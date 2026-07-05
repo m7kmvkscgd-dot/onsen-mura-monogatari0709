@@ -482,6 +482,7 @@ function renderClassGrid() {
 let selectedClass = "fighter";
 
 function renderRosterList() {
+  pruneActiveParty();
   const list = document.getElementById("rosterList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -726,14 +727,18 @@ function getRosterChar(id) {
 // 瀕死/ロストになったキャラがパーティ編成の4枠に居座り続けないよう、
 // activePartyIdsから現在status==="active"でなくなった者を取り除く
 function pruneActiveParty() {
+  const seen = new Set();
   state.activePartyIds = state.activePartyIds.filter((id) => {
     const c = getRosterChar(id);
-    return c && c.status === "active";
-  });
+    if (!c || c.status !== "active" || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
 }
 
 function enterDungeon() {
   currentFloor = 1;
+  pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   dungeonLogLines = [];
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
