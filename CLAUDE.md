@@ -139,3 +139,6 @@
 「新しい冒険者を仲間にする選択画面が現在の仲間リストより上に来るようにしてほしい。かつ新しく雇った仲間はリストの一番上、古いキャラは下に来るようにしてほしい」との指示で2点対応した:
 - HTML上で「新しい冒険者を仲間にする」ブロック(名前入力+職業選択+仲間にするボタン)を「パーティ編成(最大4人)」の名簿(`#rosterList`)より前に移動した
 - `createCharBtn`のクリックハンドラで`state.roster.push(c)`(末尾に追加)を`state.roster.unshift(c)`(先頭に追加)に変更し、新規加入者が`renderRosterList()`の描画順で常に一番上に来るようにした
+
+## 町画面のボタンを画像モックアップ通りの2x2レイアウトに
+ユーザーがイメージ画像(2列2行、各ボタンが文字数に合わせた大きさの箱、画面中央やや下寄りに配置)を提示。`#screen-town .btn-col`を全幅ボタンの縦積み(`flex-column`)から`display:grid; grid-template-columns:repeat(2,auto); justify-content:start;`に変更し、ボタン自体も`width:auto`にして文字量に応じた箱サイズにした(HTML内の並び順、宿屋→道具屋→温泉→深淵の森へ向かう、がそのままグリッドの左上→右上→左下→右下になる)。位置は[[feedback-mobile-fixed-position-anchoring]]の教訓に従い、`bottom: calc(300px + env(safe-area-inset-bottom))`という画面下端からの固定px距離のまま(vh%は使わない)、値だけ24px→300pxに変えて中央やや下あたりに来るよう調整した。
