@@ -325,7 +325,10 @@ bgmAudio.volume = 0.4;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
-const bgmPositions = {}; // 町⇔ダンジョン往復時に曲を頭から再生し直さず続きから流すための再生位置記憶
+// 場面ごとの再生位置記憶(例: 町の曲は町に戻るたびに続きから再生される)。
+// ただしダンジョンの曲だけは、新しい冒険を始めるたびにenterDungeon()でこの値を0に戻し、
+// 前回の続きからではなく必ず最初から再生されるようにしている
+const bgmPositions = {};
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -611,10 +614,10 @@ function enterDungeon() {
   currentFloor = 1;
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   dungeonLogLines = [];
+  bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
   renderDungeon();
   showScreen("screen-dungeon");
   dlog("ダンジョンに入った。");
-  playBgm("dungeon");
 }
 
 let dungeonLogLines = [];
