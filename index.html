@@ -304,18 +304,18 @@ function toggleTimeOfDay() {
 }
 
 // ============ 音声 ============
-// 場面(町/ダンジョン探索/戦闘)ごとに曲を切り替える
+// 場面ごとに曲を切り替える。ダンジョン探索と戦闘は「冒険中」として同じ曲を共有し、
+// 戦闘に入っても曲を切り替えない(=中断しない)ことで途切れず流れ続けるようにしている
 const BGM_TRACKS = {
   town: "assets/bgm/town_bgm.mp3",
-  dungeon: "assets/bgm/dungeon_bgm.ogg",
-  battle: "assets/bgm/battle_bgm.mp3",
+  dungeon: "assets/bgm/dungeon_bgm.mp3",
 };
 const bgmAudio = document.getElementById("bgmAudio");
 bgmAudio.volume = 0.4;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
-const bgmPositions = {}; // 戦闘⇔ダンジョン往復時に曲を頭から再生し直さず続きから流すための再生位置記憶
+const bgmPositions = {}; // 町⇔ダンジョン往復時に曲を頭から再生し直さず続きから流すための再生位置記憶
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -718,7 +718,7 @@ function startBattle(enemies) {
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
-  playBgm("battle");
+  playBgm("dungeon"); // 戦闘中もダンジョン探索と同じ曲を途切れさせず流し続ける
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
   nextRound();
 }
