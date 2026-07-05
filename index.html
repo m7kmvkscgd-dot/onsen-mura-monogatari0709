@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>温泉村物語</title>
 <style>
   :root {
@@ -37,7 +37,7 @@
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
-  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem; flex: 1; }
+  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   button.big {
     padding: 0.9rem; border-radius: 10px; border: 1px solid var(--border);
@@ -113,7 +113,7 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
-  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 16px; }
+  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; }
   .battle-bg {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
@@ -132,7 +132,8 @@
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 6;
     background: var(--panel);
-    padding: 0.7rem 1rem; box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px) + 20px);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
   .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }

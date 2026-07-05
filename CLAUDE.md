@@ -126,3 +126,5 @@
 「一度のスクロールでは戻るボタンまで到達せず、二度スクロールする必要がある」という報告を受けて2つの原因を修正した:
 - **`100vh`のモバイルブラウザ問題**: `.hero`/`.dungeon-bg`/`.battle-bg`が`height:100vh`固定だったが、モバイルSafari等はアドレスバーの表示/非表示でビューポート高さが動的に変わり、`100vh`はその変化に追従しないため、スクロール中に実際のページ高さが変わって「一度止まってから続きが見えるようになる」現象が起きていたと考えられる。`height:100vh; height:100dvh;`(dvh対応ブラウザでは動的ビューポート単位を優先、非対応ブラウザは100vhにフォールバック)に変更した
 - **`backdrop-filter: blur()`のスクロール性能問題**: `.body-pad`等、`position:fixed`の背景画像の上に重なる半透明パネルに`backdrop-filter: blur()`をかけていたが、これはスクロールのたびに背後の固定要素を再描画する必要があり、モバイル端末(特にiOS Safari)でスクロールのカクつき/一時停止を引き起こすことが知られている。透明感(半透明の背景色)は維持したまま、`.body-pad`・`#dungeonLog`/`#battleLog`・`.party-bar`・`.battle-flee-bar`から`backdrop-filter`を全て削除した
+
+**追記(ユーザーによる原因特定)**: 上記の対応後、ユーザーから「iPhoneのSafariだと画面最下部がきちんと表示されづらいことが原因」との報告があった。iOS Safariはツールバー/ホームインジケーターの分だけ画面最下部が実際には見えづらい・タップしづらいことがあるため、根本原因は解消しきれない前提で、**戻るボタンの下に余白を作ってスクロールの終端を画面最下部より手前にする**方針に切り替えた。`.body-pad`のpadding-bottomを`calc(1rem + 80px)`に、`.dungeon-content`に`padding-bottom:80px`を追加。`.battle-flee-bar`(position:fixed;bottom:0)には`env(safe-area-inset-bottom)`を使った余白も追加し、`<meta name="viewport">`に`viewport-fit=cover`を付与してenv()がノッチ付きiPhoneで正しく機能するようにした。
