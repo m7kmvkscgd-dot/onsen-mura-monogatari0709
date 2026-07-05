@@ -217,14 +217,15 @@
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="tavernGold">0G</p>
       <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる(20G)</button>
-      <h2>パーティ編成(最大4人)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロスト・入浴中は選べません。</p>
-      <div id="rosterList"></div>
 
-      <h2 style="margin-top:1rem;">新しい冒険者を仲間にする</h2>
+      <h2>新しい冒険者を仲間にする</h2>
       <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
       <div class="class-grid" id="classGrid"></div>
       <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする</button>
+
+      <h2 style="margin-top:1.2rem;">パーティ編成(最大4人)</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロスト・入浴中は選べません。</p>
+      <div id="rosterList"></div>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -621,7 +622,7 @@ document.getElementById("createCharBtn").onclick = () => {
   const name = nameInput.value.trim() || randomFemaleName();
   if (state.roster.length >= 12) { alert("名簿がいっぱいです(最大12人)"); return; }
   const c = createCharacter(name, selectedClass, state.classUpgrades);
-  state.roster.push(c);
+  state.roster.unshift(c); // 新しく雇った仲間が名簿の一番上に来るようにする
   nameInput.value = "";
   saveState();
   playSfx("select");
