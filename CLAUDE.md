@@ -70,6 +70,15 @@
 - **敵カード直接タップで対象選択**: 元々`.enemy-card.targetable`というCSSクラスは定義済みだったが未使用だった。`pendingEnemyPick`というグローバル変数を追加し、`pickSingleEnemyTarget()`が呼ばれるたびにセットして`renderBattleScreen()`を再描画→対象になり得る敵カードに`targetable`クラス(赤いパルスアニメーション付き)とクリックハンドラを付与。既存のテキストボタン列(`#actionGrid`内)は残したまま、敵画像を直接タップしても選べるようにした(両方とも同じコールバックに合流)
 - **ダメージ/回復のポップアップ表示**: `popupOn(targetId, text, cls)`ヘルパーを追加し、`.enemy-card`/`.party-member`に`data-id`属性を付与した上で対象要素に`.dmg-pop`(ふわっと浮き上がって消えるCSSアニメーション、`dmgFloat` 0.9秒)を差し込む。通常攻撃・単体アビリティ・全体アビリティ(`useAbility`の`dmgs`配列を`aliveEnemies()`の順序とzipして対応付け)・敵の攻撃・回復魔法・回復薬のすべての箇所に適用済み。`engine.js`の`usePotion()`は回復量を返り値で返すよう変更(元は返り値なしだった)
 
+## UIの透過化(文字ボタン以外)
+全画面ヒーロー化した後、`.body-pad`が`var(--bg)`で完全に不透明だったため画像が上部34vhしか見えず「ラベル部分以外は結局透過してない」状態だった。指摘を受けて`--panel: rgba(20,24,27,0.72)`/`--panel-2: rgba(28,34,38,0.6)`という半透明変数を追加し、`.body-pad`・`.card`・`.equip-class-card`・`#dungeonLog`/`#battleLog`・`.critical-alert`・`.roster-row.selected`・`.class-pick.selected`など「パネル/コンテナ」系の背景を半透明化(`backdrop-filter: blur(2px)`も追加して読みやすさを確保)。`.hero::before`の下端フェード色も新しい`--panel`値に合わせて調整し、画像とパネルの境目が不自然にならないようにした。**`button.big`等の実際のボタン要素は意図的に不透明のまま維持**(タップ対象として視認性を保つため、透過対象は「文字ボタン以外」という指示通り)。
+
+## パーティ編成: 瀕死/ロストしたキャラが枠を占有し続けるバグを修正
+`state.activePartyIds`に一度入ったキャラは、戦闘不能で瀕死やロストになっても配列から自動的には外れず、パーティ4枠のうち使えない枠を永久に占有し続けるバグがあった(タップしても`selectable=false`のため外せない)。`pruneActiveParty()`という関数を追加し、`activePartyIds`から`status !== "active"`になったキャラのidを取り除くようにして、`handleFieldDeaths()`(瀕死になった直後)・`toggleTimeOfDay()`(ロストになるタイミング)・`renderTown()`/`renderTavern()`(画面遷移のたびの保険)から呼ぶようにした。
+
+## 宿屋/道具屋に上部の「戻る」ボタンを追加
+パーティ編成や装備リストが長く、下部の「町に戻る」まで毎回スクロールするのが面倒という指摘を受け、`tavernBackBtnTop`/`shopBackBtnTop`を`.body-pad`の先頭(タイトル画像のすぐ下)にも追加。下部の既存ボタンと同じ処理を呼ぶだけの単純な複製。
+
 ## 未決定事項(次回セッションで詰める)
 - ステータス名・UI文言なども含めて和風に統一するかどうか(「◯層目」以外は概ね西洋ファンタジー風の言い回しが残っている)
 - 昼夜は見た目(背景画像)のみの変更で、瀕死ロスト判定以外のゲームバランスへの影響は無い
