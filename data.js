@@ -42,14 +42,58 @@ const ABILITY_DESC = {
   guard: "自分への被ダメージを大幅に減らす",
 };
 
-// key: id, ja, image, hp, atk, def, spd, goldMin, goldMax, minFloor, maxFloor, isBoss
+// key: id, ja, image, hp, atk, def, spd, goldMin, goldMax, xp, minFloor, maxFloor, isBoss
+// 序盤(Lv1-10)/中盤(Lv11-25)/後半(Lv26-40)/終盤(Lv41-50〜)の4段階、計40種。
+// 後半のがしゃどくろ・九尾の狐は中ボス、終盤の鬼神・羅刹王が最終ボス(いずれもisBoss:trueで
+// pickEncounterForFloor()により10の倍数フロアで単体ボス戦として優先的に選ばれる)
 const ENEMIES = {
-  slime_green: { id: "slime_green", ja: "岩塊の魔物", image: "assets/enemies/slime_green.png", hp: 18, atk: 5, def: 2, spd: 4, goldMin: 5, goldMax: 10, xp: 12, minFloor: 1, maxFloor: 5 },
-  slime_blue: { id: "slime_blue", ja: "氷塊の魔物", image: "assets/enemies/slime_blue.png", hp: 24, atk: 6, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 16, minFloor: 2, maxFloor: 7 },
-  goblin_yellow: { id: "goblin_yellow", ja: "ゴブリン", image: "assets/enemies/goblin_yellow.png", hp: 34, atk: 9, def: 5, spd: 8, goldMin: 14, goldMax: 22, xp: 26, minFloor: 4, maxFloor: 11 },
-  ogre_red: { id: "ogre_red", ja: "紅蓮鬼", image: "assets/enemies/ogre_red.png", hp: 52, atk: 13, def: 7, spd: 7, goldMin: 22, goldMax: 35, xp: 40, minFloor: 7, maxFloor: 16 },
-  shade_dark: { id: "shade_dark", ja: "くらやみのけもの", image: "assets/enemies/shade_dark.png", hp: 68, atk: 16, def: 9, spd: 11, goldMin: 32, goldMax: 48, xp: 58, minFloor: 12, maxFloor: 24 },
-  boss_white: { id: "boss_white", ja: "紅の竜王", image: "assets/enemies/boss_white.png", hp: 140, atk: 20, def: 12, spd: 9, goldMin: 100, goldMax: 150, xp: 150, minFloor: 9, maxFloor: 999, isBoss: true },
+  // ---- 序盤(Lv1-10 / floor 1-12) ----
+  yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/yaken.png", hp: 14, atk: 4, def: 2, spd: 6, goldMin: 3, goldMax: 7, xp: 8, minFloor: 1, maxFloor: 12 },
+  inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 20, atk: 6, def: 3, spd: 4, goldMin: 4, goldMax: 8, xp: 9, minFloor: 1, maxFloor: 12 },
+  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 6, def: 2, spd: 7, goldMin: 4, goldMax: 8, xp: 9, minFloor: 1, maxFloor: 12 },
+  oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 5, goldMax: 9, xp: 10, minFloor: 1, maxFloor: 12 },
+  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 4, goldMax: 8, xp: 9, minFloor: 1, maxFloor: 12 },
+  kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 16, atk: 5, def: 3, spd: 6, goldMin: 5, goldMax: 9, xp: 10, minFloor: 1, maxFloor: 12 },
+  hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 5, goldMax: 9, xp: 10, minFloor: 1, maxFloor: 12 },
+  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 6, goldMax: 10, xp: 11, minFloor: 1, maxFloor: 12 },
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 6, goldMax: 10, xp: 11, minFloor: 1, maxFloor: 12 },
+  kamaitachi: { id: "kamaitachi", ja: "鎌鼬", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 7, def: 2, spd: 10, goldMin: 7, goldMax: 12, xp: 13, minFloor: 1, maxFloor: 12 },
+
+  // ---- 中盤(Lv11-25 / floor 9-29) ----
+  ochimusha: { id: "ochimusha", ja: "落武者", image: "assets/enemies/ochimusha.png", hp: 34, atk: 10, def: 6, spd: 8, goldMin: 14, goldMax: 22, xp: 24, minFloor: 9, maxFloor: 29 },
+  kamaitachi2: { id: "kamaitachi2", ja: "鎌鼬", image: "assets/enemies/kamaitachi2.png", hp: 28, atk: 11, def: 4, spd: 12, goldMin: 15, goldMax: 23, xp: 25, minFloor: 9, maxFloor: 29 },
+  youko: { id: "youko", ja: "妖狐", image: "assets/enemies/youko.png", hp: 26, atk: 12, def: 4, spd: 9, goldMin: 15, goldMax: 23, xp: 25, minFloor: 9, maxFloor: 29 },
+  rokurokubi: { id: "rokurokubi", ja: "ろくろ首", image: "assets/enemies/rokurokubi.png", hp: 30, atk: 10, def: 5, spd: 8, goldMin: 14, goldMax: 22, xp: 24, minFloor: 9, maxFloor: 29 },
+  yukionna: { id: "yukionna", ja: "雪女", image: "assets/enemies/yukionna.png", hp: 27, atk: 11, def: 5, spd: 8, goldMin: 15, goldMax: 23, xp: 25, minFloor: 9, maxFloor: 29 },
+  yamauba: { id: "yamauba", ja: "山姥", image: "assets/enemies/yamauba.png", hp: 36, atk: 10, def: 6, spd: 6, goldMin: 16, goldMax: 24, xp: 26, minFloor: 9, maxFloor: 29 },
+  tsuchigumo: { id: "tsuchigumo", ja: "土蜘蛛", image: "assets/enemies/tsuchigumo.png", hp: 32, atk: 10, def: 5, spd: 7, goldMin: 15, goldMax: 23, xp: 25, minFloor: 9, maxFloor: 29 },
+  onryo: { id: "onryo", ja: "怨霊", image: "assets/enemies/onryo.png", hp: 24, atk: 13, def: 3, spd: 9, goldMin: 16, goldMax: 24, xp: 27, minFloor: 9, maxFloor: 29 },
+  oomukade: { id: "oomukade", ja: "大百足", image: "assets/enemies/oomukade.png", hp: 38, atk: 11, def: 6, spd: 6, goldMin: 17, goldMax: 25, xp: 27, minFloor: 9, maxFloor: 29 },
+  kasha: { id: "kasha", ja: "火車", image: "assets/enemies/kasha.png", hp: 34, atk: 12, def: 6, spd: 7, goldMin: 18, goldMax: 27, xp: 29, minFloor: 9, maxFloor: 29 },
+
+  // ---- 後半(Lv26-40 / floor 24-45)、うち2体は中ボス ----
+  oni: { id: "oni", ja: "鬼", image: "assets/enemies/oni.png", hp: 58, atk: 18, def: 9, spd: 9, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45 },
+  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45 },
+  yamauba2: { id: "yamauba2", ja: "山姥", image: "assets/enemies/yamauba2.png", hp: 56, atk: 16, def: 9, spd: 8, goldMin: 23, goldMax: 35, xp: 41, minFloor: 24, maxFloor: 45 },
+  gyuki: { id: "gyuki", ja: "牛鬼", image: "assets/enemies/gyuki.png", hp: 70, atk: 19, def: 11, spd: 7, goldMin: 28, goldMax: 40, xp: 46, minFloor: 24, maxFloor: 45 },
+  nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 52, atk: 18, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45 },
+  wanyudo: { id: "wanyudo", ja: "輪入道", image: "assets/enemies/wanyudo.png", hp: 50, atk: 17, def: 8, spd: 13, goldMin: 25, goldMax: 37, xp: 43, minFloor: 24, maxFloor: 45 },
+  gaikotsu_musha: { id: "gaikotsu_musha", ja: "骸骨武者", image: "assets/enemies/gaikotsu_musha.png", hp: 54, atk: 18, def: 10, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45 },
+  orochi: { id: "orochi", ja: "大蛇", image: "assets/enemies/orochi.png", hp: 62, atk: 18, def: 10, spd: 9, goldMin: 27, goldMax: 39, xp: 45, minFloor: 24, maxFloor: 45 },
+  gashadokuro: { id: "gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/gashadokuro.png", hp: 170, atk: 24, def: 13, spd: 9, goldMin: 90, goldMax: 130, xp: 150, minFloor: 26, maxFloor: 999, isBoss: true },
+  kyubi_no_kitsune: { id: "kyubi_no_kitsune", ja: "九尾の狐", image: "assets/enemies/kyubi_no_kitsune.png", hp: 155, atk: 26, def: 11, spd: 12, goldMin: 95, goldMax: 135, xp: 155, minFloor: 26, maxFloor: 999, isBoss: true },
+
+  // ---- 終盤(Lv41-50〜 / floor 38-) ----
+  shuten_doji: { id: "shuten_doji", ja: "酒呑童子", image: "assets/enemies/shuten_doji.png", hp: 92, atk: 26, def: 13, spd: 10, goldMin: 40, goldMax: 58, xp: 75, minFloor: 38, maxFloor: 999 },
+  ibaraki_doji: { id: "ibaraki_doji", ja: "茨木童子", image: "assets/enemies/ibaraki_doji.png", hp: 98, atk: 28, def: 13, spd: 10, goldMin: 42, goldMax: 60, xp: 78, minFloor: 38, maxFloor: 999 },
+  dai_tengu: { id: "dai_tengu", ja: "大天狗", image: "assets/enemies/dai_tengu.png", hp: 85, atk: 27, def: 12, spd: 15, goldMin: 41, goldMax: 59, xp: 76, minFloor: 38, maxFloor: 999 },
+  yamata_no_orochi: { id: "yamata_no_orochi", ja: "八岐大蛇", image: "assets/enemies/yamata_no_orochi.png", hp: 110, atk: 29, def: 14, spd: 8, goldMin: 45, goldMax: 64, xp: 82, minFloor: 38, maxFloor: 999 },
+  tamamo_no_mae: { id: "tamamo_no_mae", ja: "玉藻前", image: "assets/enemies/tamamo_no_mae.png", hp: 82, atk: 28, def: 11, spd: 12, goldMin: 42, goldMax: 60, xp: 77, minFloor: 38, maxFloor: 999 },
+  giou: { id: "giou", ja: "巍王", image: "assets/enemies/giou.png", hp: 100, atk: 27, def: 15, spd: 11, goldMin: 44, goldMax: 62, xp: 80, minFloor: 38, maxFloor: 999 },
+  kyubi_shin: { id: "kyubi_shin", ja: "九尾の狐(真)", image: "assets/enemies/kyubi_shin.png", hp: 95, atk: 30, def: 12, spd: 13, goldMin: 46, goldMax: 65, xp: 85, minFloor: 38, maxFloor: 999 },
+  gashadokuro_shin: { id: "gashadokuro_shin", ja: "がしゃどくろ(真)", image: "assets/enemies/gashadokuro_shin.png", hp: 120, atk: 28, def: 16, spd: 8, goldMin: 47, goldMax: 66, xp: 86, minFloor: 38, maxFloor: 999 },
+  yomi_no_onryo: { id: "yomi_no_onryo", ja: "黄泉の怨霊", image: "assets/enemies/yomi_no_onryo.png", hp: 88, atk: 32, def: 10, spd: 11, goldMin: 48, goldMax: 68, xp: 88, minFloor: 38, maxFloor: 999 },
+  kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 280, atk: 34, def: 18, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 42, maxFloor: 999, isBoss: true },
 };
 
 const ITEMS = {

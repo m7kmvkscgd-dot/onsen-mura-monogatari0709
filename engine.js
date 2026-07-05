@@ -62,8 +62,9 @@ function createCharacter(name, classId, classUpgrades) {
   };
 }
 
+// 体感のレベルアップ速度を旧来の3分の1にするため、必要経験値を3倍にしてある
 function xpToNext(level) {
-  return 20 + level * 15;
+  return (20 + level * 15) * 3;
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
@@ -170,9 +171,11 @@ function rollHeal(mag) {
   return Math.max(5, Math.round(mag * 1.5 + Math.random() * 5));
 }
 
-// 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される
-function pickEnemyForFloor(floor) {
-  const eligible = Object.values(ENEMIES).filter((e) => floor >= e.minFloor && floor <= e.maxFloor);
+// 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
+// onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
+function pickEnemyForFloor(floor, onlyBoss) {
+  const eligible = Object.values(ENEMIES).filter((e) => floor >= e.minFloor && floor <= e.maxFloor && (!onlyBoss || e.isBoss));
+  if (onlyBoss && eligible.length === 0) return null;
   const weighted = [];
   eligible.forEach((e) => {
     const weight = e.isBoss ? (floor % 10 === 0 ? 6 : 1) : 10;
@@ -196,7 +199,10 @@ function pickEnemyForFloor(floor) {
 // それ以外は単体(手強い1体)か複数体(1体あたりは弱いが数で来る雑魚集団)がランダムに出る —
 // 雑魚集団は範囲攻撃(魔法使いのメテオ/忍者の乱れ突き)で効率よく削れる、という職業差別化の要
 function pickEncounterForFloor(floor) {
-  if (floor % 10 === 0) return [pickEnemyForFloor(floor)];
+  if (floor % 10 === 0) {
+    const boss = pickEnemyForFloor(floor, true);
+    return [boss || pickEnemyForFloor(floor)];
+  }
   const roll = Math.random();
   let count = 1;
   if (floor >= 4) {

@@ -139,7 +139,8 @@
       <h1>宿屋</h1>
     </div>
     <div class="body-pad">
-      <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる</button>
+      <p class="gold" id="tavernGold">0G</p>
+      <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる(20G)</button>
       <h2>パーティ編成(最大4人)</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロストは選べません。</p>
       <div id="rosterList"></div>
@@ -465,6 +466,7 @@ function renderRosterList() {
 }
 
 function renderTavern() {
+  document.getElementById("tavernGold").textContent = state.gold + "G";
   renderRosterList();
   renderClassGrid();
   updateSceneBackgrounds();
@@ -510,11 +512,15 @@ document.getElementById("createCharBtn").onclick = () => {
 };
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 
+const SLEEP_COST = 20; // 宿屋に一晩泊まる際の宿代
 document.getElementById("sleepBtn").onclick = () => {
+  if (state.gold < SLEEP_COST) { alert(`お金が足りません(宿代${SLEEP_COST}G)`); return; }
   playSfx("select");
+  state.gold -= SLEEP_COST;
   toggleTimeOfDay();
   const label = state.timeOfDay === "night" ? "夜" : "朝";
-  alert(`一晩ぐっすり眠った。${label}になった。`);
+  alert(`宿代${SLEEP_COST}Gを払って一晩ぐっすり眠った。${label}になった。`);
+  renderTavern();
 };
 
 // ============ 道具屋 ============
