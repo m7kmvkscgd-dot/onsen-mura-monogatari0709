@@ -146,9 +146,22 @@ const EQUIPMENT = {
 const CRITICAL_MIN_HALFDAYS = 2; // 1日
 const CRITICAL_MAX_HALFDAYS = 4; // 2日
 
-const FATIGUE_PER_FLOOR = 4; // フィールドに出ているキャラが1階進むごとに溜まる疲労度
+const FATIGUE_PER_FLOOR = 2; // フィールドに出ているキャラが1階進むごとに溜まる疲労度(旧4から半減)
 const FATIGUE_MAX = 100;
 
+// 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復し、
+// 同じキャラは半日(halfDayStep 1つ分)経つまで再入浴できない。価格はキャラのレベルに応じて上がる
+const ONSEN_FATIGUE_RELIEF = 50;
+const ONSEN_BASE_COST = 40;
+const ONSEN_COST_PER_LEVEL = 8;
+
+// 敵の階層スケーリング係数。旧0.045だと低レベルパーティでも階層を無制限に潜り抜けられてしまったため、
+// 「Lv5なら深くても5階程度」を目安に大幅に引き上げた(パーティのレベル成長率とほぼ釣り合うよう調整)
+const FLOOR_SCALE_RATE = 0.15;
+
 if (typeof module !== "undefined") {
-  module.exports = { CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS, FATIGUE_PER_FLOOR, FATIGUE_MAX };
+  module.exports = {
+    CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE,
+  };
 }

@@ -53,12 +53,13 @@ function createCharacter(name, classId, classUpgrades) {
     spd: c.spd,
     mag: c.mag,
     equipBonus: computeEquipBonus(classId, classUpgrades),
-    fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町で全回復)
+    fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町では抜けない。温泉で回復)
     guarding: false,
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     status: "active", // active | critical | lost
     criticalFloor: null,
     criticalExpireHalfDay: null,
+    onsenCooldownUntil: null, // この値以上にhalfDayStepが進むまで温泉に入れない
   };
 }
 
@@ -86,13 +87,13 @@ function levelUp(character, log) {
   log(`${character.label}はレベル${character.level}になった！`);
 }
 
-// 町に戻って休息した際にHP/MP/疲労度を全回復する(ダンジョン探索中は回復しない)
+// 町に戻って休息した際にHP/MPを全回復する(ダンジョン探索中は回復しない)。
+// 疲労度はここでは回復しない(温泉に入らないと抜けない)
 function restAtTown(characters) {
   characters.forEach((c) => {
     if (c.status === "active") {
       c.hp = c.maxHp;
       c.mp = c.maxMp;
-      c.fatigue = 0;
     }
   });
 }
@@ -104,6 +105,22 @@ function advanceFatigue(characters) {
       c.fatigue = Math.min(FATIGUE_MAX, c.fatigue + FATIGUE_PER_FLOOR);
     }
   });
+}
+
+// 温泉: レベルが高いキャラほど入浴料が高くなる(ちょっと高めの金額)
+function onsenCost(level) {
+  return ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL;
+}
+
+// 半日(halfDayStep 1つ分)経っていれば再入浴できる
+function canUseOnsen(character, halfDayStep) {
+  return character.status === "active" && (character.onsenCooldownUntil == null || halfDayStep >= character.onsenCooldownUntil);
+}
+
+// 温泉に入り、疲労度を半分(ONSEN_FATIGUE_RELIEF分)回復する。以後半日は再利用不可にする
+function useOnsen(character, halfDayStep) {
+  character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
+  character.onsenCooldownUntil = halfDayStep + 1;
 }
 
 // 疲労度による攻撃力/防御力/素早さ/魔力の低下率(最大40%)
@@ -182,7 +199,7 @@ function pickEnemyForFloor(floor, onlyBoss) {
     for (let i = 0; i < weight; i++) weighted.push(e);
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
-  const scale = 1 + (floor - 1) * 0.045;
+  const scale = 1 + (floor - 1) * FLOOR_SCALE_RATE;
   const hp = Math.round(pick.hp * scale);
   return {
     ...pick,
@@ -417,5 +434,6 @@ if (typeof module !== "undefined") {
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, restAtTown, abilityMpCost,
     advanceFatigue, fatigueMalus, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
+    onsenCost, canUseOnsen, useOnsen,
   };
 }

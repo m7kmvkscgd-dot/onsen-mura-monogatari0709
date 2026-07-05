@@ -164,6 +164,7 @@
       <div class="btn-col">
         <button class="big" id="toTavernBtn">🏨 宿屋</button>
         <button class="big" id="toShopBtn">🛒 道具屋</button>
+        <button class="big" id="toOnsenBtn">♨️ 温泉</button>
         <button class="big primary" id="toDungeonBtn">🕯 深淵の森へ向かう</button>
       </div>
     </div>
@@ -242,6 +243,20 @@
     </div>
   </div>
 
+  <!-- 温泉 -->
+  <div class="screen" id="screen-onsen">
+    <div class="hero" style="background-image:url('assets/bg/town.png')">
+      <h1>温泉</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="onsenBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+      <p class="gold" id="onsenGold">0G</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴すると疲労度が50回復します(宿屋では疲労度は抜けません)。レベルが高いほど入浴料は上がり、入った後は半日再入浴できません。</p>
+      <div id="onsenList"></div>
+      <button class="big" id="onsenBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
   <!-- 深淵の森 -->
   <div class="screen" id="screen-dungeon">
     <div class="dungeon-bg" id="dungeonBg"></div>
@@ -312,6 +327,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   }
   if (c.criticalFloor === undefined) c.criticalFloor = null;
   if (c.criticalExpireHalfDay === undefined) c.criticalExpireHalfDay = null;
+  if (c.onsenCooldownUntil === undefined) c.onsenCooldownUntil = null;
   delete c.corpseFloor;
   delete c.corpseExpireStep;
   return c;
@@ -440,6 +456,7 @@ function renderTown() {
 }
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
+document.getElementById("toOnsenBtn").onclick = () => { playSfx("select"); renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("toDungeonBtn").onclick = () => {
   playSfx("select");
   if (state.activePartyIds.length === 0) {
@@ -577,6 +594,49 @@ document.getElementById("sleepBtn").onclick = () => {
   alert(`宿代${SLEEP_COST}Gを払って一晩ぐっすり眠った。${label}になった。`);
   renderTavern();
 };
+
+// ============ 温泉 ============
+function renderOnsen() {
+  document.getElementById("onsenGold").textContent = state.gold + "G";
+  const list = document.getElementById("onsenList");
+  list.innerHTML = "";
+  const bathable = state.roster.filter((c) => c.status === "active");
+  if (bathable.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">入浴できる仲間がいません。</p>';
+    return;
+  }
+  bathable.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const cost = onsenCost(c.level);
+    const cooling = !canUseOnsen(c, state.halfDayStep);
+    const noFatigue = (c.fatigue || 0) <= 0;
+    const disabled = cooling || noFatigue || state.gold < cost;
+    let label = `入る(${cost}G)`;
+    if (noFatigue) label = "疲労なし";
+    else if (cooling) label = "半日は入浴不可";
+    const row = document.createElement("div");
+    row.className = "roster-row";
+    row.innerHTML = `
+      <img src="${c2.image}">
+      <div class="roster-info">
+        <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
+        <div class="roster-sub">疲労度 ${c.fatigue || 0}</div>
+        <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
+      </div>
+      <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
+    `;
+    row.querySelector("button").onclick = () => {
+      state.gold -= cost;
+      useOnsen(c, state.halfDayStep);
+      saveState();
+      playSfx("heal");
+      renderOnsen();
+    };
+    list.appendChild(row);
+  });
+}
+document.getElementById("onsenBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 
 // ============ 道具屋 ============
 function renderShop() {
