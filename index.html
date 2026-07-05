@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ダンジョン1</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
+    --text: #e8ecea; --text-muted: #9aa79f; --accent: #c9a24a;
+    --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #d1503f;
+    --danger: #d1503f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    margin: 0; padding: 0; line-height: 1.5;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  .screen { display: none; flex-direction: column; flex: 1; }
+  .screen.active { display: flex; }
+  .hero {
+    position: relative; background-size: cover; background-position: center;
+    padding: 1.2rem 1rem 1rem; min-height: 130px; display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(20,24,27,0.95));
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+  .gold { font-weight: 700; color: var(--accent); }
+  .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
+  .body-pad { padding: 1rem; flex: 1; }
+  .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
+  button.big {
+    padding: 0.9rem; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  }
+  button.big:active { background: var(--surface-2); }
+  button.primary { background: var(--accent); color: #241d0a; border-color: var(--accent); }
+  button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.7rem; }
+  .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .roster-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
+  .detail-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.68rem; cursor: pointer; }
+  .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .stat-row span:first-child { color: var(--text-muted); }
+  .mpbar-fill { height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
+  .roster-row img { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
+  .roster-info { flex: 1; }
+  .roster-name { font-weight: 700; font-size: 0.88rem; }
+  .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
+  .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700; }
+  .status-tag.active { background: #234a2e; color: #7fe0a0; }
+  .status-tag.corpse { background: #4a2323; color: #e08787; }
+  .status-tag.lost { background: #333; color: #888; }
+  .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
+  .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem; text-align: center; cursor: pointer; }
+  .class-pick.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; }
+  .class-pick span { display: block; font-size: 0.68rem; margin-top: 0.2rem; }
+  input[type="text"] {
+    width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font-size: 0.9rem;
+  }
+  h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--accent); }
+  .shop-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+  .shop-item .desc { font-size: 0.72rem; color: var(--text-muted); }
+  .equip-class-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; margin-bottom: 0.6rem; }
+  .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .equip-class-title img { width: 32px; height: 32px; object-fit: cover; object-position: top; border-radius: 5px; }
+  .equip-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
+  .equip-row .desc { font-size: 0.68rem; color: var(--text-muted); }
+  .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
+  .party-bar { display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem; background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); }
+  .party-member { flex: 1; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; }
+  .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); }
+  .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
+  .party-member img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
+  .party-member.dead img { filter: grayscale(1) brightness(0.4); }
+  .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; }
+  .hpbar-fill { height: 100%; background: var(--hp); transition: width 0.4s ease; }
+  .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
+  .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
+  .fatigue-fill { height: 100%; background: #b06a2a; }
+  .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+  .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 0.6rem; }
+  #dungeonLog, #battleLog { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; height: 120px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
+  #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
+  .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
+  .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; }
+  .enemy-card { text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
+  .enemy-card.targetable { cursor: pointer; }
+  .enemy-card.targetable:active { transform: scale(0.96); }
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); }
+  .enemy-card.dead { opacity: 0.25; }
+  .enemy-card img { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
+  .action-grid button { grid-column: span 1; }
+  .turn-indicator { text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--accent); padding: 0.4rem 0 0; background: rgba(20,24,27,0.72); }
+  .corpse-alert { background: #3a2222; border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
+  .corpse-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
+  .bottom-actions { padding: 0.8rem 1rem; display: flex; gap: 0.6rem; }
+  .bottom-actions button { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 町 -->
+  <div class="screen active" id="screen-town">
+    <div class="hero" style="background-image:url('assets/bg/town.png')">
+      <div class="topbar">
+        <span class="gold" id="townGold">0G</span>
+        <button class="mute-btn" id="muteBtn">🔊</button>
+      </div>
+      <h1>城下町</h1>
+    </div>
+    <div class="body-pad">
+      <div class="btn-col">
+        <button class="big" id="toTavernBtn">🍺 酒場</button>
+        <button class="big" id="toShopBtn">🛒 道具屋</button>
+        <button class="big primary" id="toDungeonBtn">🕯 ダンジョンへ向かう</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 酒場 -->
+  <div class="screen" id="screen-tavern">
+    <div class="hero" style="background-image:url('assets/bg/tavern.png');min-height:100px;">
+      <h1>酒場</h1>
+    </div>
+    <div class="body-pad">
+      <h2>パーティ編成(最大4人)</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。死体・ロストは選べません。</p>
+      <div id="rosterList"></div>
+
+      <h2 style="margin-top:1rem;">新しい冒険者を仲間にする</h2>
+      <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
+      <div class="class-grid" id="classGrid"></div>
+      <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする</button>
+
+      <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- ステータス詳細 -->
+  <div class="screen" id="screen-status">
+    <div class="hero" style="background-image:url('assets/bg/tavern.png');min-height:90px;">
+      <h1 id="statusName">-</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card" style="text-align:center;">
+        <img id="statusImg" src="" style="width:96px;height:96px;object-fit:cover;object-position:top;border-radius:8px;">
+      </div>
+      <div class="card">
+        <div class="stat-row"><span>職業</span><span id="statClass"></span></div>
+        <div class="stat-row"><span>レベル</span><span id="statLevel"></span></div>
+        <div class="stat-row"><span>経験値</span><span id="statXp"></span></div>
+        <div class="stat-row"><span>HP</span><span id="statHp"></span></div>
+        <div class="stat-row"><span>MP</span><span id="statMp"></span></div>
+        <div class="stat-row"><span>攻撃力</span><span id="statAtk"></span></div>
+        <div class="stat-row"><span>防御力</span><span id="statDef"></span></div>
+        <div class="stat-row"><span>素早さ</span><span id="statSpd"></span></div>
+        <div class="stat-row"><span>魔力</span><span id="statMag"></span></div>
+        <div class="stat-row"><span>状態</span><span id="statStatus"></span></div>
+      </div>
+      <button class="big" id="statusBackBtn">戻る</button>
+    </div>
+  </div>
+
+  <!-- 道具屋 -->
+  <div class="screen" id="screen-shop">
+    <div class="hero" style="background-image:url('assets/bg/town.png');min-height:90px;">
+      <h1>道具屋</h1>
+    </div>
+    <div class="body-pad">
+      <p class="gold" id="shopGold">0G</p>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>聖水</strong> <span id="holyWaterCount"></span></div>
+            <div class="desc">ダンジョンの死体を蘇生する(50G)</div>
+          </div>
+          <button class="big" id="buyHolyWaterBtn">購入</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <div><strong>回復薬</strong> <span id="potionCount"></span></div>
+            <div class="desc">戦闘中にHPを30回復する(20G)</div>
+          </div>
+          <button class="big" id="buyPotionBtn">購入</button>
+        </div>
+      </div>
+
+      <h2>職業別 武器・防具</h2>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.5rem;">一度買えばその職業の全員(今後仲間にする人も含む)に永久に効果が乗ります。個別の装備の付け外しはありません。</p>
+      <div id="equipmentList"></div>
+
+      <button class="big" id="shopBackBtn">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- ダンジョン -->
+  <div class="screen" id="screen-dungeon">
+    <div class="party-bar" id="dungeonPartyBar"></div>
+    <div class="floor-badge" id="floorBadge">地下1階</div>
+    <div id="corpseAlert"></div>
+    <div id="dungeonLog"></div>
+    <div class="bottom-actions">
+      <button class="big primary" id="advanceBtn">進む</button>
+      <button class="big danger" id="retreatBtn">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- 戦闘 -->
+  <div class="screen" id="screen-battle">
+    <div class="battle-bg" style="background-image:url('assets/bg/dungeon.png')">
+      <div class="enemy-row" id="enemyRow"></div>
+      <div class="party-bar" id="battlePartyBar"></div>
+    </div>
+    <div class="turn-indicator" id="turnIndicator"></div>
+    <div id="battleLog"></div>
+    <div class="action-grid" id="actionGrid"></div>
+  </div>
+
+</div>
+
+<audio id="bgmAudio" src="assets/bgm/town_bgm.ogg" loop></audio>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+// ============ 状態管理 ============
+const SAVE_KEY = "dungeon1_save";
+
+function defaultState() {
+  return {
+    gold: 150,
+    worldStep: 0,
+    roster: [],
+    activePartyIds: [],
+    inventory: { holyWater: 1, potion: 3 },
+    classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
+  };
+}
+
+let state = loadState();
+
+// 開発中に途中でMP/疲労度/装備ボーナスの仕組みを追加したため、それ以前に保存された古いセーブの
+// キャラクターにはこれらのフィールドが無く、undefinedのままMP消費判定が素通りしてしまうバグがあった。
+// ロード時に不足しているフィールドを補完して直す
+function normalizeCharacter(c, classUpgrades) {
+  if (c.maxMp == null) c.maxMp = maxMpFor(CLASSES[c.classId].mag);
+  if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
+  if (c.fatigue == null) c.fatigue = 0;
+  if (c.guarding == null) c.guarding = false;
+  if (!c.equipBonus) c.equipBonus = computeEquipBonus(c.classId, classUpgrades);
+  return c;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const loaded = JSON.parse(raw);
+      loaded.classUpgrades = loaded.classUpgrades || {};
+      (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades));
+      return loaded;
+    }
+  } catch (e) {}
+  return defaultState();
+}
+
+function saveState() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+
+// ============ 音声 ============
+// 場面(町/ダンジョン探索/戦闘)ごとに曲を切り替える
+const BGM_TRACKS = {
+  town: "assets/bgm/town_bgm.ogg",
+  dungeon: "assets/bgm/dungeon_bgm.ogg",
+  battle: "assets/bgm/battle_bgm.ogg",
+};
+const bgmAudio = document.getElementById("bgmAudio");
+bgmAudio.volume = 0.4;
+let audioUnlocked = false;
+let muted = false;
+let currentBgmKey = null;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  bgmAudio.play().catch(() => {});
+}
+document.addEventListener("pointerdown", unlockAudio, { once: true });
+
+function playBgm(key) {
+  if (currentBgmKey === key) return;
+  currentBgmKey = key;
+  bgmAudio.src = BGM_TRACKS[key];
+  bgmAudio.currentTime = 0;
+  if (audioUnlocked) bgmAudio.play().catch(() => {});
+}
+
+const sfxCache = {};
+function playSfx(name) {
+  if (muted) return;
+  if (!sfxCache[name]) sfxCache[name] = new Audio(`assets/sfx/${name}.ogg`);
+  const node = sfxCache[name].cloneNode(true);
+  node.play().catch(() => {});
+}
+
+document.getElementById("muteBtn").onclick = () => {
+  muted = !muted;
+  bgmAudio.muted = muted;
+  document.getElementById("muteBtn").textContent = muted ? "🔇" : "🔊";
+};
+
+// ============ 画面切り替え ============
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function statusLabel(c) {
+  if (c.status === "active") return `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+  if (c.status === "corpse") {
+    const left = Math.max(0, c.corpseExpireStep - state.worldStep);
+    return `地下${c.corpseFloor}階で死亡(残り${left}歩)`;
+  }
+  return "ロスト(消滅した)";
+}
+
+function statusTagClass(c) {
+  return c.status;
+}
+
+// ============ 町 ============
+function renderTown() {
+  restAtTown(state.roster); // 町にいる間はHP/MPが全回復する(ダンジョン内では回復しない)
+  saveState();
+  document.getElementById("townGold").textContent = state.gold + "G";
+  playBgm("town");
+}
+document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
+document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
+document.getElementById("toDungeonBtn").onclick = () => {
+  playSfx("select");
+  if (state.activePartyIds.length === 0) {
+    alert("酒場でパーティを編成してください");
+    return;
+  }
+  enterDungeon();
+};
+
+// ============ 酒場 ============
+function renderClassGrid() {
+  const grid = document.getElementById("classGrid");
+  grid.innerHTML = "";
+  Object.keys(CLASSES).forEach((classId) => {
+    const c = CLASSES[classId];
+    const div = document.createElement("div");
+    div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
+    div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>`;
+    div.onclick = () => { selectedClass = classId; renderClassGrid(); };
+    grid.appendChild(div);
+  });
+}
+let selectedClass = "fighter";
+
+function renderRosterList() {
+  const list = document.getElementById("rosterList");
+  list.innerHTML = "";
+  if (state.roster.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">まだ誰もいません。下で仲間を作りましょう。</p>';
+    return;
+  }
+  state.roster.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const inParty = state.activePartyIds.includes(c.id);
+    const selectable = c.status === "active";
+    const row = document.createElement("div");
+    row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
+    row.innerHTML = `
+      <img src="${c2.image}">
+      <div class="roster-info">
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${c.status === "active" ? "待機中" : c.status === "corpse" ? "死体" : "ロスト"}</span></div>
+        <div class="roster-sub">${statusLabel(c)}</div>
+      </div>
+      <button class="detail-btn" data-id="${c.id}">詳細</button>
+    `;
+    row.onclick = (e) => {
+      if (e.target.closest(".detail-btn")) return;
+      if (!selectable) return;
+      if (inParty) {
+        state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
+      } else {
+        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
+        state.activePartyIds.push(c.id);
+      }
+      saveState();
+      renderRosterList();
+    };
+    row.querySelector(".detail-btn").onclick = (e) => {
+      e.stopPropagation();
+      renderStatusScreen(c.id);
+      showScreen("screen-status");
+    };
+    list.appendChild(row);
+  });
+}
+
+function renderTavern() {
+  renderRosterList();
+  renderClassGrid();
+}
+
+// ============ ステータス詳細 ============
+function renderStatusScreen(charId) {
+  const c = getRosterChar(charId);
+  const c2 = CLASSES[c.classId];
+  document.getElementById("statusName").textContent = c.name;
+  document.getElementById("statusImg").src = c2.image;
+  document.getElementById("statClass").textContent = c2.ja;
+  document.getElementById("statLevel").textContent = c.level;
+  document.getElementById("statXp").textContent = `${c.xp} / ${xpToNext(c.level)}`;
+  document.getElementById("statHp").textContent = `${c.hp} / ${c.maxHp}`;
+  document.getElementById("statMp").textContent = c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-";
+  document.getElementById("statAtk").textContent = effectiveStat(c, "atk") + (c.equipBonus && c.equipBonus.atk ? ` (装備+${c.equipBonus.atk})` : "");
+  document.getElementById("statDef").textContent = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
+  document.getElementById("statSpd").textContent = effectiveStat(c, "spd");
+  document.getElementById("statMag").textContent = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
+  document.getElementById("statStatus").textContent = statusLabel(c) + (c.status === "active" ? ` / 疲労度${c.fatigue || 0}` : "");
+}
+document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
+
+const RANDOM_FEMALE_NAMES = [
+  "エミリア", "リゼッタ", "フィオナ", "セレナ", "アリシア", "ノエル", "ミラベル", "クレア",
+  "ルナリア", "エルフィ", "シャーロット", "ヴィオラ", "アネット", "レティシア", "ミレイユ", "カリナ",
+];
+function randomFemaleName() {
+  return RANDOM_FEMALE_NAMES[Math.floor(Math.random() * RANDOM_FEMALE_NAMES.length)];
+}
+
+document.getElementById("createCharBtn").onclick = () => {
+  const nameInput = document.getElementById("newCharName");
+  const name = nameInput.value.trim() || randomFemaleName();
+  if (state.roster.length >= 12) { alert("名簿がいっぱいです(最大12人)"); return; }
+  const c = createCharacter(name, selectedClass, state.classUpgrades);
+  state.roster.push(c);
+  nameInput.value = "";
+  saveState();
+  playSfx("select");
+  renderRosterList();
+};
+document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+
+// ============ 道具屋 ============
+function renderShop() {
+  document.getElementById("shopGold").textContent = state.gold + "G";
+  document.getElementById("holyWaterCount").textContent = `(所持:${state.inventory.holyWater})`;
+  document.getElementById("potionCount").textContent = `(所持:${state.inventory.potion})`;
+  renderEquipmentList();
+}
+
+function equipRowHtml(classId, slot, slotLabel) {
+  const tiers = EQUIPMENT[classId][slot];
+  state.classUpgrades[classId] = state.classUpgrades[classId] || { weapon: 0, armor: 0 };
+  const ownedTier = state.classUpgrades[classId][slot] || 0;
+  const ownedName = ownedTier > 0 ? tiers[ownedTier - 1].name : "なし";
+  if (ownedTier >= tiers.length) {
+    return `<div class="equip-row"><div><strong>${slotLabel}: ${ownedName}</strong> <span class="desc">最大強化済み</span></div></div>`;
+  }
+  const next = tiers[ownedTier];
+  const statLabel = next.statKey === "mag" ? "魔力" : next.statKey === "def" ? "防御力" : "攻撃力";
+  const levelOk = classHasReachedLevel(state.roster, classId, next.level);
+  const goldOk = state.gold >= next.price;
+  const disabled = !levelOk || !goldOk;
+  const reason = !levelOk ? `Lv${next.level}到達で解禁` : (!goldOk ? "お金が足りません" : "");
+  return `
+    <div class="equip-row">
+      <div>
+        <strong>${slotLabel}: ${ownedName} → ${next.name}</strong>
+        <span class="desc">${statLabel}+${next.bonus}(現在から+${next.bonus - (ownedTier > 0 ? tiers[ownedTier - 1].bonus : 0)}) ${!levelOk ? `/ ${reason}` : ""}</span>
+      </div>
+      <button class="big" data-class="${classId}" data-slot="${slot}" ${disabled ? "disabled" : ""}>${next.price}G</button>
+    </div>
+  `;
+}
+
+function renderEquipmentList() {
+  const wrap = document.getElementById("equipmentList");
+  wrap.innerHTML = "";
+  Object.keys(CLASSES).forEach((classId) => {
+    const c2 = CLASSES[classId];
+    const card = document.createElement("div");
+    card.className = "equip-class-card";
+    card.innerHTML = `
+      <div class="equip-class-title"><img src="${c2.image}">${c2.ja}</div>
+      ${equipRowHtml(classId, "weapon", "武器")}
+      ${equipRowHtml(classId, "armor", "防具")}
+    `;
+    card.querySelectorAll("button[data-slot]").forEach((btn) => {
+      btn.onclick = () => buyEquipment(btn.dataset.class, btn.dataset.slot);
+    });
+    wrap.appendChild(card);
+  });
+}
+
+function buyEquipment(classId, slot) {
+  const tiers = EQUIPMENT[classId][slot];
+  state.classUpgrades[classId] = state.classUpgrades[classId] || { weapon: 0, armor: 0 };
+  const ownedTier = state.classUpgrades[classId][slot] || 0;
+  if (ownedTier >= tiers.length) return;
+  const next = tiers[ownedTier];
+  if (!classHasReachedLevel(state.roster, classId, next.level)) { alert(`Lv${next.level}に到達した${CLASSES[classId].ja}が必要です`); return; }
+  if (state.gold < next.price) { alert("お金が足りません"); return; }
+  state.gold -= next.price;
+  state.classUpgrades[classId][slot] = ownedTier + 1;
+  refreshEquipBonus(state.roster, classId, state.classUpgrades);
+  saveState();
+  playSfx("coin");
+  renderShop();
+}
+document.getElementById("buyHolyWaterBtn").onclick = () => {
+  if (state.gold < ITEMS.holyWater.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.holyWater.price;
+  state.inventory.holyWater++;
+  saveState();
+  playSfx("coin");
+  renderShop();
+};
+document.getElementById("buyPotionBtn").onclick = () => {
+  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.potion.price;
+  state.inventory.potion++;
+  saveState();
+  playSfx("coin");
+  renderShop();
+};
+document.getElementById("shopBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+
+// ============ ダンジョン ============
+let currentFloor = 0;
+let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
+
+function getRosterChar(id) {
+  return state.roster.find((c) => c.id === id);
+}
+
+function enterDungeon() {
+  currentFloor = 1;
+  fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
+  dungeonLogLines = [];
+  renderDungeon();
+  showScreen("screen-dungeon");
+  dlog("ダンジョンに入った。");
+  playBgm("dungeon");
+}
+
+let dungeonLogLines = [];
+function dlog(msg) {
+  dungeonLogLines.push(msg);
+  const el = document.getElementById("dungeonLog");
+  const p = document.createElement("p");
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderPartyBar(elId, combatants, actingCharId) {
+  const bar = document.getElementById(elId);
+  bar.innerHTML = "";
+  combatants.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const dead = c.hp <= 0 || c.status !== "active";
+    const div = document.createElement("div");
+    div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "");
+    const ratio = Math.max(0, c.hp / c.maxHp) * 100;
+    const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+    div.innerHTML = `
+      <img src="${c2.image}">
+      <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
+      ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
+      <div class="fatigue-track"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
+      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}</div>
+    `;
+    bar.appendChild(div);
+  });
+}
+
+function renderDungeon() {
+  document.getElementById("floorBadge").textContent = `地下${currentFloor}階`;
+  renderPartyBar("dungeonPartyBar", fieldParty);
+  document.getElementById("corpseAlert").innerHTML = "";
+  playBgm("dungeon");
+}
+
+document.getElementById("retreatBtn").onclick = () => {
+  dlog("町に戻った。");
+  renderTown();
+  showScreen("screen-town");
+};
+
+document.getElementById("advanceBtn").onclick = () => {
+  if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
+    alert("行動できる仲間がいません");
+    return;
+  }
+  state.worldStep++;
+  tickWorldStep(state.roster, state.worldStep);
+  advanceFatigue(fieldParty);
+  currentFloor++;
+  saveState();
+
+  const corpseHere = state.roster.find((c) => c.status === "corpse" && c.corpseFloor === currentFloor);
+  renderDungeon();
+  if (corpseHere) {
+    showCorpseAlert(corpseHere);
+    return;
+  }
+  rollEncounter();
+};
+
+function showCorpseAlert(corpse) {
+  const c2 = CLASSES[corpse.classId];
+  const left = Math.max(0, corpse.corpseExpireStep - state.worldStep);
+  const div = document.getElementById("corpseAlert");
+  div.innerHTML = `
+    <div class="corpse-alert">
+      <p><strong>${corpse.name}(${c2.ja})の亡骸がここに眠っている...</strong></p>
+      <p>あと${left}歩以内に救出しないと消滅する。</p>
+      <button class="big primary" id="reviveBtn" ${state.inventory.holyWater <= 0 ? "disabled" : ""}>聖水を使って救出する(所持:${state.inventory.holyWater})</button>
+      <button class="big" id="skipCorpseBtn" style="margin-top:0.4rem;">今は見送る</button>
+    </div>
+  `;
+  document.getElementById("reviveBtn").onclick = () => {
+    state.inventory.holyWater--;
+    reviveCorpse(corpse);
+    fieldParty.push(corpse);
+    saveState();
+    playSfx("heal");
+    dlog(`${corpse.name}を聖水で蘇生した！パーティに戻った。`);
+    div.innerHTML = "";
+    renderDungeon();
+  };
+  document.getElementById("skipCorpseBtn").onclick = () => {
+    dlog("亡骸をその場に残し、先へ進んだ。");
+    div.innerHTML = "";
+    rollEncounter();
+  };
+}
+
+function rollEncounter() {
+  const roll = Math.random();
+  if (roll < 0.65) {
+    const enemies = pickEncounterForFloor(currentFloor);
+    startBattle(enemies);
+  } else if (roll < 0.9) {
+    const g = 5 + Math.floor(Math.random() * currentFloor * 3);
+    state.gold += g;
+    saveState();
+    playSfx("coin");
+    dlog(`${g}Gの財宝を見つけた！`);
+    renderDungeon();
+  } else {
+    dlog("静かな通路だ。何も起こらなかった。");
+    renderDungeon();
+  }
+}
+
+// ============ 戦闘 ============
+let battle = null;
+
+function startBattle(enemies) {
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null };
+  battleLogLines = [];
+  document.getElementById("battleLog").innerHTML = "";
+  showScreen("screen-battle");
+  playBgm("battle");
+  blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
+  nextRound();
+}
+
+let battleLogLines = [];
+function blog(msg) {
+  battleLogLines.push(msg);
+  const el = document.getElementById("battleLog");
+  const p = document.createElement("p");
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+
+function aliveField() {
+  return fieldParty.filter((c) => c.hp > 0 && c.status === "active");
+}
+function aliveEnemies() {
+  return battle.enemies.filter((e) => e.hp > 0);
+}
+
+function renderBattleScreen() {
+  renderPartyBar("battlePartyBar", fieldParty, battle.actingId);
+  const row = document.getElementById("enemyRow");
+  row.innerHTML = "";
+  battle.enemies.forEach((e) => {
+    const dead = e.hp <= 0;
+    const card = document.createElement("div");
+    card.className = "enemy-card" + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "");
+    const ratio = Math.max(0, e.hp / e.maxHp) * 100;
+    card.innerHTML = `
+      <img src="${e.image}" alt="${e.label}">
+      <div class="enemy-name">${e.label}</div>
+      <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
+    `;
+    row.appendChild(card);
+  });
+  const indicator = document.getElementById("turnIndicator");
+  const actingChar = fieldParty.find((c) => c.id === battle.actingId);
+  indicator.textContent = actingChar ? `${actingChar.name}のターン` : (battle.actingEnemyId ? "敵のターン" : "");
+}
+
+function nextRound() {
+  const alive = aliveField();
+  if (aliveEnemies().length === 0) { victory(); return; }
+  if (alive.length === 0) { defeat(); return; }
+  battle.order = turnOrder([...alive, ...aliveEnemies()]);
+  battle.orderIndex = 0;
+  processNext();
+}
+
+function processNext() {
+  battle.actingId = null;
+  battle.actingEnemyId = null;
+  if (aliveEnemies().length === 0) { renderBattleScreen(); victory(); return; }
+  const alive = aliveField();
+  if (alive.length === 0) { renderBattleScreen(); defeat(); return; }
+  if (battle.orderIndex >= battle.order.length) { nextRound(); return; }
+  const actor = battle.order[battle.orderIndex];
+  const isEnemy = battle.enemies.includes(actor);
+  if (isEnemy) {
+    if (actor.hp <= 0) { battle.orderIndex++; processNext(); return; }
+    battle.actingEnemyId = actor.instanceId;
+    renderBattleScreen();
+    setTimeout(() => {
+      enemyAttack(actor, alive, blog);
+      playSfx("hit_taken");
+      handleFieldDeaths();
+      battle.orderIndex++;
+      processNext();
+    }, 600);
+  } else {
+    if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
+    battle.actingId = actor.id;
+    renderBattleScreen();
+    renderActionButtons(actor);
+  }
+}
+
+function handleFieldDeaths() {
+  fieldParty.forEach((c) => {
+    if (c.hp <= 0 && c.status === "active") {
+      markCorpse(c, currentFloor, state.worldStep);
+      blog(`${c.name}は倒れた...亡骸は地下${currentFloor}階に残された。`);
+    }
+  });
+  saveState();
+}
+
+// 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする
+function pickSingleEnemyTarget(onPicked) {
+  const targets = aliveEnemies();
+  if (targets.length === 1) { onPicked(targets[0]); return; }
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  targets.forEach((t) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${t.label} (${t.hp}/${t.maxHp})`;
+    btn.onclick = () => onPicked(t);
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
+  grid.appendChild(backBtn);
+}
+
+function renderActionButtons(actor) {
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const c = CLASSES[actor.classId];
+
+  const atkBtn = document.createElement("button");
+  atkBtn.className = "big primary";
+  atkBtn.textContent = "攻撃";
+  atkBtn.onclick = () => {
+    pickSingleEnemyTarget((target) => {
+      playSfx("attack");
+      performAttack(actor, target, blog);
+      afterPlayerAction();
+    });
+  };
+  grid.appendChild(atkBtn);
+
+  (c.abilities || []).forEach((ability) => {
+    const abBtn = document.createElement("button");
+    abBtn.className = "big";
+    const cost = abilityMpCost(ability);
+    abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
+    if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
+    abBtn.onclick = () => {
+      if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
+      if (ability === "guard") { playSfx("select"); useAbility(actor, actor, "guard", blog); afterPlayerAction(); return; }
+      if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+        playSfx("attack");
+        useAbility(actor, aliveEnemies(), ability, blog);
+        afterPlayerAction();
+        return;
+      }
+      // 単体系(ファイア/会心の一撃/渾身の一撃)
+      pickSingleEnemyTarget((target) => {
+        playSfx("attack");
+        useAbility(actor, target, ability, blog);
+        afterPlayerAction();
+      });
+    };
+    grid.appendChild(abBtn);
+  });
+
+  const itemBtn = document.createElement("button");
+  itemBtn.className = "big";
+  itemBtn.textContent = `回復薬(${state.inventory.potion})`;
+  itemBtn.disabled = state.inventory.potion <= 0;
+  itemBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
+  grid.appendChild(itemBtn);
+
+  const fleeBtn = document.createElement("button");
+  fleeBtn.className = "big danger";
+  fleeBtn.textContent = "逃げる";
+  fleeBtn.onclick = () => {
+    blog("戦闘から逃げ出した！");
+    battle = null;
+    renderDungeon();
+    showScreen("screen-dungeon");
+  };
+  grid.appendChild(fleeBtn);
+}
+
+function renderAllyTargets(actor, kind) {
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  aliveField().forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
+    btn.onclick = () => {
+      if (kind === "heal") {
+        playSfx("heal");
+        useAbility(actor, target, "heal", blog);
+      } else {
+        state.inventory.potion--;
+        playSfx("heal");
+        usePotion(target, blog);
+        saveState();
+      }
+      afterPlayerAction();
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+function afterPlayerAction() {
+  handleFieldDeaths();
+  battle.orderIndex++;
+  processNext();
+}
+
+function victory() {
+  playSfx("victory");
+  let totalGold = 0, totalMsgs = [];
+  battle.enemies.forEach((e) => {
+    const g = goldReward(e);
+    totalGold += g;
+    aliveField().forEach((c) => grantXp(c, e.xp, blog));
+  });
+  state.gold += totalGold;
+  blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
+  saveState();
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">ダンジョンに戻る</button>`;
+  document.getElementById("battleContinueBtn").onclick = () => {
+    battle = null;
+    renderDungeon();
+    showScreen("screen-dungeon");
+  };
+}
+
+function defeat() {
+  blog("パーティは全滅した...命からがら町に逃げ帰った。");
+  document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
+  document.getElementById("battleBackTownBtn").onclick = () => {
+    battle = null;
+    renderTown();
+    showScreen("screen-town");
+  };
+}
+
+// ============ 初期化 ============
+renderTown();
+</script>
+</body>
+</html>

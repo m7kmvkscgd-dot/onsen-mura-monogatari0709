@@ -1,0 +1,26 @@
+{
+  "ninja_w0.5": {
+    "label": "忍者 (weight=0.5)",
+    "filename": "dungeon1_ipa_ninja_w0.5_00001_.png"
+  },
+  "ninja_w0.7": {
+    "label": "忍者 (weight=0.7)",
+    "filename": "dungeon1_ipa_ninja_w0.7_00001_.png"
+  },
+  "thief_w0.5": {
+    "label": "盗賊 (weight=0.5)",
+    "filename": "dungeon1_ipa_thief_w0.5_00001_.png"
+  },
+  "thief_w0.7": {
+    "label": "盗賊 (weight=0.7)",
+    "filename": "dungeon1_ipa_thief_w0.7_00001_.png"
+  },
+  "fighter_w0.5": {
+    "label": "戦士 (weight=0.5)",
+    "filename": "dungeon1_ipa_fighter_w0.5_00001_.png"
+  },
+  "fighter_w0.7": {
+    "label": "戦士 (weight=0.7)",
+    "filename": "dungeon1_ipa_fighter_w0.7_00001_.png"
+  }
+}

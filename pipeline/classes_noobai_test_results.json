@@ -1,0 +1,42 @@
+{
+  "fighter": {
+    "label": "戦士",
+    "desc": "a sturdy fighter girl in polished plate armor over a simple tunic, wielding a short sword and round shield, short brown hair, a brave confident expression",
+    "filename": "dungeon1_class_fighter_noobai_00001_.png"
+  },
+  "mage": {
+    "label": "魔法使い",
+    "desc": "a mage girl in a flowing blue robe with a tall pointed wizard hat, holding a wooden staff topped with a glowing crystal, long violet hair, a curious mystical expression",
+    "filename": "dungeon1_class_mage_noobai_00001_.png"
+  },
+  "priest": {
+    "label": "僧侶",
+    "desc": "a priest girl in white-and-gold holy robes with a simple veil, holding a small mace with a holy symbol, soft platinum-blonde hair, a gentle kind expression",
+    "filename": "dungeon1_class_priest_noobai_00001_.png"
+  },
+  "thief": {
+    "label": "盗賊",
+    "desc": "a thief girl in a dark hooded cloak and leather outfit, twin daggers at her belt, short messy auburn hair peeking from the hood, a sly playful smirk",
+    "filename": "dungeon1_class_thief_noobai_00001_.png"
+  },
+  "samurai": {
+    "label": "侍",
+    "desc": "a samurai girl in traditional lamellar armor over a red-and-white kimono, a katana sheathed at her hip, long black hair tied back, a calm disciplined expression",
+    "filename": "dungeon1_class_samurai_noobai_00001_.png"
+  },
+  "ninja": {
+    "label": "忍者",
+    "desc": "a ninja girl in a fitted dark grey-and-purple outfit with a face scarf pulled down, kunai strapped to her thigh, short black hair, a sharp stealthy gaze",
+    "filename": "dungeon1_class_ninja_noobai_00001_.png"
+  },
+  "sage": {
+    "label": "賢者",
+    "desc": "a sage girl in an ornate robe blending arcane purple and holy white, holding a tall staff topped with both a crystal and a small holy emblem, silver hair, a wise serene expression",
+    "filename": "dungeon1_class_sage_noobai_00001_.png"
+  },
+  "paladin": {
+    "label": "パラディン",
+    "desc": "a paladin girl in gleaming golden-white holy armor with a small holy-water flask at her belt, a sword and a kite shield marked with a holy emblem, long golden hair, a righteous determined expression",
+    "filename": "dungeon1_class_paladin_noobai_00001_.png"
+  }
+}
