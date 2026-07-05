@@ -65,6 +65,7 @@
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }
   .status-tag.lost { background: #333; color: #888; }
+  .status-tag.bathing { background: #234a4a; color: #7fd0e0; }
   .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
   .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem; text-align: center; cursor: pointer; }
   .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
@@ -83,8 +84,8 @@
   .equip-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
   .equip-row .desc { font-size: 0.68rem; color: var(--text-muted); }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
-  .party-bar { display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem; background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); }
-  .party-member { flex: 1; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; }
+  .party-bar { display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem; background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); justify-content: center; }
+  .party-member { flex: 0 1 110px; max-width: 110px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; }
   .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
@@ -113,7 +114,13 @@
     width: 100%; max-width: 480px; z-index: 5; background: #1a1410;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }
-  .battle-content { flex: 1; }
+  .battle-content { flex: 1; padding-bottom: 84px; }
+  .battle-flee-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; z-index: 6;
+    background: var(--panel); backdrop-filter: blur(2px);
+    padding: 0.7rem 1rem; box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+  }
   .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
   .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; min-height: 158px; }
   .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
@@ -135,7 +142,13 @@
     18% { opacity: 1; transform: translate(-50%, -6px) scale(1.2); }
     100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
   }
-  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); }
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  @keyframes enemyLunge {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(14px); }
+    65% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+  }
   .enemy-card.dead { opacity: 0.25; }
   .enemy-card img { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
@@ -180,7 +193,7 @@
       <p class="gold" id="tavernGold">0G</p>
       <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる(20G)</button>
       <h2>パーティ編成(最大4人)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロストは選べません。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロスト・入浴中は選べません。</p>
       <div id="rosterList"></div>
 
       <h2 style="margin-top:1rem;">新しい冒険者を仲間にする</h2>
@@ -251,7 +264,7 @@
     <div class="body-pad">
       <button class="big" id="onsenBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="onsenGold">0G</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴すると疲労度が50回復します(宿屋では疲労度は抜けません)。レベルが高いほど入浴料は上がり、入った後は半日再入浴できません。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴するとストレスが50回復します(宿屋ではストレスは抜けません)。レベルが高いほど入浴料は上がり、入浴中(半日)は冒険に連れて行けません。</p>
       <div id="onsenList"></div>
       <button class="big" id="onsenBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -277,13 +290,16 @@
     <div class="battle-top" id="battleTop">
       <div class="battle-bg" id="battleBg">
         <div class="enemy-row" id="enemyRow"></div>
+        <div class="turn-indicator" id="turnIndicator"></div>
+        <div class="action-grid" id="actionGrid"></div>
         <div class="party-bar" id="battlePartyBar"></div>
       </div>
-      <div class="turn-indicator" id="turnIndicator"></div>
     </div>
     <div class="battle-content" id="battleContent">
       <div id="battleLog"></div>
-      <div class="action-grid" id="actionGrid"></div>
+    </div>
+    <div class="battle-flee-bar">
+      <button class="big danger" id="fleeBtn">逃げる</button>
     </div>
   </div>
 
@@ -432,7 +448,10 @@ function showScreen(id) {
 }
 
 function statusLabel(c) {
-  if (c.status === "active") return `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+  if (c.status === "active") {
+    if (!canUseOnsen(c, state.halfDayStep)) return "入浴中(半日は連れて行けません)";
+    return `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+  }
   if (c.status === "critical") {
     const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
     const daysLeft = Math.ceil(halfLeft / 2);
@@ -442,6 +461,7 @@ function statusLabel(c) {
 }
 
 function statusTagClass(c) {
+  if (c.status === "active" && !canUseOnsen(c, state.halfDayStep)) return "bathing";
   return c.status;
 }
 
@@ -492,13 +512,14 @@ function renderRosterList() {
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const inParty = state.activePartyIds.includes(c.id);
-    const selectable = c.status === "active";
+    const selectable = c.status === "active" && canUseOnsen(c, state.halfDayStep);
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
+    const tagText = c.status === "active" ? (canUseOnsen(c, state.halfDayStep) ? "待機中" : "入浴中") : c.status === "critical" ? "瀕死" : "ロスト";
     row.innerHTML = `
       <img src="${c2.image}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${c.status === "active" ? "待機中" : c.status === "critical" ? "瀕死" : "ロスト"}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
         <div class="roster-sub">${statusLabel(c)}</div>
       </div>
       <div class="roster-actions">
@@ -559,7 +580,7 @@ function renderStatusScreen(charId) {
   document.getElementById("statDef").textContent = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
   document.getElementById("statSpd").textContent = effectiveStat(c, "spd");
   document.getElementById("statMag").textContent = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
-  document.getElementById("statStatus").textContent = statusLabel(c) + (c.status === "active" ? ` / 疲労度${c.fatigue || 0}` : "");
+  document.getElementById("statStatus").textContent = statusLabel(c) + (c.status === "active" ? ` / ストレス${c.fatigue || 0}` : "");
 }
 document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
 
@@ -613,7 +634,7 @@ function renderOnsen() {
     const noFatigue = (c.fatigue || 0) <= 0;
     const disabled = cooling || noFatigue || state.gold < cost;
     let label = `入る(${cost}G)`;
-    if (noFatigue) label = "疲労なし";
+    if (noFatigue) label = "ストレスなし";
     else if (cooling) label = "半日は入浴不可";
     const row = document.createElement("div");
     row.className = "roster-row";
@@ -621,7 +642,7 @@ function renderOnsen() {
       <img src="${c2.image}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
-        <div class="roster-sub">疲労度 ${c.fatigue || 0}</div>
+        <div class="roster-sub">ストレス ${c.fatigue || 0}</div>
         <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
       </div>
       <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
@@ -730,10 +751,10 @@ function pruneActiveParty() {
   const seen = new Set();
   state.activePartyIds = state.activePartyIds.filter((id) => {
     const c = getRosterChar(id);
-    if (!c || c.status !== "active" || seen.has(id)) return false;
+    if (!c || c.status !== "active" || !canUseOnsen(c, state.halfDayStep) || seen.has(id)) return false;
     seen.add(id);
     return true;
-  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
+  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)。入浴中のキャラも除外する
 }
 
 function enterDungeon() {
@@ -900,6 +921,16 @@ function aliveEnemies() {
   return battle.enemies.filter((e) => e.hp > 0);
 }
 
+// 戦闘上部(敵/コマンド/味方)をposition:fixedにしているため、実測した高さ分だけ
+// 下のログ欄を押し下げて重なりを防ぐ。actionGridの中身が変わるたびに呼び直す
+function syncBattleTopHeight() {
+  requestAnimationFrame(() => {
+    const top = document.getElementById("battleTop");
+    const content = document.getElementById("battleContent");
+    if (top && content) content.style.paddingTop = top.offsetHeight + "px";
+  });
+}
+
 function renderBattleScreen() {
   renderPartyBar("battlePartyBar", fieldParty, battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -928,12 +959,7 @@ function renderBattleScreen() {
   const indicator = document.getElementById("turnIndicator");
   const actingChar = fieldParty.find((c) => c.id === battle.actingId);
   indicator.textContent = actingChar ? `${actingChar.name}のターン` : (battle.actingEnemyId ? "敵のターン" : "");
-  // 戦闘上部(敵/味方の表示)を画面に固定しているため、実測した高さ分だけ下のログ/コマンド欄を押し下げて重なりを防ぐ
-  requestAnimationFrame(() => {
-    const top = document.getElementById("battleTop");
-    const content = document.getElementById("battleContent");
-    if (top && content) content.style.paddingTop = top.offsetHeight + "px";
-  });
+  syncBattleTopHeight();
 }
 
 function nextRound() {
@@ -1019,6 +1045,7 @@ function pickSingleEnemyTarget(onPicked) {
     renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
   };
   grid.appendChild(backBtn);
+  syncBattleTopHeight();
 }
 
 function renderActionButtons(actor) {
@@ -1073,18 +1100,17 @@ function renderActionButtons(actor) {
   itemBtn.disabled = state.inventory.potion <= 0;
   itemBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
   grid.appendChild(itemBtn);
-
-  const fleeBtn = document.createElement("button");
-  fleeBtn.className = "big danger";
-  fleeBtn.textContent = "逃げる";
-  fleeBtn.onclick = () => {
-    blog("戦闘から逃げ出した！");
-    battle = null;
-    renderDungeon();
-    showScreen("screen-dungeon");
-  };
-  grid.appendChild(fleeBtn);
+  syncBattleTopHeight();
 }
+
+// 逃げるは画面下部に常設(行動選択の一覧には含めない)。自分のターンで行動待ちの時だけ有効
+document.getElementById("fleeBtn").onclick = () => {
+  if (!battle || battle.actingId == null) return;
+  blog("戦闘から逃げ出した！");
+  battle = null;
+  renderDungeon();
+  showScreen("screen-dungeon");
+};
 
 function renderAllyTargets(actor, kind) {
   const grid = document.getElementById("actionGrid");
@@ -1114,6 +1140,7 @@ function renderAllyTargets(actor, kind) {
   backBtn.textContent = "戻る";
   backBtn.onclick = () => renderActionButtons(actor);
   grid.appendChild(backBtn);
+  syncBattleTopHeight();
 }
 
 function afterPlayerAction() {

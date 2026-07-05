@@ -248,13 +248,14 @@ function goldReward(enemy) {
 
 function performAttack(actor, target, log) {
   const dmg = rollBasicAttack(effectiveStat(actor, "atk"), target.def);
-  applyDamageToTarget(target, dmg, log, `${actor.label}の攻撃！`);
+  applyDamageToTarget(target, dmg, log, actor.label);
   return dmg;
 }
 
-function applyDamageToTarget(target, dmg, log, prefix) {
+// ログは「静香は鬼火に50ダメージ！」の1行のみにする(技名などの装飾は付けない)
+function applyDamageToTarget(target, dmg, log, actorLabel) {
   target.hp = Math.max(0, target.hp - dmg);
-  log(`${prefix} ${target.label}に${dmg}ダメージ！`);
+  log(`${actorLabel}は${target.label}に${dmg}ダメージ！`);
 }
 
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
@@ -263,25 +264,25 @@ function useAbility(actor, target, abilityType, log) {
   const cost = abilityMpCost(abilityType);
   if (cost > 0) {
     if (actor.mp < cost) {
-      log(`${actor.label}はMPが足りず${ABILITY_LABEL[abilityType]}を使えなかった！`);
+      log(`${actor.label}はMPが足りない！`);
       return { failed: true };
     }
     actor.mp -= cost;
   }
   if (abilityType === "guard") {
     actor.guarding = true;
-    log(`${actor.label}は身を守る構えを取った！`);
+    log(`${actor.label}は身を守る構え！`);
     return { guard: true };
   }
   if (abilityType === "magicAttack") {
     const dmg = rollMagicAttack(effectiveStat(actor, "mag"), target.def);
-    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    applyDamageToTarget(target, dmg, log, actor.label);
     return { dmg };
   }
   if (abilityType === "magicAttackAll") {
     const results = target.filter((t) => t.hp > 0).map((t) => {
       const dmg = Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6));
-      applyDamageToTarget(t, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+      applyDamageToTarget(t, dmg, log, actor.label);
       return dmg;
     });
     return { dmgs: results };
@@ -289,36 +290,36 @@ function useAbility(actor, target, abilityType, log) {
   if (abilityType === "physicalAttackAll") {
     const results = target.filter((t) => t.hp > 0).map((t) => {
       const dmg = Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.55));
-      applyDamageToTarget(t, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+      applyDamageToTarget(t, dmg, log, actor.label);
       return dmg;
     });
     return { dmgs: results };
   }
   if (abilityType === "powerAttack") {
     const dmg = rollPowerAttack(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    applyDamageToTarget(target, dmg, log, actor.label);
     return { dmg };
   }
   if (abilityType === "critAttack") {
     const dmg = rollCritAttack(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    applyDamageToTarget(target, dmg, log, actor.label);
     return { dmg };
   }
   if (abilityType === "preciseShot") {
     const dmg = rollPreciseShot(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    applyDamageToTarget(target, dmg, log, actor.label);
     return { dmg };
   }
   if (abilityType === "cannonShot") {
     const dmg = rollCannonShot(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    applyDamageToTarget(target, dmg, log, actor.label);
     actor.reloading = true;
     return { dmg };
   }
   if (abilityType === "heal") {
     const heal = rollHeal(effectiveStat(actor, "mag"));
     target.hp = Math.min(target.maxHp, target.hp + heal);
-    log(`${actor.label}の${ABILITY_LABEL[abilityType]}！ ${target.label}のHPが${heal}回復した！(MP-${cost})`);
+    log(`${actor.label}は${target.label}を${heal}回復！`);
     return { heal };
   }
   return null;
@@ -327,7 +328,7 @@ function useAbility(actor, target, abilityType, log) {
 function usePotion(target, log) {
   const heal = 30;
   target.hp = Math.min(target.maxHp, target.hp + heal);
-  log(`${target.label}は回復薬でHPが${heal}回復した！`);
+  log(`${target.label}は回復薬で${heal}回復！`);
   return heal;
 }
 
@@ -341,10 +342,10 @@ function enemyAttack(enemy, targets, log) {
     dmg = Math.max(1, Math.round(dmg * 0.4));
     target.guarding = false;
     target.hp = Math.max(0, target.hp - dmg);
-    log(`${enemy.label}の攻撃！ ${target.label}はかばう構えで衝撃を軽減し、${dmg}ダメージ！`);
+    log(`${enemy.label}は${target.label}に${dmg}ダメージ(かばう)！`);
   } else {
     target.hp = Math.max(0, target.hp - dmg);
-    log(`${enemy.label}の攻撃！ ${target.label}に${dmg}ダメージ！`);
+    log(`${enemy.label}は${target.label}に${dmg}ダメージ！`);
   }
   return { target, dmg };
 }
