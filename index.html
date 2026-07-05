@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ダンジョン1</title>
+<title>温泉村物語</title>
 <style>
   :root {
     --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
@@ -120,21 +120,21 @@
         <span class="gold" id="townGold">0G</span>
         <button class="mute-btn" id="muteBtn">🔊</button>
       </div>
-      <h1>城下町</h1>
+      <h1>湯乃里温泉</h1>
     </div>
     <div class="body-pad">
       <div class="btn-col">
-        <button class="big" id="toTavernBtn">🍺 酒場</button>
+        <button class="big" id="toTavernBtn">🏨 宿屋</button>
         <button class="big" id="toShopBtn">🛒 道具屋</button>
         <button class="big primary" id="toDungeonBtn">🕯 ダンジョンへ向かう</button>
       </div>
     </div>
   </div>
 
-  <!-- 酒場 -->
+  <!-- 宿屋 -->
   <div class="screen" id="screen-tavern">
     <div class="hero" style="background-image:url('assets/bg/tavern.png');min-height:100px;">
-      <h1>酒場</h1>
+      <h1>宿屋</h1>
     </div>
     <div class="body-pad">
       <h2>パーティ編成(最大4人)</h2>
@@ -232,7 +232,7 @@
 
 </div>
 
-<audio id="bgmAudio" src="assets/bgm/town_bgm.ogg" loop></audio>
+<audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>
@@ -285,7 +285,7 @@ function saveState() {
 // ============ 音声 ============
 // 場面(町/ダンジョン探索/戦闘)ごとに曲を切り替える
 const BGM_TRACKS = {
-  town: "assets/bgm/town_bgm.ogg",
+  town: "assets/bgm/town_bgm.mp3",
   dungeon: "assets/bgm/dungeon_bgm.ogg",
   battle: "assets/bgm/battle_bgm.ogg",
 };
@@ -355,13 +355,13 @@ document.getElementById("toShopBtn").onclick = () => { playSfx("select"); render
 document.getElementById("toDungeonBtn").onclick = () => {
   playSfx("select");
   if (state.activePartyIds.length === 0) {
-    alert("酒場でパーティを編成してください");
+    alert("宿屋でパーティを編成してください");
     return;
   }
   enterDungeon();
 };
 
-// ============ 酒場 ============
+// ============ 宿屋 ============
 function renderClassGrid() {
   const grid = document.getElementById("classGrid");
   grid.innerHTML = "";
