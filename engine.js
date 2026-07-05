@@ -311,6 +311,7 @@ function usePotion(target, log) {
   const heal = 30;
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は回復薬でHPが${heal}回復した！`);
+  return heal;
 }
 
 // enemy一体がtargets(生存中の味方)からランダムに1人を攻撃する。かばう中の相手なら大幅減衰した上で構えを消費する

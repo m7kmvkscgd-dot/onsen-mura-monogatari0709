@@ -64,6 +64,12 @@
 ## ダンジョン→「深淵の森」に改称+専用の昼夜背景を追加
 ユーザーの指示で「ダンジョン」という呼称をゲーム内表示から廃止し、「深淵の森」に統一(内部のid/関数名/コード上のコメントは`dungeon`のまま維持、変更したのはプレイヤーに見える文言のみ)。あわせてユーザー提供の森の昼/夜イラスト2枚を`assets/bg/forest_day.png`/`forest_night.png`として追加し、`BG_SETS.dungeon`に登録。ダンジョン探索画面に`.dungeon-bg`という全画面固定背景(`.hero`と同様のposition:fixedパターン、既存コンテンツは`.dungeon-content`でラップしてz-index:1に)を新設し、戦闘画面の`.battle-bg`(旧: PIL生成のタイル状ダンジョン床`assets/bg/dungeon.png`、削除済み)も同じ森画像を使うようにした。`updateSceneBackgrounds()`が`dungeonBg`/`battleBg`要素も含めて一括更新するため、昼夜切り替えは町・宿屋と同じ仕組みでそのまま連動する。あわせて「地下◯階」という表記も森のテーマに合わないため「◯層目」に変更(`floorBadge`・瀕死ステータス表示・戦闘不能ログ)。
 
+## 戦闘UIの視認性改善(表示固定・敵タップ選択・ダメージポップアップ)
+「戦闘中のキャラ表示が上下に動いて見にくい」「対象選択が分かりにくい」「ダメージが直感的にわからない」という指摘を受けて3点対応した:
+- **表示位置の固定**: `.battle-bg`(敵/味方の表示)と`.turn-indicator`を`.battle-top`という`position:fixed`のコンテナにまとめ、`.hero`/`.dungeon-bg`と同じ「画面上部に固定」パターンを適用。行動ボタンの数が変わって`#battleLog`/`.action-grid`の高さが変化しても、キャラ表示が動かなくなった。`.battle-content`(ログ+コマンド欄)には`renderBattleScreen()`内で`battleTop`の実測高さを`requestAnimationFrame`で計測して`padding-top`を動的に設定し、固定ヘッダーとの重なりを防いでいる
+- **敵カード直接タップで対象選択**: 元々`.enemy-card.targetable`というCSSクラスは定義済みだったが未使用だった。`pendingEnemyPick`というグローバル変数を追加し、`pickSingleEnemyTarget()`が呼ばれるたびにセットして`renderBattleScreen()`を再描画→対象になり得る敵カードに`targetable`クラス(赤いパルスアニメーション付き)とクリックハンドラを付与。既存のテキストボタン列(`#actionGrid`内)は残したまま、敵画像を直接タップしても選べるようにした(両方とも同じコールバックに合流)
+- **ダメージ/回復のポップアップ表示**: `popupOn(targetId, text, cls)`ヘルパーを追加し、`.enemy-card`/`.party-member`に`data-id`属性を付与した上で対象要素に`.dmg-pop`(ふわっと浮き上がって消えるCSSアニメーション、`dmgFloat` 0.9秒)を差し込む。通常攻撃・単体アビリティ・全体アビリティ(`useAbility`の`dmgs`配列を`aliveEnemies()`の順序とzipして対応付け)・敵の攻撃・回復魔法・回復薬のすべての箇所に適用済み。`engine.js`の`usePotion()`は回復量を返り値で返すよう変更(元は返り値なしだった)
+
 ## 未決定事項(次回セッションで詰める)
 - ステータス名・UI文言なども含めて和風に統一するかどうか(「◯層目」以外は概ね西洋ファンタジー風の言い回しが残っている)
 - 昼夜は見た目(背景画像)のみの変更で、瀕死ロスト判定以外のゲームバランスへの影響は無い

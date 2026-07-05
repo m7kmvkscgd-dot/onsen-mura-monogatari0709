@@ -107,11 +107,33 @@
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
   .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
+  .battle-top {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; z-index: 5; background: #1a1410;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .battle-content { flex: 1; }
   .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
-  .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; }
-  .enemy-card { text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
-  .enemy-card.targetable { cursor: pointer; }
-  .enemy-card.targetable:active { transform: scale(0.96); }
+  .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; min-height: 158px; }
+  .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
+  .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
+  .enemy-card.targetable:active { transform: scale(0.94); }
+  @keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(209,80,63,0.35); }
+    50% { box-shadow: 0 0 16px rgba(209,80,63,0.8); }
+  }
+  .dmg-pop {
+    position: absolute; left: 50%; top: 25%; transform: translate(-50%, 0);
+    font-weight: 800; font-size: 1.15rem; color: #fff2b0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95); pointer-events: none;
+    animation: dmgFloat 0.9s ease-out forwards; z-index: 20; white-space: nowrap;
+  }
+  .dmg-pop.heal { color: #8fe0a0; }
+  @keyframes dmgFloat {
+    0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
+    18% { opacity: 1; transform: translate(-50%, -6px) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+  }
   .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); }
   .enemy-card.dead { opacity: 0.25; }
   .enemy-card img { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
@@ -234,13 +256,17 @@
 
   <!-- 戦闘 -->
   <div class="screen" id="screen-battle">
-    <div class="battle-bg" id="battleBg">
-      <div class="enemy-row" id="enemyRow"></div>
-      <div class="party-bar" id="battlePartyBar"></div>
+    <div class="battle-top" id="battleTop">
+      <div class="battle-bg" id="battleBg">
+        <div class="enemy-row" id="enemyRow"></div>
+        <div class="party-bar" id="battlePartyBar"></div>
+      </div>
+      <div class="turn-indicator" id="turnIndicator"></div>
     </div>
-    <div class="turn-indicator" id="turnIndicator"></div>
-    <div id="battleLog"></div>
-    <div class="action-grid" id="actionGrid"></div>
+    <div class="battle-content" id="battleContent">
+      <div id="battleLog"></div>
+      <div class="action-grid" id="actionGrid"></div>
+    </div>
   </div>
 
 </div>
@@ -657,6 +683,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const dead = c.hp <= 0 || c.status !== "active";
     const div = document.createElement("div");
     div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "");
+    div.dataset.id = c.id;
     const ratio = Math.max(0, c.hp / c.maxHp) * 100;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     div.innerHTML = `
@@ -751,6 +778,18 @@ function rollEncounter() {
 
 // ============ 戦闘 ============
 let battle = null;
+let pendingEnemyPick = null; // 対象選択待ちの間、敵カード画像を直接タップしても選べるようにする際のコールバック
+
+// 与えたダメージ/回復をキャラクターの上にふわっと数字で表示する
+function popupOn(targetId, text, cls) {
+  const el = document.querySelector(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"]`);
+  if (!el) return;
+  const pop = document.createElement("div");
+  pop.className = "dmg-pop" + (cls ? " " + cls : "");
+  pop.textContent = text;
+  el.appendChild(pop);
+  setTimeout(() => pop.remove(), 900);
+}
 
 function startBattle(enemies) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null };
@@ -785,19 +824,34 @@ function renderBattleScreen() {
   row.innerHTML = "";
   battle.enemies.forEach((e) => {
     const dead = e.hp <= 0;
+    const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "");
+    card.className = "enemy-card" + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "");
+    card.dataset.id = e.instanceId;
     const ratio = Math.max(0, e.hp / e.maxHp) * 100;
     card.innerHTML = `
       <img src="${e.image}" alt="${e.label}">
       <div class="enemy-name">${e.label}</div>
       <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
     `;
+    if (targetable) {
+      card.onclick = () => {
+        const picked = pendingEnemyPick;
+        pendingEnemyPick = null;
+        picked(e);
+      };
+    }
     row.appendChild(card);
   });
   const indicator = document.getElementById("turnIndicator");
   const actingChar = fieldParty.find((c) => c.id === battle.actingId);
   indicator.textContent = actingChar ? `${actingChar.name}のターン` : (battle.actingEnemyId ? "敵のターン" : "");
+  // 戦闘上部(敵/味方の表示)を画面に固定しているため、実測した高さ分だけ下のログ/コマンド欄を押し下げて重なりを防ぐ
+  requestAnimationFrame(() => {
+    const top = document.getElementById("battleTop");
+    const content = document.getElementById("battleContent");
+    if (top && content) content.style.paddingTop = top.offsetHeight + "px";
+  });
 }
 
 function nextRound() {
@@ -823,7 +877,8 @@ function processNext() {
     battle.actingEnemyId = actor.instanceId;
     renderBattleScreen();
     setTimeout(() => {
-      enemyAttack(actor, alive, blog);
+      const result = enemyAttack(actor, alive, blog);
+      if (result) popupOn(result.target.id, `-${result.dmg}`, "dmg");
       playSfx("hit_taken");
       handleFieldDeaths();
       battle.orderIndex++;
@@ -856,23 +911,30 @@ function handleFieldDeaths() {
   saveState();
 }
 
-// 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする
+// 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする。
+// 対象選択中は上の敵カード画像を直接タップしても選べる(pendingEnemyPick、renderBattleScreen側で処理)
 function pickSingleEnemyTarget(onPicked) {
   const targets = aliveEnemies();
   if (targets.length === 1) { onPicked(targets[0]); return; }
+  pendingEnemyPick = (t) => { onPicked(t); };
+  renderBattleScreen();
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   targets.forEach((t) => {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${t.label} (${t.hp}/${t.maxHp})`;
-    btn.onclick = () => onPicked(t);
+    btn.onclick = () => { pendingEnemyPick = null; onPicked(t); };
     grid.appendChild(btn);
   });
   const backBtn = document.createElement("button");
   backBtn.className = "big danger";
   backBtn.textContent = "戻る";
-  backBtn.onclick = () => renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
+  backBtn.onclick = () => {
+    pendingEnemyPick = null;
+    renderBattleScreen();
+    renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
+  };
   grid.appendChild(backBtn);
 }
 
@@ -887,7 +949,8 @@ function renderActionButtons(actor) {
   atkBtn.onclick = () => {
     pickSingleEnemyTarget((target) => {
       playSfx("attack");
-      performAttack(actor, target, blog);
+      const dmg = performAttack(actor, target, blog);
+      popupOn(target.instanceId, `-${dmg}`, "dmg");
       afterPlayerAction();
     });
   };
@@ -904,14 +967,17 @@ function renderActionButtons(actor) {
       if (ability === "guard") { playSfx("select"); useAbility(actor, actor, "guard", blog); afterPlayerAction(); return; }
       if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
         playSfx("attack");
-        useAbility(actor, aliveEnemies(), ability, blog);
+        const targetsList = aliveEnemies();
+        const result = useAbility(actor, targetsList, ability, blog);
+        if (result && result.dmgs) targetsList.forEach((t, i) => popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg"));
         afterPlayerAction();
         return;
       }
-      // 単体系(ファイア/会心の一撃/渾身の一撃)
+      // 単体系(会心の一撃/奇襲/呪符ノ術など)
       pickSingleEnemyTarget((target) => {
         playSfx("attack");
-        useAbility(actor, target, ability, blog);
+        const result = useAbility(actor, target, ability, blog);
+        if (result && result.dmg != null) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
         afterPlayerAction();
       });
     };
@@ -947,11 +1013,13 @@ function renderAllyTargets(actor, kind) {
     btn.onclick = () => {
       if (kind === "heal") {
         playSfx("heal");
-        useAbility(actor, target, "heal", blog);
+        const result = useAbility(actor, target, "heal", blog);
+        if (result && result.heal) popupOn(target.id, `+${result.heal}`, "heal");
       } else {
         state.inventory.potion--;
         playSfx("heal");
-        usePotion(target, blog);
+        const heal = usePotion(target, blog);
+        popupOn(target.id, `+${heal}`, "heal");
         saveState();
       }
       afterPlayerAction();
