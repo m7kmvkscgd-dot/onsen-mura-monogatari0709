@@ -56,9 +56,9 @@ function createCharacter(name, classId, classUpgrades) {
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町で全回復)
     guarding: false,
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
-    status: "active", // active | corpse | lost
-    corpseFloor: null,
-    corpseExpireStep: null,
+    status: "active", // active | critical | lost
+    criticalFloor: null,
+    criticalExpireHalfDay: null,
   };
 }
 
@@ -325,32 +325,35 @@ function enemyAttack(enemy, targets, log) {
   return { target, dmg };
 }
 
-// 戦闘不能になったキャラをそのフロアの死体にする(パーマデス+死体回収システム)
-function markCorpse(character, floor, worldStep) {
-  character.status = "corpse";
+// 戦闘不能になったキャラをそのフロアで瀕死にする(死体ではなく生存しているが動けない状態)。
+// 別の仲間がそのフロアに到達し、救出コマンドを使えば連れ帰れる(ただし冒険はそこで終了する)。
+// 誰も助けに来ないまま、昼夜が1〜2日分(halfDayStepにして2〜4)経過するとロスト(完全消滅)する
+function markCritical(character, floor, halfDayStep) {
+  character.status = "critical";
   character.hp = 0;
-  character.corpseFloor = floor;
-  character.corpseExpireStep = worldStep + CORPSE_STEP_LIMIT;
+  character.criticalFloor = floor;
+  const span = CRITICAL_MIN_HALFDAYS + Math.floor(Math.random() * (CRITICAL_MAX_HALFDAYS - CRITICAL_MIN_HALFDAYS + 1));
+  character.criticalExpireHalfDay = halfDayStep + span;
 }
 
-// worldStepが進むたび、期限切れの死体をロスト(完全消滅)にする
-function tickWorldStep(characters, worldStep) {
+// 昼夜が切り替わる(halfDayStepが進む)たび、期限切れの瀕死キャラをロストにする
+function tickHalfDay(characters, halfDayStep) {
   characters.forEach((c) => {
-    if (c.status === "corpse" && worldStep > c.corpseExpireStep) {
+    if (c.status === "critical" && halfDayStep > c.criticalExpireHalfDay) {
       c.status = "lost";
     }
   });
 }
 
-// 聖水を使って死体を蘇生する(HP半分で復活)
-function reviveCorpse(character) {
-  if (character.status !== "corpse") return false;
+// 瀕死の仲間を救出する(HP半分で復活)。呼び出し側でその冒険を終了させて町に戻す
+function rescueCritical(character) {
+  if (character.status !== "critical") return false;
   const c = CLASSES[character.classId];
   character.status = "active";
   character.hp = Math.max(1, Math.round(c.hp * 0.5));
   character.fatigue = 0;
-  character.corpseFloor = null;
-  character.corpseExpireStep = null;
+  character.criticalFloor = null;
+  character.criticalExpireHalfDay = null;
   return true;
 }
 
@@ -404,7 +407,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
-    markCorpse, tickWorldStep, reviveCorpse, turnOrder, simulateBattle, simulateBattleMulti,
+    markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, restAtTown, abilityMpCost,
     advanceFatigue, fatigueMalus, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
   };

@@ -53,7 +53,6 @@ const ENEMIES = {
 };
 
 const ITEMS = {
-  holyWater: { id: "holyWater", ja: "聖水", price: 50, desc: "ダンジョンに残された死体を蘇生する(その場で使用)" },
   potion: { id: "potion", ja: "回復薬", price: 20, desc: "戦闘中に1人のHPを30回復する" },
 };
 
@@ -98,11 +97,14 @@ const EQUIPMENT = {
   },
 };
 
-const CORPSE_STEP_LIMIT = 40; // 死亡時のworldStepからこの歩数以内に回収しないとロストする
+// 戦闘不能で瀕死になったキャラは、昼夜が切り替わるたび(halfDayStep)にカウントが進み、
+// この範囲でランダムに決まる猶予(2〜4 = 1〜2日分)を過ぎると誰も救出に来なくてもロストする
+const CRITICAL_MIN_HALFDAYS = 2; // 1日
+const CRITICAL_MAX_HALFDAYS = 4; // 2日
 
 const FATIGUE_PER_FLOOR = 4; // フィールドに出ているキャラが1階進むごとに溜まる疲労度
 const FATIGUE_MAX = 100;
 
 if (typeof module !== "undefined") {
-  module.exports = { CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CORPSE_STEP_LIMIT, FATIGUE_PER_FLOOR, FATIGUE_MAX };
+  module.exports = { CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS, FATIGUE_PER_FLOOR, FATIGUE_MAX };
 }
