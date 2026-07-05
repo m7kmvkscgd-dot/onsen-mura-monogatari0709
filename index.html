@@ -287,13 +287,14 @@ function saveState() {
 const BGM_TRACKS = {
   town: "assets/bgm/town_bgm.mp3",
   dungeon: "assets/bgm/dungeon_bgm.ogg",
-  battle: "assets/bgm/battle_bgm.ogg",
+  battle: "assets/bgm/battle_bgm.mp3",
 };
 const bgmAudio = document.getElementById("bgmAudio");
 bgmAudio.volume = 0.4;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
+const bgmPositions = {}; // 戦闘⇔ダンジョン往復時に曲を頭から再生し直さず続きから流すための再生位置記憶
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -304,9 +305,10 @@ document.addEventListener("pointerdown", unlockAudio, { once: true });
 
 function playBgm(key) {
   if (currentBgmKey === key) return;
+  if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
-  bgmAudio.currentTime = 0;
+  bgmAudio.currentTime = bgmPositions[key] || 0;
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 }
 
