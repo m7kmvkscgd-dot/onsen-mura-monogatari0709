@@ -84,7 +84,12 @@
   .equip-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
   .equip-row .desc { font-size: 0.68rem; color: var(--text-muted); }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
-  .party-bar { display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem; background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); justify-content: center; }
+  .party-bar {
+    position: fixed; top: 386px; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; z-index: 4;
+    display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); justify-content: center;
+  }
   .party-member { flex: 0 1 110px; max-width: 110px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; }
   .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
@@ -108,13 +113,13 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
-  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
+  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 570px; }
   .battle-top {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 5; background: #1a1410;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }
-  .battle-content { flex: 1; padding-bottom: 84px; }
+  .battle-content { flex: 1; padding-top: 570px; padding-bottom: 84px; }
   .battle-flee-bar {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 6;
@@ -122,7 +127,7 @@
     padding: 0.7rem 1rem; box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
-  .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; min-height: 158px; }
+  .enemy-row { display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
   .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
   .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
   .enemy-card.targetable:active { transform: scale(0.94); }
@@ -153,8 +158,12 @@
   .enemy-card img { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
-  .action-grid button { grid-column: span 1; }
-  .turn-indicator { text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--accent); padding: 0.4rem 0 0; background: rgba(20,24,27,0.72); }
+  .action-grid button {
+    grid-column: span 1; height: 51px; padding: 0.3rem;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 0.82rem; line-height: 1.1; overflow: hidden;
+  }
+  .turn-indicator { box-sizing: border-box; height: 28px; line-height: 28px; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--accent); padding: 0; background: rgba(20,24,27,0.72); }
   .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
   .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
   .bottom-actions { padding: 0.8rem 1rem; display: flex; gap: 0.6rem; }
@@ -273,8 +282,8 @@
   <!-- 深淵の森 -->
   <div class="screen" id="screen-dungeon">
     <div class="dungeon-bg" id="dungeonBg"></div>
+    <div class="party-bar" id="dungeonPartyBar"></div>
     <div class="dungeon-content">
-      <div class="party-bar" id="dungeonPartyBar"></div>
       <div class="floor-badge" id="floorBadge">1層目</div>
       <div id="criticalAlert"></div>
       <div id="dungeonLog"></div>
@@ -290,11 +299,11 @@
     <div class="battle-top" id="battleTop">
       <div class="battle-bg" id="battleBg">
         <div class="enemy-row" id="enemyRow"></div>
-        <div class="turn-indicator" id="turnIndicator"></div>
-        <div class="action-grid" id="actionGrid"></div>
-        <div class="party-bar" id="battlePartyBar"></div>
       </div>
+      <div class="turn-indicator" id="turnIndicator"></div>
+      <div class="action-grid" id="actionGrid"></div>
     </div>
+    <div class="party-bar" id="battlePartyBar"></div>
     <div class="battle-content" id="battleContent">
       <div id="battleLog"></div>
     </div>
@@ -921,16 +930,6 @@ function aliveEnemies() {
   return battle.enemies.filter((e) => e.hp > 0);
 }
 
-// 戦闘上部(敵/コマンド/味方)をposition:fixedにしているため、実測した高さ分だけ
-// 下のログ欄を押し下げて重なりを防ぐ。actionGridの中身が変わるたびに呼び直す
-function syncBattleTopHeight() {
-  requestAnimationFrame(() => {
-    const top = document.getElementById("battleTop");
-    const content = document.getElementById("battleContent");
-    if (top && content) content.style.paddingTop = top.offsetHeight + "px";
-  });
-}
-
 function renderBattleScreen() {
   renderPartyBar("battlePartyBar", fieldParty, battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -959,7 +958,6 @@ function renderBattleScreen() {
   const indicator = document.getElementById("turnIndicator");
   const actingChar = fieldParty.find((c) => c.id === battle.actingId);
   indicator.textContent = actingChar ? `${actingChar.name}のターン` : (battle.actingEnemyId ? "敵のターン" : "");
-  syncBattleTopHeight();
 }
 
 function nextRound() {
@@ -1045,7 +1043,6 @@ function pickSingleEnemyTarget(onPicked) {
     renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
   };
   grid.appendChild(backBtn);
-  syncBattleTopHeight();
 }
 
 function renderActionButtons(actor) {
@@ -1100,7 +1097,6 @@ function renderActionButtons(actor) {
   itemBtn.disabled = state.inventory.potion <= 0;
   itemBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
   grid.appendChild(itemBtn);
-  syncBattleTopHeight();
 }
 
 // 逃げるは画面下部に常設(行動選択の一覧には含めない)。自分のターンで行動待ちの時だけ有効
@@ -1140,7 +1136,6 @@ function renderAllyTargets(actor, kind) {
   backBtn.textContent = "戻る";
   backBtn.onclick = () => renderActionButtons(actor);
   grid.appendChild(backBtn);
-  syncBattleTopHeight();
 }
 
 function afterPlayerAction() {
