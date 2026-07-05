@@ -128,3 +128,6 @@
 - **`backdrop-filter: blur()`のスクロール性能問題**: `.body-pad`等、`position:fixed`の背景画像の上に重なる半透明パネルに`backdrop-filter: blur()`をかけていたが、これはスクロールのたびに背後の固定要素を再描画する必要があり、モバイル端末(特にiOS Safari)でスクロールのカクつき/一時停止を引き起こすことが知られている。透明感(半透明の背景色)は維持したまま、`.body-pad`・`#dungeonLog`/`#battleLog`・`.party-bar`・`.battle-flee-bar`から`backdrop-filter`を全て削除した
 
 **追記(ユーザーによる原因特定)**: 上記の対応後、ユーザーから「iPhoneのSafariだと画面最下部がきちんと表示されづらいことが原因」との報告があった。iOS Safariはツールバー/ホームインジケーターの分だけ画面最下部が実際には見えづらい・タップしづらいことがあるため、根本原因は解消しきれない前提で、**戻るボタンの下に余白を作ってスクロールの終端を画面最下部より手前にする**方針に切り替えた。`.body-pad`のpadding-bottomを`calc(1rem + 80px)`に、`.dungeon-content`に`padding-bottom:80px`を追加。`.battle-flee-bar`(position:fixed;bottom:0)には`env(safe-area-inset-bottom)`を使った余白も追加し、`<meta name="viewport">`に`viewport-fit=cover`を付与してenv()がノッチ付きiPhoneで正しく機能するようにした。
+
+## 町画面はスクロール不要にし、ボタン背景を完全透過に
+町画面(`#screen-town`)はボタン4つだけで縦に長くならないため、「この画面はスクロールできなくていい。ボタンを固定配置にして、後ろの背景も不透明なパネルを被せずに見えるようにしてほしい」との指示を受けた。`#screen-town .body-pad`だけを個別に上書きし、`position: fixed; top: 56vh;`+`background: transparent; border-radius: 0;`にした(共通の`.body-pad`クラス自体は宿屋/道具屋/温泉/ステータスで引き続きスクロール前提の半透明パネルとして使うため変更していない)。町画面の実質的な内容(`.hero`と`.body-pad`)が両方`position:fixed`になったことで`.screen-town`に流し込みコンテンツが無くなり、`.wrap`の`min-height:100vh`だけがページ高さを決めるため、スクロール自体が発生しなくなる。ボタン(`button.big`)は元々不透明なので、パネルを外しても文字は問題なく読める。
