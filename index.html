@@ -443,8 +443,8 @@ function renderStatusScreen(charId) {
 document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
 
 const RANDOM_FEMALE_NAMES = [
-  "エミリア", "リゼッタ", "フィオナ", "セレナ", "アリシア", "ノエル", "ミラベル", "クレア",
-  "ルナリア", "エルフィ", "シャーロット", "ヴィオラ", "アネット", "レティシア", "ミレイユ", "カリナ",
+  "紅葉", "小雪", "千鶴", "朝顔", "薄雲", "萌", "夕凪", "静音",
+  "椿", "撫子", "楓", "泉", "琥珀", "小夜", "藍", "花梨",
 ];
 function randomFemaleName() {
   return RANDOM_FEMALE_NAMES[Math.floor(Math.random() * RANDOM_FEMALE_NAMES.length)];
@@ -759,6 +759,15 @@ function processNext() {
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
+    if (actor.reloading) {
+      actor.reloading = false;
+      battle.actingId = actor.id;
+      renderBattleScreen();
+      blog(`${actor.label}は装填中で動けない！`);
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
     battle.actingId = actor.id;
     renderBattleScreen();
     renderActionButtons(actor);

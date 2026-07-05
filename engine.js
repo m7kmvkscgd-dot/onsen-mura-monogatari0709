@@ -55,6 +55,7 @@ function createCharacter(name, classId, classUpgrades) {
     equipBonus: computeEquipBonus(classId, classUpgrades),
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町で全回復)
     guarding: false,
+    reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     status: "active", // active | corpse | lost
     corpseFloor: null,
     corpseExpireStep: null,
@@ -129,7 +130,7 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 
 // guard以外の全アビリティ(魔法系だけでなく物理系の必殺技も)はMPを消費する。
 // 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える
-const ABILITY_MP_COST = { magicAttack: 6, magicAttackAll: 12, heal: 5, critAttack: 4, powerAttack: 5, physicalAttackAll: 9 };
+const ABILITY_MP_COST = { magicAttack: 6, magicAttackAll: 12, heal: 5, critAttack: 4, powerAttack: 5, physicalAttackAll: 9, preciseShot: 4, cannonShot: 8 };
 function abilityMpCost(abilityType) {
   return ABILITY_MP_COST[abilityType] || 0;
 }
@@ -156,6 +157,14 @@ function rollPowerAttack(atk, def) {
 }
 function rollCritAttack(atk, def) {
   return Math.max(1, Math.round(atk * 1.3 - def * 0.4 + (Math.random() * 5 - 2)));
+}
+// 狩人の会心の一矢。会心の一撃と同じ防御貫通の性質(弓は鎧の隙間を狙う)
+function rollPreciseShot(atk, def) {
+  return Math.max(1, Math.round(atk * 1.35 - def * 0.4 + (Math.random() * 5 - 2)));
+}
+// 砲術士の砲撃。渾身の一撃よりさらに重いが、使うと次のターンは装填で動けなくなる(呼び出し側で処理)
+function rollCannonShot(atk, def) {
+  return Math.max(1, Math.round(atk * 2.4 - def * 0.8 + (Math.random() * 8 - 3)));
 }
 function rollHeal(mag) {
   return Math.max(5, Math.round(mag * 1.5 + Math.random() * 5));
@@ -272,6 +281,17 @@ function useAbility(actor, target, abilityType, log) {
     applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
     return { dmg };
   }
+  if (abilityType === "preciseShot") {
+    const dmg = rollPreciseShot(effectiveStat(actor, "atk"), target.def);
+    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    return { dmg };
+  }
+  if (abilityType === "cannonShot") {
+    const dmg = rollCannonShot(effectiveStat(actor, "atk"), target.def);
+    applyDamageToTarget(target, dmg, log, `${actor.label}の${ABILITY_LABEL[abilityType]}！`);
+    actor.reloading = true;
+    return { dmg };
+  }
   if (abilityType === "heal") {
     const heal = rollHeal(effectiveStat(actor, "mag"));
     target.hp = Math.min(target.maxHp, target.hp + heal);
@@ -382,7 +402,7 @@ function simulateBattleMulti(party, enemies, log) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollHeal,
+    createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCorpse, tickWorldStep, reviveCorpse, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, restAtTown, abilityMpCost,
