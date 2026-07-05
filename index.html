@@ -115,7 +115,7 @@
 
   <!-- 町 -->
   <div class="screen active" id="screen-town">
-    <div class="hero" style="background-image:url('assets/bg/town.png')">
+    <div class="hero" id="townHero" style="background-image:url('assets/bg/town.png')">
       <div class="topbar">
         <span class="gold" id="townGold">0G</span>
         <button class="mute-btn" id="muteBtn">🔊</button>
@@ -133,10 +133,11 @@
 
   <!-- 宿屋 -->
   <div class="screen" id="screen-tavern">
-    <div class="hero" style="background-image:url('assets/bg/tavern.png');min-height:100px;">
+    <div class="hero" id="tavernHero" style="background-image:url('assets/bg/tavern.png');min-height:100px;">
       <h1>宿屋</h1>
     </div>
     <div class="body-pad">
+      <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる</button>
       <h2>パーティ編成(最大4人)</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。死体・ロストは選べません。</p>
       <div id="rosterList"></div>
@@ -152,7 +153,7 @@
 
   <!-- ステータス詳細 -->
   <div class="screen" id="screen-status">
-    <div class="hero" style="background-image:url('assets/bg/tavern.png');min-height:90px;">
+    <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.png');min-height:90px;">
       <h1 id="statusName">-</h1>
     </div>
     <div class="body-pad">
@@ -248,6 +249,7 @@ function defaultState() {
     activePartyIds: [],
     inventory: { holyWater: 1, potion: 3 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
+    timeOfDay: "day", // "day" | "night"。ダンジョン往復や宿屋での宿泊で切り替わる
   };
 }
 
@@ -271,6 +273,7 @@ function loadState() {
     if (raw) {
       const loaded = JSON.parse(raw);
       loaded.classUpgrades = loaded.classUpgrades || {};
+      loaded.timeOfDay = loaded.timeOfDay || "day";
       (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades));
       return loaded;
     }
@@ -280,6 +283,24 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+
+// ============ 昼夜 ============
+// ダンジョンから町に帰る/宿屋に泊まるたびに昼と夜を切り替える(進んだ時間の長さは問わない単純な二値)
+const BG_SETS = {
+  town: { day: "assets/bg/town.png", night: "assets/bg/town_night.png" },
+  tavern: { day: "assets/bg/tavern.png", night: "assets/bg/tavern_night.png" },
+};
+function updateSceneBackgrounds() {
+  const tod = state.timeOfDay || "day";
+  document.getElementById("townHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
+  document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
+  document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
+}
+function toggleTimeOfDay() {
+  state.timeOfDay = state.timeOfDay === "night" ? "day" : "night";
+  saveState();
+  updateSceneBackgrounds();
 }
 
 // ============ 音声 ============
@@ -351,6 +372,7 @@ function renderTown() {
   saveState();
   document.getElementById("townGold").textContent = state.gold + "G";
   playBgm("town");
+  updateSceneBackgrounds();
 }
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
@@ -423,6 +445,7 @@ function renderRosterList() {
 function renderTavern() {
   renderRosterList();
   renderClassGrid();
+  updateSceneBackgrounds();
 }
 
 // ============ ステータス詳細 ============
@@ -464,6 +487,13 @@ document.getElementById("createCharBtn").onclick = () => {
   renderRosterList();
 };
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+
+document.getElementById("sleepBtn").onclick = () => {
+  playSfx("select");
+  toggleTimeOfDay();
+  const label = state.timeOfDay === "night" ? "夜" : "朝";
+  alert(`一晩ぐっすり眠った。${label}になった。`);
+};
 
 // ============ 道具屋 ============
 function renderShop() {
@@ -608,6 +638,7 @@ function renderDungeon() {
 
 document.getElementById("retreatBtn").onclick = () => {
   dlog("町に戻った。");
+  toggleTimeOfDay();
   renderTown();
   showScreen("screen-town");
 };
@@ -925,6 +956,7 @@ function defeat() {
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     battle = null;
+    toggleTimeOfDay();
     renderTown();
     showScreen("screen-town");
   };
