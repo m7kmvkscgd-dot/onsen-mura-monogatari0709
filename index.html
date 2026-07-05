@@ -23,7 +23,7 @@
   .screen.active { display: flex; }
   .hero {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px; height: 100vh;
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center;
     padding: 1.2rem 1rem 0; display: flex; flex-direction: column; justify-content: flex-start;
     z-index: 0;
@@ -37,7 +37,7 @@
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
-  .body-pad { position: relative; z-index: 1; background: var(--panel); backdrop-filter: blur(2px); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem; flex: 1; }
+  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem; flex: 1; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   button.big {
     padding: 0.9rem; border-radius: 10px; border: 1px solid var(--border);
@@ -88,7 +88,7 @@
     position: fixed; top: 386px; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 4;
     display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
-    background: rgba(20,24,27,0.72); backdrop-filter: blur(1px); justify-content: center;
+    background: rgba(20,24,27,0.72); justify-content: center;
   }
   .party-member { flex: 0 1 110px; max-width: 110px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; }
   .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); }
@@ -102,11 +102,11 @@
   .fatigue-fill { height: 100%; background: #b06a2a; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 0.6rem; }
-  #dungeonLog, #battleLog { background: var(--panel-2); backdrop-filter: blur(2px); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; height: 120px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
+  #dungeonLog, #battleLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; height: 120px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
   .dungeon-bg {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px; height: 100vh;
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; z-index: 0;
   }
   .dungeon-bg::after {
@@ -116,7 +116,7 @@
   .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 16px; }
   .battle-bg {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px; height: 100vh;
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
   }
   .battle-bg::after {
@@ -131,7 +131,7 @@
   .battle-flee-bar {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 6;
-    background: var(--panel); backdrop-filter: blur(2px);
+    background: var(--panel);
     padding: 0.7rem 1rem; box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
