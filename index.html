@@ -113,11 +113,19 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
-  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 570px; }
+  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 16px; }
+  .battle-bg {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100vh;
+    background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
+  }
+  .battle-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
   .battle-top {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px; z-index: 5; background: #1a1410;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    width: 100%; max-width: 480px; z-index: 5;
   }
   .battle-content { flex: 1; padding-top: 570px; padding-bottom: 84px; }
   .battle-flee-bar {
@@ -126,8 +134,7 @@
     background: var(--panel); backdrop-filter: blur(2px);
     padding: 0.7rem 1rem; box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
-  .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
-  .enemy-row { display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
   .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
   .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
   .enemy-card.targetable:active { transform: scale(0.94); }
@@ -296,10 +303,9 @@
 
   <!-- 戦闘 -->
   <div class="screen" id="screen-battle">
+    <div class="battle-bg" id="battleBg"></div>
     <div class="battle-top" id="battleTop">
-      <div class="battle-bg" id="battleBg">
-        <div class="enemy-row" id="enemyRow"></div>
-      </div>
+      <div class="enemy-row" id="enemyRow"></div>
       <div class="turn-indicator" id="turnIndicator"></div>
       <div class="action-grid" id="actionGrid"></div>
     </div>
