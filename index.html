@@ -18,22 +18,25 @@
     margin: 0; padding: 0; line-height: 1.5;
   }
   .wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-  .screen { display: none; flex-direction: column; flex: 1; }
+  .screen { display: none; flex-direction: column; flex: 1; position: relative; }
   .screen.active { display: flex; }
   .hero {
-    position: relative; background-size: cover; background-position: center;
-    padding: 1.2rem 1rem 1rem; min-height: 130px; display: flex; flex-direction: column; justify-content: flex-end;
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100vh;
+    background-size: cover; background-position: center;
+    padding: 1.2rem 1rem 0; display: flex; flex-direction: column; justify-content: flex-start;
+    z-index: 0;
   }
   .hero::before {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(20,24,27,0.95));
+    background: linear-gradient(to bottom, rgba(20,24,27,0.05) 0%, rgba(20,24,27,0.35) 45%, rgba(20,24,27,0.97) 78%, var(--bg) 100%);
   }
   .hero > * { position: relative; z-index: 1; }
   .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
-  .body-pad { padding: 1rem; flex: 1; }
+  .body-pad { position: relative; z-index: 1; background: var(--bg); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem; flex: 1; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   button.big {
     padding: 0.9rem; border-radius: 10px; border: 1px solid var(--border);
@@ -94,6 +97,16 @@
   .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 0.6rem; }
   #dungeonLog, #battleLog { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; height: 120px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
+  .dungeon-bg {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100vh;
+    background-size: cover; background-position: center; z-index: 0;
+  }
+  .dungeon-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
+  }
+  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
   .battle-bg { background-size: cover; background-position: center; background-color: #1a1410; }
   .enemy-row { display: flex; justify-content: center; gap: 0.8rem; padding: 1rem 0.6rem 1.2rem; flex-wrap: wrap; }
   .enemy-card { text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
@@ -128,14 +141,14 @@
       <div class="btn-col">
         <button class="big" id="toTavernBtn">🏨 宿屋</button>
         <button class="big" id="toShopBtn">🛒 道具屋</button>
-        <button class="big primary" id="toDungeonBtn">🕯 ダンジョンへ向かう</button>
+        <button class="big primary" id="toDungeonBtn">🕯 深淵の森へ向かう</button>
       </div>
     </div>
   </div>
 
   <!-- 宿屋 -->
   <div class="screen" id="screen-tavern">
-    <div class="hero" id="tavernHero" style="background-image:url('assets/bg/tavern.png');min-height:100px;">
+    <div class="hero" id="tavernHero" style="background-image:url('assets/bg/tavern.png')">
       <h1>宿屋</h1>
     </div>
     <div class="body-pad">
@@ -156,7 +169,7 @@
 
   <!-- ステータス詳細 -->
   <div class="screen" id="screen-status">
-    <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.png');min-height:90px;">
+    <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.png')">
       <h1 id="statusName">-</h1>
     </div>
     <div class="body-pad">
@@ -181,7 +194,7 @@
 
   <!-- 道具屋 -->
   <div class="screen" id="screen-shop">
-    <div class="hero" style="background-image:url('assets/bg/town.png');min-height:90px;">
+    <div class="hero" style="background-image:url('assets/bg/town.png')">
       <h1>道具屋</h1>
     </div>
     <div class="body-pad">
@@ -204,21 +217,24 @@
     </div>
   </div>
 
-  <!-- ダンジョン -->
+  <!-- 深淵の森 -->
   <div class="screen" id="screen-dungeon">
-    <div class="party-bar" id="dungeonPartyBar"></div>
-    <div class="floor-badge" id="floorBadge">地下1階</div>
-    <div id="criticalAlert"></div>
-    <div id="dungeonLog"></div>
-    <div class="bottom-actions">
-      <button class="big primary" id="advanceBtn">進む</button>
-      <button class="big danger" id="retreatBtn">町に戻る</button>
+    <div class="dungeon-bg" id="dungeonBg"></div>
+    <div class="dungeon-content">
+      <div class="party-bar" id="dungeonPartyBar"></div>
+      <div class="floor-badge" id="floorBadge">1層目</div>
+      <div id="criticalAlert"></div>
+      <div id="dungeonLog"></div>
+      <div class="bottom-actions">
+        <button class="big primary" id="advanceBtn">進む</button>
+        <button class="big danger" id="retreatBtn">町に戻る</button>
+      </div>
     </div>
   </div>
 
   <!-- 戦闘 -->
   <div class="screen" id="screen-battle">
-    <div class="battle-bg" style="background-image:url('assets/bg/dungeon.png')">
+    <div class="battle-bg" id="battleBg">
       <div class="enemy-row" id="enemyRow"></div>
       <div class="party-bar" id="battlePartyBar"></div>
     </div>
@@ -298,12 +314,15 @@ function saveState() {
 const BG_SETS = {
   town: { day: "assets/bg/town.png", night: "assets/bg/town_night.png" },
   tavern: { day: "assets/bg/tavern.png", night: "assets/bg/tavern_night.png" },
+  dungeon: { day: "assets/bg/forest_day.png", night: "assets/bg/forest_night.png" },
 };
 function updateSceneBackgrounds() {
   const tod = state.timeOfDay || "day";
   document.getElementById("townHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
+  document.getElementById("dungeonBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
+  document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
 }
 function toggleTimeOfDay() {
   state.timeOfDay = state.timeOfDay === "night" ? "day" : "night";
@@ -371,7 +390,7 @@ function statusLabel(c) {
   if (c.status === "critical") {
     const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
     const daysLeft = Math.ceil(halfLeft / 2);
-    return `地下${c.criticalFloor}階で瀕死(あと約${daysLeft}日で救出しないとロスト)`;
+    return `深淵の森 ${c.criticalFloor}層目で瀕死(あと約${daysLeft}日で救出しないとロスト)`;
   }
   return "ロスト(消滅した)";
 }
@@ -617,7 +636,7 @@ function enterDungeon() {
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
   renderDungeon();
   showScreen("screen-dungeon");
-  dlog("ダンジョンに入った。");
+  dlog("深淵の森に入った。");
 }
 
 let dungeonLogLines = [];
@@ -652,7 +671,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
 }
 
 function renderDungeon() {
-  document.getElementById("floorBadge").textContent = `地下${currentFloor}階`;
+  document.getElementById("floorBadge").textContent = `${currentFloor}層目`;
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
   playBgm("dungeon");
@@ -831,7 +850,7 @@ function handleFieldDeaths() {
   fieldParty.forEach((c) => {
     if (c.hp <= 0 && c.status === "active") {
       markCritical(c, currentFloor, state.halfDayStep);
-      blog(`${c.name}は倒れた...瀕死のまま地下${currentFloor}階に取り残された。`);
+      blog(`${c.name}は倒れた...瀕死のまま深淵の森 ${currentFloor}層目に取り残された。`);
     }
   });
   saveState();
@@ -963,7 +982,7 @@ function victory() {
   state.gold += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
   saveState();
-  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">ダンジョンに戻る</button>`;
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
     renderDungeon();
@@ -972,7 +991,7 @@ function victory() {
 }
 
 function defeat() {
-  blog("パーティは全滅した...瀕死の仲間をダンジョンに残し、町に戻った。別の仲間で助けに向かおう。");
+  blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     battle = null;
