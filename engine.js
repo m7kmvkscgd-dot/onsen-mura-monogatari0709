@@ -79,15 +79,12 @@ function levelUp(character, log) {
   const growth = 1 + character.level * 0.12;
   const defGrowth = 1 + character.level * 0.06; // defは他ステータスよりゆるやかに伸ばす(敵の階層スケーリングと同じ考え方)
   const oldMaxHp = character.maxHp;
-  const oldMaxMp = character.maxMp;
   character.maxHp = Math.round(c.hp * growth);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
   character.atk = Math.round(c.atk * growth);
   character.def = Math.round(c.def * defGrowth);
   character.spd = Math.round(c.spd * (1 + character.level * 0.05));
-  character.mag = Math.round(c.mag * growth);
-  character.maxMp = maxMpFor(character.mag);
-  character.mp = Math.min(character.maxMp, character.mp + (character.maxMp - oldMaxMp));
+  character.mag = Math.round(c.mag * growth); // 魔法威力/治癒量は引き続き伸びる。MPの上限だけはレベルで伸ばさない(maxMp/mpは据え置き)
   log(`${character.label}はレベル${character.level}になった！`);
 }
 
@@ -163,8 +160,9 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 }
 
 // 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える。
-// guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
-const ABILITY_MP_COST = { magicAttack: 6, magicAttackAll: 12, heal: 5, critAttack: 4, powerAttack: 5, physicalAttackAll: 9, preciseShot: 4, cannonShot: 8, guard: 1 };
+// MPはレベルアップで伸びなくなった(下記levelUp参照)ため、一度の遠征で4〜5回使える程度を目安に
+// guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
+const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 5, preciseShot: 2, cannonShot: 4, guard: 1 };
 function abilityMpCost(abilityType) {
   return ABILITY_MP_COST[abilityType] || 0;
 }
