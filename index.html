@@ -124,8 +124,10 @@
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member img:not(.stress-overlay) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
-  .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; }
-  .hpbar-fill { height: 100%; background: var(--hp); transition: width 0.4s ease; }
+  .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; position: relative; }
+  /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく */
+  .hpbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp-low); transition: width 0.8s ease-out; }
+  .hpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp); }
   .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
@@ -163,9 +165,9 @@
     width: 100%; max-width: 480px; z-index: 5;
   }
   .battle-actions {
-    /* 逃げるボタン(画面下端固定)の直上に来るよう、topではなくbottom基準で配置する。
-       topで固定すると実機のブラウザUIでビューポートの高さが変わった時に逃げるボタンと重なってしまうため */
-    position: fixed; bottom: calc(155px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(端末ごとの表示領域の違いに左右されないようにするため)。
+       ここでのtopは計算が走るまでの初期値 */
+    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 4;
   }
   .battle-flee-bar {
@@ -222,8 +224,8 @@
   .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
   .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
   .bottom-actions {
-    /* 戦闘画面の行動ボタン(.battle-actions)と同じ基準・同じ値にして、画面切り替え時に位置が変わらないようにする */
-    position: fixed; bottom: calc(155px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(戦闘画面と同じ仕組み) */
+    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
     padding: 0.8rem 1rem; display: flex; gap: 0.6rem;
   }
@@ -1046,6 +1048,24 @@ function stressOverlaySrc(fatigue) {
   return STRESS_OVERLAY_SRC[stressTier(fatigue)] || null;
 }
 
+// 被弾時、緑ゲージは即座に新しい残量まで落とし、赤ゲージ(トレイル)は前回表示していた残量から
+// 緑の位置までゆっくり追いついて消えていく。entity.__hpDisplayRatioに前回表示分を記憶しておく
+function hpBarHtml(entity) {
+  const ratio = entity.maxHp > 0 ? Math.max(0, entity.hp / entity.maxHp) * 100 : 0;
+  const prevRatio = entity.__hpDisplayRatio != null ? entity.__hpDisplayRatio : ratio;
+  entity.__hpDisplayRatio = ratio;
+  return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill" style="width:${ratio}%"></div></div>`;
+}
+// 描画直後の赤ゲージを、記録しておいた目標値までアニメーションさせて追いつかせる
+function activateHpTrails(container) {
+  const trails = container.querySelectorAll("[data-hp-trail]");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      trails.forEach((el) => { el.style.width = `${el.dataset.target}%`; });
+    });
+  });
+}
+
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
   bar.innerHTML = "";
@@ -1055,7 +1075,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const div = document.createElement("div");
     div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
-    const ratio = Math.max(0, c.hp / c.maxHp) * 100;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const overlaySrc = stressOverlaySrc(c.fatigue);
     div.innerHTML = `
@@ -1063,12 +1082,24 @@ function renderPartyBar(elId, combatants, actingCharId) {
         <img src="${c2.image}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
       </div>
-      <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
+      ${hpBarHtml(c)}
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}</div>
     `;
     bar.appendChild(div);
   });
+  activateHpTrails(bar);
+}
+
+// 行動選択ボタン欄を、味方表示の実際の描画位置のすぐ下に配置する。
+// 端末ごとにブラウザの表示領域の高さが違い、固定pxの当て推量では重なったりズレたりするため、
+// 実測したgetBoundingClientRect()を元に毎回計算し直す
+function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
+  const partyBar = document.getElementById(partyBarId);
+  const actions = document.querySelector(actionsSelector);
+  if (!partyBar || !actions) return;
+  const rect = partyBar.getBoundingClientRect();
+  actions.style.top = `${Math.round(rect.bottom) + 10}px`;
 }
 
 function renderDungeon() {
@@ -1076,6 +1107,7 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
   playBgm("dungeon");
+  positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 }
 
 document.getElementById("retreatBtn").onclick = () => {
@@ -1243,11 +1275,10 @@ function renderBattleScreen() {
     const card = document.createElement("div");
     card.className = "enemy-card" + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
-    const ratio = Math.max(0, e.hp / e.maxHp) * 100;
     card.innerHTML = `
       <img src="${e.image}" alt="${e.label}">
       <div class="enemy-name">${e.label}</div>
-      <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
+      ${hpBarHtml(e)}
     `;
     if (targetable) {
       card.onclick = () => {
@@ -1258,8 +1289,10 @@ function renderBattleScreen() {
     }
     row.appendChild(card);
   });
+  activateHpTrails(row);
   fieldParty.forEach((c) => renderVfxFor(c.id));
   battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
+  positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
 }
 
 function nextRound() {
