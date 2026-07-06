@@ -63,21 +63,35 @@ function createCharacter(name, classId, classUpgrades) {
     criticalExpireHalfDay: null,
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
     carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
+    poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
+    stunTurns: 0, // スタン(行動不能)の残りターン数
+    silenceTurns: 0, // 沈黙(技が使えず通常攻撃のみ)の残りターン数
+    statusImmuneTurns: 0, // 状態異常を受け付けない残りターン数
+    tauntTurns: 0, // 挑発中の残りターン数(かばう同様、敵から必ず狙われる)
+    statMods: [], // [{stat, mult, turns}] 一時的なステータス倍率(バフ/デバフ)。effectiveStatで乗算される
+    skills: {}, // { level: "left"|"right" } スキルツリーで選んだ側の記録
+    unlockedSkills: [], // 選んだ能動スキル(action持ち)のリスト。戦闘中の行動選択に追加される
+    passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
   };
 }
 
-// 体感のレベルアップ速度を旧来の3分の1にするため必要経験値を3倍にし、さらに「上がりやすすぎる」というフィードバックを受けて1.5倍(合計4.5倍)にしてある
+// レベル上限を10に圧縮したことに伴う再設計(旧: 上限なしで(20+level*15)*4.5)。
+// 「新レベルN = 旧レベル4N-3〜4Nの4段分をまとめたもの」という考え方で、旧式で旧レベル1〜36を上る
+// のに必要だった経験値の合計と同じ総量になるよう、新レベル1〜9の必要経験値を等差数列(1080*level-45)で
+// 割り振ってある(結果として新レベル1=1035, 新レベル9=9675と、終盤ほど1段の重みが大きくなる)
 function xpToNext(level) {
-  return Math.round((20 + level * 15) * 4.5);
+  return Math.round(1080 * level - 45);
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
-// HPは全快させず、最大値が増えた分だけ現在値に上乗せする(戦闘中の連続レベルアップが実質全回復になっていたバグの修正)
+// HPは全快させず、最大値が増えた分だけ現在値に上乗せする(戦闘中の連続レベルアップが実質全回復になっていたバグの修正)。
+// 成長率はダクソン/XCOM的に「Lv10でも2倍程度」に収まるよう抑えてある(旧0.12/0.06からさらに緩和)
 function levelUp(character, log) {
+  if (character.level >= MAX_LEVEL) return;
   character.level++;
   const c = CLASSES[character.classId];
-  const growth = 1 + character.level * 0.12;
-  const defGrowth = 1 + character.level * 0.06; // defは他ステータスよりゆるやかに伸ばす(敵の階層スケーリングと同じ考え方)
+  const growth = 1 + character.level * 0.1; // Lv10で2.0倍
+  const defGrowth = 1 + character.level * 0.05; // defは他ステータスよりゆるやかに伸ばす(敵の階層スケーリングと同じ考え方)。Lv10で1.5倍
   const oldMaxHp = character.maxHp;
   character.maxHp = Math.round(c.hp * growth);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
@@ -143,12 +157,103 @@ function fatigueMalus(fatigue) {
 // 疲労減衰は素の能力値にのみかかり、装備ボーナスは減衰後に加算する(装備は疲労で劣化しない)
 function effectiveStat(entity, key) {
   const base = entity[key] || 0;
-  if (entity.fatigue == null) return base; // 敵など疲労を持たない対象はそのまま
-  const fatigued = base * (1 - fatigueMalus(entity.fatigue));
-  const equip = (entity.equipBonus && entity.equipBonus[key]) || 0;
-  let result = Math.max(1, Math.round(fatigued + equip));
-  if (key === "spd" && entity.carryingId) result = Math.max(1, Math.round(result * 0.5)); // 仲間を担いでいる間は素早さ半減
+  let result;
+  if (entity.fatigue == null) {
+    result = base; // 敵など疲労を持たない対象はそのまま
+  } else {
+    const fatigued = base * (1 - fatigueMalus(entity.fatigue));
+    const equip = (entity.equipBonus && entity.equipBonus[key]) || 0;
+    result = Math.max(1, Math.round(fatigued + equip));
+    if (key === "spd" && entity.carryingId) result = Math.max(1, Math.round(result * 0.5)); // 仲間を担いでいる間は素早さ半減
+  }
+  // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
+  if (entity.statMods && entity.statMods.length) {
+    let mult = 1;
+    entity.statMods.forEach((m) => { if (m.stat === key) mult *= m.mult; });
+    result = Math.max(1, Math.round(result * mult));
+  }
+  // スキルツリーの永続受動効果(atk/mag/def/spdの倍率)を適用。magはatkMultを流用する(陰陽師/僧侶の術威力もこれで底上げされる)
+  if (entity.passives && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
+    const p = entity.passives;
+    const permMult = (key === "atk" || key === "mag") ? p.atkMult : key === "def" ? p.defMult : p.spdMult;
+    if (permMult !== 1) result = Math.max(1, Math.round(result * permMult));
+  }
+  // HP割合条件つきの受動効果(武士道など、HP◯%以下で攻撃力/防御力up、といったもの)
+  if (entity.passives && entity.passives.conditionalMods && entity.passives.conditionalMods.length && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
+    activeConditionalMods(entity).forEach((m) => {
+      if (!m.statMult) return;
+      m.statMult.forEach((sm) => { if (sm.stat === key) result = Math.max(1, Math.round(result * sm.mult)); });
+    });
+  }
+  // 撃破時スタック系の受動効果(修羅・槍鬼など)。重複回数ぶん倍率を線形に積み増す
+  if (entity.passives && entity.passives.onKill && entity.passives.onKillStacks > 0 && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
+    entity.passives.onKill.statMult.forEach((sm) => {
+      if (sm.stat !== key) return;
+      const totalMult = 1 + (sm.mult - 1) * entity.passives.onKillStacks;
+      result = Math.max(1, Math.round(result * totalMult));
+    });
+  }
   return result;
+}
+
+// 一時的なステータス修正(バフ/デバフ)を付与する。同じstatへの既存の修正は上書き(重ね掛けで際限なく増えないように)
+function applyStatMod(entity, stat, mult, turns) {
+  entity.statMods = entity.statMods || [];
+  const existing = entity.statMods.find((m) => m.stat === stat);
+  if (existing) { existing.mult = mult; existing.turns = turns; }
+  else entity.statMods.push({ stat, mult, turns });
+}
+// 自分のターンが来るたびに残りターン数を1減らし、0になったものは消す
+function tickStatMods(entity) {
+  if (!entity.statMods || !entity.statMods.length) return;
+  entity.statMods.forEach((m) => { m.turns--; });
+  entity.statMods = entity.statMods.filter((m) => m.turns > 0);
+}
+
+const POISON_MAX_STACKS = 6; // OP化を防ぐための毒蓄積の上限
+// 毒を付与する。重ね掛けは加算ではなく現在値との大きい方に上書きする(無限に積み上がらないように)
+function applyPoison(entity, stacks) {
+  if (entity.statusImmuneTurns > 0) return;
+  entity.poison = Math.min(POISON_MAX_STACKS, Math.max(entity.poison || 0, stacks));
+}
+// 毒: 自分のターンが来るたびに蓄積値分のダメージを受け、蓄積値が1減る(ダーケストダンジョン方式)
+function tickPoison(entity, log) {
+  if (!entity.poison || entity.poison <= 0) return 0;
+  const dmg = Math.min(entity.hp, entity.poison);
+  entity.hp = Math.max(0, entity.hp - entity.poison);
+  log(`${entity.label}は毒で${dmg}ダメージ！`);
+  entity.poison = Math.max(0, entity.poison - 1);
+  return dmg;
+}
+function applyStun(entity, turns) {
+  if (entity.statusImmuneTurns > 0) return;
+  entity.stunTurns = Math.max(entity.stunTurns || 0, turns);
+}
+function applySilence(entity, turns) {
+  if (entity.statusImmuneTurns > 0) return;
+  entity.silenceTurns = Math.max(entity.silenceTurns || 0, turns);
+}
+// 自分のターンの一番最初に呼ぶ共通処理(毒のダメージ+継続回復+バフ/デバフの残りターン消化)。毒ダメージ量を返す
+function tickTurnStartEffects(entity, log) {
+  const dmg = tickPoison(entity, log);
+  // hpRegenPct: statMods便乗の継続回復タグ(mult欄に割合を入れて流用)。明鏡止水・仁王立ちなど
+  if (entity.hp > 0 && entity.statMods) {
+    entity.statMods.forEach((m) => {
+      if (m.stat === "hpRegenPct") {
+        const heal = Math.max(1, Math.round(entity.maxHp * m.mult));
+        entity.hp = Math.min(entity.maxHp, entity.hp + heal);
+        log(`${entity.label}は${heal}回復した！`);
+      }
+    });
+  }
+  tickStatMods(entity);
+  if (entity.statusImmuneTurns > 0) entity.statusImmuneTurns--;
+  if (entity.tauntTurns > 0) entity.tauntTurns--;
+  if (entity.passives && entity.passives.onKillStacks > 0) {
+    entity.passives.onKillStacksTurns--;
+    if (entity.passives.onKillStacksTurns <= 0) entity.passives.onKillStacks = 0;
+  }
+  return dmg;
 }
 
 // 装備購入後、既存の該当職業メンバー全員のequipBonusを再計算する
@@ -169,13 +274,15 @@ function abilityMpCost(abilityType) {
 
 function grantXp(character, amount, log) {
   if (character.status !== "active") return;
+  if (character.level >= MAX_LEVEL) return; // 上限到達後は経験値を受け取らない(溜まり続けるのを防ぐ)
   character.xp += amount;
   let guardCounter = 0;
-  while (character.xp >= xpToNext(character.level) && guardCounter < 50) {
+  while (character.level < MAX_LEVEL && character.xp >= xpToNext(character.level) && guardCounter < 50) {
     character.xp -= xpToNext(character.level);
     levelUp(character, log);
     guardCounter++;
   }
+  if (character.level >= MAX_LEVEL) character.xp = 0;
 }
 
 function rollBasicAttack(atk, def) {
@@ -200,6 +307,163 @@ function rollCannonShot(atk, def) {
 }
 function rollHeal(mag) {
   return Math.max(5, Math.round(mag * 1.5 + Math.random() * 5));
+}
+
+// ============ スキルツリー(XCOM風、レベルアップごとに2択で1つ選ぶ) ============
+// character.passives: 選んだ受動スキルの効果をまとめて蓄積するオブジェクト(常時参照される)
+function initPassives() {
+  return {
+    atkMult: 1, defMult: 1, spdMult: 1, // hpMultは適用時に直接maxHpへ反映するのでここでは保持しない
+    critRateAdd: 0, critDmgAdd: 0, accuracyAdd: 0, evasionAdd: 0,
+    statusResistMult: 0, dodgeChance: 0, counterChance: 0, counterMult: 1,
+    mpDiscountPct: 0, mpRefundChance: 0,
+    onceGuardType: null, onceGuardUsed: false,
+    firstAttackBonusMult: 0, firstAttackUsed: false,
+    onKill: null, // {statMult:[{stat,mult}], turns, maxStacks}
+    onKillStacks: 0, onKillStacksTurns: 0,
+    onHitInflicts: [], // [{type, chance, value, turns}] 通常攻撃に乗る状態異常付与(複数スキルぶん積み上がる)
+    executeBonus: null, // {belowPct, mult} HPが閾値以下の相手への追加ダメージ倍率
+    conditionalMods: [], // [{cmp, value, statMult:[{stat,mult}]|null, dmgTakenMult:number|null}] (stat基準は常にhpPct)
+  };
+}
+const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
+const BASE_CRIT_DMG_MULT = 1.5; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)
+
+// レベルアップで選んだスキルを反映する。受動効果はpassivesに蓄積し、能動スキルはunlockedSkillsに追加する
+function applySkillChoice(character, skill) {
+  character.skills = character.skills || {};
+  character.skills[character.level] = skill.side;
+  if (skill.passive) {
+    const p = character.passives;
+    const add = skill.passive;
+    if (add.atkMult) p.atkMult *= add.atkMult;
+    if (add.defMult) p.defMult *= add.defMult;
+    if (add.spdMult) p.spdMult *= add.spdMult;
+    if (add.hpMult) {
+      // maxHpはeffectiveStat経由ではなく直接持つ値なので、levelUpと同じ要領でその場で底上げする
+      const oldMax = character.maxHp;
+      character.maxHp = Math.round(character.maxHp * add.hpMult);
+      character.hp += character.maxHp - oldMax;
+    }
+    if (add.critRateAdd) p.critRateAdd += add.critRateAdd;
+    if (add.critDmgAdd) p.critDmgAdd += add.critDmgAdd;
+    if (add.accuracyAdd) p.accuracyAdd += add.accuracyAdd;
+    if (add.evasionAdd) p.evasionAdd += add.evasionAdd;
+    if (add.statusResistMult) p.statusResistMult = Math.min(0.9, p.statusResistMult + add.statusResistMult);
+    if (add.dodgeChance) p.dodgeChance = Math.min(0.6, p.dodgeChance + add.dodgeChance);
+    if (add.counterChance) { p.counterChance = Math.min(0.6, p.counterChance + add.counterChance); p.counterMult = add.counterMult || p.counterMult; }
+    if (add.mpDiscountPct) p.mpDiscountPct = Math.min(0.6, p.mpDiscountPct + add.mpDiscountPct);
+    if (add.mpRefundChance) p.mpRefundChance = Math.min(0.6, p.mpRefundChance + add.mpRefundChance);
+    if (add.onceGuardType) p.onceGuardType = add.onceGuardType;
+    if (add.firstAttackBonusMult) p.firstAttackBonusMult = add.firstAttackBonusMult;
+    if (add.onKill) p.onKill = add.onKill;
+    if (add.conditionalMod) p.conditionalMods.push(add.conditionalMod);
+    if (add.onHitInflict) p.onHitInflicts.push(add.onHitInflict);
+    if (add.executeBonus) p.executeBonus = add.executeBonus;
+  }
+  if (skill.action) {
+    character.unlockedSkills = character.unlockedSkills || [];
+    character.unlockedSkills.push({ id: skill.id, name: skill.name, mp: skill.mp, action: skill.action });
+  }
+}
+
+// HP割合条件つきの受動効果(気迫・武士道など)を、現在のHPに応じて都度評価する
+function activeConditionalMods(character) {
+  if (!character.passives || !character.passives.conditionalMods.length) return [];
+  const hpPct = character.maxHp > 0 ? character.hp / character.maxHp : 1;
+  return character.passives.conditionalMods.filter((m) => (m.cmp === "gte" ? hpPct >= m.value : hpPct <= m.value));
+}
+// 被ダメージ軽減系の受動効果(気迫・仁王立ちなど、statMods経由のものも含む)をまとめて乗算で返す
+function damageTakenMultiplier(character) {
+  let mult = 1;
+  activeConditionalMods(character).forEach((m) => { if (m.dmgTakenMult) mult *= m.dmgTakenMult; });
+  if (character.statMods) character.statMods.forEach((m) => { if (m.stat === "dmgTaken") mult *= m.mult; });
+  return mult;
+}
+// 会心判定。会心なら会心時ダメージ倍率を、外れなら1を返す
+function rollCritMultiplier(actor) {
+  const p = actor.passives;
+  if (!p) return 1;
+  const rate = BASE_CRIT_RATE + p.critRateAdd;
+  if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
+  return 1;
+}
+// スキルツリーの技のMPコストに、そのキャラのMP割引を適用する
+function skillMpCost(actor, baseMp) {
+  const discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
+  return Math.max(0, Math.round(baseMp * (1 - discount)));
+}
+// 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する
+function resistedChance(target, baseChance) {
+  const resist = (target.passives && target.passives.statusResistMult) || 0;
+  return baseChance * (1 - resist);
+}
+
+// スキルツリーの能動スキル(単体/範囲攻撃、バフ、回復など)を実行する汎用リゾルバ。
+// target: 単体系はentity1体、範囲系(action.aoe)は配列
+function useTreeSkill(actor, target, skill, log) {
+  const action = skill.action;
+  const cost = skillMpCost(actor, skill.mp);
+  if (cost > 0) {
+    if (actor.mp < cost) { log(`${actor.label}はMPが足りない！`); return { failed: true }; }
+    const refund = actor.passives && Math.random() < actor.passives.mpRefundChance;
+    if (!refund) actor.mp -= cost;
+  }
+  if (action.kind === "buffSelf" || action.kind === "buffParty") {
+    const targets = action.kind === "buffParty" ? target : [actor];
+    targets.forEach((t) => {
+      (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
+      if (action.hpRegenPct) applyStatMod(t, "hpRegenPct", action.hpRegenPct, action.turns); // effectiveStatでは使わず、tick時に直接参照する目印として保持
+      if (action.cleanse) { t.poison = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      if (action.statusImmuneTurns) t.statusImmuneTurns = Math.max(t.statusImmuneTurns || 0, action.statusImmuneTurns);
+      if (action.tauntTurns) t.tauntTurns = Math.max(t.tauntTurns || 0, action.tauntTurns);
+    });
+    log(`${actor.label}は${skill.name}を使った！`);
+    return { buffed: true };
+  }
+  if (action.kind === "heal") {
+    const targets = action.aoe ? target : [target];
+    const heals = targets.map((t) => {
+      const heal = Math.max(1, Math.round(t.maxHp * action.healPct));
+      if (t.status === "critical" && action.reviveHpPct) {
+        return { target: t, revived: true, heal: 0 };
+      }
+      t.hp = Math.min(t.maxHp, t.hp + heal);
+      if (action.cleanse) { t.poison = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      log(`${actor.label}は${t.label}を${heal}回復！`);
+      return { target: t, heal };
+    });
+    return { healed: heals };
+  }
+  // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
+  const targets = action.aoe ? target : [target];
+  const results = targets.map((t) => {
+    if (!action.guaranteedHit && !rollHit(actor, t)) {
+      log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
+      return { hit: false, dmg: 0 };
+    }
+    const hits = action.hits || 1;
+    const atkStat = action.useMag ? effectiveStat(actor, "mag") : effectiveStat(actor, "atk");
+    const defPierce = action.defPierce || 0;
+    const def = t.def * (1 - defPierce);
+    let rawTotal = 0;
+    for (let i = 0; i < hits; i++) {
+      rawTotal += Math.max(1, Math.round(atkStat * (action.mult / hits) - def * 0.5 + (Math.random() * 4 - 2)));
+    }
+    const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
+    if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
+    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
+    if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance)) {
+      if (action.inflict.type === "poison") applyPoison(t, action.inflict.value || 3);
+      if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
+      if (action.inflict.type === "silence") applySilence(t, action.inflict.turns || 2);
+      if (action.inflict.type === "atkDown") applyStatMod(t, "atk", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
+      if (action.inflict.type === "defDown") applyStatMod(t, "def", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
+      if (action.inflict.type === "spdDown") applyStatMod(t, "spd", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
+    }
+    return { hit: true, dmg };
+  });
+  return { dmgs: results };
 }
 
 // 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
@@ -264,13 +528,23 @@ function goldReward(enemy) {
 // 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)
 function evasionChance(entity) {
   const spd = effectiveStat(entity, "spd");
-  return Math.max(0, Math.min(EVASION_MAX, (spd - EVASION_SPD_BASELINE) * EVASION_SPD_FACTOR));
+  const base = Math.max(0, Math.min(EVASION_MAX, (spd - EVASION_SPD_BASELINE) * EVASION_SPD_FACTOR));
+  const passiveAdd = (entity.passives && entity.passives.evasionAdd) || 0;
+  let timedAdd = 0;
+  if (entity.statMods) entity.statMods.forEach((m) => { if (m.stat === "evasionAdd") timedAdd += m.mult; });
+  return Math.min(0.9, base + passiveAdd + timedAdd);
 }
 function accuracyOf(entity) {
-  return entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
+  const base = entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
+  const passiveAdd = (entity.passives && entity.passives.accuracyAdd) || 0;
+  return Math.min(0.99, base + passiveAdd);
 }
-// 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)
+// 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)。
+// スキルツリーの「完全回避」系受動(見切り・分身など)は、この命中率とは別枠の追加判定として先に効く
 function rollHit(actor, target) {
+  let dodge = (target.passives && target.passives.dodgeChance) || 0;
+  if (target.statMods) target.statMods.forEach((m) => { if (m.stat === "dodgeChance") dodge += m.mult; });
+  if (dodge > 0 && Math.random() < dodge) return false;
   const chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor) - evasionChance(target)));
   return Math.random() < chance;
 }
@@ -281,8 +555,7 @@ function rollAttackOrMiss(actor, target, rollFn, log) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
     return { hit: false, dmg: null };
   }
-  const dmg = rollFn();
-  applyDamageToTarget(target, dmg, log, actor.label);
+  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor);
   return { hit: true, dmg };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
@@ -296,8 +569,7 @@ function rollAoeAttack(actor, targets, rollFn, log) {
       dmgs.push(null);
       return;
     }
-    const dmg = rollFn(t);
-    applyDamageToTarget(t, dmg, log, actor.label);
+    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
     hits.push(true);
     dmgs.push(dmg);
   });
@@ -308,10 +580,59 @@ function performAttack(actor, target, log) {
   return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log);
 }
 
-// ログは「静香は鬼火に50ダメージ！」の1行のみにする(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel) {
-  target.hp = Math.max(0, target.hp - dmg);
-  log(`${actorLabel}は${target.label}に${dmg}ダメージ！`);
+// ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
+// ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix) {
+  logSuffix = logSuffix || "";
+  if (actor && actor.passives && actor.passives.firstAttackBonusMult > 0 && !actor.passives.firstAttackUsed) {
+    dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
+    actor.passives.firstAttackUsed = true;
+  }
+  // 常時発動の低HP追撃系の受動効果(暗殺術など): 対象のHPが閾値以下なら全ての攻撃にダメージ加算がかかる
+  if (actor && actor.passives && actor.passives.executeBonus) {
+    const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
+    if (hpPct <= actor.passives.executeBonus.belowPct) dmg = Math.round(dmg * actor.passives.executeBonus.mult);
+  }
+  if (actor) dmg = Math.round(dmg * rollCritMultiplier(actor));
+  dmg = Math.max(0, Math.round(dmg * damageTakenMultiplier(target)));
+  if (target.passives && target.passives.onceGuardType === "nullifyDamage" && !target.passives.onceGuardUsed) {
+    target.passives.onceGuardUsed = true;
+    log(`${target.label}は${actorLabel}の攻撃を完全に無効化した！`);
+    return 0;
+  }
+  const lethal = target.hp - dmg <= 0;
+  if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
+    target.passives.onceGuardUsed = true;
+    target.hp = 1;
+    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(`${target.label}は致命傷を気迫でこらえた！`);
+  } else {
+    target.hp = Math.max(0, target.hp - dmg);
+    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+  }
+  if (actor && target.hp > 0 && target.passives && target.passives.counterChance > 0 && Math.random() < target.passives.counterChance) {
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * (target.passives.counterMult || 1) - effectiveStat(actor, "def") * 0.5));
+    actor.hp = Math.max(0, actor.hp - counterDmg);
+    log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！`);
+  }
+  // 撃破時スタック系の受動効果(修羅・槍鬼など): このダメージで倒したらスタックを積む
+  if (actor && actor.passives && actor.passives.onKill && target.hp <= 0) {
+    const ok = actor.passives.onKill;
+    actor.passives.onKillStacks = Math.min(ok.maxStacks, (actor.passives.onKillStacks || 0) + 1);
+    actor.passives.onKillStacksTurns = ok.turns;
+  }
+  // 通常攻撃に乗る状態異常付与の受動効果(毒刃・毒矢など): 攻撃が当たった時に確率判定する。複数選んでいれば全て判定する
+  if (actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
+    actor.passives.onHitInflicts.forEach((oh) => {
+      if (Math.random() < resistedChance(target, oh.chance)) {
+        if (oh.type === "poison") applyPoison(target, oh.value || 3);
+        if (oh.type === "stun") applyStun(target, oh.turns || 1);
+        if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
+        if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
+      }
+    });
+  }
+  return dmg;
 }
 
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
@@ -375,22 +696,21 @@ function usePotion(target, log) {
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
-  const guardian = alive.find((t) => t.guarding);
+  // かばう中、または挑発(tauntTurns)中の仲間がいれば、タンクとして必ずその相手が狙われる
+  const guardian = alive.find((t) => t.guarding || t.tauntTurns > 0);
   const target = guardian || alive[Math.floor(Math.random() * alive.length)];
   if (!rollHit(enemy, target)) {
     log(`${target.label}は${enemy.label}の攻撃をかわした！`);
     return { target, dmg: null, hit: false };
   }
-  let dmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
+  let rawDmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
+  let suffix = "";
   if (target.guarding) {
-    dmg = Math.max(1, Math.round(dmg * 0.4));
+    rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
     target.guarding = false;
-    target.hp = Math.max(0, target.hp - dmg);
-    log(`${enemy.label}は${target.label}に${dmg}ダメージ(かばう)！`);
-  } else {
-    target.hp = Math.max(0, target.hp - dmg);
-    log(`${enemy.label}は${target.label}に${dmg}ダメージ！`);
+    suffix = "(かばう)";
   }
+  const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
   target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(dmg, target.maxHp));
   return { target, dmg, hit: true };
 }
@@ -491,5 +811,8 @@ if (typeof module !== "undefined") {
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
+    applyStatMod, tickStatMods, applyPoison, tickPoison, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
+    initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
+    skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT,
   };
 }

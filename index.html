@@ -433,6 +433,13 @@
     </div>
   </div>
 
+  <!-- レベルアップ時のスキル選択(2択)。どの画面の上にも被さるオーバーレイ -->
+  <div id="skillChoiceOverlay" style="display:none; position:fixed; inset:0; z-index:50; background:rgba(10,12,14,0.92); overflow-y:auto;">
+    <div style="max-width:480px; margin:0 auto; padding:2rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));">
+      <div id="skillChoiceContent"></div>
+    </div>
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>
@@ -477,6 +484,32 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.criticalExpireHalfDay === undefined) c.criticalExpireHalfDay = null;
   if (c.carryingId === undefined) c.carryingId = null;
   if (c.carriedBy === undefined) c.carriedBy = null;
+  if (c.poison == null) c.poison = 0;
+  if (c.stunTurns == null) c.stunTurns = 0;
+  if (c.silenceTurns == null) c.silenceTurns = 0;
+  if (c.statusImmuneTurns == null) c.statusImmuneTurns = 0;
+  if (c.tauntTurns == null) c.tauntTurns = 0;
+  if (!c.statMods) c.statMods = [];
+  if (!c.skills) c.skills = {};
+  if (!c.unlockedSkills) c.unlockedSkills = [];
+  // initPassives()の初期値に、旧セーブに残っている値があればそれで上書きする形でマージする
+  // (単純に足りないキーを足すだけだと、新しく追加したフィールドが未定義のままになりバグるため)
+  c.passives = Object.assign(initPassives(), c.passives || {});
+  // レベル上限を旧仕様(上限なし)から10に圧縮したため、それ以前のセーブで上限を超えているキャラは
+  // 新しい成長式でLv10相当のステータスに再計算し直す(旧仕様のまま強すぎる状態で残さないため)
+  if (c.level > MAX_LEVEL) {
+    c.level = MAX_LEVEL;
+    c.xp = 0;
+    const cls = CLASSES[c.classId];
+    const growth = 1 + MAX_LEVEL * 0.1;
+    const defGrowth = 1 + MAX_LEVEL * 0.05;
+    c.maxHp = Math.round(cls.hp * growth);
+    c.hp = Math.min(c.hp, c.maxHp);
+    c.atk = Math.round(cls.atk * growth);
+    c.def = Math.round(cls.def * defGrowth);
+    c.spd = Math.round(cls.spd * (1 + MAX_LEVEL * 0.05));
+    c.mag = Math.round(cls.mag * growth);
+  }
   delete c.onsenCooldownUntil;
   delete c.lodgingCooldownUntil;
   delete c.corpseFloor;
@@ -846,7 +879,7 @@ function renderStatusScreen(charId) {
   if (overlaySrc) overlayEl.src = overlaySrc;
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statLevel").textContent = c.level;
-  document.getElementById("statXp").textContent = `${c.xp} / ${xpToNext(c.level)}`;
+  document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpToNext(c.level)}`;
   document.getElementById("statHp").textContent = `${c.hp} / ${c.maxHp}`;
   document.getElementById("statMp").textContent = c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-";
   document.getElementById("statAtk").textContent = effectiveStat(c, "atk") + (c.equipBonus && c.equipBonus.atk ? ` (装備+${c.equipBonus.atk})` : "");
@@ -1185,7 +1218,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       </div>
       ${hpBarHtml(c)}
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}${c.carryingId ? " 🎒" : ""}</div>
+      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}${c.carryingId ? " 🎒" : ""}${statusIconsFor(c)}</div>
     `;
     if (targetable) {
       div.onclick = () => {
@@ -1449,10 +1482,33 @@ function renderVfxFor(targetId) {
 function shakeClassFor(entity) {
   return entity.__shakeUntil && entity.__shakeUntil > Date.now() ? " hit-shake" : "";
 }
+// 毒/スタン/沈黙の状態異常アイコンを名前の横に表示する
+function statusIconsFor(entity) {
+  let s = "";
+  if (entity.poison > 0) s += ` ☠${entity.poison}`;
+  if (entity.stunTurns > 0) s += " 💫";
+  if (entity.silenceTurns > 0) s += " 🔇";
+  return s;
+}
 
 function startBattle(enemies) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null };
-  fieldParty.forEach((c) => { c.fleeState = null; }); // 新しい戦闘のたびに前回の逃走状態をリセット
+  // 新しい戦闘のたびに前回の逃走状態/状態異常/一時バフ/戦闘限定の受動効果をリセット(毒などが戦闘をまたいで残らないように)
+  fieldParty.forEach((c) => {
+    c.fleeState = null;
+    c.poison = 0;
+    c.stunTurns = 0;
+    c.silenceTurns = 0;
+    c.statusImmuneTurns = 0;
+    c.tauntTurns = 0;
+    c.statMods = [];
+    if (c.passives) {
+      c.passives.onceGuardUsed = false;
+      c.passives.firstAttackUsed = false;
+      c.passives.onKillStacks = 0;
+      c.passives.onKillStacksTurns = 0;
+    }
+  });
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
@@ -1491,7 +1547,7 @@ function renderBattleScreen() {
     card.dataset.id = e.instanceId;
     card.innerHTML = `
       <img src="${e.image}" alt="${e.label}">
-      <div class="enemy-name">${e.label}</div>
+      <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
       ${hpBarHtml(e)}
     `;
     if (targetable) {
@@ -1542,6 +1598,20 @@ function processNext() {
     // 自分のターンでなくなったので、前のターンの行動ボタンが残って誤タップできてしまわないよう消す
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
+    const poisonDmg = tickTurnStartEffects(actor, blog);
+    if (poisonDmg > 0) popupOn(actor.instanceId, `-${poisonDmg}`, "dmg");
+    if (actor.hp <= 0) {
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    if (actor.stunTurns > 0) {
+      actor.stunTurns--;
+      blog(`${actor.label}はスタンして動けない！`);
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
     setTimeout(() => {
       const result = enemyAttack(actor, alive, blog);
       if (result && result.hit) {
@@ -1559,10 +1629,29 @@ function processNext() {
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
+    battle.actingId = actor.id;
+    document.getElementById("actionGrid").innerHTML = "";
+    renderBattleScreen();
+    const poisonDmg = tickTurnStartEffects(actor, blog);
+    if (poisonDmg > 0) {
+      popupOn(actor.id, `-${poisonDmg}`, "dmg");
+      handleFieldDeaths();
+      renderBattleScreen();
+      if (actor.hp <= 0 || actor.status !== "active") {
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        return;
+      }
+    }
+    if (actor.stunTurns > 0) {
+      actor.stunTurns--;
+      blog(`${actor.label}はスタンして動けない！`);
+      renderBattleScreen();
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
     if (actor.fleeState === "preparing") {
       actor.fleeState = "fled";
-      battle.actingId = actor.id;
-      document.getElementById("actionGrid").innerHTML = "";
       blog(`${actor.label}は戦闘から逃げ出した！`);
       renderBattleScreen();
       battle.orderIndex++;
@@ -1570,9 +1659,6 @@ function processNext() {
       return;
     }
     if (stressTier(actor.fatigue) >= 4) {
-      battle.actingId = actor.id;
-      document.getElementById("actionGrid").innerHTML = "";
-      renderBattleScreen();
       blog(`${actor.label}は発狂して動けない！`);
       battle.orderIndex++;
       setTimeout(processNext, 500);
@@ -1580,16 +1666,15 @@ function processNext() {
     }
     if (actor.reloading) {
       actor.reloading = false;
-      battle.actingId = actor.id;
-      document.getElementById("actionGrid").innerHTML = "";
-      renderBattleScreen();
       blog(`${actor.label}は装填中で動けない！`);
       battle.orderIndex++;
       setTimeout(processNext, 500);
       return;
     }
-    battle.actingId = actor.id;
-    renderBattleScreen();
+    if (actor.silenceTurns > 0) {
+      blog(`${actor.label}は沈黙していて技が使えない！`);
+      actor.silenceTurns--;
+    }
     renderActionButtons(actor);
   }
 }
@@ -1647,6 +1732,94 @@ function pickSingleEnemyTarget(onPicked) {
 }
 
 // 担いでいる相手を対象に選ぶ(戦闘中に瀕死になった仲間、または担いでいる最中に別の仲間が瀕死になった場合)
+// スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
+function runTreeSkill(actor, skill) {
+  const action = skill.action;
+  if (action.kind === "buffSelf") {
+    playSfx("select");
+    useTreeSkill(actor, actor, skill, blog);
+    renderBattleScreen();
+    setTimeout(afterPlayerAction, 500);
+    return;
+  }
+  if (action.kind === "buffParty") {
+    playSfx("select");
+    useTreeSkill(actor, aliveField(), skill, blog);
+    renderBattleScreen();
+    setTimeout(afterPlayerAction, 500);
+    return;
+  }
+  if (action.kind === "heal") {
+    if (action.aoe) {
+      playSfx("heal");
+      const targets = fieldParty.filter((c) => c.status === "active" || (action.reviveHpPct && c.status === "critical"));
+      const result = useTreeSkill(actor, targets, skill, blog);
+      if (result && result.healed) {
+        result.healed.forEach((h) => {
+          if (h.revived) { rescueCritical(h.target); h.target.hp = Math.max(1, Math.round(h.target.maxHp * action.reviveHpPct)); blog(`${h.target.name}が蘇生した！`); }
+          else popupOn(h.target.id, `+${h.heal}`, "heal");
+        });
+      }
+      renderBattleScreen();
+      setTimeout(afterPlayerAction, 500);
+      return;
+    }
+    renderTreeSkillAllyPicker(actor, skill);
+    return;
+  }
+  // ダメージ系
+  if (action.aoe) {
+    playSfx(attackSfxFor(actor.classId));
+    const targetsList = aliveEnemies();
+    const result = useTreeSkill(actor, targetsList, skill, blog);
+    if (result && result.dmgs) {
+      let anyEvaded = false;
+      targetsList.forEach((t, i) => {
+        const r = result.dmgs[i];
+        if (r && r.hit) popupOn(t.instanceId, `-${r.dmg}`, "dmg");
+        else anyEvaded = true;
+      });
+      if (anyEvaded) playSfx("evade");
+    }
+    renderBattleScreen();
+    setTimeout(afterPlayerAction, 500);
+    return;
+  }
+  pickSingleEnemyTarget((target) => {
+    playSfx(attackSfxFor(actor.classId));
+    const result = useTreeSkill(actor, target, skill, blog);
+    const r = result && result.dmgs && result.dmgs[0];
+    if (r && r.hit) popupOn(target.instanceId, `-${r.dmg}`, "dmg");
+    else if (r) playSfx("evade");
+    renderBattleScreen();
+    setTimeout(afterPlayerAction, 500);
+  });
+}
+
+// スキルツリーの単体回復スキル用、味方の対象選択(既存のrenderAllyTargetsは回復薬/治癒の術専用のため別関数にしてある)
+function renderTreeSkillAllyPicker(actor, skill) {
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  aliveField().forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
+    btn.onclick = () => {
+      playSfx("heal");
+      const result = useTreeSkill(actor, target, skill, blog);
+      if (result && result.healed && result.healed[0]) popupOn(target.id, `+${result.healed[0].heal}`, "heal");
+      renderBattleScreen();
+      setTimeout(afterPlayerAction, 500);
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
 function renderCarryTargets(actor, targets) {
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
@@ -1694,7 +1867,8 @@ function renderActionButtons(actor) {
     };
     grid.appendChild(atkBtn);
 
-    (c.abilities || []).forEach((ability) => {
+    // 沈黙中は技(会心の一撃・呪符ノ術など)が使えず、通常攻撃のみになる
+    (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
       const abBtn = document.createElement("button");
       abBtn.className = "big";
       const cost = abilityMpCost(ability);
@@ -1736,6 +1910,17 @@ function renderActionButtons(actor) {
         });
       };
       grid.appendChild(abBtn);
+    });
+
+    // スキルツリーで選んだ能動スキル(沈黙中は使えない)
+    (actor.silenceTurns > 0 ? [] : (actor.unlockedSkills || [])).forEach((skill) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      const cost = skillMpCost(actor, skill.mp);
+      btn.textContent = skill.name + (cost > 0 ? `(MP${cost})` : "");
+      if (cost > 0 && actor.mp < cost) btn.disabled = true;
+      btn.onclick = () => { runTreeSkill(actor, skill); };
+      grid.appendChild(btn);
     });
 
     // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
@@ -1862,11 +2047,16 @@ function afterPlayerAction() {
 
 function victory() {
   playSfx("victory");
-  let totalGold = 0, totalMsgs = [];
+  let totalGold = 0;
+  const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
-    aliveField().forEach((c) => grantXp(c, e.xp, blog));
+    aliveField().forEach((c) => {
+      const beforeLevel = c.level;
+      grantXp(c, e.xp, blog);
+      for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+    });
   });
   state.gold += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
@@ -1877,6 +2067,48 @@ function victory() {
     showScreen("screen-dungeon");
     renderDungeon();
     checkStrandedOnCurrentFloor();
+    queueSkillChoices(leveledUp);
+  };
+}
+
+// レベルアップで選べるスキルツリーがある分だけ、1件ずつ順番に2択画面を出す
+let pendingSkillChoices = [];
+function queueSkillChoices(list) {
+  pendingSkillChoices = list.filter((entry) => SKILL_TREES[entry.character.classId] && SKILL_TREES[entry.character.classId][entry.level]);
+  showNextSkillChoice();
+}
+function showNextSkillChoice() {
+  const overlay = document.getElementById("skillChoiceOverlay");
+  if (pendingSkillChoices.length === 0) {
+    overlay.style.display = "none";
+    return;
+  }
+  const { character, level } = pendingSkillChoices.shift();
+  const tree = SKILL_TREES[character.classId][level];
+  overlay.style.display = "block";
+  const content = document.getElementById("skillChoiceContent");
+  const optionHtml = (skill, side) => `
+    <div class="card" style="margin-top:0.8rem;">
+      <h3 style="margin:0 0 0.3rem;">【${side === "left" ? "左" : "右"}】${skill.name}</h3>
+      <p class="desc" style="margin:0 0 0.6rem;">${skill.desc}</p>
+      <button class="big primary" data-side="${side}" style="width:100%;">これを選ぶ</button>
+    </div>
+  `;
+  content.innerHTML = `
+    <h2 style="text-align:center;">${character.name}がレベル${level}になった！</h2>
+    <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;">スキルを1つ選んでください</p>
+    ${optionHtml(tree.left, "left")}
+    ${optionHtml(tree.right, "right")}
+  `;
+  content.querySelector('button[data-side="left"]').onclick = () => {
+    applySkillChoice(character, { ...tree.left, side: "left" });
+    saveState();
+    showNextSkillChoice();
+  };
+  content.querySelector('button[data-side="right"]').onclick = () => {
+    applySkillChoice(character, { ...tree.right, side: "right" });
+    saveState();
+    showNextSkillChoice();
   };
 }
 

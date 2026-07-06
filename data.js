@@ -103,6 +103,318 @@ const ITEMS = {
   smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 40, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" }, // 回復薬の2倍の価格
 };
 const POTION_HEAL_RATIO = 0.35;
+
+// ============ スキルツリー(XCOM風。レベルアップ毎(Lv2〜10)に左右どちらか1つを選ぶ) ============
+// 数値はユーザー提供の原案(ChatGPT作成)をベースに、このゲームの既存の技(会心の一撃mult1.3など、
+// MPは物理職10固定/術者職26〜30)と釣り合うよう全体的に控えめへ調整してある。
+// 「通常攻撃時に◯%で追撃/連撃」系は会心率/会心ダメージ加算に、「状態異常:麻痺」は全て「スタン(1ターン行動不能)」に、
+// 「沈黙」は敵に技が無い都合上スタンかデバフに、「狙われる確率」系は回避率加算に、それぞれ意味の近い形に置き換えている
+const SKILL_TREES = {
+  samurai: {
+    2: {
+      left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+40%", mp: 0, passive: { firstAttackBonusMult: 0.4 } },
+      right: { name: "見切り", desc: "被弾時、12%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.12 } },
+    },
+    3: {
+      left: { name: "連斬", desc: "会心率+20%、会心ダメージ+15%", mp: 0, passive: { critRateAdd: 0.2, critDmgAdd: 0.15 } },
+      right: { name: "気迫", desc: "HPが80%以上の間、被ダメージ12%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.88 } } },
+    },
+    4: {
+      left: { name: "一閃", desc: "敵単体へ190%ダメージ、防御力25%無視", mp: 4, action: { kind: "damage", mult: 1.9, defPierce: 0.25 } },
+      right: { name: "武士道", desc: "HPが50%以下の間、攻撃力・防御力+18%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, statMult: [{ stat: "atk", mult: 1.18 }, { stat: "def", mult: 1.18 }] } } },
+    },
+    5: {
+      left: { name: "剣圧", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "心眼", desc: "命中率+15%", mp: 0, passive: { accuracyAdd: 0.15 } },
+    },
+    6: {
+      left: { name: "剣豪", desc: "会心率+20%、会心ダメージ+30%", mp: 0, passive: { critRateAdd: 0.2, critDmgAdd: 0.3 } },
+      right: { name: "不動", desc: "状態異常にかかる確率が50%減少する", mp: 0, passive: { statusResistMult: 0.5 } },
+    },
+    7: {
+      left: { name: "疾風", desc: "素早さ+20%", mp: 0, passive: { spdMult: 1.2 } },
+      right: { name: "鉄心", desc: "最大HP+15%、被ダメージ8%減少", mp: 0, passive: { hpMult: 1.15, conditionalMod: { cmp: "gte", value: 0, dmgTakenMult: 0.92 } } },
+    },
+    8: {
+      left: { name: "乱れ斬り", desc: "敵単体へ3連続攻撃(合計210%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.1, hits: 3 } },
+      right: { name: "反撃", desc: "被弾時、20%の確率で反撃する", mp: 0, passive: { counterChance: 0.2 } },
+    },
+    9: {
+      left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
+      right: { name: "覚悟", desc: "戦闘不能になる一撃を、戦闘中1回だけHP1で耐える", mp: 0, passive: { onceGuardType: "surviveAtHp1" } },
+    },
+    10: {
+      left: { name: "神速抜刀", desc: "敵単体へ320%ダメージ、防御力50%無視", mp: 7, action: { kind: "damage", mult: 3.2, defPierce: 0.5 } },
+      right: { name: "明鏡止水", desc: "5ターンの間、攻撃力・防御力・素早さ+20%、毎ターンHP8%回復、状態異常無効", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "atk", mult: 1.2 }, { stat: "def", mult: 1.2 }, { stat: "spd", mult: 1.2 }], turns: 5, hpRegenPct: 0.08, statusImmuneTurns: 5 } },
+    },
+  },
+  ninja: {
+    2: {
+      left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
+    },
+    3: {
+      left: { name: "連撃", desc: "会心率+12%、会心ダメージ+10%", mp: 0, passive: { critRateAdd: 0.12, critDmgAdd: 0.1 } },
+      right: { name: "反射神経", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
+    },
+    4: {
+      left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
+      right: { name: "スタン手裏剣", desc: "敵単体へ100%ダメージ、50%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.5, turns: 1 } } },
+    },
+    5: {
+      left: { name: "暗殺術", desc: "HPが50%以下の敵へのダメージ+30%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.3 } } },
+      right: { name: "忍足", desc: "回避率+8%", mp: 0, passive: { evasionAdd: 0.08 } },
+    },
+    6: {
+      left: { name: "双影", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "分身", desc: "被弾時、15%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.15 } },
+    },
+    7: {
+      left: { name: "修羅刃", desc: "敵を倒すと3ターンの間、攻撃力+20%", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.2 }], turns: 3, maxStacks: 1 } } },
+      right: { name: "幻惑", desc: "通常攻撃が命中した敵の防御力を10%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 1.0, value: 0.1, turns: 3 } } },
+    },
+    8: {
+      left: { name: "乱れ苦無", desc: "敵単体へ4連続攻撃(合計200%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.0, hits: 4 } },
+      right: { name: "影縫い", desc: "敵単体へ130%ダメージ、30%の確率でスタン", mp: 3, action: { kind: "damage", mult: 1.3, inflict: { type: "stun", chance: 0.3, turns: 1 } } },
+    },
+    9: {
+      left: { name: "忍の極意", desc: "会心ダメージ+40%", mp: 0, passive: { critDmgAdd: 0.4 } },
+      right: { name: "空蝉", desc: "戦闘中1回だけ、受けるダメージを完全に無効化する", mp: 0, passive: { onceGuardType: "nullifyDamage" } },
+    },
+    10: {
+      left: { name: "瞬獄", desc: "敵単体へ290%ダメージ、HP50%以下の敵にはさらに1.4倍", mp: 7, action: { kind: "damage", mult: 2.9, executeBonus: { belowPct: 0.5, mult: 1.4 } } },
+      right: { name: "朧隠れ", desc: "5ターンの間、回避率+30%", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "evasionAdd", mult: 0.3 }], turns: 5 } },
+    },
+  },
+  spearman: {
+    2: {
+      left: { name: "貫通突き", desc: "敵単体へ150%ダメージ、防御力20%無視", mp: 3, action: { kind: "damage", mult: 1.5, defPierce: 0.2 } },
+      right: { name: "鉄壁", desc: "防御力+15%", mp: 0, passive: { defMult: 1.15 } },
+    },
+    3: {
+      left: { name: "豪槍", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
+      right: { name: "挑発", desc: "3ターンの間、敵から必ず狙われるようになり、防御力+15%", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.15 }], turns: 3, tauntTurns: 3 } },
+    },
+    4: {
+      left: { name: "連突き", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2 } },
+      right: { name: "迎撃", desc: "被弾時、20%の確率で反撃する", mp: 0, passive: { counterChance: 0.2 } },
+    },
+    5: {
+      left: { name: "鎧砕き", desc: "敵単体へ150%ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 1.5, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
+      right: { name: "守護の構え", desc: "HPが80%以上の間、被ダメージ15%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.85 } } },
+    },
+    6: {
+      left: { name: "槍術皆伝", desc: "攻撃力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "不屈", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
+    },
+    7: {
+      left: { name: "烈槍", desc: "会心率+15%、会心ダメージ+20%", mp: 0, passive: { critRateAdd: 0.15, critDmgAdd: 0.2 } },
+      right: { name: "鋼の肉体", desc: "最大HP+20%", mp: 0, passive: { hpMult: 1.2 } },
+    },
+    8: {
+      left: { name: "迅雷突き", desc: "敵単体へ210%ダメージ", mp: 4, action: { kind: "damage", mult: 2.1 } },
+      right: { name: "守護陣", desc: "4ターンの間、味方全体の防御力+15%", mp: 5, action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.15 }], turns: 4 } },
+    },
+    9: {
+      left: { name: "槍鬼", desc: "敵を倒すたび攻撃力+12%(最大3回まで重複)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.12 }], turns: 20, maxStacks: 3 } } },
+      right: { name: "金剛", desc: "被ダメージ13%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0, dmgTakenMult: 0.87 } } },
+    },
+    10: {
+      left: { name: "天穿槍", desc: "敵単体へ290%ダメージ、防御力45%無視", mp: 7, action: { kind: "damage", mult: 2.9, defPierce: 0.45 } },
+      right: { name: "仁王立ち", desc: "5ターンの間、防御力+35%、被ダメージ25%減少、毎ターンHP5%回復", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.35 }, { stat: "dmgTaken", mult: 0.75 }], turns: 5, hpRegenPct: 0.05 } },
+    },
+  },
+  naginata: {
+    2: {
+      left: { name: "円月の構え", desc: "薙ぎ払いの威力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "足払い", desc: "敵単体へ130%ダメージ、40%の確率で素早さ-20%(3ターン)", mp: 2, action: { kind: "damage", mult: 1.3, inflict: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } },
+    },
+    3: {
+      left: { name: "円舞", desc: "薙ぎ払いの威力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "崩し", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.3, value: 0.15, turns: 3 } } },
+    },
+    4: {
+      left: { name: "旋風薙ぎ", desc: "敵全体へ100%ダメージ", mp: 4, action: { kind: "damage", aoe: true, mult: 1.0 } },
+      right: { name: "威圧", desc: "通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
+    },
+    5: {
+      left: { name: "追刃", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "舞姫", desc: "回避率+15%", mp: 0, passive: { evasionAdd: 0.15 } },
+    },
+    6: {
+      left: { name: "乱舞", desc: "敵全体へ2連続攻撃(合計130%ダメージ)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.3, hits: 2 } },
+      right: { name: "流水", desc: "被弾時、15%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.15 } },
+    },
+    7: {
+      left: { name: "豪舞", desc: "攻撃力+15%", mp: 0, passive: { atkMult: 1.15 } },
+      right: { name: "制圧の心得", desc: "防御力+10%", mp: 0, passive: { defMult: 1.1 } },
+    },
+    8: {
+      left: { name: "花吹雪", desc: "敵全体へ150%ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.5 } },
+      right: { name: "乱心", desc: "通常攻撃時、15%の確率で敵をスタンさせる", mp: 0, passive: { onHitInflict: { type: "stun", chance: 0.15, turns: 1 } } },
+    },
+    9: {
+      left: { name: "舞踏極意", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "静寂", desc: "状態異常にかかる確率が50%減少する", mp: 0, passive: { statusResistMult: 0.5 } },
+    },
+    10: {
+      left: { name: "千本桜", desc: "敵全体へ220%ダメージ", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2 } },
+      right: { name: "天女の舞", desc: "5ターンの間、味方全体の攻撃力・防御力・素早さ+15%", mp: 6, action: { kind: "buffParty", stats: [{ stat: "atk", mult: 1.15 }, { stat: "def", mult: 1.15 }, { stat: "spd", mult: 1.15 }], turns: 5 } },
+    },
+  },
+  hunter: {
+    2: {
+      left: { name: "狙撃", desc: "敵単体へ150%ダメージ", mp: 3, action: { kind: "damage", mult: 1.5 } },
+      right: { name: "毒矢", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
+    },
+    3: {
+      left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "罠師", desc: "命中率+8%", mp: 0, passive: { accuracyAdd: 0.08 } },
+    },
+    4: {
+      left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2 } },
+      right: { name: "スタン矢", desc: "敵単体へ100%ダメージ、40%の確率でスタン", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.4, turns: 1 } } },
+    },
+    5: {
+      left: { name: "鷹の目", desc: "命中率+10%、会心ダメージ+15%", mp: 0, passive: { accuracyAdd: 0.1, critDmgAdd: 0.15 } },
+      right: { name: "弱点看破", desc: "攻撃力+8%", mp: 0, passive: { atkMult: 1.08 } },
+    },
+    6: {
+      left: { name: "狙撃術", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
+      right: { name: "捕縛", desc: "通常攻撃が命中した敵の素早さを20%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
+    },
+    7: {
+      left: { name: "連続射撃", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "狩猟本能", desc: "HPが50%以下の敵へのダメージ+25%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.25 } } },
+    },
+    8: {
+      left: { name: "必中撃ち", desc: "敵単体へ210%ダメージ。この攻撃は必ず命中する", mp: 4, action: { kind: "damage", mult: 2.1, guaranteedHit: true } },
+      right: { name: "腐食毒", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.25, value: 0.15, turns: 3 } } },
+    },
+    9: {
+      left: { name: "射手の極意", desc: "会心率+15%、会心ダメージ+25%", mp: 0, passive: { critRateAdd: 0.15, critDmgAdd: 0.25 } },
+      right: { name: "猛毒使い", desc: "通常攻撃時、30%の確率で敵に強い毒(蓄積4)を付与する", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.3, value: 4 } } },
+    },
+    10: {
+      left: { name: "流星射ち", desc: "敵単体へ290%ダメージ", mp: 7, action: { kind: "damage", mult: 2.9 } },
+      right: { name: "狩神の領域", desc: "5ターンの間、素早さ+20%、攻撃力+15%", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "spd", mult: 1.2 }, { stat: "atk", mult: 1.15 }], turns: 5 } },
+    },
+  },
+  gunner: {
+    2: {
+      left: { name: "精密射撃", desc: "敵単体へ150%ダメージ", mp: 3, action: { kind: "damage", mult: 1.5 } },
+      right: { name: "榴弾", desc: "敵全体へ85%ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85 } },
+    },
+    3: {
+      left: { name: "火薬強化", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
+      right: { name: "爆薬調合", desc: "攻撃力+10%(範囲攻撃向け)", mp: 0, passive: { atkMult: 1.1 } },
+    },
+    4: {
+      left: { name: "貫通弾", desc: "敵単体へ170%ダメージ、防御力25%無視", mp: 4, action: { kind: "damage", mult: 1.7, defPierce: 0.25 } },
+      right: { name: "炸裂弾", desc: "敵全体へ100%ダメージ、30%の確率で攻撃力-15%(3ターン)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.0, inflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
+    },
+    5: {
+      left: { name: "照準", desc: "会心率+18%", mp: 0, passive: { critRateAdd: 0.18 } },
+      right: { name: "焼夷弾", desc: "通常攻撃時、20%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.2, value: 3 } } },
+    },
+    6: {
+      left: { name: "装填術", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
+      right: { name: "爆風拡大", desc: "攻撃力+12%(範囲攻撃向け)", mp: 0, passive: { atkMult: 1.12 } },
+    },
+    7: {
+      left: { name: "急所射撃", desc: "会心ダメージ+35%", mp: 0, passive: { critDmgAdd: 0.35 } },
+      right: { name: "衝撃波", desc: "通常攻撃が命中した敵の素早さを15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "spdDown", chance: 0.2, value: 0.15, turns: 3 } } },
+    },
+    8: {
+      left: { name: "徹甲弾", desc: "敵単体へ220%ダメージ、防御力35%無視", mp: 5, action: { kind: "damage", mult: 2.2, defPierce: 0.35 } },
+      right: { name: "一斉砲撃", desc: "敵全体へ150%ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.5 } },
+    },
+    9: {
+      left: { name: "砲撃術皆伝", desc: "MP消費-20%", mp: 0, passive: { mpDiscountPct: 0.2 } },
+      right: { name: "爆炎支配", desc: "HPが50%以下の敵へのダメージ+25%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.25 } } },
+    },
+    10: {
+      left: { name: "神威砲", desc: "敵単体へ340%ダメージ、防御力45%無視", mp: 7, action: { kind: "damage", mult: 3.4, defPierce: 0.45 } },
+      right: { name: "天地崩砲", desc: "敵全体へ220%ダメージ、40%の確率で毒(蓄積3)を付与", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2, inflict: { type: "poison", chance: 0.4, value: 3 } } },
+    },
+  },
+  onmyoji: {
+    2: {
+      left: { name: "火遁符", desc: "敵単体へ150%の魔法ダメージ", mp: 3, action: { kind: "damage", mult: 1.5, useMag: true } },
+      right: { name: "呪縛符", desc: "通常攻撃時、25%の確率で敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.25, value: 0.15, turns: 3 } } },
+    },
+    3: {
+      left: { name: "水遁符", desc: "敵全体へ85%の魔法ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85, useMag: true } },
+      right: { name: "結界術", desc: "3ターンの間、味方全体の防御力+15%", mp: 4, action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.15 }], turns: 3 } },
+    },
+    4: {
+      left: { name: "雷遁符", desc: "敵単体へ170%の魔法ダメージ、25%の確率でスタン", mp: 4, action: { kind: "damage", mult: 1.7, useMag: true, inflict: { type: "stun", chance: 0.25, turns: 1 } } },
+      right: { name: "衰弱符", desc: "敵単体へ80%の魔法ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
+    },
+    5: {
+      left: { name: "五行の理", desc: "術の威力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "封魔符", desc: "敵単体へ80%の魔法ダメージ、35%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "stun", chance: 0.35, turns: 1 } } },
+    },
+    6: {
+      left: { name: "陰陽融合", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "式神召喚", desc: "術の威力+8%", mp: 0, passive: { atkMult: 1.08 } },
+    },
+    7: {
+      left: { name: "天地鳴動", desc: "敵全体へ110%の魔法ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.1, useMag: true } },
+      right: { name: "厄災", desc: "HPが30%以下の敵への魔法ダメージ+15%", mp: 0, passive: { executeBonus: { belowPct: 0.3, mult: 1.15 } } },
+    },
+    8: {
+      left: { name: "陰陽極意", desc: "MP消費-25%", mp: 0, passive: { mpDiscountPct: 0.25 } },
+      right: { name: "呪詛", desc: "通常攻撃時、20%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.2, value: 3 } } },
+    },
+    9: {
+      left: { name: "四神加護", desc: "会心ダメージ+30%", mp: 0, passive: { critDmgAdd: 0.3 } },
+      right: { name: "霊脈支配", desc: "防御力+10%", mp: 0, passive: { defMult: 1.1 } },
+    },
+    10: {
+      left: { name: "五行滅殺陣", desc: "敵全体へ200%の魔法ダメージ、防御力25%無視", mp: 7, action: { kind: "damage", aoe: true, mult: 2.0, useMag: true, defPierce: 0.25 } },
+      right: { name: "黄泉の呪", desc: "敵全体へ80%の魔法ダメージ、60%の確率で防御力-25%(3ターン)", mp: 7, action: { kind: "damage", aoe: true, mult: 0.8, useMag: true, inflict: { type: "defDown", chance: 0.6, value: 0.25, turns: 3 } } },
+    },
+  },
+  priest: {
+    2: {
+      left: { name: "治癒術", desc: "治癒の術の回復量+15%", mp: 0, passive: { atkMult: 1.15 } },
+      right: { name: "祝福", desc: "防御力+10%", mp: 0, passive: { defMult: 1.1 } },
+    },
+    3: {
+      left: { name: "癒しの祈り", desc: "味方単体のHPを35%回復し、状態異常を解除する", mp: 3, action: { kind: "heal", healPct: 0.35, cleanse: true } },
+      right: { name: "神聖加護", desc: "3ターンの間、味方全体の防御力+15%", mp: 4, action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.15 }], turns: 3 } },
+    },
+    4: {
+      left: { name: "生命力循環", desc: "技のMP消費を15%の確率で無効化する", mp: 0, passive: { mpRefundChance: 0.15 } },
+      right: { name: "浄化", desc: "味方全体の状態異常を解除する", mp: 3, action: { kind: "buffParty", stats: [], turns: 1, cleanse: true } },
+    },
+    5: {
+      left: { name: "慈愛", desc: "治癒の術の回復量+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "聖なる結界", desc: "3ターンの間、味方全体の被ダメージ12%減少", mp: 4, action: { kind: "buffParty", stats: [{ stat: "dmgTaken", mult: 0.88 }], turns: 3 } },
+    },
+    6: {
+      left: { name: "蘇生術", desc: "技のMP消費-20%", mp: 0, passive: { mpDiscountPct: 0.2 } },
+      right: { name: "神託", desc: "3ターンの間、味方全体の素早さ+15%", mp: 4, action: { kind: "buffParty", stats: [{ stat: "spd", mult: 1.15 }], turns: 3 } },
+    },
+    7: {
+      left: { name: "癒しの波動", desc: "味方全体のHPを20%回復する", mp: 5, action: { kind: "heal", aoe: true, healPct: 0.2 } },
+      right: { name: "聖域", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
+    },
+    8: {
+      left: { name: "生命の奇跡", desc: "技のMP消費-20%", mp: 0, passive: { mpDiscountPct: 0.2 } },
+      right: { name: "神威", desc: "4ターンの間、味方全体の攻撃力・防御力+15%", mp: 5, action: { kind: "buffParty", stats: [{ stat: "atk", mult: 1.15 }, { stat: "def", mult: 1.15 }], turns: 4 } },
+    },
+    9: {
+      left: { name: "慈悲の心", desc: "治癒の術の回復量+10%", mp: 0, passive: { atkMult: 1.1 } },
+      right: { name: "退魔", desc: "状態異常にかかる確率が30%減少する", mp: 0, passive: { statusResistMult: 0.3 } },
+    },
+    10: {
+      left: { name: "命の祝福", desc: "味方全体のHPを全回復し、戦闘不能の仲間をHP50%で蘇生する", mp: 8, action: { kind: "heal", aoe: true, healPct: 1.0, reviveHpPct: 0.5, cleanse: true } },
+      right: { name: "天恵の祈り", desc: "5ターンの間、味方全体の攻撃力・防御力・素早さ+20%、毎ターンHP8%回復、状態異常無効", mp: 7, action: { kind: "buffParty", stats: [{ stat: "atk", mult: 1.2 }, { stat: "def", mult: 1.2 }, { stat: "spd", mult: 1.2 }], turns: 5, hpRegenPct: 0.08, statusImmuneTurns: 5 } },
+    },
+  },
+};
 const SUPPLY_CAP = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる
 
 // 職業ごとの武器/防具。各3段階(Lv1から買える基礎/Lv5解禁/Lv10解禁)。上位を買うと下位から乗り換わる(加算ではなく差し替え)。
@@ -160,12 +472,14 @@ const ONSEN_FATIGUE_RELIEF = 50;
 const ONSEN_BASE_COST = 40;
 const ONSEN_COST_PER_LEVEL = 8;
 
-// 敵の階層スケーリング係数。旧0.045だと低レベルパーティでも階層を無制限に潜り抜けられてしまったため、
-// 「Lv5なら深くても5階程度」を目安に大幅に引き上げた(パーティのレベル成長率とほぼ釣り合うよう調整)
-const FLOOR_SCALE_RATE = 0.15; // 敵の攻撃力/HPのスケール(旧: 防御力も同じ倍率で伸ばしていた)
-// 防御力はattackと同じ倍率で伸ばすと「与ダメージがすぐ1に張り付く」問題が起きるため、
-// 攻撃力よりゆるやかに(半分の倍率で)伸ばす。プレイヤー側のlevelUp()のdef成長も同じ考え方で合わせてある
-const FLOOR_DEF_SCALE_RATE = 0.075;
+// 敵の階層スケーリング係数。
+// レベル上限を10に圧縮し(MAX_LEVEL参照)、Lv10で階層40前後に対応できるようにする方針に合わせて、
+// 「Lv10の伸び(1+10*0.1=2.0倍)」と「階層40での敵の伸び」がおおよそ釣り合うよう逆算した値
+// (1+(40-1)*0.025 ≒ 1.975)。防御力は攻撃力の半分の倍率(FLOOR_DEF_SCALE_RATE)で伸ばし、
+// ダメージがすぐ1に張り付かないようにしている(プレイヤー側のlevelUp()のdef成長も同じ考え方)
+const FLOOR_SCALE_RATE = 0.025; // 敵の攻撃力/HPのスケール
+const FLOOR_DEF_SCALE_RATE = 0.0125;
+const MAX_LEVEL = 10; // レベル上限。ダクソン/XCOM的に「少ないレベルで大きく強くなる」設計のため低めに圧縮
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -179,7 +493,7 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE,
-    BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, MAX_LEVEL,
+    BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
 }
