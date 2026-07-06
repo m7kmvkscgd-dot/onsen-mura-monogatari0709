@@ -53,7 +53,7 @@
     justify-content: start; margin-top: 0;
   }
   #screen-town .btn-col button.big {
-    width: auto; white-space: nowrap; padding: 0.9rem 1.1rem;
+    width: 150px; white-space: nowrap; padding: 0.9rem 0.5rem;
   }
   button.big {
     padding: 0.9rem; border-radius: 10px; border: 1px solid var(--border);
@@ -197,7 +197,11 @@
   .turn-indicator { box-sizing: border-box; height: 28px; line-height: 28px; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--accent); padding: 0; background: rgba(20,24,27,0.72); }
   .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
   .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
-  .bottom-actions { padding: 0.8rem 1rem; display: flex; gap: 0.6rem; }
+  .bottom-actions {
+    position: fixed; top: 290px; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
+    padding: 0.8rem 1rem; display: flex; gap: 0.6rem;
+  }
   .bottom-actions button { flex: 1; }
 </style>
 </head>
@@ -218,7 +222,7 @@
         <button class="big" id="toTavernBtn">🏨 宿屋</button>
         <button class="big" id="toShopBtn">🛒 道具屋</button>
         <button class="big" id="toOnsenBtn">♨️ 温泉</button>
-        <button class="big primary" id="toDungeonBtn">🕯 深淵の森へ向かう</button>
+        <button class="big primary" id="toDungeonBtn">⛰️出発</button>
       </div>
     </div>
   </div>
@@ -238,8 +242,9 @@
       <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする</button>
 
       <h2 style="margin-top:1.2rem;">宿泊(HP/MPを全回復)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊すると1日/夜が進み、宿泊中(半日)は冒険に連れて行けません。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで宿泊させたい仲間をまとめて選び、「宿泊する」を押すと1日/夜が進みます(宿泊中の半日は冒険に連れて行けません)。</p>
       <div id="lodgingList"></div>
+      <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;">宿泊する</button>
 
       <h2 style="margin-top:1.2rem;">名簿</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
@@ -319,7 +324,7 @@
 
   <!-- 温泉 -->
   <div class="screen" id="screen-onsen">
-    <div class="hero" style="background-image:url('assets/bg/town.png')">
+    <div class="hero" id="onsenHero">
       <h1>温泉</h1>
     </div>
     <div class="body-pad">
@@ -341,7 +346,7 @@
       <div id="dungeonLog"></div>
       <div class="bottom-actions">
         <button class="big primary" id="advanceBtn">進む</button>
-        <button class="big danger" id="retreatBtn">町に戻る</button>
+        <button class="big danger" id="retreatBtn">里に戻る</button>
       </div>
     </div>
   </div>
@@ -437,6 +442,7 @@ const BG_SETS = {
   town: { day: "assets/bg/town.png", night: "assets/bg/town_night.png" },
   tavern: { day: "assets/bg/tavern.png", night: "assets/bg/tavern_night.png" },
   dungeon: { day: "assets/bg/forest_day.png", night: "assets/bg/forest_night.png" },
+  onsen: { day: "assets/bg/onsen.png", night: "assets/bg/onsen_night.png" },
 };
 function updateSceneBackgrounds() {
   const tod = state.timeOfDay || "day";
@@ -445,6 +451,7 @@ function updateSceneBackgrounds() {
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("dungeonBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
   document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
+  document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[tod]}')`;
 }
 function toggleTimeOfDay() {
   state.timeOfDay = state.timeOfDay === "night" ? "day" : "night";
@@ -562,7 +569,7 @@ function renderClassGrid() {
     grid.appendChild(div);
   });
 }
-let selectedClass = "fighter";
+let selectedClass = "samurai";
 
 // 宿屋の名簿一覧: 状態確認/詳細/解雇のみ(パーティ編成はここでは行わない。出発時に別画面で選ぶ)
 function renderRosterList() {
@@ -611,49 +618,70 @@ function renderRosterList() {
   });
 }
 
-// 宿屋: 宿泊(HP/MPを全回復するが、宿泊中は半日連れて行けない。1日/夜が進む)
+// 宿屋: 宿泊(HP/MPを全回復するが、宿泊中は半日連れて行けない。まとめて選んで1回だけ1日/夜が進む)
+let lodgingSelectedIds = [];
 function renderLodgingList() {
   const list = document.getElementById("lodgingList");
   list.innerHTML = "";
   const eligible = state.roster.filter((c) => c.status === "active");
+  lodgingSelectedIds = lodgingSelectedIds.filter((id) => eligible.some((c) => c.id === id));
+  const confirmBtn = document.getElementById("lodgeConfirmBtn");
   if (eligible.length === 0) {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">宿泊できる仲間がいません。</p>';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "宿泊する";
     return;
   }
   eligible.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const cooling = !isAvailable(c, state.halfDayStep);
     const fullHealth = c.hp >= c.maxHp && c.mp >= c.maxMp;
-    const disabled = cooling || fullHealth || state.gold < LODGE_COST;
-    let label = `宿泊する(${LODGE_COST}G)`;
-    if (cooling) label = "休養中";
-    else if (fullHealth) label = "満タン";
+    const selectable = !cooling && !fullHealth;
+    const selected = lodgingSelectedIds.includes(c.id);
     const row = document.createElement("div");
-    row.className = "roster-row";
+    row.className = "roster-row" + (selected ? " selected" : "") + (!selectable ? " disabled" : "");
     const overlaySrc = stressOverlaySrc(c.fatigue);
+    let tag = "宿泊対象";
+    if (cooling) tag = "休養中";
+    else if (fullHealth) tag = "満タン";
     row.innerHTML = `
       <div class="stress-wrap">
         <img src="${c2.image}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
       </div>
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${selectable ? "active" : ""}">${tag}</span></div>
         <div class="roster-sub">HP ${c.hp}/${c.maxHp} ・ MP ${c.mp}/${c.maxMp}</div>
       </div>
-      <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
     `;
-    row.querySelector("button").onclick = () => {
-      state.gold -= LODGE_COST;
-      useLodging(c, state.halfDayStep);
-      toggleTimeOfDay();
-      saveState();
-      playSfx("heal");
-      alert(`${c.name}は宿でぐっすり眠り、HP/MPが全回復した。`);
-      renderTavern();
+    row.onclick = () => {
+      if (!selectable) return;
+      if (selected) {
+        lodgingSelectedIds = lodgingSelectedIds.filter((id) => id !== c.id);
+      } else {
+        lodgingSelectedIds.push(c.id);
+      }
+      renderLodgingList();
     };
     list.appendChild(row);
   });
+  const cost = LODGE_COST * lodgingSelectedIds.length;
+  confirmBtn.textContent = lodgingSelectedIds.length > 0 ? `宿泊する(${cost}G)` : "宿泊する";
+  confirmBtn.disabled = lodgingSelectedIds.length === 0 || state.gold < cost;
 }
+document.getElementById("lodgeConfirmBtn").onclick = () => {
+  const targets = state.roster.filter((c) => lodgingSelectedIds.includes(c.id));
+  if (targets.length === 0) return;
+  const cost = LODGE_COST * targets.length;
+  state.gold -= cost;
+  targets.forEach((c) => useLodging(c, state.halfDayStep));
+  toggleTimeOfDay();
+  lodgingSelectedIds = [];
+  saveState();
+  playSfx("heal");
+  alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復した。`);
+  renderTavern();
+};
 
 function renderTavern() {
   pruneActiveParty();
@@ -690,6 +718,14 @@ document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showS
 const RANDOM_FEMALE_NAMES = [
   "紅葉", "小雪", "千鶴", "朝顔", "薄雲", "萌", "夕凪", "静音",
   "椿", "撫子", "楓", "泉", "琥珀", "小夜", "藍", "花梨",
+  "桜", "桔梗", "菖蒲", "芙蓉", "牡丹", "百合", "菫", "蓮",
+  "睡蓮", "桃花", "杏", "小梅", "柚子", "柊", "雪乃", "雫",
+  "霞", "朧", "潮音", "汐里", "白波", "凛", "澪", "瑠璃",
+  "翡翠", "珊瑚", "水晶", "黄金", "銀糸", "茜", "朱音", "緋色",
+  "深緑", "若葉", "早苗", "稲穂", "麦穂", "蛍", "燕", "千鳥",
+  "雲雀", "白鷺", "木蓮", "山吹", "弥生", "皐月", "長月", "葉月",
+  "睦月", "如月", "卯月", "水無月", "文月", "霜月", "小春", "朝陽",
+  "夕陽", "望月", "新月", "星羅", "天音", "風音", "雪音", "紫苑",
 ];
 function randomFemaleName() {
   return RANDOM_FEMALE_NAMES[Math.floor(Math.random() * RANDOM_FEMALE_NAMES.length)];
@@ -705,6 +741,7 @@ document.getElementById("createCharBtn").onclick = () => {
   saveState();
   playSfx("select");
   renderRosterList();
+  renderLodgingList();
 };
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
@@ -765,6 +802,7 @@ document.getElementById("departBtn").onclick = () => {
 
 // ============ 温泉 ============
 function renderOnsen() {
+  updateSceneBackgrounds();
   document.getElementById("onsenGold").textContent = state.gold + "G";
   const list = document.getElementById("onsenList");
   list.innerHTML = "";
