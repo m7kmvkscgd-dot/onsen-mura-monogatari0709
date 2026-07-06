@@ -1022,8 +1022,8 @@ function enterDungeon() {
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   dungeonLogLines = [];
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
-  renderDungeon();
   showScreen("screen-dungeon");
+  renderDungeon();
   dlog("深淵の森に入った。");
 }
 
@@ -1457,8 +1457,8 @@ document.getElementById("fleeBtn").onclick = () => {
   if (!battle || battle.actingId == null) return;
   blog("戦闘から逃げ出した！");
   battle = null;
-  renderDungeon();
   showScreen("screen-dungeon");
+  renderDungeon();
 };
 
 function renderAllyTargets(actor, kind) {
@@ -1511,8 +1511,8 @@ function victory() {
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
-    renderDungeon();
     showScreen("screen-dungeon");
+    renderDungeon();
   };
 }
 
