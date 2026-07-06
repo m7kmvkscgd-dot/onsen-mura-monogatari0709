@@ -97,11 +97,13 @@ const ENEMIES = {
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 280, atk: 34, def: 18, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 42, maxFloor: 999, isBoss: true },
 };
 
+// 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 20, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
+  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 40, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" }, // 回復薬の2倍の価格
 };
 const POTION_HEAL_RATIO = 0.35;
-const POTION_CAP = 5; // 一度の遠征で持てる回復薬の上限
+const SUPPLY_CAP = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる
 
 // 職業ごとの武器/防具。各3段階(Lv1から買える基礎/Lv5解禁/Lv10解禁)。上位を買うと下位から乗り換わる(加算ではなく差し替え)。
 // 「そのレベルに到達した仲間が1人でもいるか」で解禁判定する。購入すると同じ職業の全メンバーに恒久的なステータスが乗る。
@@ -160,7 +162,10 @@ const ONSEN_COST_PER_LEVEL = 8;
 
 // 敵の階層スケーリング係数。旧0.045だと低レベルパーティでも階層を無制限に潜り抜けられてしまったため、
 // 「Lv5なら深くても5階程度」を目安に大幅に引き上げた(パーティのレベル成長率とほぼ釣り合うよう調整)
-const FLOOR_SCALE_RATE = 0.15;
+const FLOOR_SCALE_RATE = 0.15; // 敵の攻撃力/HPのスケール(旧: 防御力も同じ倍率で伸ばしていた)
+// 防御力はattackと同じ倍率で伸ばすと「与ダメージがすぐ1に張り付く」問題が起きるため、
+// 攻撃力よりゆるやかに(半分の倍率で)伸ばす。プレイヤー側のlevelUp()のdef成長も同じ考え方で合わせてある
+const FLOOR_DEF_SCALE_RATE = 0.075;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -174,6 +179,7 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE,
+    BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE,
   };
 }

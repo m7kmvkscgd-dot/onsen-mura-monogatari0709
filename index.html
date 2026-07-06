@@ -37,7 +37,7 @@
   }
   .hero > * { position: relative; z-index: 1; }
   .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
-  .hero-title-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
   .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
@@ -153,11 +153,15 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
-  .dungeon-content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; }
+  /* z-indexは.party-bar(4)より高くする: 内側の.dungeon-top(z-index:5)はこのスタッキングコンテキストに
+     閉じ込められるため、こちら自体を.party-barより上げないと瀕死アラートのボタンが増えた時に隠れてしまう */
+  .dungeon-content { position: relative; z-index: 5; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; }
   .dungeon-top {
-    /* 戦闘画面の.battle-topと同じtop:0にして、ログ欄の開始位置(floor-badgeの余白で調整)を戦闘画面と揃える */
+    /* 戦闘画面の.battle-topと同じtop:0にして、ログ欄の開始位置(floor-badgeの余白で調整)を戦闘画面と揃える。
+       z-indexも.battle-top(5)と同じにして.party-bar(4)より上にし、瀕死アラートのボタンが増えて
+       縦に伸びた時にparty-barに隠れてタップできなくなるのを防ぐ */
     position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
-    width: 100%; max-width: 480px; z-index: 2;
+    width: 100%; max-width: 480px; z-index: 5;
   }
   .battle-bg {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
@@ -179,10 +183,12 @@
     width: 100%; max-width: 480px; z-index: 4;
   }
   .battle-flee-bar {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    /* iOS Safariはツールバー分だけ画面最下部が実際には見えづらいため、bottom:0ではなく
+       画面下端から一定距離を空けた位置に固定する(スクロールしないと届かない問題への対応) */
+    position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 6;
     background: var(--panel);
-    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px) + 20px);
+    padding: 0.7rem 1rem;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
@@ -258,7 +264,7 @@
     <div class="body-pad">
       <div class="btn-col">
         <button class="big" id="toTavernBtn">🏨 宿屋</button>
-        <button class="big" id="toShopBtn">🛒 道具屋</button>
+        <button class="big" id="toShopBtn">⚒️ 鍛冶屋</button>
         <button class="big" id="toOnsenBtn">♨️ 温泉</button>
         <button class="big primary" id="toDungeonBtn">⛰️出発</button>
       </div>
@@ -305,6 +311,28 @@
     </div>
     <div class="body-pad">
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+
+      <h2>支援物資 <span id="suppliesCount"></span></h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">回復薬と煙玉を購入できます。合計で最大<span id="suppliesCapLabel"></span>個まで持てます。</p>
+      <p class="gold" id="suppliesGold">0G</p>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>回復薬</strong> <span id="potionOwned">0</span>個</div>
+            <div class="desc">戦闘中にHPを最大HPの35%回復する</div>
+          </div>
+          <button class="big" id="buyPotionSupplyBtn">購入</button>
+        </div>
+        <div class="shop-item" style="margin-top:0.6rem;">
+          <div>
+            <div><strong>煙玉</strong> <span id="smokeBombOwned">0</span>個</div>
+            <div class="desc">使うとその戦闘からパーティ全員で逃げ出せる</div>
+          </div>
+          <button class="big" id="buySmokeBombBtn">購入</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top:1rem;">パーティ編成</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大4人)。瀕死・ロストは選べません。</p>
       <div id="partySelectList"></div>
       <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
@@ -343,20 +371,11 @@
   <!-- 道具屋 -->
   <div class="screen" id="screen-shop">
     <div class="hero" id="shopHero">
-      <h1>道具屋</h1>
+      <h1>鍛冶屋</h1>
     </div>
     <div class="body-pad">
       <button class="big" id="shopBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="shopGold">0G</p>
-      <div class="card">
-        <div class="shop-item">
-          <div>
-            <div><strong>回復薬</strong> <span id="potionCount"></span></div>
-            <div class="desc">戦闘中にHPを最大HPの35%回復する(20G、最大5個まで)</div>
-          </div>
-          <button class="big" id="buyPotionBtn">購入</button>
-        </div>
-      </div>
 
       <h2>職業別 武器・防具</h2>
       <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.5rem;">一度買えばその職業の全員(今後仲間にする人も含む)に永久に効果が乗ります。個別の装備の付け外しはありません。</p>
@@ -393,6 +412,7 @@
       <div class="bottom-actions">
         <button class="big primary" id="advanceBtn">進む</button>
         <button class="big danger" id="retreatBtn">里に戻る</button>
+        <button class="big" id="dungeonPotionBtn">回復薬</button>
       </div>
     </div>
   </div>
@@ -429,9 +449,10 @@ function defaultState() {
     halfDayStep: 0, // 昼夜が切り替わるたびに1つ進むカウンタ(瀕死キャラのロスト判定に使う)
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 3 },
+    inventory: { potion: 3, smokeBomb: 0 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
+    clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
   };
 }
 
@@ -454,6 +475,8 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   }
   if (c.criticalFloor === undefined) c.criticalFloor = null;
   if (c.criticalExpireHalfDay === undefined) c.criticalExpireHalfDay = null;
+  if (c.carryingId === undefined) c.carryingId = null;
+  if (c.carriedBy === undefined) c.carriedBy = null;
   delete c.onsenCooldownUntil;
   delete c.lodgingCooldownUntil;
   delete c.corpseFloor;
@@ -469,10 +492,13 @@ function loadState() {
       loaded.classUpgrades = loaded.classUpgrades || {};
       loaded.timeOfDay = loaded.timeOfDay || "day";
       loaded.halfDayStep = loaded.halfDayStep || 0;
+      if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
-        loaded.inventory.potion = Math.min(loaded.inventory.potion || 0, POTION_CAP);
+        // 支援物資(回復薬+煙玉)の合計がSUPPLY_CAPを超えないよう、旧セーブや不整合分を補正する
+        loaded.inventory.potion = Math.min(loaded.inventory.potion || 0, SUPPLY_CAP);
+        loaded.inventory.smokeBomb = Math.min(loaded.inventory.smokeBomb || 0, Math.max(0, SUPPLY_CAP - loaded.inventory.potion));
       }
       (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades, loaded.halfDayStep));
       return loaded;
@@ -486,14 +512,36 @@ function saveState() {
 }
 
 // ============ 時間帯(朝→昼→夕→夜の4段階サイクル) ============
-// 町・宿屋は4段階それぞれの絵を持つが、深淵の森・温泉は昼/夜2種類の絵しか無いため
+// 町・宿屋・深淵の森は4段階それぞれの絵を持つが、温泉は昼/夜2種類の絵しか無いため
 // 朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
 const TIME_PHASES = ["dawn", "day", "dusk", "night"];
 const TIME_PHASE_LABEL = { dawn: "朝", day: "昼", dusk: "夕", night: "夜" };
+// 探索中の時計(0〜1439分 = 0:00〜23:59)。「進む」1回でMINUTES_PER_FLOOR_FORWARD分(深層に向かうのは時間がかかる)、
+// 「帰還」1回でMINUTES_PER_FLOOR_RETREAT分(帰りは勝手知ったる道で少し早い)進み、
+// 下記の時間割の境界を跨いだらtimeOfDayも自動で切り替わる(生活感覚に近い長さにしてあり、均等4分割ではない)
+const MINUTES_PER_FLOOR_FORWARD = 45; // 4回進む(4層分)でちょうど3時間
+const MINUTES_PER_FLOOR_RETREAT = 30;
+const PHASE_START_MINUTES = { dawn: 5 * 60, day: 10 * 60, dusk: 16 * 60, night: 19 * 60 }; // 朝5:00/昼10:00/夕16:00/夜19:00
+function phaseForClockMinutes(minutes) {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  let phase = "night"; // 0:00〜4:59は前日の夜の続き
+  TIME_PHASES.forEach((p) => { if (m >= PHASE_START_MINUTES[p]) phase = p; });
+  return phase;
+}
+// 町に帰る/宿泊で時間帯が飛ぶ時は、時計をその時間帯の開始時刻に同期させる(探索中の時計と矛盾しないように)
+function syncClockToPhase() {
+  state.clockMinutes = PHASE_START_MINUTES[state.timeOfDay];
+}
+// 探索で1階進む/戻るごとに時計を進め、時間帯の境界を跨いだらtimeOfDayを切り替える
+function advanceExplorationClock(minutes) {
+  if (state.clockMinutes == null) syncClockToPhase();
+  state.clockMinutes = (state.clockMinutes + minutes) % 1440;
+  state.timeOfDay = phaseForClockMinutes(state.clockMinutes);
+}
 const BG_SETS = {
   town: { dawn: "assets/bg/town_dawn.png", day: "assets/bg/town.png", dusk: "assets/bg/town_dusk.png", night: "assets/bg/town_night.png" },
   tavern: { dawn: "assets/bg/tavern_dawn.png", day: "assets/bg/tavern.png", dusk: "assets/bg/tavern_dusk.png", night: "assets/bg/tavern_night.png" },
-  dungeon: { day: "assets/bg/forest_day.png", night: "assets/bg/forest_night.png" },
+  dungeon: { dawn: "assets/bg/forest_dawn.png", day: "assets/bg/forest_day.png", dusk: "assets/bg/forest_dusk.png", night: "assets/bg/forest_night.png" },
   onsen: { day: "assets/bg/onsen.png", night: "assets/bg/onsen_night.png" },
 };
 function dayLikeOf(tod) {
@@ -505,14 +553,14 @@ function updateSceneBackgrounds() {
   document.getElementById("townHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
-  document.getElementById("dungeonBg").style.backgroundImage = `url('${BG_SETS.dungeon[dayLike]}')`;
-  document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[dayLike]}')`;
+  document.getElementById("dungeonBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
+  document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("partySelectHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
 }
 // halfDayStepの加算・瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
-// 時間帯フェーズの進め方(applyPhase)だけを呼び出し元ごとに変える
+// 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
 function advanceCalendar(applyPhase) {
   applyPhase();
   state.halfDayStep++;
@@ -521,17 +569,16 @@ function advanceCalendar(applyPhase) {
   saveState();
   updateSceneBackgrounds();
 }
-// 冒険から町に帰った時: 朝→夕、夜→翌日の昼のように、4段階のうち2つ分進める
+// 冒険から町に帰った時: 時間帯は探索中の時計(advanceExplorationClock)で既に正しく進んでいるため、
+// ここで追加のジャンプは行わない(旧: 朝→夕のように4段階のうち2つ分進めていたが撤廃)
 function toggleTimeOfDay() {
-  advanceCalendar(() => {
-    const idx = TIME_PHASES.indexOf(state.timeOfDay || "day");
-    state.timeOfDay = TIME_PHASES[(idx + 2) % TIME_PHASES.length];
-  });
+  advanceCalendar(() => {});
 }
 // 宿屋で宿泊した時: 今が何時であっても必ず翌日の朝になる
 function advanceToNextMorning() {
   advanceCalendar(() => {
     state.timeOfDay = "dawn";
+    syncClockToPhase();
   });
 }
 
@@ -609,6 +656,10 @@ function statusLabel(c) {
     return base;
   }
   if (c.status === "critical") {
+    if (c.carriedBy) {
+      const carrier = getRosterChar(c.carriedBy);
+      return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
+    }
     const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
     const daysLeft = Math.ceil(halfLeft / 2);
     return `深淵の森 ${c.criticalFloor}層目で瀕死(あと約${daysLeft}日で救出しないとロスト)`;
@@ -842,6 +893,7 @@ const LODGE_COST = 20; // 宿屋に宿泊する際の宿代(キャラ1人あた�
 function renderPartySelect() {
   updateSceneBackgrounds();
   pruneActiveParty();
+  renderSupplies();
   const list = document.getElementById("partySelectList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -880,6 +932,41 @@ function renderPartySelect() {
     list.appendChild(row);
   });
 }
+
+// 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計SUPPLY_CAP個までの共有枠
+function renderSupplies() {
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  document.getElementById("suppliesGold").textContent = state.gold + "G";
+  document.getElementById("suppliesCount").textContent = `(${total}/${SUPPLY_CAP})`;
+  document.getElementById("suppliesCapLabel").textContent = SUPPLY_CAP;
+  document.getElementById("potionOwned").textContent = state.inventory.potion || 0;
+  document.getElementById("smokeBombOwned").textContent = state.inventory.smokeBomb || 0;
+  document.getElementById("buyPotionSupplyBtn").textContent = `購入(${ITEMS.potion.price}G)`;
+  document.getElementById("buyPotionSupplyBtn").disabled = total >= SUPPLY_CAP || state.gold < ITEMS.potion.price;
+  document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
+  document.getElementById("buySmokeBombBtn").disabled = total >= SUPPLY_CAP || state.gold < ITEMS.smokeBomb.price;
+}
+document.getElementById("buyPotionSupplyBtn").onclick = () => {
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  if (total >= SUPPLY_CAP) { alert(`支援物資は最大${SUPPLY_CAP}個までしか持てません`); return; }
+  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.potion.price;
+  state.inventory.potion = (state.inventory.potion || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderSupplies();
+};
+document.getElementById("buySmokeBombBtn").onclick = () => {
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  if (total >= SUPPLY_CAP) { alert(`支援物資は最大${SUPPLY_CAP}個までしか持てません`); return; }
+  if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.smokeBomb.price;
+  state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderSupplies();
+};
+
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("departBtn").onclick = () => {
@@ -941,8 +1028,6 @@ document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); showS
 function renderShop() {
   updateSceneBackgrounds();
   document.getElementById("shopGold").textContent = state.gold + "G";
-  document.getElementById("potionCount").textContent = `(所持:${state.inventory.potion}/${POTION_CAP})`;
-  document.getElementById("buyPotionBtn").disabled = state.inventory.potion >= POTION_CAP;
   renderEquipmentList();
 }
 
@@ -1005,21 +1090,13 @@ function buyEquipment(classId, slot) {
   playSfx("coin");
   renderShop();
 }
-document.getElementById("buyPotionBtn").onclick = () => {
-  if (state.inventory.potion >= POTION_CAP) { alert(`回復薬は最大${POTION_CAP}個までしか持てません`); return; }
-  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
-  state.gold -= ITEMS.potion.price;
-  state.inventory.potion++;
-  saveState();
-  playSfx("coin");
-  renderShop();
-};
 document.getElementById("shopBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 
 // ============ ダンジョン ============
 let currentFloor = 0;
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
+let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 
 function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
@@ -1039,8 +1116,10 @@ function pruneActiveParty() {
 
 function enterDungeon() {
   currentFloor = 1;
+  retreating = false;
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
+  fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
   dungeonLogLines = [];
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
   showScreen("screen-dungeon");
@@ -1106,7 +1185,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       </div>
       ${hpBarHtml(c)}
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}</div>
+      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}${c.carryingId ? " 🎒" : ""}</div>
     `;
     if (targetable) {
       div.onclick = () => {
@@ -1136,29 +1215,79 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
   playBgm("dungeon");
+  updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
+  document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
+  document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
+  document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
+  document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
   positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 }
 
+// 探索中(戦闘外)にも回復薬を使えるように。対象は生存中の仲間から選ぶ
+document.getElementById("dungeonPotionBtn").onclick = () => {
+  if ((state.inventory.potion || 0) <= 0) return;
+  const div = document.getElementById("criticalAlert");
+  const targets = fieldParty.filter((c) => c.status === "active");
+  div.innerHTML = `
+    <div class="critical-alert">
+      <p><strong>誰に回復薬(残り${state.inventory.potion})を使いますか？</strong></p>
+      ${targets.map((c) => `<button class="big" data-target-id="${c.id}" style="margin-top:0.3rem;">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+      <button class="big danger" id="cancelDungeonPotionBtn" style="margin-top:0.4rem;">やめる</button>
+    </div>
+  `;
+  targets.forEach((c) => {
+    div.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      state.inventory.potion--;
+      const heal = usePotion(c, dlog);
+      playSfx("heal");
+      saveState();
+      renderDungeon();
+    };
+  });
+  document.getElementById("cancelDungeonPotionBtn").onclick = () => { div.innerHTML = ""; };
+};
+
+// 「里に戻る」はファストトラベルではなく、ここから階層を1つずつ下って歩いて帰るモードに入るだけ。
+// 実際に町へ着くのは、帰還を続けて階層1から更に戻ろうとした時(finishRetreat参照)
 document.getElementById("retreatBtn").onclick = () => {
-  dlog("町に戻った。");
+  retreating = true;
+  dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+  renderDungeon();
+};
+
+function finishRetreat() {
+  retreating = false;
+  deliverCarriedAllies();
+  dlog("里に戻った。");
   toggleTimeOfDay();
   renderTown();
   showScreen("screen-town");
-};
+}
 
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
     return;
   }
-  advanceFatigue(fieldParty);
-  currentFloor++;
+  if (retreating) {
+    currentFloor--;
+    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+    if (currentFloor <= 0) {
+      saveState();
+      finishRetreat();
+      return;
+    }
+  } else {
+    advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
+    currentFloor++;
+    advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+  }
   saveState();
 
   const criticalHere = state.roster.find((c) => c.status === "critical" && c.criticalFloor === currentFloor);
   renderDungeon();
   if (criticalHere) {
-    showCriticalAlert(criticalHere);
+    showCriticalAlert(criticalHere, () => rollEncounter());
     return;
   }
   rollEncounter();
@@ -1166,7 +1295,9 @@ document.getElementById("advanceBtn").onclick = () => {
 
 // 別の冒険で瀕死のまま残された仲間がいる階に到達した時のアラート。
 // 救出すると即座にその冒険を終了して町に戻る(見送れば探索を続行できる)
-function showCriticalAlert(critical) {
+// afterSkip: 「見送る」を選んだ時の続き処理。フロア到達時は次のエンカウント抽選(rollEncounter)、
+// 戦闘直後(このフロアで今しがた瀕死になった仲間がいる場合)は何もせず探索画面に留まるだけ、と呼び出し元で使い分ける
+function showCriticalAlert(critical, afterSkip) {
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   div.innerHTML = `
@@ -1174,7 +1305,8 @@ function showCriticalAlert(critical) {
       <p><strong>${critical.name}(${c2.ja})が瀕死のまま倒れている...</strong></p>
       <p>${statusLabel(critical)}</p>
       <button class="big primary" id="rescueBtn">救出して町に戻る</button>
-      <button class="big" id="skipCriticalBtn" style="margin-top:0.4rem;">今は見送って先へ進む</button>
+      <button class="big" id="carryBtn" style="margin-top:0.4rem;">担いで一緒に歩いて帰る</button>
+      <button class="big" id="skipCriticalBtn" style="margin-top:0.4rem;">${retreating ? "今は見送って帰還を続ける" : "今は見送って先へ進む"}</button>
     </div>
   `;
   document.getElementById("rescueBtn").onclick = () => {
@@ -1182,23 +1314,73 @@ function showCriticalAlert(critical) {
     dlog(`${critical.name}を救出した！この冒険はここで終了し、町に戻る。`);
     saveState();
     playSfx("heal");
+    retreating = false;
+    deliverCarriedAllies(); // もし他に担いでいる仲間がいれば、その人も一緒に届ける
     toggleTimeOfDay();
     renderTown();
     showScreen("screen-town");
   };
+  document.getElementById("carryBtn").onclick = () => {
+    showCarryPicker(critical, afterSkip);
+  };
   document.getElementById("skipCriticalBtn").onclick = () => {
-    dlog("瀕死の仲間をその場に残し、先へ進んだ。");
+    dlog("瀕死の仲間をその場に残した。");
     div.innerHTML = "";
-    rollEncounter();
+    afterSkip();
   };
 }
 
+// 誰が担ぐかを選ぶ(探索中に取り残された仲間の階へたどり着いた時、または戦闘直後にこのフロアで瀕死になった仲間がいる時)
+function showCarryPicker(critical, afterSkip) {
+  const div = document.getElementById("criticalAlert");
+  const carriers = aliveField().filter((c) => !c.carryingId);
+  if (carriers.length === 0) {
+    alert("担げる仲間がいません(全員ふさがっています)");
+    return;
+  }
+  div.innerHTML = `
+    <div class="critical-alert">
+      <p><strong>${critical.name}を誰が担ぎますか？</strong></p>
+      ${carriers.map((c) => `<button class="big" data-carrier-id="${c.id}" style="margin-top:0.3rem;">${c.name}</button>`).join("")}
+      <button class="big danger" id="cancelCarryBtn" style="margin-top:0.4rem;">やめる</button>
+    </div>
+  `;
+  carriers.forEach((c) => {
+    div.querySelector(`button[data-carrier-id="${c.id}"]`).onclick = () => {
+      c.carryingId = critical.id;
+      critical.carriedBy = c.id;
+      critical.criticalFloor = null;
+      critical.criticalExpireHalfDay = null;
+      saveState();
+      dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
+      div.innerHTML = "";
+      renderDungeon();
+    };
+  });
+  document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, afterSkip);
+}
+
+// 担いでいた仲間を無事に里まで届け、瀕死から回復させる(里に着いた時に呼ぶ)
+function deliverCarriedAllies() {
+  fieldParty.forEach((c) => {
+    if (c.status === "critical" && c.carriedBy) {
+      const carrier = getRosterChar(c.carriedBy);
+      rescueCritical(c);
+      dlog(`${carrier ? carrier.name : "仲間"}が担いでいた${c.name}を無事に里まで連れ帰った！`);
+    }
+  });
+  fieldParty.forEach((c) => { c.carryingId = null; });
+}
+
+// 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
 function rollEncounter() {
+  const battleChance = retreating ? 0.65 / 4 : 0.65;
+  const goldChance = retreating ? 0.25 / 5 : 0.25;
   const roll = Math.random();
-  if (roll < 0.65) {
+  if (roll < battleChance) {
     const enemies = pickEncounterForFloor(currentFloor);
     startBattle(enemies);
-  } else if (roll < 0.9) {
+  } else if (roll < battleChance + goldChance) {
     const g = 5 + Math.floor(Math.random() * currentFloor * 3);
     state.gold += g;
     saveState();
@@ -1270,6 +1452,7 @@ function shakeClassFor(entity) {
 
 function startBattle(enemies) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null };
+  fieldParty.forEach((c) => { c.fleeState = null; }); // 新しい戦闘のたびに前回の逃走状態をリセット
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
@@ -1288,8 +1471,9 @@ function blog(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
+// 戦闘中に「逃げた」(fleeState==="fled")キャラは、生きていても以後この戦闘には参加しない
 function aliveField() {
-  return fieldParty.filter((c) => c.hp > 0 && c.status === "active");
+  return fieldParty.filter((c) => c.hp > 0 && c.status === "active" && c.fleeState !== "fled");
 }
 function aliveEnemies() {
   return battle.enemies.filter((e) => e.hp > 0);
@@ -1325,10 +1509,19 @@ function renderBattleScreen() {
   positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
 }
 
+// aliveField()が0人になった時、それが「全滅」なのか「全員逃げ切った」なのかを判定する
+// (fleeStateが"fled"のキャラはaliveField()から除外されるが、hp>0かつstatus==="active"のままなので
+// fieldParty全体で見ればまだ生きている=逃走成功、というケースと区別する必要がある)
+function handleNoOneLeftToFight() {
+  const stillActiveIncludingFled = fieldParty.filter((c) => c.hp > 0 && c.status === "active");
+  if (stillActiveIncludingFled.length > 0) escapeBattle();
+  else defeat();
+}
+
 function nextRound() {
   const alive = aliveField();
   if (aliveEnemies().length === 0) { victory(); return; }
-  if (alive.length === 0) { defeat(); return; }
+  if (alive.length === 0) { handleNoOneLeftToFight(); return; }
   battle.order = turnOrder([...alive, ...aliveEnemies()]);
   battle.orderIndex = 0;
   processNext();
@@ -1339,7 +1532,7 @@ function processNext() {
   battle.actingEnemyId = null;
   if (aliveEnemies().length === 0) { renderBattleScreen(); victory(); return; }
   const alive = aliveField();
-  if (alive.length === 0) { renderBattleScreen(); defeat(); return; }
+  if (alive.length === 0) { renderBattleScreen(); handleNoOneLeftToFight(); return; }
   if (battle.orderIndex >= battle.order.length) { nextRound(); return; }
   const actor = battle.order[battle.orderIndex];
   const isEnemy = battle.enemies.includes(actor);
@@ -1365,7 +1558,17 @@ function processNext() {
       }, 500);
     }, 600);
   } else {
-    if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
+    if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
+    if (actor.fleeState === "preparing") {
+      actor.fleeState = "fled";
+      battle.actingId = actor.id;
+      document.getElementById("actionGrid").innerHTML = "";
+      blog(`${actor.label}は戦闘から逃げ出した！`);
+      renderBattleScreen();
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
     if (stressTier(actor.fatigue) >= 4) {
       battle.actingId = actor.id;
       document.getElementById("actionGrid").innerHTML = "";
@@ -1394,6 +1597,14 @@ function processNext() {
 function handleFieldDeaths() {
   fieldParty.forEach((c) => {
     if (c.hp <= 0 && c.status === "active") {
+      // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
+      const carried = fieldParty.find((x) => x.carriedBy === c.id);
+      if (carried) {
+        markCritical(carried, currentFloor, state.halfDayStep);
+        carried.carriedBy = null;
+        c.carryingId = null;
+        blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
+      }
       markCritical(c, currentFloor, state.halfDayStep);
       blog(`${c.name}は倒れた...瀕死のまま深淵の森 ${currentFloor}層目に取り残された。`);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
@@ -1435,87 +1646,171 @@ function pickSingleEnemyTarget(onPicked) {
   grid.appendChild(backBtn);
 }
 
+// 担いでいる相手を対象に選ぶ(戦闘中に瀕死になった仲間、または担いでいる最中に別の仲間が瀕死になった場合)
+function renderCarryTargets(actor, targets) {
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  targets.forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name}を担ぐ`;
+    btn.onclick = () => {
+      actor.carryingId = target.id;
+      target.carriedBy = actor.id;
+      target.criticalFloor = null;
+      target.criticalExpireHalfDay = null;
+      blog(`${actor.label}は${target.name}を担いだ！`);
+      renderBattleScreen();
+      renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
 function renderActionButtons(actor) {
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   const c = CLASSES[actor.classId];
 
-  const atkBtn = document.createElement("button");
-  atkBtn.className = "big primary";
-  atkBtn.textContent = "攻撃";
-  atkBtn.onclick = () => {
-    pickSingleEnemyTarget((target) => {
-      playSfx(attackSfxFor(actor.classId));
-      const result = performAttack(actor, target, blog);
-      if (result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
-      else playSfx("evade");
-      renderBattleScreen();
-      setTimeout(afterPlayerAction, 500);
-    });
-  };
-  grid.appendChild(atkBtn);
-
-  (c.abilities || []).forEach((ability) => {
-    const abBtn = document.createElement("button");
-    abBtn.className = "big";
-    const cost = abilityMpCost(ability);
-    abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
-    if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
-    abBtn.onclick = () => {
-      if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
-      if (ability === "guard") {
-        playSfx("select");
-        useAbility(actor, actor, "guard", blog);
-        renderBattleScreen();
-        setTimeout(afterPlayerAction, 500);
-        return;
-      }
-      if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-        playSfx(attackSfxFor(actor.classId));
-        const targetsList = aliveEnemies();
-        const result = useAbility(actor, targetsList, ability, blog);
-        if (result && result.hits) {
-          let anyEvaded = false;
-          targetsList.forEach((t, i) => {
-            if (result.hits[i]) popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg");
-            else anyEvaded = true;
-          });
-          if (anyEvaded) playSfx("evade");
-        }
-        renderBattleScreen();
-        setTimeout(afterPlayerAction, 500);
-        return;
-      }
-      // 単体系(会心の一撃/奇襲/呪符ノ術など)
+  // 仲間を担いでいる間は攻撃/技が使えず、逃げる(常設ボタン)かアイテムしか行動できない
+  if (!actor.carryingId) {
+    const atkBtn = document.createElement("button");
+    atkBtn.className = "big primary";
+    atkBtn.textContent = "攻撃";
+    atkBtn.onclick = () => {
       pickSingleEnemyTarget((target) => {
         playSfx(attackSfxFor(actor.classId));
-        const result = useAbility(actor, target, ability, blog);
-        if (result && result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
-        else if (result && !result.failed) playSfx("evade");
+        const result = performAttack(actor, target, blog);
+        if (result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+        else playSfx("evade");
         renderBattleScreen();
         setTimeout(afterPlayerAction, 500);
       });
     };
-    grid.appendChild(abBtn);
-  });
+    grid.appendChild(atkBtn);
+
+    (c.abilities || []).forEach((ability) => {
+      const abBtn = document.createElement("button");
+      abBtn.className = "big";
+      const cost = abilityMpCost(ability);
+      abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
+      if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
+      abBtn.onclick = () => {
+        if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
+        if (ability === "guard") {
+          playSfx("select");
+          useAbility(actor, actor, "guard", blog);
+          renderBattleScreen();
+          setTimeout(afterPlayerAction, 500);
+          return;
+        }
+        if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+          playSfx(attackSfxFor(actor.classId));
+          const targetsList = aliveEnemies();
+          const result = useAbility(actor, targetsList, ability, blog);
+          if (result && result.hits) {
+            let anyEvaded = false;
+            targetsList.forEach((t, i) => {
+              if (result.hits[i]) popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg");
+              else anyEvaded = true;
+            });
+            if (anyEvaded) playSfx("evade");
+          }
+          renderBattleScreen();
+          setTimeout(afterPlayerAction, 500);
+          return;
+        }
+        // 単体系(会心の一撃/奇襲/呪符ノ術など)
+        pickSingleEnemyTarget((target) => {
+          playSfx(attackSfxFor(actor.classId));
+          const result = useAbility(actor, target, ability, blog);
+          if (result && result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+          else if (result && !result.failed) playSfx("evade");
+          renderBattleScreen();
+          setTimeout(afterPlayerAction, 500);
+        });
+      };
+      grid.appendChild(abBtn);
+    });
+
+    // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
+    const carryTargets = fieldParty.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && !x.carriedBy);
+    if (carryTargets.length > 0) {
+      const carryBtn = document.createElement("button");
+      carryBtn.className = "big";
+      carryBtn.textContent = "担ぐ";
+      carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
+      grid.appendChild(carryBtn);
+    }
+  }
 
   const itemBtn = document.createElement("button");
   itemBtn.className = "big";
-  itemBtn.textContent = `回復薬(${state.inventory.potion})`;
-  itemBtn.disabled = state.inventory.potion <= 0;
-  itemBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
+  itemBtn.textContent = "道具";
+  itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
+  itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
 }
 
-// 逃げるは画面下部に常設(行動選択の一覧には含めない)。自分のターンで行動待ちの時だけ有効
-document.getElementById("fleeBtn").onclick = () => {
-  if (!battle || battle.actingId == null) return;
-  blog("戦闘から逃げ出した！");
+// 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
+function renderItemMenu(actor) {
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const potionBtn = document.createElement("button");
+  potionBtn.className = "big";
+  potionBtn.textContent = `回復薬(${state.inventory.potion || 0})`;
+  potionBtn.disabled = (state.inventory.potion || 0) <= 0;
+  potionBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
+  grid.appendChild(potionBtn);
+
+  const smokeBtn = document.createElement("button");
+  smokeBtn.className = "big";
+  smokeBtn.textContent = `煙玉(${state.inventory.smokeBomb || 0})`;
+  smokeBtn.disabled = (state.inventory.smokeBomb || 0) <= 0;
+  smokeBtn.onclick = () => useSmokeBomb(actor);
+  grid.appendChild(smokeBtn);
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
+function useSmokeBomb(actor) {
+  state.inventory.smokeBomb--;
+  saveState();
+  blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
+  playSfx("evade");
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
   showScreen("screen-dungeon");
   renderDungeon();
+  checkStrandedOnCurrentFloor();
+}
+
+// 逃げるは画面下部に常設(行動選択の一覧には含めない)。自分のターンで行動待ちの時だけ有効。
+// 押した本人だけが「逃走準備」に入り、その場では離脱せず今のターンを消費する。次に自分の番が来た時に
+// 実際に逃げ出す(processNext参照)。パーティ全員が入れ替わりで一人ずつ逃げる必要があり、
+// 誰か一人が逃げただけで全員が離脱するわけではない
+document.getElementById("fleeBtn").onclick = () => {
+  if (!battle || battle.actingId == null) return;
+  const actor = fieldParty.find((c) => c.id === battle.actingId);
+  if (!actor || actor.fleeState) return;
+  actor.fleeState = "preparing";
+  blog(`${actor.label}は逃走準備を始めた！`);
+  document.getElementById("actionGrid").innerHTML = "";
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  renderBattleScreen();
+  setTimeout(afterPlayerAction, 500);
 };
 
 function resolveAllyTarget(actor, kind, target) {
@@ -1581,7 +1876,26 @@ function victory() {
     battle = null;
     showScreen("screen-dungeon");
     renderDungeon();
+    checkStrandedOnCurrentFloor();
   };
+}
+
+// パーティ全員(生きているメンバー)が一人ずつ逃げ切った時。誰も倒れていないので瀕死ペナルティ無しでそのまま探索画面に戻る
+function escapeBattle() {
+  blog("残った仲間全員が戦闘から逃げ延びた。");
+  battle = null;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  showScreen("screen-dungeon");
+  renderDungeon();
+  checkStrandedOnCurrentFloor();
+}
+
+// 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
+// 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
+function checkStrandedOnCurrentFloor() {
+  const critical = fieldParty.find((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+  if (critical) showCriticalAlert(critical, () => {});
 }
 
 function defeat() {

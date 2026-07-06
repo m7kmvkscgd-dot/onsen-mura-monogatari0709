@@ -57,9 +57,12 @@ function createCharacter(name, classId, classUpgrades) {
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町では抜けない。温泉で回復)
     guarding: false,
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
+    fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
     status: "active", // active | critical | lost
     criticalFloor: null,
     criticalExpireHalfDay: null,
+    carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
+    carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
   };
 }
 
@@ -74,12 +77,13 @@ function levelUp(character, log) {
   character.level++;
   const c = CLASSES[character.classId];
   const growth = 1 + character.level * 0.12;
+  const defGrowth = 1 + character.level * 0.06; // defは他ステータスよりゆるやかに伸ばす(敵の階層スケーリングと同じ考え方)
   const oldMaxHp = character.maxHp;
   const oldMaxMp = character.maxMp;
   character.maxHp = Math.round(c.hp * growth);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
   character.atk = Math.round(c.atk * growth);
-  character.def = Math.round(c.def * growth);
+  character.def = Math.round(c.def * defGrowth);
   character.spd = Math.round(c.spd * (1 + character.level * 0.05));
   character.mag = Math.round(c.mag * growth);
   character.maxMp = maxMpFor(character.mag);
@@ -145,7 +149,9 @@ function effectiveStat(entity, key) {
   if (entity.fatigue == null) return base; // 敵など疲労を持たない対象はそのまま
   const fatigued = base * (1 - fatigueMalus(entity.fatigue));
   const equip = (entity.equipBonus && entity.equipBonus[key]) || 0;
-  return Math.max(1, Math.round(fatigued + equip));
+  let result = Math.max(1, Math.round(fatigued + equip));
+  if (key === "spd" && entity.carryingId) result = Math.max(1, Math.round(result * 0.5)); // 仲間を担いでいる間は素早さ半減
+  return result;
 }
 
 // 装備購入後、既存の該当職業メンバー全員のequipBonusを再計算する
@@ -210,6 +216,7 @@ function pickEnemyForFloor(floor, onlyBoss) {
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
   const scale = 1 + (floor - 1) * FLOOR_SCALE_RATE;
+  const defScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE; // 防御力は攻撃力よりゆるやかに伸ばす(すぐダメージ1に張り付くのを防ぐ)
   const hp = Math.round(pick.hp * scale);
   return {
     ...pick,
@@ -218,7 +225,7 @@ function pickEnemyForFloor(floor, onlyBoss) {
     hp,
     maxHp: hp,
     atk: Math.round(pick.atk * scale),
-    def: Math.round(pick.def * scale),
+    def: Math.round(pick.def * defScale),
   };
 }
 
@@ -428,6 +435,7 @@ function rescueCritical(character) {
   character.fatigue = 0;
   character.criticalFloor = null;
   character.criticalExpireHalfDay = null;
+  character.carriedBy = null;
   return true;
 }
 
