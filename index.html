@@ -562,7 +562,15 @@ function playBgm(key) {
 }
 
 const sfxCache = {};
-const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3" };
+const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3" };
+// 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
+function hitTakenSfxFor(dmg, maxHp) {
+  const ratio = maxHp > 0 ? dmg / maxHp : 0;
+  if (ratio < 0.2) return "hit_taken_1";
+  if (ratio < 0.4) return "hit_taken_2";
+  if (ratio < 0.7) return "hit_taken_3";
+  return "hit_taken_4";
+}
 function playSfx(name) {
   if (muted) return;
   if (!sfxCache[name]) sfxCache[name] = new Audio(`assets/sfx/${name}.${SFX_EXT[name] || "ogg"}`);
@@ -1342,7 +1350,7 @@ function processNext() {
     setTimeout(() => {
       const result = enemyAttack(actor, alive, blog);
       if (result) popupOn(result.target.id, `-${result.dmg}`, "dmg");
-      playSfx("hit_taken");
+      if (result) playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
       handleFieldDeaths();
       renderBattleScreen();
       setTimeout(() => {
