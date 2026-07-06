@@ -474,7 +474,18 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.fatigue == null) c.fatigue = 0;
   if (c.guarding == null) c.guarding = false;
   if (c.accuracy == null) c.accuracy = CLASSES[c.classId].accuracy;
-  if (!c.equipBonus) c.equipBonus = computeEquipBonus(c.classId, classUpgrades);
+  // 武器購入によるMP上限ボーナスなど、equipBonusの中身が古いセーブには反映されていない場合があるため、
+  // 常に最新の状態で再計算し、maxMpの差分だけ現在MPにも反映する(既存のequipBonusを持たない場合も含む)
+  {
+    const newEquipBonus = computeEquipBonus(c.classId, classUpgrades);
+    const newMaxMp = maxMpFor(CLASSES[c.classId].mag) + (newEquipBonus.mp || 0);
+    if (newMaxMp !== c.maxMp) {
+      const delta = newMaxMp - c.maxMp;
+      c.mp = Math.max(0, Math.min(newMaxMp, c.mp + delta));
+    }
+    c.maxMp = newMaxMp;
+    c.equipBonus = newEquipBonus;
+  }
   if (c.status === "corpse") {
     c.status = "critical";
     c.criticalFloor = c.corpseFloor;
@@ -1078,11 +1089,12 @@ function equipRowHtml(classId, slot, slotLabel) {
   const goldOk = state.gold >= next.price;
   const disabled = !levelOk || !goldOk;
   const reason = !levelOk ? `Lv${next.level}到達で解禁` : (!goldOk ? "お金が足りません" : "");
+  const mpNote = slot === "weapon" ? "、MP上限+2" : "";
   return `
     <div class="equip-row">
       <div>
         <strong>${slotLabel}: ${ownedName} → ${next.name}</strong>
-        <span class="desc">${statLabel}+${next.bonus}(現在から+${next.bonus - (ownedTier > 0 ? tiers[ownedTier - 1].bonus : 0)}) ${!levelOk ? `/ ${reason}` : ""}</span>
+        <span class="desc">${statLabel}+${next.bonus}(現在から+${next.bonus - (ownedTier > 0 ? tiers[ownedTier - 1].bonus : 0)})${mpNote} ${!levelOk ? `/ ${reason}` : ""}</span>
       </div>
       <button class="big" data-class="${classId}" data-slot="${slot}" ${disabled ? "disabled" : ""}>${next.price}G</button>
     </div>
@@ -2093,6 +2105,7 @@ function victory() {
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
+    fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     showScreen("screen-dungeon");
     renderDungeon();
     checkStrandedOnCurrentFloor();
@@ -2147,6 +2160,7 @@ function escapeBattle() {
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
+  fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
   showScreen("screen-dungeon");
   renderDungeon();
   checkStrandedOnCurrentFloor();

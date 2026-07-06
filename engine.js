@@ -15,12 +15,13 @@ function maxMpFor(mag) {
 // 上位ティアを買うと下位ティアから乗り換わる(加算ではなく差し替え)。個別のキャラごとの装備管理は無く、
 // 「その職業への投資」として全メンバー(既存+以後仲間にする人)に一律で乗る(MVPとしての単純化)。
 function computeEquipBonus(classId, classUpgrades) {
-  const bonus = { atk: 0, def: 0, mag: 0 };
+  const bonus = { atk: 0, def: 0, mag: 0, mp: 0 };
   const eq = EQUIPMENT[classId];
   const owned = (classUpgrades && classUpgrades[classId]) || {};
   if (eq && owned.weapon > 0) {
     const t = eq.weapon[owned.weapon - 1];
     bonus[t.statKey] += t.bonus;
+    bonus.mp += owned.weapon * 2; // 武器を1段階買うごとにMP上限+2(5段階買うと最大+10)
   }
   if (eq && owned.armor > 0) {
     const t = eq.armor[owned.armor - 1];
@@ -36,7 +37,8 @@ function classHasReachedLevel(characters, classId, level) {
 
 function createCharacter(name, classId, classUpgrades) {
   const c = CLASSES[classId];
-  const maxMp = maxMpFor(c.mag);
+  const equipBonus = computeEquipBonus(classId, classUpgrades);
+  const maxMp = maxMpFor(c.mag) + (equipBonus.mp || 0);
   return {
     id: nextId(),
     name,
@@ -53,7 +55,7 @@ function createCharacter(name, classId, classUpgrades) {
     spd: c.spd,
     mag: c.mag,
     accuracy: c.accuracy,
-    equipBonus: computeEquipBonus(classId, classUpgrades),
+    equipBonus,
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町では抜けない。温泉で回復)
     guarding: false,
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
@@ -259,15 +261,22 @@ function tickTurnStartEffects(entity, log) {
 // 装備購入後、既存の該当職業メンバー全員のequipBonusを再計算する
 function refreshEquipBonus(characters, classId, classUpgrades) {
   const bonus = computeEquipBonus(classId, classUpgrades);
+  const baseMaxMp = maxMpFor(CLASSES[classId].mag);
   characters.forEach((c) => {
-    if (c.classId === classId) c.equipBonus = bonus;
+    if (c.classId === classId) {
+      c.equipBonus = bonus;
+      const newMaxMp = baseMaxMp + (bonus.mp || 0);
+      const delta = newMaxMp - c.maxMp;
+      c.maxMp = newMaxMp;
+      c.mp = Math.max(0, Math.min(newMaxMp, c.mp + delta)); // MP上限が増えた分、現在MPにもそのまま上乗せする
+    }
   });
 }
 
 // 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える。
 // MPはレベルアップで伸びなくなった(下記levelUp参照)ため、一度の遠征で4〜5回使える程度を目安に
 // guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
-const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 5, preciseShot: 2, cannonShot: 4, guard: 1 };
+const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
 function abilityMpCost(abilityType) {
   return ABILITY_MP_COST[abilityType] || 0;
 }
@@ -675,9 +684,7 @@ function useAbility(actor, target, abilityType, log) {
     return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6)), log);
   }
   if (abilityType === "physicalAttackAll") {
-    // 旧0.55倍だと素の攻撃(atk倍率1.0)に対する目減りが大きく、魔法版(rollMagicAttackの1.8倍×0.6=実質1.08倍)より
-    // 大幅に見劣りしていたため、0.85倍に引き上げて薙ぎ払いが単体攻撃と張り合える威力になるよう調整
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.85)), log);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log);
   }
   if (abilityType === "powerAttack") {
     return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), target.def), log);
