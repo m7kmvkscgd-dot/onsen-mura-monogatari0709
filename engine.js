@@ -59,8 +59,6 @@ function createCharacter(name, classId, classUpgrades) {
     status: "active", // active | critical | lost
     criticalFloor: null,
     criticalExpireHalfDay: null,
-    onsenCooldownUntil: null, // この値以上にhalfDayStepが進むまで温泉に入れない
-    lodgingCooldownUntil: null, // この値以上にhalfDayStepが進むまで宿泊中で連れて行けない
   };
 }
 
@@ -102,20 +100,14 @@ function onsenCost(level) {
   return ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL;
 }
 
-// 現在「休養中」(温泉に入っている)かどうか。宿泊は(一旦)冒険可否に影響しない
-function isResting(character, halfDayStep) {
-  return character.onsenCooldownUntil != null && halfDayStep < character.onsenCooldownUntil;
+// 生存していれば冒険に連れて行ける/温泉や宿屋を利用できる(入浴・宿泊のどちらも連れ出し可否には影響しない)
+function isAvailable(character) {
+  return character.status === "active";
 }
 
-// 生存していて、かつ休養中でもない = 冒険に連れて行ける/温泉や宿屋を新たに利用できる状態
-function isAvailable(character, halfDayStep) {
-  return character.status === "active" && !isResting(character, halfDayStep);
-}
-
-// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後半日は再利用/連れ出し不可にする
-function useOnsen(character, halfDayStep) {
+// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する
+function useOnsen(character) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
-  character.onsenCooldownUntil = halfDayStep + 1;
 }
 
 // 宿屋に宿泊し、HP/MPを全回復する(宿泊自体は冒険可否に影響しない)
@@ -466,6 +458,6 @@ if (typeof module !== "undefined") {
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, useOnsen, useLodging, isResting, isAvailable,
+    onsenCost, useOnsen, useLodging, isAvailable,
   };
 }
