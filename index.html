@@ -75,6 +75,13 @@
   .mpbar-fill { height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
   .roster-row img { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .roster-info { flex: 1; }
+  /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
+  .stress-wrap { position: relative; }
+  .stress-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 2; }
+  .roster-row .stress-wrap { display: block; width: 44px; height: 44px; flex-shrink: 0; }
+  .party-member .stress-wrap { display: block; width: 100%; }
+  .status-portrait-wrap { position: relative; display: inline-block; width: 96px; height: 96px; }
+  .status-portrait-wrap .stress-overlay { border-radius: 8px; }
   .roster-name { font-weight: 700; font-size: 0.88rem; }
   .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700; }
@@ -224,18 +231,35 @@
     <div class="body-pad">
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="tavernGold">0G</p>
-      <button class="big primary" id="sleepBtn" style="margin-bottom:0.8rem;">🛌 一晩泊まる(20G)</button>
 
       <h2>新しい冒険者を仲間にする</h2>
       <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
       <div class="class-grid" id="classGrid"></div>
       <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする</button>
 
-      <h2 style="margin-top:1.2rem;">パーティ編成(最大4人)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す。瀕死・ロスト・入浴中は選べません。</p>
+      <h2 style="margin-top:1.2rem;">宿泊(HP/MPを全回復)</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊すると1日/夜が進み、宿泊中(半日)は冒険に連れて行けません。</p>
+      <div id="lodgingList"></div>
+
+      <h2 style="margin-top:1.2rem;">名簿</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
       <div id="rosterList"></div>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- パーティ編成(出発直前) -->
+  <div class="screen" id="screen-party-select">
+    <div class="hero" style="background-image:url('assets/bg/town.png')">
+      <h1>パーティ編成</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大4人)。瀕死・ロスト・入浴中・宿泊中は選べません。</p>
+      <div id="partySelectList"></div>
+      <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
+      <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
     </div>
   </div>
 
@@ -246,7 +270,10 @@
     </div>
     <div class="body-pad">
       <div class="card" style="text-align:center;">
-        <img id="statusImg" src="" style="width:96px;height:96px;object-fit:cover;object-position:top;border-radius:8px;">
+        <div class="status-portrait-wrap">
+          <img id="statusImg" src="" style="width:96px;height:96px;object-fit:cover;object-position:top;border-radius:8px;">
+          <img id="statusStressOverlay" class="stress-overlay" src="" style="display:none;">
+        </div>
       </div>
       <div class="card">
         <div class="stat-row"><span>職業</span><span id="statClass"></span></div>
@@ -377,6 +404,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.criticalFloor === undefined) c.criticalFloor = null;
   if (c.criticalExpireHalfDay === undefined) c.criticalExpireHalfDay = null;
   if (c.onsenCooldownUntil === undefined) c.onsenCooldownUntil = null;
+  if (c.lodgingCooldownUntil === undefined) c.lodgingCooldownUntil = null;
   delete c.corpseFloor;
   delete c.corpseExpireStep;
   return c;
@@ -482,8 +510,13 @@ function showScreen(id) {
 
 function statusLabel(c) {
   if (c.status === "active") {
-    if (!canUseOnsen(c, state.halfDayStep)) return "入浴中(半日は連れて行けません)";
-    return `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+    const bathing = c.onsenCooldownUntil != null && state.halfDayStep < c.onsenCooldownUntil;
+    const lodging = c.lodgingCooldownUntil != null && state.halfDayStep < c.lodgingCooldownUntil;
+    if (bathing) return "入浴中(半日は連れて行けません)";
+    if (lodging) return "宿泊中(半日は連れて行けません)";
+    const base = `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+    if (stressTier(c.fatigue) >= 4) return `${base}(発狂中・行動不能)`;
+    return base;
   }
   if (c.status === "critical") {
     const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
@@ -494,13 +527,13 @@ function statusLabel(c) {
 }
 
 function statusTagClass(c) {
-  if (c.status === "active" && !canUseOnsen(c, state.halfDayStep)) return "bathing";
+  if (c.status === "active" && !isAvailable(c, state.halfDayStep)) return "bathing";
   return c.status;
 }
 
 // ============ 町 ============
 function renderTown() {
-  restAtTown(state.roster); // 町にいる間はHP/MPが全回復する(ダンジョン内では回復しない)
+  // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
   saveState();
   document.getElementById("townGold").textContent = state.gold + "G";
@@ -512,11 +545,8 @@ document.getElementById("toShopBtn").onclick = () => { playSfx("select"); render
 document.getElementById("toOnsenBtn").onclick = () => { playSfx("select"); renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("toDungeonBtn").onclick = () => {
   playSfx("select");
-  if (state.activePartyIds.length === 0) {
-    alert("宿屋でパーティを編成してください");
-    return;
-  }
-  enterDungeon();
+  renderPartySelect();
+  showScreen("screen-party-select");
 };
 
 // ============ 宿屋 ============
@@ -534,8 +564,8 @@ function renderClassGrid() {
 }
 let selectedClass = "fighter";
 
+// 宿屋の名簿一覧: 状態確認/詳細/解雇のみ(パーティ編成はここでは行わない。出発時に別画面で選ぶ)
 function renderRosterList() {
-  pruneActiveParty();
   const list = document.getElementById("rosterList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -544,13 +574,16 @@ function renderRosterList() {
   }
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
-    const inParty = state.activePartyIds.includes(c.id);
-    const selectable = c.status === "active" && canUseOnsen(c, state.halfDayStep);
+    const available = c.status === "active" && isAvailable(c, state.halfDayStep);
     const row = document.createElement("div");
-    row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
-    const tagText = c.status === "active" ? (canUseOnsen(c, state.halfDayStep) ? "待機中" : "入浴中") : c.status === "critical" ? "瀕死" : "ロスト";
+    row.className = "roster-row" + (!available ? " disabled" : "");
+    const tagText = c.status === "active" ? (available ? "待機中" : (c.onsenCooldownUntil != null && state.halfDayStep < c.onsenCooldownUntil ? "入浴中" : "宿泊中")) : c.status === "critical" ? "瀕死" : "ロスト";
+    const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
     row.innerHTML = `
-      <img src="${c2.image}">
+      <div class="stress-wrap">
+        <img src="${c2.image}">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
         <div class="roster-sub">${statusLabel(c)}</div>
@@ -560,18 +593,6 @@ function renderRosterList() {
         <button class="dismiss-btn" data-id="${c.id}">解雇</button>
       </div>
     `;
-    row.onclick = (e) => {
-      if (e.target.closest(".detail-btn") || e.target.closest(".dismiss-btn")) return;
-      if (!selectable) return;
-      if (inParty) {
-        state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
-      } else {
-        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
-        state.activePartyIds.push(c.id);
-      }
-      saveState();
-      renderRosterList();
-    };
     row.querySelector(".detail-btn").onclick = (e) => {
       e.stopPropagation();
       renderStatusScreen(c.id);
@@ -590,9 +611,54 @@ function renderRosterList() {
   });
 }
 
+// 宿屋: 宿泊(HP/MPを全回復するが、宿泊中は半日連れて行けない。1日/夜が進む)
+function renderLodgingList() {
+  const list = document.getElementById("lodgingList");
+  list.innerHTML = "";
+  const eligible = state.roster.filter((c) => c.status === "active");
+  if (eligible.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">宿泊できる仲間がいません。</p>';
+    return;
+  }
+  eligible.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const cooling = !isAvailable(c, state.halfDayStep);
+    const fullHealth = c.hp >= c.maxHp && c.mp >= c.maxMp;
+    const disabled = cooling || fullHealth || state.gold < LODGE_COST;
+    let label = `宿泊する(${LODGE_COST}G)`;
+    if (cooling) label = "休養中";
+    else if (fullHealth) label = "満タン";
+    const row = document.createElement("div");
+    row.className = "roster-row";
+    const overlaySrc = stressOverlaySrc(c.fatigue);
+    row.innerHTML = `
+      <div class="stress-wrap">
+        <img src="${c2.image}">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
+      <div class="roster-info">
+        <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
+        <div class="roster-sub">HP ${c.hp}/${c.maxHp} ・ MP ${c.mp}/${c.maxMp}</div>
+      </div>
+      <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
+    `;
+    row.querySelector("button").onclick = () => {
+      state.gold -= LODGE_COST;
+      useLodging(c, state.halfDayStep);
+      toggleTimeOfDay();
+      saveState();
+      playSfx("heal");
+      alert(`${c.name}は宿でぐっすり眠り、HP/MPが全回復した。`);
+      renderTavern();
+    };
+    list.appendChild(row);
+  });
+}
+
 function renderTavern() {
   pruneActiveParty();
   document.getElementById("tavernGold").textContent = state.gold + "G";
+  renderLodgingList();
   renderRosterList();
   renderClassGrid();
   updateSceneBackgrounds();
@@ -604,6 +670,10 @@ function renderStatusScreen(charId) {
   const c2 = CLASSES[c.classId];
   document.getElementById("statusName").textContent = c.name;
   document.getElementById("statusImg").src = c2.image;
+  const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
+  const overlayEl = document.getElementById("statusStressOverlay");
+  overlayEl.style.display = overlaySrc ? "block" : "none";
+  if (overlaySrc) overlayEl.src = overlaySrc;
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statLevel").textContent = c.level;
   document.getElementById("statXp").textContent = `${c.xp} / ${xpToNext(c.level)}`;
@@ -628,7 +698,7 @@ function randomFemaleName() {
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
-  if (state.roster.length >= 12) { alert("名簿がいっぱいです(最大12人)"); return; }
+  if (state.roster.length >= 10) { alert("名簿がいっぱいです(最大10人)"); return; }
   const c = createCharacter(name, selectedClass, state.classUpgrades);
   state.roster.unshift(c); // 新しく雇った仲間が名簿の一番上に来るようにする
   nameInput.value = "";
@@ -639,15 +709,58 @@ document.getElementById("createCharBtn").onclick = () => {
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 
-const SLEEP_COST = 20; // 宿屋に一晩泊まる際の宿代
-document.getElementById("sleepBtn").onclick = () => {
-  if (state.gold < SLEEP_COST) { alert(`お金が足りません(宿代${SLEEP_COST}G)`); return; }
+const LODGE_COST = 20; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
+
+// ============ パーティ編成(出発直前) ============
+function renderPartySelect() {
+  pruneActiveParty();
+  const list = document.getElementById("partySelectList");
+  list.innerHTML = "";
+  if (state.roster.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">仲間がいません。宿屋で仲間を作りましょう。</p>';
+    return;
+  }
+  state.roster.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const inParty = state.activePartyIds.includes(c.id);
+    const selectable = c.status === "active" && isAvailable(c, state.halfDayStep);
+    const row = document.createElement("div");
+    row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
+    const tagText = c.status === "active" ? (selectable ? "待機中" : (c.onsenCooldownUntil != null && state.halfDayStep < c.onsenCooldownUntil ? "入浴中" : "宿泊中")) : c.status === "critical" ? "瀕死" : "ロスト";
+    const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
+    row.innerHTML = `
+      <div class="stress-wrap">
+        <img src="${c2.image}">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
+      <div class="roster-info">
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
+        <div class="roster-sub">${statusLabel(c)}</div>
+      </div>
+    `;
+    row.onclick = () => {
+      if (!selectable) return;
+      if (inParty) {
+        state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
+      } else {
+        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
+        state.activePartyIds.push(c.id);
+      }
+      saveState();
+      renderPartySelect();
+    };
+    list.appendChild(row);
+  });
+}
+document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("departBtn").onclick = () => {
+  if (state.activePartyIds.length === 0) {
+    alert("パーティを1人以上選んでください");
+    return;
+  }
   playSfx("select");
-  state.gold -= SLEEP_COST;
-  toggleTimeOfDay();
-  const label = state.timeOfDay === "night" ? "夜" : "朝";
-  alert(`宿代${SLEEP_COST}Gを払って一晩ぐっすり眠った。${label}になった。`);
-  renderTavern();
+  enterDungeon();
 };
 
 // ============ 温泉 ============
@@ -663,7 +776,7 @@ function renderOnsen() {
   bathable.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const cost = onsenCost(c.level);
-    const cooling = !canUseOnsen(c, state.halfDayStep);
+    const cooling = !isAvailable(c, state.halfDayStep);
     const noFatigue = (c.fatigue || 0) <= 0;
     const disabled = cooling || noFatigue || state.gold < cost;
     let label = `入る(${cost}G)`;
@@ -671,8 +784,12 @@ function renderOnsen() {
     else if (cooling) label = "半日は入浴不可";
     const row = document.createElement("div");
     row.className = "roster-row";
+    const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
-      <img src="${c2.image}">
+      <div class="stress-wrap">
+        <img src="${c2.image}">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
         <div class="roster-sub">ストレス ${c.fatigue || 0}</div>
@@ -784,10 +901,10 @@ function pruneActiveParty() {
   const seen = new Set();
   state.activePartyIds = state.activePartyIds.filter((id) => {
     const c = getRosterChar(id);
-    if (!c || c.status !== "active" || !canUseOnsen(c, state.halfDayStep) || seen.has(id)) return false;
+    if (!c || !isAvailable(c, state.halfDayStep) || seen.has(id)) return false;
     seen.add(id);
     return true;
-  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)。入浴中のキャラも除外する
+  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)。休養中のキャラも除外する
 }
 
 function enterDungeon() {
@@ -811,6 +928,17 @@ function dlog(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
+// ストレス段階に応じた落書き風オーバーレイ画像(無ければnull)
+const STRESS_OVERLAY_SRC = {
+  1: "assets/stress/tier1.png",
+  2: "assets/stress/tier2.png",
+  3: "assets/stress/tier3.png",
+  4: "assets/stress/frenzy.png",
+};
+function stressOverlaySrc(fatigue) {
+  return STRESS_OVERLAY_SRC[stressTier(fatigue)] || null;
+}
+
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
   bar.innerHTML = "";
@@ -822,11 +950,14 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.dataset.id = c.id;
     const ratio = Math.max(0, c.hp / c.maxHp) * 100;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+    const overlaySrc = stressOverlaySrc(c.fatigue);
     div.innerHTML = `
-      <img src="${c2.image}">
+      <div class="stress-wrap">
+        <img src="${c2.image}">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
       <div class="hpbar-track"><div class="hpbar-fill" style="width:${ratio}%"></div></div>
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="fatigue-track"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
       <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}</div>
     `;
     bar.appendChild(div);
@@ -1016,6 +1147,14 @@ function processNext() {
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
+    if (stressTier(actor.fatigue) >= 4) {
+      battle.actingId = actor.id;
+      renderBattleScreen();
+      blog(`${actor.label}は発狂して動けない！`);
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
     if (actor.reloading) {
       actor.reloading = false;
       battle.actingId = actor.id;

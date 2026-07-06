@@ -142,3 +142,19 @@
 
 ## 町画面のボタンを画像モックアップ通りの2x2レイアウトに
 ユーザーがイメージ画像(2列2行、各ボタンが文字数に合わせた大きさの箱、画面中央やや下寄りに配置)を提示。`#screen-town .btn-col`を全幅ボタンの縦積み(`flex-column`)から`display:grid; grid-template-columns:repeat(2,auto); justify-content:start;`に変更し、ボタン自体も`width:auto`にして文字量に応じた箱サイズにした(HTML内の並び順、宿屋→道具屋→温泉→深淵の森へ向かう、がそのままグリッドの左上→右上→左下→右下になる)。位置は[[feedback-mobile-fixed-position-anchoring]]の教訓に従い、`bottom: calc(300px + env(safe-area-inset-bottom))`という画面下端からの固定px距離のまま(vh%は使わない)、値だけ24px→300pxに変えて中央やや下あたりに来るよう調整した。
+
+## ストレス表現を落書き風オーバーレイ画像に、宿屋を宿泊制+出発時パーティ編成に、名簿上限10人に変更(大型セッション)
+ユーザーから3点まとめて指示があった:
+
+**① ストレスの見た目をバーから顔への落書きオーバーレイに変更**: ユーザー提供の4枚の透過落書きイラスト(`assets/stress/tier1.png`〜`tier3.png`、`frenzy.png`)を、ストレス値に応じてキャラのアイコンに重ねて表示するようにした。`engine.js`に`stressTier(fatigue)`(0=平常/1=40-59/2=60-79/3=80-99/4=100=発狂)を追加し、`STRESS_OVERLAY_SRC`で段階→画像を対応付け。デバフは`fatigueMalus()`を連続式から段階式に変更(tier1:15%, tier2:30%, tier3:50%=ユーザー提案通り「マックスで半減」, tier4:100%)。**発狂(ストレス100)は数値デバフに加えて完全に行動不能**にする必要があったため、`processNext()`のプレイヤーターン処理に`stressTier(actor.fatigue)>=4`のチェックを追加し、`actor.reloading`と同様にターンを消費してパスするようにした。オーバーレイ表示は`.stress-wrap`(position:relative)+`.stress-overlay`(position:absolute;inset:0)という汎用パターンを作り、`.party-member`(ダンジョン/戦闘のパーティバー)・`.roster-row`(宿屋名簿/パーティ編成/温泉/宿泊の各リスト)・ステータス詳細画面の全てのキャラポートレート表示箇所に適用した。
+
+**② 宿屋のシステム再編**: 「宿屋ではHP/MPが自動回復しない。宿泊したいキャラを選んで宿泊ボタンを押すと全回復するが、温泉と同様に宿泊中(半日)は連れ出せない」「パーティ編成は宿屋ではなく、出発ボタンを押すたびに毎回選ぶ方式にする」の2点で、宿屋の構造を大きく変えた。
+- `restAtTown()`(町にいる間HP/MPを自動全回復する関数)を`engine.js`から削除し、`renderTown()`からの呼び出しも削除。HP/MP回復は完全に「宿泊」経由のみになった
+- `useLodging(character, halfDayStep)`を追加(HP/MP全回復+`lodgingCooldownUntil`設定)。宿泊自体が`toggleTimeOfDay()`で昼夜を1つ進める仕様のため、半日ロックを保つには`halfDayStep+2`にする必要がある点に注意(宿泊が引き起こす自身のトグル分を先読みして相殺している)
+- `isResting()`/`isAvailable()`という汎用関数を新設し、「温泉に入っている」「宿屋に宿泊している」のどちらでも`status`はactiveのまま`isAvailable()`がfalseになるようにした(旧`canUseOnsen()`は削除し、全呼び出し箇所を`isAvailable()`に統一)
+- 宿屋画面から「パーティ編成(最大4人)」セクションを完全に撤去し、代わりに「宿泊」セクション(`renderLodgingList()`、温泉のUIと同じ行形式)を追加。名簿(`renderRosterList()`)は詳細/解雇のみの純粋な管理リストに変更(タップでの編成トグルは削除)
+- 新画面`#screen-party-select`を追加。町の「深淵の森へ向かう」ボタンはダンジョンに直接入らず、まずこの画面を表示するように変更(`renderPartySelect()`)。ここで毎回4人まで選び、「出発する」ボタンで`enterDungeon()`を呼ぶ
+
+**③ 名簿の上限を12人→10人に変更**: `createCharBtn`のクリックハンドラの上限チェックを`10`に変更。
+
+**旧「一晩泊まる(20G)」ボタンは廃止**(グローバルな昼夜トグルのみの機能だったが、今回の「宿泊」がHP/MP回復+同じ昼夜トグルを兼ねるため冗長になった)。

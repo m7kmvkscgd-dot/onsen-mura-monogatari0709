@@ -60,6 +60,7 @@ function createCharacter(name, classId, classUpgrades) {
     criticalFloor: null,
     criticalExpireHalfDay: null,
     onsenCooldownUntil: null, // この値以上にhalfDayStepが進むまで温泉に入れない
+    lodgingCooldownUntil: null, // この値以上にhalfDayStepが進むまで宿泊中で連れて行けない
   };
 }
 
@@ -87,18 +88,7 @@ function levelUp(character, log) {
   log(`${character.label}はレベル${character.level}になった！`);
 }
 
-// 町に戻って休息した際にHP/MPを全回復する(ダンジョン探索中は回復しない)。
-// 疲労度はここでは回復しない(温泉に入らないと抜けない)
-function restAtTown(characters) {
-  characters.forEach((c) => {
-    if (c.status === "active") {
-      c.hp = c.maxHp;
-      c.mp = c.maxMp;
-    }
-  });
-}
-
-// フィールドに出ている(ダンジョンに潜っている)キャラに1階分の疲労を加算する
+// フィールドに出ている(ダンジョンに潜っている)キャラに1階分の疲労(ストレス)を加算する
 function advanceFatigue(characters) {
   characters.forEach((c) => {
     if (c.status === "active") {
@@ -112,20 +102,51 @@ function onsenCost(level) {
   return ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL;
 }
 
-// 半日(halfDayStep 1つ分)経っていれば再入浴できる
-function canUseOnsen(character, halfDayStep) {
-  return character.status === "active" && (character.onsenCooldownUntil == null || halfDayStep >= character.onsenCooldownUntil);
+// 現在「休養中」(温泉に入っている、または宿屋に宿泊している)かどうか
+function isResting(character, halfDayStep) {
+  const bathing = character.onsenCooldownUntil != null && halfDayStep < character.onsenCooldownUntil;
+  const lodging = character.lodgingCooldownUntil != null && halfDayStep < character.lodgingCooldownUntil;
+  return bathing || lodging;
 }
 
-// 温泉に入り、疲労度を半分(ONSEN_FATIGUE_RELIEF分)回復する。以後半日は再利用不可にする
+// 生存していて、かつ休養中でもない = 冒険に連れて行ける/温泉や宿屋を新たに利用できる状態
+function isAvailable(character, halfDayStep) {
+  return character.status === "active" && !isResting(character, halfDayStep);
+}
+
+// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後半日は再利用/連れ出し不可にする
 function useOnsen(character, halfDayStep) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
   character.onsenCooldownUntil = halfDayStep + 1;
 }
 
-// 疲労度による攻撃力/防御力/素早さ/魔力の低下率(最大40%)
+// 宿屋に宿泊し、HP/MPを全回復する。宿泊自体が昼夜を1つ進める(呼び出し側でtoggleTimeOfDayする)前提のため、
+// 「宿泊中」を半日分維持するには基準のhalfDayStepに+2しておく必要がある
+function useLodging(character, halfDayStep) {
+  character.hp = character.maxHp;
+  character.mp = character.maxMp;
+  character.lodgingCooldownUntil = halfDayStep + 2;
+}
+
+// ストレスの段階(0=平常, 1=40〜59, 2=60〜79, 3=80〜99, 4=100=発狂)
+function stressTier(fatigue) {
+  const f = fatigue || 0;
+  if (f >= 100) return 4;
+  if (f >= 80) return 3;
+  if (f >= 60) return 2;
+  if (f >= 40) return 1;
+  return 0;
+}
+
+// ストレスによる攻撃力/防御力/素早さ/魔力の低下率。段階が上がるごとに重くなり、
+// 80〜99で半減、100(発狂)は数値上も0(=そもそも行動不能として別途扱う)
 function fatigueMalus(fatigue) {
-  return Math.min(0.4, (fatigue || 0) * 0.004);
+  const tier = stressTier(fatigue);
+  if (tier >= 4) return 1;
+  if (tier === 3) return 0.5;
+  if (tier === 2) return 0.3;
+  if (tier === 1) return 0.15;
+  return 0;
 }
 
 // 疲労を反映した実効ステータス(敵にはfatigueが無いのでそのまま返る)
@@ -433,8 +454,8 @@ if (typeof module !== "undefined") {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
-    xpToNext, levelUp, grantXp, maxMpFor, restAtTown, abilityMpCost,
-    advanceFatigue, fatigueMalus, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, canUseOnsen, useOnsen,
+    xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
+    advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
+    onsenCost, useOnsen, useLodging, isResting, isAvailable,
   };
 }
