@@ -285,25 +285,36 @@ function grantXp(character, amount, log) {
   if (character.level >= MAX_LEVEL) character.xp = 0;
 }
 
+// 防御力による軽減率(割合軽減式)。K/(K+def)で、defが増えるほど軽減率は上がるが常に伸びが緩やかになり、
+// どれだけ防御力を積んでも生ダメージが0になることはない(旧: atk - def×係数 という引き算式は、
+// 防御力を積むほど直線的に効きが増して「攻撃がほぼ通らない」状態を作れてしまっていたため、割合式に全面刷新した)。
+// Kが小さいほど防御力の影響を強く受ける(=防御貫通しやすい/軽減されにくい)技になる
+function mitigation(def, K) {
+  return K / (K + Math.max(0, def));
+}
+// 命中した際の最終ダメージにランダムな幅(±pct)を掛ける。割合式では加算乱数より掛け算の方が自然
+function withVariance(value, pct) {
+  return value * (1 + (Math.random() * 2 - 1) * pct);
+}
 function rollBasicAttack(atk, def) {
-  return Math.max(1, Math.round(atk - def * 0.6 + (Math.random() * 5 - 2)));
+  return Math.max(1, Math.round(withVariance(atk * mitigation(def, 18), 0.15)));
 }
 function rollMagicAttack(mag, def) {
-  return Math.max(1, Math.round(mag * 1.8 - def * 0.3 + (Math.random() * 4 - 1)));
+  return Math.max(1, Math.round(withVariance(mag * 1.8 * mitigation(def, 8), 0.12)));
 }
 function rollPowerAttack(atk, def) {
-  return Math.max(1, Math.round(atk * 1.6 - def * 0.7 + (Math.random() * 5 - 2)));
+  return Math.max(1, Math.round(withVariance(atk * 1.6 * mitigation(def, 22), 0.15)));
 }
 function rollCritAttack(atk, def) {
-  return Math.max(1, Math.round(atk * 1.3 - def * 0.4 + (Math.random() * 5 - 2)));
+  return Math.max(1, Math.round(withVariance(atk * 1.3 * mitigation(def, 12), 0.15)));
 }
 // 狩人の会心の一矢。会心の一撃と同じ防御貫通の性質(弓は鎧の隙間を狙う)
 function rollPreciseShot(atk, def) {
-  return Math.max(1, Math.round(atk * 1.35 - def * 0.4 + (Math.random() * 5 - 2)));
+  return Math.max(1, Math.round(withVariance(atk * 1.35 * mitigation(def, 12), 0.15)));
 }
 // 砲術士の砲撃。渾身の一撃よりさらに重いが、使うと次のターンは装填で動けなくなる(呼び出し側で処理)
 function rollCannonShot(atk, def) {
-  return Math.max(1, Math.round(atk * 2.4 - def * 0.8 + (Math.random() * 8 - 3)));
+  return Math.max(1, Math.round(withVariance(atk * 2.4 * mitigation(def, 26), 0.2)));
 }
 function rollHeal(mag) {
   return Math.max(5, Math.round(mag * 1.5 + Math.random() * 5));
@@ -445,10 +456,10 @@ function useTreeSkill(actor, target, skill, log) {
     const hits = action.hits || 1;
     const atkStat = action.useMag ? effectiveStat(actor, "mag") : effectiveStat(actor, "atk");
     const defPierce = action.defPierce || 0;
-    const def = t.def * (1 - defPierce);
+    const def = effectiveStat(t, "def") * (1 - defPierce);
     let rawTotal = 0;
     for (let i = 0; i < hits; i++) {
-      rawTotal += Math.max(1, Math.round(atkStat * (action.mult / hits) - def * 0.5 + (Math.random() * 4 - 2)));
+      rawTotal += Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
     }
     const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
@@ -477,8 +488,14 @@ function pickEnemyForFloor(floor, onlyBoss) {
     for (let i = 0; i < weight; i++) weighted.push(e);
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
-  const scale = (1 + (floor - 1) * FLOOR_SCALE_RATE) * ENEMY_POWER_MULT; // ENEMY_POWER_MULTでプレイヤー側の強化分を底上げ
-  const defScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE; // 防御力は据え置き(攻撃力/HPだけ底上げし、ダメージ1張り付きを防ぐ)
+  const baseScale = (1 + (floor - 1) * FLOOR_SCALE_RATE) * ENEMY_POWER_MULT;
+  const baseDefScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE;
+  // 序盤(階層1に近いほど)ほど大きく、EARLY_DANGER_FADE_FLOORに向かって直線的に消えていく上乗せ分。
+  // これにより終盤の難易度曲線(baseScale/baseDefScale、既に検証済み)には影響を与えずに序盤だけ底上げできる
+  const earlyBonus = Math.max(0, EARLY_DANGER_BONUS_BASE * (1 - floor / EARLY_DANGER_FADE_FLOOR));
+  const earlyDefBonus = Math.max(0, EARLY_DANGER_DEF_BONUS_BASE * (1 - floor / EARLY_DANGER_FADE_FLOOR));
+  const scale = baseScale + earlyBonus;
+  const defScale = baseDefScale + earlyDefBonus;
   const hp = Math.round(pick.hp * scale);
   return {
     ...pick,
@@ -735,10 +752,11 @@ function markCritical(character, floor, halfDayStep) {
   character.criticalExpireHalfDay = halfDayStep + span;
 }
 
-// 昼夜が切り替わる(halfDayStepが進む)たび、期限切れの瀕死キャラをロストにする
+// 昼夜が切り替わる(halfDayStepが進む)たび、期限切れの瀕死キャラをロストにする。
+// ただし既に誰かに担がれている間は「救出済みで運搬中」なので、カウントダウンを進めない(ロストしない)
 function tickHalfDay(characters, halfDayStep) {
   characters.forEach((c) => {
-    if (c.status === "critical" && halfDayStep > c.criticalExpireHalfDay) {
+    if (c.status === "critical" && !c.carriedBy && halfDayStep > c.criticalExpireHalfDay) {
       c.status = "lost";
     }
   });
@@ -812,6 +830,6 @@ if (typeof module !== "undefined") {
     onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
-    skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT,
+    skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
   };
 }

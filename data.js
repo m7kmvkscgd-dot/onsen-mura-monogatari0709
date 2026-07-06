@@ -417,51 +417,56 @@ const SKILL_TREES = {
 };
 const SUPPLY_CAP = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる
 
-// 職業ごとの武器/防具。各3段階(Lv1から買える基礎/Lv5解禁/Lv10解禁)。上位を買うと下位から乗り換わる(加算ではなく差し替え)。
-// 「そのレベルに到達した仲間が1人でもいるか」で解禁判定する。購入すると同じ職業の全メンバーに恒久的なステータスが乗る。
-// 個別の装備の付け外しは無く、「その職業への投資」として一度買えば以後ずっと有効(ウィザードリィ的な個別装備管理はMVPとして省略)。
+// 職業ごとの武器/防具。各5段階(Lv1/3/5/7/9で解禁、レベルが2上がるごとに上位種が出る)。
+// 上位を買うと下位から乗り換わる(加算ではなく差し替え)。「そのレベルに到達した仲間が1人でもいるか」で解禁判定する。
+// 購入すると同じ職業の全メンバーに恒久的なステータスが乗る。個別の装備の付け外しは無く、
+// 「その職業への投資」として一度買えば以後ずっと有効(ウィザードリィ的な個別装備管理はMVPとして省略)。
+// 最上位(Lv9)の数値は、そのステータスがレベル1→10のレベルアップだけで伸びる量のおよそ半分になるよう調整してある
+// (例: 侍はレベルアップだけで攻撃力+13伸びるので、武器の最終段階は+7程度に抑え、装備がレベルアップの主役を
+// 食ってしまわないようにした)。防具(防御力)は元々のレベル成長自体が緩やかなため、最終段階は小さい値になる。
 function tier(name, statKey, bonus, price, level) {
   return { name, statKey, bonus, price, level };
 }
 const EQUIPMENT = {
   samurai: {
-    weapon: [tier("業物の刀", "atk", 5, 120, 1), tier("妖刀", "atk", 11, 270, 5), tier("伝説の名刀", "atk", 18, 540, 10)],
-    armor: [tier("当世具足", "def", 5, 110, 1), tier("上級当世具足", "def", 10, 250, 5), tier("伝説の甲冑", "def", 17, 500, 10)],
+    weapon: [tier("業物の刀", "atk", 2, 40, 1), tier("業物の太刀", "atk", 4, 90, 3), tier("妖刀", "atk", 5, 125, 5), tier("鬼哭の刀", "atk", 6, 160, 7), tier("伝説の名刀", "atk", 7, 200, 9)],
+    armor: [tier("当世具足", "def", 0.4, 10, 1), tier("強化当世具足", "def", 0.8, 20, 3), tier("上級当世具足", "def", 1.2, 30, 5), tier("鬼哭の甲冑", "def", 1.6, 45, 7), tier("伝説の甲冑", "def", 2, 55, 9)],
   },
   ninja: {
-    weapon: [tier("業物の苦無", "atk", 4, 90, 1), tier("影の苦無", "atk", 9, 220, 5), tier("暁の苦無", "atk", 15, 440, 10)],
-    armor: [tier("強化忍び装束", "def", 3, 75, 1), tier("上級忍び装束", "def", 7, 190, 5), tier("暁の装束", "def", 12, 400, 10)],
+    weapon: [tier("業物の苦無", "atk", 2, 40, 1), tier("改良苦無", "atk", 4, 90, 3), tier("影の苦無", "atk", 5, 120, 5), tier("月影の苦無", "atk", 6, 160, 7), tier("暁の苦無", "atk", 7, 195, 9)],
+    armor: [tier("強化忍び装束", "def", 0.4, 10, 1), tier("精鋭忍び装束", "def", 0.8, 20, 3), tier("上級忍び装束", "def", 1.2, 35, 5), tier("月影の装束", "def", 1.6, 45, 7), tier("暁の装束", "def", 2, 60, 9)],
   },
   spearman: {
-    weapon: [tier("鍛えの槍", "atk", 4, 90, 1), tier("十文字槍", "atk", 9, 220, 5), tier("伝説の大槍", "atk", 16, 450, 10)],
-    armor: [tier("鉄の大盾", "def", 6, 110, 1), tier("強化大盾", "def", 12, 260, 5), tier("伝説の盾", "def", 20, 500, 10)],
+    weapon: [tier("鍛えの槍", "atk", 2, 40, 1), tier("業物の槍", "atk", 3, 70, 3), tier("十文字槍", "atk", 4, 100, 5), tier("鬼殺しの槍", "atk", 5, 130, 7), tier("伝説の大槍", "atk", 6, 170, 9)],
+    armor: [tier("鉄の大盾", "def", 0.5, 10, 1), tier("業物の大盾", "def", 1, 20, 3), tier("強化大盾", "def", 1.5, 35, 5), tier("鬼殺しの大盾", "def", 2, 45, 7), tier("伝説の盾", "def", 2.5, 60, 9)],
   },
   naginata: {
-    weapon: [tier("鍛えの薙刀", "atk", 5, 110, 1), tier("大薙刀", "atk", 11, 250, 5), tier("伝説の薙刀", "atk", 17, 510, 10)],
-    armor: [tier("強化白鉢巻", "def", 4, 90, 1), tier("上級具足", "def", 8, 220, 5), tier("伝説の巫女装束", "def", 14, 440, 10)],
+    weapon: [tier("鍛えの薙刀", "atk", 2, 40, 1), tier("業物の薙刀", "atk", 3, 65, 3), tier("大薙刀", "atk", 4, 90, 5), tier("巴形の薙刀", "atk", 5, 120, 7), tier("伝説の薙刀", "atk", 6, 155, 9)],
+    armor: [tier("強化白鉢巻", "def", 0.4, 10, 1), tier("強化具足", "def", 0.8, 20, 3), tier("上級具足", "def", 1.2, 35, 5), tier("巴形の装束", "def", 1.6, 45, 7), tier("伝説の巫女装束", "def", 2, 65, 9)],
   },
   hunter: {
-    weapon: [tier("鍛えの弓", "atk", 4, 90, 1), tier("強弓", "atk", 9, 220, 5), tier("伝説の弓", "atk", 15, 440, 10)],
-    armor: [tier("強化猟師装束", "def", 3, 75, 1), tier("上級猟師装束", "def", 7, 190, 5), tier("伝説の猟師装束", "def", 12, 400, 10)],
+    weapon: [tier("鍛えの弓", "atk", 2, 40, 1), tier("業物の弓", "atk", 3, 70, 3), tier("強弓", "atk", 4, 100, 5), tier("鬼哭の弓", "atk", 5, 130, 7), tier("伝説の弓", "atk", 6, 170, 9)],
+    armor: [tier("強化猟師装束", "def", 0.3, 5, 1), tier("精鋭猟師装束", "def", 0.6, 15, 3), tier("上級猟師装束", "def", 0.9, 25, 5), tier("鬼哭の猟師装束", "def", 1.2, 35, 7), tier("伝説の猟師装束", "def", 1.5, 45, 9)],
   },
   gunner: {
-    weapon: [tier("鍛えの火縄銃", "atk", 6, 130, 1), tier("上級火縄銃", "atk", 13, 290, 5), tier("伝説の大筒", "atk", 21, 570, 10)],
-    armor: [tier("強化胴当て", "def", 3, 75, 1), tier("上級胴当て", "def", 7, 190, 5), tier("伝説の胴当て", "def", 12, 400, 10)],
+    weapon: [tier("鍛えの火縄銃", "atk", 3, 55, 1), tier("業物の火縄銃", "atk", 4, 85, 3), tier("上級火縄銃", "atk", 6, 135, 5), tier("雷神の大筒", "atk", 7, 170, 7), tier("伝説の大筒", "atk", 8, 205, 9)],
+    armor: [tier("強化胴当て", "def", 0.3, 5, 1), tier("精鋭胴当て", "def", 0.6, 15, 3), tier("上級胴当て", "def", 0.9, 25, 5), tier("雷神の胴当て", "def", 1.2, 35, 7), tier("伝説の胴当て", "def", 1.5, 45, 9)],
   },
   onmyoji: {
-    weapon: [tier("式神の御幣", "mag", 5, 110, 1), tier("上級御幣", "mag", 11, 260, 5), tier("大陰陽の御幣", "mag", 19, 520, 10)],
-    armor: [tier("浄衣", "def", 3, 90, 1), tier("上級浄衣", "def", 7, 210, 5), tier("大陰陽の浄衣", "def", 12, 430, 10)],
+    weapon: [tier("式神の御幣", "mag", 3, 60, 1), tier("精霊の御幣", "mag", 5, 110, 3), tier("上級御幣", "mag", 6, 140, 5), tier("秘伝の御幣", "mag", 8, 205, 7), tier("大陰陽の御幣", "mag", 9, 245, 9)],
+    armor: [tier("浄衣", "def", 0.2, 5, 1), tier("精霊の浄衣", "def", 0.4, 10, 3), tier("上級浄衣", "def", 0.6, 20, 5), tier("秘伝の浄衣", "def", 0.8, 25, 7), tier("大陰陽の浄衣", "def", 1, 35, 9)],
   },
   priest: {
-    weapon: [tier("聖なる錫杖", "mag", 4, 100, 1), tier("大僧正の錫杖", "mag", 9, 240, 5), tier("神託の錫杖", "mag", 16, 480, 10)],
-    armor: [tier("法衣", "def", 4, 90, 1), tier("大僧正の法衣", "def", 8, 220, 5), tier("神託の法衣", "def", 14, 440, 10)],
+    weapon: [tier("聖なる錫杖", "mag", 2, 45, 1), tier("高僧の錫杖", "mag", 4, 100, 3), tier("大僧正の錫杖", "mag", 5, 135, 5), tier("悟りの錫杖", "mag", 6, 170, 7), tier("神託の錫杖", "mag", 7, 215, 9)],
+    armor: [tier("法衣", "def", 0.3, 5, 1), tier("高僧の法衣", "def", 0.6, 15, 3), tier("大僧正の法衣", "def", 0.9, 25, 5), tier("悟りの法衣", "def", 1.2, 35, 7), tier("神託の法衣", "def", 1.5, 45, 9)],
   },
 };
 
 // 戦闘不能で瀕死になったキャラは、昼夜が切り替わるたび(halfDayStep)にカウントが進み、
-// この範囲でランダムに決まる猶予(2〜4 = 1〜2日分)を過ぎると誰も救出に来なくてもロストする
-const CRITICAL_MIN_HALFDAYS = 2; // 1日
-const CRITICAL_MAX_HALFDAYS = 4; // 2日
+// この範囲でランダムに決まる猶予(4〜6 = 2〜3日分)を過ぎると誰も救出に来なくてもロストする
+// (旧2〜4=1〜2日分から、ユーザー指示で猶予を1日分伸ばした)
+const CRITICAL_MIN_HALFDAYS = 4; // 2日
+const CRITICAL_MAX_HALFDAYS = 6; // 3日
 
 const FATIGUE_PER_FLOOR = 2; // フィールドに出ているキャラが1階進むごとに溜まる疲労度(旧4から半減)
 const FATIGUE_MAX = 100;
@@ -472,17 +477,19 @@ const ONSEN_FATIGUE_RELIEF = 50;
 const ONSEN_BASE_COST = 40;
 const ONSEN_COST_PER_LEVEL = 8;
 
-// 敵の階層スケーリング係数。
-// レベル上限を10に圧縮し(MAX_LEVEL参照)、Lv10で階層40前後に対応できるようにする方針に合わせて、
-// 「Lv10の伸び(1+10*0.1=2.0倍)」と「階層40での敵の伸び」がおおよそ釣り合うよう逆算した値
-// (1+(40-1)*0.025 ≒ 1.975)。防御力は攻撃力の半分の倍率(FLOOR_DEF_SCALE_RATE)で伸ばし、
-// ダメージがすぐ1に張り付かないようにしている(プレイヤー側のlevelUp()のdef成長も同じ考え方)
+// 敵の階層スケーリング係数(階層1〜50付近まで滑らかに伸びる、既にLv10≒階層40前後で釣り合うよう調整済みのベース曲線)
 const FLOOR_SCALE_RATE = 0.025; // 敵の攻撃力/HPのスケール
 const FLOOR_DEF_SCALE_RATE = 0.0125;
 const MAX_LEVEL = 10; // レベル上限。ダクソン/XCOM的に「少ないレベルで大きく強くなる」設計のため低めに圧縮
-// スキルツリー導入でプレイヤー側が全体的に強くなった分、敵の攻撃力/HPを底上げする倍率(防御力は据え置き、
-// ダメージがすぐ1に張り付く問題を再発させないため)
+// スキルツリー導入でプレイヤー側が全体的に強くなった分、敵の攻撃力/HPを底上げする倍率(防御力は対象外)
 const ENEMY_POWER_MULT = 1.5;
+// 序盤の危険ボーナス。「1階層目の敵が5階層目よりあからさまに弱い」のは退屈で、ソウルシリーズのように
+// 序盤から気を抜くと熟練キャラでも瀕死になる緊張感が欲しい、という指示に対応するための上乗せ分。
+// 階層1で最大(+2.3倍相当)、EARLY_DANGER_FADE_FLOORに向かって直線的に0まで薄れ、以降は上のベース曲線のみになる
+// (終盤の難易度曲線=既に検証済みのバランスには影響を与えない設計)
+const EARLY_DANGER_BONUS_BASE = 2.3;
+const EARLY_DANGER_FADE_FLOOR = 25;
+const EARLY_DANGER_DEF_BONUS_BASE = 0.42;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -496,7 +503,8 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, MAX_LEVEL, ENEMY_POWER_MULT,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, MAX_LEVEL, ENEMY_POWER_MULT,
+    FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, EARLY_DANGER_BONUS_BASE, EARLY_DANGER_FADE_FLOOR, EARLY_DANGER_DEF_BONUS_BASE,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
 }

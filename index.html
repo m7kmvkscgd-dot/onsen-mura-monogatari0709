@@ -1418,9 +1418,12 @@ function showCarryPicker(critical, onResolved) {
 }
 
 // 担いでいた仲間を無事に里まで届け、瀕死から回復させる(里に着いた時に呼ぶ)
+// 担がれている本人は、今回の遠征の名簿(fieldParty)に居るとは限らない(別の冒険で瀕死のまま
+// 取り残されていた仲間を、今回の探索中に見つけて担いだ場合など)。そのため検索はfieldPartyではなく
+// state.roster全体に対して行い、「今回の遠征メンバーの誰かに担がれているか」で判定する
 function deliverCarriedAllies() {
-  fieldParty.forEach((c) => {
-    if (c.status === "critical" && c.carriedBy) {
+  state.roster.forEach((c) => {
+    if (c.status === "critical" && c.carriedBy && fieldParty.some((f) => f.id === c.carriedBy)) {
       const carrier = getRosterChar(c.carriedBy);
       rescueCritical(c);
       dlog(`${carrier ? carrier.name : "仲間"}が担いでいた${c.name}を無事に里まで連れ帰った！`);
