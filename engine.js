@@ -305,8 +305,10 @@ function useAbility(actor, target, abilityType, log) {
     return { dmgs: results };
   }
   if (abilityType === "physicalAttackAll") {
+    // 旧0.55倍だと素の攻撃(atk倍率1.0)に対する目減りが大きく、魔法版(rollMagicAttackの1.8倍×0.6=実質1.08倍)より
+    // 大幅に見劣りしていたため、0.85倍に引き上げて薙ぎ払いが単体攻撃と張り合える威力になるよう調整
     const results = target.filter((t) => t.hp > 0).map((t) => {
-      const dmg = Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.55));
+      const dmg = Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.85));
       applyDamageToTarget(t, dmg, log, actor.label);
       return dmg;
     });

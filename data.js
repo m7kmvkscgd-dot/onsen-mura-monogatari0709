@@ -10,7 +10,7 @@
 const CLASSES = {
   samurai: { ja: "侍", image: "assets/class_samurai.png", hp: 34, atk: 13, def: 8, spd: 11, mag: 0, abilities: ["critAttack"] },
   ninja: { ja: "忍", image: "assets/class_ninja.png", hp: 29, atk: 13, def: 7, spd: 16, mag: 0, abilities: ["powerAttack"] },
-  spearman: { ja: "槍士", image: "assets/class_spearman.png", hp: 42, atk: 11, def: 13, spd: 7, mag: 0, abilities: ["guard"] },
+  spearman: { ja: "槍士", image: "assets/class_spearman.png", hp: 38, atk: 11, def: 10, spd: 7, mag: 0, abilities: ["guard"] },
   naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 32, atk: 12, def: 8, spd: 9, mag: 0, abilities: ["physicalAttackAll"] },
   hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 26, atk: 11, def: 5, spd: 12, mag: 0, abilities: ["preciseShot"] },
   gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 28, atk: 16, def: 6, spd: 4, mag: 0, abilities: ["cannonShot"] },

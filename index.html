@@ -76,7 +76,7 @@
   .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
   .stat-row span:first-child { color: var(--text-muted); }
   .mpbar-fill { height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
-  .roster-row img { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
+  .roster-row img:not(.stress-overlay) { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .roster-info { flex: 1; }
   /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
   .stress-wrap { position: relative; }
@@ -120,7 +120,7 @@
   .party-member { flex: 0 1 110px; max-width: 110px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s; transform: translateZ(0); }
   .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
-  .party-member img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
+  .party-member img:not(.stress-overlay) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; }
   .hpbar-fill { height: 100%; background: var(--hp); transition: width 0.4s ease; }
@@ -537,11 +537,17 @@ function playBgm(key) {
 }
 
 const sfxCache = {};
+const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3" };
 function playSfx(name) {
   if (muted) return;
-  if (!sfxCache[name]) sfxCache[name] = new Audio(`assets/sfx/${name}.ogg`);
+  if (!sfxCache[name]) sfxCache[name] = new Audio(`assets/sfx/${name}.${SFX_EXT[name] || "ogg"}`);
   const node = sfxCache[name].cloneNode(true);
   node.play().catch(() => {});
+}
+// 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
+const CLASS_ATTACK_SFX = { hunter: "attack_hunter", samurai: "attack_samurai", priest: "attack_caster", onmyoji: "attack_caster", gunner: "attack_gunner", spearman: "attack_spearman", naginata: "attack_naginata", ninja: "attack_ninja" };
+function attackSfxFor(classId) {
+  return CLASS_ATTACK_SFX[classId] || "attack";
 }
 
 document.getElementById("muteBtn").onclick = () => {
@@ -1141,8 +1147,8 @@ function popupOn(targetId, text, cls) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
   if (cls === "dmg") entity.__shakeUntil = Date.now() + 400;
-  // 味方が被弾した際の数値表示だけ、表示対象がずれる不具合の暫定対応として一旦止める(揺れ・敵側の表示は継続)
-  if (cls === "dmg" && fieldParty.includes(entity)) return;
+  // ダメージ数値の表示は、表示対象がずれる不具合の暫定対応として一旦全面的に止める(揺れは継続)
+  if (cls === "dmg") return;
   entity.__popupText = text;
   entity.__popupCls = cls;
   entity.__popupAt = Date.now();
@@ -1350,7 +1356,7 @@ function renderActionButtons(actor) {
   atkBtn.textContent = "攻撃";
   atkBtn.onclick = () => {
     pickSingleEnemyTarget((target) => {
-      playSfx("attack");
+      playSfx(attackSfxFor(actor.classId));
       const dmg = performAttack(actor, target, blog);
       popupOn(target.instanceId, `-${dmg}`, "dmg");
       afterPlayerAction();
@@ -1368,7 +1374,7 @@ function renderActionButtons(actor) {
       if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
       if (ability === "guard") { playSfx("select"); useAbility(actor, actor, "guard", blog); afterPlayerAction(); return; }
       if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-        playSfx("attack");
+        playSfx(attackSfxFor(actor.classId));
         const targetsList = aliveEnemies();
         const result = useAbility(actor, targetsList, ability, blog);
         if (result && result.dmgs) targetsList.forEach((t, i) => popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg"));
@@ -1377,7 +1383,7 @@ function renderActionButtons(actor) {
       }
       // 単体系(会心の一撃/奇襲/呪符ノ術など)
       pickSingleEnemyTarget((target) => {
-        playSfx("attack");
+        playSfx(attackSfxFor(actor.classId));
         const result = useAbility(actor, target, ability, blog);
         if (result && result.dmg != null) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
         afterPlayerAction();
