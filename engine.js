@@ -345,7 +345,7 @@ function useAbility(actor, target, abilityType, log) {
 }
 
 function usePotion(target, log) {
-  const heal = 30;
+  const heal = Math.round(target.maxHp * POTION_HEAL_RATIO);
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は回復薬で${heal}回復！`);
   return heal;

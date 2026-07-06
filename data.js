@@ -97,8 +97,10 @@ const ENEMIES = {
 };
 
 const ITEMS = {
-  potion: { id: "potion", ja: "回復薬", price: 20, desc: "戦闘中に1人のHPを30回復する" },
+  potion: { id: "potion", ja: "回復薬", price: 20, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
 };
+const POTION_HEAL_RATIO = 0.35;
+const POTION_CAP = 5; // 一度の遠征で持てる回復薬の上限
 
 // 職業ごとの武器/防具。各3段階(Lv1から買える基礎/Lv5解禁/Lv10解禁)。上位を買うと下位から乗り換わる(加算ではなく差し替え)。
 // 「そのレベルに到達した仲間が1人でもいるか」で解禁判定する。購入すると同じ職業の全メンバーに恒久的なステータスが乗る。
