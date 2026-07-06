@@ -64,9 +64,9 @@ function createCharacter(name, classId, classUpgrades) {
   };
 }
 
-// 体感のレベルアップ速度を旧来の3分の1にするため、必要経験値を3倍にしてある
+// 体感のレベルアップ速度を旧来の3分の1にするため必要経験値を3倍にし、さらに「上がりやすすぎる」というフィードバックを受けて1.5倍(合計4.5倍)にしてある
 function xpToNext(level) {
-  return (20 + level * 15) * 3;
+  return Math.round((20 + level * 15) * 4.5);
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
@@ -102,11 +102,9 @@ function onsenCost(level) {
   return ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL;
 }
 
-// 現在「休養中」(温泉に入っている、または宿屋に宿泊している)かどうか
+// 現在「休養中」(温泉に入っている)かどうか。宿泊は(一旦)冒険可否に影響しない
 function isResting(character, halfDayStep) {
-  const bathing = character.onsenCooldownUntil != null && halfDayStep < character.onsenCooldownUntil;
-  const lodging = character.lodgingCooldownUntil != null && halfDayStep < character.lodgingCooldownUntil;
-  return bathing || lodging;
+  return character.onsenCooldownUntil != null && halfDayStep < character.onsenCooldownUntil;
 }
 
 // 生存していて、かつ休養中でもない = 冒険に連れて行ける/温泉や宿屋を新たに利用できる状態
@@ -120,12 +118,10 @@ function useOnsen(character, halfDayStep) {
   character.onsenCooldownUntil = halfDayStep + 1;
 }
 
-// 宿屋に宿泊し、HP/MPを全回復する。宿泊自体が昼夜を1つ進める(呼び出し側でtoggleTimeOfDayする)前提のため、
-// 「宿泊中」を半日分維持するには基準のhalfDayStepに+2しておく必要がある
+// 宿屋に宿泊し、HP/MPを全回復する(宿泊自体は冒険可否に影響しない)
 function useLodging(character, halfDayStep) {
   character.hp = character.maxHp;
   character.mp = character.maxMp;
-  character.lodgingCooldownUntil = halfDayStep + 2;
 }
 
 // ストレスの段階(0=平常, 1=40〜59, 2=60〜79, 3=80〜99, 4=100=発狂)
@@ -353,11 +349,13 @@ function usePotion(target, log) {
   return heal;
 }
 
-// enemy一体がtargets(生存中の味方)からランダムに1人を攻撃する。かばう中の相手なら大幅減衰した上で構えを消費する
+// enemy一体がtargets(生存中の味方)を攻撃する。かばう中の仲間がいれば、タンクとして必ずその相手が身代わりになって
+// 大幅減衰した上で構えを消費する(誰もかばっていなければランダムに1人を攻撃する)
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
-  const target = alive[Math.floor(Math.random() * alive.length)];
+  const guardian = alive.find((t) => t.guarding);
+  const target = guardian || alive[Math.floor(Math.random() * alive.length)];
   let dmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
   if (target.guarding) {
     dmg = Math.max(1, Math.round(dmg * 0.4));
@@ -368,7 +366,17 @@ function enemyAttack(enemy, targets, log) {
     target.hp = Math.max(0, target.hp - dmg);
     log(`${enemy.label}は${target.label}に${dmg}ダメージ！`);
   }
+  target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(dmg, target.maxHp));
   return { target, dmg };
+}
+
+// 被弾ダメージが自身の最大HPに占める割合に応じてストレスが溜まる。3割未満は増加なし、
+// 3割で+2、8割で+15になるよう線形補間している(割合1.0=即死級の一撃で+20)
+function damageStress(dmg, maxHp) {
+  if (!maxHp) return 0;
+  const ratio = Math.min(dmg / maxHp, 1);
+  if (ratio < 0.3) return 0;
+  return Math.round(26 * (ratio - 0.3) + 2);
 }
 
 // 戦闘不能になったキャラをそのフロアで瀕死にする(死体ではなく生存しているが動けない状態)。
