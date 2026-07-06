@@ -37,6 +37,9 @@
   }
   .hero > * { position: relative; z-index: 1; }
   .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .hero-title-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .hero-title-row h1 { margin: 0; }
+  .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
@@ -247,7 +250,10 @@
         <span class="gold" id="townGold">0G</span>
         <button class="mute-btn" id="muteBtn">🔊</button>
       </div>
-      <h1>湯乃里温泉</h1>
+      <div class="hero-title-row">
+        <h1>湯乃里温泉</h1>
+        <span class="time-of-day-label" id="townTimeLabel"></span>
+      </div>
     </div>
     <div class="body-pad">
       <div class="btn-col">
@@ -439,6 +445,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
   if (c.fatigue == null) c.fatigue = 0;
   if (c.guarding == null) c.guarding = false;
+  if (c.accuracy == null) c.accuracy = CLASSES[c.classId].accuracy;
   if (!c.equipBonus) c.equipBonus = computeEquipBonus(c.classId, classUpgrades);
   if (c.status === "corpse") {
     c.status = "critical";
@@ -482,6 +489,7 @@ function saveState() {
 // 町・宿屋は4段階それぞれの絵を持つが、深淵の森・温泉は昼/夜2種類の絵しか無いため
 // 朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
 const TIME_PHASES = ["dawn", "day", "dusk", "night"];
+const TIME_PHASE_LABEL = { dawn: "朝", day: "昼", dusk: "夕", night: "夜" };
 const BG_SETS = {
   town: { dawn: "assets/bg/town_dawn.png", day: "assets/bg/town.png", dusk: "assets/bg/town_dusk.png", night: "assets/bg/town_night.png" },
   tavern: { dawn: "assets/bg/tavern_dawn.png", day: "assets/bg/tavern.png", dusk: "assets/bg/tavern_dusk.png", night: "assets/bg/tavern_night.png" },
@@ -561,7 +569,7 @@ function playBgm(key) {
 }
 
 const sfxCache = {};
-const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3" };
+const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3" };
 // 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
 function hitTakenSfxFor(dmg, maxHp) {
   const ratio = maxHp > 0 ? dmg / maxHp : 0;
@@ -618,6 +626,7 @@ function renderTown() {
   pruneActiveParty();
   saveState();
   document.getElementById("townGold").textContent = state.gold + "G";
+  document.getElementById("townTimeLabel").textContent = TIME_PHASE_LABEL[state.timeOfDay || "day"];
   playBgm("town");
   updateSceneBackgrounds();
 }
@@ -1342,8 +1351,12 @@ function processNext() {
     renderBattleScreen();
     setTimeout(() => {
       const result = enemyAttack(actor, alive, blog);
-      if (result) popupOn(result.target.id, `-${result.dmg}`, "dmg");
-      if (result) playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+      if (result && result.hit) {
+        popupOn(result.target.id, `-${result.dmg}`, "dmg");
+        playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+      } else if (result) {
+        playSfx("evade");
+      }
       handleFieldDeaths();
       renderBattleScreen();
       setTimeout(() => {
@@ -1433,8 +1446,9 @@ function renderActionButtons(actor) {
   atkBtn.onclick = () => {
     pickSingleEnemyTarget((target) => {
       playSfx(attackSfxFor(actor.classId));
-      const dmg = performAttack(actor, target, blog);
-      popupOn(target.instanceId, `-${dmg}`, "dmg");
+      const result = performAttack(actor, target, blog);
+      if (result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+      else playSfx("evade");
       renderBattleScreen();
       setTimeout(afterPlayerAction, 500);
     });
@@ -1460,7 +1474,14 @@ function renderActionButtons(actor) {
         playSfx(attackSfxFor(actor.classId));
         const targetsList = aliveEnemies();
         const result = useAbility(actor, targetsList, ability, blog);
-        if (result && result.dmgs) targetsList.forEach((t, i) => popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg"));
+        if (result && result.hits) {
+          let anyEvaded = false;
+          targetsList.forEach((t, i) => {
+            if (result.hits[i]) popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg");
+            else anyEvaded = true;
+          });
+          if (anyEvaded) playSfx("evade");
+        }
         renderBattleScreen();
         setTimeout(afterPlayerAction, 500);
         return;
@@ -1469,7 +1490,8 @@ function renderActionButtons(actor) {
       pickSingleEnemyTarget((target) => {
         playSfx(attackSfxFor(actor.classId));
         const result = useAbility(actor, target, ability, blog);
-        if (result && result.dmg != null) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+        if (result && result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+        else if (result && !result.failed) playSfx("evade");
         renderBattleScreen();
         setTimeout(afterPlayerAction, 500);
       });

@@ -52,6 +52,7 @@ function createCharacter(name, classId, classUpgrades) {
     def: c.def,
     spd: c.spd,
     mag: c.mag,
+    accuracy: c.accuracy,
     equipBonus: computeEquipBonus(classId, classUpgrades),
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町では抜けない。温泉で回復)
     guarding: false,
@@ -155,9 +156,9 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
   });
 }
 
-// guard以外の全アビリティ(魔法系だけでなく物理系の必殺技も)はMPを消費する。
-// 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える
-const ABILITY_MP_COST = { magicAttack: 6, magicAttackAll: 12, heal: 5, critAttack: 4, powerAttack: 5, physicalAttackAll: 9, preciseShot: 4, cannonShot: 8 };
+// 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える。
+// guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
+const ABILITY_MP_COST = { magicAttack: 6, magicAttackAll: 12, heal: 5, critAttack: 4, powerAttack: 5, physicalAttackAll: 9, preciseShot: 4, cannonShot: 8, guard: 1 };
 function abilityMpCost(abilityType) {
   return ABILITY_MP_COST[abilityType] || 0;
 }
@@ -255,10 +256,51 @@ function goldReward(enemy) {
   return enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
 }
 
-function performAttack(actor, target, log) {
-  const dmg = rollBasicAttack(effectiveStat(actor, "atk"), target.def);
+// 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)
+function evasionChance(entity) {
+  const spd = effectiveStat(entity, "spd");
+  return Math.max(0, Math.min(EVASION_MAX, (spd - EVASION_SPD_BASELINE) * EVASION_SPD_FACTOR));
+}
+function accuracyOf(entity) {
+  return entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
+}
+// 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)
+function rollHit(actor, target) {
+  const chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor) - evasionChance(target)));
+  return Math.random() < chance;
+}
+
+// ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す
+function rollAttackOrMiss(actor, target, rollFn, log) {
+  if (!rollHit(actor, target)) {
+    log(`${target.label}は${actor.label}の攻撃をかわした！`);
+    return { hit: false, dmg: null };
+  }
+  const dmg = rollFn();
   applyDamageToTarget(target, dmg, log, actor.label);
-  return dmg;
+  return { hit: true, dmg };
+}
+// 範囲技共通: 対象ごとに個別に命中判定する
+function rollAoeAttack(actor, targets, rollFn, log) {
+  const hits = [];
+  const dmgs = [];
+  targets.filter((t) => t.hp > 0).forEach((t) => {
+    if (!rollHit(actor, t)) {
+      log(`${t.label}は${actor.label}の攻撃をかわした！`);
+      hits.push(false);
+      dmgs.push(null);
+      return;
+    }
+    const dmg = rollFn(t);
+    applyDamageToTarget(t, dmg, log, actor.label);
+    hits.push(true);
+    dmgs.push(dmg);
+  });
+  return { hits, dmgs };
+}
+
+function performAttack(actor, target, log) {
+  return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log);
 }
 
 // ログは「静香は鬼火に50ダメージ！」の1行のみにする(技名などの装飾は付けない)
@@ -284,48 +326,28 @@ function useAbility(actor, target, abilityType, log) {
     return { guard: true };
   }
   if (abilityType === "magicAttack") {
-    const dmg = rollMagicAttack(effectiveStat(actor, "mag"), target.def);
-    applyDamageToTarget(target, dmg, log, actor.label);
-    return { dmg };
+    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log);
   }
   if (abilityType === "magicAttackAll") {
-    const results = target.filter((t) => t.hp > 0).map((t) => {
-      const dmg = Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6));
-      applyDamageToTarget(t, dmg, log, actor.label);
-      return dmg;
-    });
-    return { dmgs: results };
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6)), log);
   }
   if (abilityType === "physicalAttackAll") {
     // 旧0.55倍だと素の攻撃(atk倍率1.0)に対する目減りが大きく、魔法版(rollMagicAttackの1.8倍×0.6=実質1.08倍)より
     // 大幅に見劣りしていたため、0.85倍に引き上げて薙ぎ払いが単体攻撃と張り合える威力になるよう調整
-    const results = target.filter((t) => t.hp > 0).map((t) => {
-      const dmg = Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.85));
-      applyDamageToTarget(t, dmg, log, actor.label);
-      return dmg;
-    });
-    return { dmgs: results };
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.85)), log);
   }
   if (abilityType === "powerAttack") {
-    const dmg = rollPowerAttack(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, actor.label);
-    return { dmg };
+    return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "critAttack") {
-    const dmg = rollCritAttack(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, actor.label);
-    return { dmg };
+    return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "preciseShot") {
-    const dmg = rollPreciseShot(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, actor.label);
-    return { dmg };
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "cannonShot") {
-    const dmg = rollCannonShot(effectiveStat(actor, "atk"), target.def);
-    applyDamageToTarget(target, dmg, log, actor.label);
-    actor.reloading = true;
-    return { dmg };
+    actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる
+    return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "heal") {
     const heal = rollHeal(effectiveStat(actor, "mag"));
@@ -350,6 +372,10 @@ function enemyAttack(enemy, targets, log) {
   if (!alive.length) return null;
   const guardian = alive.find((t) => t.guarding);
   const target = guardian || alive[Math.floor(Math.random() * alive.length)];
+  if (!rollHit(enemy, target)) {
+    log(`${target.label}は${enemy.label}の攻撃をかわした！`);
+    return { target, dmg: null, hit: false };
+  }
   let dmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
   if (target.guarding) {
     dmg = Math.max(1, Math.round(dmg * 0.4));
@@ -361,7 +387,7 @@ function enemyAttack(enemy, targets, log) {
     log(`${enemy.label}は${target.label}に${dmg}ダメージ！`);
   }
   target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(dmg, target.maxHp));
-  return { target, dmg };
+  return { target, dmg, hit: true };
 }
 
 // 被弾ダメージが自身の最大HPに占める割合に応じてストレスが溜まる。3割未満は増加なし、
@@ -458,6 +484,6 @@ if (typeof module !== "undefined") {
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, useOnsen, useLodging, isAvailable,
+    onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
   };
 }
