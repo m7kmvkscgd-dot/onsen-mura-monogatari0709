@@ -477,8 +477,8 @@ function pickEnemyForFloor(floor, onlyBoss) {
     for (let i = 0; i < weight; i++) weighted.push(e);
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
-  const scale = 1 + (floor - 1) * FLOOR_SCALE_RATE;
-  const defScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE; // 防御力は攻撃力よりゆるやかに伸ばす(すぐダメージ1に張り付くのを防ぐ)
+  const scale = (1 + (floor - 1) * FLOOR_SCALE_RATE) * ENEMY_POWER_MULT; // ENEMY_POWER_MULTでプレイヤー側の強化分を底上げ
+  const defScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE; // 防御力は据え置き(攻撃力/HPだけ底上げし、ダメージ1張り付きを防ぐ)
   const hp = Math.round(pick.hp * scale);
   return {
     ...pick,
@@ -747,9 +747,8 @@ function tickHalfDay(characters, halfDayStep) {
 // 瀕死の仲間を救出する(HP半分で復活)。呼び出し側でその冒険を終了させて町に戻す
 function rescueCritical(character) {
   if (character.status !== "critical") return false;
-  const c = CLASSES[character.classId];
   character.status = "active";
-  character.hp = Math.max(1, Math.round(c.hp * 0.5));
+  character.hp = 1; // 瀕死から復帰した直後はHP1(ぎりぎり生きている状態。全快ではない)
   character.fatigue = 0;
   character.criticalFloor = null;
   character.criticalExpireHalfDay = null;

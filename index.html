@@ -1317,64 +1317,87 @@ document.getElementById("advanceBtn").onclick = () => {
   }
   saveState();
 
-  const criticalHere = state.roster.find((c) => c.status === "critical" && c.criticalFloor === currentFloor);
+  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
   renderDungeon();
-  if (criticalHere) {
-    showCriticalAlert(criticalHere, () => rollEncounter());
+  if (criticalHereList.length > 0) {
+    queueCriticalAlerts(criticalHereList, () => rollEncounter());
     return;
   }
   rollEncounter();
 };
 
+// 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
+let pendingCriticalQueue = [];
+let afterCriticalQueue = null;
+function queueCriticalAlerts(criticalList, onAllDone) {
+  pendingCriticalQueue = criticalList;
+  afterCriticalQueue = onAllDone;
+  showNextQueuedCriticalAlert();
+}
+function showNextQueuedCriticalAlert() {
+  if (pendingCriticalQueue.length === 0) {
+    const cb = afterCriticalQueue;
+    afterCriticalQueue = null;
+    if (cb) cb();
+    return;
+  }
+  const critical = pendingCriticalQueue.shift();
+  if (critical.status !== "critical" || critical.carriedBy) { showNextQueuedCriticalAlert(); return; } // 既に対応済みなら飛ばす
+  showCriticalAlert(critical, showNextQueuedCriticalAlert);
+}
+
 // 別の冒険で瀕死のまま残された仲間がいる階に到達した時のアラート。
-// 救出すると即座にその冒険を終了して町に戻る(見送れば探索を続行できる)
-// afterSkip: 「見送る」を選んだ時の続き処理。フロア到達時は次のエンカウント抽選(rollEncounter)、
-// 戦闘直後(このフロアで今しがた瀕死になった仲間がいる場合)は何もせず探索画面に留まるだけ、と呼び出し元で使い分ける
-function showCriticalAlert(critical, afterSkip) {
+// onResolved: 「見送る」または「担ぐ」が確定した時の続き処理(複数人いる場合は次の1人のアラートへ、
+// 全員片付いたらフロア到達時は次のエンカウント抽選、戦闘直後は何もせず探索画面に留まる)。
+// 「救出して町に戻る」(即座に瀕死解除+強制帰還)は、実質ノーコストのファストトラベルになってしまうため廃止。
+// 瀕死の仲間を助ける手段は「担ぐ」(歩いて連れて帰る必要がある)のみにしてある
+function showCriticalAlert(critical, onResolved) {
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
+  const overlaySrc = stressOverlaySrc(critical.fatigue);
   div.innerHTML = `
     <div class="critical-alert">
-      <p><strong>${critical.name}(${c2.ja})が瀕死のまま倒れている...</strong></p>
+      <div class="stress-wrap" style="width:64px;margin:0 auto 0.5rem;">
+        <img src="${c2.image}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:top;border-radius:6px;">
+        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      </div>
+      <p style="text-align:center;"><strong>${critical.name}(${c2.ja})が瀕死のまま倒れている...</strong></p>
       <p>${statusLabel(critical)}</p>
-      <button class="big primary" id="rescueBtn">救出して町に戻る</button>
-      <button class="big" id="carryBtn" style="margin-top:0.4rem;">担いで一緒に歩いて帰る</button>
+      <button class="big primary" id="carryBtn">担いで一緒に歩いて帰る</button>
       <button class="big" id="skipCriticalBtn" style="margin-top:0.4rem;">${retreating ? "今は見送って帰還を続ける" : "今は見送って先へ進む"}</button>
     </div>
   `;
-  document.getElementById("rescueBtn").onclick = () => {
-    rescueCritical(critical);
-    dlog(`${critical.name}を救出した！この冒険はここで終了し、町に戻る。`);
-    saveState();
-    playSfx("heal");
-    retreating = false;
-    deliverCarriedAllies(); // もし他に担いでいる仲間がいれば、その人も一緒に届ける
-    toggleTimeOfDay();
-    renderTown();
-    showScreen("screen-town");
-  };
   document.getElementById("carryBtn").onclick = () => {
-    showCarryPicker(critical, afterSkip);
+    showCarryPicker(critical, onResolved);
   };
   document.getElementById("skipCriticalBtn").onclick = () => {
-    dlog("瀕死の仲間をその場に残した。");
+    dlog(`${critical.name}をその場に残した。`);
     div.innerHTML = "";
-    afterSkip();
+    onResolved();
   };
 }
 
 // 誰が担ぐかを選ぶ(探索中に取り残された仲間の階へたどり着いた時、または戦闘直後にこのフロアで瀕死になった仲間がいる時)
-function showCarryPicker(critical, afterSkip) {
+function showCarryPicker(critical, onResolved) {
   const div = document.getElementById("criticalAlert");
   const carriers = aliveField().filter((c) => !c.carryingId);
   if (carriers.length === 0) {
     alert("担げる仲間がいません(全員ふさがっています)");
     return;
   }
+  const rowHtml = (c) => {
+    const c2 = CLASSES[c.classId];
+    return `
+      <button class="big" data-carrier-id="${c.id}" style="margin-top:0.3rem; display:flex; align-items:center; gap:0.6rem; justify-content:flex-start; padding-left:0.8rem;">
+        <img src="${c2.image}" style="width:36px;height:36px;object-fit:cover;object-position:top;border-radius:4px;">
+        <span>${c.name}</span>
+      </button>
+    `;
+  };
   div.innerHTML = `
     <div class="critical-alert">
       <p><strong>${critical.name}を誰が担ぎますか？</strong></p>
-      ${carriers.map((c) => `<button class="big" data-carrier-id="${c.id}" style="margin-top:0.3rem;">${c.name}</button>`).join("")}
+      ${carriers.map(rowHtml).join("")}
       <button class="big danger" id="cancelCarryBtn" style="margin-top:0.4rem;">やめる</button>
     </div>
   `;
@@ -1388,9 +1411,10 @@ function showCarryPicker(critical, afterSkip) {
       dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
       div.innerHTML = "";
       renderDungeon();
+      onResolved();
     };
   });
-  document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, afterSkip);
+  document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, onResolved);
 }
 
 // 担いでいた仲間を無事に里まで届け、瀕死から回復させる(里に着いた時に呼ぶ)
@@ -1658,7 +1682,9 @@ function processNext() {
       setTimeout(processNext, 500);
       return;
     }
-    if (stressTier(actor.fatigue) >= 4) {
+    // 発狂(ストレス100)は完全に行動不能ではなく、50%の確率で動けない(残り50%は行動できる、ただし
+    // ステータス自体はfatigueMalusのtier4減衰(-100%)がそのままかかる)
+    if (stressTier(actor.fatigue) >= 4 && Math.random() < 0.5) {
       blog(`${actor.label}は発狂して動けない！`);
       battle.orderIndex++;
       setTimeout(processNext, 500);
@@ -2126,8 +2152,8 @@ function escapeBattle() {
 // 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
 // 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
 function checkStrandedOnCurrentFloor() {
-  const critical = fieldParty.find((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
-  if (critical) showCriticalAlert(critical, () => {});
+  const criticalList = fieldParty.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+  if (criticalList.length > 0) queueCriticalAlerts(criticalList, () => {});
 }
 
 function defeat() {

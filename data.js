@@ -480,6 +480,9 @@ const ONSEN_COST_PER_LEVEL = 8;
 const FLOOR_SCALE_RATE = 0.025; // 敵の攻撃力/HPのスケール
 const FLOOR_DEF_SCALE_RATE = 0.0125;
 const MAX_LEVEL = 10; // レベル上限。ダクソン/XCOM的に「少ないレベルで大きく強くなる」設計のため低めに圧縮
+// スキルツリー導入でプレイヤー側が全体的に強くなった分、敵の攻撃力/HPを底上げする倍率(防御力は据え置き、
+// ダメージがすぐ1に張り付く問題を再発させないため)
+const ENEMY_POWER_MULT = 1.5;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -493,7 +496,7 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, MAX_LEVEL,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, MAX_LEVEL, ENEMY_POWER_MULT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
 }
