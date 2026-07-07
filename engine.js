@@ -10,6 +10,12 @@ function nextId() {
 function maxMpFor(mag) {
   return 10 + Math.round(mag * 1.2);
 }
+// クラスごとの基礎MP上限。CLASSES[classId].maxMpで明示的に指定されていればそれを優先し(魔力に連動させたくない
+// 個別調整用)、無ければ従来通り魔力から自動計算する
+function baseMaxMpFor(classId) {
+  const c = CLASSES[classId];
+  return c.maxMp != null ? c.maxMp : maxMpFor(c.mag);
+}
 
 // classUpgrades: { weapon: tierIndex(0=未購入), armor: tierIndex(0=未購入) } — 職業単位の恒久装備。
 // 上位ティアを買うと下位ティアから乗り換わる(加算ではなく差し替え)。個別のキャラごとの装備管理は無く、
@@ -38,7 +44,7 @@ function classHasReachedLevel(characters, classId, level) {
 function createCharacter(name, classId, classUpgrades) {
   const c = CLASSES[classId];
   const equipBonus = computeEquipBonus(classId, classUpgrades);
-  const maxMp = maxMpFor(c.mag) + (equipBonus.mp || 0);
+  const maxMp = baseMaxMpFor(classId) + (equipBonus.mp || 0);
   return {
     id: nextId(),
     name,
@@ -82,7 +88,7 @@ function createCharacter(name, classId, classUpgrades) {
 // のに必要だった経験値の合計と同じ総量になるよう、新レベル1〜9の必要経験値を等差数列(1080*level-45)で
 // 割り振ってある(結果として新レベル1=1035, 新レベル9=9675と、終盤ほど1段の重みが大きくなる)
 function xpToNext(level) {
-  return Math.round((1080 * level - 45) * 0.35); // ユーザー指示で必要経験値をさらに半分に短縮(元の7割からさらに0.5倍)
+  return Math.round((1080 * level - 45) * 0.11025); // ユーザー指示で必要経験値を現状からさらに1割短縮(0.1225 * 0.9)
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
@@ -262,7 +268,7 @@ function tickTurnStartEffects(entity, log) {
 // 装備購入後、既存の該当職業メンバー全員のequipBonusを再計算する
 function refreshEquipBonus(characters, classId, classUpgrades) {
   const bonus = computeEquipBonus(classId, classUpgrades);
-  const baseMaxMp = maxMpFor(CLASSES[classId].mag);
+  const baseMaxMp = baseMaxMpFor(classId);
   characters.forEach((c) => {
     if (c.classId === classId) {
       c.equipBonus = bonus;
@@ -316,7 +322,7 @@ function rollPowerAttack(atk, def) {
   return Math.max(1, Math.round(withVariance(atk * 1.6 * mitigation(def, 22), 0.15)));
 }
 function rollCritAttack(atk, def) {
-  return Math.max(1, Math.round(withVariance(atk * 1.3 * mitigation(def, 12), 0.15)));
+  return Math.max(1, Math.round(withVariance(atk * 1.56 * mitigation(def, 12), 0.15))); // ユーザー指示で威力を1.2倍(1.3→1.56)
 }
 // 狩人の会心の一矢。会心の一撃と同じ防御貫通の性質(弓は鎧の隙間を狙う)
 function rollPreciseShot(atk, def) {
@@ -350,10 +356,14 @@ function initPassives() {
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
 const BASE_CRIT_DMG_MULT = 1.5; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)
 
-// レベルアップで選んだスキルを反映する。受動効果はpassivesに蓄積し、能動スキルはunlockedSkillsに追加する
-function applySkillChoice(character, skill) {
+// レベルアップで選んだスキルを反映する。受動効果はpassivesに蓄積し、能動スキルはunlockedSkillsに追加する。
+// level引数は「このスキルを選んだのはレベル何の時か」を明示的に渡すためのもの。
+// character.levelを使わない理由: 1戦で2レベル以上連続で上がった場合、スキル選択が全て終わる前に
+// character.levelは既に最終レベルまで進んでしまっているため、character.levelをキーに使うと
+// 複数のレベル分の選択が同じキーに上書きされて記録が消えてしまうバグがあった
+function applySkillChoice(character, skill, level) {
   character.skills = character.skills || {};
-  character.skills[character.level] = skill.side;
+  character.skills[level] = skill.side;
   if (skill.passive) {
     const p = character.passives;
     const add = skill.passive;
@@ -523,14 +533,14 @@ function pickEnemyForFloor(floor, mode) {
   const earlyDefBonus = earlyTierBonus(floor, EARLY_DANGER_DEF_BONUS_BASE);
   const scale = baseScale + earlyBonus;
   const defScale = baseDefScale + earlyDefBonus;
-  const hp = Math.round(pick.hp * scale);
+  const hp = Math.round(pick.hp * scale * (pick.isSwarm ? 1 : ENEMY_HP_MULT));
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,
     maxHp: hp,
-    atk: Math.round(pick.atk * scale),
+    atk: Math.round(pick.atk * scale * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
     def: Math.round(pick.def * defScale),
   };
 }
@@ -894,7 +904,7 @@ if (typeof module !== "undefined") {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, earlyTierBonus, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
-    xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
+    xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,

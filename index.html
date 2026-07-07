@@ -79,7 +79,43 @@
   .detail-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.68rem; cursor: pointer; }
   .roster-actions { display: flex; flex-direction: column; gap: 0.3rem; }
   .lodge-btn { background: var(--accent); border: 1px solid var(--accent); color: #241d0a; border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.68rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .skill-pending-btn { background: #8a5fd6; border: 1px solid #8a5fd6; color: #fff; border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.68rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
   .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .skill-entry { border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; cursor: pointer; }
+  .skill-entry-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; }
+  .skill-entry-side { color: var(--text-muted); font-size: 0.7rem; }
+  .skill-entry-desc { display: none; font-size: 0.78rem; color: var(--text-muted); margin: 0.4rem 0 0; }
+  .skill-entry.open .skill-entry-desc { display: block; }
+
+  /* スキル選択画面(宿屋の名簿から開く「系譜」一覧)。XCOM風のレイアウトを、温泉宿らしい金・焦げ茶の配色に置き換えている */
+  .skill-tree-header { text-align: center; margin-bottom: 1rem; }
+  .skill-tree-charname { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+  .skill-tree-classname { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
+  .skill-tree-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0.7rem 0 0; }
+  .skill-tree-rows { border-top: 1px solid var(--border); }
+  .skill-tree-row-wrap { border-bottom: 1px solid var(--border); }
+  .skill-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; }
+  .skill-tree-row.pending { background: var(--accent-soft); border-radius: 8px; padding-left: 0.3rem; padding-right: 0.3rem; }
+  .skill-tree-level-badge {
+    flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.68rem;
+    background: rgba(20,24,27,0.5);
+  }
+  .skill-tree-row.locked .skill-tree-level-badge { border-color: var(--border); color: var(--text-muted); }
+  .skill-tree-row.pending .skill-tree-level-badge { box-shadow: 0 0 8px rgba(201,162,74,0.7); }
+  .skill-tree-opt { flex: 1; background: none; border: none; padding: 0.4rem 0.3rem; cursor: pointer; text-align: left; border-radius: 6px; }
+  .skill-tree-opt.right { text-align: right; }
+  .skill-tree-opt-name { font-size: 0.8rem; line-height: 1.3; }
+  .skill-tree-opt.chosen .skill-tree-opt-name { color: var(--accent); font-weight: 700; }
+  .skill-tree-opt.rejected .skill-tree-opt-name { color: var(--text-muted); opacity: 0.6; }
+  .skill-tree-opt.locked .skill-tree-opt-name { color: var(--text-muted); opacity: 0.4; }
+  .skill-tree-opt.pending-choice { background: rgba(28,34,38,0.7); }
+  .skill-tree-opt.pending-choice:active { background: var(--accent-soft); }
+  .skill-tree-inline-detail { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid var(--accent); border-radius: 8px; background: var(--surface-2); }
+  .skill-tree-inline-detail h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.85rem; }
+  .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
+  .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
   .stat-row span:first-child { color: var(--text-muted); }
   .mpbar-fill { height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
   .roster-row img:not(.stress-overlay) { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
@@ -161,8 +197,12 @@
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
   /* z-indexは.party-bar(4)より高くする: 内側の.dungeon-top(z-index:5)はこのスタッキングコンテキストに
-     閉じ込められるため、こちら自体を.party-barより上げないと瀕死アラートのボタンが増えた時に隠れてしまう */
-  .dungeon-content { position: relative; z-index: 5; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; }
+     閉じ込められるため、こちら自体を.party-barより上げないと瀕死アラートのボタンが増えた時に隠れてしまう。
+     ただしflex:1で画面全体に引き伸ばされるため、pointer-events:noneにしないと実体の無い透明な部分が
+     .party-bar(z-indexが低い)より手前になり、味方イラストのタップを奪ってしまう(実際に発生したバグ)。
+     実際にクリックさせたい子要素(.dungeon-top/.bottom-actions)側だけpointer-events:autoで戻す */
+  .dungeon-content { position: relative; z-index: 5; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; pointer-events: none; }
+  .dungeon-content > * { pointer-events: auto; }
   .dungeon-top {
     /* 戦闘画面の.battle-topと同じtop:0にして、ログ欄の開始位置(floor-badgeの余白で調整)を戦闘画面と揃える。
        z-indexも.battle-top(5)と同じにして.party-bar(4)より上にし、瀕死アラートのボタンが増えて
@@ -238,14 +278,50 @@
     font-size: 0.82rem; line-height: 1.1; overflow: hidden;
   }
   .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
+  /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
+     イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
+  .treasure-popup {
+    position: fixed; top: 110px; left: 50%; transform: translate(-50%, 0) translateZ(0);
+    z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center;
+  }
+  .treasure-popup img {
+    width: 110px; max-width: 32vw; height: auto;
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
+    animation: treasurePop 1.8s ease forwards;
+  }
+  @keyframes treasurePop {
+    0% { opacity: 0; transform: scale(0.7); }
+    12% { opacity: 1; transform: scale(1.05); }
+    20% { opacity: 1; transform: scale(1); }
+    78% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.05); }
+  }
+  /* 宿泊時の夜明け演出: 朝→昼→夕→夜と背景をクロスフェードでめくっていき、最後(夜→朝)だけ
+     暗転を挟んでから朝の映像で明ける。動画ファイルは使わず、背景イラストの重ね合わせ+
+     JSで制御するopacity遷移だけで表現しているので読み込み負荷は増えない */
+  .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
+  .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
+  .lodging-transition-caption {
+    position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%);
+    color: #fff; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.15em;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9); white-space: nowrap;
+    opacity: 0;
+  }
+  @keyframes lodgingCaptionFade {
+    0% { opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+  }
   .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
   .bottom-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(戦闘画面と同じ仕組み) */
     position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
-    padding: 0.8rem 1rem; display: flex; gap: 0.6rem;
+    padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
   }
-  .bottom-actions button { flex: 1; }
+  .bottom-actions button { flex: 1 1 auto; min-width: 90px; }
 </style>
 </head>
 <body>
@@ -337,7 +413,7 @@
       </div>
 
       <h2 style="margin-top:1rem;">パーティ編成</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大<span id="partyCapLabel"></span>人)。瀕死・ロストは選べません。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大4人)。瀕死・ロストは選べません。</p>
       <div id="partySelectList"></div>
       <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
@@ -367,6 +443,11 @@
         <div class="stat-row"><span>素早さ</span><span id="statSpd"></span></div>
         <div class="stat-row"><span>魔力</span><span id="statMag"></span></div>
         <div class="stat-row"><span>状態</span><span id="statStatus"></span></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 0.4rem;">習得スキル</h3>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで効果を表示</p>
+        <div id="statSkillList"></div>
       </div>
       <button class="big" id="statusBackBtn">戻る</button>
     </div>
@@ -411,12 +492,20 @@
     <div class="body-pad">
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="extensionGold">0G</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、出発パーティに入れられる仲間の人数上限が増えます(最大10人)。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、名簿に置いておける仲間の人数上限が増えます(最大10人)。出発パーティ(戦闘に連れて行く人数)は常に最大4人までです。</p>
       <div class="card">
-        <div class="roster-name">家レベル <span id="extensionLevel"></span></div>
-        <div class="roster-sub" style="margin-top:0.2rem;">パーティ上限: <span id="extensionCapacity"></span>人</div>
+        <div class="roster-name">🏠レベル <span id="extensionLevel"></span></div>
+        <div class="roster-sub" style="margin-top:0.2rem;">名簿上限: <span id="extensionCapacity"></span>人</div>
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🥋道場</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった名簿の仲間も経験値の30%を分け前としてもらえるようになります。</p>
+      <div class="card">
+        <div class="roster-name" id="dojoStatusLabel"></div>
+      </div>
+      <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
+
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
   </div>
@@ -435,7 +524,12 @@
         <button class="big primary" id="advanceBtn">進む</button>
         <button class="big danger" id="retreatBtn">里に戻る</button>
         <button class="big" id="dungeonPotionBtn">回復薬</button>
+        <button class="big" id="dungeonHealBtn" style="display:none;">治癒の術</button>
+        <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
       </div>
+    </div>
+    <div class="treasure-popup" id="treasurePopup" style="display:none;">
+      <img id="treasurePopupImg" src="" alt="">
     </div>
   </div>
 
@@ -465,6 +559,16 @@
     </div>
   </div>
 
+  <!-- ゲームオーバー: 所持金が尽き、名簿の全員が瀕死/ロストで稼働不能になった時 -->
+  <div class="screen" id="screen-gameover">
+    <div class="body-pad" style="margin-top:0; padding-top:3rem;">
+      <h1 style="text-align:center;">ゲームオーバー</h1>
+      <p style="text-align:center;margin-top:1rem;">所持金が底をつき、動ける仲間もいなくなってしまった…</p>
+      <p style="text-align:center;font-size:0.8rem;color:var(--text-muted);">この村での物語はここで終わる。</p>
+      <button class="big danger" id="gameoverRestartBtn" style="margin-top:2rem;width:100%;">最初から</button>
+    </div>
+  </div>
+
   <!-- レベルアップ時のスキル選択(2択)。どの画面の上にも被さるオーバーレイ -->
   <div id="skillChoiceOverlay" style="display:none; position:fixed; inset:0; z-index:50; background:rgba(10,12,14,0.92); overflow-y:auto;">
     <div style="max-width:480px; margin:0 auto; padding:2rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));">
@@ -472,9 +576,19 @@
     </div>
   </div>
 
+  <!-- 宿泊時の「一晩がすぎる」演出。現在の時間帯→昼→夕→夜とめくり、最後(夜→朝)だけ暗転を挟む。
+       動画は使わず、既存の背景イラストをCSSでクロスフェードするだけ -->
+  <div id="lodgingTransition" class="lodging-transition" style="display:none;">
+    <div class="lodging-transition-bg from" id="lodgingTransitionFrom"></div>
+    <div class="lodging-transition-bg to" id="lodgingTransitionTo"></div>
+    <div class="lodging-transition-black" id="lodgingTransitionBlack"></div>
+    <div class="lodging-transition-caption" id="lodgingTransitionCaption">一晩がすぎた…</div>
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>
+<audio id="lodgingBgmAudio" src="assets/bgm/lodging_bgm.mp3" preload="none"></audio>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>
@@ -484,26 +598,30 @@ const SAVE_KEY = "dungeon1_save";
 
 function defaultState() {
   return {
-    gold: 150,
+    gold: 200,
     halfDayStep: 0, // 昼夜が切り替わるたびに1つ進むカウンタ(瀕死キャラのロスト判定に使う)
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 3, smokeBomb: 2 },
+    inventory: { potion: 5, smokeBomb: 2 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
     dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
-    houseLevel: 1, // 増築で上がる家のレベル(1=パーティ上限2人、以降1レベルごとに+1人、最大10人)
+    houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限2人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
+    dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
+    pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
   };
 }
 
-const HOUSE_MAX_LEVEL = 9; // レベル9でパーティ上限10人に達し、それ以上は増築できない
+const HOUSE_MAX_LEVEL = 9; // レベル9で名簿上限10人に達し、それ以上は増築できない
 function houseUpgradeCost(level) {
-  return level === 1 ? 50 : 150; // レベル1→2だけ50G、以降は一律150G
+  return level === 1 ? 100 : 250; // レベル1→2は100G、以降(2→3以降)は一律250G
 }
-function partyCapacity() {
+function rosterCapacity() {
   return Math.min(10, (state.houseLevel || 1) + 1);
 }
+const DOJO_LEVEL1_COST = 50; // 道場レベル1の建築費用
+const DOJO_XP_SHARE = 0.3; // 道場がある時、同行しなかった仲間が受け取る経験値の割合(3割)
 
 // dayCount(1始まり=4月1日)を「M月D日」の表示文字列に変換する。うるう年を考慮する必要がないよう
 // 固定の平年(2001年)を基準日として使い、実カレンダーの月の日数だけを利用する
@@ -519,7 +637,7 @@ let state = loadState();
 // 保存された古いセーブのキャラクターにはこれらのフィールドが無かったり形が古かったりする。
 // ロード時に不足しているフィールドを補完し、旧「死体(corpse)」状態も瀕死(critical)に変換する
 function normalizeCharacter(c, classUpgrades, halfDayStep) {
-  if (c.maxMp == null) c.maxMp = maxMpFor(CLASSES[c.classId].mag);
+  if (c.maxMp == null) c.maxMp = baseMaxMpFor(c.classId);
   if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
   if (c.fatigue == null) c.fatigue = 0;
   if (c.guarding == null) c.guarding = false;
@@ -528,7 +646,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   // 常に最新の状態で再計算し、maxMpの差分だけ現在MPにも反映する(既存のequipBonusを持たない場合も含む)
   {
     const newEquipBonus = computeEquipBonus(c.classId, classUpgrades);
-    const newMaxMp = maxMpFor(CLASSES[c.classId].mag) + (newEquipBonus.mp || 0);
+    const newMaxMp = baseMaxMpFor(c.classId) + (newEquipBonus.mp || 0);
     if (newMaxMp !== c.maxMp) {
       const delta = newMaxMp - c.maxMp;
       c.mp = Math.max(0, Math.min(newMaxMp, c.mp + delta));
@@ -588,7 +706,9 @@ function loadState() {
       loaded.halfDayStep = loaded.halfDayStep || 0;
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
-      if (loaded.houseLevel == null) loaded.houseLevel = 3; // 増築実装前の旧セーブは、元々の上限だった4人を維持できるようレベル3(上限4人)扱いにする
+      if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、元々の名簿上限だった10人を維持できるよう最大レベル扱いにする
+      if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
+      if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
@@ -615,8 +735,8 @@ const TIME_PHASE_LABEL = { dawn: "朝", day: "昼", dusk: "夕", night: "夜" };
 // 探索中の時計(0〜1439分 = 0:00〜23:59)。「進む」1回でMINUTES_PER_FLOOR_FORWARD分(深層に向かうのは時間がかかる)、
 // 「帰還」1回でMINUTES_PER_FLOOR_RETREAT分(帰りは勝手知ったる道で少し早い)進み、
 // 下記の時間割の境界を跨いだらtimeOfDayも自動で切り替わる(生活感覚に近い長さにしてあり、均等4分割ではない)
-const MINUTES_PER_FLOOR_FORWARD = 45; // 4回進む(4層分)でちょうど3時間
-const MINUTES_PER_FLOOR_RETREAT = 30;
+const MINUTES_PER_FLOOR_FORWARD = 30;
+const MINUTES_PER_FLOOR_RETREAT = 20;
 const PHASE_START_MINUTES = { dawn: 5 * 60, day: 10 * 60, dusk: 16 * 60, night: 19 * 60 }; // 朝5:00/昼10:00/夕16:00/夜19:00
 function phaseForClockMinutes(minutes) {
   const m = ((minutes % 1440) + 1440) % 1440;
@@ -643,6 +763,22 @@ const BG_SETS = {
   dungeon: { dawn: "assets/bg/forest_dawn.png", day: "assets/bg/forest_day.png", dusk: "assets/bg/forest_dusk.png", night: "assets/bg/forest_night.png" },
   onsen: { day: "assets/bg/onsen.png", night: "assets/bg/onsen_night.png" },
 };
+// 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
+// 宿屋の4枚だけを先読みしておく。反応速度優先のため、対象は宿泊演出に必要な最小限(4枚、以前は
+// 町/森/温泉も含めた十数枚だった)に絞り、かつrequestIdleCallbackでブラウザが本当に暇な時だけ
+// 読み込むようにして、ボタンSFXなど他の処理を一切邪魔しないようにしてある
+function preloadTavernImages() {
+  Object.values(BG_SETS.tavern).forEach((url) => { const img = new Image(); img.src = url; });
+}
+function scheduleIdlePreload(fn) {
+  if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 5000 });
+  else setTimeout(fn, 2000);
+}
+if (document.readyState === "complete") {
+  scheduleIdlePreload(preloadTavernImages);
+} else {
+  window.addEventListener("load", () => scheduleIdlePreload(preloadTavernImages));
+}
 function dayLikeOf(tod) {
   return tod === "dawn" || tod === "day" ? "day" : "night";
 }
@@ -692,7 +828,11 @@ const BGM_TRACKS = {
   dungeon: "assets/bgm/dungeon_bgm.mp3",
 };
 const bgmAudio = document.getElementById("bgmAudio");
-bgmAudio.volume = 0.4;
+const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
+const BGM_BASE_VOLUME = 0.4;
+const LODGING_BGM_VOLUME = 0.5;
+bgmAudio.volume = BGM_BASE_VOLUME;
+lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
@@ -717,8 +857,36 @@ function playBgm(key) {
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 }
 
+// 宿泊時: 町のBGMをフェードで止め、代わりに宿泊専用の一度きりの曲を再生する。曲が鳴り終わったら
+// (ended)、町のBGMを最初から再開する(bgmPositionsの続きからではなく、必ず頭出しする)。
+// 補足: <audio>要素のvolumeでのフェードはiOS Safariでは効かない(音量はハードウェアボタンのみで制御され、
+// JSからの変更は無視される)ため実機では厳密には滑らかにならない。Web Audio API(GainNode)化で
+// 直そうとしたが、村の基本BGMまで無音になる重大な副作用が出たため、確実に動く現状の方式に戻してある
+const LODGING_BGM_FADE_OUT_MS = 1200;
+function playLodgingBgm() {
+  const startVol = bgmAudio.volume;
+  const startTime = performance.now();
+  function fadeStep() {
+    const t = Math.min(1, (performance.now() - startTime) / LODGING_BGM_FADE_OUT_MS);
+    bgmAudio.volume = startVol * (1 - t);
+    if (t < 1) {
+      requestAnimationFrame(fadeStep);
+    } else {
+      bgmAudio.pause();
+      bgmAudio.volume = BGM_BASE_VOLUME;
+      lodgingBgmAudio.currentTime = 0;
+      if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
+    }
+  }
+  fadeStep();
+}
+lodgingBgmAudio.addEventListener("ended", () => {
+  bgmAudio.currentTime = 0; // 途中からではなく必ず最初から再開する
+  if (audioUnlocked) bgmAudio.play().catch(() => {});
+});
+
 const sfxCache = {};
-const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3" };
+const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3" };
 // 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
 function hitTakenSfxFor(dmg, maxHp) {
   const ratio = maxHp > 0 ? dmg / maxHp : 0;
@@ -742,6 +910,7 @@ function attackSfxFor(classId) {
 document.getElementById("muteBtn").onclick = () => {
   muted = !muted;
   bgmAudio.muted = muted;
+  lodgingBgmAudio.muted = muted;
   document.getElementById("muteBtn").textContent = muted ? "🔇" : "🔊";
 };
 
@@ -773,16 +942,28 @@ function statusTagClass(c) {
   return c.status;
 }
 
+// 所持金がHIRE_COST未満、かつ名簿の全員が稼働不能(瀕死/ロスト)になったら、もう手詰まりなのでゲームオーバーにする。
+// trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
+function checkGameOver() {
+  if (state.roster.length === 0) return false;
+  const noActive = state.roster.every((c) => c.status !== "active");
+  if (!noActive || state.gold >= HIRE_COST) return false;
+  showScreen("screen-gameover");
+  return true;
+}
+
 // ============ 町 ============
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
   saveState();
+  if (checkGameOver()) return;
   document.getElementById("townGold").textContent = state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = TIME_PHASE_LABEL[state.timeOfDay || "day"];
   playBgm("town");
   updateSceneBackgrounds();
+  showScreen("screen-town");
 }
 
 // 冒険から町に帰る直前に挟むリザルト画面: 今回の冒険で稼いだゴールドと、キャラごとに得た経験値を
@@ -875,6 +1056,7 @@ function renderRosterList() {
     const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+    const hasPendingSkill = state.pendingSkillChoices.some((e) => e.characterId === c.id);
     const row = document.createElement("div");
     row.className = "roster-row" + (dismissMode ? (dismissSelected ? " dismiss-selected" : "") : (lodgeSelected ? " selected" : ""));
     row.innerHTML = `
@@ -892,6 +1074,7 @@ function renderRosterList() {
       </div>
       <div class="roster-actions">
         <button class="detail-btn" data-id="${c.id}">詳細</button>
+        ${!dismissMode && hasPendingSkill ? `<button class="skill-pending-btn">🎓スキル選択</button>` : ""}
         ${!dismissMode && lodgeable ? `<button class="lodge-btn">${lodgeSelected ? "選択中" : "宿泊する"}</button>` : ""}
       </div>
     `;
@@ -900,6 +1083,13 @@ function renderRosterList() {
       renderStatusScreen(c.id);
       showScreen("screen-status");
     };
+    const skillBtn = row.querySelector(".skill-pending-btn");
+    if (skillBtn) {
+      skillBtn.onclick = (e) => {
+        e.stopPropagation();
+        openSkillChoiceFor(c.id);
+      };
+    }
     const lodgeBtn = row.querySelector(".lodge-btn");
     if (lodgeBtn) {
       lodgeBtn.onclick = (e) => {
@@ -954,18 +1144,102 @@ document.getElementById("dismissYesBtn").onclick = () => {
   renderRosterList();
 };
 
+// 宿泊時の演出。現在の時間帯から朝を迎えるまでの残りの時間帯(例: 朝スタートなら昼→夕→夜)を
+// 順にクロスフェードでめくり、最後の夜→朝だけは暗転を挟んでから明ける。動画ファイルは使わず、
+// 既存の背景イラストの重ね合わせだけで表現しているので読み込み負荷は増えない。
+// CSS transitionを「transition:noneにしてリフローしてから戻す」方式で毎回リスタートさせていたが、
+// 端末によってはこの手順がうまく効かずフェードせず一瞬で切り替わってしまう不具合があったため、
+// より確実にアニメーションさせられるWeb Animations API(element.animate())に切り替えてある
+function crossfadeBg(fromEl, toEl, imageUrl, durationMs, callback) {
+  toEl.style.opacity = "0";
+  toEl.style.backgroundImage = `url('${imageUrl}')`;
+  const anim = toEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: durationMs, easing: "ease", fill: "forwards" });
+  anim.onfinish = () => {
+    fromEl.style.backgroundImage = `url('${imageUrl}')`; // 今回の見た目をfrom側に焼き込み、toを次のフェード用に戻す
+    anim.cancel(); // fill:forwardsで保持されたopacity:1を解除してから素のinline styleに戻す
+    toEl.style.opacity = "0";
+    if (callback) callback();
+  };
+}
+
+function fadeOpacity(el, from, to, durationMs, callback) {
+  el.style.opacity = String(from);
+  const anim = el.animate([{ opacity: from }, { opacity: to }], { duration: durationMs, easing: "ease", fill: "forwards" });
+  anim.onfinish = () => {
+    anim.cancel();
+    el.style.opacity = String(to);
+    if (callback) callback();
+  };
+}
+
+let lodgingTransitionActive = false;
+function playLodgingTransition(onDone) {
+  if (lodgingTransitionActive) return;
+  lodgingTransitionActive = true;
+  playLodgingBgm();
+  const overlay = document.getElementById("lodgingTransition");
+  const fromEl = document.getElementById("lodgingTransitionFrom");
+  const toEl = document.getElementById("lodgingTransitionTo");
+  const blackEl = document.getElementById("lodgingTransitionBlack");
+  const caption = document.getElementById("lodgingTransitionCaption");
+  const CROSSFADE_MS = 1500; // ユーザー指示で従来の2倍
+
+  fromEl.style.opacity = "1";
+  fromEl.style.backgroundImage = `url('${BG_SETS.tavern[state.timeOfDay] || BG_SETS.tavern.night}')`;
+  toEl.style.opacity = "0";
+  blackEl.style.opacity = "0";
+  caption.style.animation = "none";
+  caption.style.opacity = "0";
+  overlay.style.display = "block";
+  void overlay.offsetWidth;
+
+  // 現在の時間帯の次から"night"までを順番にめくる(例: 朝スタート→[昼,夕,夜]、夜スタートなら空)
+  const startIdx = TIME_PHASES.indexOf(state.timeOfDay);
+  const queue = startIdx >= 0 ? TIME_PHASES.slice(startIdx + 1) : ["day", "dusk", "night"];
+
+  function nextPhase(i) {
+    if (i < queue.length) {
+      crossfadeBg(fromEl, toEl, BG_SETS.tavern[queue[i]], CROSSFADE_MS, () => nextPhase(i + 1));
+      return;
+    }
+    finale();
+  }
+
+  function finale() {
+    // 夜→暗転(ユーザー指示で暗転まわりの時間はすべて従来の3倍)
+    fadeOpacity(blackEl, 0, 1, 2700, () => {
+      // 画面が真っ暗な間に背景を朝の絵へ差し替え、キャプションを表示する
+      fromEl.style.backgroundImage = `url('${BG_SETS.tavern.dawn}')`;
+      caption.style.animation = "lodgingCaptionFade 4500ms ease forwards";
+      setTimeout(() => {
+        // 暗転明け→朝
+        fadeOpacity(blackEl, 1, 0, 3300, () => {
+          overlay.style.display = "none";
+          lodgingTransitionActive = false;
+          onDone();
+        });
+      }, 1650);
+    });
+  }
+
+  nextPhase(0);
+}
+
 document.getElementById("lodgeConfirmBtn").onclick = () => {
   const targets = state.roster.filter((c) => lodgingSelectedIds.includes(c.id));
   if (targets.length === 0) return;
-  const cost = LODGE_COST * targets.length;
-  state.gold -= cost;
-  targets.forEach((c) => useLodging(c, state.halfDayStep));
-  advanceToNextMorning();
-  lodgingSelectedIds = [];
-  saveState();
-  playSfx("heal");
-  alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復しストレスが${LODGE_FATIGUE_RELIEF}回復した。`);
-  renderTavern();
+  playLodgingTransition(() => {
+    const cost = LODGE_COST * targets.length;
+    state.gold -= cost;
+    targets.forEach((c) => useLodging(c, state.halfDayStep));
+    advanceToNextMorning();
+    lodgingSelectedIds = [];
+    saveState();
+    playSfx("heal");
+    alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復しストレスが${LODGE_FATIGUE_RELIEF}回復した。`);
+    if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
+    renderTavern();
+  });
 };
 
 function renderTavern() {
@@ -973,7 +1247,7 @@ function renderTavern() {
   document.getElementById("tavernGold").textContent = state.gold + "G";
   renderRosterList();
   renderClassGrid();
-  document.getElementById("createCharBtn").disabled = state.gold < HIRE_COST || state.roster.length >= 10;
+  document.getElementById("createCharBtn").disabled = state.gold < HIRE_COST || state.roster.length >= rosterCapacity();
   updateSceneBackgrounds();
 }
 
@@ -997,6 +1271,28 @@ function renderStatusScreen(charId) {
   document.getElementById("statSpd").textContent = effectiveStat(c, "spd");
   document.getElementById("statMag").textContent = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
   document.getElementById("statStatus").textContent = statusLabel(c) + ` / ストレス${c.fatigue || 0}`;
+
+  const skillListEl = document.getElementById("statSkillList");
+  const skillLevels = Object.keys(c.skills || {}).map(Number).sort((a, b) => a - b);
+  const skillRows = skillLevels.map((lv) => {
+    const side = c.skills[lv];
+    const tree = SKILL_TREES[c.classId] && SKILL_TREES[c.classId][lv];
+    const skill = tree && tree[side];
+    if (!skill) return "";
+    return `
+      <div class="skill-entry" data-level="${lv}">
+        <div class="skill-entry-head">
+          <strong>Lv.${lv} ${skill.name}</strong>
+          <span class="skill-entry-side">${side === "left" ? "左" : "右"}</span>
+        </div>
+        <p class="skill-entry-desc">${skill.desc}</p>
+      </div>
+    `;
+  }).join("");
+  skillListEl.innerHTML = skillRows || '<p style="color:var(--text-muted);font-size:0.8rem;">まだ習得したスキルがありません。</p>';
+  skillListEl.querySelectorAll(".skill-entry").forEach((el) => {
+    el.onclick = () => { el.classList.toggle("open"); };
+  });
 }
 document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
 
@@ -1020,7 +1316,7 @@ const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
-  if (state.roster.length >= 10) { alert("名簿がいっぱいです(最大10人)"); return; }
+  if (state.roster.length >= rosterCapacity()) { alert(`名簿がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
   if (state.gold < HIRE_COST) { alert(`お金が足りません(${HIRE_COST}G必要)`); return; }
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
@@ -1031,8 +1327,8 @@ document.getElementById("createCharBtn").onclick = () => {
   renderRosterList();
   document.getElementById("tavernGold").textContent = state.gold + "G";
 };
-document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
-document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("tavernBackBtn").onclick = () => { renderTown(); };
+document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); };
 
 const LODGE_COST = 10; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
 
@@ -1041,7 +1337,6 @@ function renderPartySelect() {
   updateSceneBackgrounds();
   pruneActiveParty();
   renderSupplies();
-  document.getElementById("partyCapLabel").textContent = partyCapacity();
   const list = document.getElementById("partySelectList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -1071,7 +1366,7 @@ function renderPartySelect() {
       if (inParty) {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
       } else {
-        if (state.activePartyIds.length >= partyCapacity()) { alert(`パーティは最大${partyCapacity()}人までです`); return; }
+        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
         state.activePartyIds.push(c.id);
       }
       saveState();
@@ -1115,8 +1410,8 @@ document.getElementById("buySmokeBombBtn").onclick = () => {
   renderSupplies();
 };
 
-document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
-document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
+document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
 document.getElementById("departBtn").onclick = () => {
   if (state.activePartyIds.length === 0) {
     alert("パーティを1人以上選んでください");
@@ -1169,8 +1464,8 @@ function renderOnsen() {
     list.appendChild(row);
   });
 }
-document.getElementById("onsenBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
-document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
+document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 増築 ============
 function renderExtension() {
@@ -1178,15 +1473,26 @@ function renderExtension() {
   document.getElementById("extensionGold").textContent = state.gold + "G";
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
-  document.getElementById("extensionCapacity").textContent = partyCapacity();
+  document.getElementById("extensionCapacity").textContent = rosterCapacity();
   const btn = document.getElementById("extensionUpgradeBtn");
   if (level >= HOUSE_MAX_LEVEL) {
     btn.textContent = "これ以上は増築できません(上限)";
     btn.disabled = true;
   } else {
     const cost = houseUpgradeCost(level);
-    btn.textContent = `増築する(${cost}G) パーティ上限 ${partyCapacity()}→${partyCapacity() + 1}人`;
+    btn.textContent = `増築する(${cost}G) 名簿上限 ${rosterCapacity()}→${rosterCapacity() + 1}人`;
     btn.disabled = state.gold < cost;
+  }
+  const dojoLevel = state.dojoLevel || 0;
+  const dojoBtn = document.getElementById("dojoBuildBtn");
+  if (dojoLevel >= 1) {
+    document.getElementById("dojoStatusLabel").textContent = "道場レベル1(建築済み)";
+    dojoBtn.textContent = "建築済み";
+    dojoBtn.disabled = true;
+  } else {
+    document.getElementById("dojoStatusLabel").textContent = "道場レベル0(未建築)";
+    dojoBtn.textContent = `建築する(${DOJO_LEVEL1_COST}G)`;
+    dojoBtn.disabled = state.gold < DOJO_LEVEL1_COST;
   }
 }
 document.getElementById("extensionUpgradeBtn").onclick = () => {
@@ -1197,12 +1503,27 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   state.gold -= cost;
   state.houseLevel = level + 1;
   saveState();
-  playSfx("select");
+  playSfx("extension_build");
+  renderExtension();
+};
+document.getElementById("dojoBuildBtn").onclick = () => {
+  if ((state.dojoLevel || 0) >= 1) return;
+  if (state.gold < DOJO_LEVEL1_COST) return;
+  state.gold -= DOJO_LEVEL1_COST;
+  state.dojoLevel = 1;
+  saveState();
+  playSfx("extension_build");
   renderExtension();
 };
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
-document.getElementById("extensionBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
-document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
+document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
+
+// ゲームオーバー画面の「最初から」: セーブを消してページごと再読み込みし、完全に初期状態からやり直す
+document.getElementById("gameoverRestartBtn").onclick = () => {
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+};
 
 // ============ 道具屋 ============
 function renderShop() {
@@ -1271,8 +1592,8 @@ function buyEquipment(classId, slot) {
   playSfx("coin");
   renderShop();
 }
-document.getElementById("shopBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
-document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("shopBackBtn").onclick = () => { renderTown(); };
+document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ ダンジョン ============
 let currentFloor = 0;
@@ -1294,7 +1615,7 @@ function pruneActiveParty() {
     if (!c || !isAvailable(c) || seen.has(id)) return false;
     seen.add(id);
     return true;
-  }).slice(0, partyCapacity()); // 何らかの原因で上限を超えて紛れ込んだ場合の保険(重複除去+上限強制)
+  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
 }
 
 function enterDungeon() {
@@ -1406,31 +1727,86 @@ function renderDungeon() {
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
+  // 治癒の術: 僧侶がパーティにいる時だけボタンを表示し、MPが足りない時は無効化する
+  const dungeonPriests = fieldParty.filter((c) => c.status === "active" && c.classId === "priest");
+  const healCost = abilityMpCost("heal");
+  const healBtn = document.getElementById("dungeonHealBtn");
+  if (dungeonPriests.length === 0) {
+    healBtn.style.display = "none";
+  } else {
+    healBtn.style.display = "";
+    healBtn.textContent = `治癒の術(MP${healCost})`;
+    healBtn.disabled = !dungeonPriests.some((c) => c.mp >= healCost);
+  }
+  positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
+}
+
+// 探索中(戦闘外)に回復薬/治癒の術の対象を選ぶ共通ヘルパー。戦闘中と同様、上の味方イラストを
+// 直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)し、下のテキストボタンからも選べる。
+// 選択肢は#criticalAlert(画面上部)ではなく味方バーの下の.bottom-actionsに出す。上部に出すと
+// 選択肢が増えた時に味方イラストへ重なってタップを奪ってしまう(実際に発生したバグ)ため、
+// 戦闘画面の対象選択(味方バーの下に出る)と同じ位置関係に揃えてある
+const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn"];
+function closeDungeonTargetPicker() {
+  const picker = document.getElementById("dungeonTargetPicker");
+  picker.style.display = "none";
+  picker.innerHTML = "";
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = ""; });
+  renderDungeon();
+}
+function pickDungeonAllyTarget(promptText, onPicked) {
+  const targets = fieldParty.filter((c) => c.status === "active");
+  pendingAllyPick = (t) => {
+    pendingAllyPick = null;
+    closeDungeonTargetPicker();
+    onPicked(t);
+  };
+  renderDungeon(); // 味方イラストにtargetableハイライトを反映
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
+  const picker = document.getElementById("dungeonTargetPicker");
+  picker.style.display = "flex";
+  picker.innerHTML = `
+    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>${promptText}</strong></p>
+    ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+    <button class="big danger" id="cancelDungeonTargetBtn">やめる</button>
+  `;
+  targets.forEach((c) => {
+    picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      pendingAllyPick = null;
+      closeDungeonTargetPicker();
+      onPicked(c);
+    };
+  });
+  document.getElementById("cancelDungeonTargetBtn").onclick = () => {
+    pendingAllyPick = null;
+    closeDungeonTargetPicker();
+  };
   positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 }
 
 // 探索中(戦闘外)にも回復薬を使えるように。対象は生存中の仲間から選ぶ
 document.getElementById("dungeonPotionBtn").onclick = () => {
   if ((state.inventory.potion || 0) <= 0) return;
-  const div = document.getElementById("criticalAlert");
-  const targets = fieldParty.filter((c) => c.status === "active");
-  div.innerHTML = `
-    <div class="critical-alert">
-      <p><strong>誰に回復薬(残り${state.inventory.potion})を使いますか？</strong></p>
-      ${targets.map((c) => `<button class="big" data-target-id="${c.id}" style="margin-top:0.3rem;">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
-      <button class="big danger" id="cancelDungeonPotionBtn" style="margin-top:0.4rem;">やめる</button>
-    </div>
-  `;
-  targets.forEach((c) => {
-    div.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
-      state.inventory.potion--;
-      const heal = usePotion(c, dlog);
-      playSfx("heal");
-      saveState();
-      renderDungeon();
-    };
+  pickDungeonAllyTarget(`誰に回復薬(残り${state.inventory.potion})を使いますか？`, (c) => {
+    state.inventory.potion--;
+    usePotion(c, dlog);
+    playSfx("heal");
+    saveState();
+    renderDungeon();
   });
-  document.getElementById("cancelDungeonPotionBtn").onclick = () => { div.innerHTML = ""; };
+};
+
+// 探索中(戦闘外)にも僧侶の治癒の術を使えるように。MPが足りる僧侶を自動で術者にする
+document.getElementById("dungeonHealBtn").onclick = () => {
+  const healCost = abilityMpCost("heal");
+  const caster = fieldParty.find((c) => c.status === "active" && c.classId === "priest" && c.mp >= healCost);
+  if (!caster) return;
+  pickDungeonAllyTarget("誰に治癒の術を使いますか？", (target) => {
+    useAbility(caster, target, "heal", dlog);
+    playSfx("heal");
+    saveState();
+    renderDungeon();
+  });
 };
 
 // 「里に戻る」はファストトラベルではなく、ここから階層を1つずつ下って歩いて帰るモードに入るだけ。
@@ -1449,7 +1825,6 @@ function finishRetreat() {
   bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
   renderResultScreen(() => {
     renderTown();
-    showScreen("screen-town");
   });
 }
 
@@ -1597,16 +1972,42 @@ function rollEncounter() {
     const enemies = pickEncounterForFloor(currentFloor);
     startBattle(enemies);
   } else if (roll < battleChance + goldChance) {
-    const g = 5 + Math.floor(Math.random() * currentFloor * 3);
+    // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
+    // 旧仕様の問題を解消するため、下限も階層に応じて伸びるようにしてある)
+    const treasureMax = 6 + currentFloor;
+    const treasureMin = Math.max(1, Math.round(treasureMax * 0.5));
+    const g = treasureMin + Math.floor(Math.random() * (treasureMax - treasureMin + 1));
     state.gold += g;
+    advGoldEarned += g; // リザルト画面の「収穫」にも反映されるよう、戦闘報酬と同じ集計に加算する
     saveState();
     playSfx("coin");
     dlog(`${g}Gの財宝を見つけた！`);
     renderDungeon();
+    showTreasurePopup(g);
   } else {
     dlog("静かな通路だ。何も起こらなかった。");
     renderDungeon();
   }
+}
+
+// 財宝発見時、量に応じて4段階(ごくわずか/少量/中量/大量)のイラストを画面中央に一瞬表示する
+function treasureTierImage(amount) {
+  if (amount <= 5) return "gokuwazuka";
+  if (amount <= 15) return "shoryo";
+  if (amount <= 25) return "churyo";
+  return "tairyo";
+}
+let treasurePopupTimer = null;
+function showTreasurePopup(amount) {
+  const popup = document.getElementById("treasurePopup");
+  const img = document.getElementById("treasurePopupImg");
+  img.src = `assets/gold/${treasureTierImage(amount)}.png`;
+  popup.style.display = "flex";
+  img.style.animation = "none";
+  void img.offsetWidth; // 再生中に連続で発見した時もアニメーションを最初から再生し直すためのリフロー強制
+  img.style.animation = "";
+  clearTimeout(treasurePopupTimer);
+  treasurePopupTimer = setTimeout(() => { popup.style.display = "none"; }, 1800);
 }
 
 // ============ 戦闘 ============
@@ -1686,6 +2087,7 @@ function startBattle(enemies) {
     c.statusImmuneTurns = 0;
     c.tauntTurns = 0;
     c.statMods = [];
+    c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
     if (c.passives) {
       c.passives.onceGuardUsed = false;
       c.passives.firstAttackUsed = false;
@@ -1761,6 +2163,17 @@ function handleNoOneLeftToFight() {
 }
 
 function nextRound() {
+  // このラウンド中に「逃走準備」に入った仲間は、次のラウンドが始まる前にまとめて実際に逃げ出す。
+  // 以前は本人の次の手番(=次のラウンドの自分の順番)まで待ってから逃げていたため、運が悪いと
+  // 敵の攻撃をラウンドを跨いで2回受けてから逃げる、ということが起きていた。ラウンドの節目で
+  // 解決するようにし、逃走準備中に受ける敵の攻撃は最大でも「そのラウンド中の1回」までに抑える
+  fieldParty.forEach((c) => {
+    if (c.fleeState === "preparing") {
+      c.fleeState = "fled";
+      playSfx("flee");
+      blog(`${c.label}は戦闘から逃げ出した！`);
+    }
+  });
   const alive = aliveField();
   if (aliveEnemies().length === 0) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
@@ -1836,15 +2249,9 @@ function processNext() {
       setTimeout(processNext, 500);
       return;
     }
-    if (actor.fleeState === "preparing") {
-      actor.fleeState = "fled";
-      playSfx("flee");
-      blog(`${actor.label}は戦闘から逃げ出した！`);
-      renderBattleScreen();
-      battle.orderIndex++;
-      setTimeout(processNext, 500);
-      return;
-    }
+    // 逃走準備(fleeState==="preparing")の解決はnextRound()側でラウンドの節目にまとめて行うため、
+    // ここでは何もしない(このactorがここに来る時点で既に"fled"になっているか、まだ"preparing"のまま
+    // 通常通り行動選択に進む=このラウンド中はまだ逃げていないことになる)
     // 発狂(ストレス100)は完全に行動不能ではなく、50%の確率で動けない(残り50%は行動できる、ただし
     // ステータス自体はfatigueMalusのtier4減衰(-100%)がそのままかかる)
     if (stressTier(actor.fatigue) >= 4 && Math.random() < 0.5) {
@@ -1937,14 +2344,14 @@ function runTreeSkill(actor, skill) {
     playSfx("select");
     useTreeSkill(actor, actor, skill, blog);
     renderBattleScreen();
-    setTimeout(afterPlayerAction, 500);
+    finishPlayerAction();
     return;
   }
   if (action.kind === "buffParty") {
     playSfx("select");
     useTreeSkill(actor, aliveField(), skill, blog);
     renderBattleScreen();
-    setTimeout(afterPlayerAction, 500);
+    finishPlayerAction();
     return;
   }
   if (action.kind === "heal") {
@@ -1959,7 +2366,7 @@ function runTreeSkill(actor, skill) {
         });
       }
       renderBattleScreen();
-      setTimeout(afterPlayerAction, 500);
+      finishPlayerAction();
       return;
     }
     renderTreeSkillAllyPicker(actor, skill);
@@ -1980,7 +2387,7 @@ function runTreeSkill(actor, skill) {
       if (anyEvaded) playSfx("evade");
     }
     renderBattleScreen();
-    setTimeout(afterPlayerAction, 500);
+    finishPlayerAction();
     return;
   }
   pickSingleEnemyTarget((target) => {
@@ -1990,7 +2397,7 @@ function runTreeSkill(actor, skill) {
     if (r && r.hit) popupOn(target.instanceId, `-${r.dmg}`, "dmg");
     else if (r) playSfx("evade");
     renderBattleScreen();
-    setTimeout(afterPlayerAction, 500);
+    finishPlayerAction();
   });
 }
 
@@ -2008,7 +2415,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
       const result = useTreeSkill(actor, target, skill, blog);
       if (result && result.healed && result.healed[0]) popupOn(target.id, `+${result.healed[0].heal}`, "heal");
       renderBattleScreen();
-      setTimeout(afterPlayerAction, 500);
+      finishPlayerAction();
     };
     grid.appendChild(btn);
   });
@@ -2063,7 +2470,7 @@ function renderActionButtons(actor) {
         if (result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
         else playSfx("evade");
         renderBattleScreen();
-        setTimeout(afterPlayerAction, 500);
+        finishPlayerAction();
       });
     };
     grid.appendChild(atkBtn);
@@ -2081,7 +2488,7 @@ function renderActionButtons(actor) {
           playSfx("guard");
           useAbility(actor, actor, "guard", blog);
           renderBattleScreen();
-          setTimeout(afterPlayerAction, 500);
+          finishPlayerAction();
           return;
         }
         if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
@@ -2097,7 +2504,7 @@ function renderActionButtons(actor) {
             if (anyEvaded) playSfx("evade");
           }
           renderBattleScreen();
-          setTimeout(afterPlayerAction, 500);
+          finishPlayerAction();
           return;
         }
         // 単体系(会心の一撃/奇襲/呪符ノ術など)
@@ -2107,7 +2514,7 @@ function renderActionButtons(actor) {
           if (result && result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
           else if (result && !result.failed) playSfx("evade");
           renderBattleScreen();
-          setTimeout(afterPlayerAction, 500);
+          finishPlayerAction();
         });
       };
       grid.appendChild(abBtn);
@@ -2199,7 +2606,7 @@ function fleeAction(actor) {
   pendingEnemyPick = null;
   pendingAllyPick = null;
   renderBattleScreen();
-  setTimeout(afterPlayerAction, 500);
+  finishPlayerAction();
 }
 
 // 対象選択/道具メニューなどのサブ画面を表示中(battleSubMenuActive)は、コマンド一覧(#actionGrid)や
@@ -2229,7 +2636,7 @@ function resolveAllyTarget(actor, kind, target) {
     saveState();
   }
   renderBattleScreen();
-  setTimeout(afterPlayerAction, 500);
+  finishPlayerAction();
 }
 
 // 味方対象の選択中は、上の味方イラストを直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)
@@ -2254,6 +2661,15 @@ function renderAllyTargets(actor, kind) {
   grid.appendChild(backBtn);
 }
 
+// 行動確定の直後に必ず呼ぶ。#actionGridをその場で空にしてから500ms後にターンを進めることで、
+// 演出のディレイ中にボタン(や敵/味方の直接タップ)を連打して同じキャラが何度も行動できてしまう
+// バグ(致命的な二重行動バグ)を防ぐ。renderBattleScreen()自体は#actionGridに触れないため、
+// これを呼ばずにsetTimeout(afterPlayerAction, 500)だけ書くと再発するので注意
+function finishPlayerAction() {
+  document.getElementById("actionGrid").innerHTML = "";
+  setTimeout(afterPlayerAction, 500);
+}
+
 function afterPlayerAction() {
   handleFieldDeaths();
   battle.orderIndex++;
@@ -2273,10 +2689,21 @@ function victory() {
       advXpGained[c.id] = (advXpGained[c.id] || 0) + e.xp;
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
+    // 道場があれば、この冒険に同行しなかった(名簿にいるが出発していない)仲間にも経験値の一部を分配する
+    if ((state.dojoLevel || 0) >= 1) {
+      const reserveXp = Math.round(e.xp * DOJO_XP_SHARE);
+      state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c)).forEach((c) => {
+        const beforeLevel = c.level;
+        grantXp(c, reserveXp, blog);
+        advXpGained[c.id] = (advXpGained[c.id] || 0) + reserveXp;
+        for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+      });
+    }
   });
   state.gold += totalGold;
   advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
+  queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
@@ -2285,49 +2712,116 @@ function victory() {
     showScreen("screen-dungeon");
     renderDungeon();
     checkStrandedOnCurrentFloor();
-    queueSkillChoices(leveledUp);
   };
 }
 
-// レベルアップで選べるスキルツリーがある分だけ、1件ずつ順番に2択画面を出す
-let pendingSkillChoices = [];
+// レベルアップで選べるスキルツリーがある分だけ、選択待ち(state.pendingSkillChoices)に積む。
+// 以前は戦闘終了直後に強制的に2択オーバーレイを出していたが、1戦で2レベル以上連続で上がった時に
+// 「character.levelを見て記録キーにする」実装だった影響で選択内容の記録が壊れるバグがあったため、
+// 記録は明示的にlevelを渡す形(applySkillChoice参照)に修正した上で、選ぶタイミングも
+// 「宿屋の名簿画面で任意に選ぶ」方式に変更した(openSkillChoiceFor参照)
 function queueSkillChoices(list) {
-  pendingSkillChoices = list.filter((entry) => SKILL_TREES[entry.character.classId] && SKILL_TREES[entry.character.classId][entry.level]);
-  showNextSkillChoice();
+  list.filter((entry) => SKILL_TREES[entry.character.classId] && SKILL_TREES[entry.character.classId][entry.level])
+    .forEach((entry) => { state.pendingSkillChoices.push({ characterId: entry.character.id, level: entry.level }); });
 }
-function showNextSkillChoice() {
+
+// 宿屋の名簿から、指定したキャラの未選択スキルを1件選ばせる。同じキャラに複数レベル分溜まっていれば、
+// 選び終えるたびに再帰的に呼び直して1つずつ順番に出す。画面はXCOM風の「系譜」一覧(習得済み/選択中/
+// 未到達を1本のリストで見せる)を参考に、レベル2〜10を縦に並べて表示する
+function openSkillChoiceFor(characterId) {
+  const idx = state.pendingSkillChoices.findIndex((e) => e.characterId === characterId);
+  if (idx === -1) return;
+  const { level } = state.pendingSkillChoices[idx];
+  const character = getRosterChar(characterId);
   const overlay = document.getElementById("skillChoiceOverlay");
-  if (pendingSkillChoices.length === 0) {
-    overlay.style.display = "none";
+  const tree = character && SKILL_TREES[character.classId];
+  if (!character || !tree || !tree[level]) {
+    state.pendingSkillChoices.splice(idx, 1);
+    saveState();
     return;
   }
-  const { character, level } = pendingSkillChoices.shift();
-  const tree = SKILL_TREES[character.classId][level];
   overlay.style.display = "block";
+  renderSkillTreeContent(character, level);
+}
+
+// 実際にスキル選択を確定させる。選び終えたら、同じキャラにまだ選択待ちが残っていれば続けて出し、
+// 無ければオーバーレイを閉じて名簿を再描画する(「🎓スキル選択」バッジが消える)
+function resolveSkillChoice(character, level, side, skill) {
+  applySkillChoice(character, { ...skill, side }, level);
+  const idx = state.pendingSkillChoices.findIndex((e) => e.characterId === character.id && e.level === level);
+  if (idx !== -1) state.pendingSkillChoices.splice(idx, 1);
+  saveState();
+  if (state.pendingSkillChoices.some((e) => e.characterId === character.id)) {
+    openSkillChoiceFor(character.id);
+  } else {
+    document.getElementById("skillChoiceOverlay").style.display = "none";
+    renderRosterList();
+  }
+}
+
+function renderSkillTreeContent(character, pendingLevel) {
+  const c2 = CLASSES[character.classId];
+  const tree = SKILL_TREES[character.classId];
   const content = document.getElementById("skillChoiceContent");
-  const optionHtml = (skill, side) => `
-    <div class="card" style="margin-top:0.8rem;">
-      <h3 style="margin:0 0 0.3rem;">【${side === "left" ? "左" : "右"}】${skill.name}</h3>
-      <p class="desc" style="margin:0 0 0.6rem;">${skill.desc}</p>
-      <button class="big primary" data-side="${side}" style="width:100%;">これを選ぶ</button>
-    </div>
-  `;
+  const levels = Object.keys(tree).map(Number).sort((a, b) => a - b);
+  const rowsHtml = levels.map((lv) => {
+    const chosenSide = character.skills && character.skills[lv];
+    const isPending = lv === pendingLevel;
+    const rowState = isPending ? "pending" : chosenSide ? "done" : "locked";
+    const sideClass = (side) => {
+      if (isPending) return "pending-choice";
+      if (chosenSide) return chosenSide === side ? "chosen" : "rejected";
+      return "locked";
+    };
+    const optHtml = (side) => `
+      <button class="skill-tree-opt ${side} ${sideClass(side)}" data-level="${lv}" data-side="${side}">
+        <span class="skill-tree-opt-name">${tree[lv][side].name}</span>
+      </button>
+    `;
+    return `
+      <div class="skill-tree-row-wrap" data-level="${lv}">
+        <div class="skill-tree-row ${rowState}">
+          ${optHtml("left")}
+          <div class="skill-tree-level-badge"><span>Lv${lv}</span></div>
+          ${optHtml("right")}
+        </div>
+        <div class="skill-tree-inline-detail" style="display:none;"></div>
+      </div>
+    `;
+  }).join("");
   content.innerHTML = `
-    <h2 style="text-align:center;">${character.name}がレベル${level}になった！</h2>
-    <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;">スキルを1つ選んでください</p>
-    ${optionHtml(tree.left, "left")}
-    ${optionHtml(tree.right, "right")}
+    <div class="skill-tree-header">
+      <div class="skill-tree-charname">${character.name}</div>
+      <div class="skill-tree-classname">${c2.ja}の系譜</div>
+      <p class="skill-tree-hint">Lv${pendingLevel}で新しいスキルを1つ選べます。スキル名をタップすると、その下に説明が開きます</p>
+    </div>
+    <div class="skill-tree-rows">${rowsHtml}</div>
   `;
-  content.querySelector('button[data-side="left"]').onclick = () => {
-    applySkillChoice(character, { ...tree.left, side: "left" });
-    saveState();
-    showNextSkillChoice();
-  };
-  content.querySelector('button[data-side="right"]').onclick = () => {
-    applySkillChoice(character, { ...tree.right, side: "right" });
-    saveState();
-    showNextSkillChoice();
-  };
+  // スキル名をタップすると、そのスキルの真下にだけ説明(+選択待ちの行なら決定ボタン)を開く。
+  // 別のスキルをタップすると前に開いていたものは閉じる(アコーディオン式、同時に1つだけ開く)
+  content.querySelectorAll(".skill-tree-opt").forEach((btn) => {
+    const lv = Number(btn.dataset.level);
+    const side = btn.dataset.side;
+    const skill = tree[lv][side];
+    btn.onclick = () => {
+      const wrap = btn.closest(".skill-tree-row-wrap");
+      const detail = wrap.querySelector(".skill-tree-inline-detail");
+      const alreadyOpenForThis = detail.style.display !== "none" && detail.dataset.side === side;
+      content.querySelectorAll(".skill-tree-inline-detail").forEach((d) => { d.style.display = "none"; d.innerHTML = ""; });
+      if (alreadyOpenForThis) return;
+      const isThisPending = lv === pendingLevel;
+      detail.dataset.side = side;
+      detail.innerHTML = `
+        <h4>Lv${lv}・【${side === "left" ? "左" : "右"}】${skill.name}</h4>
+        <p>${skill.desc}</p>
+        ${isThisPending ? `<button class="big primary skill-confirm-btn">このスキルに決める</button>` : ""}
+      `;
+      detail.style.display = "block";
+      if (isThisPending) {
+        detail.querySelector(".skill-confirm-btn").onclick = () => resolveSkillChoice(character, lv, side, skill);
+      }
+    };
+  });
 }
 
 // パーティ全員(生きているメンバー)が一人ずつ逃げ切った時。誰も倒れていないので瀕死ペナルティ無しでそのまま探索画面に戻る
@@ -2366,7 +2860,6 @@ function defeat() {
     bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
     renderResultScreen(() => {
       renderTown();
-      showScreen("screen-town");
     });
   };
 }
