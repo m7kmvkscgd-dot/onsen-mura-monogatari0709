@@ -665,7 +665,7 @@ function playBgm(key) {
 }
 
 const sfxCache = {};
-const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3" };
+const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3" };
 // 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
 function hitTakenSfxFor(dmg, maxHp) {
   const ratio = maxHp > 0 ? dmg / maxHp : 0;
@@ -1586,7 +1586,8 @@ function aliveEnemies() {
 }
 
 function renderBattleScreen() {
-  renderPartyBar("battlePartyBar", fieldParty, battle.actingId);
+  // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
+  renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
   row.classList.toggle("crowded", battle.enemies.length >= 4);
@@ -1703,6 +1704,7 @@ function processNext() {
     }
     if (actor.fleeState === "preparing") {
       actor.fleeState = "fled";
+      playSfx("flee");
       blog(`${actor.label}は戦闘から逃げ出した！`);
       renderBattleScreen();
       battle.orderIndex++;

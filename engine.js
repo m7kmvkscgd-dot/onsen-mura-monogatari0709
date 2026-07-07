@@ -606,14 +606,16 @@ function goldReward(enemy) {
   return enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
 }
 
-// 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)
+// 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)。
+// 逃走準備中(fleeState==="preparing")は、逃げ出そうと隙を伺っている分+25%回避率が上がる
 function evasionChance(entity) {
   const spd = effectiveStat(entity, "spd");
   const base = Math.max(0, Math.min(EVASION_MAX, (spd - EVASION_SPD_BASELINE) * EVASION_SPD_FACTOR));
   const passiveAdd = (entity.passives && entity.passives.evasionAdd) || 0;
   let timedAdd = 0;
   if (entity.statMods) entity.statMods.forEach((m) => { if (m.stat === "evasionAdd") timedAdd += m.mult; });
-  return Math.min(0.9, base + passiveAdd + timedAdd);
+  const fleeingAdd = entity.fleeState === "preparing" ? 0.25 : 0;
+  return Math.min(0.9, base + passiveAdd + timedAdd + fleeingAdd);
 }
 function accuracyOf(entity) {
   const base = entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
