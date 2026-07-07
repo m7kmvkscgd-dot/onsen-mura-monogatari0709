@@ -8,7 +8,7 @@
   :root {
     --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
     --text: #e8ecea; --text-muted: #9aa79f; --accent: #c9a24a;
-    --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #d1503f;
+    --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #d1503f; --hp-critical: #5a0002;
     --danger: #d1503f;
     --panel: rgba(20,24,27,0.72); --panel-2: rgba(28,34,38,0.6);
   }
@@ -136,7 +136,7 @@
   /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく */
   .hpbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp-low); transition: width 0.8s ease-out; }
   .hpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp); transition: background-color 0.3s; }
-  .hpbar-fill.low { background: var(--hp-low); }
+  .hpbar-fill.low { background: var(--hp-critical); }
   .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
