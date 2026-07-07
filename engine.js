@@ -82,7 +82,7 @@ function createCharacter(name, classId, classUpgrades) {
 // のに必要だった経験値の合計と同じ総量になるよう、新レベル1〜9の必要経験値を等差数列(1080*level-45)で
 // 割り振ってある(結果として新レベル1=1035, 新レベル9=9675と、終盤ほど1段の重みが大きくなる)
 function xpToNext(level) {
-  return Math.round(1080 * level - 45);
+  return Math.round((1080 * level - 45) * 0.7); // ユーザー指示で必要経験値を7割に短縮
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
@@ -115,7 +115,7 @@ function advanceFatigue(characters) {
 
 // 温泉: レベルが高いキャラほど入浴料が高くなる(ちょっと高めの金額)
 function onsenCost(level) {
-  return ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL;
+  return Math.round((ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL) * 0.7); // ユーザー指示で利用料を7割に
 }
 
 // 生存していれば冒険に連れて行ける/温泉や宿屋を利用できる(入浴・宿泊のどちらも連れ出し可否には影響しない)
@@ -401,10 +401,10 @@ function damageTakenMultiplier(character) {
   return mult;
 }
 // 会心判定。会心なら会心時ダメージ倍率を、外れなら1を返す
-function rollCritMultiplier(actor) {
+function rollCritMultiplier(actor, extraCritRate) {
   const p = actor.passives;
   if (!p) return 1;
-  const rate = BASE_CRIT_RATE + p.critRateAdd;
+  const rate = BASE_CRIT_RATE + p.critRateAdd + (extraCritRate || 0);
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
   return 1;
 }
@@ -489,7 +489,7 @@ function useTreeSkill(actor, target, skill, log) {
 // 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
-// 大群系はpickSwarmEncounter経由でのみ出す)
+// 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
 function pickEnemyForFloor(floor, mode) {
   const eligible = Object.values(ENEMIES).filter((e) => {
     if (floor < e.minFloor || floor > e.maxFloor) return false;
@@ -524,8 +524,11 @@ function pickEnemyForFloor(floor, mode) {
   };
 }
 
-// そのフロアの遭遇(1〜3体)を組み立てる。ボスフロア(10の倍数)は必ず単体。
-// それ以外は単体(手強い1体)か複数体(1体あたりは弱いが数で来る雑魚集団)がランダムに出る —
+// そのフロアの遭遇を組み立てる。ボスフロア(10の倍数)は必ず単体。
+// それ以外は、まず「大群が絡むか」を1回だけ判定し(SWARM_ENCOUNTER_CHANCE)、絡む場合は
+// pickSwarmInvolvedEncounterで直接まとめて組み立てる(3枠それぞれ独立に大群判定すると、
+// 6体まで揃う確率が0.15^3のようにほぼ0まで潰れてしまうため、複数回のサイコロを重ねる設計を避けた)。
+// 絡まない場合は従来通り1〜3体の通常敵のみ。
 // 雑魚集団は範囲攻撃(魔法使いのメテオ/忍者の乱れ突き)で効率よく削れる、という職業差別化の要
 function pickEncounterForFloor(floor) {
   if (floor % 10 === 0) {
@@ -534,8 +537,7 @@ function pickEncounterForFloor(floor) {
   }
   const hasSwarmHere = Object.values(ENEMIES).some((e) => e.isSwarm && floor >= e.minFloor && floor <= e.maxFloor);
   if (hasSwarmHere && Math.random() < SWARM_ENCOUNTER_CHANCE) {
-    const swarmEncounter = pickSwarmEncounter(floor);
-    if (swarmEncounter.length > 0) return swarmEncounter;
+    return applyGroupNerf(pickSwarmInvolvedEncounter(floor));
   }
   const roll = Math.random();
   let count = 1;
@@ -548,34 +550,44 @@ function pickEncounterForFloor(floor) {
   for (let i = 0; i < count; i++) {
     const e = pickEnemyForFloor(floor);
     if (e.isBoss) return [e]; // ボス個体が紛れたら単体に差し戻す
-    if (count > 1) {
-      const nerf = count === 2 ? 0.8 : 0.65;
-      e.hp = Math.max(1, Math.round(e.hp * nerf));
-      e.maxHp = e.hp;
-      e.atk = Math.max(1, Math.round(e.atk * nerf));
-    }
     enemies.push(e);
+  }
+  return applyGroupNerf(enemies);
+}
+
+// 大群が絡むと決まった時の中身。65%は「大群のみ3〜6体」(6体の内訳20%=大群絡み全体の13%≒毎回の1.95%程度)、
+// 35%は「通常1〜2体+大群2体」の混成にする
+function pickSwarmInvolvedEncounter(floor) {
+  const enemies = [];
+  if (Math.random() < 0.65) {
+    const roll = Math.random();
+    let swarmCount;
+    if (roll < 0.15) swarmCount = 3;
+    else if (roll < 0.5) swarmCount = 4;
+    else if (roll < 0.8) swarmCount = 5;
+    else swarmCount = 6;
+    for (let i = 0; i < swarmCount; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
+  } else {
+    const normalCount = Math.random() < 0.5 ? 1 : 2;
+    for (let i = 0; i < normalCount; i++) {
+      const e = pickEnemyForFloor(floor);
+      if (!e.isBoss) enemies.push(e); // ボスが紛れたらこの枠は諦める(滅多に起きない)
+    }
+    for (let i = 0; i < 2; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
   }
   return enemies;
 }
 
-// 大群遭遇: 半々の確率で「大群系だけ4〜5体」か「通常の敵2体+大群系2体」の混成にする。
-// 大群系は元々弱いのでさらなる頭数ナーフはかけない(通常側の2体だけ複数体ナーフを軽くかける)
-function pickSwarmEncounter(floor) {
-  const enemies = [];
-  if (Math.random() < 0.5) {
-    const swarmCount = 4 + Math.floor(Math.random() * 2); // 4か5体
-    for (let i = 0; i < swarmCount; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
-  } else {
-    for (let i = 0; i < 2; i++) {
-      const e = pickEnemyForFloor(floor);
-      if (e.isBoss) continue; // ボスが混じったらこの枠は諦める(滅多に起きない)
-      e.hp = Math.max(1, Math.round(e.hp * 0.8));
+// 頭数が多いほど、行動回数(=敵側の総攻撃回数)が増えて理不尽にならないよう1体あたりの数値を弱める
+function applyGroupNerf(enemies) {
+  if (enemies.length > 1) {
+    const nerfTable = { 2: 0.8, 3: 0.65, 4: 0.55, 5: 0.48, 6: 0.42 };
+    const nerf = nerfTable[enemies.length] || 0.4;
+    enemies.forEach((e) => {
+      e.hp = Math.max(1, Math.round(e.hp * nerf));
       e.maxHp = e.hp;
-      e.atk = Math.max(1, Math.round(e.atk * 0.8));
-      enemies.push(e);
-    }
-    for (let i = 0; i < 2; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
+      e.atk = Math.max(1, Math.round(e.atk * nerf));
+    });
   }
   return enemies;
 }
@@ -609,12 +621,12 @@ function rollHit(actor, target) {
 }
 
 // ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す
-function rollAttackOrMiss(actor, target, rollFn, log) {
+function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate) {
   if (!rollHit(actor, target)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
     return { hit: false, dmg: null };
   }
-  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor);
+  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate);
   return { hit: true, dmg };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
@@ -641,7 +653,7 @@ function performAttack(actor, target, log) {
 
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
   logSuffix = logSuffix || "";
   if (actor && actor.passives && actor.passives.firstAttackBonusMult > 0 && !actor.passives.firstAttackUsed) {
     dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
@@ -652,7 +664,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix) {
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
     if (hpPct <= actor.passives.executeBonus.belowPct) dmg = Math.round(dmg * actor.passives.executeBonus.mult);
   }
-  if (actor) dmg = Math.round(dmg * rollCritMultiplier(actor));
+  if (actor) dmg = Math.round(dmg * rollCritMultiplier(actor, extraCritRate));
   dmg = Math.max(0, Math.round(dmg * damageTakenMultiplier(target)));
   if (target.passives && target.passives.onceGuardType === "nullifyDamage" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
@@ -726,7 +738,8 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "preciseShot") {
-    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log);
+    // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+30%を上乗せし、合計35%で急所を突く
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.3);
   }
   if (abilityType === "cannonShot") {
     actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる
@@ -768,7 +781,10 @@ function enemyAttack(enemy, targets, log) {
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
-  target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(dmg, target.maxHp));
+  // 瀕死になった一撃は、既にHPが減っていて実際のダメージ量(dmg)が小さくても、
+  // 気絶するという出来事自体が最大級のストレスになるはずなので、その場合はratio=1.0扱いで計算する
+  const wentDown = target.hp <= 0;
+  target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
   return { target, dmg, hit: true };
 }
 
@@ -863,7 +879,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, pickSwarmEncounter, goldReward, performAttack, useAbility, usePotion, enemyAttack,
+    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,

@@ -96,16 +96,16 @@ const ENEMIES = {
   yomi_no_onryo: { id: "yomi_no_onryo", ja: "黄泉の怨霊", image: "assets/enemies/yomi_no_onryo.png", hp: 88, atk: 32, def: 10, spd: 11, goldMin: 48, goldMax: 68, xp: 88, minFloor: 38, maxFloor: 999 },
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 280, atk: 34, def: 18, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 42, maxFloor: 999, isBoss: true },
 
-  // 大群系(isSwarm): 通常より小さく表示され、ステータスも弱いが、大群遭遇(SWARM_ENCOUNTER_CHANCE)で
-  // 4〜5体まとまって、または通常の敵2体と混成で出てくる。階層帯は既存の40種と同じ4段階に対応
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 9, atk: 4, def: 1, spd: 9, goldMin: 2, goldMax: 4, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
-  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 10, atk: 3, def: 1, spd: 5, goldMin: 2, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
-  kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 17, atk: 6, def: 3, spd: 6, goldMin: 7, goldMax: 11, xp: 13, minFloor: 9, maxFloor: 29, isSwarm: true },
-  chibi_oni: { id: "chibi_oni", ja: "ちび鬼", image: "assets/enemies/chibi_oni.png", hp: 16, atk: 7, def: 2, spd: 7, goldMin: 7, goldMax: 12, xp: 13, minFloor: 9, maxFloor: 29, isSwarm: true },
-  karakasa: { id: "karakasa", ja: "からかさ", image: "assets/enemies/karakasa.png", hp: 30, atk: 10, def: 4, spd: 6, goldMin: 13, goldMax: 19, xp: 22, minFloor: 24, maxFloor: 45, isSwarm: true },
-  kogitsune: { id: "kogitsune", ja: "こぎつね", image: "assets/enemies/kogitsune.png", hp: 26, atk: 11, def: 3, spd: 13, goldMin: 14, goldMax: 20, xp: 22, minFloor: 24, maxFloor: 45, isSwarm: true },
-  warashibe_ningyo: { id: "warashibe_ningyo", ja: "わらしべ人形", image: "assets/enemies/warashibe_ningyo.png", hp: 45, atk: 15, def: 6, spd: 5, goldMin: 20, goldMax: 28, xp: 38, minFloor: 38, maxFloor: 999, isSwarm: true },
-  medama_kozou: { id: "medama_kozou", ja: "目玉こぞう", image: "assets/enemies/medama_kozou.png", hp: 42, atk: 14, def: 5, spd: 6, goldMin: 20, goldMax: 30, xp: 38, minFloor: 38, maxFloor: 999, isSwarm: true },
+  // 大群系(isSwarm): 通常より小さく表示され、ステータスは同階層帯の通常種平均のおよそ4〜5割に抑えてある。
+  // 遭遇時は2体で通常種1体ぶんの「枠」を埋める(pickEncounterForFloor参照)。階層帯は既存の40種と同じ4段階に対応
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 2, goldMax: 3, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
+  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 8, atk: 2, def: 1, spd: 5, goldMin: 2, goldMax: 4, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
+  kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 13, atk: 5, def: 2, spd: 6, goldMin: 8, goldMax: 11, xp: 11, minFloor: 9, maxFloor: 29, isSwarm: true },
+  chibi_oni: { id: "chibi_oni", ja: "ちび鬼", image: "assets/enemies/chibi_oni.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 8, goldMax: 12, xp: 12, minFloor: 9, maxFloor: 29, isSwarm: true },
+  karakasa: { id: "karakasa", ja: "からかさ", image: "assets/enemies/karakasa.png", hp: 27, atk: 8, def: 4, spd: 6, goldMin: 13, goldMax: 18, xp: 19, minFloor: 24, maxFloor: 45, isSwarm: true },
+  kogitsune: { id: "kogitsune", ja: "こぎつね", image: "assets/enemies/kogitsune.png", hp: 22, atk: 9, def: 3, spd: 13, goldMin: 13, goldMax: 18, xp: 20, minFloor: 24, maxFloor: 45, isSwarm: true },
+  warashibe_ningyo: { id: "warashibe_ningyo", ja: "わらしべ人形", image: "assets/enemies/warashibe_ningyo.png", hp: 47, atk: 12, def: 6, spd: 5, goldMin: 22, goldMax: 28, xp: 35, minFloor: 38, maxFloor: 999, isSwarm: true },
+  medama_kozou: { id: "medama_kozou", ja: "目玉こぞう", image: "assets/enemies/medama_kozou.png", hp: 40, atk: 14, def: 5, spd: 6, goldMin: 22, goldMax: 30, xp: 36, minFloor: 38, maxFloor: 999, isSwarm: true },
 };
 
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
@@ -441,35 +441,35 @@ function tier(name, statKey, bonus, price, level) {
 const EQUIPMENT = {
   samurai: {
     weapon: [tier("業物の刀", "atk", 2, 40, 1), tier("業物の太刀", "atk", 4, 90, 3), tier("妖刀", "atk", 5, 125, 5), tier("鬼哭の刀", "atk", 6, 160, 7), tier("伝説の名刀", "atk", 7, 200, 9)],
-    armor: [tier("当世具足", "def", 0.4, 10, 1), tier("強化当世具足", "def", 0.8, 20, 3), tier("上級当世具足", "def", 1.2, 30, 5), tier("鬼哭の甲冑", "def", 1.6, 45, 7), tier("伝説の甲冑", "def", 2, 55, 9)],
+    armor: [tier("当世具足", "def", 0.4, 30, 1), tier("強化当世具足", "def", 0.8, 20, 3), tier("上級当世具足", "def", 1.2, 30, 5), tier("鬼哭の甲冑", "def", 1.6, 45, 7), tier("伝説の甲冑", "def", 2, 55, 9)],
   },
   ninja: {
     weapon: [tier("業物の苦無", "atk", 2, 40, 1), tier("改良苦無", "atk", 4, 90, 3), tier("影の苦無", "atk", 5, 120, 5), tier("月影の苦無", "atk", 6, 160, 7), tier("暁の苦無", "atk", 7, 195, 9)],
-    armor: [tier("強化忍び装束", "def", 0.4, 10, 1), tier("精鋭忍び装束", "def", 0.8, 20, 3), tier("上級忍び装束", "def", 1.2, 35, 5), tier("月影の装束", "def", 1.6, 45, 7), tier("暁の装束", "def", 2, 60, 9)],
+    armor: [tier("強化忍び装束", "def", 0.4, 30, 1), tier("精鋭忍び装束", "def", 0.8, 20, 3), tier("上級忍び装束", "def", 1.2, 35, 5), tier("月影の装束", "def", 1.6, 45, 7), tier("暁の装束", "def", 2, 60, 9)],
   },
   spearman: {
     weapon: [tier("鍛えの槍", "atk", 2, 40, 1), tier("業物の槍", "atk", 3, 70, 3), tier("十文字槍", "atk", 4, 100, 5), tier("鬼殺しの槍", "atk", 5, 130, 7), tier("伝説の大槍", "atk", 6, 170, 9)],
-    armor: [tier("鉄の大盾", "def", 0.5, 10, 1), tier("業物の大盾", "def", 1, 20, 3), tier("強化大盾", "def", 1.5, 35, 5), tier("鬼殺しの大盾", "def", 2, 45, 7), tier("伝説の盾", "def", 2.5, 60, 9)],
+    armor: [tier("鉄の大盾", "def", 0.5, 30, 1), tier("業物の大盾", "def", 1, 20, 3), tier("強化大盾", "def", 1.5, 35, 5), tier("鬼殺しの大盾", "def", 2, 45, 7), tier("伝説の盾", "def", 2.5, 60, 9)],
   },
   naginata: {
     weapon: [tier("鍛えの薙刀", "atk", 2, 40, 1), tier("業物の薙刀", "atk", 3, 65, 3), tier("大薙刀", "atk", 4, 90, 5), tier("巴形の薙刀", "atk", 5, 120, 7), tier("伝説の薙刀", "atk", 6, 155, 9)],
-    armor: [tier("強化白鉢巻", "def", 0.4, 10, 1), tier("強化具足", "def", 0.8, 20, 3), tier("上級具足", "def", 1.2, 35, 5), tier("巴形の装束", "def", 1.6, 45, 7), tier("伝説の巫女装束", "def", 2, 65, 9)],
+    armor: [tier("強化白鉢巻", "def", 0.4, 30, 1), tier("強化具足", "def", 0.8, 20, 3), tier("上級具足", "def", 1.2, 35, 5), tier("巴形の装束", "def", 1.6, 45, 7), tier("伝説の巫女装束", "def", 2, 65, 9)],
   },
   hunter: {
     weapon: [tier("鍛えの弓", "atk", 2, 40, 1), tier("業物の弓", "atk", 3, 70, 3), tier("強弓", "atk", 4, 100, 5), tier("鬼哭の弓", "atk", 5, 130, 7), tier("伝説の弓", "atk", 6, 170, 9)],
-    armor: [tier("強化猟師装束", "def", 0.3, 5, 1), tier("精鋭猟師装束", "def", 0.6, 15, 3), tier("上級猟師装束", "def", 0.9, 25, 5), tier("鬼哭の猟師装束", "def", 1.2, 35, 7), tier("伝説の猟師装束", "def", 1.5, 45, 9)],
+    armor: [tier("強化猟師装束", "def", 0.3, 30, 1), tier("精鋭猟師装束", "def", 0.6, 15, 3), tier("上級猟師装束", "def", 0.9, 25, 5), tier("鬼哭の猟師装束", "def", 1.2, 35, 7), tier("伝説の猟師装束", "def", 1.5, 45, 9)],
   },
   gunner: {
     weapon: [tier("鍛えの火縄銃", "atk", 3, 55, 1), tier("業物の火縄銃", "atk", 4, 85, 3), tier("上級火縄銃", "atk", 6, 135, 5), tier("雷神の大筒", "atk", 7, 170, 7), tier("伝説の大筒", "atk", 8, 205, 9)],
-    armor: [tier("強化胴当て", "def", 0.3, 5, 1), tier("精鋭胴当て", "def", 0.6, 15, 3), tier("上級胴当て", "def", 0.9, 25, 5), tier("雷神の胴当て", "def", 1.2, 35, 7), tier("伝説の胴当て", "def", 1.5, 45, 9)],
+    armor: [tier("強化胴当て", "def", 0.3, 30, 1), tier("精鋭胴当て", "def", 0.6, 15, 3), tier("上級胴当て", "def", 0.9, 25, 5), tier("雷神の胴当て", "def", 1.2, 35, 7), tier("伝説の胴当て", "def", 1.5, 45, 9)],
   },
   onmyoji: {
     weapon: [tier("式神の御幣", "mag", 3, 60, 1), tier("精霊の御幣", "mag", 5, 110, 3), tier("上級御幣", "mag", 6, 140, 5), tier("秘伝の御幣", "mag", 8, 205, 7), tier("大陰陽の御幣", "mag", 9, 245, 9)],
-    armor: [tier("浄衣", "def", 0.2, 5, 1), tier("精霊の浄衣", "def", 0.4, 10, 3), tier("上級浄衣", "def", 0.6, 20, 5), tier("秘伝の浄衣", "def", 0.8, 25, 7), tier("大陰陽の浄衣", "def", 1, 35, 9)],
+    armor: [tier("浄衣", "def", 0.2, 30, 1), tier("精霊の浄衣", "def", 0.4, 10, 3), tier("上級浄衣", "def", 0.6, 20, 5), tier("秘伝の浄衣", "def", 0.8, 25, 7), tier("大陰陽の浄衣", "def", 1, 35, 9)],
   },
   priest: {
     weapon: [tier("聖なる錫杖", "mag", 2, 45, 1), tier("高僧の錫杖", "mag", 4, 100, 3), tier("大僧正の錫杖", "mag", 5, 135, 5), tier("悟りの錫杖", "mag", 6, 170, 7), tier("神託の錫杖", "mag", 7, 215, 9)],
-    armor: [tier("法衣", "def", 0.3, 5, 1), tier("高僧の法衣", "def", 0.6, 15, 3), tier("大僧正の法衣", "def", 0.9, 25, 5), tier("悟りの法衣", "def", 1.2, 35, 7), tier("神託の法衣", "def", 1.5, 45, 9)],
+    armor: [tier("法衣", "def", 0.3, 30, 1), tier("高僧の法衣", "def", 0.6, 15, 3), tier("大僧正の法衣", "def", 0.9, 25, 5), tier("悟りの法衣", "def", 1.2, 35, 7), tier("神託の法衣", "def", 1.5, 45, 9)],
   },
 };
 
@@ -501,7 +501,7 @@ const ENEMY_POWER_MULT = 1.5;
 const EARLY_DANGER_BONUS_BASE = 2.3;
 const EARLY_DANGER_FADE_FLOOR = 25;
 const EARLY_DANGER_DEF_BONUS_BASE = 0.42;
-// 大群系(ENEMIES内のisSwarm)が出る確率。毎回出るとうざいので控えめにしてある
+// 大群系が絡んだ遭遇になる確率(1回の遭遇につき1回だけ判定する)。毎回出るとうざいので控えめにしてある
 const SWARM_ENCOUNTER_CHANCE = 0.15;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
