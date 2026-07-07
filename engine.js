@@ -488,9 +488,16 @@ function useTreeSkill(actor, target, skill, log) {
 
 // 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
-function pickEnemyForFloor(floor, onlyBoss) {
-  const eligible = Object.values(ENEMIES).filter((e) => floor >= e.minFloor && floor <= e.maxFloor && (!onlyBoss || e.isBoss));
-  if (onlyBoss && eligible.length === 0) return null;
+// mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
+// 大群系はpickSwarmEncounter経由でのみ出す)
+function pickEnemyForFloor(floor, mode) {
+  const eligible = Object.values(ENEMIES).filter((e) => {
+    if (floor < e.minFloor || floor > e.maxFloor) return false;
+    if (mode === true) return !!e.isBoss;
+    if (mode === "swarm") return !!e.isSwarm;
+    return !e.isSwarm;
+  });
+  if (mode === true && eligible.length === 0) return null;
   const weighted = [];
   eligible.forEach((e) => {
     const weight = e.isBoss ? (floor % 10 === 0 ? 6 : 1) : 10;
@@ -525,6 +532,11 @@ function pickEncounterForFloor(floor) {
     const boss = pickEnemyForFloor(floor, true);
     return [boss || pickEnemyForFloor(floor)];
   }
+  const hasSwarmHere = Object.values(ENEMIES).some((e) => e.isSwarm && floor >= e.minFloor && floor <= e.maxFloor);
+  if (hasSwarmHere && Math.random() < SWARM_ENCOUNTER_CHANCE) {
+    const swarmEncounter = pickSwarmEncounter(floor);
+    if (swarmEncounter.length > 0) return swarmEncounter;
+  }
   const roll = Math.random();
   let count = 1;
   if (floor >= 4) {
@@ -543,6 +555,27 @@ function pickEncounterForFloor(floor) {
       e.atk = Math.max(1, Math.round(e.atk * nerf));
     }
     enemies.push(e);
+  }
+  return enemies;
+}
+
+// 大群遭遇: 半々の確率で「大群系だけ4〜5体」か「通常の敵2体+大群系2体」の混成にする。
+// 大群系は元々弱いのでさらなる頭数ナーフはかけない(通常側の2体だけ複数体ナーフを軽くかける)
+function pickSwarmEncounter(floor) {
+  const enemies = [];
+  if (Math.random() < 0.5) {
+    const swarmCount = 4 + Math.floor(Math.random() * 2); // 4か5体
+    for (let i = 0; i < swarmCount; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
+  } else {
+    for (let i = 0; i < 2; i++) {
+      const e = pickEnemyForFloor(floor);
+      if (e.isBoss) continue; // ボスが混じったらこの枠は諦める(滅多に起きない)
+      e.hp = Math.max(1, Math.round(e.hp * 0.8));
+      e.maxHp = e.hp;
+      e.atk = Math.max(1, Math.round(e.atk * 0.8));
+      enemies.push(e);
+    }
+    for (let i = 0; i < 2; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
   }
   return enemies;
 }
@@ -830,7 +863,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
+    pickEnemyForFloor, pickEncounterForFloor, pickSwarmEncounter, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,

@@ -192,6 +192,7 @@
     box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
+  .enemy-row.crowded { gap: 0.25rem; }
   .enemy-card { position: relative; text-align: center; cursor: default; border-radius: 10px; padding: 0.4rem; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s; }
   .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
   .enemy-card.targetable:active { transform: scale(0.94); }
@@ -228,6 +229,9 @@
   }
   .enemy-card.dead { opacity: 0.25; }
   .enemy-card img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .enemy-card.swarm { width: 56px; padding: 0.2rem; }
+  .enemy-card.swarm img { width: 48px; height: 48px; }
+  .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
   .action-grid button {
@@ -1578,11 +1582,12 @@ function renderBattleScreen() {
   renderPartyBar("battlePartyBar", fieldParty, battle.actingId);
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
+  row.classList.toggle("crowded", battle.enemies.length >= 4);
   battle.enemies.forEach((e) => {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(e);
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     card.innerHTML = `
       <img src="${e.image}" alt="${e.label}">

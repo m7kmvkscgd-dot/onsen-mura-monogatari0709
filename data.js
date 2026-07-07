@@ -95,6 +95,17 @@ const ENEMIES = {
   gashadokuro_shin: { id: "gashadokuro_shin", ja: "がしゃどくろ(真)", image: "assets/enemies/gashadokuro_shin.png", hp: 120, atk: 28, def: 16, spd: 8, goldMin: 47, goldMax: 66, xp: 86, minFloor: 38, maxFloor: 999 },
   yomi_no_onryo: { id: "yomi_no_onryo", ja: "黄泉の怨霊", image: "assets/enemies/yomi_no_onryo.png", hp: 88, atk: 32, def: 10, spd: 11, goldMin: 48, goldMax: 68, xp: 88, minFloor: 38, maxFloor: 999 },
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 280, atk: 34, def: 18, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 42, maxFloor: 999, isBoss: true },
+
+  // 大群系(isSwarm): 通常より小さく表示され、ステータスも弱いが、大群遭遇(SWARM_ENCOUNTER_CHANCE)で
+  // 4〜5体まとまって、または通常の敵2体と混成で出てくる。階層帯は既存の40種と同じ4段階に対応
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 9, atk: 4, def: 1, spd: 9, goldMin: 2, goldMax: 4, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
+  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 10, atk: 3, def: 1, spd: 5, goldMin: 2, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
+  kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 17, atk: 6, def: 3, spd: 6, goldMin: 7, goldMax: 11, xp: 13, minFloor: 9, maxFloor: 29, isSwarm: true },
+  chibi_oni: { id: "chibi_oni", ja: "ちび鬼", image: "assets/enemies/chibi_oni.png", hp: 16, atk: 7, def: 2, spd: 7, goldMin: 7, goldMax: 12, xp: 13, minFloor: 9, maxFloor: 29, isSwarm: true },
+  karakasa: { id: "karakasa", ja: "からかさ", image: "assets/enemies/karakasa.png", hp: 30, atk: 10, def: 4, spd: 6, goldMin: 13, goldMax: 19, xp: 22, minFloor: 24, maxFloor: 45, isSwarm: true },
+  kogitsune: { id: "kogitsune", ja: "こぎつね", image: "assets/enemies/kogitsune.png", hp: 26, atk: 11, def: 3, spd: 13, goldMin: 14, goldMax: 20, xp: 22, minFloor: 24, maxFloor: 45, isSwarm: true },
+  warashibe_ningyo: { id: "warashibe_ningyo", ja: "わらしべ人形", image: "assets/enemies/warashibe_ningyo.png", hp: 45, atk: 15, def: 6, spd: 5, goldMin: 20, goldMax: 28, xp: 38, minFloor: 38, maxFloor: 999, isSwarm: true },
+  medama_kozou: { id: "medama_kozou", ja: "目玉こぞう", image: "assets/enemies/medama_kozou.png", hp: 42, atk: 14, def: 5, spd: 6, goldMin: 20, goldMax: 30, xp: 38, minFloor: 38, maxFloor: 999, isSwarm: true },
 };
 
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
@@ -490,6 +501,8 @@ const ENEMY_POWER_MULT = 1.5;
 const EARLY_DANGER_BONUS_BASE = 2.3;
 const EARLY_DANGER_FADE_FLOOR = 25;
 const EARLY_DANGER_DEF_BONUS_BASE = 0.42;
+// 大群系(ENEMIES内のisSwarm)が出る確率。毎回出るとうざいので控えめにしてある
+const SWARM_ENCOUNTER_CHANCE = 0.15;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -504,7 +517,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
     FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, MAX_LEVEL, ENEMY_POWER_MULT,
-    FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, EARLY_DANGER_BONUS_BASE, EARLY_DANGER_FADE_FLOOR, EARLY_DANGER_DEF_BONUS_BASE,
+    FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, EARLY_DANGER_BONUS_BASE, EARLY_DANGER_FADE_FLOOR, EARLY_DANGER_DEF_BONUS_BASE, SWARM_ENCOUNTER_CHANCE,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
 }
