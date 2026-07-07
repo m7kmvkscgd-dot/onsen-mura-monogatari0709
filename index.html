@@ -360,7 +360,7 @@
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="tavernGold">0G</p>
 
-      <h2>名簿(HP/MPを全回復+ストレス少し回復するには宿泊)</h2>
+      <h2>仲間(HP/MPを全回復+ストレス少し回復するには宿泊)</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊できる仲間には「宿泊する」ボタンが表示されます。まとめて選んで下の「宿泊する」を押すと1日/夜が進みます。パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
       <div id="rosterList"></div>
       <div id="lodgeActionBar" style="display:flex;gap:0.6rem;">
@@ -492,15 +492,15 @@
     <div class="body-pad">
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="extensionGold">0G</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、名簿に置いておける仲間の人数上限が増えます(最大10人)。出発パーティ(戦闘に連れて行く人数)は常に最大4人までです。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、仲間として置いておける人数上限が増えます(最大10人)。出発パーティ(戦闘に連れて行く人数)は常に最大4人までです。</p>
       <div class="card">
         <div class="roster-name">🏠レベル <span id="extensionLevel"></span></div>
-        <div class="roster-sub" style="margin-top:0.2rem;">名簿上限: <span id="extensionCapacity"></span>人</div>
+        <div class="roster-sub" style="margin-top:0.2rem;">仲間上限: <span id="extensionCapacity"></span>人</div>
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🥋道場</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった名簿の仲間も経験値の30%を分け前としてもらえるようになります。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の30%を分け前としてもらえるようになります。</p>
       <div class="card">
         <div class="roster-name" id="dojoStatusLabel"></div>
       </div>
@@ -1239,9 +1239,8 @@ function playLodgingTransition(onDone) {
   const toEl = document.getElementById("lodgingTransitionTo");
   const blackEl = document.getElementById("lodgingTransitionBlack");
   const caption = document.getElementById("lodgingTransitionCaption");
-  const CROSSFADE_MS = 1500; // ユーザー指示で従来の2倍
-  const INITIAL_HOLD_MS = 2500; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間
-  const PHASE_HOLD_MS = 1500; // 各時間帯の絵にフェードし終わった後、次にめくるまでの静止表示の追加時間
+  const NIGHT_CROSSFADE_MS = 2000; // 現在時刻→夜へのクロスフェード時間(ユーザー指示で従来より少し長め)
+  const INITIAL_HOLD_MS = 2200; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(ユーザー指示で0.3秒短縮)
 
   fromEl.style.opacity = "1";
   fromEl.style.backgroundImage = `url('${BG_SETS.tavern[state.timeOfDay] || BG_SETS.tavern.night}')`;
@@ -1252,18 +1251,13 @@ function playLodgingTransition(onDone) {
   overlay.style.display = "block";
   void overlay.offsetWidth;
 
-  // 現在の時間帯の次から"night"までを順番にめくる(例: 朝スタート→[昼,夕,夜]、夜スタートなら空)
-  const startIdx = TIME_PHASES.indexOf(state.timeOfDay);
-  const queue = startIdx >= 0 ? TIME_PHASES.slice(startIdx + 1) : ["day", "dusk", "night"];
-
-  function nextPhase(i) {
-    if (i < queue.length) {
-      crossfadeBg(fromEl, toEl, BG_SETS.tavern[queue[i]], CROSSFADE_MS, () => {
-        setTimeout(() => nextPhase(i + 1), PHASE_HOLD_MS);
-      });
-      return;
+  // 途中の時間帯(昼/夕)は経由せず、現在時刻から夜へ直接クロスフェードする。既に夜ならクロスフェード自体不要
+  function afterHold() {
+    if (state.timeOfDay === "night") {
+      finale();
+    } else {
+      crossfadeBg(fromEl, toEl, BG_SETS.tavern.night, NIGHT_CROSSFADE_MS, finale);
     }
-    finale();
   }
 
   function finale() {
@@ -1279,7 +1273,7 @@ function playLodgingTransition(onDone) {
     });
   }
 
-  setTimeout(() => nextPhase(0), INITIAL_HOLD_MS);
+  setTimeout(afterHold, INITIAL_HOLD_MS);
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
@@ -1373,7 +1367,7 @@ const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
-  if (state.roster.length >= rosterCapacity()) { alert(`名簿がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
+  if (state.roster.length >= rosterCapacity()) { alert(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
   if (state.gold < HIRE_COST) { alert(`お金が足りません(${HIRE_COST}G必要)`); return; }
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
@@ -1537,7 +1531,7 @@ function renderExtension() {
     btn.disabled = true;
   } else {
     const cost = houseUpgradeCost(level);
-    btn.textContent = `増築する(${cost}G) 名簿上限 ${rosterCapacity()}→${rosterCapacity() + 1}人`;
+    btn.textContent = `増築する(${cost}G) 仲間上限 ${rosterCapacity()}→${rosterCapacity() + 1}人`;
     btn.disabled = state.gold < cost;
   }
   const dojoLevel = state.dojoLevel || 0;
@@ -2629,7 +2623,7 @@ function renderItemMenu(actor) {
   smokeBtn.className = "big";
   smokeBtn.textContent = `煙玉(${state.inventory.smokeBomb || 0})`;
   smokeBtn.disabled = (state.inventory.smokeBomb || 0) <= 0;
-  smokeBtn.onclick = () => useSmokeBomb(actor);
+  smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
   grid.appendChild(smokeBtn);
 
   const backBtn = document.createElement("button");
@@ -2639,6 +2633,28 @@ function renderItemMenu(actor) {
   grid.appendChild(backBtn);
 }
 
+// 煙玉は消耗品かつ使うと即座に戦闘から一斉離脱してしまうため、誤タップ対策で使用前に確認を挟む
+function renderSmokeBombConfirm(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const msg = document.createElement("div");
+  msg.style.cssText = "grid-column:1/-1;font-size:0.85rem;text-align:center;margin-bottom:0.3rem;";
+  msg.textContent = "煙玉を使いますか？";
+  grid.appendChild(msg);
+
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "big danger";
+  yesBtn.textContent = "はい";
+  yesBtn.onclick = () => useSmokeBomb(actor);
+  grid.appendChild(yesBtn);
+
+  const noBtn = document.createElement("button");
+  noBtn.className = "big";
+  noBtn.textContent = "いいえ";
+  noBtn.onclick = () => renderItemMenu(actor);
+  grid.appendChild(noBtn);
+}
 // 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
 function useSmokeBomb(actor) {
   state.inventory.smokeBomb--;

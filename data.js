@@ -123,11 +123,11 @@ const POTION_HEAL_RATIO = 0.35;
 const SKILL_TREES = {
   samurai: {
     2: {
-      left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+40%", mp: 0, passive: { firstAttackBonusMult: 0.4 } },
+      left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+35%", mp: 0, passive: { firstAttackBonusMult: 0.35 } },
       right: { name: "見切り", desc: "被弾時、12%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.12 } },
     },
     3: {
-      left: { name: "連斬", desc: "会心率+20%、会心ダメージ+15%", mp: 0, passive: { critRateAdd: 0.2, critDmgAdd: 0.15 } },
+      left: { name: "連斬", desc: "会心率+10%、会心ダメージ+15%", mp: 0, passive: { critRateAdd: 0.1, critDmgAdd: 0.15 } },
       right: { name: "気迫", desc: "HPが80%以上の間、被ダメージ12%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.88 } } },
     },
     4: {
