@@ -486,6 +486,18 @@ function useTreeSkill(actor, target, skill, log) {
   return { dmgs: results };
 }
 
+// 序盤の階層帯ボーナス。0〜5階=基準、6〜10階=基準×90/80、11〜15階=基準×100/80という
+// 階段状(5階層区切り)のスケールにする。16階以降はEARLY_DANGER_FADE_FLOORに向かって
+// 11〜15階の値から直線的に0まで薄れ、終盤の難易度曲線(baseScale/baseDefScale、既に検証済み)には
+// 影響を与えない
+function earlyTierBonus(floor, base) {
+  if (floor <= 5) return base;
+  if (floor <= 10) return base * (90 / 80);
+  const tier2Value = base * (100 / 80);
+  if (floor <= 15) return tier2Value;
+  return Math.max(0, tier2Value * (1 - (floor - 15) / (EARLY_DANGER_FADE_FLOOR - 15)));
+}
+
 // 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
@@ -506,10 +518,8 @@ function pickEnemyForFloor(floor, mode) {
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
   const baseScale = (1 + (floor - 1) * FLOOR_SCALE_RATE) * ENEMY_POWER_MULT;
   const baseDefScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE;
-  // 序盤(階層1に近いほど)ほど大きく、EARLY_DANGER_FADE_FLOORに向かって直線的に消えていく上乗せ分。
-  // これにより終盤の難易度曲線(baseScale/baseDefScale、既に検証済み)には影響を与えずに序盤だけ底上げできる
-  const earlyBonus = Math.max(0, EARLY_DANGER_BONUS_BASE * (1 - floor / EARLY_DANGER_FADE_FLOOR));
-  const earlyDefBonus = Math.max(0, EARLY_DANGER_DEF_BONUS_BASE * (1 - floor / EARLY_DANGER_FADE_FLOOR));
+  const earlyBonus = earlyTierBonus(floor, EARLY_DANGER_BONUS_BASE);
+  const earlyDefBonus = earlyTierBonus(floor, EARLY_DANGER_DEF_BONUS_BASE);
   const scale = baseScale + earlyBonus;
   const defScale = baseDefScale + earlyDefBonus;
   const hp = Math.round(pick.hp * scale);
@@ -738,8 +748,8 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "preciseShot") {
-    // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+30%を上乗せし、合計35%で急所を突く
-    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.3);
+    // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+45%を上乗せし、合計50%で急所を突く
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.45);
   }
   if (abilityType === "cannonShot") {
     actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる
@@ -879,7 +889,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
+    pickEnemyForFloor, pickEncounterForFloor, earlyTierBonus, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,

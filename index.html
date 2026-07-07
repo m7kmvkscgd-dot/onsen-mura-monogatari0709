@@ -303,7 +303,7 @@
       <h2 style="margin-top:1.2rem;">新しい冒険者を仲間にする</h2>
       <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
       <div class="class-grid" id="classGrid"></div>
-      <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(100G)</button>
+      <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(50G)</button>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -461,7 +461,7 @@ function defaultState() {
     halfDayStep: 0, // 昼夜が切り替わるたびに1つ進むカウンタ(瀕死キャラのロスト判定に使う)
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 3, smokeBomb: 0 },
+    inventory: { potion: 3, smokeBomb: 2 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -923,7 +923,7 @@ function randomFemaleName() {
   return RANDOM_FEMALE_NAMES[Math.floor(Math.random() * RANDOM_FEMALE_NAMES.length)];
 }
 
-const HIRE_COST = 100; // 新しい冒険者を仲間にする際の費用
+const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
