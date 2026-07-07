@@ -171,10 +171,15 @@
   .party-member img:not(.stress-overlay) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; position: relative; }
-  /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく */
-  .hpbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp-low); transition: width 0.8s ease-out; }
+  /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく。
+     アニメーション自体はCSS transitionではなくJS(element.animate())側で制御しているのでwidthのtransitionは指定しない */
+  .hpbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp-low); }
   .hpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp); transition: background-color 0.3s; }
   .hpbar-fill.low { background: var(--hp-critical); }
+  /* 回復時、緑は即座に新しい残量へ伸ばし、この淡いシアンのゲージは回復前の残量から緑の位置まで
+     少し遅れて追いつくように伸びる(赤のhpbar-fill-trailとは逆方向・別要素)。.hpbar-fillより後の
+     DOM順で描画するため上に重なり、追いつくまでの間だけ見えて、完了後は非表示にする */
+  .hpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #B8FFF5; }
   .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
@@ -1919,21 +1924,41 @@ function stressOverlaySrc(fatigue) {
 }
 
 // 被弾時、緑ゲージは即座に新しい残量まで落とし、赤ゲージ(トレイル)は前回表示していた残量から
-// 緑の位置までゆっくり追いついて消えていく。entity.__hpDisplayRatioに前回表示分を記憶しておく
+// 緑の位置までゆっくり追いついて消えていく。entity.__hpDisplayRatioに前回表示分を記憶しておく。
+// 回復時(前回より残量が増えた時)は、赤ゲージとは別に淡いシアンの回復用トレイルも重ねて出し、
+// 回復前の残量から緑の位置まで追いついたら非表示にする(ダメージ用の赤ゲージの挙動は変更しない)
 function hpBarHtml(entity) {
   const ratio = entity.maxHp > 0 ? Math.max(0, entity.hp / entity.maxHp) * 100 : 0;
   const prevRatio = entity.__hpDisplayRatio != null ? entity.__hpDisplayRatio : ratio;
   entity.__hpDisplayRatio = ratio;
   const lowClass = ratio < 30 ? " low" : "";
-  return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill${lowClass}" style="width:${ratio}%"></div></div>`;
+  const isHeal = ratio > prevRatio;
+  const healTrailHtml = isHeal
+    ? `<div class="hpbar-heal-trail" data-hp-heal-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div>`
+    : "";
+  return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill${lowClass}" style="width:${ratio}%"></div>${healTrailHtml}</div>`;
 }
-// 描画直後の赤ゲージを、記録しておいた目標値までアニメーションさせて追いつかせる
+// 描画直後の赤ゲージ/回復用シアンゲージを、記録しておいた目標値までアニメーションさせて追いつかせる。
+// CSS transitionを「別のタイミングでinline styleを書き換えて発火させる」方式は、環境によっては
+// (実測したところheadless Chromiumでも)トランジションが一切発火せず一瞬で目標値に飛んでしまう
+// ことがあったため、Web Animations API(element.animate())で確実にアニメーションさせる方式にした。
+// 回復用ゲージは追いついたら(アニメーション完了時)非表示にする
 function activateHpTrails(container) {
+  const HP_TRAIL_MS = 800;
   const trails = container.querySelectorAll("[data-hp-trail]");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      trails.forEach((el) => { el.style.width = `${el.dataset.target}%`; });
-    });
+  const healTrails = container.querySelectorAll("[data-hp-heal-trail]");
+  trails.forEach((el) => {
+    const from = Number(el.dataset.from);
+    const target = Number(el.dataset.target);
+    if (from === target) return;
+    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: HP_TRAIL_MS, easing: "ease-out", fill: "forwards" });
+    anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; };
+  });
+  healTrails.forEach((el) => {
+    const from = Number(el.dataset.from);
+    const target = Number(el.dataset.target);
+    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: HP_TRAIL_MS, easing: "ease-out", fill: "forwards" });
+    anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; el.style.display = "none"; };
   });
 }
 
