@@ -664,6 +664,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.carryingId === undefined) c.carryingId = null;
   if (c.carriedBy === undefined) c.carriedBy = null;
   if (c.poison == null) c.poison = 0;
+  if (c.burnTurns == null) c.burnTurns = 0;
   if (c.stunTurns == null) c.stunTurns = 0;
   if (c.silenceTurns == null) c.silenceTurns = 0;
   if (c.statusImmuneTurns == null) c.statusImmuneTurns = 0;
@@ -680,12 +681,11 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
     c.level = MAX_LEVEL;
     c.xp = 0;
     const cls = CLASSES[c.classId];
-    const growth = 1 + MAX_LEVEL * 0.1;
-    const defGrowth = 1 + MAX_LEVEL * 0.05;
+    const growth = 1 + MAX_LEVEL * 0.075;
     c.maxHp = Math.round(cls.hp * growth);
     c.hp = Math.min(c.hp, c.maxHp);
     c.atk = Math.round(cls.atk * growth);
-    c.def = Math.round(cls.def * defGrowth);
+    c.def = cls.def; // レベルによるdef成長は廃止(装備でのみ伸びる)
     c.spd = Math.round(cls.spd * (1 + MAX_LEVEL * 0.05));
     c.mag = Math.round(cls.mag * growth);
   }
@@ -2133,6 +2133,7 @@ function startBattle(enemies) {
   fieldParty.forEach((c) => {
     c.fleeState = null;
     c.poison = 0;
+    c.burnTurns = 0;
     c.stunTurns = 0;
     c.silenceTurns = 0;
     c.statusImmuneTurns = 0;

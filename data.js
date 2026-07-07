@@ -113,7 +113,7 @@ const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
   smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 20, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" },
 };
-const POTION_HEAL_RATIO = 0.35;
+const POTION_HEAL_RATIO = 0.38;
 
 // ============ スキルツリー(XCOM風。レベルアップ毎(Lv2〜10)に左右どちらか1つを選ぶ) ============
 // 数値はユーザー提供の原案(ChatGPT作成)をベースに、このゲームの既存の技(会心の一撃mult1.3など、
@@ -148,7 +148,7 @@ const SKILL_TREES = {
     },
     8: {
       left: { name: "乱れ斬り", desc: "敵単体へ3連続攻撃(合計210%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.1, hits: 3 } },
-      right: { name: "反撃", desc: "被弾時、20%の確率で反撃する", mp: 0, passive: { counterChance: 0.2 } },
+      right: { name: "反撃", desc: "被弾時、20%の確率で反撃する(通常の1.4倍ダメージ)", mp: 0, passive: { counterChance: 0.2, counterMult: 1.4 } },
     },
     9: {
       left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
@@ -165,19 +165,19 @@ const SKILL_TREES = {
       right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
     },
     3: {
-      left: { name: "連撃", desc: "会心率+12%、会心ダメージ+10%", mp: 0, passive: { critRateAdd: 0.12, critDmgAdd: 0.1 } },
+      left: { name: "俊足", desc: "素早さ+15%", mp: 0, passive: { spdMult: 1.15 } },
       right: { name: "反射神経", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
     },
     4: {
       left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
-      right: { name: "スタン手裏剣", desc: "敵単体へ100%ダメージ、50%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.5, turns: 1 } } },
+      right: { name: "スタン手裏剣", desc: "敵単体へ100%ダメージ、55%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.55, turns: 1 } } },
     },
     5: {
       left: { name: "暗殺術", desc: "HPが50%以下の敵へのダメージ+30%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.3 } } },
       right: { name: "忍足", desc: "回避率+8%", mp: 0, passive: { evasionAdd: 0.08 } },
     },
     6: {
-      left: { name: "双影", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      left: { name: "影分身", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
       right: { name: "分身", desc: "被弾時、15%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.15 } },
     },
     7: {
@@ -207,8 +207,8 @@ const SKILL_TREES = {
       right: { name: "挑発", desc: "3ターンの間、敵から必ず狙われるようになり、防御力+15%", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.15 }], turns: 3, tauntTurns: 3 } },
     },
     4: {
-      left: { name: "連突き", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2 } },
-      right: { name: "迎撃", desc: "被弾時、20%の確率で反撃する", mp: 0, passive: { counterChance: 0.2 } },
+      left: { name: "連突き", desc: "敵単体へ2連続攻撃(合計150%ダメージ)、3ターンの間防御力-15%", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2, inflict: { type: "defDown", chance: 0.4, value: 0.15, turns: 3 } } },
+      right: { name: "迎撃", desc: "被弾時、30%の確率で反撃する", mp: 0, passive: { counterChance: 0.3 } },
     },
     5: {
       left: { name: "鎧砕き", desc: "敵単体へ150%ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 1.5, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
@@ -219,7 +219,7 @@ const SKILL_TREES = {
       right: { name: "不屈", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
     },
     7: {
-      left: { name: "烈槍", desc: "会心率+15%、会心ダメージ+20%", mp: 0, passive: { critRateAdd: 0.15, critDmgAdd: 0.2 } },
+      left: { name: "警戒", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
       right: { name: "鋼の肉体", desc: "最大HP+20%", mp: 0, passive: { hpMult: 1.2 } },
     },
     8: {
@@ -254,7 +254,7 @@ const SKILL_TREES = {
     },
     6: {
       left: { name: "乱舞", desc: "敵全体へ2連続攻撃(合計130%ダメージ)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.3, hits: 2 } },
-      right: { name: "流水", desc: "被弾時、15%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.15 } },
+      right: { name: "流水", desc: "被弾時、13%の確率で完全に回避する", mp: 0, passive: { dodgeChance: 0.13 } },
     },
     7: {
       left: { name: "豪舞", desc: "攻撃力+15%", mp: 0, passive: { atkMult: 1.15 } },
@@ -265,8 +265,8 @@ const SKILL_TREES = {
       right: { name: "乱心", desc: "通常攻撃時、15%の確率で敵をスタンさせる", mp: 0, passive: { onHitInflict: { type: "stun", chance: 0.15, turns: 1 } } },
     },
     9: {
-      left: { name: "舞踏極意", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
-      right: { name: "静寂", desc: "状態異常にかかる確率が50%減少する", mp: 0, passive: { statusResistMult: 0.5 } },
+      left: { name: "百花繚乱", desc: "薙ぎ払いの威力+12%", mp: 0, passive: { atkMult: 1.12 } },
+      right: { name: "静寂", desc: "状態異常にかかる確率が35%減少する", mp: 0, passive: { statusResistMult: 0.35 } },
     },
     10: {
       left: { name: "千本桜", desc: "敵全体へ220%ダメージ", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2 } },
@@ -276,7 +276,7 @@ const SKILL_TREES = {
   hunter: {
     2: {
       left: { name: "狙撃", desc: "敵単体へ150%ダメージ", mp: 3, action: { kind: "damage", mult: 1.5 } },
-      right: { name: "毒矢", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
+      right: { name: "毒矢", desc: "敵単体へ110%ダメージ、確実に毒状態にする(蓄積5)", mp: 3, action: { kind: "damage", mult: 1.1, inflict: { type: "poison", chance: 1.0, value: 5 } } },
     },
     3: {
       left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
@@ -295,16 +295,16 @@ const SKILL_TREES = {
       right: { name: "捕縛", desc: "通常攻撃が命中した敵の素早さを20%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
     },
     7: {
-      left: { name: "連続射撃", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      left: { name: "連射の心得", desc: "命中率+12%", mp: 0, passive: { accuracyAdd: 0.12 } },
       right: { name: "狩猟本能", desc: "HPが50%以下の敵へのダメージ+25%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.25 } } },
     },
     8: {
       left: { name: "必中撃ち", desc: "敵単体へ210%ダメージ。この攻撃は必ず命中する", mp: 4, action: { kind: "damage", mult: 2.1, guaranteedHit: true } },
-      right: { name: "腐食毒", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.25, value: 0.15, turns: 3 } } },
+      right: { name: "腐食毒", desc: "通常攻撃が命中した敵の防御力を20%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.2, value: 0.2, turns: 3 } } },
     },
     9: {
       left: { name: "射手の極意", desc: "会心率+15%、会心ダメージ+25%", mp: 0, passive: { critRateAdd: 0.15, critDmgAdd: 0.25 } },
-      right: { name: "猛毒使い", desc: "通常攻撃時、30%の確率で敵に強い毒(蓄積4)を付与する", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.3, value: 4 } } },
+      right: { name: "百歩穿楊", desc: "攻撃力+10%", mp: 0, passive: { atkMult: 1.1 } },
     },
     10: {
       left: { name: "流星射ち", desc: "敵単体へ290%ダメージ", mp: 7, action: { kind: "damage", mult: 2.9 } },
@@ -313,7 +313,7 @@ const SKILL_TREES = {
   },
   gunner: {
     2: {
-      left: { name: "精密射撃", desc: "敵単体へ150%ダメージ", mp: 3, action: { kind: "damage", mult: 1.5 } },
+      left: { name: "精密射撃", desc: "敵単体へ190%ダメージ。次の自分のターンは装填で動けない", mp: 3, action: { kind: "damage", mult: 1.9, selfReload: true } },
       right: { name: "榴弾", desc: "敵全体へ85%ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85 } },
     },
     3: {
@@ -321,12 +321,12 @@ const SKILL_TREES = {
       right: { name: "爆薬調合", desc: "攻撃力+10%(範囲攻撃向け)", mp: 0, passive: { atkMult: 1.1 } },
     },
     4: {
-      left: { name: "貫通弾", desc: "敵単体へ170%ダメージ、防御力25%無視", mp: 4, action: { kind: "damage", mult: 1.7, defPierce: 0.25 } },
+      left: { name: "貫通弾", desc: "敵単体へ210%ダメージ、防御力25%無視。次の自分のターンは装填で動けない", mp: 4, action: { kind: "damage", mult: 2.1, defPierce: 0.25, selfReload: true } },
       right: { name: "炸裂弾", desc: "敵全体へ100%ダメージ、30%の確率で攻撃力-15%(3ターン)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.0, inflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
-      left: { name: "照準", desc: "会心率+18%", mp: 0, passive: { critRateAdd: 0.18 } },
-      right: { name: "焼夷弾", desc: "通常攻撃時、20%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.2, value: 3 } } },
+      left: { name: "照準", desc: "命中率+15%", mp: 0, passive: { accuracyAdd: 0.15 } },
+      right: { name: "焼夷弾", desc: "通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.2, turns: 3 } } },
     },
     6: {
       left: { name: "装填術", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
@@ -334,11 +334,11 @@ const SKILL_TREES = {
     },
     7: {
       left: { name: "急所射撃", desc: "会心ダメージ+35%", mp: 0, passive: { critDmgAdd: 0.35 } },
-      right: { name: "衝撃波", desc: "通常攻撃が命中した敵の素早さを15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "spdDown", chance: 0.2, value: 0.15, turns: 3 } } },
+      right: { name: "衝撃波", desc: "通常攻撃が命中した敵を15%の確率でスタンさせる(1ターン)", mp: 0, passive: { onHitInflict: { type: "stun", chance: 0.15, turns: 1 } } },
     },
     8: {
       left: { name: "徹甲弾", desc: "敵単体へ220%ダメージ、防御力35%無視", mp: 5, action: { kind: "damage", mult: 2.2, defPierce: 0.35 } },
-      right: { name: "一斉砲撃", desc: "敵全体へ150%ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.5 } },
+      right: { name: "一斉砲撃", desc: "敵全体へ190%ダメージ。次の自分のターンは装填で動けない", mp: 6, action: { kind: "damage", aoe: true, mult: 1.9, selfReload: true } },
     },
     9: {
       left: { name: "砲撃術皆伝", desc: "MP消費-20%", mp: 0, passive: { mpDiscountPct: 0.2 } },
@@ -346,7 +346,7 @@ const SKILL_TREES = {
     },
     10: {
       left: { name: "神威砲", desc: "敵単体へ340%ダメージ、防御力45%無視", mp: 7, action: { kind: "damage", mult: 3.4, defPierce: 0.45 } },
-      right: { name: "天地崩砲", desc: "敵全体へ220%ダメージ、40%の確率で毒(蓄積3)を付与", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2, inflict: { type: "poison", chance: 0.4, value: 3 } } },
+      right: { name: "天地崩砲", desc: "敵全体へ220%ダメージ、40%の確率で炎上(3ターン)を付与", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2, inflict: { type: "burn", chance: 0.4, turns: 3 } } },
     },
   },
   onmyoji: {
@@ -367,7 +367,7 @@ const SKILL_TREES = {
       right: { name: "封魔符", desc: "敵単体へ80%の魔法ダメージ、35%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "stun", chance: 0.35, turns: 1 } } },
     },
     6: {
-      left: { name: "陰陽融合", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      left: { name: "陰陽融合", desc: "命中率+12%", mp: 0, passive: { accuracyAdd: 0.12 } },
       right: { name: "式神召喚", desc: "術の威力+8%", mp: 0, passive: { atkMult: 1.08 } },
     },
     7: {
@@ -376,7 +376,7 @@ const SKILL_TREES = {
     },
     8: {
       left: { name: "陰陽極意", desc: "MP消費-25%", mp: 0, passive: { mpDiscountPct: 0.25 } },
-      right: { name: "呪詛", desc: "通常攻撃時、20%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.2, value: 3 } } },
+      right: { name: "呪詛", desc: "通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.2, turns: 3 } } },
     },
     9: {
       left: { name: "四神加護", desc: "会心ダメージ+30%", mp: 0, passive: { critDmgAdd: 0.3 } },
@@ -413,7 +413,7 @@ const SKILL_TREES = {
       right: { name: "聖域", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
     },
     8: {
-      left: { name: "生命の奇跡", desc: "技のMP消費-20%", mp: 0, passive: { mpDiscountPct: 0.2 } },
+      left: { name: "生命の奇跡", desc: "技のMP消費を15%の確率で無効化する(生命力循環と重複可)", mp: 0, passive: { mpRefundChance: 0.15 } },
       right: { name: "神威", desc: "4ターンの間、味方全体の攻撃力・防御力+15%", mp: 5, action: { kind: "buffParty", stats: [{ stat: "atk", mult: 1.15 }, { stat: "def", mult: 1.15 }], turns: 4 } },
     },
     9: {
@@ -438,38 +438,41 @@ const SUPPLY_CAP = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠
 function tier(name, statKey, bonus, price, level) {
   return { name, statKey, bonus, price, level };
 }
+// 甲冑ボーナス(def)は「防具なし→MAX装備で被ダメージ約30%減」を狙って再設計したもの
+// (旧来はレベル成長がdefを底上げしていたが、レベルによるdef成長を廃止したのに合わせて
+// 装備側の伸び幅を大幅に引き上げた。価格は据え置き)
 const EQUIPMENT = {
   samurai: {
     weapon: [tier("業物の刀", "atk", 2, 40, 1), tier("業物の太刀", "atk", 4, 90, 3), tier("妖刀", "atk", 5, 125, 5), tier("鬼哭の刀", "atk", 6, 160, 7), tier("伝説の名刀", "atk", 7, 200, 9)],
-    armor: [tier("当世具足", "def", 0.4, 30, 1), tier("強化当世具足", "def", 0.8, 20, 3), tier("上級当世具足", "def", 1.2, 30, 5), tier("鬼哭の甲冑", "def", 1.6, 45, 7), tier("伝説の甲冑", "def", 2, 55, 9)],
+    armor: [tier("当世具足", "def", 2, 30, 1), tier("強化当世具足", "def", 4, 20, 3), tier("上級当世具足", "def", 7, 30, 5), tier("鬼哭の甲冑", "def", 9, 45, 7), tier("伝説の甲冑", "def", 11, 55, 9)],
   },
   ninja: {
     weapon: [tier("業物の苦無", "atk", 2, 40, 1), tier("改良苦無", "atk", 4, 90, 3), tier("影の苦無", "atk", 5, 120, 5), tier("月影の苦無", "atk", 6, 160, 7), tier("暁の苦無", "atk", 7, 195, 9)],
-    armor: [tier("強化忍び装束", "def", 0.4, 30, 1), tier("精鋭忍び装束", "def", 0.8, 20, 3), tier("上級忍び装束", "def", 1.2, 35, 5), tier("月影の装束", "def", 1.6, 45, 7), tier("暁の装束", "def", 2, 60, 9)],
+    armor: [tier("強化忍び装束", "def", 2, 30, 1), tier("精鋭忍び装束", "def", 4, 20, 3), tier("上級忍び装束", "def", 6, 35, 5), tier("月影の装束", "def", 9, 45, 7), tier("暁の装束", "def", 11, 60, 9)],
   },
   spearman: {
     weapon: [tier("鍛えの槍", "atk", 2, 40, 1), tier("業物の槍", "atk", 3, 70, 3), tier("十文字槍", "atk", 4, 100, 5), tier("鬼殺しの槍", "atk", 5, 130, 7), tier("伝説の大槍", "atk", 6, 170, 9)],
-    armor: [tier("鉄の大盾", "def", 0.5, 30, 1), tier("業物の大盾", "def", 1, 20, 3), tier("強化大盾", "def", 1.5, 35, 5), tier("鬼殺しの大盾", "def", 2, 45, 7), tier("伝説の盾", "def", 2.5, 60, 9)],
+    armor: [tier("鉄の大盾", "def", 2, 30, 1), tier("業物の大盾", "def", 5, 20, 3), tier("強化大盾", "def", 7, 35, 5), tier("鬼殺しの大盾", "def", 10, 45, 7), tier("伝説の盾", "def", 12, 60, 9)],
   },
   naginata: {
     weapon: [tier("鍛えの薙刀", "atk", 2, 40, 1), tier("業物の薙刀", "atk", 3, 65, 3), tier("大薙刀", "atk", 4, 90, 5), tier("巴形の薙刀", "atk", 5, 120, 7), tier("伝説の薙刀", "atk", 6, 155, 9)],
-    armor: [tier("強化白鉢巻", "def", 0.4, 30, 1), tier("強化具足", "def", 0.8, 20, 3), tier("上級具足", "def", 1.2, 35, 5), tier("巴形の装束", "def", 1.6, 45, 7), tier("伝説の巫女装束", "def", 2, 65, 9)],
+    armor: [tier("強化白鉢巻", "def", 2, 30, 1), tier("強化具足", "def", 4, 20, 3), tier("上級具足", "def", 7, 35, 5), tier("巴形の装束", "def", 9, 45, 7), tier("伝説の巫女装束", "def", 11, 65, 9)],
   },
   hunter: {
     weapon: [tier("鍛えの弓", "atk", 2, 40, 1), tier("業物の弓", "atk", 3, 70, 3), tier("強弓", "atk", 4, 100, 5), tier("鬼哭の弓", "atk", 5, 130, 7), tier("伝説の弓", "atk", 6, 170, 9)],
-    armor: [tier("強化猟師装束", "def", 0.3, 30, 1), tier("精鋭猟師装束", "def", 0.6, 15, 3), tier("上級猟師装束", "def", 0.9, 25, 5), tier("鬼哭の猟師装束", "def", 1.2, 35, 7), tier("伝説の猟師装束", "def", 1.5, 45, 9)],
+    armor: [tier("強化猟師装束", "def", 2, 30, 1), tier("精鋭猟師装束", "def", 4, 15, 3), tier("上級猟師装束", "def", 6, 25, 5), tier("鬼哭の猟師装束", "def", 8, 35, 7), tier("伝説の猟師装束", "def", 10, 45, 9)],
   },
   gunner: {
     weapon: [tier("鍛えの火縄銃", "atk", 3, 55, 1), tier("業物の火縄銃", "atk", 4, 85, 3), tier("上級火縄銃", "atk", 6, 135, 5), tier("雷神の大筒", "atk", 7, 170, 7), tier("伝説の大筒", "atk", 8, 205, 9)],
-    armor: [tier("強化胴当て", "def", 0.3, 30, 1), tier("精鋭胴当て", "def", 0.6, 15, 3), tier("上級胴当て", "def", 0.9, 25, 5), tier("雷神の胴当て", "def", 1.2, 35, 7), tier("伝説の胴当て", "def", 1.5, 45, 9)],
+    armor: [tier("強化胴当て", "def", 2, 30, 1), tier("精鋭胴当て", "def", 4, 15, 3), tier("上級胴当て", "def", 6, 25, 5), tier("雷神の胴当て", "def", 8, 35, 7), tier("伝説の胴当て", "def", 10, 45, 9)],
   },
   onmyoji: {
     weapon: [tier("式神の御幣", "mag", 3, 60, 1), tier("精霊の御幣", "mag", 5, 110, 3), tier("上級御幣", "mag", 6, 140, 5), tier("秘伝の御幣", "mag", 8, 205, 7), tier("大陰陽の御幣", "mag", 9, 245, 9)],
-    armor: [tier("浄衣", "def", 0.2, 30, 1), tier("精霊の浄衣", "def", 0.4, 10, 3), tier("上級浄衣", "def", 0.6, 20, 5), tier("秘伝の浄衣", "def", 0.8, 25, 7), tier("大陰陽の浄衣", "def", 1, 35, 9)],
+    armor: [tier("浄衣", "def", 2, 30, 1), tier("精霊の浄衣", "def", 4, 10, 3), tier("上級浄衣", "def", 6, 20, 5), tier("秘伝の浄衣", "def", 8, 25, 7), tier("大陰陽の浄衣", "def", 9, 35, 9)],
   },
   priest: {
     weapon: [tier("聖なる錫杖", "mag", 2, 45, 1), tier("高僧の錫杖", "mag", 4, 100, 3), tier("大僧正の錫杖", "mag", 5, 135, 5), tier("悟りの錫杖", "mag", 6, 170, 7), tier("神託の錫杖", "mag", 7, 215, 9)],
-    armor: [tier("法衣", "def", 0.3, 30, 1), tier("高僧の法衣", "def", 0.6, 15, 3), tier("大僧正の法衣", "def", 0.9, 25, 5), tier("悟りの法衣", "def", 1.2, 35, 7), tier("神託の法衣", "def", 1.5, 45, 9)],
+    armor: [tier("法衣", "def", 2, 30, 1), tier("高僧の法衣", "def", 4, 15, 3), tier("大僧正の法衣", "def", 6, 25, 5), tier("悟りの法衣", "def", 8, 35, 7), tier("神託の法衣", "def", 10, 45, 9)],
   },
 };
 
@@ -490,27 +493,28 @@ const ONSEN_COST_PER_LEVEL = 8;
 // 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
 const LODGE_FATIGUE_RELIEF = 10;
 
-// 敵の階層スケーリング係数(階層1〜50付近まで滑らかに伸びる、既にLv10≒階層40前後で釣り合うよう調整済みのベース曲線)
-const FLOOR_SCALE_RATE = 0.025; // 敵の攻撃力/HPのスケール
-const FLOOR_DEF_SCALE_RATE = 0.0125;
+// 敵の強さ倍率。以前は「階層に応じて伸びる基礎カーブ」+「階層1〜15で増加後25にかけてフェードする
+// 序盤ボーナス」を別々に足し算していたため、階層15をピークに階層20〜25で敵が逆に弱くなる歪んだコブが
+// できてしまっていた。実際にはENEMIESの4段階ティア(序盤/中盤/後半/終盤、素の平均ステータスが
+// 各段階で約1.6〜2.1倍ずつ綺麗に伸びている)だけで深さによる強さの違いは十分に表現できており、
+// 「奥へ進むリスク」自体はストレス蓄積や瀕死救出システム側が担うべき、という方針のもと、
+// 階層に応じて変動する倍率を廃止し、常に一定の倍率だけを掛ける方式に単純化した。
+// 倍率の値は旧仕様の階層1時点(序盤の緊張感の基準)と一致させてあるので、階層1〜8のキツさは維持される
+const ENEMY_SCALE = 3.8; // 敵の攻撃力/HPに常に掛かる固定倍率(旧・階層1のbaseScale+序盤ボーナス相当)
+const ENEMY_DEF_SCALE = 1.42; // 敵の防御力に常に掛かる固定倍率(同上)
 const MAX_LEVEL = 10; // レベル上限。ダクソン/XCOM的に「少ないレベルで大きく強くなる」設計のため低めに圧縮
-// スキルツリー導入でプレイヤー側が全体的に強くなった分、敵の攻撃力/HPを底上げする倍率(防御力は対象外)
-const ENEMY_POWER_MULT = 1.5;
 // 敵の攻撃力だけをさらに1割弱体化する倍率(HP/防御力には影響しない)
 const ENEMY_ATK_MULT = 0.9;
 // 敵のHPだけをさらに1割弱体化する倍率(大群系isSwarmは元々ステータス控えめな雑魚のため対象外)
 const ENEMY_HP_MULT = 0.9;
 // 大群系(isSwarm)の敵だけ、上記ENEMY_ATK_MULTの弱体化を踏まえた現状値からさらに攻撃力を1割強化する倍率
 const ENEMY_SWARM_ATK_MULT = 1.1;
-// 序盤の危険ボーナス。「1階層目の敵が5階層目よりあからさまに弱い」のは退屈で、ソウルシリーズのように
-// 序盤から気を抜くと熟練キャラでも瀕死になる緊張感が欲しい、という指示に対応するための上乗せ分。
-// 階層1で最大(+2.3倍相当)、EARLY_DANGER_FADE_FLOORに向かって直線的に0まで薄れ、以降は上のベース曲線のみになる
-// (終盤の難易度曲線=既に検証済みのバランスには影響を与えない設計)
-const EARLY_DANGER_BONUS_BASE = 2.3;
-const EARLY_DANGER_FADE_FLOOR = 25;
-const EARLY_DANGER_DEF_BONUS_BASE = 0.42;
 // 大群系が絡んだ遭遇になる確率(1回の遭遇につき1回だけ判定する)。毎回出るとうざいので控えめにしてある
 const SWARM_ENCOUNTER_CHANCE = 0.15;
+
+// 炎上(毒とは別系統のDOT): 毒が固定ダメージ+蓄積減衰なのに対し、炎上は最大HPの割合ダメージ+ターン数固定(減衰なし)。
+// 低HPの相手には毒が、高HPのタンクには炎上がよく効く、という住み分けを狙っている(陰陽師/砲術士の専売)
+const BURN_DAMAGE_PCT = 0.07;
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -524,8 +528,8 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_POWER_MULT, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
-    FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, EARLY_DANGER_BONUS_BASE, EARLY_DANGER_FADE_FLOOR, EARLY_DANGER_DEF_BONUS_BASE, SWARM_ENCOUNTER_CHANCE,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
+    ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
 }

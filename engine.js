@@ -72,6 +72,7 @@ function createCharacter(name, classId, classUpgrades) {
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
     carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
+    burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
     stunTurns: 0, // スタン(行動不能)の残りターン数
     silenceTurns: 0, // 沈黙(技が使えず通常攻撃のみ)の残りターン数
     statusImmuneTurns: 0, // 状態異常を受け付けない残りターン数
@@ -93,18 +94,19 @@ function xpToNext(level) {
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
 // HPは全快させず、最大値が増えた分だけ現在値に上乗せする(戦闘中の連続レベルアップが実質全回復になっていたバグの修正)。
-// 成長率はダクソン/XCOM的に「Lv10でも2倍程度」に収まるよう抑えてある(旧0.12/0.06からさらに緩和)
+// 成長率はダクソン/XCOM的に「Lv10でも2倍未満」に収まるよう抑えてある(旧0.1=Lv10で2.0倍から、
+// 序盤の階層で装備済みの高レベルキャラが無双しすぎるという指摘を受けさらに緩和。Lv10で1.75倍)。
+// 防御力はレベルでは一切伸ばさず、常に職業の基礎値のまま固定する(装備(甲冑)だけが伸びしろになる)
 function levelUp(character, log) {
   if (character.level >= MAX_LEVEL) return;
   character.level++;
   const c = CLASSES[character.classId];
-  const growth = 1 + character.level * 0.1; // Lv10で2.0倍
-  const defGrowth = 1 + character.level * 0.05; // defは他ステータスよりゆるやかに伸ばす(敵の階層スケーリングと同じ考え方)。Lv10で1.5倍
+  const growth = 1 + character.level * 0.075; // Lv10で1.75倍
   const oldMaxHp = character.maxHp;
   character.maxHp = Math.round(c.hp * growth);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
   character.atk = Math.round(c.atk * growth);
-  character.def = Math.round(c.def * defGrowth);
+  character.def = c.def; // レベルによるdef成長は廃止(装備でのみ伸びる)
   character.spd = Math.round(c.spd * (1 + character.level * 0.05));
   character.mag = Math.round(c.mag * growth); // 魔法威力/治癒量は引き続き伸びる。MPの上限だけはレベルで伸ばさない(maxMp/mpは据え置き)
   log(`${character.label}はレベル${character.level}になった！`);
@@ -234,6 +236,20 @@ function tickPoison(entity, log) {
   entity.poison = Math.max(0, entity.poison - 1);
   return dmg;
 }
+// 炎上: 毒(固定ダメージ・蓄積減衰)とは違う性質のDOTとして、最大HPの割合ダメージ・ターン数固定(減衰なし)にしてある。
+// 低HPの相手には毒が、高HPのタンク相手には炎上がよく効く、という住み分けを狙った設計
+function applyBurn(entity, turns) {
+  if (entity.statusImmuneTurns > 0) return;
+  entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
+}
+function tickBurn(entity, log) {
+  if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
+  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT));
+  entity.hp = Math.max(0, entity.hp - dmg);
+  log(`${entity.label}は炎上で${dmg}ダメージ！`);
+  entity.burnTurns--;
+  return dmg;
+}
 function applyStun(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   entity.stunTurns = Math.max(entity.stunTurns || 0, turns);
@@ -242,9 +258,9 @@ function applySilence(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   entity.silenceTurns = Math.max(entity.silenceTurns || 0, turns);
 }
-// 自分のターンの一番最初に呼ぶ共通処理(毒のダメージ+継続回復+バフ/デバフの残りターン消化)。毒ダメージ量を返す
+// 自分のターンの一番最初に呼ぶ共通処理(毒/炎上のダメージ+継続回復+バフ/デバフの残りターン消化)。ダメージ量を返す
 function tickTurnStartEffects(entity, log) {
-  const dmg = tickPoison(entity, log);
+  const dmg = tickPoison(entity, log) + tickBurn(entity, log);
   // hpRegenPct: statMods便乗の継続回復タグ(mult欄に割合を入れて流用)。明鏡止水・仁王立ちなど
   if (entity.hp > 0 && entity.statMods) {
     entity.statMods.forEach((m) => {
@@ -445,7 +461,7 @@ function useTreeSkill(actor, target, skill, log) {
     targets.forEach((t) => {
       (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
       if (action.hpRegenPct) applyStatMod(t, "hpRegenPct", action.hpRegenPct, action.turns); // effectiveStatでは使わず、tick時に直接参照する目印として保持
-      if (action.cleanse) { t.poison = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      if (action.cleanse) { t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0; }
       if (action.statusImmuneTurns) t.statusImmuneTurns = Math.max(t.statusImmuneTurns || 0, action.statusImmuneTurns);
       if (action.tauntTurns) t.tauntTurns = Math.max(t.tauntTurns || 0, action.tauntTurns);
     });
@@ -460,12 +476,15 @@ function useTreeSkill(actor, target, skill, log) {
         return { target: t, revived: true, heal: 0 };
       }
       t.hp = Math.min(t.maxHp, t.hp + heal);
-      if (action.cleanse) { t.poison = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      if (action.cleanse) { t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0; }
       log(`${actor.label}は${t.label}を${heal}回復！`);
       return { target: t, heal };
     });
     return { healed: heals };
   }
+  // selfReload: 砲術士の一部の技(貫通弾・一斉砲撃など)は、命中/回避に関わらず撃てば次の自分のターンは
+  // 装填で動けなくなる(cannonShotと同じ仕様)。大威力の代わりに手数が落ちる、というトレードオフの表現
+  if (action.selfReload) actor.reloading = true;
   // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
   const targets = action.aoe ? target : [target];
   const results = targets.map((t) => {
@@ -486,6 +505,7 @@ function useTreeSkill(actor, target, skill, log) {
     const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance)) {
       if (action.inflict.type === "poison") applyPoison(t, action.inflict.value || 3);
+      if (action.inflict.type === "burn") applyBurn(t, action.inflict.turns || 3);
       if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
       if (action.inflict.type === "silence") applySilence(t, action.inflict.turns || 2);
       if (action.inflict.type === "atkDown") applyStatMod(t, "atk", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
@@ -497,19 +517,9 @@ function useTreeSkill(actor, target, skill, log) {
   return { dmgs: results };
 }
 
-// 序盤の階層帯ボーナス。0〜5階=基準、6〜10階=基準×90/80、11〜15階=基準×100/80という
-// 階段状(5階層区切り)のスケールにする。16階以降はEARLY_DANGER_FADE_FLOORに向かって
-// 11〜15階の値から直線的に0まで薄れ、終盤の難易度曲線(baseScale/baseDefScale、既に検証済み)には
-// 影響を与えない
-function earlyTierBonus(floor, base) {
-  if (floor <= 5) return base;
-  if (floor <= 10) return base * (90 / 80);
-  const tier2Value = base * (100 / 80);
-  if (floor <= 15) return tier2Value;
-  return Math.max(0, tier2Value * (1 - (floor - 15) / (EARLY_DANGER_FADE_FLOOR - 15)));
-}
-
-// 現在のフロアに応じて敵を1体抽選する(内部用)。フロアが深いほど際限なくステータスが強化される。
+// 現在のフロアに応じて敵を1体抽選する(内部用)。深さによる強さの違いはENEMIESの4段階ティア
+// (序盤/中盤/後半/終盤、ティアごとに素の平均ステータスが約1.6〜2.1倍ずつ伸びる設計)に任せており、
+// 階層に応じて変動する倍率は持たない(ENEMY_SCALE/ENEMY_DEF_SCALEは常に一定)。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
@@ -527,21 +537,15 @@ function pickEnemyForFloor(floor, mode) {
     for (let i = 0; i < weight; i++) weighted.push(e);
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
-  const baseScale = (1 + (floor - 1) * FLOOR_SCALE_RATE) * ENEMY_POWER_MULT;
-  const baseDefScale = 1 + (floor - 1) * FLOOR_DEF_SCALE_RATE;
-  const earlyBonus = earlyTierBonus(floor, EARLY_DANGER_BONUS_BASE);
-  const earlyDefBonus = earlyTierBonus(floor, EARLY_DANGER_DEF_BONUS_BASE);
-  const scale = baseScale + earlyBonus;
-  const defScale = baseDefScale + earlyDefBonus;
-  const hp = Math.round(pick.hp * scale * (pick.isSwarm ? 1 : ENEMY_HP_MULT));
+  const hp = Math.round(pick.hp * ENEMY_SCALE * (pick.isSwarm ? 1 : ENEMY_HP_MULT));
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,
     maxHp: hp,
-    atk: Math.round(pick.atk * scale * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
-    def: Math.round(pick.def * defScale),
+    atk: Math.round(pick.atk * ENEMY_SCALE * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
+    def: Math.round(pick.def * ENEMY_DEF_SCALE),
   };
 }
 
@@ -720,6 +724,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     actor.passives.onHitInflicts.forEach((oh) => {
       if (Math.random() < resistedChance(target, oh.chance)) {
         if (oh.type === "poison") applyPoison(target, oh.value || 3);
+        if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
         if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
         if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
@@ -902,12 +907,12 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, earlyTierBonus, goldReward, performAttack, useAbility, usePotion, enemyAttack,
+    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
-    applyStatMod, tickStatMods, applyPoison, tickPoison, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
+    applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
   };
