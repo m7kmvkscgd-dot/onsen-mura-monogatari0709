@@ -142,6 +142,10 @@
   .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
+  /* リザルト画面の経験値バー: 今回の冒険より前からの分(xpbar-fill)と、今回新たに得た分(xpbar-gain、明るい色で強調)の2色重ね */
+  .xpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.35rem; position: relative; }
+  .xpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a6f8f; }
+  .xpbar-gain { position: absolute; top: 0; height: 100%; background: #ffd76a; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 122px 0.6rem 0.6rem; }
   #dungeonLog, #battleLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
@@ -184,15 +188,6 @@
        ここでのtopは計算が走るまでの初期値 */
     position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 4;
-  }
-  .battle-flee-bar {
-    /* iOS Safariはツールバー分だけ画面最下部が実際には見えづらいため、bottom:0ではなく
-       画面下端から一定距離を空けた位置に固定する(スクロールしないと届かない問題への対応) */
-    position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
-    width: 100%; max-width: 480px; z-index: 6;
-    background: var(--panel);
-    padding: 0.7rem 1rem;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 158px; overflow: hidden; box-sizing: border-box; }
   .enemy-row.crowded { gap: 0.25rem; }
@@ -265,14 +260,16 @@
       </div>
       <div class="hero-title-row">
         <h1>湯乃里温泉</h1>
+        <span class="time-of-day-label" id="townDateLabel"></span>
         <span class="time-of-day-label" id="townTimeLabel"></span>
       </div>
     </div>
     <div class="body-pad">
       <div class="btn-col">
-        <button class="big" id="toTavernBtn">🏨 宿屋</button>
+        <button class="big" id="toTavernBtn">🏮旅の宿</button>
         <button class="big" id="toShopBtn">⚒️ 鍛冶屋</button>
         <button class="big" id="toOnsenBtn">♨️ 温泉</button>
+        <button class="big" id="toExtensionBtn">🪵増築</button>
         <button class="big primary" id="toDungeonBtn">⛰️出発</button>
       </div>
     </div>
@@ -340,7 +337,7 @@
       </div>
 
       <h2 style="margin-top:1rem;">パーティ編成</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大4人)。瀕死・ロストは選べません。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる/外す(最大<span id="partyCapLabel"></span>人)。瀕死・ロストは選べません。</p>
       <div id="partySelectList"></div>
       <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
@@ -406,6 +403,24 @@
     </div>
   </div>
 
+  <!-- 増築(家のレベルアップ = 出発パーティの保有上限アップ) -->
+  <div class="screen" id="screen-extension">
+    <div class="hero" id="extensionHero">
+      <h1>増築</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+      <p class="gold" id="extensionGold">0G</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、出発パーティに入れられる仲間の人数上限が増えます(最大10人)。</p>
+      <div class="card">
+        <div class="roster-name">家レベル <span id="extensionLevel"></span></div>
+        <div class="roster-sub" style="margin-top:0.2rem;">パーティ上限: <span id="extensionCapacity"></span>人</div>
+      </div>
+      <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
+      <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
   <!-- 深淵の森 -->
   <div class="screen" id="screen-dungeon">
     <div class="dungeon-bg" id="dungeonBg"></div>
@@ -435,8 +450,18 @@
     <div class="battle-actions">
       <div class="action-grid" id="actionGrid"></div>
     </div>
-    <div class="battle-flee-bar">
-      <button class="big danger" id="fleeBtn">逃げる</button>
+  </div>
+
+  <!-- 冒険の結果(帰還時のリザルト画面) -->
+  <div class="screen" id="screen-result">
+    <div class="hero" id="resultHero">
+      <h1>冒険の記録</h1>
+    </div>
+    <div class="body-pad">
+      <h2 id="resultGold" style="color:var(--accent);"></h2>
+      <h2 style="margin-top:1rem;">獲得経験値</h2>
+      <div id="resultXpList"></div>
+      <button class="big primary" id="resultContinueBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
   </div>
 
@@ -467,7 +492,25 @@ function defaultState() {
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
+    dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
+    houseLevel: 1, // 増築で上がる家のレベル(1=パーティ上限2人、以降1レベルごとに+1人、最大10人)
   };
+}
+
+const HOUSE_MAX_LEVEL = 9; // レベル9でパーティ上限10人に達し、それ以上は増築できない
+function houseUpgradeCost(level) {
+  return level === 1 ? 50 : 150; // レベル1→2だけ50G、以降は一律150G
+}
+function partyCapacity() {
+  return Math.min(10, (state.houseLevel || 1) + 1);
+}
+
+// dayCount(1始まり=4月1日)を「M月D日」の表示文字列に変換する。うるう年を考慮する必要がないよう
+// 固定の平年(2001年)を基準日として使い、実カレンダーの月の日数だけを利用する
+function formatGameDate(dayCount) {
+  const d = new Date(2001, 3, 1);
+  d.setDate(d.getDate() + ((dayCount || 1) - 1));
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 let state = loadState();
@@ -544,6 +587,8 @@ function loadState() {
       loaded.timeOfDay = loaded.timeOfDay || "day";
       loaded.halfDayStep = loaded.halfDayStep || 0;
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
+      if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
+      if (loaded.houseLevel == null) loaded.houseLevel = 3; // 増築実装前の旧セーブは、元々の上限だった4人を維持できるようレベル3(上限4人)扱いにする
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
@@ -583,10 +628,13 @@ function phaseForClockMinutes(minutes) {
 function syncClockToPhase() {
   state.clockMinutes = PHASE_START_MINUTES[state.timeOfDay];
 }
-// 探索で1階進む/戻るごとに時計を進め、時間帯の境界を跨いだらtimeOfDayを切り替える
+// 探索で1階進む/戻るごとに時計を進め、時間帯の境界を跨いだらtimeOfDayを切り替える。
+// 深夜0時を跨いだ場合はdayCount(日にち)も1進める
 function advanceExplorationClock(minutes) {
   if (state.clockMinutes == null) syncClockToPhase();
-  state.clockMinutes = (state.clockMinutes + minutes) % 1440;
+  const newTotal = state.clockMinutes + minutes;
+  if (newTotal >= 1440) state.dayCount = (state.dayCount || 1) + 1;
+  state.clockMinutes = newTotal % 1440;
   state.timeOfDay = phaseForClockMinutes(state.clockMinutes);
 }
 const BG_SETS = {
@@ -609,6 +657,8 @@ function updateSceneBackgrounds() {
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("partySelectHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
+  document.getElementById("resultHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
+  document.getElementById("extensionHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
 }
 // halfDayStepの加算・瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
@@ -625,9 +675,10 @@ function advanceCalendar(applyPhase) {
 function toggleTimeOfDay() {
   advanceCalendar(() => {});
 }
-// 宿屋で宿泊した時: 今が何時であっても必ず翌日の朝になる
+// 宿屋で宿泊した時: 今が何時であっても必ず翌日の朝になる(dayCountも必ず1進める)
 function advanceToNextMorning() {
   advanceCalendar(() => {
+    state.dayCount = (state.dayCount || 1) + 1;
     state.timeOfDay = "dawn";
     syncClockToPhase();
   });
@@ -728,9 +779,49 @@ function renderTown() {
   pruneActiveParty();
   saveState();
   document.getElementById("townGold").textContent = state.gold + "G";
+  document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = TIME_PHASE_LABEL[state.timeOfDay || "day"];
   playBgm("town");
   updateSceneBackgrounds();
+}
+
+// 冒険から町に帰る直前に挟むリザルト画面: 今回の冒険で稼いだゴールドと、キャラごとに得た経験値を
+// バー(今回の冒険より前からの分+今回新たに得た分を強調表示)で見せる。「町に戻る」を押すまでは
+// 実際の町への遷移(onContinue)は行わない
+function renderResultScreen(onContinue) {
+  document.getElementById("resultGold").textContent = `収穫: +${advGoldEarned}G`;
+  const list = document.getElementById("resultXpList");
+  list.innerHTML = "";
+  const participants = state.roster.filter((c) => (advXpGained[c.id] || 0) > 0);
+  if (participants.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">今回は経験値を得られなかった。</p>';
+  }
+  participants.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const gained = advXpGained[c.id] || 0;
+    const isMax = c.level >= MAX_LEVEL;
+    const need = isMax ? 0 : xpToNext(c.level);
+    const currentRatio = isMax ? 100 : Math.max(0, Math.min(100, (c.xp / need) * 100));
+    const gainRatio = isMax ? 0 : Math.max(0, Math.min(currentRatio, (Math.min(gained, c.xp) / need) * 100));
+    const baseRatio = Math.max(0, currentRatio - gainRatio);
+    const row = document.createElement("div");
+    row.className = "card";
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <strong>${c.name}(${c2.ja})</strong>
+        <span style="font-size:0.8rem;color:var(--accent);">+${gained} XP</span>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem;">Lv.${c.level}${isMax ? "(MAX)" : ""}</div>
+      <div class="xpbar-track">
+        <div class="xpbar-fill" style="width:${baseRatio}%"></div>
+        <div class="xpbar-gain" style="left:${baseRatio}%;width:${gainRatio}%"></div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  updateSceneBackgrounds();
+  document.getElementById("resultContinueBtn").onclick = () => { onContinue(); };
+  showScreen("screen-result");
 }
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
@@ -781,7 +872,7 @@ function renderRosterList() {
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
     const dismissSelected = dismissSelectedIds.includes(c.id);
     const tagText = c.status === "active" ? (fullHealth ? "満タン" : "待機中") : c.status === "critical" ? "瀕死" : "ロスト";
-    const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
+    const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const row = document.createElement("div");
@@ -892,7 +983,7 @@ function renderStatusScreen(charId) {
   const c2 = CLASSES[c.classId];
   document.getElementById("statusName").textContent = c.name;
   document.getElementById("statusImg").src = c2.image;
-  const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
+  const overlaySrc = stressOverlaySrc(c.fatigue);
   const overlayEl = document.getElementById("statusStressOverlay");
   overlayEl.style.display = overlaySrc ? "block" : "none";
   if (overlaySrc) overlayEl.src = overlaySrc;
@@ -905,7 +996,7 @@ function renderStatusScreen(charId) {
   document.getElementById("statDef").textContent = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
   document.getElementById("statSpd").textContent = effectiveStat(c, "spd");
   document.getElementById("statMag").textContent = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
-  document.getElementById("statStatus").textContent = statusLabel(c) + (c.status === "active" ? ` / ストレス${c.fatigue || 0}` : "");
+  document.getElementById("statStatus").textContent = statusLabel(c) + ` / ストレス${c.fatigue || 0}`;
 }
 document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
 
@@ -950,6 +1041,7 @@ function renderPartySelect() {
   updateSceneBackgrounds();
   pruneActiveParty();
   renderSupplies();
+  document.getElementById("partyCapLabel").textContent = partyCapacity();
   const list = document.getElementById("partySelectList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -963,7 +1055,7 @@ function renderPartySelect() {
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const tagText = c.status === "active" ? "待機中" : c.status === "critical" ? "瀕死" : "ロスト";
-    const overlaySrc = c.status === "active" ? stressOverlaySrc(c.fatigue) : null;
+    const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
       <div class="stress-wrap">
         <img src="${c2.image}">
@@ -979,7 +1071,7 @@ function renderPartySelect() {
       if (inParty) {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
       } else {
-        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
+        if (state.activePartyIds.length >= partyCapacity()) { alert(`パーティは最大${partyCapacity()}人までです`); return; }
         state.activePartyIds.push(c.id);
       }
       saveState();
@@ -1080,6 +1172,38 @@ function renderOnsen() {
 document.getElementById("onsenBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 
+// ============ 増築 ============
+function renderExtension() {
+  updateSceneBackgrounds();
+  document.getElementById("extensionGold").textContent = state.gold + "G";
+  const level = state.houseLevel || 1;
+  document.getElementById("extensionLevel").textContent = level;
+  document.getElementById("extensionCapacity").textContent = partyCapacity();
+  const btn = document.getElementById("extensionUpgradeBtn");
+  if (level >= HOUSE_MAX_LEVEL) {
+    btn.textContent = "これ以上は増築できません(上限)";
+    btn.disabled = true;
+  } else {
+    const cost = houseUpgradeCost(level);
+    btn.textContent = `増築する(${cost}G) パーティ上限 ${partyCapacity()}→${partyCapacity() + 1}人`;
+    btn.disabled = state.gold < cost;
+  }
+}
+document.getElementById("extensionUpgradeBtn").onclick = () => {
+  const level = state.houseLevel || 1;
+  if (level >= HOUSE_MAX_LEVEL) return;
+  const cost = houseUpgradeCost(level);
+  if (state.gold < cost) return;
+  state.gold -= cost;
+  state.houseLevel = level + 1;
+  saveState();
+  playSfx("select");
+  renderExtension();
+};
+document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
+document.getElementById("extensionBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
+document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
+
 // ============ 道具屋 ============
 function renderShop() {
   updateSceneBackgrounds();
@@ -1153,13 +1277,15 @@ document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); showSc
 // ============ ダンジョン ============
 let currentFloor = 0;
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
+let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
+let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 
 function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
 
-// 瀕死/ロストになったキャラがパーティ編成の4枠に居座り続けないよう、
+// 瀕死/ロストになったキャラがパーティ編成の枠に居座り続けないよう、
 // activePartyIdsから現在status==="active"でなくなった者を取り除く
 function pruneActiveParty() {
   const seen = new Set();
@@ -1168,7 +1294,7 @@ function pruneActiveParty() {
     if (!c || !isAvailable(c) || seen.has(id)) return false;
     seen.add(id);
     return true;
-  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
+  }).slice(0, partyCapacity()); // 何らかの原因で上限を超えて紛れ込んだ場合の保険(重複除去+上限強制)
 }
 
 function enterDungeon() {
@@ -1177,6 +1303,8 @@ function enterDungeon() {
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
+  advGoldEarned = 0;
+  advXpGained = {};
   dungeonLogLines = [];
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
   showScreen("screen-dungeon");
@@ -1318,8 +1446,11 @@ function finishRetreat() {
   deliverCarriedAllies();
   dlog("里に戻った。");
   toggleTimeOfDay();
-  renderTown();
-  showScreen("screen-town");
+  bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
+  renderResultScreen(() => {
+    renderTown();
+    showScreen("screen-town");
+  });
 }
 
 document.getElementById("advanceBtn").onclick = () => {
@@ -1482,6 +1613,7 @@ function rollEncounter() {
 let battle = null;
 let pendingEnemyPick = null; // 対象選択待ちの間、敵カード画像を直接タップしても選べるようにする際のコールバック
 let pendingAllyPick = null; // 同様に、味方対象の選択待ちの間、味方の画像を直接タップしても選べるようにする際のコールバック
+let battleSubMenuActive = false; // 対象選択/道具メニューなどのサブ画面を表示中かどうか(trueの間はコマンド外タップで一段戻れる)
 
 // targetId(キャラのid、または敵のinstanceId)から実体(キャラ/敵オブジェクト)を探す。
 // 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
@@ -1761,11 +1893,24 @@ function handleFieldDeaths() {
   saveState();
 }
 
+// 対象選択/道具メニューなどのサブ画面(戻るボタンは置かず、コマンド外をタップすると呼ばれる)を
+// キャンセルして行動選択に戻る
+function cancelBattleSubMenu() {
+  if (!battle || battle.actingId == null) return;
+  const actor = fieldParty.find((c) => c.id === battle.actingId);
+  if (!actor) return;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  renderBattleScreen();
+  renderActionButtons(actor);
+}
+
 // 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする。
 // 対象選択中は上の敵カード画像を直接タップしても選べる(pendingEnemyPick、renderBattleScreen側で処理)
 function pickSingleEnemyTarget(onPicked) {
   const targets = aliveEnemies();
   if (targets.length === 1) { onPicked(targets[0]); return; }
+  battleSubMenuActive = true;
   pendingEnemyPick = (t) => { onPicked(t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
@@ -1780,11 +1925,7 @@ function pickSingleEnemyTarget(onPicked) {
   const backBtn = document.createElement("button");
   backBtn.className = "big danger";
   backBtn.textContent = "戻る";
-  backBtn.onclick = () => {
-    pendingEnemyPick = null;
-    renderBattleScreen();
-    renderActionButtons(fieldParty.find((c) => c.id === battle.actingId));
-  };
+  backBtn.onclick = () => cancelBattleSubMenu();
   grid.appendChild(backBtn);
 }
 
@@ -1855,6 +1996,7 @@ function runTreeSkill(actor, skill) {
 
 // スキルツリーの単体回復スキル用、味方の対象選択(既存のrenderAllyTargetsは回復薬/治癒の術専用のため別関数にしてある)
 function renderTreeSkillAllyPicker(actor, skill) {
+  battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   aliveField().forEach((target) => {
@@ -1878,6 +2020,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
 }
 
 function renderCarryTargets(actor, targets) {
+  battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   targets.forEach((target) => {
@@ -1903,11 +2046,12 @@ function renderCarryTargets(actor, targets) {
 }
 
 function renderActionButtons(actor) {
+  battleSubMenuActive = false;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   const c = CLASSES[actor.classId];
 
-  // 仲間を担いでいる間は攻撃/技が使えず、逃げる(常設ボタン)かアイテムしか行動できない
+  // 仲間を担いでいる間は攻撃/技が使えず、逃げるかアイテムしか行動できない
   if (!actor.carryingId) {
     const atkBtn = document.createElement("button");
     atkBtn.className = "big primary";
@@ -1997,10 +2141,17 @@ function renderActionButtons(actor) {
   itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
   itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
+
+  const fleeBtn = document.createElement("button");
+  fleeBtn.className = "big danger";
+  fleeBtn.textContent = "逃げる";
+  fleeBtn.onclick = () => fleeAction(actor);
+  grid.appendChild(fleeBtn);
 }
 
 // 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
 function renderItemMenu(actor) {
+  battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   const potionBtn = document.createElement("button");
@@ -2038,14 +2189,10 @@ function useSmokeBomb(actor) {
   checkStrandedOnCurrentFloor();
 }
 
-// 逃げるは画面下部に常設(行動選択の一覧には含めない)。自分のターンで行動待ちの時だけ有効。
-// 押した本人だけが「逃走準備」に入り、その場では離脱せず今のターンを消費する。次に自分の番が来た時に
+// 逃げる: 押した本人だけが「逃走準備」に入り、その場では離脱せず今のターンを消費する。次に自分の番が来た時に
 // 実際に逃げ出す(processNext参照)。パーティ全員が入れ替わりで一人ずつ逃げる必要があり、
 // 誰か一人が逃げただけで全員が離脱するわけではない
-document.getElementById("fleeBtn").onclick = () => {
-  if (!battle || battle.actingId == null) return;
-  const actor = fieldParty.find((c) => c.id === battle.actingId);
-  if (!actor || actor.fleeState) return;
+function fleeAction(actor) {
   actor.fleeState = "preparing";
   blog(`${actor.label}は逃走準備を始めた！`);
   document.getElementById("actionGrid").innerHTML = "";
@@ -2053,7 +2200,21 @@ document.getElementById("fleeBtn").onclick = () => {
   pendingAllyPick = null;
   renderBattleScreen();
   setTimeout(afterPlayerAction, 500);
-};
+}
+
+// 対象選択/道具メニューなどのサブ画面を表示中(battleSubMenuActive)は、コマンド一覧(#actionGrid)や
+// 選択可能な敵/味方カード以外の場所をタップすると行動選択に戻れる(専用の「戻る」ボタンは置かない)。
+// "click"だとボタン押下のハンドラがactionGridの中身を書き換えてから(戻る対象が2択以上ある時など)
+// イベントがbubbleするため、押した要素が既にDOMから外れてclosest("#actionGrid")が見つけられず
+// 誤って直後にキャンセルされてしまう(敵が2体以上いる時に攻撃コマンドが一切効かなくなるバグの原因)。
+// DOM書き換え前に判定できる"pointerdown"で見るようにして回避する
+document.getElementById("screen-battle").addEventListener("pointerdown", (e) => {
+  if (!battleSubMenuActive) return;
+  if (e.target.closest("#actionGrid")) return;
+  if (e.target.closest(".enemy-card.targetable")) return;
+  if (e.target.closest(".party-member.targetable")) return;
+  cancelBattleSubMenu();
+});
 
 function resolveAllyTarget(actor, kind, target) {
   if (kind === "heal") {
@@ -2073,6 +2234,7 @@ function resolveAllyTarget(actor, kind, target) {
 
 // 味方対象の選択中は、上の味方イラストを直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)
 function renderAllyTargets(actor, kind) {
+  battleSubMenuActive = true;
   const targets = aliveField();
   pendingAllyPick = (t) => { pendingAllyPick = null; resolveAllyTarget(actor, kind, t); };
   renderBattleScreen();
@@ -2088,11 +2250,7 @@ function renderAllyTargets(actor, kind) {
   const backBtn = document.createElement("button");
   backBtn.className = "big danger";
   backBtn.textContent = "戻る";
-  backBtn.onclick = () => {
-    pendingAllyPick = null;
-    renderBattleScreen();
-    renderActionButtons(actor);
-  };
+  backBtn.onclick = () => cancelBattleSubMenu();
   grid.appendChild(backBtn);
 }
 
@@ -2112,10 +2270,12 @@ function victory() {
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
       grantXp(c, e.xp, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + e.xp;
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
   });
   state.gold += totalGold;
+  advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
   saveState();
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
@@ -2203,8 +2363,11 @@ function defeat() {
   document.getElementById("battleBackTownBtn").onclick = () => {
     battle = null;
     toggleTimeOfDay();
-    renderTown();
-    showScreen("screen-town");
+    bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
+    renderResultScreen(() => {
+      renderTown();
+      showScreen("screen-town");
+    });
   };
 }
 
