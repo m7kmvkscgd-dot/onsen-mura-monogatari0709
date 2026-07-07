@@ -829,7 +829,7 @@ const BGM_TRACKS = {
 };
 const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
-const BGM_BASE_VOLUME = 0.4;
+const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 bgmAudio.volume = BGM_BASE_VOLUME;
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
@@ -845,6 +845,8 @@ function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   bgmAudio.play().catch(() => {});
+  // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
+  if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
 }
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 
@@ -885,8 +887,30 @@ lodgingBgmAudio.addEventListener("ended", () => {
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 });
 
-const sfxCache = {};
-const SFX_EXT = { attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3" };
+// ============ 効果音(SE): Web Audio API低遅延方式 ============
+// new Audio()+cloneNode().play()は端末によって呼び出しから実際の再生開始までに遅延が乗ることがあるため、
+// 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
+// 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
+// lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3" };
+// ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
+// 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
+// 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
+let sfxAudioCtx = null;
+try {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) sfxAudioCtx = new AudioContextClass();
+} catch (e) {}
+const sfxBuffers = {}; // name -> デコード済みAudioBuffer
+function loadSfxBuffer(name) {
+  if (!sfxAudioCtx) return;
+  fetch(`assets/sfx/${name}.${SFX_EXT[name] || "ogg"}`)
+    .then((res) => res.arrayBuffer())
+    .then((data) => sfxAudioCtx.decodeAudioData(data))
+    .then((buffer) => { sfxBuffers[name] = buffer; })
+    .catch(() => {}); // 個別のSEが読み込み・デコードに失敗しても他のSEの読み込みは止めない
+}
+Object.keys(SFX_EXT).forEach(loadSfxBuffer);
 // 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
 function hitTakenSfxFor(dmg, maxHp) {
   const ratio = maxHp > 0 ? dmg / maxHp : 0;
@@ -897,10 +921,29 @@ function hitTakenSfxFor(dmg, maxHp) {
 }
 function playSfx(name) {
   if (muted) return;
-  if (!sfxCache[name]) sfxCache[name] = new Audio(`assets/sfx/${name}.${SFX_EXT[name] || "ogg"}`);
-  const node = sfxCache[name].cloneNode(true);
-  node.play().catch(() => {});
+  const buffer = sfxBuffers[name];
+  if (!buffer || !sfxAudioCtx) return; // デコードがまだ終わっていない場合は諦める(旧実装の.catch(()=>{})と同じく無音で失敗させる)
+  const start = () => {
+    const source = sfxAudioCtx.createBufferSource(); // 使い回さず毎回新規生成(同時多重再生に対応)
+    source.buffer = buffer;
+    source.connect(sfxAudioCtx.destination);
+    source.start(0);
+  };
+  // iOS Safariはバックグラウンド化などでAudioContextを勝手にsuspendすることがあり、
+  // 一度そうなると以降ずっとSEが無音になっていた(ユーザー報告のバグ)。再生のたびに
+  // suspended状態をチェックしてresume()してから鳴らすことで自己回復させる
+  if (sfxAudioCtx.state === "suspended") {
+    sfxAudioCtx.resume().then(start).catch(() => {});
+  } else {
+    start();
+  }
 }
+// ページがバックグラウンドから復帰した瞬間にもAudioContextの復旧を試みておく(念のための保険)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
+    sfxAudioCtx.resume().catch(() => {});
+  }
+});
 // 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
 const CLASS_ATTACK_SFX = { hunter: "attack_hunter", samurai: "attack_samurai", priest: "attack_caster", onmyoji: "attack_caster", gunner: "attack_gunner", spearman: "attack_spearman", naginata: "attack_naginata", ninja: "attack_ninja" };
 function attackSfxFor(classId) {
@@ -1177,12 +1220,28 @@ function playLodgingTransition(onDone) {
   if (lodgingTransitionActive) return;
   lodgingTransitionActive = true;
   playLodgingBgm();
+  // セーフティネット: アニメーションのコールバック(element.animateのonfinish)がバックグラウンド化などの
+  // 理由で発火しなかった場合、lodgingTransitionActiveがtrueのまま固まり続け、以降ずっと宿泊が
+  // 無反応になってしまう(ユーザー報告のバグ)。想定最大所要時間より十分長い上限で強制的に完了させ、
+  // 自然完了・タイムアウトのどちらが先でも一度しか後処理が走らないようにする
+  let lodgingFinished = false;
+  function finishLodging() {
+    if (lodgingFinished) return;
+    lodgingFinished = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    lodgingTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finishLodging, 30000);
   const overlay = document.getElementById("lodgingTransition");
   const fromEl = document.getElementById("lodgingTransitionFrom");
   const toEl = document.getElementById("lodgingTransitionTo");
   const blackEl = document.getElementById("lodgingTransitionBlack");
   const caption = document.getElementById("lodgingTransitionCaption");
   const CROSSFADE_MS = 1500; // ユーザー指示で従来の2倍
+  const INITIAL_HOLD_MS = 2500; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間
+  const PHASE_HOLD_MS = 1500; // 各時間帯の絵にフェードし終わった後、次にめくるまでの静止表示の追加時間
 
   fromEl.style.opacity = "1";
   fromEl.style.backgroundImage = `url('${BG_SETS.tavern[state.timeOfDay] || BG_SETS.tavern.night}')`;
@@ -1199,7 +1258,9 @@ function playLodgingTransition(onDone) {
 
   function nextPhase(i) {
     if (i < queue.length) {
-      crossfadeBg(fromEl, toEl, BG_SETS.tavern[queue[i]], CROSSFADE_MS, () => nextPhase(i + 1));
+      crossfadeBg(fromEl, toEl, BG_SETS.tavern[queue[i]], CROSSFADE_MS, () => {
+        setTimeout(() => nextPhase(i + 1), PHASE_HOLD_MS);
+      });
       return;
     }
     finale();
@@ -1213,16 +1274,12 @@ function playLodgingTransition(onDone) {
       caption.style.animation = "lodgingCaptionFade 4500ms ease forwards";
       setTimeout(() => {
         // 暗転明け→朝
-        fadeOpacity(blackEl, 1, 0, 3300, () => {
-          overlay.style.display = "none";
-          lodgingTransitionActive = false;
-          onDone();
-        });
+        fadeOpacity(blackEl, 1, 0, 3300, finishLodging);
       }, 1650);
     });
   }
 
-  nextPhase(0);
+  setTimeout(() => nextPhase(0), INITIAL_HOLD_MS);
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
