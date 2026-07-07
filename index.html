@@ -182,10 +182,26 @@
   .xpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.35rem; position: relative; }
   .xpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a6f8f; }
   .xpbar-gain { position: absolute; top: 0; height: 100%; background: #ffd76a; }
+  .levelup-badge {
+    margin-top: 0.4rem; padding: 0.3rem 0.6rem; border-radius: 8px;
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.82rem; font-weight: 700; text-align: center; letter-spacing: 0.03em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes levelupPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,106,0); }
+    50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(255,215,106,0.6); }
+  }
+  .levelup-badge-small {
+    display: inline-block; margin-top: 0.2rem; padding: 0.12rem 0.5rem; border-radius: 999px;
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 122px 0.6rem 0.6rem; }
-  #dungeonLog, #battleLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
-  #dungeonLog, #battleLog { height: 70px; }
+  #dungeonLog, #battleLog, #campLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
+  #dungeonLog, #battleLog, #campLog { height: 70px; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
   .dungeon-bg {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
@@ -322,6 +338,13 @@
     padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
   }
   .bottom-actions button { flex: 1 1 auto; min-width: 90px; }
+  .camp-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(.bottom-actions/.battle-actionsと同じ仕組み) */
+    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
+    padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
+  }
+  .camp-actions button { flex: 1 1 auto; min-width: 90px; }
 </style>
 </head>
 <body>
@@ -358,10 +381,12 @@
     </div>
     <div class="body-pad">
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
-      <p class="gold" id="tavernGold">0G</p>
+      <p class="gold" id="tavernGold" style="color:#ffd76a;">0G</p>
 
       <h2>仲間(HP/MPを全回復+ストレス少し回復するには宿泊)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊できる仲間には「宿泊する」ボタンが表示されます。まとめて選んで下の「宿泊する」を押すと1日/夜が進みます。パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">🏮HP/MPを全回復します(一人/10G)</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊したい仲間を選んで下の「宿泊する」を押して下さい。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
       <div id="rosterList"></div>
       <div id="lodgeActionBar" style="display:flex;gap:0.6rem;">
         <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;flex:1;">宿泊する</button>
@@ -409,6 +434,16 @@
             <div class="desc">使うとその戦闘からパーティ全員で逃げ出せる</div>
           </div>
           <button class="big" id="buySmokeBombBtn">購入</button>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.8rem 0 0.5rem;">野営具は回復薬/煙玉とは別枠で、最大<span id="campingKitCapLabel"></span>個まで持てます。</p>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>野営具</strong> <span id="campingKitOwned">0</span>個</div>
+            <div class="desc">簡易宿泊キット。夜を越すことができる</div>
+          </div>
+          <button class="big" id="buyCampingKitBtn">購入</button>
         </div>
       </div>
 
@@ -492,9 +527,9 @@
     <div class="body-pad">
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="extensionGold">0G</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">家を増築すると、仲間として置いておける人数上限が増えます(最大10人)。出発パーティ(戦闘に連れて行く人数)は常に最大4人までです。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">待機できる仲間の人数上限が増えます。同時に出発できるのは最大4人です。</p>
       <div class="card">
-        <div class="roster-name">🏠レベル <span id="extensionLevel"></span></div>
+        <div class="roster-name">🏠家レベル <span id="extensionLevel"></span></div>
         <div class="roster-sub" style="margin-top:0.2rem;">仲間上限: <span id="extensionCapacity"></span>人</div>
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
@@ -525,12 +560,26 @@
         <button class="big danger" id="retreatBtn">里に戻る</button>
         <button class="big" id="dungeonPotionBtn">回復薬</button>
         <button class="big" id="dungeonHealBtn" style="display:none;">治癒の術</button>
+        <button class="big" id="dungeonCampBtn">野営</button>
         <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
       </div>
     </div>
     <div class="treasure-popup" id="treasurePopup" style="display:none;">
       <img id="treasurePopupImg" src="" alt="">
     </div>
+  </div>
+
+  <!-- 野営 -->
+  <div class="screen" id="screen-camp">
+    <div class="dungeon-bg" id="campBg"></div>
+    <div class="party-bar" id="campPartyBar"></div>
+    <div class="dungeon-content">
+      <div class="dungeon-top">
+        <div class="floor-badge">野営中</div>
+        <div id="campLog"></div>
+      </div>
+    </div>
+    <div class="camp-actions" id="campActions"></div>
   </div>
 
   <!-- 戦闘 -->
@@ -585,10 +634,19 @@
     <div class="lodging-transition-caption" id="lodgingTransitionCaption">一晩がすぎた…</div>
   </div>
 
+  <!-- 野営開始時/翌朝の演出。lodging-transitionと同じCSS(クロスフェード+暗転)を使い回す -->
+  <div id="campTransition" class="lodging-transition" style="display:none;">
+    <div class="lodging-transition-bg from" id="campTransitionFrom"></div>
+    <div class="lodging-transition-bg to" id="campTransitionTo"></div>
+    <div class="lodging-transition-black" id="campTransitionBlack"></div>
+    <div class="lodging-transition-caption" id="campTransitionCaption"></div>
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>
 <audio id="lodgingBgmAudio" src="assets/bgm/lodging_bgm.mp3" preload="none"></audio>
+<audio id="campBgmAudio" src="assets/bgm/camp_bgm.mp3" loop preload="none"></audio>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>
@@ -598,11 +656,11 @@ const SAVE_KEY = "dungeon1_save";
 
 function defaultState() {
   return {
-    gold: 200,
+    gold: 230,
     halfDayStep: 0, // 昼夜が切り替わるたびに1つ進むカウンタ(瀕死キャラのロスト判定に使う)
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2 },
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -665,6 +723,7 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.carriedBy === undefined) c.carriedBy = null;
   if (c.poison == null) c.poison = 0;
   if (c.burnTurns == null) c.burnTurns = 0;
+  if (c.campWeaponCareBattles == null) c.campWeaponCareBattles = 0;
   if (c.stunTurns == null) c.stunTurns = 0;
   if (c.silenceTurns == null) c.silenceTurns = 0;
   if (c.statusImmuneTurns == null) c.statusImmuneTurns = 0;
@@ -715,6 +774,7 @@ function loadState() {
         // 支援物資(回復薬+煙玉)の合計がSUPPLY_CAPを超えないよう、旧セーブや不整合分を補正する
         loaded.inventory.potion = Math.min(loaded.inventory.potion || 0, SUPPLY_CAP);
         loaded.inventory.smokeBomb = Math.min(loaded.inventory.smokeBomb || 0, Math.max(0, SUPPLY_CAP - loaded.inventory.potion));
+        loaded.inventory.campingKit = Math.min(loaded.inventory.campingKit || 0, CAMPING_KIT_CAP);
       }
       (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades, loaded.halfDayStep));
       return loaded;
@@ -829,10 +889,13 @@ const BGM_TRACKS = {
 };
 const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
+const campBgmAudio = document.getElementById("campBgmAudio");
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
+const CAMP_BGM_VOLUME = 0.5;
 bgmAudio.volume = BGM_BASE_VOLUME;
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
+campBgmAudio.volume = CAMP_BGM_VOLUME;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
@@ -887,12 +950,50 @@ lodgingBgmAudio.addEventListener("ended", () => {
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 });
 
+// 野営時: 冒険中BGMをフェードで止め、代わりに野営専用の曲をループ再生する。就寝時にstopCampBgm()で
+// 逆方向のフェードを行い、冒険中BGMを(頭出しではなく)続きから再開する
+const CAMP_BGM_FADE_MS = 1200;
+function playCampBgm() {
+  const startVol = bgmAudio.volume;
+  const startTime = performance.now();
+  function fadeStep() {
+    const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
+    bgmAudio.volume = startVol * (1 - t);
+    if (t < 1) {
+      requestAnimationFrame(fadeStep);
+    } else {
+      bgmAudio.pause();
+      bgmAudio.volume = BGM_BASE_VOLUME;
+      campBgmAudio.currentTime = 0;
+      if (audioUnlocked) campBgmAudio.play().catch(() => {});
+    }
+  }
+  fadeStep();
+}
+function stopCampBgm(onDone) {
+  const startVol = campBgmAudio.volume;
+  const startTime = performance.now();
+  function fadeStep() {
+    const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
+    campBgmAudio.volume = startVol * (1 - t);
+    if (t < 1) {
+      requestAnimationFrame(fadeStep);
+    } else {
+      campBgmAudio.pause();
+      campBgmAudio.volume = CAMP_BGM_VOLUME;
+      if (audioUnlocked) bgmAudio.play().catch(() => {}); // 続きから再開(頭出ししない)
+      if (onDone) onDone();
+    }
+  }
+  fadeStep();
+}
+
 // ============ 効果音(SE): Web Audio API低遅延方式 ============
 // new Audio()+cloneNode().play()は端末によって呼び出しから実際の再生開始までに遅延が乗ることがあるため、
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1028,6 +1129,8 @@ function renderResultScreen(onContinue) {
     const currentRatio = isMax ? 100 : Math.max(0, Math.min(100, (c.xp / need) * 100));
     const gainRatio = isMax ? 0 : Math.max(0, Math.min(currentRatio, (Math.min(gained, c.xp) / need) * 100));
     const baseRatio = Math.max(0, currentRatio - gainRatio);
+    const levelBefore = advLevelBefore[c.id] || c.level;
+    const leveledUp = c.level > levelBefore;
     const row = document.createElement("div");
     row.className = "card";
     row.innerHTML = `
@@ -1036,6 +1139,7 @@ function renderResultScreen(onContinue) {
         <span style="font-size:0.8rem;color:var(--accent);">+${gained} XP</span>
       </div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem;">Lv.${c.level}${isMax ? "(MAX)" : ""}</div>
+      ${leveledUp ? `<div class="levelup-badge">⭐レベルアップ！ Lv.${levelBefore}→${c.level}</div>` : ""}
       <div class="xpbar-track">
         <div class="xpbar-fill" style="width:${baseRatio}%"></div>
         <div class="xpbar-gain" style="left:${baseRatio}%;width:${gainRatio}%"></div>
@@ -1099,7 +1203,9 @@ function renderRosterList() {
     const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-    const hasPendingSkill = state.pendingSkillChoices.some((e) => e.characterId === c.id);
+    const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
+    const hasPendingSkill = pendingLevels.length > 0;
+    const levelUpFrom = hasPendingSkill ? Math.min(...pendingLevels) - 1 : null;
     const row = document.createElement("div");
     row.className = "roster-row" + (dismissMode ? (dismissSelected ? " dismiss-selected" : "") : (lodgeSelected ? " selected" : ""));
     row.innerHTML = `
@@ -1110,6 +1216,7 @@ function renderRosterList() {
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
         <div class="roster-sub">${statusLabel(c)}</div>
+        ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！ Lv.${levelUpFrom}→${c.level}</div>` : ""}
         ${c.status === "active" ? `
           <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
           ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
@@ -1276,6 +1383,96 @@ function playLodgingTransition(onDone) {
   setTimeout(afterHold, INITIAL_HOLD_MS);
 }
 
+// 野営開始時の演出: 現在の背景(1.5秒静止)→夜の森へクロスフェード(既に夜ならスキップ)→
+// 夜の森を1.5秒静止→ゆっくり暗転→野営地の絵にフェードイン。BGMのフェードアウトと同時に開始する
+let campTransitionActive = false;
+function playCampTransition(onDone) {
+  if (campTransitionActive) return;
+  campTransitionActive = true;
+  playCampBgm();
+  let campTransFinished = false;
+  function finishCampTransition() {
+    if (campTransFinished) return;
+    campTransFinished = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    campTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finishCampTransition, 30000);
+  const overlay = document.getElementById("campTransition");
+  const fromEl = document.getElementById("campTransitionFrom");
+  const toEl = document.getElementById("campTransitionTo");
+  const blackEl = document.getElementById("campTransitionBlack");
+  const caption = document.getElementById("campTransitionCaption");
+  const HOLD_MS = 1500;
+  const NIGHT_CROSSFADE_MS = 1500;
+
+  fromEl.style.opacity = "1";
+  fromEl.style.backgroundImage = `url('${BG_SETS.dungeon[state.timeOfDay] || BG_SETS.dungeon.night}')`;
+  toEl.style.opacity = "0";
+  blackEl.style.opacity = "0";
+  caption.textContent = "";
+  overlay.style.display = "block";
+  void overlay.offsetWidth;
+
+  function afterInitialHold() {
+    if (state.timeOfDay === "night") {
+      afterNightHold();
+    } else {
+      crossfadeBg(fromEl, toEl, BG_SETS.dungeon.night, NIGHT_CROSSFADE_MS, () => setTimeout(afterNightHold, HOLD_MS));
+    }
+  }
+  function afterNightHold() {
+    // 夜の森→暗転→野営地
+    fadeOpacity(blackEl, 0, 1, 2000, () => {
+      fromEl.style.backgroundImage = `url('assets/bg/camp_night.png')`;
+      setTimeout(() => {
+        fadeOpacity(blackEl, 1, 0, 1500, finishCampTransition);
+      }, 300);
+    });
+  }
+
+  setTimeout(afterInitialHold, HOLD_MS);
+}
+
+// 就寝時の演出: ゆっくり暗転(2.5秒)→翌朝(森の朝背景)にフェードイン
+let campSleepTransitionActive = false;
+function playCampSleepTransition(onDone) {
+  if (campSleepTransitionActive) return;
+  campSleepTransitionActive = true;
+  let sleepFinished = false;
+  function finishSleepTransition() {
+    if (sleepFinished) return;
+    sleepFinished = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    campSleepTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finishSleepTransition, 30000);
+  const overlay = document.getElementById("campTransition");
+  const fromEl = document.getElementById("campTransitionFrom");
+  const toEl = document.getElementById("campTransitionTo");
+  const blackEl = document.getElementById("campTransitionBlack");
+  const caption = document.getElementById("campTransitionCaption");
+
+  fromEl.style.opacity = "1";
+  fromEl.style.backgroundImage = `url('assets/bg/camp_night.png')`;
+  toEl.style.opacity = "0";
+  blackEl.style.opacity = "0";
+  caption.textContent = "";
+  overlay.style.display = "block";
+  void overlay.offsetWidth;
+
+  fadeOpacity(blackEl, 0, 1, 2500, () => {
+    fromEl.style.backgroundImage = `url('${BG_SETS.dungeon.dawn}')`;
+    setTimeout(() => {
+      fadeOpacity(blackEl, 1, 0, 1500, finishSleepTransition);
+    }, 300);
+  });
+}
+
 document.getElementById("lodgeConfirmBtn").onclick = () => {
   const targets = state.roster.filter((c) => lodgingSelectedIds.includes(c.id));
   if (targets.length === 0) return;
@@ -1439,6 +1636,10 @@ function renderSupplies() {
   document.getElementById("buyPotionSupplyBtn").disabled = total >= SUPPLY_CAP || state.gold < ITEMS.potion.price;
   document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
   document.getElementById("buySmokeBombBtn").disabled = total >= SUPPLY_CAP || state.gold < ITEMS.smokeBomb.price;
+  document.getElementById("campingKitCapLabel").textContent = CAMPING_KIT_CAP;
+  document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
+  document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
+  document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
@@ -1456,6 +1657,15 @@ document.getElementById("buySmokeBombBtn").onclick = () => {
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
   state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderSupplies();
+};
+document.getElementById("buyCampingKitBtn").onclick = () => {
+  if ((state.inventory.campingKit || 0) >= CAMPING_KIT_CAP) { alert(`野営具は最大${CAMPING_KIT_CAP}個までしか持てません`); return; }
+  if (state.gold < ITEMS.campingKit.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.campingKit.price;
+  state.inventory.campingKit = (state.inventory.campingKit || 0) + 1;
   saveState();
   playSfx("coin");
   renderSupplies();
@@ -1651,6 +1861,7 @@ let currentFloor = 0;
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
+let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId -> level)。リザルト画面でレベルアップを分かりやすく表示するための比較用
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 
 function getRosterChar(id) {
@@ -1677,6 +1888,8 @@ function enterDungeon() {
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
   advGoldEarned = 0;
   advXpGained = {};
+  advLevelBefore = {};
+  fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
   bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
   showScreen("screen-dungeon");
@@ -1778,6 +1991,8 @@ function renderDungeon() {
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
+  document.getElementById("dungeonCampBtn").textContent = `野営(${state.inventory.campingKit || 0})`;
+  document.getElementById("dungeonCampBtn").disabled = (state.inventory.campingKit || 0) <= 0;
   // 治癒の術: 僧侶がパーティにいる時だけボタンを表示し、MPが足りない時は無効化する
   const dungeonPriests = fieldParty.filter((c) => c.status === "active" && c.classId === "priest");
   const healCost = abilityMpCost("heal");
@@ -1797,7 +2012,7 @@ function renderDungeon() {
 // 選択肢は#criticalAlert(画面上部)ではなく味方バーの下の.bottom-actionsに出す。上部に出すと
 // 選択肢が増えた時に味方イラストへ重なってタップを奪ってしまう(実際に発生したバグ)ため、
 // 戦闘画面の対象選択(味方バーの下に出る)と同じ位置関係に揃えてある
-const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn"];
+const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonCampBtn"];
 function closeDungeonTargetPicker() {
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "none";
@@ -1868,6 +2083,134 @@ document.getElementById("retreatBtn").onclick = () => {
   renderDungeon();
 };
 
+// ============ 野営 ============
+// 野営具を使うと開始する休息イベント。仲間が1人ずつ「回復薬を調合/慰める/武器の手入れ」から1つ選び、
+// 全員が選び終えると就寝できる。就寝すると翌朝(5:30)になり、HP/MP/ストレスが回復する
+function clog(msg) {
+  const el = document.getElementById("campLog");
+  const p = document.createElement("p");
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+let campActionQueue = [];
+let campPendingComfortActor = null;
+document.getElementById("dungeonCampBtn").onclick = () => {
+  if ((state.inventory.campingKit || 0) <= 0) return;
+  state.inventory.campingKit--;
+  saveState();
+  playCampTransition(() => {
+    startCampPhase();
+  });
+};
+function startCampPhase() {
+  showScreen("screen-camp");
+  document.getElementById("campBg").style.backgroundImage = "url('assets/bg/camp_night.png')";
+  document.getElementById("campLog").innerHTML = "";
+  campActionQueue = fieldParty.filter((c) => c.status === "active");
+  campPendingComfortActor = null;
+  clog("野営の準備を整えた。焚き火を囲みながら、夜の行動を選ぼう。");
+  renderCampScreen();
+}
+function renderCampScreen() {
+  renderPartyBar("campPartyBar", fieldParty);
+  const actions = document.getElementById("campActions");
+  actions.innerHTML = "";
+
+  if (campPendingComfortActor) {
+    const actor = campPendingComfortActor;
+    const targets = fieldParty.filter((c) => c.status === "active");
+    const p = document.createElement("p");
+    p.style.cssText = "width:100%;margin:0;font-size:0.82rem;";
+    p.innerHTML = `<strong>${actor.name}が誰を慰めますか？</strong>`;
+    actions.appendChild(p);
+    targets.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      btn.textContent = `${t.name}(ストレス${t.fatigue || 0})`;
+      btn.onclick = () => {
+        t.fatigue = Math.max(0, (t.fatigue || 0) - CAMP_COMFORT_STRESS_RELIEF);
+        clog(`${actor.name}は${t.name}を慰めた。`);
+        playSfx("heal");
+        campPendingComfortActor = null;
+        campActionQueue.shift();
+        saveState();
+        renderCampScreen();
+      };
+      actions.appendChild(btn);
+    });
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "big danger";
+    cancelBtn.textContent = "やめる";
+    cancelBtn.onclick = () => { campPendingComfortActor = null; renderCampScreen(); };
+    actions.appendChild(cancelBtn);
+    positionActionsBelowPartyBar("campPartyBar", ".camp-actions");
+    return;
+  }
+
+  if (campActionQueue.length === 0) {
+    const sleepBtn = document.createElement("button");
+    sleepBtn.className = "big primary";
+    sleepBtn.textContent = "就寝";
+    sleepBtn.onclick = () => finishCamping();
+    actions.appendChild(sleepBtn);
+    positionActionsBelowPartyBar("campPartyBar", ".camp-actions");
+    return;
+  }
+
+  const actor = campActionQueue[0];
+  const p = document.createElement("p");
+  p.style.cssText = "width:100%;margin:0;font-size:0.82rem;";
+  p.innerHTML = `<strong>${actor.name}の夜の行動を選択してください</strong>`;
+  actions.appendChild(p);
+
+  const brewBtn = document.createElement("button");
+  brewBtn.className = "big";
+  brewBtn.textContent = "回復薬を調合";
+  brewBtn.onclick = () => {
+    state.inventory.potion = Math.min(SUPPLY_CAP, (state.inventory.potion || 0) + 1);
+    clog(`${actor.name}は回復薬を調合した。`);
+    playSfx("coin");
+    campActionQueue.shift();
+    saveState();
+    renderCampScreen();
+  };
+  actions.appendChild(brewBtn);
+
+  const comfortBtn = document.createElement("button");
+  comfortBtn.className = "big";
+  comfortBtn.textContent = "慰める";
+  comfortBtn.onclick = () => { campPendingComfortActor = actor; renderCampScreen(); };
+  actions.appendChild(comfortBtn);
+
+  const careBtn = document.createElement("button");
+  careBtn.className = "big";
+  careBtn.textContent = "武器の手入れ";
+  careBtn.onclick = () => {
+    actor.campWeaponCareBattles = CAMP_WEAPON_CARE_BATTLES;
+    clog(`${actor.name}は武器の手入れをした。(攻撃力+10%、${CAMP_WEAPON_CARE_BATTLES}戦闘の間)`);
+    playSfx("guard");
+    campActionQueue.shift();
+    saveState();
+    renderCampScreen();
+  };
+  actions.appendChild(careBtn);
+
+  positionActionsBelowPartyBar("campPartyBar", ".camp-actions");
+}
+function finishCamping() {
+  stopCampBgm();
+  playCampSleepTransition(() => {
+    fieldParty.forEach((c) => { if (c.status === "active") useCampRest(c); });
+    advanceToNextMorning();
+    state.clockMinutes = 5 * 60 + 30; // 翌朝5:30
+    saveState();
+    showScreen("screen-dungeon");
+    renderDungeon();
+    dlog("野営を終え、5:30に目を覚ました。");
+  });
+}
+
 function finishRetreat() {
   retreating = false;
   deliverCarriedAllies();
@@ -1879,6 +2222,12 @@ function finishRetreat() {
   });
 }
 
+// 探索中、1階層進む/戻るごとに生存中の仲間のHPを少しだけ回復させる(歩きながらの自然回復)
+function healPartyOnFloorMove() {
+  fieldParty.forEach((c) => {
+    if (c.status === "active" && c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 1);
+  });
+}
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
@@ -1886,6 +2235,7 @@ document.getElementById("advanceBtn").onclick = () => {
   }
   if (retreating) {
     currentFloor--;
+    healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
     if (currentFloor <= 0) {
       saveState();
@@ -1895,6 +2245,7 @@ document.getElementById("advanceBtn").onclick = () => {
   } else {
     advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
     currentFloor++;
+    healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
   }
   saveState();
@@ -2118,10 +2469,11 @@ function renderVfxFor(targetId) {
 function shakeClassFor(entity) {
   return entity.__shakeUntil && entity.__shakeUntil > Date.now() ? " hit-shake" : "";
 }
-// 毒/スタン/沈黙の状態異常アイコンを名前の横に表示する
+// 毒/炎上/スタン/沈黙の状態異常アイコンを名前の横に表示する
 function statusIconsFor(entity) {
   let s = "";
-  if (entity.poison > 0) s += ` ☠${entity.poison}`;
+  if (entity.poison > 0) s += ` 🦠${entity.poison}`;
+  if (entity.burnTurns > 0) s += ` 🔥${entity.burnTurns}`;
   if (entity.stunTurns > 0) s += " 💫";
   if (entity.silenceTurns > 0) s += " 🔇";
   return s;
@@ -2658,6 +3010,7 @@ function renderSmokeBombConfirm(actor) {
 }
 // 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
 function useSmokeBomb(actor) {
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   state.inventory.smokeBomb--;
   saveState();
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
@@ -2752,6 +3105,7 @@ function afterPlayerAction() {
 
 function victory() {
   playSfx("victory");
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   battle.enemies.forEach((e) => {
@@ -2822,6 +3176,7 @@ function openSkillChoiceFor(characterId) {
 // 無ければオーバーレイを閉じて名簿を再描画する(「🎓スキル選択」バッジが消える)
 function resolveSkillChoice(character, level, side, skill) {
   applySkillChoice(character, { ...skill, side }, level);
+  playSfx("skill_confirm");
   const idx = state.pendingSkillChoices.findIndex((e) => e.characterId === character.id && e.level === level);
   if (idx !== -1) state.pendingSkillChoices.splice(idx, 1);
   saveState();
@@ -2864,6 +3219,7 @@ function renderSkillTreeContent(character, pendingLevel) {
     `;
   }).join("");
   content.innerHTML = `
+    <button class="big" id="skillTreeBackBtn" style="margin-bottom:0.8rem;">戻る</button>
     <div class="skill-tree-header">
       <div class="skill-tree-charname">${character.name}</div>
       <div class="skill-tree-classname">${c2.ja}の系譜</div>
@@ -2871,6 +3227,10 @@ function renderSkillTreeContent(character, pendingLevel) {
     </div>
     <div class="skill-tree-rows">${rowsHtml}</div>
   `;
+  document.getElementById("skillTreeBackBtn").onclick = () => {
+    document.getElementById("skillChoiceOverlay").style.display = "none";
+    renderRosterList();
+  };
   // スキル名をタップすると、そのスキルの真下にだけ説明(+選択待ちの行なら決定ボタン)を開く。
   // 別のスキルをタップすると前に開いていたものは閉じる(アコーディオン式、同時に1つだけ開く)
   content.querySelectorAll(".skill-tree-opt").forEach((btn) => {
@@ -2926,6 +3286,7 @@ function checkStrandedOnCurrentFloor() {
 }
 
 function defeat() {
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {

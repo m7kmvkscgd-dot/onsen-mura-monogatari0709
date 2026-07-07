@@ -78,6 +78,7 @@ function createCharacter(name, classId, classUpgrades) {
     statusImmuneTurns: 0, // 状態異常を受け付けない残りターン数
     tauntTurns: 0, // 挑発中の残りターン数(かばう同様、敵から必ず狙われる)
     statMods: [], // [{stat, mult, turns}] 一時的なステータス倍率(バフ/デバフ)。effectiveStatで乗算される
+    campWeaponCareBattles: 0, // 野営「武器の手入れ」の攻撃力バフ残り戦闘回数。startBattle()ではリセットせず、戦闘終了時に1減る
     skills: {}, // { level: "left"|"right" } スキルツリーで選んだ側の記録
     unlockedSkills: [], // 選んだ能動スキル(action持ち)のリスト。戦闘中の行動選択に追加される
     passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
@@ -204,7 +205,18 @@ function effectiveStat(entity, key) {
       result = Math.max(1, Math.round(result * totalMult));
     });
   }
+  // 野営「武器の手入れ」の攻撃力バフ(戦闘回数でカウントするため、ターン基準のstatModsとは別枠)
+  if (key === "atk" && entity.campWeaponCareBattles > 0) {
+    result = Math.max(1, Math.round(result * CAMP_WEAPON_CARE_ATK_MULT));
+  }
   return result;
+}
+
+// 野営: HP/MPを割合回復し、ストレスを固定量回復する(宿泊とは異なり全回復ではない)
+function useCampRest(character) {
+  character.hp = Math.min(character.maxHp, character.hp + Math.round(character.maxHp * CAMP_HP_RELIEF));
+  character.mp = Math.min(character.maxMp, character.mp + Math.round(character.maxMp * CAMP_MP_RELIEF));
+  character.fatigue = Math.max(0, (character.fatigue || 0) - CAMP_STRESS_RELIEF);
 }
 
 // 一時的なステータス修正(バフ/デバフ)を付与する。同じstatへの既存の修正は上書き(重ね掛けで際限なく増えないように)
@@ -911,7 +923,7 @@ if (typeof module !== "undefined") {
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, useOnsen, useLodging, isAvailable, evasionChance, accuracyOf, rollHit,
+    onsenCost, useOnsen, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,

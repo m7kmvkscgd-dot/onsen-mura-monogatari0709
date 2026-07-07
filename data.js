@@ -58,7 +58,7 @@ const ENEMIES = {
   hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12 },
   bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12 },
   onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12 },
-  kamaitachi: { id: "kamaitachi", ja: "鎌鼬", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 7, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 12 },
+  kamaitachi: { id: "kamaitachi", ja: "鎌鼬", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 6, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 12 },
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
   ochimusha: { id: "ochimusha", ja: "落武者", image: "assets/enemies/ochimusha.png", hp: 34, atk: 10, def: 6, spd: 8, goldMin: 18, goldMax: 29, xp: 24, minFloor: 9, maxFloor: 29 },
@@ -111,9 +111,21 @@ const ENEMIES = {
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
-  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 20, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" },
+  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" },
+  campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる" },
 };
 const POTION_HEAL_RATIO = 0.38;
+// 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
+const CAMPING_KIT_CAP = 1;
+// 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復
+const CAMP_HP_RELIEF = 0.5;
+const CAMP_MP_RELIEF = 0.4;
+const CAMP_STRESS_RELIEF = 20;
+// 野営中に選べる3行動のうち「慰める」のストレス軽減量
+const CAMP_COMFORT_STRESS_RELIEF = 10;
+// 野営中「武器の手入れ」を選んだキャラの攻撃力バフ(戦闘回数でカウントし、ターンではなく戦闘をまたいで持続する)
+const CAMP_WEAPON_CARE_ATK_MULT = 1.1;
+const CAMP_WEAPON_CARE_BATTLES = 3;
 
 // ============ スキルツリー(XCOM風。レベルアップ毎(Lv2〜10)に左右どちらか1つを選ぶ) ============
 // 数値はユーザー提供の原案(ChatGPT作成)をベースに、このゲームの既存の技(会心の一撃mult1.3など、
@@ -531,5 +543,7 @@ if (typeof module !== "undefined") {
     FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
+    CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
+    CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES,
   };
 }
