@@ -53,6 +53,8 @@
     background: transparent; border-radius: 0; margin-top: 0; top: auto;
     padding: 0 1rem; flex: none;
   }
+  /* 宿屋画面は名簿+仲間作成で縦に長く、下部のボタンが画面最下部に来て押しにくいため、下側に大きめの余白を追加 */
+  #screen-tavern .body-pad { padding-bottom: calc(1rem + 220px); }
   /* 町画面のボタンは2x2で、それぞれ文字数に合わせた大きさの箱にする(全幅ボタンにしない) */
   #screen-town .btn-col {
     display: grid; grid-template-columns: repeat(2, auto); gap: 0.7rem;
@@ -285,12 +287,12 @@
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="tavernGold">0G</p>
 
-      <h2>名簿(HP/MPを全回復するには宿泊)</h2>
+      <h2>名簿(HP/MPを全回復+ストレス少し回復するには宿泊)</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊できる仲間には「宿泊する」ボタンが表示されます。まとめて選んで下の「宿泊する」を押すと1日/夜が進みます。パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
-      <button class="big" id="dismissModeBtn" style="margin-bottom:0.5rem;">解雇</button>
       <div id="rosterList"></div>
-      <div id="lodgeActionBar">
-        <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;">宿泊する</button>
+      <div id="lodgeActionBar" style="display:flex;gap:0.6rem;">
+        <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;flex:1;">宿泊する</button>
+        <button class="big" id="dismissModeBtn" style="margin-top:0.5rem;flex:1;">解雇</button>
       </div>
       <div id="dismissActionBar" style="display:none;margin-top:0.5rem;">
         <p id="dismissConfirmText" style="font-size:0.82rem;margin:0 0 0.5rem;"></p>
@@ -871,7 +873,7 @@ document.getElementById("lodgeConfirmBtn").onclick = () => {
   lodgingSelectedIds = [];
   saveState();
   playSfx("heal");
-  alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復した。`);
+  alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復しストレスが${LODGE_FATIGUE_RELIEF}回復した。`);
   renderTavern();
 };
 
@@ -941,7 +943,7 @@ document.getElementById("createCharBtn").onclick = () => {
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); showScreen("screen-town"); };
 document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); showScreen("screen-town"); };
 
-const LODGE_COST = 20; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
+const LODGE_COST = 10; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
 
 // ============ パーティ編成(出発直前) ============
 function renderPartySelect() {

@@ -82,7 +82,7 @@ function createCharacter(name, classId, classUpgrades) {
 // のに必要だった経験値の合計と同じ総量になるよう、新レベル1〜9の必要経験値を等差数列(1080*level-45)で
 // 割り振ってある(結果として新レベル1=1035, 新レベル9=9675と、終盤ほど1段の重みが大きくなる)
 function xpToNext(level) {
-  return Math.round((1080 * level - 45) * 0.7); // ユーザー指示で必要経験値を7割に短縮
+  return Math.round((1080 * level - 45) * 0.35); // ユーザー指示で必要経験値をさらに半分に短縮(元の7割からさらに0.5倍)
 }
 
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
@@ -128,10 +128,11 @@ function useOnsen(character) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
 }
 
-// 宿屋に宿泊し、HP/MPを全回復する(宿泊自体は冒険可否に影響しない)
+// 宿屋に宿泊し、HP/MPを全回復+ストレスを少量回復する(宿泊自体は冒険可否に影響しない)
 function useLodging(character, halfDayStep) {
   character.hp = character.maxHp;
   character.mp = character.maxMp;
+  character.fatigue = Math.max(0, (character.fatigue || 0) - LODGE_FATIGUE_RELIEF);
 }
 
 // ストレスの段階(0=平常, 1=40〜59, 2=60〜79, 3=80〜99, 4=100=発狂)

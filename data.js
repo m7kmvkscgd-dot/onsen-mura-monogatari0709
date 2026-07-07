@@ -110,8 +110,8 @@ const ENEMIES = {
 
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
-  potion: { id: "potion", ja: "回復薬", price: 20, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
-  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 40, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" }, // 回復薬の2倍の価格
+  potion: { id: "potion", ja: "回復薬", price: 5, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
+  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 20, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" },
 };
 const POTION_HEAL_RATIO = 0.35;
 
@@ -487,6 +487,8 @@ const FATIGUE_MAX = 100;
 const ONSEN_FATIGUE_RELIEF = 50;
 const ONSEN_BASE_COST = 40;
 const ONSEN_COST_PER_LEVEL = 8;
+// 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
+const LODGE_FATIGUE_RELIEF = 10;
 
 // 敵の階層スケーリング係数(階層1〜50付近まで滑らかに伸びる、既にLv10≒階層40前後で釣り合うよう調整済みのベース曲線)
 const FLOOR_SCALE_RATE = 0.025; // 敵の攻撃力/HPのスケール
@@ -516,7 +518,7 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, MAX_LEVEL, ENEMY_POWER_MULT,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_POWER_MULT,
     FLOOR_SCALE_RATE, FLOOR_DEF_SCALE_RATE, EARLY_DANGER_BONUS_BASE, EARLY_DANGER_FADE_FLOOR, EARLY_DANGER_DEF_BONUS_BASE, SWARM_ENCOUNTER_CHANCE,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
   };
