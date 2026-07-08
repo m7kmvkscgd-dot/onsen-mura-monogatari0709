@@ -299,6 +299,28 @@
     animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* 吹き出しセリフ専用の全画面固定レイヤー。party-bar内蔵ではなく画面最前面の独立レイヤーに
+     実測位置(JSでleft/topを設定)で配置することで、探索画面の文字などに埋もれないようにする */
+  #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+  /* キャラの上に浮かせて、フェードイン→少し静止→フェードアウトする。widthはmax-contentにして
+     (max-widthだけだと環境によって極端に狭く折り返されることがあったため)テキスト量に応じて
+     自然に広がるようにしてある。セリフなので白地に黒文字の吹き出し配色にしている */
+  .speech-bubble {
+    position: absolute; transform: translate(-50%, calc(-100% - 8px));
+    width: max-content; max-width: 150px; padding: 0.3rem 0.55rem;
+    background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.15); border-radius: 10px;
+    font-size: 0.72rem; line-height: 1.3; color: #201a14; text-align: center;
+    white-space: normal; pointer-events: none;
+    animation: speechPop 2.5s ease-in-out forwards;
+  }
+  .speech-bubble::after {
+    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: rgba(255,255,255,0.95);
+  }
+  @keyframes speechPop {
+    0%, 100% { opacity: 0; }
+    12%, 85% { opacity: 1; }
+  }
   @keyframes dmgFloat {
     0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
     12% { opacity: 1; transform: translate(-50%, -6px) scale(1.2); }
@@ -544,6 +566,7 @@
       </div>
       <div class="card">
         <div class="stat-row"><span>職業</span><span id="statClass"></span></div>
+        <div class="stat-row"><span>性格</span><span id="statPersonality"></span></div>
         <div class="stat-row"><span>レベル</span><span id="statLevel"></span></div>
         <div class="stat-row"><span>経験値</span><span id="statXp"></span></div>
         <div class="stat-row"><span>HP</span><span id="statHp"></span></div>
@@ -705,6 +728,10 @@
   <!-- 「進む」「里に戻る」で1階層分歩く時の暗転オーバーレイ -->
   <div id="moveTransitionBlack" class="move-transition-black" style="display:none;"></div>
 
+  <!-- 吹き出しセリフ専用の全画面固定レイヤー。.party-bar内に置くとスタッキングコンテキストの都合で
+       探索画面の文字より奥に埋もれてしまうため、画面最前面の独立レイヤーに実測位置で配置する -->
+  <div id="speechBubbleLayer"></div>
+
   <!-- 宿泊時の「一晩がすぎる」演出。現在の時間帯→昼→夕→夜とめくり、最後(夜→朝)だけ暗転を挟む。
        動画は使わず、既存の背景イラストをCSSでクロスフェードするだけ -->
   <div id="lodgingTransition" class="lodging-transition" style="display:none;">
@@ -825,6 +852,7 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   delete c.criticalExpireHalfDay;
   if (c.carryingId === undefined) c.carryingId = null;
   if (c.carriedBy === undefined) c.carriedBy = null;
+  if (!c.personality) c.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
   if (c.poison == null) c.poison = 0;
   if (c.burnTurns == null) c.burnTurns = 0;
   if (c.campWeaponCareBattles == null) c.campWeaponCareBattles = 0;
@@ -1741,6 +1769,7 @@ function renderStatusScreen(charId) {
   overlayEl.style.display = overlaySrc ? "block" : "none";
   if (overlaySrc) overlayEl.src = overlaySrc;
   document.getElementById("statClass").textContent = c2.ja;
+  document.getElementById("statPersonality").textContent = c.personality || "-";
   document.getElementById("statLevel").textContent = c.level;
   document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpToNext(c.level)}`;
   document.getElementById("statHp").textContent = `${c.hp} / ${c.maxHp}`;
@@ -2346,6 +2375,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     bar.appendChild(div);
   });
   activateHpTrails(bar);
+  combatants.forEach((c) => renderVfxFor(c.id));
 }
 
 // 行動選択ボタン欄を、味方表示の実際の描画位置のすぐ下に配置する。
@@ -2437,6 +2467,7 @@ document.getElementById("dungeonPotionBtn").onclick = () => {
     state.inventory.potion--;
     usePotion(c, dlog);
     playSfx("heal");
+    maybeSpeakHealed(c);
     saveState();
     renderDungeon();
   });
@@ -2710,6 +2741,7 @@ function moveOneFloor() {
     currentFloor++;
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+    maybeSpeakOnFloorAdvance();
   }
   // ダンジョン内を歩き回っている間も時計は進んでいるので、町へ帰る/宿泊する時だけでなく
   // ここでも瀕死ロスト判定を行う(担がれている間は消化されない)
@@ -2952,6 +2984,93 @@ function renderVfxFor(targetId) {
       setTimeout(() => pop.remove(), Math.max(0, remaining));
     }
   }
+  // 吹き出しは.party-member/.enemy-cardの中には置かず、専用の全画面固定レイヤー(#speechBubbleLayer)に
+  // カード位置を実測して配置する(.party-barのスタッキングコンテキストの都合で、内部にどんな高い
+  // z-indexを置いても探索画面側の要素の手前に出せなかったための対策)
+  const layer = document.getElementById("speechBubbleLayer");
+  const existingBubble = layer.querySelector(`[data-speech-id="${targetId}"]`);
+  if (entity.__speechAt && Date.now() - entity.__speechAt < SPEECH_BUBBLE_DURATION_MS) {
+    let bubble = existingBubble;
+    const alreadyShowingLatest = bubble && Number(bubble.dataset.speechAt) === entity.__speechAt;
+    if (!alreadyShowingLatest) {
+      if (bubble) bubble.remove();
+      bubble = document.createElement("div");
+      bubble.className = "speech-bubble";
+      bubble.textContent = entity.__speechText;
+      bubble.dataset.speechId = targetId;
+      bubble.dataset.speechAt = String(entity.__speechAt);
+      layer.appendChild(bubble);
+      const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - entity.__speechAt);
+      setTimeout(() => bubble.remove(), Math.max(0, remaining));
+    }
+    // カードが再描画のたびに動くことがあるため、既存の吹き出しでも毎回位置を実測し直す
+    const rect = el.getBoundingClientRect();
+    bubble.style.left = `${rect.left + rect.width / 2}px`;
+    bubble.style.top = `${rect.top}px`;
+  } else if (existingBubble) {
+    existingBubble.remove();
+  }
+}
+// 現在、発狂(breakdown)以外の理由で吹き出しを表示中の仲間がいるかどうか。
+// 通常は同時に1人しか喋らない(発狂中のセリフだけこのミューテックスを無視して複数同時発言を許す)
+function anyoneSpeaking() {
+  const now = Date.now();
+  return fieldParty.some((c) => c.__speechAt && c.__speechCategory !== "breakdown" && now - c.__speechAt < SPEECH_BUBBLE_DURATION_MS);
+}
+// 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
+function trySpeak(speaker, category) {
+  if (!speaker || speaker.status !== "active") return false;
+  const allowConcurrent = category === "breakdown";
+  if (!allowConcurrent && anyoneSpeaking()) return false;
+  const lines = DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
+  if (!lines || !lines.length) return false;
+  speaker.__speechText = lines[Math.floor(Math.random() * lines.length)];
+  speaker.__speechAt = Date.now();
+  speaker.__speechCategory = category;
+  renderVfxFor(speaker.id);
+  return true;
+}
+// スキル命中時の吹き出し判定(10%)。命中させた本人か、ランダムな他の仲間のどちらかが発言する
+function maybeSpeakSkillHit(actor) {
+  if (Math.random() >= DIALOGUE_CHANCE.skillHit) return;
+  const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
+  if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
+  else trySpeak(actor, "selfSkillHit");
+}
+// 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する
+function maybeSpeakHealed(target) {
+  if (Math.random() >= DIALOGUE_CHANCE.selfHealed) return;
+  trySpeak(target, "selfHealed");
+}
+// ダメージ判定の前後でHPを比較し、瀕死ライン(30%)を新たに下回った瞬間だけ判定する(20%)。
+// 本人か、ランダムな他の仲間のどちらかが発言する
+function checkPinchTrigger(target, hpBefore) {
+  if (!target || target.status !== "active" || !(target.maxHp > 0)) return;
+  const wasAbove = hpBefore / target.maxHp > 0.3;
+  const nowAtOrBelow = target.hp / target.maxHp <= 0.3 && target.hp > 0;
+  if (!wasAbove || !nowAtOrBelow) return;
+  if (Math.random() >= DIALOGUE_CHANCE.pinch) return;
+  const others = fieldParty.filter((c) => c.status === "active" && c.id !== target.id);
+  if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allyPinch");
+  else trySpeak(target, "selfPinch");
+}
+// 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)と、
+// ストレスを抱えている仲間の愚痴セリフ(20%、発狂=tier4は別枠で処理済みなのでtier1〜3のみ対象)を判定する
+function maybeSpeakOnFloorAdvance() {
+  const alive = fieldParty.filter((c) => c.status === "active");
+  if (alive.length === 0) return;
+  const avgLevel = alive.reduce((sum, c) => sum + c.level, 0) / alive.length;
+  if (currentFloor > avgLevel * DANGER_FLOOR_LEVEL_MULT && Math.random() < DIALOGUE_CHANCE.dangerFloor) {
+    trySpeak(alive[Math.floor(Math.random() * alive.length)], "dangerFloor");
+  }
+  if (Math.random() < DIALOGUE_CHANCE.stressFloor) {
+    const stressed = alive.filter((c) => { const t = stressTier(c.fatigue); return t >= 1 && t <= 3; });
+    if (stressed.length > 0) {
+      const speaker = stressed[Math.floor(Math.random() * stressed.length)];
+      const tier = stressTier(speaker.fatigue);
+      trySpeak(speaker, tier === 1 ? "stressLight" : tier === 2 ? "stressMid" : "stressHigh");
+    }
+  }
 }
 // entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す
 function shakeClassFor(entity) {
@@ -2994,6 +3113,11 @@ function startBattle(enemies) {
   showScreen("screen-battle");
   playDungeonAreaBgm(); // 戦闘中もダンジョン探索と同じ曲を途切れさせず流し続ける(夜は専用曲)
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
+  // 戦闘開始時の吹き出し(30%)。生存中の仲間からランダムに1人選ぶ
+  if (Math.random() < DIALOGUE_CHANCE.battleStart) {
+    const alive = fieldParty.filter((c) => c.status === "active");
+    if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "battleStart");
+  }
   nextRound();
 }
 
@@ -3116,6 +3240,8 @@ function processNext() {
         actor.bigAttackPending = false;
         actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
         blog(`${actor.label}が大技を放った！`);
+        const hpBeforeBig = {};
+        alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
         const results = enemyBigAttack(actor, alive, blog);
         results.forEach((r) => {
           if (r.hit) {
@@ -3125,6 +3251,7 @@ function processNext() {
             playSfx("evade");
           }
         });
+        alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
         handleFieldDeaths();
         renderBattleScreen();
         setTimeout(() => {
@@ -3140,10 +3267,13 @@ function processNext() {
         playSfx("guard");
       }
       actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
+      const hpBeforeAtk = {};
+      alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
       const result = enemyAttack(actor, alive, blog);
       if (result && result.hit) {
         popupOn(result.target.id, `-${result.dmg}`, "dmg");
         playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+        checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
       } else if (result) {
         playSfx("evade");
       }
@@ -3180,6 +3310,11 @@ function processNext() {
     // 逃走準備(fleeState==="preparing")の解決はnextRound()側でラウンドの節目にまとめて行うため、
     // ここでは何もしない(このactorがここに来る時点で既に"fled"になっているか、まだ"preparing"のまま
     // 通常通り行動選択に進む=このラウンド中はまだ逃げていないことになる)
+    // 発狂中の吹き出し(このキャラの手番が来るたび50%、行動できるかどうかとは独立の判定)。
+    // 発狂だけは複数人が同時に喋ることを許すため、通常のミューテックスとは別枠のcategoryを使う
+    if (stressTier(actor.fatigue) >= 4 && Math.random() < DIALOGUE_CHANCE.breakdownPerTurn) {
+      trySpeak(actor, "breakdown");
+    }
     // 発狂(ストレス100)は完全に行動不能ではなく、50%の確率で動けない(残り50%は行動できる、ただし
     // ステータス自体はfatigueMalusのtier4減衰(-100%)がそのままかかる)
     if (stressTier(actor.fatigue) >= 4 && Math.random() < 0.5) {
@@ -3214,6 +3349,8 @@ function handleFieldDeaths() {
         c.carryingId = null;
         blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
+      // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
+      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
       markCritical(c, currentFloor, absoluteGameMinutes());
       blog(`${c.name}は倒れた...瀕死のまま深淵の森 ${currentFloor}層目に取り残された。`);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
@@ -3222,6 +3359,11 @@ function handleFieldDeaths() {
           ally.fatigue = Math.min(FATIGUE_MAX, (ally.fatigue || 0) + 25);
         }
       });
+      // 味方が倒れた時の吹き出し(75%)。倒れた本人は喋れないので他の生存者から選ぶ
+      if (Math.random() < DIALOGUE_CHANCE.allyDefeated) {
+        const bystanders = fieldParty.filter((ally) => ally.id !== c.id && ally.status === "active");
+        if (bystanders.length > 0) trySpeak(bystanders[Math.floor(Math.random() * bystanders.length)], "allyDefeated");
+      }
     }
   });
   pruneActiveParty();
@@ -3290,7 +3432,7 @@ function runTreeSkill(actor, skill) {
       if (result && result.healed) {
         result.healed.forEach((h) => {
           if (h.revived) { rescueCritical(h.target); h.target.hp = Math.max(1, Math.round(h.target.maxHp * action.reviveHpPct)); blog(`${h.target.name}が蘇生した！`); }
-          else popupOn(h.target.id, `+${h.heal}`, "heal");
+          else { popupOn(h.target.id, `+${h.heal}`, "heal"); maybeSpeakHealed(h.target); }
         });
       }
       renderBattleScreen();
@@ -3307,12 +3449,14 @@ function runTreeSkill(actor, skill) {
     const result = useTreeSkill(actor, targetsList, skill, blog);
     if (result && result.dmgs) {
       let anyEvaded = false;
+      let anyHit = false;
       targetsList.forEach((t, i) => {
         const r = result.dmgs[i];
-        if (r && r.hit) popupOn(t.instanceId, `-${r.dmg}`, "dmg");
+        if (r && r.hit) { popupOn(t.instanceId, `-${r.dmg}`, "dmg"); anyHit = true; }
         else anyEvaded = true;
       });
       if (anyEvaded) playSfx("evade");
+      if (anyHit) maybeSpeakSkillHit(actor);
     }
     renderBattleScreen();
     finishPlayerAction();
@@ -3322,7 +3466,7 @@ function runTreeSkill(actor, skill) {
     playSfx(attackSfxFor(actor.classId));
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
-    if (r && r.hit) popupOn(target.instanceId, `-${r.dmg}`, "dmg");
+    if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg"); maybeSpeakSkillHit(actor); }
     else if (r) playSfx("evade");
     renderBattleScreen();
     finishPlayerAction();
@@ -3341,7 +3485,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
     btn.onclick = () => {
       playSfx("heal");
       const result = useTreeSkill(actor, target, skill, blog);
-      if (result && result.healed && result.healed[0]) popupOn(target.id, `+${result.healed[0].heal}`, "heal");
+      if (result && result.healed && result.healed[0]) { popupOn(target.id, `+${result.healed[0].heal}`, "heal"); maybeSpeakHealed(target); }
       renderBattleScreen();
       finishPlayerAction();
     };
@@ -3395,7 +3539,10 @@ function renderActionButtons(actor) {
       pickSingleEnemyTarget((target) => {
         playSfx(attackSfxFor(actor.classId));
         const result = performAttack(actor, target, blog);
-        if (result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+        if (result.hit) {
+          popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+          if (target.hp <= 0 && Math.random() < DIALOGUE_CHANCE.normalKill) trySpeak(actor, "normalKill");
+        }
         else playSfx("evade");
         renderBattleScreen();
         finishPlayerAction();
@@ -3425,11 +3572,13 @@ function renderActionButtons(actor) {
           const result = useAbility(actor, targetsList, ability, blog);
           if (result && result.hits) {
             let anyEvaded = false;
+            let anyHit = false;
             targetsList.forEach((t, i) => {
-              if (result.hits[i]) popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg");
+              if (result.hits[i]) { popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg"); anyHit = true; }
               else anyEvaded = true;
             });
             if (anyEvaded) playSfx("evade");
+            if (anyHit) maybeSpeakSkillHit(actor);
           }
           renderBattleScreen();
           finishPlayerAction();
@@ -3439,7 +3588,7 @@ function renderActionButtons(actor) {
         pickSingleEnemyTarget((target) => {
           playSfx(attackSfxFor(actor.classId));
           const result = useAbility(actor, target, ability, blog);
-          if (result && result.hit) popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+          if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg"); maybeSpeakSkillHit(actor); }
           else if (result && !result.failed) playSfx("evade");
           renderBattleScreen();
           finishPlayerAction();
@@ -3593,12 +3742,13 @@ function resolveAllyTarget(actor, kind, target) {
   if (kind === "heal") {
     playSfx("heal");
     const result = useAbility(actor, target, "heal", blog);
-    if (result && result.heal) popupOn(target.id, `+${result.heal}`, "heal");
+    if (result && result.heal) { popupOn(target.id, `+${result.heal}`, "heal"); maybeSpeakHealed(target); }
   } else {
     state.inventory.potion--;
     playSfx("heal");
     const heal = usePotion(target, blog);
     popupOn(target.id, `+${heal}`, "heal");
+    maybeSpeakHealed(target);
     saveState();
   }
   renderBattleScreen();
