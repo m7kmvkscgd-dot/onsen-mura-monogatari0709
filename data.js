@@ -488,11 +488,12 @@ const EQUIPMENT = {
   },
 };
 
-// 戦闘不能で瀕死になったキャラは、昼夜が切り替わるたび(halfDayStep)にカウントが進み、
-// この範囲でランダムに決まる猶予を過ぎると誰も救出に来なくてもロストする
-// (旧2〜4=1〜2日分→4〜6=2〜3日分ときて、ユーザー指示でさらに半日分伸ばした)
-const CRITICAL_MIN_HALFDAYS = 5; // 2.5日
-const CRITICAL_MAX_HALFDAYS = 7; // 3.5日
+// 戦闘不能で瀕死になったキャラは、実際のゲーム内時間(絶対分数)が経過するとロストする。
+// 町へ帰る/宿泊するタイミングだけでなく、ダンジョン内を歩き回っている間の時計の進みも
+// そのまま消費される。この範囲でランダムに決まる猶予を過ぎると誰も救出に来なくてもロストする
+// (旧2〜4=1〜2日分→4〜6=2〜3日分→5〜7半日=2.5〜3.5日ときて、時間ベースに再設計した)
+const CRITICAL_MIN_HOURS = 60; // 2.5日
+const CRITICAL_MAX_HOURS = 84; // 3.5日
 
 const FATIGUE_PER_FLOOR = 2; // フィールドに出ているキャラが1階進むごとに溜まる疲労度(旧4から半減)
 const FATIGUE_MAX = 100;
@@ -539,7 +540,7 @@ const MIN_HIT_CHANCE = 0.75;
 
 if (typeof module !== "undefined") {
   module.exports = {
-    CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
+    CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
     FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_LOCK_MINUTES, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,

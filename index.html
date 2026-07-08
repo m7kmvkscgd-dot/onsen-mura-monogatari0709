@@ -355,7 +355,7 @@
   .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
   .lodging-transition-caption {
-    position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%);
+    position: absolute; left: 50%; bottom: 35%; transform: translateX(-50%);
     color: #fff; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.15em;
     text-shadow: 0 2px 10px rgba(0,0,0,0.9); white-space: nowrap;
     opacity: 0;
@@ -689,6 +689,11 @@
     <div class="lodging-transition-bg to" id="lodgingTransitionTo"></div>
     <div class="lodging-transition-black" id="lodgingTransitionBlack"></div>
     <div class="lodging-transition-caption" id="lodgingTransitionCaption">一晩がすぎた…</div>
+    <div id="lodgingRestSummary" class="camp-rest-summary" style="display:none;">
+      <h2>夜が明けた</h2>
+      <div id="lodgingRestSummaryList"></div>
+      <button class="big primary" id="lodgingRestNextBtn">次へ</button>
+    </div>
   </div>
 
   <!-- 野営開始時/翌朝の演出。lodging-transitionと同じCSS(クロスフェード+暗転)を使い回す -->
@@ -719,7 +724,6 @@ const SAVE_KEY = "dungeon1_save";
 function defaultState() {
   return {
     gold: 230,
-    halfDayStep: 0, // 昼夜が切り替わるたびに1つ進むカウンタ(瀕死キャラのロスト判定に使う)
     roster: [],
     activePartyIds: [],
     inventory: { potion: 5, smokeBomb: 2, campingKit: 0 },
@@ -765,7 +769,7 @@ let state = loadState();
 // 開発中に途中でMP/疲労度/装備ボーナス/瀕死システムの仕組みを追加・変更したため、それ以前に
 // 保存された古いセーブのキャラクターにはこれらのフィールドが無かったり形が古かったりする。
 // ロード時に不足しているフィールドを補完し、旧「死体(corpse)」状態も瀕死(critical)に変換する
-function normalizeCharacter(c, classUpgrades, halfDayStep) {
+function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (c.onsenLockUntilMinutes === undefined) c.onsenLockUntilMinutes = null; // 旧セーブ(入浴ロック導入前)はロック無し扱い
   if (c.maxMp == null) c.maxMp = baseMaxMpFor(c.classId);
   if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
@@ -787,10 +791,15 @@ function normalizeCharacter(c, classUpgrades, halfDayStep) {
   if (c.status === "corpse") {
     c.status = "critical";
     c.criticalFloor = c.corpseFloor;
-    c.criticalExpireHalfDay = halfDayStep + CRITICAL_MIN_HALFDAYS;
+    c.criticalExpireMinutes = nowAbsoluteMinutes + CRITICAL_MIN_HOURS * 60;
   }
   if (c.criticalFloor === undefined) c.criticalFloor = null;
-  if (c.criticalExpireHalfDay === undefined) c.criticalExpireHalfDay = null;
+  if (c.criticalExpireMinutes === undefined) {
+    // 旧halfDayStep方式のセーブから移行。瀕死中なら現在時刻起点で新しく猶予を与え、
+    // それ以外(active/lost)はもともと使わない値なのでnullのままでよい
+    c.criticalExpireMinutes = c.status === "critical" ? nowAbsoluteMinutes + CRITICAL_MIN_HOURS * 60 : null;
+  }
+  delete c.criticalExpireHalfDay;
   if (c.carryingId === undefined) c.carryingId = null;
   if (c.carriedBy === undefined) c.carriedBy = null;
   if (c.poison == null) c.poison = 0;
@@ -834,7 +843,7 @@ function loadState() {
       const loaded = JSON.parse(raw);
       loaded.classUpgrades = loaded.classUpgrades || {};
       loaded.timeOfDay = loaded.timeOfDay || "day";
-      loaded.halfDayStep = loaded.halfDayStep || 0;
+      delete loaded.halfDayStep; // 瀕死ロスト判定を実時間ベースに移行したため廃止(criticalExpireMinutes参照)
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
       if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、元々の名簿上限だった10人を維持できるよう最大レベル扱いにする
@@ -848,7 +857,8 @@ function loadState() {
         loaded.inventory.smokeBomb = Math.min(loaded.inventory.smokeBomb || 0, Math.max(0, SUPPLY_CAP - loaded.inventory.potion));
         loaded.inventory.campingKit = Math.min(loaded.inventory.campingKit || 0, CAMPING_KIT_CAP);
       }
-      (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades, loaded.halfDayStep));
+      const nowAbsoluteMinutes = ((loaded.dayCount || 1) - 1) * 1440 + (loaded.clockMinutes || 0);
+      (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades, nowAbsoluteMinutes));
       return loaded;
     }
   } catch (e) {}
@@ -936,12 +946,11 @@ function updateSceneBackgrounds() {
   document.getElementById("resultHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("extensionHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
 }
-// halfDayStepの加算・瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
+// 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
 function advanceCalendar(applyPhase) {
   applyPhase();
-  state.halfDayStep++;
-  tickHalfDay(state.roster, state.halfDayStep); // 瀕死のまま猶予が切れた仲間をロストにする
+  tickCriticalExpiry(state.roster, absoluteGameMinutes()); // 瀕死のまま猶予が切れた仲間をロストにする
   pruneActiveParty();
   saveState();
   updateSceneBackgrounds();
@@ -1165,8 +1174,8 @@ function statusLabel(c) {
       const carrier = getRosterChar(c.carriedBy);
       return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
     }
-    const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
-    const totalHoursLeft = halfLeft * 12; // halfDayStep 1つ分 = 半日(12時間)
+    const minutesLeft = Math.max(0, (c.criticalExpireMinutes || 0) - absoluteGameMinutes());
+    const totalHoursLeft = Math.floor(minutesLeft / 60);
     const daysLeft = Math.floor(totalHoursLeft / 24);
     const hoursLeft = totalHoursLeft % 24;
     const timeLeftStr = hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
@@ -1436,24 +1445,13 @@ function fadeOpacity(el, from, to, durationMs, callback) {
 }
 
 let lodgingTransitionActive = false;
-function playLodgingTransition(onDone) {
+// 現在時刻→夜へクロスフェード→暗転して「一晩がすぎた…」キャプションが出るところまで進める。
+// 暗転しきったところでonBlackを呼び、回復サマリー画面の表示を呼び出し元(lodgeConfirmBtn)に任せる。
+// 朝への切り替え(森の朝背景+フェードイン)はrevealLodgingMorning側で行う
+function playLodgingTransition(onBlack) {
   if (lodgingTransitionActive) return;
   lodgingTransitionActive = true;
   playLodgingBgm();
-  // セーフティネット: アニメーションのコールバック(element.animateのonfinish)がバックグラウンド化などの
-  // 理由で発火しなかった場合、lodgingTransitionActiveがtrueのまま固まり続け、以降ずっと宿泊が
-  // 無反応になってしまう(ユーザー報告のバグ)。想定最大所要時間より十分長い上限で強制的に完了させ、
-  // 自然完了・タイムアウトのどちらが先でも一度しか後処理が走らないようにする
-  let lodgingFinished = false;
-  function finishLodging() {
-    if (lodgingFinished) return;
-    lodgingFinished = true;
-    clearTimeout(safetyTimer);
-    overlay.style.display = "none";
-    lodgingTransitionActive = false;
-    onDone();
-  }
-  const safetyTimer = setTimeout(finishLodging, 30000);
   const overlay = document.getElementById("lodgingTransition");
   const fromEl = document.getElementById("lodgingTransitionFrom");
   const toEl = document.getElementById("lodgingTransitionTo");
@@ -1486,15 +1484,33 @@ function playLodgingTransition(onDone) {
       // 画面が真っ暗な間に背景を朝の絵へ差し替え、キャプションを表示する
       fromEl.style.backgroundImage = `url('${BG_SETS.tavern.dawn}')`;
       caption.style.animation = "lodgingCaptionFade 4500ms ease forwards";
-      setTimeout(() => {
-        // 暗転明け→朝。朝のイラストが見え始めるこのタイミングで専用の効果音を一度だけ鳴らす
-        playSfx("morning_chime");
-        fadeOpacity(blackEl, 1, 0, 3300, finishLodging);
-      }, 1650);
+      setTimeout(onBlack, 1650);
     });
   }
 
   setTimeout(afterHold, INITIAL_HOLD_MS);
+}
+// 回復サマリーの「次へ」が押された後に呼ぶ: 暗転明け→朝(モーニングチャイム+フェードイン)して演出を終える
+function revealLodgingMorning(onDone) {
+  // セーフティネット: アニメーションのコールバック(element.animateのonfinish)がバックグラウンド化などの
+  // 理由で発火しなかった場合、lodgingTransitionActiveがtrueのまま固まり続け、以降ずっと宿泊が
+  // 無反応になってしまう(ユーザー報告のバグ)。想定最大所要時間より十分長い上限で強制的に完了させ、
+  // 自然完了・タイムアウトのどちらが先でも一度しか後処理が走らないようにする
+  let lodgingFinished = false;
+  function finishLodging() {
+    if (lodgingFinished) return;
+    lodgingFinished = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    lodgingTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finishLodging, 30000);
+  const overlay = document.getElementById("lodgingTransition");
+  const blackEl = document.getElementById("lodgingTransitionBlack");
+  // 朝のイラストが見え始めるこのタイミングで専用の効果音を一度だけ鳴らす
+  playSfx("morning_chime");
+  fadeOpacity(blackEl, 1, 0, 3300, finishLodging);
 }
 
 // 野営開始時の演出: 現在の背景(1.5秒静止)→夜の森へクロスフェード(既に夜ならスキップ)→
@@ -1599,12 +1615,12 @@ function revealCampMorning(onDone) {
     fadeOpacity(blackEl, 1, 0, 1500, finish);
   }, 300);
 }
-// 野営の回復サマリー画面を表示する(暗転中)。fieldPartyの各アクティブメンバーについて
+// 回復サマリー画面の共通実装(野営/宿泊どちらも使う)。暗転中に対象キャラごとの
 // HP/MPの回復バー(hpBarHtml/mpBarHtmlの回復トレイル)とストレス減少量を表示し、
 // 「次へ」ボタンが押されたらonNextを呼ぶ
-function showCampRestSummary(beforeSnapshot, onNext) {
-  const panel = document.getElementById("campRestSummary");
-  const list = document.getElementById("campRestSummaryList");
+function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext) {
+  const panel = document.getElementById(panelId);
+  const list = document.getElementById(listId);
   list.innerHTML = beforeSnapshot.map(({ id, fatigueBefore }) => {
     const c = getRosterChar(id);
     if (!c) return "";
@@ -1625,10 +1641,16 @@ function showCampRestSummary(beforeSnapshot, onNext) {
   }).join("");
   panel.style.display = "flex";
   activateHpTrails(list);
-  document.getElementById("campRestNextBtn").onclick = () => {
+  document.getElementById(nextBtnId).onclick = () => {
     panel.style.display = "none";
     onNext();
   };
+}
+function showCampRestSummary(beforeSnapshot, onNext) {
+  showRestSummary("campRestSummary", "campRestSummaryList", "campRestNextBtn", beforeSnapshot, onNext);
+}
+function showLodgingRestSummary(beforeSnapshot, onNext) {
+  showRestSummary("lodgingRestSummary", "lodgingRestSummaryList", "lodgingRestNextBtn", beforeSnapshot, onNext);
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
@@ -1637,14 +1659,24 @@ document.getElementById("lodgeConfirmBtn").onclick = () => {
   playLodgingTransition(() => {
     const cost = LODGE_COST * targets.length;
     state.gold -= cost;
-    targets.forEach((c) => useLodging(c, state.halfDayStep));
+    // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
+    // キャラの残量バーが今まで一度も描画されたことがなくても確実に回復アニメーションが出るよう、
+    // 宿泊前の値を明示的に記録しておく(野営の回復サマリーと同じ対策)
+    const beforeSnapshot = targets.map((c) => {
+      c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+      c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+      return { id: c.id, fatigueBefore: c.fatigue || 0 };
+    });
+    targets.forEach((c) => useLodging(c));
     advanceToNextMorning();
     lodgingSelectedIds = [];
     saveState();
-    playSfx("heal");
-    alert(`${targets.map((c) => c.name).join("・")}は宿でぐっすり眠り、HP/MPが全回復しストレスが${LODGE_FATIGUE_RELIEF}回復した。`);
-    if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
-    renderTavern();
+    showLodgingRestSummary(beforeSnapshot, () => {
+      revealLodgingMorning(() => {
+        if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
+        renderTavern();
+      });
+    });
   });
 };
 
@@ -2583,7 +2615,11 @@ function finishRetreat() {
   deliverCarriedAllies();
   dlog("里に戻った。");
   toggleTimeOfDay();
-  bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
+  // 里に帰るたびに町の曲を続きからではなく最初から再生する。時間帯によってtown/town_dawn/town_nightの
+  // どのBGMキーが実際に使われるか変わるため、3つとも記憶位置をリセットしておく
+  bgmPositions.town = 0;
+  bgmPositions.town_dawn = 0;
+  bgmPositions.town_night = 0;
   renderResultScreen(() => {
     renderTown();
   });
@@ -2613,6 +2649,9 @@ function moveOneFloor() {
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
   }
+  // ダンジョン内を歩き回っている間も時計は進んでいるので、町へ帰る/宿泊する時だけでなく
+  // ここでも瀕死ロスト判定を行う(担がれている間は消化されない)
+  tickCriticalExpiry(state.roster, absoluteGameMinutes());
   saveState();
 
   const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
@@ -2717,7 +2756,7 @@ function showCarryPicker(critical, onResolved) {
       c.carryingId = critical.id;
       critical.carriedBy = c.id;
       critical.criticalFloor = null;
-      critical.criticalExpireHalfDay = null;
+      critical.criticalExpireMinutes = null;
       saveState();
       dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
       div.innerHTML = "";
@@ -3067,12 +3106,12 @@ function handleFieldDeaths() {
       // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
       const carried = fieldParty.find((x) => x.carriedBy === c.id);
       if (carried) {
-        markCritical(carried, currentFloor, state.halfDayStep);
+        markCritical(carried, currentFloor, absoluteGameMinutes());
         carried.carriedBy = null;
         c.carryingId = null;
         blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
-      markCritical(c, currentFloor, state.halfDayStep);
+      markCritical(c, currentFloor, absoluteGameMinutes());
       blog(`${c.name}は倒れた...瀕死のまま深淵の森 ${currentFloor}層目に取り残された。`);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
@@ -3224,7 +3263,7 @@ function renderCarryTargets(actor, targets) {
       actor.carryingId = target.id;
       target.carriedBy = actor.id;
       target.criticalFloor = null;
-      target.criticalExpireHalfDay = null;
+      target.criticalExpireMinutes = null;
       blog(`${actor.label}は${target.name}を担いだ！`);
       renderBattleScreen();
       renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる

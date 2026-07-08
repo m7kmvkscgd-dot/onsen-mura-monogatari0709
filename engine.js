@@ -69,7 +69,7 @@ function createCharacter(name, classId, classUpgrades) {
     status: "active", // active | critical | lost
     onsenLockUntilMinutes: null, // 入浴した時点の絶対分数+ONSEN_LOCK_MINUTES。この値を過ぎるまでパーティ編成に組み込めない
     criticalFloor: null,
-    criticalExpireHalfDay: null,
+    criticalExpireMinutes: null, // ロストするゲーム内絶対分数(この値を過ぎるとtickCriticalExpiryでロストになる)
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
     carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
@@ -148,7 +148,7 @@ function useOnsen(character, absoluteMinutes) {
 }
 
 // 宿屋に宿泊し、HP/MPを全回復+ストレスを少量回復する(宿泊自体は冒険可否に影響しない)
-function useLodging(character, halfDayStep) {
+function useLodging(character) {
   character.hp = character.maxHp;
   character.mp = character.maxMp;
   character.fatigue = Math.max(0, (character.fatigue || 0) - LODGE_FATIGUE_RELIEF);
@@ -849,20 +849,22 @@ function damageStress(dmg, maxHp) {
 
 // 戦闘不能になったキャラをそのフロアで瀕死にする(死体ではなく生存しているが動けない状態)。
 // 別の仲間がそのフロアに到達し、救出コマンドを使えば連れ帰れる(ただし冒険はそこで終了する)。
-// 誰も助けに来ないまま、昼夜が1〜2日分(halfDayStepにして2〜4)経過するとロスト(完全消滅)する
-function markCritical(character, floor, halfDayStep) {
+// 誰も助けに来ないまま、実ゲーム内時間で2.5〜3.5日(CRITICAL_MIN_HOURS〜MAX_HOURS)経過すると
+// ロスト(完全消滅)する。absoluteMinutesはその時点のゲーム内絶対分数(呼び出し側で算出)
+function markCritical(character, floor, absoluteMinutes) {
   character.status = "critical";
   character.hp = 0;
   character.criticalFloor = floor;
-  const span = CRITICAL_MIN_HALFDAYS + Math.floor(Math.random() * (CRITICAL_MAX_HALFDAYS - CRITICAL_MIN_HALFDAYS + 1));
-  character.criticalExpireHalfDay = halfDayStep + span;
+  const spanHours = CRITICAL_MIN_HOURS + Math.random() * (CRITICAL_MAX_HOURS - CRITICAL_MIN_HOURS);
+  character.criticalExpireMinutes = absoluteMinutes + spanHours * 60;
 }
 
-// 昼夜が切り替わる(halfDayStepが進む)たび、期限切れの瀕死キャラをロストにする。
-// ただし既に誰かに担がれている間は「救出済みで運搬中」なので、カウントダウンを進めない(ロストしない)
-function tickHalfDay(characters, halfDayStep) {
+// ゲーム内時間が進むたび(町へ帰る/宿泊はもちろん、ダンジョン内を歩き回っている間も)呼び、
+// 期限切れの瀕死キャラをロストにする。ただし既に誰かに担がれている間は「救出済みで運搬中」
+// なので、カウントダウンを進めない(ロストしない)
+function tickCriticalExpiry(characters, absoluteMinutes) {
   characters.forEach((c) => {
-    if (c.status === "critical" && !c.carriedBy && halfDayStep > c.criticalExpireHalfDay) {
+    if (c.status === "critical" && !c.carriedBy && absoluteMinutes > c.criticalExpireMinutes) {
       c.status = "lost";
     }
   });
@@ -875,7 +877,7 @@ function rescueCritical(character) {
   character.hp = 1; // 瀕死から復帰した直後はHP1(ぎりぎり生きている状態。全快ではない)
   character.fatigue = 0;
   character.criticalFloor = null;
-  character.criticalExpireHalfDay = null;
+  character.criticalExpireMinutes = null;
   character.carriedBy = null;
   return true;
 }
@@ -930,7 +932,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
-    markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
+    markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, isOnsenLocked, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
