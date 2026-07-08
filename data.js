@@ -15,7 +15,7 @@ const CLASSES = {
   naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 33, atk: 12, def: 8, spd: 9, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
   hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 27, atk: 11, def: 5, spd: 12, mag: 0, accuracy: 0.99, abilities: ["preciseShot"] },
   gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 29, atk: 16, def: 6, spd: 4, mag: 0, accuracy: 0.95, abilities: ["cannonShot"] },
-  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 4, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
+  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 5, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
   priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 6, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
 };
 
@@ -725,7 +725,7 @@ const ENEMY_SCALE = 3.8; // 敵の攻撃力/HPに常に掛かる固定倍率(旧
 const ENEMY_DEF_SCALE = 1.42; // 敵の防御力に常に掛かる固定倍率(同上)
 const MAX_LEVEL = 10; // レベル上限。ダクソン/XCOM的に「少ないレベルで大きく強くなる」設計のため低めに圧縮
 // 敵の攻撃力だけをさらに1割弱体化する倍率(HP/防御力には影響しない)
-const ENEMY_ATK_MULT = 0.9;
+const ENEMY_ATK_MULT = 0.8;
 // 敵のHPだけをさらに1割弱体化する倍率(大群系isSwarmは元々ステータス控えめな雑魚のため対象外)
 const ENEMY_HP_MULT = 0.9;
 // 大群系(isSwarm)の敵だけ、上記ENEMY_ATK_MULTの弱体化を踏まえた現状値からさらに攻撃力を1割強化する倍率

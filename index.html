@@ -171,14 +171,23 @@
   .equip-row .desc { font-size: 0.68rem; color: var(--text-muted); }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
   .party-bar {
-    /* 戦闘画面・探索画面のどちらでも自キャラの表示位置が変わらないよう、同じtop値を共有する */
+    /* 戦闘画面・探索画面のどちらでも自キャラの表示位置が変わらないよう、同じtop値を共有する。
+       transform: translateZ(0)は以前ここに付いていたが、.enemy-row(position:relativeのみで
+       transformを持たない)には対応する常時transformが無い非対称な作りになっており、常時transform
+       を持つこの要素が独自の合成レイヤーを持ち続けることで、bar.innerHTML=""による頻繁な再構築と
+       組み合わさってiOS Safariで子要素/関連要素の再描画が更新されなくなる不具合の原因になっていた
+       可能性が高いため外した(translateX(-50%)は中央寄せに必須なので残す) */
     position: fixed; top: 250px; left: 50%;
-    transform: translateX(-50%) translateZ(0);
+    transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 4;
     display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
     background: rgba(20,24,27,0.72); justify-content: center;
   }
-  .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; transform: translateZ(0); }
+  /* transform:translateZ(0)を常時ではなく.acting/:active等の個別状態だけに限定してある。
+     常時transformを持たせると要素が独自のスタッキングコンテキスト/合成レイヤーを持ち続けることになり、
+     iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
+     再描画・位置取得が更新されなくなる不具合の原因になっていた可能性が高いため外した */
+  .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 8px; padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
   .party-member.acting { border-color: var(--accent); background: rgba(201,162,74,0.18); box-shadow: 0 0 10px rgba(201,162,74,0.5); transform: translateY(-10px) translateZ(0); }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member.targetable { cursor: pointer; border-color: rgba(76,175,111,0.75); box-shadow: 0 0 10px rgba(76,175,111,0.5); animation: targetPulseAlly 1.1s ease-in-out infinite; }
@@ -301,25 +310,32 @@
   .dmg-pop.heal { color: #8fe0a0; }
   /* 吹き出しセリフ専用の全画面固定レイヤー。party-bar内蔵ではなく画面最前面の独立レイヤーに
      実測位置(JSでleft/topを設定)で配置することで、探索画面の文字などに埋もれないようにする */
-  #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+  #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; transform: translateZ(0); }
   /* キャラの上に浮かせて、フェードイン→少し静止→フェードアウトする。widthはmax-contentにして
      (max-widthだけだと環境によって極端に狭く折り返されることがあったため)テキスト量に応じて
-     自然に広がるようにしてある。セリフなので白地に黒文字の吹き出し配色にしている */
+     自然に広がるようにしてある。セリフなので白地に黒文字の吹き出し配色にしている。
+     translateZ(0)は、戦闘中の頻繁な再描画でiOS Safariがposition:fixed要素の再合成を
+     怠って表示が更新されない(実機で報告された不具合)のを防ぐためのGPUレイヤー昇格 */
   .speech-bubble {
-    position: absolute; transform: translate(-50%, calc(-100% - 8px));
+    position: absolute; transform: translate(-50%, calc(-100% - 8px)) translateZ(0);
     width: max-content; max-width: 150px; padding: 0.3rem 0.55rem;
     background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.15); border-radius: 10px;
     font-size: 0.72rem; line-height: 1.3; color: #201a14; text-align: center;
     white-space: normal; pointer-events: none;
-    animation: speechPop 2.5s ease-in-out forwards;
+    opacity: 0;
   }
   .speech-bubble::after {
     content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
     border: 5px solid transparent; border-top-color: rgba(255,255,255,0.95);
   }
-  @keyframes speechPop {
-    0%, 100% { opacity: 0; }
-    12%, 85% { opacity: 1; }
+  /* 味方カードは戦闘画面のレイアウト上、真上に戦闘ログ(#battleLog、頻繁に文字が書き換わる)が
+     重なる位置になる。敵側の吹き出し(カードの上に出す、こちらは何とも重ならない)と違い、
+     味方の吹き出しだけiOS実機で描画されない不具合の原因が「戦闘ログと同じ領域に重なること」
+     である可能性を検証するため、味方の吹き出しだけカードの下(ログと重ならない空白部分)に
+     出すようにする。三角の吹き出し口も上向きに反転する */
+  .speech-bubble.below { transform: translate(-50%, 8px) translateZ(0); }
+  .speech-bubble.below::after {
+    top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: rgba(255,255,255,0.95);
   }
   @keyframes dmgFloat {
     0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
@@ -2962,8 +2978,55 @@ function popupOn(targetId, text, cls) {
 }
 // entityの現在のカードDOM要素に、保存済みのポップアップ/揺れ状態を反映する
 // (renderPartyBar/敵カード生成の直後に呼ぶことで、その場で作られたばかりのカードにも即座に反映する)
+// 一時的なデバッグ用: 画面上にログを直接表示する(Safari実機でWeb Inspectorが繋げない環境でも
+// 現象を追えるようにするため)。原因特定後はこの関数の呼び出し箇所ごと削除する
+function speechDebugLog(msg) {
+  console.log("[speech-debug]", msg);
+  let panel = document.getElementById("speechDebugPanel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "speechDebugPanel";
+    panel.style.cssText = "position:fixed;top:0;left:0;right:0;max-height:14vh;overflow-y:auto;background:rgba(0,0,0,0.88);color:#5f5;font-size:8.5px;line-height:1.3;font-family:monospace;z-index:99999;padding:4px;white-space:pre-wrap;pointer-events:none;";
+    document.body.appendChild(panel);
+  }
+  panel.style.pointerEvents = "none";
+  const line = document.createElement("div");
+  const t = new Date();
+  const ts = `${String(t.getMinutes()).padStart(2, "0")}:${String(t.getSeconds()).padStart(2, "0")}.${String(t.getMilliseconds()).padStart(3, "0")}`;
+  line.textContent = `${ts} ${msg}`;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+  while (panel.children.length > 12) panel.removeChild(panel.firstChild);
+}
+// 未捕捉のJSエラー・Promise rejectionもパネルに出す(実機だけで起きるエラーがローカル環境の
+// テストでは再現せず見落とされている可能性があるため)
+window.addEventListener("error", (e) => {
+  speechDebugLog(`!!JS-ERROR!! ${e.message} @${e.filename}:${e.lineno}:${e.colno}`);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  speechDebugLog(`!!UNHANDLED-REJECTION!! ${e.reason}`);
+});
+document.addEventListener("visibilitychange", () => {
+  speechDebugLog(`visibilitychange -> ${document.visibilityState}`);
+});
+// 同じキャラのカードは#dungeonPartyBar/#battlePartyBar/#campPartyBarなど複数の画面(.screen)に
+// 同時に存在しうる(現在表示されていない画面の分もDOM上には残っている)。data-idだけで
+// document.querySelector(...)すると、たまたまDOM順で先に出てくる「非表示画面側」のカードに
+// マッチしてしまい、そちらはdisplay:noneの祖先を持つため getBoundingClientRect() が全て0を
+// 返す、という不具合があった(敵側は#enemyRowが戦闘画面にしか存在しないため起こらなかった)。
+// 複数マッチする中から実際にレイアウトされている(幅/高さが0でない)ものを選ぶ
+function findVisibleCard(targetId) {
+  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"]`);
+  for (const c of candidates) {
+    const r = c.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return c;
+  }
+  return candidates[0] || null;
+}
+let __renderVfxForCallCount = 0;
 function renderVfxFor(targetId) {
-  const el = document.querySelector(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"]`);
+  __renderVfxForCallCount++;
+  const el = findVisibleCard(targetId);
   if (!el) return;
   const entity = findVfxEntity(targetId);
   if (!entity) return;
@@ -2989,24 +3052,66 @@ function renderVfxFor(targetId) {
   // z-indexを置いても探索画面側の要素の手前に出せなかったための対策)
   const layer = document.getElementById("speechBubbleLayer");
   const existingBubble = layer.querySelector(`[data-speech-id="${targetId}"]`);
-  if (entity.__speechAt && Date.now() - entity.__speechAt < SPEECH_BUBBLE_DURATION_MS) {
-    let bubble = existingBubble;
-    const alreadyShowingLatest = bubble && Number(bubble.dataset.speechAt) === entity.__speechAt;
+  const withinWindow = entity.__speechAt && Date.now() - entity.__speechAt < SPEECH_BUBBLE_DURATION_MS;
+  if (withinWindow) {
+    const speechAtSnapshot = entity.__speechAt;
+    const alreadyShowingLatest = existingBubble && Number(existingBubble.dataset.speechAt) === speechAtSnapshot;
     if (!alreadyShowingLatest) {
-      if (bubble) bubble.remove();
-      bubble = document.createElement("div");
-      bubble.className = "speech-bubble";
+      if (existingBubble) existingBubble.remove();
+      const isParty = el.classList.contains("party-member");
+      const bubble = document.createElement("div");
+      bubble.className = "speech-bubble" + (isParty ? " below" : "");
       bubble.textContent = entity.__speechText;
       bubble.dataset.speechId = targetId;
-      bubble.dataset.speechAt = String(entity.__speechAt);
+      bubble.dataset.speechAt = String(speechAtSnapshot);
       layer.appendChild(bubble);
-      const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - entity.__speechAt);
-      setTimeout(() => bubble.remove(), Math.max(0, remaining));
+      speechDebugLog(`APPEND target=${targetId} isConnected=${bubble.isConnected} parent=${bubble.parentElement && bubble.parentElement.id} callCount=${__renderVfxForCallCount}`);
+      const fadeAnim = bubble.animate(
+        [
+          { opacity: 0, offset: 0 },
+          { opacity: 1, offset: 0.12 },
+          { opacity: 1, offset: 0.85 },
+          { opacity: 0, offset: 1 },
+        ],
+        { duration: SPEECH_BUBBLE_DURATION_MS, easing: "linear", fill: "forwards" }
+      );
+      const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - speechAtSnapshot);
+      setTimeout(() => { fadeAnim.cancel(); bubble.remove(); }, Math.max(0, remaining));
     }
-    // カードが再描画のたびに動くことがあるため、既存の吹き出しでも毎回位置を実測し直す
-    const rect = el.getBoundingClientRect();
-    bubble.style.left = `${rect.left + rect.width / 2}px`;
-    bubble.style.top = `${rect.top}px`;
+    requestAnimationFrame(() => {
+      const freshEl = findVisibleCard(targetId);
+      const freshBubble = layer.querySelector(`[data-speech-id="${targetId}"][data-speech-at="${speechAtSnapshot}"]`);
+      if (!freshEl || !freshBubble) { speechDebugLog(`RAF-ABORT target=${targetId} freshEl=${!!freshEl} freshBubble=${!!freshBubble}`); return; }
+      const rect = freshEl.getBoundingClientRect();
+      const isPartyFresh = freshEl.classList.contains("party-member");
+      freshBubble.style.left = `${rect.left + rect.width / 2}px`;
+      freshBubble.style.top = `${isPartyFresh ? rect.bottom : rect.top}px`;
+      setTimeout(() => {
+        // 吹き出し自身の実際の描画位置(transformで上にずれた後)を使う。カードの座標をそのまま
+        // 使うと、吹き出しがtransformで上に移動した先ではなく移動前のアンカー点をチェックして
+        // しまい、pointer-events:noneの吹き出し自身はどのみち除外されるにしても、その真下に
+        // 何があるかの診断としてズレた場所を見てしまっていたため修正
+        const bRect = freshBubble.getBoundingClientRect();
+        const cx = bRect.left + bRect.width / 2;
+        const cy = bRect.top + bRect.height / 2;
+        const hitEl = document.elementFromPoint(cx, cy);
+        const prevPointerEvents = freshBubble.style.pointerEvents;
+        freshBubble.style.pointerEvents = "auto";
+        const hitElWithBubble = document.elementFromPoint(cx, cy);
+        freshBubble.style.pointerEvents = prevPointerEvents;
+        const fmt = (el) => el ? el.tagName + (el.id ? "#" + el.id : "") + (typeof el.className === "string" ? "." + el.className.replace(/ /g, ".") : "") : "null";
+        speechDebugLog(
+          `CHECK target=${targetId} callCount=${__renderVfxForCallCount} visState=${document.visibilityState}\n` +
+          `  cardRect(l/t/w/h)=${rect.left.toFixed(1)}/${rect.top.toFixed(1)}/${rect.width.toFixed(1)}/${rect.height.toFixed(1)}\n` +
+          `  bubbleRect(l/t/w/h)=${bRect.left.toFixed(1)}/${bRect.top.toFixed(1)}/${bRect.width.toFixed(1)}/${bRect.height.toFixed(1)}\n` +
+          `  style: left=${freshBubble.style.left} top=${freshBubble.style.top} display=${freshBubble.style.display || "(inherit)"} opacity=${freshBubble.style.opacity || "(inherit)"} visibility=${freshBubble.style.visibility || "(inherit)"} zIndex=${freshBubble.style.zIndex || "(inherit)"}\n` +
+          `  computed: display=${getComputedStyle(freshBubble).display} opacity=${getComputedStyle(freshBubble).opacity} visibility=${getComputedStyle(freshBubble).visibility} zIndex=${getComputedStyle(freshBubble).zIndex}\n` +
+          `  isConnected=${freshBubble.isConnected} parent=${freshBubble.parentElement && freshBubble.parentElement.id}\n` +
+          `  hitTest(pointer-events:none)=${fmt(hitEl)}\n` +
+          `  hitTest(pointer-events:auto)=${fmt(hitElWithBubble)}`
+        );
+      }, 150);
+    });
   } else if (existingBubble) {
     existingBubble.remove();
   }
@@ -3019,14 +3124,16 @@ function anyoneSpeaking() {
 }
 // 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
 function trySpeak(speaker, category) {
-  if (!speaker || speaker.status !== "active") return false;
+  speechDebugLog(`trySpeak(speaker=${speaker && speaker.id}, category=${category})`);
+  if (!speaker || speaker.status !== "active") { speechDebugLog(`  -> ABORT: invalid/inactive speaker`); return false; }
   const allowConcurrent = category === "breakdown";
-  if (!allowConcurrent && anyoneSpeaking()) return false;
+  if (!allowConcurrent && anyoneSpeaking()) { speechDebugLog(`  -> ABORT: blocked by mutex`); return false; }
   const lines = DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
-  if (!lines || !lines.length) return false;
+  if (!lines || !lines.length) { speechDebugLog(`  -> ABORT: no lines (personality=${speaker.personality})`); return false; }
   speaker.__speechText = lines[Math.floor(Math.random() * lines.length)];
   speaker.__speechAt = Date.now();
   speaker.__speechCategory = category;
+  speechDebugLog(`  -> SUCCESS text="${speaker.__speechText}" speechAt=${speaker.__speechAt}`);
   renderVfxFor(speaker.id);
   return true;
 }
