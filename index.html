@@ -217,6 +217,8 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
+  /* 野営の夜の行動選択シーンは背景の野営地イラストを見せたいため、共通の.dungeon-bgが持つ暗いグラデーションを外す */
+  #campBg::after { background: none; }
   /* z-indexは.party-bar(4)より高くする: 内側の.dungeon-top(z-index:5)はこのスタッキングコンテキストに
      閉じ込められるため、こちら自体を.party-barより上げないと瀕死アラートのボタンが増えた時に隠れてしまう。
      ただしflex:1で画面全体に引き伸ばされるため、pointer-events:noneにしないと実体の無い透明な部分が
@@ -979,6 +981,7 @@ function playCampBgm() {
   }
   fadeStep();
 }
+const CAMP_BGM_RESUME_DELAY_MS = 6000; // 就寝直後に冒険中BGMが即座に鳴り始めると唐突なため、フェード完了後もしばらく無音の間を置く
 function stopCampBgm(onDone) {
   const startVol = campBgmAudio.volume;
   const startTime = performance.now();
@@ -990,11 +993,13 @@ function stopCampBgm(onDone) {
     } else {
       campBgmAudio.pause();
       campBgmAudio.volume = CAMP_BGM_VOLUME;
-      if (audioUnlocked) bgmAudio.play().catch(() => {}); // 続きから再開(頭出ししない)
       if (onDone) onDone();
     }
   }
   fadeStep();
+  setTimeout(() => {
+    if (audioUnlocked) bgmAudio.play().catch(() => {}); // 続きから再開(頭出ししない)
+  }, CAMP_BGM_RESUME_DELAY_MS);
 }
 
 // ============ 効果音(SE): Web Audio API低遅延方式 ============
@@ -2066,6 +2071,7 @@ function renderDungeon() {
   document.getElementById("floorBadge").textContent = `${currentFloor}層目`;
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
+  document.getElementById("dungeonLog").style.display = "";
   playBgm("dungeon");
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
@@ -2369,6 +2375,9 @@ function showCriticalAlert(critical, onResolved) {
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   const overlaySrc = stressOverlaySrc(critical.fatigue);
+  // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
+  // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
+  document.getElementById("dungeonLog").style.display = "none";
   div.innerHTML = `
     <div class="critical-alert">
       <div class="stress-wrap" style="width:64px;margin:0 auto 0.5rem;">
@@ -2377,8 +2386,10 @@ function showCriticalAlert(critical, onResolved) {
       </div>
       <p style="text-align:center;"><strong>${critical.name}(${c2.ja})が瀕死のまま倒れている...</strong></p>
       <p>${statusLabel(critical)}</p>
-      <button class="big primary" id="carryBtn">担いで一緒に歩いて帰る</button>
-      <button class="big" id="skipCriticalBtn" style="margin-top:0.4rem;">${retreating ? "今は見送って帰還を続ける" : "今は見送って先へ進む"}</button>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button class="big primary" id="carryBtn" style="flex:1;">担いで連れて帰る</button>
+        <button class="big" id="skipCriticalBtn" style="flex:1;">一旦見送る</button>
+      </div>
     </div>
   `;
   document.getElementById("carryBtn").onclick = () => {
@@ -2387,6 +2398,7 @@ function showCriticalAlert(critical, onResolved) {
   document.getElementById("skipCriticalBtn").onclick = () => {
     dlog(`${critical.name}をその場に残した。`);
     div.innerHTML = "";
+    document.getElementById("dungeonLog").style.display = "";
     onResolved();
   };
 }
