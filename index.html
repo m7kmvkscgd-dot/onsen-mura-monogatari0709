@@ -48,6 +48,11 @@
   .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
+  /* 所持中の支援物資アイコン。野営具→回復薬→煙玉の順、最大11個(野営具1+回復薬/煙玉合計10)を
+     1行8個までで折り返し、最大量でも2行に収まるようにしてある */
+  /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
+  .owned-supply-icons { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-width: 296px; height: 68px; margin: 0.3rem 0 0.8rem; }
+  .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
   .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
@@ -314,6 +319,22 @@
     65% { transform: translateY(-3px); }
     100% { transform: translateY(0); }
   }
+  /* 大技の構え中(bigAttackPending)の敵。対象選択中の赤パルスと区別するため橙色にしてある */
+  .enemy-card.charging { border-color: rgba(245,166,35,0.75); box-shadow: 0 0 10px rgba(245,166,35,0.5); animation: chargingPulse 0.9s ease-in-out infinite; }
+  @keyframes chargingPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(245,166,35,0.4); }
+    50% { box-shadow: 0 0 18px rgba(245,166,35,0.9); }
+  }
+  @keyframes screenWarningFlash {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #screenWarningFlash {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(245,166,35,0) 55%, rgba(245,166,35,0.35) 100%);
+    opacity: 0;
+  }
   .enemy-card.dead { opacity: 0.25; }
   .enemy-card img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
@@ -473,6 +494,7 @@
       <h2>支援物資 <span id="suppliesCount"></span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">回復薬と煙玉を購入できます。合計で最大<span id="suppliesCapLabel"></span>個まで持てます。</p>
       <p class="gold" id="suppliesGold">0G</p>
+      <div id="ownedSupplyIcons" class="owned-supply-icons"></div>
       <div class="card">
         <div class="shop-item">
           <div>
@@ -639,6 +661,7 @@
   <!-- 戦闘 -->
   <div class="screen" id="screen-battle">
     <div class="battle-bg" id="battleBg"></div>
+    <div id="screenWarningFlash"></div>
     <div class="battle-top" id="battleTop">
       <div class="enemy-row" id="enemyRow"></div>
       <div id="battleLog"></div>
@@ -921,14 +944,24 @@ const BG_SETS = {
 function preloadTavernImages() {
   Object.values(BG_SETS.tavern).forEach((url) => { const img = new Image(); img.src = url; });
 }
+// 野営開始演出(森の現在時間帯→夜へのクロスフェード)で使う森の4枚も同様に先読みしておく。
+// 未読み込みのままcrossfadeBgを呼ぶと、実機ではフェード中に画像取得が間に合わず、フェードに
+// 見えず突然切り替わったように見えてしまうことがあったための対策
+function preloadDungeonImages() {
+  Object.values(BG_SETS.dungeon).forEach((url) => { const img = new Image(); img.src = url; });
+}
 function scheduleIdlePreload(fn) {
   if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 5000 });
   else setTimeout(fn, 2000);
 }
 if (document.readyState === "complete") {
   scheduleIdlePreload(preloadTavernImages);
+  scheduleIdlePreload(preloadDungeonImages);
 } else {
-  window.addEventListener("load", () => scheduleIdlePreload(preloadTavernImages));
+  window.addEventListener("load", () => {
+    scheduleIdlePreload(preloadTavernImages);
+    scheduleIdlePreload(preloadDungeonImages);
+  });
 }
 function dayLikeOf(tod) {
   return tod === "dawn" || tod === "day" ? "day" : "night";
@@ -1838,6 +1871,8 @@ function renderPartySelect() {
       </div>
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
+        ${hpBarHtml(c)}
+        ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
         <div class="roster-sub">${statusLabel(c)}</div>
       </div>
     `;
@@ -1854,6 +1889,7 @@ function renderPartySelect() {
     };
     list.appendChild(row);
   });
+  activateHpTrails(list);
 }
 
 // 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計SUPPLY_CAP個までの共有枠
@@ -1872,6 +1908,20 @@ function renderSupplies() {
   document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
   document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
   document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
+  renderOwnedSupplyIcons();
+}
+// 所持中の支援物資を、野営具→回復薬→煙玉の順で1個ずつ小さいアイコンとして並べる
+// (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)
+function renderOwnedSupplyIcons() {
+  const wrap = document.getElementById("ownedSupplyIcons");
+  let html = "";
+  const addIcons = (item, count) => {
+    for (let i = 0; i < count; i++) html += `<img src="${item.image}" alt="${item.ja}">`;
+  };
+  addIcons(ITEMS.campingKit, state.inventory.campingKit || 0);
+  addIcons(ITEMS.potion, state.inventory.potion || 0);
+  addIcons(ITEMS.smokeBomb, state.inventory.smokeBomb || 0);
+  wrap.innerHTML = html;
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
@@ -1933,29 +1983,30 @@ document.getElementById("departBtn").onclick = () => {
   heroTitle.style.display = "none";
   setTimeout(() => {
     playSfx("footstep");
+    const overlay = document.getElementById("moveTransitionBlack");
+    overlay.style.display = "block";
+    // 揺れ/ズームの歩行アニメーションと暗転フェードアウトを同時に開始する(以前は歩行アニメーションが
+    // 終わってから暗転を始めていたため、暗転中は画面が完全に静止して見えていた。歩行の方が暗転より
+    // 長い時間続くので、これで暗転しきるまでずっと揺れ続けるようになる)
     const walkAnim = heroInner.animate(buildWalkKeyframes(), { duration: DEPARTURE_WALK_MS, easing: "ease-in-out", fill: "forwards" });
-    walkAnim.onfinish = () => {
-      const overlay = document.getElementById("moveTransitionBlack");
-      overlay.style.display = "block";
-      const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
-      fadeOut.onfinish = () => {
-        fadeOut.cancel();
-        overlay.style.opacity = "1";
-        walkAnim.cancel();
-        heroInner.style.transform = "";
-        setTimeout(() => {
-          enterDungeon();
-          departBtnEl.disabled = false;
-          bodyPad.style.display = "";
-          heroTitle.style.display = "";
-          const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
-          fadeIn.onfinish = () => {
-            fadeIn.cancel();
-            overlay.style.opacity = "0";
-            overlay.style.display = "none";
-          };
-        }, DEPARTURE_BLACK_HOLD_MS);
-      };
+    const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
+    fadeOut.onfinish = () => {
+      fadeOut.cancel();
+      overlay.style.opacity = "1";
+      walkAnim.cancel();
+      heroInner.style.transform = "";
+      setTimeout(() => {
+        enterDungeon();
+        departBtnEl.disabled = false;
+        bodyPad.style.display = "";
+        heroTitle.style.display = "";
+        const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
+        fadeIn.onfinish = () => {
+          fadeIn.cancel();
+          overlay.style.opacity = "0";
+          overlay.style.display = "none";
+        };
+      }, DEPARTURE_BLACK_HOLD_MS);
     };
   }, DEPARTURE_BG_HOLD_MS);
 };
@@ -2513,7 +2564,7 @@ function renderCampScreen() {
 
   if (campPendingComfortActor) {
     const actor = campPendingComfortActor;
-    const targets = fieldParty.filter((c) => c.status === "active");
+    const targets = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
     const p = document.createElement("p");
     p.style.cssText = "width:100%;margin:0;font-size:0.82rem;";
     p.innerHTML = `<strong>${actor.name}が誰を慰めますか？</strong>`;
@@ -2571,11 +2622,14 @@ function renderCampScreen() {
   };
   actions.appendChild(brewBtn);
 
-  const comfortBtn = document.createElement("button");
-  comfortBtn.className = "big";
-  comfortBtn.textContent = "慰める";
-  comfortBtn.onclick = () => { campPendingComfortActor = actor; renderCampScreen(); };
-  actions.appendChild(comfortBtn);
+  // 慰める対象は自分以外なので、他に稼働中の仲間がいない(単独行動中)時はボタン自体を出さない
+  if (fieldParty.some((c) => c.status === "active" && c.id !== actor.id)) {
+    const comfortBtn = document.createElement("button");
+    comfortBtn.className = "big";
+    comfortBtn.textContent = "慰める";
+    comfortBtn.onclick = () => { campPendingComfortActor = actor; renderCampScreen(); };
+    actions.appendChild(comfortBtn);
+  }
 
   const careBtn = document.createElement("button");
   careBtn.className = "big";
@@ -2854,6 +2908,15 @@ function findVfxEntity(targetId) {
 // 与えたダメージ/回復の演出(数字ポップアップ・揺れ)は、DOM要素ではなくキャラ/敵オブジェクト自身に
 // 「いつ・何を表示すべきか」を記録しておく方式にする。renderPartyBar/敵カード生成が毎回このデータを見て
 // その場でポップアップ要素を作るため、ターンのたびにDOM要素が作り直されても消えたり出そびれたりしない
+// 敵の大技予告(bigAttackPending)が発生した瞬間、画面端を一瞬だけ橙色に光らせる警告演出。
+// アニメーションを毎回頭から再生させるため、一度クラスを外してリフローを挟んでから付け直す
+function triggerWarningFlash() {
+  const el = document.getElementById("screenWarningFlash");
+  if (!el) return;
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = "screenWarningFlash 0.6s ease-out";
+}
 function popupOn(targetId, text, cls) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
@@ -2964,7 +3027,7 @@ function renderBattleScreen() {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(e);
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     card.innerHTML = `
       <img src="${e.image}" alt="${e.label}">
@@ -3073,6 +3136,8 @@ function processNext() {
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2) {
         actor.bigAttackPending = true;
         blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
+        triggerWarningFlash();
+        playSfx("guard");
       }
       actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
       const result = enemyAttack(actor, alive, blog);
@@ -3411,6 +3476,21 @@ function renderActionButtons(actor) {
   itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
   itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
+
+  // 消火: 味方に炎上中の仲間が1人でもいる時だけ表示。使うとパーティ全員の炎上を治す(ターンを消費する)
+  if (fieldParty.some((c) => c.burnTurns > 0)) {
+    const extinguishBtn = document.createElement("button");
+    extinguishBtn.className = "big";
+    extinguishBtn.textContent = "消火";
+    extinguishBtn.onclick = () => {
+      playSfx("heal");
+      fieldParty.forEach((c) => { c.burnTurns = 0; });
+      blog(`${actor.label}は仲間の炎を消し止めた！`);
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(extinguishBtn);
+  }
 
   const fleeBtn = document.createElement("button");
   fleeBtn.className = "big danger";

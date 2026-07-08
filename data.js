@@ -49,16 +49,32 @@ const ABILITY_DESC = {
 // pickEncounterForFloor()により10の倍数フロアで単体ボス戦として優先的に選ばれる)
 const ENEMIES = {
   // ---- 序盤(Lv1-10 / floor 1-12) ----
-  yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/yaken.png", hp: 14, atk: 4, def: 2, spd: 6, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 12 },
-  inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 18, atk: 5, def: 3, spd: 4, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12 },
-  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 6, def: 2, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12 },
-  oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12 },
-  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12 },
-  kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 16, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12 },
-  hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12 },
-  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12 },
-  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12 },
-  kamaitachi: { id: "kamaitachi", ja: "鎌鼬", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 6, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 12 },
+  // bigAttack: 大技(予告→発動)の専用プロファイル。見た目/生態にあわせて威力とデバフを個別に設計してある
+  // (未設定の敵はengine.js側の汎用フォールバック=BIG_ATTACK_MULT+ランダムデバフプールを使う)
+  yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/yaken.png", hp: 14, atk: 4, def: 2, spd: 6, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 群れで足に食らいつき、動きを鈍らせる
+  inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 18, atk: 5, def: 3, spd: 4, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.5 } }, // 猪突猛進、ただ単純に高威力
+  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 6, def: 2, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 0.9, debuff: { type: "poison", chance: 1.0, value: 3 } } }, // 威力は控えめだが必ず毒を注入する
+  oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で絡め取り、高確率で行動を封じる
+  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 0.9, debuff: { type: "atkDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 精気を吸い、力を奪う
+  kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 16, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 相撲さながらに組み伏せ、構えを崩す
+  hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
+  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
+    // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
+    // 必ず全体を巻き込む(ignoreGuardian)。その代わり単体特化の大技より威力は抑えめ、通常攻撃も
+    // 全体攻撃力を20%落とした代わりに、通常攻撃自体にも延焼(30%)を持たせてある
+    bigAttack: { mult: 0.4, ignoreGuardian: true, debuff: { type: "burn", chance: 1.0, turnsMin: 2, turnsMax: 3 } },
+    onHitInflict: { type: "burn", chance: 0.3, turnsMin: 2, turnsMax: 3 } },
+  kamaitachi: { id: "kamaitachi", ja: "鎌鼬", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 6, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.55, value: 0.2, turns: 3 } } }, // 鎌鼬の一閃が鎧ごと切り裂く
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
   ochimusha: { id: "ochimusha", ja: "落武者", image: "assets/enemies/ochimusha.png", hp: 34, atk: 10, def: 6, spd: 8, goldMin: 18, goldMax: 29, xp: 24, minFloor: 9, maxFloor: 29 },
@@ -98,7 +114,11 @@ const ENEMIES = {
 
   // 大群系(isSwarm): 通常より小さく表示され、ステータスは同階層帯の通常種平均のおよそ4〜5割に抑えてある。
   // 遭遇時は2体で通常種1体ぶんの「枠」を埋める(pickEncounterForFloor参照)。階層帯は既存の40種と同じ4段階に対応
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
+  // onHitInflict: 通常攻撃が命中するたび(大技を含まない毎ターンの攻撃)に確率で毒を蓄積させる。
+  // かばう/挑発でタンク役が群れの攻撃を全て一身に受けると、複数体分の蓄積が重なって毒がすぐ危険域に達する
+  // (槍士の「かばう」に対する天敵として設計。かばわず散らして受ければ1体あたりの蓄積は少ない)
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true,
+    onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
   chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 8, atk: 2, def: 1, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 13, atk: 5, def: 2, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 9, maxFloor: 29, isSwarm: true },
   chibi_oni: { id: "chibi_oni", ja: "ちび鬼", image: "assets/enemies/chibi_oni.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 10, goldMax: 16, xp: 12, minFloor: 9, maxFloor: 29, isSwarm: true },
@@ -110,9 +130,9 @@ const ENEMIES = {
 
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
-  potion: { id: "potion", ja: "回復薬", price: 5, desc: "HPを少し回復する" },
-  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる" },
-  campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる" },
+  potion: { id: "potion", ja: "回復薬", price: 5, desc: "HPを少し回復する", image: "assets/items/potion.png" },
+  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる", image: "assets/items/smoke_bomb.png" },
+  campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
 };
 const POTION_HEAL_RATIO = 0.38;
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
@@ -556,6 +576,10 @@ const BIG_ATTACK_CYCLE_LENGTH = 4;
 const BIG_ATTACK_MULT = 0.65; // 大技の1体あたりの威力(通常攻撃比)
 const BIG_ATTACK_DOT_REDUCTION = 0.15; // 敵が毒/炎上状態の間、大技の威力をさらに下げる(削る対抗策)
 const BIG_ATTACK_EXPOSED_BONUS = 1.2; // 予告中(bigAttackPending)の敵へは、プレイヤーの与ダメージが増える(押し切る対抗策)
+// 大技は命中した対象ごとに独立して、この確率で追加のデバフも1つ付与する(スタンはAOEで全員に
+// 入ると強すぎるため対象外。単発の攻撃力/防御力/素早さダウンと毒/炎上のみを候補にしてある)
+const BIG_ATTACK_DEBUFF_CHANCE = 0.35;
+const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn"];
 
 if (typeof module !== "undefined") {
   module.exports = {
@@ -563,7 +587,8 @@ if (typeof module !== "undefined") {
     FATIGUE_PER_FLOOR, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_LOCK_MINUTES, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, STUN_RESIST_TURNS, STUN_RESIST_MULT,
-    BIG_ATTACK_CYCLE_LENGTH, BIG_ATTACK_MULT, BIG_ATTACK_DOT_REDUCTION, BIG_ATTACK_EXPOSED_BONUS, SKILL_TREES,
+    BIG_ATTACK_CYCLE_LENGTH, BIG_ATTACK_MULT, BIG_ATTACK_DOT_REDUCTION, BIG_ATTACK_EXPOSED_BONUS,
+    BIG_ATTACK_DEBUFF_CHANCE, BIG_ATTACK_DEBUFF_POOL, SKILL_TREES,
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
     CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES,
   };

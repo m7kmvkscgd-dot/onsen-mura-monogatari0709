@@ -854,18 +854,53 @@ function enemyAttack(enemy, targets, log) {
   // 気絶するという出来事自体が最大級のストレスになるはずなので、その場合はratio=1.0扱いで計算する
   const wentDown = target.hp <= 0;
   target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
+  // 敵固有の通常攻撃時デバフ(ぬらりこうもりの毒など)。かばう/挑発で同じ相手が何度も狙われ続けると
+  // 蓄積が重なって危険域に達しやすい、という「かばうへの天敵」を演出するための仕組み。
+  // stacking:trueの毒は通常のapplyPoison(最大値で頭打ち)と違い、命中のたびに加算される特殊仕様
+  if (!wentDown && enemy.onHitInflict && Math.random() < enemy.onHitInflict.chance) {
+    if (enemy.onHitInflict.type === "poison" && enemy.onHitInflict.stacking && target.statusImmuneTurns <= 0) {
+      target.poison = Math.min(POISON_MAX_STACKS, (target.poison || 0) + (enemy.onHitInflict.value || 1));
+      log(`${target.label}は${enemy.label}に噛まれ、毒が蓄積した！(${target.poison})`);
+    } else {
+      resolveDebuffEffect(target, enemy.onHitInflict.type, enemy.onHitInflict, log);
+    }
+  }
   return { target, dmg, hit: true };
 }
 
+// paramsにturnsMin/turnsMaxがあれば範囲内でランダムなターン数を、無ければ固定のturns(既定3)を返す
+function resolveTurns(params) {
+  if (params.turnsMin != null && params.turnsMax != null) {
+    return params.turnsMin + Math.floor(Math.random() * (params.turnsMax - params.turnsMin + 1));
+  }
+  return params.turns || 3;
+}
+// デバフ種別ごとの適用処理を共通化(大技の専用プロファイル・汎用ランダムプール・通常攻撃時デバフの
+// いずれからも呼ぶ)。paramsはvalue/turns(またはturnsMin/turnsMaxの範囲指定)を持つinflict設定オブジェクト
+function resolveDebuffEffect(target, type, params, log) {
+  params = params || {};
+  if (type === "atkDown") { applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は攻撃力が下がった！`); }
+  if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }
+  if (type === "spdDown") { applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params)); log(`${target.label}は素早さが下がった！`); }
+  if (type === "poison") { applyPoison(target, params.value || 3); log(`${target.label}は毒を受けた！`); }
+  if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
+  if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
+  if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }
+}
+
 // enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
-// 生存中の味方全員に、通常攻撃よりウェイトの軽い威力(BIG_ATTACK_MULT)で襲いかかる。
+// 生存中の味方全員に襲いかかる。敵にbigAttackプロファイル(見た目/生態に合わせた専用の威力+デバフ)が
+// あればそれを使い、無ければ汎用フォールバック(BIG_ATTACK_MULT+ランダムデバフプール)を使う。
 // 敵自身が毒/炎上状態なら威力がさらに下がる(削る対抗策)。結果は対象ごとの配列で返す
 function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return [];
-  const guardian = alive.find((t) => t.guarding || t.tauntTurns > 0);
+  const profile = enemy.bigAttack;
+  // ignoreGuardian: 鬼火の業火など「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による
+  // 引きつけ対抗策を無視して常に生存者全員を巻き込む
+  const guardian = profile && profile.ignoreGuardian ? null : alive.find((t) => t.guarding || t.tauntTurns > 0);
   const hitTargets = guardian ? [guardian] : alive;
-  let mult = BIG_ATTACK_MULT;
+  let mult = profile ? profile.mult : BIG_ATTACK_MULT;
   if (enemy.poison > 0 || enemy.burnTurns > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {
     if (!rollHit(enemy, target)) {
@@ -882,6 +917,15 @@ function enemyBigAttack(enemy, targets, log) {
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
     const wentDown = target.hp <= 0;
     target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
+    // 命中した対象ごとに独立してデバフ判定する(戦闘不能になった相手には付けない)
+    if (!wentDown) {
+      if (profile && profile.debuff) {
+        if (Math.random() < profile.debuff.chance) resolveDebuffEffect(target, profile.debuff.type, profile.debuff, log);
+      } else if (!profile && Math.random() < BIG_ATTACK_DEBUFF_CHANCE) {
+        const debuffType = BIG_ATTACK_DEBUFF_POOL[Math.floor(Math.random() * BIG_ATTACK_DEBUFF_POOL.length)];
+        resolveDebuffEffect(target, debuffType, {}, log);
+      }
+    }
     return { target, dmg, hit: true };
   });
 }
@@ -979,7 +1023,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack, enemyBigAttack,
+    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack, enemyBigAttack, resolveDebuffEffect,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
