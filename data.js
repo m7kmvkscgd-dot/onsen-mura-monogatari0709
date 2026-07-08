@@ -111,7 +111,7 @@ const ENEMIES = {
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "戦闘中に1人のHPを最大HPの35%回復する" },
-  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "使うとその戦闘からパーティ全員で一斉に逃げ出せる" },
+  smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる" },
   campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる" },
 };
 const POTION_HEAL_RATIO = 0.38;

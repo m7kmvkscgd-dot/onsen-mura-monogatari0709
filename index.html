@@ -388,10 +388,8 @@
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="tavernGold" style="color:#ffd76a;">0G</p>
 
-      <h2>仲間(HP/MPを全回復+ストレス少し回復するには宿泊)</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">🏮HP/MPを全回復します(一人/10G)</p>
+      <h2>🏮HP/MPを全回復します(一人/10G)</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊したい仲間を選んで下の「宿泊する」を押して下さい。</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">パーティ編成は「深淵の森へ向かう」を押した時に選びます。</p>
       <div id="rosterList"></div>
       <div id="lodgeActionBar" style="display:flex;gap:0.6rem;">
         <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;flex:1;">宿泊する</button>
@@ -436,7 +434,7 @@
         <div class="shop-item" style="margin-top:0.6rem;">
           <div>
             <div><strong>煙玉</strong> <span id="smokeBombOwned">0</span>個</div>
-            <div class="desc">使うとその戦闘からパーティ全員で逃げ出せる</div>
+            <div class="desc">その戦闘から即座に逃げる</div>
           </div>
           <button class="big" id="buySmokeBombBtn">購入</button>
         </div>
@@ -890,6 +888,8 @@ function advanceToNextMorning() {
 // 戦闘に入っても曲を切り替えない(=中断しない)ことで途切れず流れ続けるようにしている
 const BGM_TRACKS = {
   town: "assets/bgm/town_bgm.mp3",
+  town_dawn: "assets/bgm/town_dawn_bgm.mp3", // 朝(dawn)の時間帯だけ町で流れる専用BGM
+  town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
 };
 const bgmAudio = document.getElementById("bgmAudio");
@@ -998,7 +998,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1110,7 +1110,7 @@ function renderTown() {
   document.getElementById("townGold").textContent = state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = TIME_PHASE_LABEL[state.timeOfDay || "day"];
-  playBgm("town");
+  playBgm(state.timeOfDay === "dawn" ? "town_dawn" : state.timeOfDay === "night" ? "town_night" : "town");
   updateSceneBackgrounds();
   showScreen("screen-town");
 }
@@ -1193,7 +1193,7 @@ function renderRosterList() {
   document.getElementById("dismissActionBar").style.display = dismissMode ? "" : "none";
   document.getElementById("dismissModeBtn").textContent = dismissMode ? "解雇をやめる" : "解雇";
   if (state.roster.length === 0) {
-    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">まだ誰もいません。下で仲間を作りましょう。</p>';
+    list.innerHTML = "";
     return;
   }
   lodgingSelectedIds = lodgingSelectedIds.filter((id) => state.roster.some((c) => c.id === id));
@@ -1379,7 +1379,8 @@ function playLodgingTransition(onDone) {
       fromEl.style.backgroundImage = `url('${BG_SETS.tavern.dawn}')`;
       caption.style.animation = "lodgingCaptionFade 4500ms ease forwards";
       setTimeout(() => {
-        // 暗転明け→朝
+        // 暗転明け→朝。朝のイラストが見え始めるこのタイミングで専用の効果音を一度だけ鳴らす
+        playSfx("morning_chime");
         fadeOpacity(blackEl, 1, 0, 3300, finishLodging);
       }, 1650);
     });
@@ -2551,6 +2552,8 @@ function aliveEnemies() {
 }
 
 function renderBattleScreen() {
+  // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
+  if (!battle) return;
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -2612,6 +2615,8 @@ function nextRound() {
 }
 
 function processNext() {
+  // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていたターン処理が遅れて発火してもクラッシュしないための保険
+  if (!battle) return;
   battle.actingId = null;
   battle.actingEnemyId = null;
   if (aliveEnemies().length === 0) { renderBattleScreen(); victory(); return; }
@@ -3039,7 +3044,7 @@ function useSmokeBomb(actor) {
   state.inventory.smokeBomb--;
   saveState();
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
-  playSfx("evade");
+  playSfx("smoke_bomb");
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
