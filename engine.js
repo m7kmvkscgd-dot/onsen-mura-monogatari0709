@@ -147,6 +147,28 @@ function isAvailable(character, absoluteMinutes) {
 function useOnsen(character, absoluteMinutes) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
   character.onsenLockUntilMinutes = absoluteMinutes + ONSEN_LOCK_MINUTES;
+  // 次の遠征中限定のランダムバフを付与する(野営する、または町へ帰ると失効する)
+  character.onsenBuffKey = pickOnsenBuff();
+}
+// バフ「ぽかぽか」(最大HP+7%)は他のバフと違い実効ステータス計算だけでは足りず、実際のHPの
+// 器そのものを一時的に増やす必要があるため、遠征開始時(enterDungeon)に一度だけ加算し、
+// バフが失効するタイミング(clearOnsenBuff)で同じ量を正しく差し引く
+function applyOnsenHpBuffOnDeparture(character) {
+  if (character.onsenBuffKey === "pokapoka" && !character.onsenHpBonusAmount) {
+    const bonus = Math.round(character.maxHp * 0.07);
+    character.maxHp += bonus;
+    character.hp += bonus;
+    character.onsenHpBonusAmount = bonus;
+  }
+}
+// 野営する/町へ戻るタイミングで呼び、バフ(と「ぽかぽか」で加算した分のHP)を失効させる
+function clearOnsenBuff(character) {
+  if (character.onsenHpBonusAmount) {
+    character.maxHp = Math.max(1, character.maxHp - character.onsenHpBonusAmount);
+    character.hp = Math.min(character.maxHp, Math.max(0, character.hp - character.onsenHpBonusAmount));
+    character.onsenHpBonusAmount = 0;
+  }
+  character.onsenBuffKey = null;
 }
 
 // 宿屋に宿泊し、HP/MPを全回復+ストレスを少量回復する(宿泊自体は冒険可否に影響しない)
@@ -190,6 +212,9 @@ function effectiveStat(entity, key) {
     result = Math.max(1, Math.round(fatigued + equip));
     if (key === "spd" && entity.carryingId) result = Math.max(1, Math.round(result * 0.5)); // 仲間を担いでいる間は素早さ半減
   }
+  // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
+  if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
+  if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
   // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
   if (entity.statMods && entity.statMods.length) {
     let mult = 1;
@@ -266,6 +291,11 @@ function applyBurn(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
 }
+// 戦闘終了時(勝利/逃走)に、生き残った味方の毒/炎上を自動的に治す。戦闘のたびに持ち越される
+// 鬱陶しさをなくすための措置(スタン等の他の状態異常はターン制でその場で切れるため対象外)
+function clearDotEffects(characters) {
+  characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; });
+}
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
   const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT));
@@ -294,6 +324,12 @@ function applySilence(entity, turns) {
 function tickTurnStartEffects(entity, log) {
   if (entity.stunResistTurns > 0) entity.stunResistTurns--;
   const dmg = tickPoison(entity, log) + tickBurn(entity, log);
+  // 温泉バフ「湯治」: 自分のターンの最初に毎回HPの2%を回復する
+  if (entity.hp > 0 && entity.onsenBuffKey === "touji") {
+    const heal = Math.max(1, Math.round(entity.maxHp * 0.02));
+    entity.hp = Math.min(entity.maxHp, entity.hp + heal);
+    log(`${entity.label}は湯治の効果で${heal}回復した！`);
+  }
   // hpRegenPct: statMods便乗の継続回復タグ(mult欄に割合を入れて流用)。明鏡止水・仁王立ちなど
   if (entity.hp > 0 && entity.statMods) {
     entity.statMods.forEach((m) => {
@@ -333,8 +369,11 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 // MPはレベルアップで伸びなくなった(下記levelUp参照)ため、一度の遠征で4〜5回使える程度を目安に
 // guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
 const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
-function abilityMpCost(abilityType) {
-  return ABILITY_MP_COST[abilityType] || 0;
+function abilityMpCost(abilityType, actor) {
+  let cost = ABILITY_MP_COST[abilityType] || 0;
+  // 温泉バフ「英気充填」: MP消費-10%
+  if (actor && actor.onsenBuffKey === "eikijuten") cost = Math.max(0, Math.round(cost * 0.9));
+  return cost;
 }
 
 function grantXp(character, amount, log) {
@@ -464,20 +503,26 @@ function damageTakenMultiplier(character) {
 function rollCritMultiplier(actor, extraCritRate) {
   const p = actor.passives;
   if (!p) return 1;
-  const rate = BASE_CRIT_RATE + p.critRateAdd + (extraCritRate || 0);
+  // 温泉バフ「気分爽快」: 会心率+5%
+  const onsenCritBonus = actor.onsenBuffKey === "kibunsoukai" ? 0.05 : 0;
+  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + (extraCritRate || 0);
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
   return 1;
 }
 // スキルツリーの技のMPコストに、そのキャラのMP割引を適用する
 function skillMpCost(actor, baseMp) {
-  const discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
+  let discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
+  // 温泉バフ「英気充填」: MP消費-10%(他の割引と乗算ではなく加算で重ねる)
+  if (actor.onsenBuffKey === "eikijuten") discount += 0.1;
   return Math.max(0, Math.round(baseMp * (1 - discount)));
 }
 // 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する。
 // typeが"stun"かつ対象がスタン抵抗中(stunResistTurns>0、直近でスタンされた直後)の場合は、
 // 通常のstatusResistMultとは別枠でさらに大きく確率を下げる(連続スタンロック防止)
 function resistedChance(target, baseChance, type) {
-  const resist = (target.passives && target.passives.statusResistMult) || 0;
+  let resist = (target.passives && target.passives.statusResistMult) || 0;
+  // 温泉バフ「美肌」: 状態異常耐性+20%
+  if (target.onsenBuffKey === "bihada") resist += 0.2;
   let chance = baseChance * (1 - resist);
   if (type === "stun" && target.stunResistTurns > 0) chance *= STUN_RESIST_MULT;
   return chance;
@@ -508,7 +553,7 @@ function useTreeSkill(actor, target, skill, log) {
   if (action.kind === "heal") {
     const targets = action.aoe ? target : [target];
     const heals = targets.map((t) => {
-      const heal = Math.max(1, Math.round(t.maxHp * action.healPct));
+      const heal = applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct)));
       if (t.status === "critical" && action.reviveHpPct) {
         return { target: t, revived: true, heal: 0 };
       }
@@ -785,7 +830,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
 // target: 単体系は対象1体、全体系(...All)は生存中の敵配列、heal/guardはactor自身か味方1体
 function useAbility(actor, target, abilityType, log) {
-  const cost = abilityMpCost(abilityType);
+  const cost = abilityMpCost(abilityType, actor);
   if (cost > 0) {
     if (actor.mp < cost) {
       log(`${actor.label}はMPが足りない！`);
@@ -822,18 +867,32 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "heal") {
-    const heal = rollHeal(effectiveStat(actor, "mag"));
+    const heal = applyOnsenHealBonus(target, rollHeal(effectiveStat(actor, "mag")));
     target.hp = Math.min(target.maxHp, target.hp + heal);
     log(`${actor.label}は${target.label}を${heal}回復！`);
     return { heal };
   }
   return null;
 }
+// 温泉バフ「湯浴み」: 回復を受ける側がこのバフを持っていれば、回復量を+15%する
+// (回復薬/温泉卵/治癒の術/スキルツリーの回復技、全ての回復経路で共通して使う)
+function applyOnsenHealBonus(target, heal) {
+  return target.onsenBuffKey === "yuami" ? Math.round(heal * 1.15) : heal;
+}
 
 function usePotion(target, log) {
-  const heal = Math.round(target.maxHp * POTION_HEAL_RATIO);
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * POTION_HEAL_RATIO));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は回復薬で${heal}回復！`);
+  return heal;
+}
+
+// 温泉卵: 回復薬と違い自分専用(呼び出し側でtarget=行動者本人を渡す前提)。ターンを消費しない点は
+// index.html側(ボタンのonclickでfinishPlayerActionを呼ばない)で担保している
+function useOnsenEgg(target, log) {
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ONSEN_EGG_HEAL_RATIO));
+  target.hp = Math.min(target.maxHp, target.hp + heal);
+  log(`${target.label}は温泉卵で${heal}回復！`);
   return heal;
 }
 
@@ -1032,12 +1091,12 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack, enemyBigAttack, resolveDebuffEffect,
+    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, isOnsenLocked, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
-    applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
+    applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, clearDotEffects, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
   };

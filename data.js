@@ -397,8 +397,12 @@ const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "HPを少し回復する", image: "assets/items/potion.png" },
   smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる", image: "assets/items/smoke_bomb.png" },
   campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
+  onsenEgg: { id: "onsenEgg", ja: "温泉卵", price: 5, desc: "HPをほんの少し回復。ターンを消費しない(自分専用)", image: "assets/items/onsen_egg.png" },
 };
 const POTION_HEAL_RATIO = 0.38;
+// 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
+// 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
+const ONSEN_EGG_HEAL_RATIO = 0.23;
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復
@@ -779,6 +783,16 @@ const EQUIPMENT = {
 const CRITICAL_MIN_HOURS = 50;
 const CRITICAL_MAX_HOURS = 74;
 
+// 重み(weight)の合計を100として、そこからランダムに1つ選ぶ共通ヘルパー(宿泊/野営の演出キャプションで使う)
+function pickWeightedMessage(list) {
+  const total = list.reduce((sum, m) => sum + m.weight, 0);
+  let roll = Math.random() * total;
+  for (const m of list) {
+    roll -= m.weight;
+    if (roll < 0) return m.text;
+  }
+  return list[0].text;
+}
 // 宿泊時の演出キャプション。重み(weight)の合計が出現率(%)になる
 const LODGING_NIGHT_MESSAGES = [
   { text: "ぐっすり眠った", weight: 50 },
@@ -793,13 +807,42 @@ const LODGING_NIGHT_MESSAGES = [
   { text: "星を眺めて語り合った", weight: 1 },
 ];
 function pickLodgingNightMessage() {
-  const total = LODGING_NIGHT_MESSAGES.reduce((sum, m) => sum + m.weight, 0);
-  let roll = Math.random() * total;
-  for (const m of LODGING_NIGHT_MESSAGES) {
-    roll -= m.weight;
-    if (roll < 0) return m.text;
-  }
-  return LODGING_NIGHT_MESSAGES[0].text;
+  return pickWeightedMessage(LODGING_NIGHT_MESSAGES);
+}
+// 野営時の演出キャプション
+const CAMP_NIGHT_MESSAGES = [
+  { text: "ぐっすり眠った", weight: 24 },
+  { text: "星が綺麗だった", weight: 20 },
+  { text: "明日に備えて眠った", weight: 20 },
+  { text: "月がよく見える夜だった", weight: 15 },
+  { text: "焚き火を絶やさず眠った", weight: 10 },
+  { text: "虫の声が心地よかった", weight: 5 },
+  { text: "深い眠りについた", weight: 5 },
+  { text: "遠くで狼の声が聞こえた", weight: 1 },
+];
+function pickCampNightMessage() {
+  return pickWeightedMessage(CAMP_NIGHT_MESSAGES);
+}
+
+// 温泉に入るとランダムで1つ付与されるバフ。次の遠征中だけ効果があり、野営するか町へ戻ると消える
+// (character.onsenBuffKeyにkeyを保存する。効果の実適用はengine.js側の各所で判定している)
+const ONSEN_BUFFS = [
+  { key: "pokapoka", name: "ぽかぽか", desc: "最大HP+7%" },
+  { key: "kekkou", name: "血行促進", desc: "攻撃力+5%" },
+  { key: "yuagari", name: "湯上がり", desc: "素早さ+5%" },
+  { key: "kibunsoukai", name: "気分爽快", desc: "会心率+5%" },
+  { key: "touji", name: "湯治", desc: "毎ターンHP2%回復" },
+  { key: "bihada", name: "美肌", desc: "状態異常耐性+20%" },
+  { key: "fukumaneki", name: "福招き", desc: "獲得銭+10%" },
+  { key: "eikijuten", name: "英気充填", desc: "MP消費-10%" },
+  { key: "yuami", name: "湯浴み", desc: "HP回復効果+15%" },
+];
+function pickOnsenBuff() {
+  return ONSEN_BUFFS[Math.floor(Math.random() * ONSEN_BUFFS.length)].key;
+}
+function onsenBuffName(key) {
+  const b = ONSEN_BUFFS.find((x) => x.key === key);
+  return b ? b.name : "";
 }
 
 const FATIGUE_PER_FLOOR = 2; // フィールドに出ているキャラが1階進むごとに溜まる疲労度(旧4から半減)

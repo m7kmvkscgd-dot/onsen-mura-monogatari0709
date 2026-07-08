@@ -149,7 +149,8 @@
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }
   .status-tag.lost { background: #333; color: #888; }
-  .status-tag.bathing { background: #1f3a4a; color: #7fd4f0; border: 1px solid #3a7a95; }
+  /* 入浴中(温泉バフ名表示)は、湯上がりのぽかぽかした雰囲気を出すため暖色系の配色にしてある */
+  .status-tag.bathing { background: linear-gradient(135deg, #4a2a1f, #6b3a1f); color: #ffbe7a; border: 1px solid #d98a3d; }
   .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
   .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem; text-align: center; cursor: pointer; }
   .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
@@ -648,11 +649,33 @@
     </div>
     <div class="body-pad">
       <button class="big" id="onsenBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+      <button class="big" id="toOnsenShopBtn" style="margin-bottom:0.8rem;">🛍️売店</button>
       <p class="gold" id="onsenGold">0G</p>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴でストレスを大きく癒します。</p>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴中は2時間の間、出発できません。</p>
       <div id="onsenList"></div>
       <button class="big" id="onsenBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- 温泉の売店 -->
+  <div class="screen" id="screen-onsen-shop">
+    <div class="hero" id="onsenShopHero" style="background-image:url('assets/bg/onsen_shop.png')">
+      <h1>売店</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="onsenShopBackBtnTop" style="margin-bottom:0.8rem;">温泉に戻る</button>
+      <p class="gold" id="onsenShopGold">0G</p>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>温泉卵</strong> <span id="onsenEggOwned">0</span>個</div>
+            <div class="desc">HPをほんの少し回復。ターンを消費しない(自分専用)</div>
+          </div>
+          <button class="big" id="buyOnsenEggBtn">購入</button>
+        </div>
+      </div>
+      <button class="big" id="onsenShopBackBtn" style="margin-top:1rem;">温泉に戻る</button>
     </div>
   </div>
 
@@ -833,10 +856,10 @@ const SAVE_KEY = "dungeon1_save";
 
 function defaultState() {
   return {
-    gold: 230,
+    gold: 150,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0 },
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -988,11 +1011,12 @@ function loadState() {
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
-        // 支援物資(回復薬+煙玉)の合計が上限を超えないよう、旧セーブや不整合分を補正する
+        // 支援物資(回復薬+煙玉+温泉卵)の合計が上限を超えないよう、旧セーブや不整合分を補正する
         // (loadState内はまだ`state`が代入される前なので、supplyCap()ではなくloaded自身の値で計算する)
         const loadedSupplyCap = SUPPLY_CAP_BASE + (loaded.bagShopLevel || 0);
         loaded.inventory.potion = Math.min(loaded.inventory.potion || 0, loadedSupplyCap);
         loaded.inventory.smokeBomb = Math.min(loaded.inventory.smokeBomb || 0, Math.max(0, loadedSupplyCap - loaded.inventory.potion));
+        loaded.inventory.onsenEgg = Math.min(loaded.inventory.onsenEgg || 0, Math.max(0, loadedSupplyCap - loaded.inventory.potion - loaded.inventory.smokeBomb));
         loaded.inventory.campingKit = Math.min(loaded.inventory.campingKit || 0, CAMPING_KIT_CAP);
       }
       const nowAbsoluteMinutes = ((loaded.dayCount || 1) - 1) * 1440 + (loaded.clockMinutes || 0);
@@ -1108,12 +1132,13 @@ function advanceCalendar(applyPhase) {
 function toggleTimeOfDay() {
   advanceCalendar(() => {});
 }
-// 宿屋で宿泊した時: 今が何時であっても必ず翌日の朝になる(dayCountも必ず1進める)
+// 宿屋で宿泊した時: 今が何時であっても必ず翌日の朝になる(dayCountも必ず1進める)。
+// 起床時刻は野営の翌朝(5:30)と揃えてある(syncClockToPhaseの朝の開始値=5:00だとずれるため直接指定)
 function advanceToNextMorning() {
   advanceCalendar(() => {
     state.dayCount = (state.dayCount || 1) + 1;
     state.timeOfDay = "dawn";
-    syncClockToPhase();
+    state.clockMinutes = 5 * 60 + 30;
   });
 }
 
@@ -1245,7 +1270,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1475,7 +1500,7 @@ function renderRosterList() {
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
     const lodgeable = c.status === "active" && (anyLodgeableNormally ? !isRestedFull(c) : true);
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : fullHealth ? "満タン" : "待機中";
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? (onsenBuffName(c.onsenBuffKey) || "入浴中") : fullHealth ? "満タン" : "待機中";
     const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
@@ -1698,7 +1723,10 @@ function playCampSleepTransition(onBlack) {
     blackDone = true;
     clearTimeout(safetyTimer);
     fromEl.style.backgroundImage = `url('${BG_SETS.dungeon.dawn}')`;
-    onBlack();
+    // 宿泊演出と同様、キャプションを表示して完全に消えてから回復画面(onBlack)を呼ぶ
+    caption.textContent = pickCampNightMessage();
+    caption.style.animation = "lodgingCaptionFade 3900ms ease forwards";
+    setTimeout(onBlack, 3900);
   }
   const safetyTimer = setTimeout(reachBlack, 30000);
   const overlay = document.getElementById("campTransition");
@@ -1990,6 +2018,15 @@ function renderFirstCharacterScreen() {
 }
 
 const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
+// 最初に仲間にする10人(最初の1人+宿屋で雇う9人)は性格が誰とも被らないようにする。
+// PERSONALITIESはちょうど全10種あるため10人分でぴったり使い切る(11人目以降は完全ランダムに戻る)
+function pickNonDuplicatePersonality() {
+  if (state.roster.length >= 10) return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  const used = new Set(state.roster.map((c) => c.personality));
+  const available = PERSONALITIES.filter((p) => !used.has(p));
+  if (available.length === 0) return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  return available[Math.floor(Math.random() * available.length)];
+}
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
@@ -1997,6 +2034,7 @@ document.getElementById("createCharBtn").onclick = () => {
   if (state.gold < HIRE_COST) { alert(`お金が足りません(${HIRE_COST}G必要)`); return; }
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
+  c.personality = pickNonDuplicatePersonality();
   state.roster.unshift(c); // 新しく雇った仲間が名簿の一番上に来るようにする
   nameInput.value = "";
   saveState();
@@ -2028,7 +2066,7 @@ function renderPartySelect() {
     const selectable = isAvailable(c, now);
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : "待機中";
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? (onsenBuffName(c.onsenBuffKey) || "入浴中") : "待機中";
     const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
       <div class="stress-wrap">
@@ -2060,7 +2098,7 @@ function renderPartySelect() {
 
 // 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠
 function renderSupplies() {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
   document.getElementById("suppliesGold").textContent = state.gold + "G";
   document.getElementById("suppliesCount").textContent = `(${total}/${supplyCap()})`;
   document.getElementById("suppliesCapLabel").textContent = supplyCap();
@@ -2076,7 +2114,7 @@ function renderSupplies() {
   document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
   renderOwnedSupplyIcons();
 }
-// 所持中の支援物資を、野営具→回復薬→煙玉の順で1個ずつ小さいアイコンとして並べる
+// 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
 // (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)
 function renderOwnedSupplyIcons() {
   const wrap = document.getElementById("ownedSupplyIcons");
@@ -2087,10 +2125,11 @@ function renderOwnedSupplyIcons() {
   addIcons(ITEMS.campingKit, state.inventory.campingKit || 0);
   addIcons(ITEMS.potion, state.inventory.potion || 0);
   addIcons(ITEMS.smokeBomb, state.inventory.smokeBomb || 0);
+  addIcons(ITEMS.onsenEgg, state.inventory.onsenEgg || 0);
   wrap.innerHTML = html;
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
@@ -2100,7 +2139,7 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buySmokeBombBtn").onclick = () => {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
@@ -2223,6 +2262,29 @@ function renderOnsen() {
 }
 document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
 document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
+
+// ============ 温泉の売店(温泉卵) ============
+function renderOnsenShop() {
+  document.getElementById("onsenShopGold").textContent = state.gold + "G";
+  document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const buyBtn = document.getElementById("buyOnsenEggBtn");
+  buyBtn.textContent = `購入(${ITEMS.onsenEgg.price}G)`;
+  buyBtn.disabled = total >= supplyCap() || state.gold < ITEMS.onsenEgg.price;
+}
+document.getElementById("buyOnsenEggBtn").onclick = () => {
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.onsenEgg.price;
+  state.inventory.onsenEgg = (state.inventory.onsenEgg || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderOnsenShop();
+};
+document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); renderOnsenShop(); showScreen("screen-onsen-shop"); };
+document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
+document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
 // ============ 増築 ============
 function renderExtension() {
@@ -2428,6 +2490,7 @@ function enterDungeon() {
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
+  fieldParty.forEach((c) => applyOnsenHpBuffOnDeparture(c)); // 温泉バフ「ぽかぽか」(最大HP+7%)をこの遠征分だけ加算する
   advGoldEarned = 0;
   advXpGained = {};
   advLevelBefore = {};
@@ -2869,7 +2932,7 @@ function finishCamping() {
       c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
       return { id: c.id, fatigueBefore: c.fatigue || 0 };
     });
-    fieldParty.forEach((c) => { if (c.status === "active") useCampRest(c); });
+    fieldParty.forEach((c) => { if (c.status === "active") { useCampRest(c); clearOnsenBuff(c); } });
     saveState();
     showCampRestSummary(beforeSnapshot, () => {
       revealCampMorning(() => {
@@ -2887,6 +2950,7 @@ function finishCamping() {
 function finishRetreat() {
   retreating = false;
   deliverCarriedAllies();
+  fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   dlog("里に戻った。");
   toggleTimeOfDay();
   // 里に帰るたびに町の曲を続きからではなく最初から再生する。時間帯によってtown/town_dawn/town_nightの
@@ -3499,7 +3563,7 @@ function processNext() {
         actor.bigAttackPending = true;
         blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
         triggerWarningFlash();
-        playSfx("guard");
+        playSfx("big_attack_warning");
       }
       actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
       const hpBeforeAtk = {};
@@ -3903,6 +3967,24 @@ function renderItemMenu(actor) {
   smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
   grid.appendChild(smokeBtn);
 
+  // 温泉卵: 回復薬と違い自分にしか使えない(対象選択なし)代わりに、使ってもターンを消費しない
+  // (finishPlayerActionを呼ばず、行動選択メニューに戻すだけ)
+  const eggBtn = document.createElement("button");
+  eggBtn.className = "big";
+  eggBtn.textContent = `温泉卵(${state.inventory.onsenEgg || 0})`;
+  eggBtn.disabled = (state.inventory.onsenEgg || 0) <= 0;
+  eggBtn.onclick = () => {
+    state.inventory.onsenEgg--;
+    playSfx("heal");
+    const heal = useOnsenEgg(actor, blog);
+    popupOn(actor.id, `+${heal}`, "heal");
+    maybeSpeakHealed(actor);
+    saveState();
+    renderBattleScreen();
+    renderActionButtons(actor);
+  };
+  grid.appendChild(eggBtn);
+
   const backBtn = document.createElement("button");
   backBtn.className = "big danger";
   backBtn.textContent = "戻る";
@@ -3939,6 +4021,7 @@ function useSmokeBomb(actor) {
   saveState();
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");
+  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
@@ -4031,6 +4114,7 @@ function afterPlayerAction() {
 function victory() {
   playSfx("victory");
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
+  clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   battle.enemies.forEach((e) => {
@@ -4053,6 +4137,8 @@ function victory() {
       });
     }
   });
+  // 温泉バフ「福招き」: パーティの誰か1人でも持っていれば獲得銭+10%
+  if (fieldParty.some((c) => c.onsenBuffKey === "fukumaneki")) totalGold = Math.round(totalGold * 1.1);
   state.gold += totalGold;
   advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
@@ -4189,6 +4275,7 @@ function escapeBattle() {
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
+  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
@@ -4210,6 +4297,8 @@ function checkStrandedOnCurrentFloor() {
 
 function defeat() {
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
+  fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
+  clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
