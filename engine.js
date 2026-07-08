@@ -128,7 +128,7 @@ function onsenCost(level) {
   return ONSEN_FLAT_COST;
 }
 
-// 入浴後、まだ6時間(ONSEN_LOCK_MINUTES)経っていなければパーティ編成に組み込めない
+// 入浴後、まだONSEN_LOCK_MINUTES(2時間)経っていなければパーティ編成に組み込めない
 // (宿泊の可否には影響しない、宿泊は別途c.status==="active"のみで判定している)
 function isOnsenLocked(character, absoluteMinutes) {
   return character.onsenLockUntilMinutes != null && absoluteMinutes < character.onsenLockUntilMinutes;
@@ -141,7 +141,7 @@ function isAvailable(character, absoluteMinutes) {
   return true;
 }
 
-// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後6時間はパーティ編成に組み込めない
+// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後2時間はパーティ編成に組み込めない
 function useOnsen(character, absoluteMinutes) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
   character.onsenLockUntilMinutes = absoluteMinutes + ONSEN_LOCK_MINUTES;
