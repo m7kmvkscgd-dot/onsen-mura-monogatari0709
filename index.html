@@ -977,7 +977,12 @@ const BGM_TRACKS = {
   town_dawn: "assets/bgm/town_dawn_bgm.mp3", // 朝(dawn)の時間帯だけ町で流れる専用BGM
   town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
+  dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ探索・戦闘で流れる専用BGM
 };
+// 深淵の森(探索+戦闘、統合済み)のBGMを時間帯に応じて選ぶ。夜だけ専用曲、それ以外は従来のまま
+function playDungeonAreaBgm() {
+  playBgm(state.timeOfDay === "night" ? "dungeon_night" : "dungeon");
+}
 const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
@@ -2178,7 +2183,9 @@ function enterDungeon() {
   advLevelBefore = {};
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
-  bgmPositions.dungeon = 0; // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)
+  // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)。夜専用曲も含めて両方リセットする
+  bgmPositions.dungeon = 0;
+  bgmPositions.dungeon_night = 0;
   showScreen("screen-dungeon");
   renderDungeon();
   dlog("深淵の森に入った。");
@@ -2305,7 +2312,7 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
-  playBgm("dungeon");
+  playDungeonAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
@@ -2919,7 +2926,7 @@ function startBattle(enemies) {
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
-  playBgm("dungeon"); // 戦闘中もダンジョン探索と同じ曲を途切れさせず流し続ける
+  playDungeonAreaBgm(); // 戦闘中もダンジョン探索と同じ曲を途切れさせず流し続ける(夜は専用曲)
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
   nextRound();
 }
@@ -3685,7 +3692,11 @@ function escapeBattle() {
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
-  fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+  fieldParty.forEach((c) => {
+    c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+    // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
+    if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
+  });
   // 戦闘から逃げると、慌てて里の方向へ1階層分後退する(例: 階層11で逃げたら階層10に戻る)
   currentFloor = Math.max(0, currentFloor - 1);
   advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
