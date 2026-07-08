@@ -182,7 +182,7 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
-      right: { name: "スタン手裏剣", desc: "敵単体へ100%ダメージ、55%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.55, turns: 1 } } },
+      right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     5: {
       left: { name: "暗殺術", desc: "HPが50%以下の敵へのダメージ+30%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.3 } } },
@@ -198,7 +198,7 @@ const SKILL_TREES = {
     },
     8: {
       left: { name: "乱れ苦無", desc: "敵単体へ4連続攻撃(合計200%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.0, hits: 4 } },
-      right: { name: "影縫い", desc: "敵単体へ130%ダメージ、30%の確率でスタン", mp: 3, action: { kind: "damage", mult: 1.3, inflict: { type: "stun", chance: 0.3, turns: 1 } } },
+      right: { name: "影縫い", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     9: {
       left: { name: "忍の極意", desc: "会心ダメージ+40%", mp: 0, passive: { critDmgAdd: 0.4 } },
@@ -212,11 +212,11 @@ const SKILL_TREES = {
   spearman: {
     2: {
       left: { name: "貫通突き", desc: "敵単体へ150%ダメージ、防御力20%無視", mp: 3, action: { kind: "damage", mult: 1.5, defPierce: 0.2 } },
-      right: { name: "鉄壁", desc: "防御力+15%", mp: 0, passive: { defMult: 1.15 } },
+      right: { name: "挑発", desc: "3ターンの間、敵から必ず狙われるようになり、防御力+15%", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.15 }], turns: 3, tauntTurns: 3 } },
     },
     3: {
       left: { name: "豪槍", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
-      right: { name: "挑発", desc: "3ターンの間、敵から必ず狙われるようになり、防御力+15%", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.15 }], turns: 3, tauntTurns: 3 } },
+      right: { name: "鉄壁", desc: "防御力+15%", mp: 0, passive: { defMult: 1.15 } },
     },
     4: {
       left: { name: "連突き", desc: "敵単体へ2連続攻撃(合計150%ダメージ)、3ターンの間防御力-15%", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2, inflict: { type: "defDown", chance: 0.4, value: 0.15, turns: 3 } } },
@@ -250,7 +250,7 @@ const SKILL_TREES = {
   naginata: {
     2: {
       left: { name: "円月の構え", desc: "薙ぎ払いの威力+10%", mp: 0, passive: { atkMult: 1.1 } },
-      right: { name: "足払い", desc: "敵単体へ130%ダメージ、40%の確率で素早さ-20%(3ターン)", mp: 2, action: { kind: "damage", mult: 1.3, inflict: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } },
+      right: { name: "足払い", desc: "敵単体へ90%ダメージ、85%の確率でスタン(1ターン)", mp: 2, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     3: {
       left: { name: "円舞", desc: "薙ぎ払いの威力+10%", mp: 0, passive: { atkMult: 1.1 } },
@@ -296,7 +296,7 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2 } },
-      right: { name: "スタン矢", desc: "敵単体へ100%ダメージ、40%の確率でスタン", mp: 3, action: { kind: "damage", mult: 1.0, inflict: { type: "stun", chance: 0.4, turns: 1 } } },
+      right: { name: "スタン矢", desc: "敵単体へ70%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     5: {
       left: { name: "鷹の目", desc: "命中率+10%、会心ダメージ+15%", mp: 0, passive: { accuracyAdd: 0.1, critDmgAdd: 0.15 } },
@@ -326,7 +326,7 @@ const SKILL_TREES = {
   gunner: {
     2: {
       left: { name: "精密射撃", desc: "敵単体へ190%ダメージ。次の自分のターンは装填で動けない", mp: 3, action: { kind: "damage", mult: 1.9, selfReload: true } },
-      right: { name: "榴弾", desc: "敵全体へ85%ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85 } },
+      right: { name: "榴弾", desc: "敵全体へ65%ダメージ、30%の確率でスタン", mp: 5, action: { kind: "damage", aoe: true, mult: 0.65, inflict: { type: "stun", chance: 0.3, turns: 1 } } },
     },
     3: {
       left: { name: "火薬強化", desc: "攻撃力+12%", mp: 0, passive: { atkMult: 1.12 } },
@@ -364,19 +364,19 @@ const SKILL_TREES = {
   onmyoji: {
     2: {
       left: { name: "火遁符", desc: "敵単体へ150%の魔法ダメージ", mp: 3, action: { kind: "damage", mult: 1.5, useMag: true } },
-      right: { name: "呪縛符", desc: "通常攻撃時、25%の確率で敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.25, value: 0.15, turns: 3 } } },
+      right: { name: "呪縛符", desc: "通常攻撃時、25%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.25, turns: 3 } } },
     },
     3: {
       left: { name: "水遁符", desc: "敵全体へ85%の魔法ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85, useMag: true } },
       right: { name: "結界術", desc: "3ターンの間、味方全体の防御力+15%", mp: 4, action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.15 }], turns: 3 } },
     },
     4: {
-      left: { name: "雷遁符", desc: "敵単体へ170%の魔法ダメージ、25%の確率でスタン", mp: 4, action: { kind: "damage", mult: 1.7, useMag: true, inflict: { type: "stun", chance: 0.25, turns: 1 } } },
+      left: { name: "雷遁符", desc: "敵単体へ110%の魔法ダメージ、85%の確率でスタン", mp: 4, action: { kind: "damage", mult: 1.1, useMag: true, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
       right: { name: "衰弱符", desc: "敵単体へ80%の魔法ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
     },
     5: {
       left: { name: "五行の理", desc: "術の威力+10%", mp: 0, passive: { atkMult: 1.1 } },
-      right: { name: "封魔符", desc: "敵単体へ80%の魔法ダメージ、35%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "stun", chance: 0.35, turns: 1 } } },
+      right: { name: "封魔符", desc: "敵単体へ60%の魔法ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.6, useMag: true, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     6: {
       left: { name: "陰陽融合", desc: "命中率+12%", mp: 0, passive: { accuracyAdd: 0.12 } },
@@ -542,12 +542,28 @@ const EVASION_SPD_FACTOR = 0.012; // 素早さ1につき回避率+1.2%
 const EVASION_MAX = 0.18;
 const MIN_HIT_CHANCE = 0.75;
 
+// スタンを受けると、その後STUN_RESIST_TURNSターンの間だけスタン確率がSTUN_RESIST_MULT倍に
+// 大幅ダウンする(通常のstatusResistMultとは別枠)。連続でスタンされ続ける「スタンロック」を
+// 防ぐための措置。プレイヤー/敵どちらにも同じルールを適用する
+const STUN_RESIST_TURNS = 3;
+const STUN_RESIST_MULT = 0.2;
+
+// 敵の「大技」システム: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、のサイクルを
+// 繰り返す。複数体が同時に予告/発動しないよう、戦闘開始時に各敵の開始位置を0〜2からランダムにずらす
+// (BIG_ATTACK_CYCLE_LENGTH-1=予告ターン、以降は0からのカウントで割った余りで判定)。
+// 大技は味方全体を巻き込む代わりに1体あたりの威力を下げてある(BIG_ATTACK_MULT)
+const BIG_ATTACK_CYCLE_LENGTH = 4;
+const BIG_ATTACK_MULT = 0.65; // 大技の1体あたりの威力(通常攻撃比)
+const BIG_ATTACK_DOT_REDUCTION = 0.15; // 敵が毒/炎上状態の間、大技の威力をさらに下げる(削る対抗策)
+const BIG_ATTACK_EXPOSED_BONUS = 1.2; // 予告中(bigAttackPending)の敵へは、プレイヤーの与ダメージが増える(押し切る対抗策)
+
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
     FATIGUE_PER_FLOOR, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_LOCK_MINUTES, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
-    BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
+    BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, STUN_RESIST_TURNS, STUN_RESIST_MULT,
+    BIG_ATTACK_CYCLE_LENGTH, BIG_ATTACK_MULT, BIG_ATTACK_DOT_REDUCTION, BIG_ATTACK_EXPOSED_BONUS, SKILL_TREES,
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
     CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES,
   };

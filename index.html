@@ -806,6 +806,7 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (c.burnTurns == null) c.burnTurns = 0;
   if (c.campWeaponCareBattles == null) c.campWeaponCareBattles = 0;
   if (c.stunTurns == null) c.stunTurns = 0;
+  if (c.stunResistTurns == null) c.stunResistTurns = 0;
   if (c.silenceTurns == null) c.silenceTurns = 0;
   if (c.statusImmuneTurns == null) c.statusImmuneTurns = 0;
   if (c.tauntTurns == null) c.tauntTurns = 0;
@@ -2893,13 +2894,14 @@ function renderVfxFor(targetId) {
 function shakeClassFor(entity) {
   return entity.__shakeUntil && entity.__shakeUntil > Date.now() ? " hit-shake" : "";
 }
-// 毒/炎上/スタン/沈黙の状態異常アイコンを名前の横に表示する
+// 毒/炎上/スタン/沈黙/大技の構えの状態アイコンを名前の横に表示する
 function statusIconsFor(entity) {
   let s = "";
   if (entity.poison > 0) s += ` 🦠${entity.poison}`;
   if (entity.burnTurns > 0) s += ` 🔥${entity.burnTurns}`;
   if (entity.stunTurns > 0) s += " 💫";
   if (entity.silenceTurns > 0) s += " 🔇";
+  if (entity.bigAttackPending) s += " ⚡";
   return s;
 }
 
@@ -2911,6 +2913,7 @@ function startBattle(enemies) {
     c.poison = 0;
     c.burnTurns = 0;
     c.stunTurns = 0;
+    c.stunResistTurns = 0;
     c.silenceTurns = 0;
     c.statusImmuneTurns = 0;
     c.tauntTurns = 0;
@@ -3044,6 +3047,34 @@ function processNext() {
       return;
     }
     setTimeout(() => {
+      // 大技サイクル: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、を繰り返す
+      const cyclePos = (actor.bigAttackCounter || 0) % BIG_ATTACK_CYCLE_LENGTH;
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1) {
+        actor.bigAttackPending = false;
+        actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
+        blog(`${actor.label}が大技を放った！`);
+        const results = enemyBigAttack(actor, alive, blog);
+        results.forEach((r) => {
+          if (r.hit) {
+            popupOn(r.target.id, `-${r.dmg}`, "dmg");
+            playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
+          } else {
+            playSfx("evade");
+          }
+        });
+        handleFieldDeaths();
+        renderBattleScreen();
+        setTimeout(() => {
+          battle.orderIndex++;
+          processNext();
+        }, 500);
+        return;
+      }
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2) {
+        actor.bigAttackPending = true;
+        blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
+      }
+      actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
       const result = enemyAttack(actor, alive, blog);
       if (result && result.hit) {
         popupOn(result.target.id, `-${result.dmg}`, "dmg");

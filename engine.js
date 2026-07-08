@@ -75,6 +75,7 @@ function createCharacter(name, classId, classUpgrades) {
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
     burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
     stunTurns: 0, // スタン(行動不能)の残りターン数
+    stunResistTurns: 0, // スタンを受けた直後の一定ターン、スタン確率が大幅に下がる(連続スタンロック防止)
     silenceTurns: 0, // 沈黙(技が使えず通常攻撃のみ)の残りターン数
     statusImmuneTurns: 0, // 状態異常を受け付けない残りターン数
     tauntTurns: 0, // 挑発中の残りターン数(かばう同様、敵から必ず狙われる)
@@ -275,6 +276,14 @@ function tickBurn(entity, log) {
 function applyStun(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   entity.stunTurns = Math.max(entity.stunTurns || 0, turns);
+  // スタンした相手には一定ターン、スタン抵抗(resistedChance側で参照)を大幅に付与する。
+  // 連続でスタンし続けられる「スタンロック」を防ぐための措置(通常のstatusResistMultとは別枠)
+  entity.stunResistTurns = Math.max(entity.stunResistTurns || 0, STUN_RESIST_TURNS);
+  // 大技の構え中(bigAttackPending)にスタンが入ると、構え自体を完全に潰す(止める対抗策)
+  if (entity.bigAttackPending) {
+    entity.bigAttackPending = false;
+    entity.bigAttackCounter = 0;
+  }
 }
 function applySilence(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
@@ -282,6 +291,7 @@ function applySilence(entity, turns) {
 }
 // 自分のターンの一番最初に呼ぶ共通処理(毒/炎上のダメージ+継続回復+バフ/デバフの残りターン消化)。ダメージ量を返す
 function tickTurnStartEffects(entity, log) {
+  if (entity.stunResistTurns > 0) entity.stunResistTurns--;
   const dmg = tickPoison(entity, log) + tickBurn(entity, log);
   // hpRegenPct: statMods便乗の継続回復タグ(mult欄に割合を入れて流用)。明鏡止水・仁王立ちなど
   if (entity.hp > 0 && entity.statMods) {
@@ -462,10 +472,14 @@ function skillMpCost(actor, baseMp) {
   const discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
   return Math.max(0, Math.round(baseMp * (1 - discount)));
 }
-// 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する
-function resistedChance(target, baseChance) {
+// 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する。
+// typeが"stun"かつ対象がスタン抵抗中(stunResistTurns>0、直近でスタンされた直後)の場合は、
+// 通常のstatusResistMultとは別枠でさらに大きく確率を下げる(連続スタンロック防止)
+function resistedChance(target, baseChance, type) {
   const resist = (target.passives && target.passives.statusResistMult) || 0;
-  return baseChance * (1 - resist);
+  let chance = baseChance * (1 - resist);
+  if (type === "stun" && target.stunResistTurns > 0) chance *= STUN_RESIST_MULT;
+  return chance;
 }
 
 // スキルツリーの能動スキル(単体/範囲攻撃、バフ、回復など)を実行する汎用リゾルバ。
@@ -525,7 +539,7 @@ function useTreeSkill(actor, target, skill, log) {
     const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
     const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
-    if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance)) {
+    if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
       if (action.inflict.type === "poison") applyPoison(t, action.inflict.value || 3);
       if (action.inflict.type === "burn") applyBurn(t, action.inflict.turns || 3);
       if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
@@ -568,6 +582,9 @@ function pickEnemyForFloor(floor, mode) {
     maxHp: hp,
     atk: Math.round(pick.atk * ENEMY_SCALE * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
     def: Math.round(pick.def * ENEMY_DEF_SCALE),
+    // 大技サイクルの開始位置を0〜2からランダムにずらす(複数体が同時に予告/発動しないようにするため)
+    bigAttackCounter: Math.floor(Math.random() * (BIG_ATTACK_CYCLE_LENGTH - 1)),
+    bigAttackPending: false,
   };
 }
 
@@ -714,6 +731,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     if (hpPct <= actor.passives.executeBonus.belowPct) dmg = Math.round(dmg * actor.passives.executeBonus.mult);
   }
   if (actor) dmg = Math.round(dmg * rollCritMultiplier(actor, extraCritRate));
+  // 大技の構え中(bigAttackPending)の敵は隙だらけとみなし、受けるダメージが増える(押し切る対抗策)
+  if (target.bigAttackPending) dmg = Math.round(dmg * BIG_ATTACK_EXPOSED_BONUS);
   dmg = Math.max(0, Math.round(dmg * damageTakenMultiplier(target)));
   if (target.passives && target.passives.onceGuardType === "nullifyDamage" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
@@ -744,7 +763,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 通常攻撃に乗る状態異常付与の受動効果(毒刃・毒矢など): 攻撃が当たった時に確率判定する。複数選んでいれば全て判定する
   if (actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
     actor.passives.onHitInflicts.forEach((oh) => {
-      if (Math.random() < resistedChance(target, oh.chance)) {
+      if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         if (oh.type === "poison") applyPoison(target, oh.value || 3);
         if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
@@ -836,6 +855,35 @@ function enemyAttack(enemy, targets, log) {
   const wentDown = target.hp <= 0;
   target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
   return { target, dmg, hit: true };
+}
+
+// enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
+// 生存中の味方全員に、通常攻撃よりウェイトの軽い威力(BIG_ATTACK_MULT)で襲いかかる。
+// 敵自身が毒/炎上状態なら威力がさらに下がる(削る対抗策)。結果は対象ごとの配列で返す
+function enemyBigAttack(enemy, targets, log) {
+  const alive = targets.filter((t) => t.hp > 0);
+  if (!alive.length) return [];
+  const guardian = alive.find((t) => t.guarding || t.tauntTurns > 0);
+  const hitTargets = guardian ? [guardian] : alive;
+  let mult = BIG_ATTACK_MULT;
+  if (enemy.poison > 0 || enemy.burnTurns > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
+  return hitTargets.map((target) => {
+    if (!rollHit(enemy, target)) {
+      log(`${target.label}は${enemy.label}の大技をかわした！`);
+      return { target, dmg: null, hit: false };
+    }
+    let rawDmg = Math.round(rollBasicAttack(enemy.atk, effectiveStat(target, "def")) * mult);
+    let suffix = "";
+    if (target.guarding) {
+      rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
+      target.guarding = false;
+      suffix = "(かばう)";
+    }
+    const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
+    const wentDown = target.hp <= 0;
+    target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
+    return { target, dmg, hit: true };
+  });
 }
 
 // 被弾ダメージが自身の最大HPに占める割合に応じてストレスが溜まる。3割未満は増加なし、
@@ -931,7 +979,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack,
+    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, enemyAttack, enemyBigAttack,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
