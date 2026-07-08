@@ -33,8 +33,10 @@
   }
   .hero::before {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(20,24,27,0.05) 0%, rgba(20,24,27,0.3) 45%, rgba(20,24,27,0.65) 78%, var(--panel) 100%);
+    background: linear-gradient(to bottom, rgba(20,24,27,0.03) 0%, rgba(20,24,27,0.5) 100%);
   }
+  /* パーティ編成画面(出発直前)は門イラストの背景をそのまま見せたいため、共通の暗いグラデーションを外す */
+  #partySelectHero::before { background: none; }
   .hero > * { position: relative; z-index: 1; }
   /* パーティ編成画面の出発演出で背景だけをscale/translateさせるための内側レイヤー(dungeon-bg-innerと
      同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
@@ -74,6 +76,9 @@
   button.big:active { background: var(--surface-2); }
   button.primary { background: var(--accent); color: #241d0a; border-color: var(--accent); }
   button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
+     切り替わったことが一目でわかるようにする */
+  button.retreat-active { background: var(--danger); color: #fff; border-color: var(--danger); }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   .card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.7rem; }
   .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
@@ -213,7 +218,14 @@
     animation: levelupPulse 1.2s ease-in-out infinite;
   }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
-  .floor-badge { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 122px 0.6rem 0.6rem; }
+  .floor-badge { text-align: center; padding: 122px 0.6rem 0.6rem; }
+  /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
+  .floor-badge span {
+    display: inline-block; font-size: 1.45rem; font-weight: 800; color: var(--accent);
+    letter-spacing: 0.05em; background: var(--panel-2); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 0.4rem 1.5rem;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
+  }
   #dungeonLog, #battleLog, #campLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
   #dungeonLog, #battleLog, #campLog { height: 70px; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
@@ -592,7 +604,7 @@
     <div class="party-bar" id="dungeonPartyBar"></div>
     <div class="dungeon-content">
       <div class="dungeon-top">
-        <div class="floor-badge" id="floorBadge">1層目</div>
+        <div class="floor-badge" id="floorBadge"><span id="floorBadgeText">1層目</span></div>
         <div id="criticalAlert"></div>
         <div id="dungeonLog"></div>
       </div>
@@ -730,6 +742,7 @@ function rosterCapacity() {
 const DOJO_LEVEL1_COST = 50; // 道場レベル1の建築費用
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
 const DOJO_MAX_LEVEL = 2;
+const DOJO_UNLOCK_HOUSE_LEVEL = 4; // 家レベルがこの値に達するまで道場は建築できない
 const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
 
 // ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(6時間)など、
@@ -1968,8 +1981,14 @@ function renderExtension() {
   }
   const dojoLevel = state.dojoLevel || 0;
   const dojoBtn = document.getElementById("dojoBuildBtn");
-  document.getElementById("dojoStatusLabel").textContent = `道場レベル${dojoLevel}(${dojoLevel === 0 ? "未建築" : `分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%`})`;
-  if (dojoLevel >= DOJO_MAX_LEVEL) {
+  const dojoLocked = dojoLevel === 0 && level < DOJO_UNLOCK_HOUSE_LEVEL;
+  document.getElementById("dojoStatusLabel").textContent = dojoLocked
+    ? `道場(家レベル${DOJO_UNLOCK_HOUSE_LEVEL}で解禁)`
+    : `道場レベル${dojoLevel}(${dojoLevel === 0 ? "未建築" : `分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%`})`;
+  if (dojoLocked) {
+    dojoBtn.textContent = `家レベル${DOJO_UNLOCK_HOUSE_LEVEL}で解禁されます`;
+    dojoBtn.disabled = true;
+  } else if (dojoLevel >= DOJO_MAX_LEVEL) {
     dojoBtn.textContent = "これ以上は増築できません(上限)";
     dojoBtn.disabled = true;
   } else if (dojoLevel === 0) {
@@ -1994,6 +2013,7 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
 document.getElementById("dojoBuildBtn").onclick = () => {
   const dojoLevel = state.dojoLevel || 0;
   if (dojoLevel >= DOJO_MAX_LEVEL) return;
+  if (dojoLevel === 0 && (state.houseLevel || 1) < DOJO_UNLOCK_HOUSE_LEVEL) return;
   const cost = dojoLevel === 0 ? DOJO_LEVEL1_COST : DOJO_LEVEL2_COST;
   if (state.gold < cost) return;
   state.gold -= cost;
@@ -2242,13 +2262,14 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
 }
 
 function renderDungeon() {
-  document.getElementById("floorBadge").textContent = `${currentFloor}層目`;
+  document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
   renderPartyBar("dungeonPartyBar", fieldParty);
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
   playBgm("dungeon");
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
+  document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
@@ -2394,13 +2415,18 @@ function playDungeonMoveTransition(actualLogic) {
   setTimeout(proceedToFade, MOVE_ANIM_MS + 200); // 安全策: onfinishが発火しない場合でも止まらないように
 }
 
-// 「里に戻る」はファストトラベルではなく、ここから階層を1つずつ下って歩いて帰るモードに入るだけ。
-// 実際に町へ着くのは、帰還を続けて階層1から更に戻ろうとした時(finishRetreat参照)
+// 「里に戻る」を押した最初の一押しから、すぐに1階層分下る(以前はモード切り替えのみで、
+// 実際に1階層下るには帰還ボタンをもう一度押す必要があり「押しても階層が下がらない」ように
+// 見えていた)。以後は「帰還」ボタン(advanceBtn)を押すたびに1階層ずつ下って里まで歩いて帰る
 document.getElementById("retreatBtn").onclick = () => {
+  if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
+    alert("行動できる仲間がいません");
+    return;
+  }
   playDungeonMoveTransition(() => {
     retreating = true;
     dlog("引き返すことにした。ここから階層を下って里へ戻る。");
-    renderDungeon();
+    moveOneFloor();
   });
 };
 
@@ -2562,37 +2588,40 @@ function healPartyOnFloorMove() {
     if (c.status === "active" && c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 1);
   });
 }
+// 1階層分の移動処理(進む/帰還どちらも共通)。retreatBtn(里に戻る最初の一押し)からも
+// advanceBtn(2回目以降の帰還)からも同じロジックで1階層動けるようにするための共通関数
+function moveOneFloor() {
+  if (retreating) {
+    currentFloor--;
+    healPartyOnFloorMove();
+    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+    if (currentFloor <= 0) {
+      saveState();
+      finishRetreat();
+      return;
+    }
+  } else {
+    advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
+    currentFloor++;
+    healPartyOnFloorMove();
+    advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+  }
+  saveState();
+
+  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+  renderDungeon();
+  if (criticalHereList.length > 0) {
+    queueCriticalAlerts(criticalHereList, () => rollEncounter());
+    return;
+  }
+  rollEncounter();
+}
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
     return;
   }
-  playDungeonMoveTransition(() => {
-    if (retreating) {
-      currentFloor--;
-      healPartyOnFloorMove();
-      advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-      if (currentFloor <= 0) {
-        saveState();
-        finishRetreat();
-        return;
-      }
-    } else {
-      advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
-      currentFloor++;
-      healPartyOnFloorMove();
-      advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
-    }
-    saveState();
-
-    const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
-    renderDungeon();
-    if (criticalHereList.length > 0) {
-      queueCriticalAlerts(criticalHereList, () => rollEncounter());
-      return;
-    }
-    rollEncounter();
-  });
+  playDungeonMoveTransition(moveOneFloor);
 };
 
 // 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
