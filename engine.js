@@ -27,11 +27,11 @@ function computeEquipBonus(classId, classUpgrades) {
   if (eq && owned.weapon > 0) {
     const t = eq.weapon[owned.weapon - 1];
     bonus[t.statKey] += t.bonus;
-    bonus.mp += owned.weapon * 2; // 武器を1段階買うごとにMP上限+2(5段階買うと最大+10)
   }
   if (eq && owned.armor > 0) {
     const t = eq.armor[owned.armor - 1];
     bonus[t.statKey] += t.bonus;
+    bonus.mp += owned.armor * 2; // 防具を1段階買うごとにMP上限+2(5段階買うと最大+10)
   }
   return bonus;
 }
@@ -375,7 +375,7 @@ function rollCritAttack(atk, def) {
 }
 // 狩人の会心の一矢。会心の一撃と同じ防御貫通の性質(弓は鎧の隙間を狙う)
 function rollPreciseShot(atk, def) {
-  return Math.max(1, Math.round(withVariance(atk * 1.35 * mitigation(def, 12), 0.15)));
+  return Math.max(1, Math.round(withVariance(atk * 1.485 * mitigation(def, 12), 0.15)));
 }
 // 砲術士の砲撃。渾身の一撃よりさらに重いが、使うと次のターンは装填で動けなくなる(呼び出し側で処理)
 function rollCannonShot(atk, def) {
@@ -718,6 +718,8 @@ function performAttack(actor, target, log) {
   return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log);
 }
 
+// 直近で敵を倒した攻撃者(全滅時のセリフ抽選で「最後に倒した人物」を優先させるために使う)
+let lastEnemyKillActor = null;
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
@@ -754,6 +756,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * (target.passives.counterMult || 1) - effectiveStat(actor, "def") * 0.5));
     actor.hp = Math.max(0, actor.hp - counterDmg);
     log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！`);
+  }
+  // 敵を倒した攻撃者を記録しておく(全滅時のセリフで「最後に倒した人物」を優先的に喋らせるために使う)
+  if (actor && target.instanceId !== undefined && target.hp <= 0) {
+    lastEnemyKillActor = actor;
   }
   // 撃破時スタック系の受動効果(修羅・槍鬼など): このダメージで倒したらスタックを積む
   if (actor && actor.passives && actor.passives.onKill && target.hp <= 0) {
@@ -897,10 +903,12 @@ function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return [];
   const profile = enemy.bigAttack;
-  // ignoreGuardian: 鬼火の業火など「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による
-  // 引きつけ対抗策を無視して常に生存者全員を巻き込む
+  // 大技は敵1体につき1人だけを狙う(以前は「かばう中の人がいなければ全員に当たる」実質AOEに
+  // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
+  // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う
   const guardian = profile && profile.ignoreGuardian ? null : alive.find((t) => t.guarding || t.tauntTurns > 0);
-  const hitTargets = guardian ? [guardian] : alive;
+  const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
+  const hitTargets = [singleTarget];
   let mult = profile ? profile.mult : BIG_ATTACK_MULT;
   if (enemy.poison > 0 || enemy.burnTurns > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {
