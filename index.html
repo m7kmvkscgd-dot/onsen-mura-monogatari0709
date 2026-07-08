@@ -36,6 +36,10 @@
     background: linear-gradient(to bottom, rgba(20,24,27,0.05) 0%, rgba(20,24,27,0.3) 45%, rgba(20,24,27,0.65) 78%, var(--panel) 100%);
   }
   .hero > * { position: relative; z-index: 1; }
+  /* パーティ編成画面の出発演出で背景だけをscale/translateさせるための内側レイヤー(dungeon-bg-innerと
+     同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
+     さらに奥(z-index:-1)に配置する */
+  .hero-bg-inner { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; }
   .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
   .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
@@ -117,7 +121,11 @@
   .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
   .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
   .stat-row span:first-child { color: var(--text-muted); }
-  .mpbar-fill { height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
+  .mpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
+  /* MP版の回復トレイル(hpbar-heal-trailと同じ考え方。緑ならぬ青は即座に伸び、この淡い水色が回復前の
+     残量から追いつくように少し遅れて伸びる)。data-hp-heal-trailを共有しているのでactivateHpTrails()が
+     そのままアニメーションさせてくれる */
+  .mpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #BFD9FF; }
   .roster-row img:not(.stress-overlay) { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .roster-info { flex: 1; }
   /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
@@ -133,6 +141,7 @@
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }
   .status-tag.lost { background: #333; color: #888; }
+  .status-tag.bathing { background: #1f3a4a; color: #7fd4f0; border: 1px solid #3a7a95; }
   .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
   .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem; text-align: center; cursor: pointer; }
   .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
@@ -180,7 +189,7 @@
      少し遅れて追いつくように伸びる(赤のhpbar-fill-trailとは逆方向・別要素)。.hpbar-fillより後の
      DOM順で描画するため上に重なり、追いつくまでの間だけ見えて、完了後は非表示にする */
   .hpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #B8FFF5; }
-  .mpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
+  .mpbar-track { position: relative; background: rgba(0,0,0,0.5); border-radius: 999px; height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
   /* リザルト画面の経験値バー: 今回の冒険より前からの分(xpbar-fill)と、今回新たに得た分(xpbar-gain、明るい色で強調)の2色重ね */
@@ -345,6 +354,24 @@
     75% { opacity: 1; }
     100% { opacity: 0; }
   }
+  /* 野営の就寝後、暗転中に表示する回復サマリー画面 */
+  .camp-rest-summary {
+    position: absolute; inset: 0; z-index: 2; overflow-y: auto;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2.5rem 1.2rem 2rem; box-sizing: border-box;
+  }
+  .camp-rest-summary h2 { color: #fff; text-align: center; margin: 0 0 1.2rem; letter-spacing: 0.1em; }
+  .camp-rest-row {
+    display: flex; align-items: center; gap: 0.7rem; width: 100%; max-width: 420px;
+    background: rgba(20,24,27,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; box-sizing: border-box;
+  }
+  .camp-rest-row img { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: 6px; flex-shrink: 0; }
+  .camp-rest-info { flex: 1; color: #fff; min-width: 0; }
+  .camp-rest-info .nm { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .camp-rest-stat-label { font-size: 0.65rem; color: var(--text-muted); }
+  .camp-rest-stress { font-size: 0.72rem; color: #9fd8ff; margin-top: 0.3rem; }
+  #campRestNextBtn { margin-top: 0.5rem; width: 100%; max-width: 420px; }
   .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
   .bottom-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(戦闘画面と同じ仕組み) */
@@ -425,6 +452,7 @@
   <!-- パーティ編成(出発直前) -->
   <div class="screen" id="screen-party-select">
     <div class="hero" id="partySelectHero">
+      <div class="hero-bg-inner" id="partySelectHeroInner" style="background-image:url('assets/bg/departure_gate.png');"></div>
       <h1>パーティ編成</h1>
     </div>
     <div class="body-pad">
@@ -548,7 +576,7 @@
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🥋道場</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の30%を分け前としてもらえるようになります。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
       <div class="card">
         <div class="roster-name" id="dojoStatusLabel"></div>
       </div>
@@ -656,6 +684,11 @@
     <div class="lodging-transition-bg to" id="campTransitionTo"></div>
     <div class="lodging-transition-black" id="campTransitionBlack"></div>
     <div class="lodging-transition-caption" id="campTransitionCaption"></div>
+    <div id="campRestSummary" class="camp-rest-summary" style="display:none;">
+      <h2>夜が明けた</h2>
+      <div id="campRestSummaryList"></div>
+      <button class="big primary" id="campRestNextBtn">次へ</button>
+    </div>
   </div>
 
 </div>
@@ -695,7 +728,15 @@ function rosterCapacity() {
   return Math.min(10, (state.houseLevel || 1) + 1);
 }
 const DOJO_LEVEL1_COST = 50; // 道場レベル1の建築費用
-const DOJO_XP_SHARE = 0.3; // 道場がある時、同行しなかった仲間が受け取る経験値の割合(3割)
+const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
+const DOJO_MAX_LEVEL = 2;
+const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
+
+// ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(6時間)など、
+// 日をまたぐ可能性のある時間比較はdayCount/clockMinutesを別々に見るのではなくこの値で行う
+function absoluteGameMinutes() {
+  return ((state.dayCount || 1) - 1) * 1440 + (state.clockMinutes || 0);
+}
 
 // dayCount(1始まり=4月1日)を「M月D日」の表示文字列に変換する。うるう年を考慮する必要がないよう
 // 固定の平年(2001年)を基準日として使い、実カレンダーの月の日数だけを利用する
@@ -711,6 +752,7 @@ let state = loadState();
 // 保存された古いセーブのキャラクターにはこれらのフィールドが無かったり形が古かったりする。
 // ロード時に不足しているフィールドを補完し、旧「死体(corpse)」状態も瀕死(critical)に変換する
 function normalizeCharacter(c, classUpgrades, halfDayStep) {
+  if (c.onsenLockUntilMinutes === undefined) c.onsenLockUntilMinutes = null; // 旧セーブ(入浴ロック導入前)はロック無し扱い
   if (c.maxMp == null) c.maxMp = baseMaxMpFor(c.classId);
   if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
   if (c.fatigue == null) c.fatigue = 0;
@@ -808,6 +850,13 @@ function saveState() {
 // 朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
 const TIME_PHASES = ["dawn", "day", "dusk", "night"];
 const TIME_PHASE_LABEL = { dawn: "朝", day: "昼", dusk: "夕", night: "夜" };
+// clockMinutes(0〜1439)を"HH:MM"表示に変換する。村パート(町画面)でのみ現在時刻を表示するために使う
+function formatClockTime(clockMinutes) {
+  const m = ((clockMinutes || 0) % 1440 + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
 // 探索中の時計(0〜1439分 = 0:00〜23:59)。「進む」1回でMINUTES_PER_FLOOR_FORWARD分(深層に向かうのは時間がかかる)、
 // 「帰還」1回でMINUTES_PER_FLOOR_RETREAT分(帰りは勝手知ったる道で少し早い)進み、
 // 下記の時間割の境界を跨いだらtimeOfDayも自動で切り替わる(生活感覚に近い長さにしてあり、均等4分割ではない)
@@ -868,7 +917,7 @@ function updateSceneBackgrounds() {
   document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
-  document.getElementById("partySelectHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
+  // partySelectHero(パーティ編成画面)は時間帯に関わらず常に門のイラストを固定表示するため、ここでは触らない
   document.getElementById("resultHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("extensionHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
 }
@@ -1009,7 +1058,8 @@ function stopCampBgm(onDone) {
   }
   fadeStep();
   setTimeout(() => {
-    if (audioUnlocked) bgmAudio.play().catch(() => {}); // 続きから再開(頭出ししない)
+    bgmAudio.currentTime = 0; // ユーザー指示で、途中からではなく必ず最初から再生し直す
+    if (audioUnlocked) bgmAudio.play().catch(() => {});
   }, CAMP_BGM_RESUME_DELAY_MS);
 }
 
@@ -1018,7 +1068,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1101,13 +1151,17 @@ function statusLabel(c) {
       return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
     }
     const halfLeft = Math.max(0, c.criticalExpireHalfDay - state.halfDayStep);
-    const daysLeft = Math.ceil(halfLeft / 2);
-    return `深淵の森 ${c.criticalFloor}層目で瀕死(あと約${daysLeft}日で救出しないとロスト)`;
+    const totalHoursLeft = halfLeft * 12; // halfDayStep 1つ分 = 半日(12時間)
+    const daysLeft = Math.floor(totalHoursLeft / 24);
+    const hoursLeft = totalHoursLeft % 24;
+    const timeLeftStr = hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
+    return `深淵の森 ${c.criticalFloor}層目で瀕死(あと約${timeLeftStr}で救出しないとロスト)`;
   }
   return "ロスト(消滅した)";
 }
 
 function statusTagClass(c) {
+  if (c.status === "active" && isOnsenLocked(c, absoluteGameMinutes())) return "bathing";
   return c.status;
 }
 
@@ -1136,7 +1190,7 @@ function renderTown() {
   if (checkGameOver()) return;
   document.getElementById("townGold").textContent = state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
-  document.getElementById("townTimeLabel").textContent = TIME_PHASE_LABEL[state.timeOfDay || "day"];
+  document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
@@ -1231,13 +1285,14 @@ function renderRosterList() {
     return c && c.status === "active" && !(c.hp >= c.maxHp && c.mp >= c.maxMp);
   });
   dismissSelectedIds = dismissSelectedIds.filter((id) => state.roster.some((c) => c.id === id));
+  const now = absoluteGameMinutes();
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
-    const lodgeable = c.status === "active" && !fullHealth;
+    const lodgeable = c.status === "active" && !fullHealth; // 入浴ロック中でも宿泊は可能
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
     const dismissSelected = dismissSelectedIds.includes(c.id);
-    const tagText = c.status === "active" ? (fullHealth ? "満タン" : "待機中") : c.status === "critical" ? "瀕死" : "ロスト";
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : fullHealth ? "満タン" : "待機中";
     const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
@@ -1475,21 +1530,21 @@ function playCampTransition(onDone) {
   setTimeout(afterInitialHold, HOLD_MS);
 }
 
-// 就寝時の演出: ゆっくり暗転(2.5秒)→翌朝(森の朝背景)にフェードイン
+// 就寝時の演出: ゆっくり暗転(2.5秒)。暗転しきったところでonBlackを呼び、回復サマリー画面の表示を
+// 呼び出し元(finishCamping)に任せる。翌朝への切り替え(森の朝背景+フェードイン)はrevealCampMorning側で行う
 let campSleepTransitionActive = false;
-function playCampSleepTransition(onDone) {
+function playCampSleepTransition(onBlack) {
   if (campSleepTransitionActive) return;
   campSleepTransitionActive = true;
-  let sleepFinished = false;
-  function finishSleepTransition() {
-    if (sleepFinished) return;
-    sleepFinished = true;
+  let blackDone = false;
+  function reachBlack() {
+    if (blackDone) return;
+    blackDone = true;
     clearTimeout(safetyTimer);
-    overlay.style.display = "none";
-    campSleepTransitionActive = false;
-    onDone();
+    fromEl.style.backgroundImage = `url('${BG_SETS.dungeon.dawn}')`;
+    onBlack();
   }
-  const safetyTimer = setTimeout(finishSleepTransition, 30000);
+  const safetyTimer = setTimeout(reachBlack, 30000);
   const overlay = document.getElementById("campTransition");
   const fromEl = document.getElementById("campTransitionFrom");
   const toEl = document.getElementById("campTransitionTo");
@@ -1504,12 +1559,56 @@ function playCampSleepTransition(onDone) {
   overlay.style.display = "block";
   void overlay.offsetWidth;
 
-  fadeOpacity(blackEl, 0, 1, 2500, () => {
-    fromEl.style.backgroundImage = `url('${BG_SETS.dungeon.dawn}')`;
-    setTimeout(() => {
-      fadeOpacity(blackEl, 1, 0, 1500, finishSleepTransition);
-    }, 300);
-  });
+  fadeOpacity(blackEl, 0, 1, 2500, reachBlack);
+}
+// 回復サマリーの「次へ」が押された後に呼ぶ: 暗転から森の朝背景へフェードインして演出を終える
+function revealCampMorning(onDone) {
+  let revealDone = false;
+  function finish() {
+    if (revealDone) return;
+    revealDone = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    campSleepTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finish, 30000);
+  const overlay = document.getElementById("campTransition");
+  const blackEl = document.getElementById("campTransitionBlack");
+  setTimeout(() => {
+    fadeOpacity(blackEl, 1, 0, 1500, finish);
+  }, 300);
+}
+// 野営の回復サマリー画面を表示する(暗転中)。fieldPartyの各アクティブメンバーについて
+// HP/MPの回復バー(hpBarHtml/mpBarHtmlの回復トレイル)とストレス減少量を表示し、
+// 「次へ」ボタンが押されたらonNextを呼ぶ
+function showCampRestSummary(beforeSnapshot, onNext) {
+  const panel = document.getElementById("campRestSummary");
+  const list = document.getElementById("campRestSummaryList");
+  list.innerHTML = beforeSnapshot.map(({ id, fatigueBefore }) => {
+    const c = getRosterChar(id);
+    if (!c) return "";
+    const c2 = CLASSES[c.classId];
+    const fatigueDelta = fatigueBefore - (c.fatigue || 0);
+    return `
+      <div class="camp-rest-row">
+        <img src="${c2.image}">
+        <div class="camp-rest-info">
+          <div class="nm">${c.name}</div>
+          <div class="camp-rest-stat-label">HP</div>
+          ${hpBarHtml(c)}
+          ${c.maxMp > 0 ? `<div class="camp-rest-stat-label" style="margin-top:0.25rem;">MP</div>${mpBarHtml(c)}` : ""}
+          <div class="camp-rest-stress">ストレス -${fatigueDelta}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+  panel.style.display = "flex";
+  activateHpTrails(list);
+  document.getElementById("campRestNextBtn").onclick = () => {
+    panel.style.display = "none";
+    onNext();
+  };
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
@@ -1665,13 +1764,14 @@ function renderPartySelect() {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">仲間がいません。宿屋で仲間を作りましょう。</p>';
     return;
   }
+  const now = absoluteGameMinutes();
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const inParty = state.activePartyIds.includes(c.id);
-    const selectable = c.status === "active";
+    const selectable = isAvailable(c, now);
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
-    const tagText = c.status === "active" ? "待機中" : c.status === "critical" ? "瀕死" : "ロスト";
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : "待機中";
     const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
       <div class="stress-wrap">
@@ -1747,13 +1847,59 @@ document.getElementById("buyCampingKitBtn").onclick = () => {
 
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
+// 出発時の演出: 専用効果音を再生→パーティ編成画面のタブ(支援物資/パーティ編成)と見出しを
+// すべて隠して門イラストの背景だけを1.5秒見せる→探索中の「進む」と同じ歩行アニメーション
+// (buildWalkKeyframes、背景だけscale/translateY、足音効果音つき)を1.25秒かけて→
+// 画面全体を0.75秒でフェードアウト→暗転を1.5秒保持(この間にenterDungeonで実際の画面遷移+
+// タブ類を元に戻す)→0.5秒でフェードインして探索画面を見せる。
+// 背景の変形リセットは(暗転しきってから行う既存の移動演出と同じく)フェードアウトが完了して
+// 画面が真っ暗になった後に行う。歩行アニメーション終了直後にリセットすると、フェードアウトの
+// 途中で一瞬ズームが元に戻って見えてしまうバグがあったため
+const DEPARTURE_BG_HOLD_MS = 1500;
+const DEPARTURE_WALK_MS = 1250;
+const DEPARTURE_FADEOUT_MS = 750;
+const DEPARTURE_FADEIN_MS = 500;
+const DEPARTURE_BLACK_HOLD_MS = 1500;
 document.getElementById("departBtn").onclick = () => {
   if (state.activePartyIds.length === 0) {
     alert("パーティを1人以上選んでください");
     return;
   }
-  playSfx("select");
-  enterDungeon();
+  playSfx("departure");
+  const departBtnEl = document.getElementById("departBtn");
+  departBtnEl.disabled = true;
+  const bodyPad = document.querySelector("#screen-party-select .body-pad");
+  const heroTitle = document.querySelector("#partySelectHero h1");
+  const heroInner = document.getElementById("partySelectHeroInner");
+  bodyPad.style.display = "none";
+  heroTitle.style.display = "none";
+  setTimeout(() => {
+    playSfx("footstep");
+    const walkAnim = heroInner.animate(buildWalkKeyframes(), { duration: DEPARTURE_WALK_MS, easing: "ease-in-out", fill: "forwards" });
+    walkAnim.onfinish = () => {
+      const overlay = document.getElementById("moveTransitionBlack");
+      overlay.style.display = "block";
+      const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
+      fadeOut.onfinish = () => {
+        fadeOut.cancel();
+        overlay.style.opacity = "1";
+        walkAnim.cancel();
+        heroInner.style.transform = "";
+        setTimeout(() => {
+          enterDungeon();
+          departBtnEl.disabled = false;
+          bodyPad.style.display = "";
+          heroTitle.style.display = "";
+          const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
+          fadeIn.onfinish = () => {
+            fadeIn.cancel();
+            overlay.style.opacity = "0";
+            overlay.style.display = "none";
+          };
+        }, DEPARTURE_BLACK_HOLD_MS);
+      };
+    };
+  }, DEPARTURE_BG_HOLD_MS);
 };
 
 // ============ 温泉 ============
@@ -1792,7 +1938,7 @@ function renderOnsen() {
     `;
     row.querySelector("button").onclick = () => {
       state.gold -= cost;
-      useOnsen(c);
+      useOnsen(c, absoluteGameMinutes());
       saveState();
       playSfx("onsen");
       renderOnsen();
@@ -1822,14 +1968,16 @@ function renderExtension() {
   }
   const dojoLevel = state.dojoLevel || 0;
   const dojoBtn = document.getElementById("dojoBuildBtn");
-  if (dojoLevel >= 1) {
-    document.getElementById("dojoStatusLabel").textContent = "道場レベル1(建築済み)";
-    dojoBtn.textContent = "建築済み";
+  document.getElementById("dojoStatusLabel").textContent = `道場レベル${dojoLevel}(${dojoLevel === 0 ? "未建築" : `分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%`})`;
+  if (dojoLevel >= DOJO_MAX_LEVEL) {
+    dojoBtn.textContent = "これ以上は増築できません(上限)";
     dojoBtn.disabled = true;
-  } else {
-    document.getElementById("dojoStatusLabel").textContent = "道場レベル0(未建築)";
+  } else if (dojoLevel === 0) {
     dojoBtn.textContent = `建築する(${DOJO_LEVEL1_COST}G)`;
     dojoBtn.disabled = state.gold < DOJO_LEVEL1_COST;
+  } else {
+    dojoBtn.textContent = `増築する(${DOJO_LEVEL2_COST}G) 分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%→${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel + 1] * 100)}%`;
+    dojoBtn.disabled = state.gold < DOJO_LEVEL2_COST;
   }
 }
 document.getElementById("extensionUpgradeBtn").onclick = () => {
@@ -1844,10 +1992,12 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   renderExtension();
 };
 document.getElementById("dojoBuildBtn").onclick = () => {
-  if ((state.dojoLevel || 0) >= 1) return;
-  if (state.gold < DOJO_LEVEL1_COST) return;
-  state.gold -= DOJO_LEVEL1_COST;
-  state.dojoLevel = 1;
+  const dojoLevel = state.dojoLevel || 0;
+  if (dojoLevel >= DOJO_MAX_LEVEL) return;
+  const cost = dojoLevel === 0 ? DOJO_LEVEL1_COST : DOJO_LEVEL2_COST;
+  if (state.gold < cost) return;
+  state.gold -= cost;
+  state.dojoLevel = dojoLevel + 1;
   saveState();
   playSfx("extension_build");
   renderExtension();
@@ -1945,13 +2095,14 @@ function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
 
-// 瀕死/ロストになったキャラがパーティ編成の枠に居座り続けないよう、
-// activePartyIdsから現在status==="active"でなくなった者を取り除く
+// 瀕死/ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
+// 居座り続けないよう、activePartyIdsから現在isAvailable()でなくなった者を取り除く
 function pruneActiveParty() {
+  const now = absoluteGameMinutes();
   const seen = new Set();
   state.activePartyIds = state.activePartyIds.filter((id) => {
     const c = getRosterChar(id);
-    if (!c || !isAvailable(c) || seen.has(id)) return false;
+    if (!c || !isAvailable(c, now) || seen.has(id)) return false;
     seen.add(id);
     return true;
   }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
@@ -2032,6 +2183,18 @@ function activateHpTrails(container) {
     const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: HP_TRAIL_MS, easing: "ease-out", fill: "forwards" });
     anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; el.style.display = "none"; };
   });
+}
+// HP版(hpBarHtml)と同じ考え方のMP回復トレイル。data-hp-heal-trailを共有しているので
+// activateHpTrails()がそのまま拾ってアニメーションさせてくれる(野営の回復サマリー画面用)
+function mpBarHtml(entity) {
+  const ratio = entity.maxMp > 0 ? Math.max(0, entity.mp / entity.maxMp) * 100 : 0;
+  const prevRatio = entity.__mpDisplayRatio != null ? entity.__mpDisplayRatio : ratio;
+  entity.__mpDisplayRatio = ratio;
+  const isHeal = ratio > prevRatio;
+  const healTrailHtml = isHeal
+    ? `<div class="mpbar-heal-trail" data-hp-heal-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div>`
+    : "";
+  return `<div class="mpbar-track"><div class="mpbar-fill" style="width:${ratio}%"></div>${healTrailHtml}</div>`;
 }
 
 function renderPartyBar(elId, combatants, actingCharId) {
@@ -2177,11 +2340,11 @@ document.getElementById("dungeonHealBtn").onclick = () => {
 // 前進しているように動かし、序盤だけ小さくランダムに揺らして足音の衝撃を表現する。
 // アニメーション完了後に画面を暗転させ、真っ暗になったタイミングでactualLogic(実際のフロア移動/
 // イベント抽選/画面遷移など、既存のゲームロジックそのまま)を実行してからフェードインする
-const MOVE_ANIM_MS = 500;
-const MOVE_FADE_MS = 200;
+const MOVE_ANIM_MS = 750; // ユーザー指示で従来(500ms)の1.5倍に
+const MOVE_FADE_MS = 600;
 function buildWalkKeyframes() {
   const totalScale = 0.08; // scale(1.00) -> scale(1.08)
-  const totalY = -30; // translateY(0px) -> translateY(-30px)
+  const totalY = -10; // translateY(0px) -> translateY(-10px)
   const jitterEndOffset = MOVE_ANIM_MS > 0 ? Math.min(1, 150 / MOVE_ANIM_MS) : 0; // 揺れは最初の約0.15秒だけ
   const jitterSteps = 4;
   const frames = [{ transform: "translate(0px, 0px) scale(1)", offset: 0 }];
@@ -2359,13 +2522,26 @@ function renderCampScreen() {
 function finishCamping() {
   stopCampBgm();
   playCampSleepTransition(() => {
+    const beforeSnapshot = fieldParty.filter((c) => c.status === "active").map((c) => {
+      // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
+      // キャラの残量バーが今まで一度も描画されたことがなくても(特にMPは通常の味方表示では
+      // 未使用の関数なので)確実に回復アニメーションが出るよう、回復前の値を明示的に記録しておく
+      c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+      c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+      return { id: c.id, fatigueBefore: c.fatigue || 0 };
+    });
     fieldParty.forEach((c) => { if (c.status === "active") useCampRest(c); });
-    advanceToNextMorning();
-    state.clockMinutes = 5 * 60 + 30; // 翌朝5:30
     saveState();
-    showScreen("screen-dungeon");
-    renderDungeon();
-    dlog("野営を終え、5:30に目を覚ました。");
+    showCampRestSummary(beforeSnapshot, () => {
+      revealCampMorning(() => {
+        advanceToNextMorning();
+        state.clockMinutes = 5 * 60 + 30; // 翌朝5:30
+        saveState();
+        showScreen("screen-dungeon");
+        renderDungeon();
+        dlog("野営を終え、5:30に目を覚ました。");
+      });
+    });
   });
 }
 
@@ -3289,7 +3465,7 @@ function victory() {
     });
     // 道場があれば、この冒険に同行しなかった(名簿にいるが出発していない)仲間にも経験値の一部を分配する
     if ((state.dojoLevel || 0) >= 1) {
-      const reserveXp = Math.round(e.xp * DOJO_XP_SHARE);
+      const reserveXp = Math.round(e.xp * DOJO_XP_SHARE_BY_LEVEL[state.dojoLevel]);
       state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c)).forEach((c) => {
         const beforeLevel = c.level;
         grantXp(c, reserveXp, blog);

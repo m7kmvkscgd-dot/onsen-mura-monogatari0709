@@ -9,14 +9,14 @@
 // - 支援: 僧侶(治癒の術)
 // accuracy: 命中率の基本値。狩人だけ突出して高くし「命中率が高い職業」という個性にする(他は共通のBASE_ACCURACY相当の0.95)
 const CLASSES = {
-  samurai: { ja: "侍", image: "assets/class_samurai.png", hp: 34, atk: 13, def: 8, spd: 11, mag: 0, accuracy: 0.95, abilities: ["critAttack"] },
-  ninja: { ja: "忍", image: "assets/class_ninja.png", hp: 29, atk: 13, def: 7, spd: 16, mag: 0, accuracy: 0.95, abilities: ["powerAttack"] },
-  spearman: { ja: "槍士", image: "assets/class_spearman.png", hp: 38, atk: 11, def: 10, spd: 7, mag: 0, accuracy: 0.95, abilities: ["guard"] },
-  naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 32, atk: 12, def: 8, spd: 9, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
-  hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 26, atk: 11, def: 5, spd: 12, mag: 0, accuracy: 0.99, abilities: ["preciseShot"] },
-  gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 28, atk: 16, def: 6, spd: 4, mag: 0, accuracy: 0.95, abilities: ["cannonShot"] },
-  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 24, atk: 5, def: 4, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
-  priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 26, atk: 6, def: 6, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
+  samurai: { ja: "侍", image: "assets/class_samurai.png", hp: 35, atk: 13, def: 8, spd: 11, mag: 0, accuracy: 0.95, abilities: ["critAttack"] },
+  ninja: { ja: "忍", image: "assets/class_ninja.png", hp: 30, atk: 13, def: 7, spd: 16, mag: 0, accuracy: 0.95, abilities: ["powerAttack"] },
+  spearman: { ja: "槍士", image: "assets/class_spearman.png", hp: 39, atk: 11, def: 10, spd: 7, mag: 0, accuracy: 0.95, abilities: ["guard"] },
+  naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 33, atk: 12, def: 8, spd: 9, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
+  hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 27, atk: 11, def: 5, spd: 12, mag: 0, accuracy: 0.99, abilities: ["preciseShot"] },
+  gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 29, atk: 16, def: 6, spd: 4, mag: 0, accuracy: 0.95, abilities: ["cannonShot"] },
+  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 4, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
+  priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 6, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
 };
 
 const ABILITY_LABEL = {
@@ -118,8 +118,8 @@ const POTION_HEAL_RATIO = 0.38;
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復
-const CAMP_HP_RELIEF = 0.5;
-const CAMP_MP_RELIEF = 0.4;
+const CAMP_HP_RELIEF = 0.6;
+const CAMP_MP_RELIEF = 0.45;
 const CAMP_STRESS_RELIEF = 20;
 // 野営中に選べる3行動のうち「慰める」のストレス軽減量
 const CAMP_COMFORT_STRESS_RELIEF = 10;
@@ -489,19 +489,19 @@ const EQUIPMENT = {
 };
 
 // 戦闘不能で瀕死になったキャラは、昼夜が切り替わるたび(halfDayStep)にカウントが進み、
-// この範囲でランダムに決まる猶予(4〜6 = 2〜3日分)を過ぎると誰も救出に来なくてもロストする
-// (旧2〜4=1〜2日分から、ユーザー指示で猶予を1日分伸ばした)
-const CRITICAL_MIN_HALFDAYS = 4; // 2日
-const CRITICAL_MAX_HALFDAYS = 6; // 3日
+// この範囲でランダムに決まる猶予を過ぎると誰も救出に来なくてもロストする
+// (旧2〜4=1〜2日分→4〜6=2〜3日分ときて、ユーザー指示でさらに半日分伸ばした)
+const CRITICAL_MIN_HALFDAYS = 5; // 2.5日
+const CRITICAL_MAX_HALFDAYS = 7; // 3.5日
 
 const FATIGUE_PER_FLOOR = 2; // フィールドに出ているキャラが1階進むごとに溜まる疲労度(旧4から半減)
 const FATIGUE_MAX = 100;
 
-// 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復し、
-// 同じキャラは半日(halfDayStep 1つ分)経つまで再入浴できない。価格はキャラのレベルに応じて上がる
+// 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復する。
+// 料金は一人あたり定額。入浴すると6時間はパーティ編成に組み込めなくなる(宿泊は引き続き可能)
 const ONSEN_FATIGUE_RELIEF = 50;
-const ONSEN_BASE_COST = 40;
-const ONSEN_COST_PER_LEVEL = 8;
+const ONSEN_FLAT_COST = 20;
+const ONSEN_LOCK_MINUTES = 360; // 6時間 = 360分
 // 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
 const LODGE_FATIGUE_RELIEF = 10;
 
@@ -540,7 +540,7 @@ const MIN_HIT_CHANCE = 0.75;
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HALFDAYS, CRITICAL_MAX_HALFDAYS,
-    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_BASE_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
+    FATIGUE_PER_FLOOR, FATIGUE_MAX, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_LOCK_MINUTES, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, SKILL_TREES,
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,

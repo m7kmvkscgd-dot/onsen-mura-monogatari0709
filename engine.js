@@ -67,6 +67,7 @@ function createCharacter(name, classId, classUpgrades) {
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
     status: "active", // active | critical | lost
+    onsenLockUntilMinutes: null, // 入浴した時点の絶対分数+ONSEN_LOCK_MINUTES。この値を過ぎるまでパーティ編成に組み込めない
     criticalFloor: null,
     criticalExpireHalfDay: null,
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
@@ -122,19 +123,28 @@ function advanceFatigue(characters) {
   });
 }
 
-// 温泉: レベルが高いキャラほど入浴料が高くなる(ちょっと高めの金額)
+// 温泉: 一人あたり定額(ONSEN_FLAT_COST)
 function onsenCost(level) {
-  return Math.round((ONSEN_BASE_COST + level * ONSEN_COST_PER_LEVEL) * 0.7); // ユーザー指示で利用料を7割に
+  return ONSEN_FLAT_COST;
 }
 
-// 生存していれば冒険に連れて行ける/温泉や宿屋を利用できる(入浴・宿泊のどちらも連れ出し可否には影響しない)
-function isAvailable(character) {
-  return character.status === "active";
+// 入浴後、まだ6時間(ONSEN_LOCK_MINUTES)経っていなければパーティ編成に組み込めない
+// (宿泊の可否には影響しない、宿泊は別途c.status==="active"のみで判定している)
+function isOnsenLocked(character, absoluteMinutes) {
+  return character.onsenLockUntilMinutes != null && absoluteMinutes < character.onsenLockUntilMinutes;
 }
 
-// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する
-function useOnsen(character) {
+// 生存していて、かつ温泉の入浴ロック中でなければ冒険に連れて行ける(宿屋の宿泊可否には影響しない)
+function isAvailable(character, absoluteMinutes) {
+  if (character.status !== "active") return false;
+  if (absoluteMinutes != null && isOnsenLocked(character, absoluteMinutes)) return false;
+  return true;
+}
+
+// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後6時間はパーティ編成に組み込めない
+function useOnsen(character, absoluteMinutes) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
+  character.onsenLockUntilMinutes = absoluteMinutes + ONSEN_LOCK_MINUTES;
 }
 
 // 宿屋に宿泊し、HP/MPを全回復+ストレスを少量回復する(宿泊自体は冒険可否に影響しない)
@@ -923,7 +933,7 @@ if (typeof module !== "undefined") {
     markCritical, tickHalfDay, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, useOnsen, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
+    onsenCost, useOnsen, isOnsenLocked, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
