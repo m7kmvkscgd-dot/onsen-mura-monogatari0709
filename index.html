@@ -217,6 +217,11 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
   }
+  /* 「進む」「里に戻る」の移動演出で背景だけをscale/translateさせるための内側レイヤー。
+     親(#dungeonBg)はposition:fixedの中央寄せ(translateX(-50%))を担うだけにし、画像と
+     アニメーション対象はこの子要素に分離することで、アニメーションが中央寄せの位置指定を
+     上書きして背景が右に寄って見えてしまう不具合を避ける */
+  .dungeon-bg-inner { position: absolute; inset: 0; background-size: cover; background-position: center; }
   /* 野営の夜の行動選択シーンは背景の野営地イラストを見せたいため、共通の.dungeon-bgが持つ暗いグラデーションを外す */
   #campBg::after { background: none; }
   /* z-indexは.party-bar(4)より高くする: 内側の.dungeon-top(z-index:5)はこのスタッキングコンテキストに
@@ -322,6 +327,9 @@
   /* 宿泊時の夜明け演出: 朝→昼→夕→夜と背景をクロスフェードでめくっていき、最後(夜→朝)だけ
      暗転を挟んでから朝の映像で明ける。動画ファイルは使わず、背景イラストの重ね合わせ+
      JSで制御するopacity遷移だけで表現しているので読み込み負荷は増えない */
+  /* 「進む」「里に戻る」の移動演出用の暗転オーバーレイ。背景画像自体(#dungeonBg)はJSでtransformを
+     アニメーションさせ、こちらは画面全体を一瞬暗転させて処理を挟むための単純な黒幕 */
+  .move-transition-black { position: fixed; inset: 0; z-index: 61; background: #000; opacity: 0; pointer-events: none; }
   .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
   .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
@@ -552,7 +560,7 @@
 
   <!-- 深淵の森 -->
   <div class="screen" id="screen-dungeon">
-    <div class="dungeon-bg" id="dungeonBg"></div>
+    <div class="dungeon-bg" id="dungeonBg"><div class="dungeon-bg-inner" id="dungeonBgInner"></div></div>
     <div class="party-bar" id="dungeonPartyBar"></div>
     <div class="dungeon-content">
       <div class="dungeon-top">
@@ -629,6 +637,9 @@
       <div id="skillChoiceContent"></div>
     </div>
   </div>
+
+  <!-- 「進む」「里に戻る」で1階層分歩く時の暗転オーバーレイ -->
+  <div id="moveTransitionBlack" class="move-transition-black" style="display:none;"></div>
 
   <!-- 宿泊時の「一晩がすぎる」演出。現在の時間帯→昼→夕→夜とめくり、最後(夜→朝)だけ暗転を挟む。
        動画は使わず、既存の背景イラストをCSSでクロスフェードするだけ -->
@@ -853,7 +864,7 @@ function updateSceneBackgrounds() {
   document.getElementById("townHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
-  document.getElementById("dungeonBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
+  document.getElementById("dungeonBgInner").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
   document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
@@ -1007,7 +1018,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -2162,12 +2173,72 @@ document.getElementById("dungeonHealBtn").onclick = () => {
   });
 };
 
+// 「進む」「里に戻る」共通の1歩分の移動演出。背景画像(#dungeonBg)だけをscale/translateYで
+// 前進しているように動かし、序盤だけ小さくランダムに揺らして足音の衝撃を表現する。
+// アニメーション完了後に画面を暗転させ、真っ暗になったタイミングでactualLogic(実際のフロア移動/
+// イベント抽選/画面遷移など、既存のゲームロジックそのまま)を実行してからフェードインする
+const MOVE_ANIM_MS = 500;
+const MOVE_FADE_MS = 200;
+function buildWalkKeyframes() {
+  const totalScale = 0.08; // scale(1.00) -> scale(1.08)
+  const totalY = -30; // translateY(0px) -> translateY(-30px)
+  const jitterEndOffset = MOVE_ANIM_MS > 0 ? Math.min(1, 150 / MOVE_ANIM_MS) : 0; // 揺れは最初の約0.15秒だけ
+  const jitterSteps = 4;
+  const frames = [{ transform: "translate(0px, 0px) scale(1)", offset: 0 }];
+  for (let i = 1; i <= jitterSteps; i++) {
+    const offset = (jitterEndOffset * i) / jitterSteps;
+    const baseScale = 1 + totalScale * offset;
+    const baseY = totalY * offset;
+    const jitterX = (Math.random() * 2 - 1) * 1.5; // 1〜2px程度のランダムな揺れ
+    const jitterY = (Math.random() * 2 - 1) * 1.5;
+    frames.push({ transform: `translate(${jitterX.toFixed(2)}px, ${(baseY + jitterY).toFixed(2)}px) scale(${baseScale.toFixed(4)})`, offset });
+  }
+  frames.push({ transform: `translate(0px, ${totalY}px) scale(${1 + totalScale})`, offset: 1 });
+  return frames;
+}
+function playDungeonMoveTransition(actualLogic) {
+  const bg = document.getElementById("dungeonBgInner"); // 中央寄せを担う親(#dungeonBg)ではなく画像だけの内側レイヤーを動かす
+  const overlay = document.getElementById("moveTransitionBlack");
+  const advanceBtnEl = document.getElementById("advanceBtn");
+  const retreatBtnEl = document.getElementById("retreatBtn");
+  advanceBtnEl.disabled = true;
+  retreatBtnEl.disabled = true;
+  playSfx("footstep");
+  const moveAnim = bg.animate(buildWalkKeyframes(), { duration: MOVE_ANIM_MS, easing: "ease-in-out", fill: "forwards" });
+  let proceeded = false;
+  function proceedToFade() {
+    if (proceeded) return;
+    proceeded = true;
+    overlay.style.display = "block";
+    const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOVE_FADE_MS, easing: "ease", fill: "forwards" });
+    fadeOut.onfinish = () => {
+      fadeOut.cancel();
+      overlay.style.opacity = "1";
+      moveAnim.cancel();
+      bg.style.transform = ""; // 暗転しきったところで背景の変形をリセット(新しい背景はactualLogic内のrenderDungeon等が反映する)
+      actualLogic();
+      const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: MOVE_FADE_MS, easing: "ease", fill: "forwards" });
+      fadeIn.onfinish = () => {
+        fadeIn.cancel();
+        overlay.style.opacity = "0";
+        overlay.style.display = "none";
+        advanceBtnEl.disabled = false;
+        retreatBtnEl.disabled = false;
+      };
+    };
+  }
+  moveAnim.onfinish = proceedToFade;
+  setTimeout(proceedToFade, MOVE_ANIM_MS + 200); // 安全策: onfinishが発火しない場合でも止まらないように
+}
+
 // 「里に戻る」はファストトラベルではなく、ここから階層を1つずつ下って歩いて帰るモードに入るだけ。
 // 実際に町へ着くのは、帰還を続けて階層1から更に戻ろうとした時(finishRetreat参照)
 document.getElementById("retreatBtn").onclick = () => {
-  retreating = true;
-  dlog("引き返すことにした。ここから階層を下って里へ戻る。");
-  renderDungeon();
+  playDungeonMoveTransition(() => {
+    retreating = true;
+    dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+    renderDungeon();
+  });
 };
 
 // ============ 野営 ============
@@ -2320,30 +2391,32 @@ document.getElementById("advanceBtn").onclick = () => {
     alert("行動できる仲間がいません");
     return;
   }
-  if (retreating) {
-    currentFloor--;
-    healPartyOnFloorMove();
-    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-    if (currentFloor <= 0) {
-      saveState();
-      finishRetreat();
+  playDungeonMoveTransition(() => {
+    if (retreating) {
+      currentFloor--;
+      healPartyOnFloorMove();
+      advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+      if (currentFloor <= 0) {
+        saveState();
+        finishRetreat();
+        return;
+      }
+    } else {
+      advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
+      currentFloor++;
+      healPartyOnFloorMove();
+      advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+    }
+    saveState();
+
+    const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+    renderDungeon();
+    if (criticalHereList.length > 0) {
+      queueCriticalAlerts(criticalHereList, () => rollEncounter());
       return;
     }
-  } else {
-    advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
-    currentFloor++;
-    healPartyOnFloorMove();
-    advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
-  }
-  saveState();
-
-  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
-  renderDungeon();
-  if (criticalHereList.length > 0) {
-    queueCriticalAlerts(criticalHereList, () => rollEncounter());
-    return;
-  }
-  rollEncounter();
+    rollEncounter();
+  });
 };
 
 // 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
