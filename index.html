@@ -139,6 +139,13 @@
   /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
   .stress-wrap { position: relative; }
   .stress-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 2; }
+  /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に、元の1/4ほどの大きさで重ねる */
+  .carried-badge {
+    position: absolute; top: -6px; right: -6px; width: 28%; aspect-ratio: 1/1;
+    object-fit: cover; object-position: top; border-radius: 50%;
+    border: 2px solid var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.5); z-index: 3;
+    transition: top 0.3s ease, right 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+  }
   .roster-row .stress-wrap { display: block; width: 44px; height: 44px; flex-shrink: 0; }
   .party-member .stress-wrap { display: block; width: 100%; }
   .status-portrait-wrap { position: relative; display: inline-block; width: 96px; height: 96px; }
@@ -216,7 +223,7 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.stress-overlay) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
+  .party-member img:not(.stress-overlay):not(.carried-badge) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: 6px; background: var(--surface-2); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   .hpbar-track { background: rgba(0,0,0,0.5); border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.2rem; position: relative; }
   /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく。
@@ -1271,7 +1278,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1988,7 +1995,7 @@ function renderFirstCharacterScreen() {
     const card = document.createElement("div");
     card.className = "first-char-card";
     const skillsHtml = c2.abilities.map((ab) => `
-      <div class="skill-row"><span class="skill-name">${ABILITY_LABEL[ab]}</span> ー ${ABILITY_DESC[ab]}</div>
+      <div class="skill-row"><span class="skill-name">${ABILITY_LABEL[ab]}</span> ${ABILITY_DESC[ab]}</div>
     `).join("");
     card.innerHTML = `
       <div class="first-char-head"><img src="${c2.image}"><strong>${c2.ja}</strong></div>
@@ -2581,7 +2588,8 @@ function mpBarHtml(entity) {
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
   bar.innerHTML = "";
-  combatants.forEach((c) => {
+  // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
+  combatants.filter((c) => !c.carriedBy).forEach((c) => {
     const c2 = CLASSES[c.classId];
     const dead = c.hp <= 0 || c.status !== "active";
     const targetable = !!pendingAllyPick && !dead;
@@ -2590,10 +2598,13 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const overlaySrc = stressOverlaySrc(c.fatigue);
+    const carried = combatants.find((x) => x.carriedBy === c.id);
+    const carriedC2 = carried ? CLASSES[carried.classId] : null;
     div.innerHTML = `
       <div class="stress-wrap">
         <img src="${c2.image}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+        ${carriedC2 ? `<img class="carried-badge" src="${carriedC2.image}" data-carried-id="${carried.id}">` : ""}
       </div>
       ${hpBarHtml(c)}
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
@@ -3101,9 +3112,13 @@ function showCarryPicker(critical, onResolved) {
       saveState();
       dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
       if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(critical, "carried");
-      div.innerHTML = "";
-      renderDungeon();
-      onResolved();
+      playSfx("carry");
+      // 1.5秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
+      setTimeout(() => {
+        div.innerHTML = "";
+        renderDungeon();
+        onResolved();
+      }, 1500);
     };
   });
   document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, onResolved);
@@ -3258,9 +3273,8 @@ function renderVfxFor(targetId) {
     const alreadyShowingLatest = existingBubble && Number(existingBubble.dataset.speechAt) === speechAtSnapshot;
     if (!alreadyShowingLatest) {
       if (existingBubble) existingBubble.remove();
-      const isParty = el.classList.contains("party-member");
       const bubble = document.createElement("div");
-      bubble.className = "speech-bubble" + (isParty ? " below" : "");
+      bubble.className = "speech-bubble";
       bubble.textContent = entity.__speechText;
       bubble.dataset.speechId = targetId;
       bubble.dataset.speechAt = String(speechAtSnapshot);
@@ -3814,8 +3828,13 @@ function renderCarryTargets(actor, targets) {
       target.criticalExpireMinutes = null;
       blog(`${actor.label}は${target.name}を担いだ！`);
       if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(target, "carried");
-      renderBattleScreen();
-      renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
+      playSfx("carry");
+      document.getElementById("actionGrid").innerHTML = ""; // 演出の間はボタンを消して連打を防ぐ
+      // 1.5秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
+      setTimeout(() => {
+        renderBattleScreen();
+        renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
+      }, 1500);
     };
     grid.appendChild(btn);
   });
