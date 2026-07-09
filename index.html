@@ -4874,6 +4874,10 @@ function pickSingleEnemyTarget(onPicked) {
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
+  // 敵が5体以上いると2列のままでは行数が増えすぎ、末尾の「戻る」がactionGrid(fixed配置)の画面外に
+  // 押し出されて押せなくなっていたため、この対象選択だけ3列にして行数を減らす
+  // (renderActionButtonsで通常の2列に戻す)
+  grid.style.gridTemplateColumns = "1fr 1fr 1fr";
   targets.forEach((t) => {
     const btn = document.createElement("button");
     btn.className = "big";
@@ -5021,6 +5025,7 @@ function renderActionButtons(actor) {
   battleSubMenuActive = false;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
+  grid.style.gridTemplateColumns = ""; // 敵対象選択(3列)からの復帰時、通常の2列に戻す
   const c = CLASSES[actor.classId];
 
   // 仲間を担いでいる間は攻撃/技が使えず、逃げるかアイテムしか行動できない
