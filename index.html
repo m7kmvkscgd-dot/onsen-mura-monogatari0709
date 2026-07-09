@@ -416,7 +416,7 @@
      translateZ(0)は、戦闘中の頻繁な再描画でiOS Safariがposition:fixed要素の再合成を
      怠って表示が更新されない(実機で報告された不具合)のを防ぐためのGPUレイヤー昇格 */
   .speech-bubble {
-    position: absolute; transform: translate(-50%, calc(-100% - 8px)) translateZ(0);
+    position: absolute; transform: translate(-50%, calc(-100% - 5px)) translateZ(0);
     width: max-content; max-width: 150px; padding: 0.3rem 0.55rem;
     background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.15); border-radius: 10px;
     font-size: 0.72rem; line-height: 1.3; color: #201a14; text-align: center;
@@ -671,14 +671,16 @@
           <button class="big" id="buySmokeBombBtn">購入</button>
         </div>
       </div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.8rem 0 0.5rem;">野営具は最大<span id="campingKitCapLabel"></span>つまで持てます。</p>
-      <div class="card">
-        <div class="shop-item">
-          <div>
-            <div><strong>野営具</strong> <span id="campingKitOwned">0</span>個</div>
-            <div class="desc">簡易宿泊キット。夜を越すことができる</div>
+      <div id="campingKitSection">
+        <p style="font-size:0.75rem;color:var(--text-muted);margin:0.8rem 0 0.5rem;">野営具は最大<span id="campingKitCapLabel"></span>つまで持てます。</p>
+        <div class="card">
+          <div class="shop-item">
+            <div>
+              <div><strong>野営具</strong> <span id="campingKitOwned">0</span>個</div>
+              <div class="desc">簡易宿泊キット。夜を越すことができる</div>
+            </div>
+            <button class="big" id="buyCampingKitBtn">購入</button>
           </div>
-          <button class="big" id="buyCampingKitBtn">購入</button>
         </div>
       </div>
 
@@ -796,13 +798,17 @@
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🥋道場</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
-      <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
-
       <h2 style="margin-top:1.2rem;">🏯奉行所</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">依頼を受けられるようになります。</p>
       <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🏕️旅支度屋</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">出発画面で野営具を購入できるようになります。</p>
+      <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🥋道場</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
+      <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🧳鞄屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">支援物資の所持上限が1つ増えます。</p>
@@ -812,9 +818,29 @@
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">村が襲撃された時、狩人・砲術士が援護射撃できるようになります。</p>
       <button class="big primary" id="watchtowerBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐎馬屋</h2>
+      <h2 style="margin-top:1.2rem;">🐓鶏小屋</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">⛩️神社</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="shrineBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">♨️湯守屋</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🍡茶屋</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🐎馬小屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">馬を購入すると、出発時の移動速度が上がります。</p>
       <button class="big primary" id="stableBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🐝養蜂場</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.8rem;"></button>
 
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -968,10 +994,18 @@ function defaultState() {
     houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限2人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル4で解禁)。依頼を受けられるようになる(未実装、建物のみ)
+    travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
-    stableLevel: 0, // 増築の1つ、馬屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
+    stableLevel: 0, // 増築の1つ、馬小屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
+    henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
+    teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。効果は未定(建物のみ)
+    hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。効果は未定(建物のみ)
+    beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
+    shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
+    onsenEggDailyCount: 0, // 温泉の売店で本日買った温泉卵の数(1日2個まで、翌朝リセット)
+    onsenEggDailyDate: 1, // 上記カウントが対応しているdayCount(値が変わったらリセットする)
   };
 }
 
@@ -989,8 +1023,11 @@ const DOJO_UNLOCK_HOUSE_LEVEL = 4; // 家レベルがこの値に達するまで
 const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
 
 // 奉行所: 依頼を受けられるようになる(建物のみ、依頼の中身は未実装)
-const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
+const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 3;
 const MAGISTRATE_COST = 50;
+// 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
+const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;
+const TRAVEL_PREP_SHOP_COST = 100;
 // 鞄屋: 支援物資の所持上限が1増える(唯一、実際に効果があるレベル1の施設)
 const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const BAG_SHOP_LEVEL1_COST = 75;
@@ -1000,9 +1037,24 @@ function supplyCap() {
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
 const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;
 const WATCHTOWER_COST = 200;
-// 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
-const STABLE_UNLOCK_HOUSE_LEVEL = 6;
+// 馬小屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
+const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
+// 鶏小屋: 効果は未定(建物のみ、未実装)
+const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 5;
+const HEN_HOUSE_COST = 200;
+// 茶屋: 効果は未定(建物のみ、未実装)
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 7;
+const TEA_HOUSE_COST = 250;
+// 湯守屋: 効果は未定(建物のみ、未実装)
+const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 6;
+const HOT_SPRING_KEEPER_COST = 200;
+// 養蜂場: 効果は未定(建物のみ、未実装)
+const BEE_FARM_UNLOCK_HOUSE_LEVEL = 8;
+const BEE_FARM_COST = 300;
+// 神社: 効果は未定(建物のみ、未実装)
+const SHRINE_UNLOCK_HOUSE_LEVEL = 5;
+const SHRINE_COST = 200;
 
 // ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(2時間)など、
 // 日をまたぐ可能性のある時間比較はdayCount/clockMinutesを別々に見るのではなくこの値で行う
@@ -1105,9 +1157,17 @@ function loadState() {
       if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、元々の名簿上限だった10人を維持できるよう最大レベル扱いにする
       if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
+      if (loaded.travelPrepShopLevel == null) loaded.travelPrepShopLevel = 0; // 旧セーブ用の初期値(旅支度屋未建築)
       if (loaded.bagShopLevel == null) loaded.bagShopLevel = 0; // 旧セーブ用の初期値(鞄屋未建築)
       if (loaded.watchtowerLevel == null) loaded.watchtowerLevel = 0; // 旧セーブ用の初期値(見張り台未建築)
-      if (loaded.stableLevel == null) loaded.stableLevel = 0; // 旧セーブ用の初期値(馬屋未建築)
+      if (loaded.stableLevel == null) loaded.stableLevel = 0; // 旧セーブ用の初期値(馬小屋未建築)
+      if (loaded.henHouseLevel == null) loaded.henHouseLevel = 0; // 旧セーブ用の初期値(小屋未建築)
+      if (loaded.teaHouseLevel == null) loaded.teaHouseLevel = 0; // 旧セーブ用の初期値(茶屋未建築)
+      if (loaded.hotSpringKeeperLevel == null) loaded.hotSpringKeeperLevel = 0; // 旧セーブ用の初期値(湯守屋未建築)
+      if (loaded.beeFarmLevel == null) loaded.beeFarmLevel = 0; // 旧セーブ用の初期値(養蜂場未建築)
+      if (loaded.shrineLevel == null) loaded.shrineLevel = 0; // 旧セーブ用の初期値(神社未建築)
+      if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
+      if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
       delete loaded.worldStep;
       if (loaded.inventory) {
@@ -2210,10 +2270,14 @@ function renderSupplies() {
   document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || state.gold < ITEMS.potion.price;
   document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
   document.getElementById("buySmokeBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
-  document.getElementById("campingKitCapLabel").textContent = CAMPING_KIT_CAP;
-  document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
-  document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
-  document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
+  // 野営具は旅支度屋を建築するまで出発画面にラインナップされない
+  document.getElementById("campingKitSection").style.display = state.travelPrepShopLevel ? "" : "none";
+  if (state.travelPrepShopLevel) {
+    document.getElementById("campingKitCapLabel").textContent = CAMPING_KIT_CAP;
+    document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
+    document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
+    document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
+  }
   renderOwnedSupplyIcons();
 }
 // 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
@@ -2366,20 +2430,38 @@ document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
 document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 温泉の売店(温泉卵) ============
+const ONSEN_EGG_DAILY_STOCK = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
+// dayCountが前回リセット時と変わっていたら、本日の販売数をリセットする(翌朝の仕入れ直し)
+function resetOnsenEggStockIfNewDay() {
+  if (state.onsenEggDailyDate !== state.dayCount) {
+    state.onsenEggDailyCount = 0;
+    state.onsenEggDailyDate = state.dayCount;
+  }
+}
 function renderOnsenShop() {
+  resetOnsenEggStockIfNewDay();
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
-  buyBtn.textContent = `購入(${ITEMS.onsenEgg.price}G)`;
-  buyBtn.disabled = total >= supplyCap() || state.gold < ITEMS.onsenEgg.price;
+  if (remaining <= 0) {
+    buyBtn.textContent = "本日売り切れ";
+    buyBtn.disabled = true;
+  } else {
+    buyBtn.textContent = `購入(${ITEMS.onsenEgg.price}G) 残り${remaining}個`;
+    buyBtn.disabled = total >= supplyCap() || state.gold < ITEMS.onsenEgg.price;
+  }
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
+  resetOnsenEggStockIfNewDay();
+  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.onsenEgg.price;
   state.inventory.onsenEgg = (state.inventory.onsenEgg || 0) + 1;
+  state.onsenEggDailyCount = (state.onsenEggDailyCount || 0) + 1;
   saveState();
   playSfx("coin");
   renderOnsenShop();
@@ -2410,9 +2492,15 @@ function renderExtension() {
   const unlocksAtNextLevel = [];
   if ((state.dojoLevel || 0) === 0 && nextLevel === DOJO_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("道場");
   if (!state.magistrateLevel && nextLevel === MAGISTRATE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("奉行所");
+  if (!state.travelPrepShopLevel && nextLevel === TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅支度屋");
   if (!state.bagShopLevel && nextLevel === BAG_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鞄屋");
   if (!state.watchtowerLevel && nextLevel === WATCHTOWER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("見張り台");
-  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬屋");
+  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬小屋");
+  if (!state.henHouseLevel && nextLevel === HEN_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鶏小屋");
+  if (!state.teaHouseLevel && nextLevel === TEA_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("茶屋");
+  if (!state.hotSpringKeeperLevel && nextLevel === HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("湯守屋");
+  if (!state.beeFarmLevel && nextLevel === BEE_FARM_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("養蜂場");
+  if (!state.shrineLevel && nextLevel === SHRINE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("神社");
   const nextUnlockEl = document.getElementById("extensionNextUnlock");
   nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
     ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
@@ -2434,9 +2522,15 @@ function renderExtension() {
     dojoBtn.disabled = state.gold < DOJO_LEVEL2_COST;
   }
   renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level);
+  renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level);
   renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level);
   renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level);
+  renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level);
+  renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level);
+  renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level);
+  renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level);
   renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level);
+  renderSimpleBuilding("beeFarmLevel", "beeFarmBuildBtn", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST, level);
 }
 // 奉行所/鞄屋/見張り台/馬屋は全て「家レベルで解禁→1回建築したら終わり(レベル1のみ)」という
 // 同じ形の建物なので、表示更新の共通処理をまとめている
@@ -2488,9 +2582,15 @@ document.getElementById("dojoBuildBtn").onclick = () => {
   renderExtension();
 };
 document.getElementById("magistrateBuildBtn").onclick = () => buildSimpleBuilding("magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST);
+document.getElementById("travelPrepShopBuildBtn").onclick = () => buildSimpleBuilding("travelPrepShopLevel", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST);
 document.getElementById("bagShopBuildBtn").onclick = () => buildSimpleBuilding("bagShopLevel", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST);
 document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuilding("watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST);
 document.getElementById("stableBuildBtn").onclick = () => buildSimpleBuilding("stableLevel", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST);
+document.getElementById("henHouseBuildBtn").onclick = () => buildSimpleBuilding("henHouseLevel", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST);
+document.getElementById("teaHouseBuildBtn").onclick = () => buildSimpleBuilding("teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST);
+document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBuilding("hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST);
+document.getElementById("beeFarmBuildBtn").onclick = () => buildSimpleBuilding("beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST);
+document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
 document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
@@ -3651,8 +3751,8 @@ function renderBattleScreen() {
     card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     card.innerHTML = `
-      <img src="${e.image}" alt="${e.label}">
       <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
+      <img src="${e.image}" alt="${e.label}">
       ${hpBarHtml(e)}
     `;
     if (targetable) {

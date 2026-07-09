@@ -396,13 +396,13 @@ const ENEMIES = {
 const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "HPを少し回復する", image: "assets/items/potion.png" },
   smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる", image: "assets/items/smoke_bomb.png" },
-  campingKit: { id: "campingKit", ja: "野営具", price: 80, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
+  campingKit: { id: "campingKit", ja: "野営具", price: 50, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
   onsenEgg: { id: "onsenEgg", ja: "温泉卵", price: 5, desc: "HPをほんの少し回復。ターンを消費しない(自分専用)", image: "assets/items/onsen_egg.png" },
 };
 const POTION_HEAL_RATIO = 0.38;
 // 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
 // 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
-const ONSEN_EGG_HEAL_RATIO = 0.23;
+const ONSEN_EGG_HEAL_RATIO = 0.25;
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復
