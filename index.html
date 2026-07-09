@@ -1598,6 +1598,11 @@ function stopBattleBgm() {
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
   function fadeStep() {
+    // フェード中に(町に戻る等で)別のBGMキーへ既に切り替わっていたら、この古いフェード処理は
+    // 中断する。ここでチェックせずbgmAudio.pause()まで進んでしまうと、後から始まった曲(町BGM等)を
+    // 巻き込んで無音にしてしまうという不具合があった(森全滅後に町BGMが鳴らない/海岸全滅後に
+    // 探索用BGMが町で鳴り続ける、という2つの報告は両方ともこれが原因)
+    if (currentBgmKey !== key) return;
     const t = Math.min(1, (performance.now() - startTime) / BATTLE_BGM_FADE_OUT_MS);
     bgmAudio.volume = startVol * (1 - t);
     if (t < 1) {
@@ -1606,7 +1611,7 @@ function stopBattleBgm() {
       bgmPositions[key] = 0;
       bgmAudio.pause();
       bgmAudio.volume = BGM_BASE_VOLUME;
-      if (currentBgmKey === key) currentBgmKey = null;
+      currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
   }
@@ -3381,8 +3386,16 @@ function visibleFieldParty() {
 function renderDungeon() {
   document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
-  document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
+  // 担ぐ/見送るの選択中に道具ボタン等を使うとrenderDungeon()が呼ばれ、そのままだと
+  // criticalAlertが空になって選択肢が消えたまま二度と出てこなくなっていたバグの修正。
+  // 表示中だったアラート/担ぎ手選択があれば、消さずに同じ内容を再表示する
+  if (activeCriticalAlert) {
+    if (activeCriticalAlert.screen === "carryPicker") showCarryPicker(activeCriticalAlert.critical, activeCriticalAlert.onResolved);
+    else showCriticalAlert(activeCriticalAlert.critical, activeCriticalAlert.onResolved);
+  } else {
+    document.getElementById("criticalAlert").innerHTML = "";
+  }
   // 森は探索中「虫の声」アンビエントだけを流す。海岸は専用の探索用BGM(coast/coast_night)を流す。
   // どちらも戦闘専用BGM(森:dungeon系/海岸:coast_battle)はstartBattleでのみ開始し、stopBattleBgmで探索用に戻る
   if (currentStage === "coast") {
@@ -4043,6 +4056,9 @@ function showPathChoice(onChosen) {
 // 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
 let pendingCriticalQueue = [];
 let afterCriticalQueue = null;
+// 現在criticalAlert欄に表示中の内容(担ぐ/見送るの選択肢、または担ぎ手選択の一覧)を覚えておく。
+// 道具ボタンの使用等でrenderDungeon()が割り込んだ時に、消さずに同じ内容を再表示するために使う
+let activeCriticalAlert = null; // { critical, onResolved, screen: "alert" | "carryPicker" } | null
 function queueCriticalAlerts(criticalList, onAllDone) {
   pendingCriticalQueue = criticalList;
   afterCriticalQueue = onAllDone;
@@ -4066,6 +4082,7 @@ function showNextQueuedCriticalAlert() {
 // 「救出して町に戻る」(即座に瀕死解除+強制帰還)は、実質ノーコストのファストトラベルになってしまうため廃止。
 // 瀕死の仲間を助ける手段は「担ぐ」(歩いて連れて帰る必要がある)のみにしてある
 function showCriticalAlert(critical, onResolved) {
+  activeCriticalAlert = { critical, onResolved, screen: "alert" };
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   const overlaySrc = stressOverlaySrc(critical.fatigue);
@@ -4093,6 +4110,7 @@ function showCriticalAlert(critical, onResolved) {
     dlog(`${critical.name}をその場に残した。`);
     div.innerHTML = "";
     document.getElementById("dungeonLog").style.display = "";
+    activeCriticalAlert = null;
     onResolved();
   };
 }
@@ -4105,6 +4123,7 @@ function showCarryPicker(critical, onResolved) {
     alert("担げる仲間がいません(全員ふさがっています)");
     return;
   }
+  activeCriticalAlert = { critical, onResolved, screen: "carryPicker" };
   const rowHtml = (c) => {
     const c2 = CLASSES[c.classId];
     return `
@@ -4133,6 +4152,7 @@ function showCarryPicker(critical, onResolved) {
       playSfx("carry");
       // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
       setTimeout(() => {
+        activeCriticalAlert = null;
         div.innerHTML = "";
         renderDungeon();
         onResolved();
