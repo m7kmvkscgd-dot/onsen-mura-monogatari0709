@@ -3233,7 +3233,9 @@ function popupOn(targetId, text, cls) {
 // 返す、という不具合があった(敵側は#enemyRowが戦闘画面にしか存在しないため起こらなかった)。
 // 複数マッチする中から実際にレイアウトされている(幅/高さが0でない)ものを選ぶ
 function findVisibleCard(targetId) {
-  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"]`);
+  // 担がれているキャラは自分の.party-memberを持たず、担いでいるキャラのカードに重ねた
+  // .carried-badge(data-carried-id)としてしか存在しないため、そちらも検索対象に含める
+  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"], .carried-badge[data-carried-id="${targetId}"]`);
   for (const c of candidates) {
     const r = c.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) return c;
@@ -3296,9 +3298,8 @@ function renderVfxFor(targetId) {
       const freshBubble = layer.querySelector(`[data-speech-id="${targetId}"][data-speech-at="${speechAtSnapshot}"]`);
       if (!freshEl || !freshBubble) return;
       const rect = freshEl.getBoundingClientRect();
-      const isPartyFresh = freshEl.classList.contains("party-member");
       freshBubble.style.left = `${rect.left + rect.width / 2}px`;
-      freshBubble.style.top = `${isPartyFresh ? rect.bottom : rect.top}px`;
+      freshBubble.style.top = `${rect.top}px`;
     });
   } else if (existingBubble) {
     existingBubble.remove();
