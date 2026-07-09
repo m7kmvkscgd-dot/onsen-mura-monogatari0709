@@ -204,7 +204,7 @@
        を持つこの要素が独自の合成レイヤーを持ち続けることで、bar.innerHTML=""による頻繁な再構築と
        組み合わさってiOS Safariで子要素/関連要素の再描画が更新されなくなる不具合の原因になっていた
        可能性が高いため外した(translateX(-50%)は中央寄せに必須なので残す) */
-    position: fixed; top: 268px; left: 50%;
+    position: fixed; top: 276px; left: 50%;
     transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 4;
     display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
@@ -296,6 +296,10 @@
      本体の縦グラデーション地。dungeonLog/campLogには影響しないよう#battleLogだけ上書きする */
   #battleLog {
     position: relative;
+    /* 1行目の文字上部が枠に食い込んで見切れないよう、共通ルールより上側paddingとボックス自体の
+       高さを少しだけ増やしてある(スクロールで最新行に合わせた時、直前の行の頭が枠際で切れるのを防ぐ) */
+    padding-top: 0.95rem;
+    height: 78px;
     background-image:
       radial-gradient(circle at top left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
       radial-gradient(circle at top right, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
