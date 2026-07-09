@@ -438,6 +438,7 @@ function initPassives() {
     onKillStacks: 0, onKillStacksTurns: 0,
     onHitInflicts: [], // [{type, chance, value, turns}] 通常攻撃に乗る状態異常付与(複数スキルぶん積み上がる)
     executeBonus: null, // {belowPct, mult} HPが閾値以下の相手への追加ダメージ倍率
+    woundBonus: null, // {mult} 毒/炎上/スタン/沈黙/能力低下など何らかの状態異常を負っている相手への追加ダメージ倍率
     conditionalMods: [], // [{cmp, value, statMult:[{stat,mult}]|null, dmgTakenMult:number|null}] (stat基準は常にhpPct)
   };
 }
@@ -479,6 +480,7 @@ function applySkillChoice(character, skill, level) {
     if (add.conditionalMod) p.conditionalMods.push(add.conditionalMod);
     if (add.onHitInflict) p.onHitInflicts.push(add.onHitInflict);
     if (add.executeBonus) p.executeBonus = add.executeBonus;
+    if (add.woundBonus) p.woundBonus = add.woundBonus;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -765,6 +767,18 @@ function performAttack(actor, target, log) {
 
 // 直近で敵を倒した攻撃者(全滅時のセリフ抽選で「最後に倒した人物」を優先させるために使う)
 let lastEnemyKillActor = null;
+// 直近のapplyDamageToTargetで会心が発動したか(index.html側で被弾演出の揺れの強さを決めるのに使う)
+let lastHitWasCrit = false;
+// 「傷口狙い」系の受動効果が参照する、対象が何らかの状態異常を負っているかどうかの判定。
+// 毒/炎上/スタン/沈黙に加え、能力低下(捕縛・崩しなどのstatMods、mult<1のもの)も対象に含める
+function hasStatusAilment(target) {
+  if ((target.poison || 0) > 0) return true;
+  if ((target.burnTurns || 0) > 0) return true;
+  if ((target.stunTurns || 0) > 0) return true;
+  if ((target.silenceTurns || 0) > 0) return true;
+  if (target.statMods && target.statMods.some((m) => m.mult < 1)) return true;
+  return false;
+}
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
@@ -778,7 +792,16 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
     if (hpPct <= actor.passives.executeBonus.belowPct) dmg = Math.round(dmg * actor.passives.executeBonus.mult);
   }
-  if (actor) dmg = Math.round(dmg * rollCritMultiplier(actor, extraCritRate));
+  // 傷口狙い系の受動効果: 対象が毒/炎上/スタン/沈黙/能力低下など何らかの状態異常を負っていれば追加ダメージ
+  if (actor && actor.passives && actor.passives.woundBonus && hasStatusAilment(target)) {
+    dmg = Math.round(dmg * actor.passives.woundBonus.mult);
+  }
+  lastHitWasCrit = false;
+  if (actor) {
+    const critMult = rollCritMultiplier(actor, extraCritRate);
+    dmg = Math.round(dmg * critMult);
+    lastHitWasCrit = critMult > 1;
+  }
   // 大技の構え中(bigAttackPending)の敵は隙だらけとみなし、受けるダメージが増える(押し切る対抗策)
   if (target.bigAttackPending) dmg = Math.round(dmg * BIG_ATTACK_EXPOSED_BONUS);
   dmg = Math.max(0, Math.round(dmg * damageTakenMultiplier(target)));

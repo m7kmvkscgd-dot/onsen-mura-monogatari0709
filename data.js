@@ -465,12 +465,12 @@ const SKILL_TREES = {
       right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
     },
     3: {
-      left: { name: "俊足", desc: "素早さ+15%", mp: 0, passive: { spdMult: 1.15 } },
-      right: { name: "反射神経", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
-    },
-    4: {
       left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
       right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+    },
+    4: {
+      left: { name: "俊足", desc: "素早さ+15%", mp: 0, passive: { spdMult: 1.15 } },
+      right: { name: "反射神経", desc: "回避率+12%", mp: 0, passive: { evasionAdd: 0.12 } },
     },
     5: {
       left: { name: "暗殺術", desc: "HPが50%以下の敵へのダメージ+30%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.3 } } },
@@ -579,12 +579,12 @@ const SKILL_TREES = {
       right: { name: "毒矢", desc: "敵単体へ110%ダメージ、確実に毒状態にする(蓄積5)", mp: 3, action: { kind: "damage", mult: 1.1, inflict: { type: "poison", chance: 1.0, value: 5 } } },
     },
     3: {
-      left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
-      right: { name: "罠師", desc: "命中率+8%", mp: 0, passive: { accuracyAdd: 0.08 } },
-    },
-    4: {
       left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2 } },
       right: { name: "スタン矢", desc: "敵単体へ70%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+    },
+    4: {
+      left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      right: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
     },
     5: {
       left: { name: "鷹の目", desc: "命中率+10%、会心ダメージ+15%", mp: 0, passive: { accuracyAdd: 0.1, critDmgAdd: 0.15 } },

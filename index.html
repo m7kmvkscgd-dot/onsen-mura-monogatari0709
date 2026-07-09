@@ -278,6 +278,12 @@
     animation: levelupPulse 1.2s ease-in-out infinite;
   }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+  /* 町画面の所持金表示。背景に埋もれて見にくいという指摘を受け時計の下に移動しつつ、
+     枠のバッジ風デザインは「ダサい」との指摘で撤去し、文字を少し大きく+影を強めるだけにした */
+  .town-gold-badge {
+    display: inline-block; font-size: 1.1rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+  }
   .floor-badge { text-align: center; padding: 122px 0.6rem 0.6rem; }
   /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
   .floor-badge span {
@@ -451,26 +457,43 @@
      .hit-shakeと.hit-flashは常にセットで付与される(shakeClassFor参照)ため、
      両方が同時に付いた状態を1つのセレクタでまとめてanimationプロパティに指定する必要がある。
      .hit-shake単体/.hit-flash単体でそれぞれanimationを宣言すると、同じプロパティを取り合って
-     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正 */
+     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正。
+     通常ヒットはhitShakeNormal(振幅/時間ともに基準の0.8倍)、会心/スキル攻撃はhitShakeStrong
+     (同1.2倍)を使い分ける(shakeClassForが.hit-shake-normal/.hit-shake-strongを付与する) */
   @keyframes hitFlash {
     0%, 100% { filter: brightness(1); }
     30% { filter: brightness(2.4); }
   }
-  .hit-shake.hit-flash {
-    animation: hitShake 0.4s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
+  .hit-shake.hit-flash.hit-shake-normal {
+    animation: hitShakeNormal 0.32s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
   }
-  /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更) */
-  @keyframes hitShake {
+  .hit-shake.hit-flash.hit-shake-strong {
+    animation: hitShakeStrong 0.48s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
+  }
+  /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更)。基準(1倍)の値 */
+  @keyframes hitShakeNormal {
     0%, 100% { transform: translate(0, 0); }
-    10% { transform: translate(-3px, 1px); }
-    20% { transform: translate(3px, -1px); }
-    30% { transform: translate(-3px, 1px); }
-    40% { transform: translate(2px, -1px); }
-    50% { transform: translate(-2px, 1px); }
-    60% { transform: translate(2px, -1px); }
-    70% { transform: translate(-1px, 1px); }
-    80% { transform: translate(1px, 0); }
-    90% { transform: translate(-1px, 0); }
+    10% { transform: translate(-2.4px, 0.8px); }
+    20% { transform: translate(2.4px, -0.8px); }
+    30% { transform: translate(-2.4px, 0.8px); }
+    40% { transform: translate(1.6px, -0.8px); }
+    50% { transform: translate(-1.6px, 0.8px); }
+    60% { transform: translate(1.6px, -0.8px); }
+    70% { transform: translate(-0.8px, 0.8px); }
+    80% { transform: translate(0.8px, 0); }
+    90% { transform: translate(-0.8px, 0); }
+  }
+  @keyframes hitShakeStrong {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-3.6px, 1.2px); }
+    20% { transform: translate(3.6px, -1.2px); }
+    30% { transform: translate(-3.6px, 1.2px); }
+    40% { transform: translate(2.4px, -1.2px); }
+    50% { transform: translate(-2.4px, 1.2px); }
+    60% { transform: translate(2.4px, -1.2px); }
+    70% { transform: translate(-1.2px, 1.2px); }
+    80% { transform: translate(1.2px, 0); }
+    90% { transform: translate(-1.2px, 0); }
   }
   .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
   @keyframes enemyLunge {
@@ -595,7 +618,7 @@
 
   <!-- 最初の1人選び(ゲーム開始時、名簿が空の間だけ表示) -->
   <div class="screen active" id="screen-first-character">
-    <div class="hero" id="firstCharacterHero" style="background-image:url('assets/bg/tavern.png')">
+    <div class="hero" id="firstCharacterHero" style="background-image:url('assets/bg/tavern.jpg')">
       <h1>職業を選んでください</h1>
     </div>
     <div class="body-pad">
@@ -605,9 +628,8 @@
 
   <!-- 町 -->
   <div class="screen" id="screen-town">
-    <div class="hero" id="townHero" style="background-image:url('assets/bg/town.png')">
-      <div class="topbar">
-        <span class="gold" id="townGold">0G</span>
+    <div class="hero" id="townHero" style="background-image:url('assets/bg/town.jpg')">
+      <div class="topbar" style="justify-content:flex-end;">
         <button class="mute-btn" id="muteBtn">🔊</button>
       </div>
       <div class="hero-title-row">
@@ -617,6 +639,7 @@
       <div class="hero-title-row" style="margin-top:0.2rem;">
         <span class="time-of-day-label" id="townTimeLabel"></span>
       </div>
+      <span class="gold town-gold-badge" id="townGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
       <p id="townHireHint" style="display:none;"><span class="hire-hint-arrow">⬇︎</span>宿屋で仲間を雇いましょう</p>
@@ -632,7 +655,7 @@
 
   <!-- 宿屋 -->
   <div class="screen" id="screen-tavern">
-    <div class="hero" id="tavernHero" style="background-image:url('assets/bg/tavern.png')">
+    <div class="hero" id="tavernHero" style="background-image:url('assets/bg/tavern.jpg')">
       <h1>宿屋</h1>
     </div>
     <div class="body-pad">
@@ -656,7 +679,7 @@
   <!-- パーティ編成(出発直前) -->
   <div class="screen" id="screen-party-select">
     <div class="hero" id="partySelectHero">
-      <div class="hero-bg-inner" id="partySelectHeroInner" style="background-image:url('assets/bg/departure_gate.png');"></div>
+      <div class="hero-bg-inner" id="partySelectHeroInner" style="background-image:url('assets/bg/departure_gate.jpg');"></div>
       <h1>パーティ編成</h1>
     </div>
     <div class="body-pad">
@@ -705,7 +728,7 @@
 
   <!-- ステータス詳細 -->
   <div class="screen" id="screen-status">
-    <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.png')">
+    <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.jpg')">
       <h1 id="statusName">-</h1>
     </div>
     <div class="body-pad">
@@ -773,7 +796,7 @@
 
   <!-- 温泉の売店 -->
   <div class="screen" id="screen-onsen-shop">
-    <div class="hero" id="onsenShopHero" style="background-image:url('assets/bg/onsen_shop.png')">
+    <div class="hero" id="onsenShopHero" style="background-image:url('assets/bg/onsen_shop.jpg')">
       <h1>売店</h1>
     </div>
     <div class="body-pad">
@@ -1241,11 +1264,11 @@ function advanceExplorationClock(minutes) {
   state.timeOfDay = phaseForClockMinutes(state.clockMinutes);
 }
 const BG_SETS = {
-  town: { dawn: "assets/bg/town_dawn.png", day: "assets/bg/town.png", dusk: "assets/bg/town_dusk.png", night: "assets/bg/town_night.png" },
-  tavern: { dawn: "assets/bg/tavern_dawn.png", day: "assets/bg/tavern.png", dusk: "assets/bg/tavern_dusk.png", night: "assets/bg/tavern_night.png" },
-  dungeon: { dawn: "assets/bg/forest_dawn.png", day: "assets/bg/forest_day.png", dusk: "assets/bg/forest_dusk.png", night: "assets/bg/forest_night.png" },
-  onsen: { day: "assets/bg/onsen.png", night: "assets/bg/onsen_night.png" },
-  departure: { dawn: "assets/bg/departure_gate_dawn.png", day: "assets/bg/departure_gate.png", dusk: "assets/bg/departure_gate_dusk.png", night: "assets/bg/departure_gate_night.png" },
+  town: { dawn: "assets/bg/town_dawn.jpg", day: "assets/bg/town.jpg", dusk: "assets/bg/town_dusk.jpg", night: "assets/bg/town_night.jpg" },
+  tavern: { dawn: "assets/bg/tavern_dawn.jpg", day: "assets/bg/tavern.jpg", dusk: "assets/bg/tavern_dusk.jpg", night: "assets/bg/tavern_night.jpg" },
+  dungeon: { dawn: "assets/bg/forest_dawn.jpg", day: "assets/bg/forest_day.jpg", dusk: "assets/bg/forest_dusk.jpg", night: "assets/bg/forest_night.jpg" },
+  onsen: { day: "assets/bg/onsen.jpg", night: "assets/bg/onsen_night.jpg" },
+  departure: { dawn: "assets/bg/departure_gate_dawn.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
 };
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
 // 宿屋の4枚だけを先読みしておく。反応速度優先のため、対象は宿泊演出に必要な最小限(4枚、以前は
@@ -1874,7 +1897,7 @@ function playCampTransition(onDone) {
   function afterNightHold() {
     // 夜の森→暗転→野営地
     fadeOpacity(blackEl, 0, 1, 2000, () => {
-      fromEl.style.backgroundImage = `url('assets/bg/camp_night.png')`;
+      fromEl.style.backgroundImage = `url('assets/bg/camp_night.jpg')`;
       setTimeout(() => {
         fadeOpacity(blackEl, 1, 0, 1500, finishCampTransition);
       }, 300);
@@ -1909,7 +1932,7 @@ function playCampSleepTransition(onBlack) {
   const caption = document.getElementById("campTransitionCaption");
 
   fromEl.style.opacity = "1";
-  fromEl.style.backgroundImage = `url('assets/bg/camp_night.png')`;
+  fromEl.style.backgroundImage = `url('assets/bg/camp_night.jpg')`;
   toEl.style.opacity = "0";
   blackEl.style.opacity = "0";
   caption.textContent = "";
@@ -3054,7 +3077,7 @@ document.getElementById("dungeonCampBtn").onclick = () => {
 };
 function startCampPhase() {
   showScreen("screen-camp");
-  document.getElementById("campBg").style.backgroundImage = "url('assets/bg/camp_night.png')";
+  document.getElementById("campBg").style.backgroundImage = "url('assets/bg/camp_night.jpg')";
   document.getElementById("campLog").innerHTML = "";
   campActionQueue = fieldParty.filter((c) => c.status === "active");
   campPendingComfortActor = null;
@@ -3428,10 +3451,18 @@ function triggerWarningFlash() {
   void el.offsetWidth;
   el.style.animation = "screenWarningFlash 0.6s ease-out";
 }
-function popupOn(targetId, text, cls) {
+// 攻撃系のdmgポップアップ呼び出し時、技/会心なら"strong"(揺れ1.2倍)、通常攻撃なら"normal"(揺れ0.8倍)を
+// 呼び出し元で明示的に渡す(毒/炎上などの継続ダメージは渡さず、常にnormal扱いにする)
+function dmgShakeIntensity(isSkill) {
+  return (isSkill || (typeof lastHitWasCrit !== "undefined" && lastHitWasCrit)) ? "strong" : "normal";
+}
+function popupOn(targetId, text, cls, intensity) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
-  if (cls === "dmg") entity.__shakeUntil = Date.now() + 400;
+  if (cls === "dmg") {
+    entity.__shakeUntil = Date.now() + 400;
+    entity.__shakeIntensity = intensity || "normal";
+  }
   // 赤いダメージ数字のポップアップ表示は敵/味方問わず廃止(揺れ+フラッシュの演出のみ残す)。回復の表示は継続する
   if (cls === "dmg") return;
   entity.__popupText = text;
@@ -3611,7 +3642,9 @@ function maybeSpeakOnFloorAdvance() {
 }
 // entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す
 function shakeClassFor(entity) {
-  return entity.__shakeUntil && entity.__shakeUntil > Date.now() ? " hit-shake hit-flash" : "";
+  if (!entity.__shakeUntil || entity.__shakeUntil <= Date.now()) return "";
+  const intensityClass = entity.__shakeIntensity === "strong" ? "hit-shake-strong" : "hit-shake-normal";
+  return ` hit-shake hit-flash ${intensityClass}`;
 }
 // 毒/炎上/スタン/沈黙/大技の構えの状態アイコンを名前の横に表示する
 function statusIconsFor(entity) {
@@ -3620,6 +3653,7 @@ function statusIconsFor(entity) {
   if (entity.burnTurns > 0) s += ` 🔥${entity.burnTurns}`;
   if (entity.stunTurns > 0) s += " 💫";
   if (entity.silenceTurns > 0) s += " 🔇";
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += " 🕸️";
   if (entity.bigAttackPending) s += " ⚡";
   return s;
 }
@@ -3855,7 +3889,7 @@ function processNext() {
         const results = enemyBigAttack(actor, alive, blog);
         results.forEach((r) => {
           if (r.hit) {
-            popupOn(r.target.id, `-${r.dmg}`, "dmg");
+            popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
             playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
           } else {
             playSfx("evade");
@@ -3881,7 +3915,7 @@ function processNext() {
       alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
       const result = enemyAttack(actor, alive, blog);
       if (result && result.hit) {
-        popupOn(result.target.id, `-${result.dmg}`, "dmg");
+        popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
         playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
         checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
       } else if (result) {
@@ -4062,7 +4096,7 @@ function runTreeSkill(actor, skill) {
       let anyHit = false;
       targetsList.forEach((t, i) => {
         const r = result.dmgs[i];
-        if (r && r.hit) { popupOn(t.instanceId, `-${r.dmg}`, "dmg"); anyHit = true; }
+        if (r && r.hit) { popupOn(t.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); anyHit = true; }
         else anyEvaded = true;
       });
       if (anyEvaded) playSfx("evade");
@@ -4076,7 +4110,7 @@ function runTreeSkill(actor, skill) {
     playSfx(attackSfxFor(actor.classId));
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
-    if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg"); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
+    if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
     else if (r) playSfx("evade");
     renderBattleScreen();
     finishPlayerAction();
@@ -4156,7 +4190,7 @@ function renderActionButtons(actor) {
         playSfx(attackSfxFor(actor.classId));
         const result = performAttack(actor, target, blog);
         if (result.hit) {
-          popupOn(target.instanceId, `-${result.dmg}`, "dmg");
+          popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
           maybeSpeakOnKill(actor, target);
         }
         else playSfx("evade");
@@ -4190,7 +4224,7 @@ function renderActionButtons(actor) {
             let anyEvaded = false;
             let anyHit = false;
             targetsList.forEach((t, i) => {
-              if (result.hits[i]) { popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg"); anyHit = true; }
+              if (result.hits[i]) { popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true)); anyHit = true; }
               else anyEvaded = true;
             });
             if (anyEvaded) playSfx("evade");
@@ -4204,7 +4238,7 @@ function renderActionButtons(actor) {
         pickSingleEnemyTarget((target) => {
           playSfx(attackSfxFor(actor.classId));
           const result = useAbility(actor, target, ability, blog);
-          if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg"); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
+          if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
           else if (result && !result.failed) playSfx("evade");
           renderBattleScreen();
           finishPlayerAction();
