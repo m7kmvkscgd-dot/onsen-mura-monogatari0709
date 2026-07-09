@@ -700,6 +700,7 @@
       <div class="card">
         <div class="roster-name">🏠家レベル <span id="extensionLevel"></span></div>
         <div class="roster-sub" style="margin-top:0.2rem;">仲間上限: <span id="extensionCapacity"></span>人</div>
+        <div class="roster-sub" id="extensionNextUnlock" style="margin-top:0.2rem;color:var(--accent);"></div>
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
@@ -896,19 +897,19 @@ const DOJO_UNLOCK_HOUSE_LEVEL = 4; // 家レベルがこの値に達するまで
 const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
 
 // 奉行所: 依頼を受けられるようになる(建物のみ、依頼の中身は未実装)
-const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 4;
+const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 50;
 // 鞄屋: 支援物資の所持上限が1増える(唯一、実際に効果があるレベル1の施設)
-const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 5;
+const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const BAG_SHOP_LEVEL1_COST = 75;
 function supplyCap() {
   return SUPPLY_CAP_BASE + (state.bagShopLevel || 0);
 }
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
-const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 6;
+const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;
 const WATCHTOWER_COST = 200;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
-const STABLE_UNLOCK_HOUSE_LEVEL = 7;
+const STABLE_UNLOCK_HOUSE_LEVEL = 6;
 const STABLE_COST = 200;
 
 // ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(2時間)など、
@@ -2312,6 +2313,18 @@ function renderExtension() {
     btn.textContent = `増築する(${cost}G) 仲間上限 ${rosterCapacity()}→${rosterCapacity() + 1}人`;
     btn.disabled = state.gold < cost;
   }
+  // 次の家レベルで解禁される施設があれば「→ 家レベルN 【解禁】◯◯」の形でプレビュー表示する
+  const nextLevel = level + 1;
+  const unlocksAtNextLevel = [];
+  if ((state.dojoLevel || 0) === 0 && nextLevel === DOJO_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("道場");
+  if (!state.magistrateLevel && nextLevel === MAGISTRATE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("奉行所");
+  if (!state.bagShopLevel && nextLevel === BAG_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鞄屋");
+  if (!state.watchtowerLevel && nextLevel === WATCHTOWER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("見張り台");
+  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬屋");
+  const nextUnlockEl = document.getElementById("extensionNextUnlock");
+  nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
+    ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
+    : "";
   const dojoLevel = state.dojoLevel || 0;
   const dojoBtn = document.getElementById("dojoBuildBtn");
   const dojoLocked = dojoLevel === 0 && level < DOJO_UNLOCK_HOUSE_LEVEL;
@@ -3113,12 +3126,12 @@ function showCarryPicker(critical, onResolved) {
       dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
       if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(critical, "carried");
       playSfx("carry");
-      // 1.5秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
+      // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
       setTimeout(() => {
         div.innerHTML = "";
         renderDungeon();
         onResolved();
-      }, 1500);
+      }, 2000);
     };
   });
   document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, onResolved);
@@ -3831,11 +3844,11 @@ function renderCarryTargets(actor, targets) {
       if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(target, "carried");
       playSfx("carry");
       document.getElementById("actionGrid").innerHTML = ""; // 演出の間はボタンを消して連打を防ぐ
-      // 1.5秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
+      // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
       setTimeout(() => {
         renderBattleScreen();
         renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
-      }, 1500);
+      }, 2000);
     };
     grid.appendChild(btn);
   });
