@@ -1618,19 +1618,20 @@ function stopBattleBgm() {
   fadeStep();
 }
 
-// 虫の声アンビエント: 探索中・戦闘中を通して共通で流れ続ける環境音。朝昼はinsect_day、夕夜(野営時も含む)は
-// insect_nightを使う。forceKeyを渡すと時間帯に関わらずそのキーを強制する(野営演出が視覚的には常に夜へ
-// 切り替わるため、野営開始時だけ強制的にinsect_nightへ寄せる用途)
+// 環境音: 探索中・戦闘中を通して共通で流れ続ける環境音。森は虫の声(朝昼insect_day/夕夜insect_night、
+// forceKeyを渡すと時間帯に関わらずそのキーを強制。野営演出が視覚的には常に夜へ切り替わるため、
+// 野営開始時だけ強制的にinsect_nightへ寄せる用途)、海岸は波音(coast_ambient、時間帯に関わらず1種類)を使う
 const AMBIENT_BGM_TRACKS = { day: "assets/bgm/insect_day.mp3", night: "assets/bgm/insect_night.mp3" };
+const COAST_AMBIENT_TRACK = "assets/bgm/coast_ambient.mp3";
 let currentAmbientKey = null;
 function ambientKeyForTimeOfDay(tod) {
   return tod === "dawn" || tod === "asa" || tod === "day" ? "day" : "night";
 }
 function playAmbientBgm(forceKey) {
-  const key = forceKey || ambientKeyForTimeOfDay(state.timeOfDay);
+  const key = currentStage === "coast" ? "coast" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
   if (currentAmbientKey === key) return;
   currentAmbientKey = key;
-  ambientBgmAudio.src = AMBIENT_BGM_TRACKS[key];
+  ambientBgmAudio.src = key === "coast" ? COAST_AMBIENT_TRACK : AMBIENT_BGM_TRACKS[key];
   ambientBgmAudio.currentTime = 0;
   if (audioUnlocked) ambientBgmAudio.play().catch(() => {});
 }
@@ -3396,14 +3397,11 @@ function renderDungeon() {
   } else {
     document.getElementById("criticalAlert").innerHTML = "";
   }
-  // 森は探索中「虫の声」アンビエントだけを流す。海岸は専用の探索用BGM(coast/coast_night)を流す。
-  // どちらも戦闘専用BGM(森:dungeon系/海岸:coast_battle)はstartBattleでのみ開始し、stopBattleBgmで探索用に戻る
-  if (currentStage === "coast") {
-    stopAmbientBgm();
-    playExplorationAreaBgm();
-  } else {
-    playAmbientBgm();
-  }
+  // 森は「虫の声」、海岸は「波音」のアンビエントを、探索中・戦闘中を通して流し続ける(playAmbientBgm内でstage判定)。
+  // BGM(森:dungeon系/海岸:coast/coast_battle)はこれとは別チャンネル(bgmAudio)で、startBattleでのみ切り替わり、
+  // stopBattleBgmで探索用に戻る。どちらのチャンネルも戦闘中に止めない
+  playAmbientBgm();
+  if (currentStage === "coast") playExplorationAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
