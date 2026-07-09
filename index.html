@@ -104,6 +104,13 @@
   .skill-tree-charname { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
   .skill-tree-classname { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
   .skill-tree-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0.7rem 0 0; }
+  /* 左右ツリーの通り名(剣豪/明鏡など)。下の系譜一覧と同じ列幅(レベルバッジ42px分)で
+     左右に振り分けて表示し、「かっこいい見出し」として金色+レタースペーシングで強調する */
+  .skill-tree-names { display: flex; align-items: center; gap: 0.4rem; margin: 1rem 0 0.2rem; }
+  .skill-tree-name { flex: 1; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .skill-tree-name.left { text-align: left; padding-left: 0.3rem; }
+  .skill-tree-name.right { text-align: right; padding-right: 0.3rem; }
+  .skill-tree-name-spacer { flex: 0 0 42px; width: 42px; }
   .skill-tree-rows { border-top: 1px solid var(--border); }
   .skill-tree-row-wrap { border-bottom: 1px solid var(--border); }
   .skill-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; }
@@ -539,6 +546,48 @@
     filter: brightness(1.15);
   }
   .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: 10px; padding: 0.8rem; margin: 0.7rem 1rem; }
+  /* 進路選択パネル(critical-alertの赤枠とは別の専用デザイン。和風の落ち着いた高級感を出すため
+     黒〜濃いグレーの半透明+細い金枠にしている) */
+  .path-choice-panel {
+    background: linear-gradient(180deg, rgba(26,22,18,0.92), rgba(12,11,9,0.90));
+    border: 1px solid var(--accent); border-radius: 18px;
+    padding: 1rem 0.9rem; margin: 0.7rem 1rem;
+    animation: pathChoiceFadeIn 0.2s ease forwards;
+  }
+  @keyframes pathChoiceFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .path-choice-title {
+    text-align: center; font-size: 1.08rem; font-weight: 800; color: #ecdfc0;
+    letter-spacing: 0.12em; margin: 0 0 0.85rem; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  }
+  .path-choice-cards { display: flex; gap: 0.5rem; }
+  .path-card {
+    flex: 1; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.35rem; background: rgba(8,8,8,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+    color: #d8d0bf; opacity: 0.78; font: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .path-card .path-card-icon { font-size: 1.35rem; }
+  .path-card .path-card-label { font-size: 0.72rem; white-space: normal; line-height: 1.25; }
+  .path-card:hover, .path-card:active {
+    transform: scale(1.03); border-color: var(--accent);
+    box-shadow: 0 0 14px rgba(201,162,74,0.55); opacity: 1;
+  }
+  /* 進路選択を閉じるだけの「戻る」(里に戻る、ではない)。道カードより目立たせない控えめな見た目 */
+  .path-choice-cancel {
+    display: block; width: 100%; margin-top: 0.7rem; padding: 0.5rem;
+    background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+    color: var(--text-muted); font-size: 0.78rem; font: inherit; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .path-choice-cancel:hover, .path-choice-cancel:active { border-color: var(--accent); color: var(--text); }
+  /* 進路選択パネルの表示中は、視線をそちらへ集中させるため味方表示/操作ボタンを一時的に薄くする */
+  body.path-choice-active #dungeonPartyBar, body.path-choice-active .bottom-actions {
+    opacity: 0.65; transition: opacity 0.18s ease;
+  }
   /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
      イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
   .treasure-popup {
@@ -604,6 +653,10 @@
     padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
   }
   .bottom-actions button { flex: 1 1 auto; min-width: 90px; }
+  /* 道具ボタンは他がhealBtn非表示等で奇数本になった時、行に1つだけ残ってflex:1 1 autoのまま
+     横幅いっぱいに伸びてしまう(他のボタンだけ並んだ時より不自然に大きく見える)ため、
+     他のボタンと同じくらいのサイズで頭打ちにする */
+  #dungeonToolsBtn { flex: 0 1 160px; }
   .camp-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(.bottom-actions/.battle-actionsと同じ仕組み) */
     position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
@@ -670,6 +723,7 @@
       <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
       <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
       <div class="class-grid" id="classGrid"></div>
+      <p id="classDescArea" style="font-size:0.75rem;color:var(--text-muted);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
       <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(50G)</button>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
@@ -756,6 +810,7 @@
         <p style="font-size:0.7rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで効果を表示</p>
         <div id="statSkillList"></div>
       </div>
+      <button class="big" id="statusViewSkillTreeBtn" style="margin-bottom:0.8rem;">スキル系譜を見る</button>
       <button class="big" id="statusBackBtn">戻る</button>
       <button class="big danger" id="statusDismissBtn" style="margin-top:1.5rem;font-size:0.75rem;padding:0.5rem;">解雇</button>
     </div>
@@ -895,7 +950,7 @@
         <button class="big danger" id="retreatBtn">里に戻る</button>
         <button class="big" id="dungeonPotionBtn">回復薬</button>
         <button class="big" id="dungeonHealBtn" style="display:none;">治癒の術</button>
-        <button class="big" id="dungeonCampBtn">野営</button>
+        <button class="big" id="dungeonToolsBtn">道具</button>
         <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
       </div>
     </div>
@@ -953,7 +1008,7 @@
 
   <!-- レベルアップ時のスキル選択(2択)。どの画面の上にも被さるオーバーレイ -->
   <div id="skillChoiceOverlay" style="display:none; position:fixed; inset:0; z-index:50; background:rgba(10,12,14,0.92); overflow-y:auto;">
-    <div style="max-width:480px; margin:0 auto; padding:2rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));">
+    <div style="max-width:480px; margin:0 auto; padding:2rem 1rem calc(6rem + env(safe-area-inset-bottom, 0px));">
       <div id="skillChoiceContent"></div>
     </div>
   </div>
@@ -1020,7 +1075,7 @@ const SAVE_KEY = "dungeon1_save";
 
 function defaultState() {
   return {
-    gold: 150,
+    gold: 170,
     roster: [],
     activePartyIds: [],
     inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0 },
@@ -1714,12 +1769,17 @@ document.getElementById("toDungeonBtn").onclick = () => {
 function renderClassGrid() {
   const grid = document.getElementById("classGrid");
   grid.innerHTML = "";
+  const descArea = document.getElementById("classDescArea");
+  descArea.textContent = CLASS_DESC[selectedClass] || "";
   Object.keys(CLASSES).forEach((classId) => {
     const c = CLASSES[classId];
     const div = document.createElement("div");
     div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
     div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>`;
     div.onclick = () => { selectedClass = classId; renderClassGrid(); };
+    // カーソルを乗せている間だけそのクラスの説明を表示し、離れたら選択中のクラスの説明に戻す
+    div.onmouseenter = () => { descArea.textContent = CLASS_DESC[classId] || ""; };
+    div.onmouseleave = () => { descArea.textContent = CLASS_DESC[selectedClass] || ""; };
     grid.appendChild(div);
   });
 }
@@ -2132,6 +2192,9 @@ function renderStatusScreen(charId) {
   skillListEl.querySelectorAll(".skill-entry").forEach((el) => {
     el.onclick = () => { el.classList.toggle("open"); };
   });
+  document.getElementById("statusViewSkillTreeBtn").onclick = () => {
+    viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
+  };
   document.getElementById("statusDismissBtn").onclick = () => {
     showConfirmModal(
       `${c.name}を解雇したキャラは2度と戻ってきません、本当に解雇しますか？`,
@@ -2945,8 +3008,8 @@ function renderDungeon() {
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
-  document.getElementById("dungeonCampBtn").textContent = `野営(${state.inventory.campingKit || 0})`;
-  document.getElementById("dungeonCampBtn").disabled = (state.inventory.campingKit || 0) <= 0;
+  // 道具: 野営具/温泉卵をまとめて選ぶメニュー。どちらも0個の時だけ無効化する
+  document.getElementById("dungeonToolsBtn").disabled = (state.inventory.campingKit || 0) <= 0 && (state.inventory.onsenEgg || 0) <= 0;
   // 治癒の術: 僧侶がパーティにいる時だけボタンを表示し、MPが足りない時は無効化する
   const dungeonPriests = fieldParty.filter((c) => c.status === "active" && c.classId === "priest");
   const healCost = abilityMpCost("heal");
@@ -2966,7 +3029,7 @@ function renderDungeon() {
 // 選択肢は#criticalAlert(画面上部)ではなく味方バーの下の.bottom-actionsに出す。上部に出すと
 // 選択肢が増えた時に味方イラストへ重なってタップを奪ってしまう(実際に発生したバグ)ため、
 // 戦闘画面の対象選択(味方バーの下に出る)と同じ位置関係に揃えてある
-const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonCampBtn"];
+const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonToolsBtn"];
 function closeDungeonTargetPicker() {
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "none";
@@ -3028,6 +3091,41 @@ document.getElementById("dungeonHealBtn").onclick = () => {
     saveState();
     renderDungeon();
   });
+};
+
+// 探索中の「道具」ボタン: 野営具(野営を始める)/温泉卵(誰か1人がその場で少し回復)をまとめて選ぶメニュー。
+// 回復薬/治癒の術と同じ.bottom-actions→dungeonTargetPickerの仕組みを流用する
+document.getElementById("dungeonToolsBtn").onclick = () => {
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
+  const picker = document.getElementById("dungeonTargetPicker");
+  picker.style.display = "flex";
+  const campCount = state.inventory.campingKit || 0;
+  const eggCount = state.inventory.onsenEgg || 0;
+  picker.innerHTML = `
+    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>道具を選んでください</strong></p>
+    <button class="big" id="toolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>野営具(${campCount})</button>
+    <button class="big" id="toolsEggBtn" ${eggCount <= 0 ? "disabled" : ""}>温泉卵(${eggCount})</button>
+    <button class="big danger" id="cancelDungeonToolsBtn">やめる</button>
+  `;
+  document.getElementById("toolsCampBtn").onclick = () => {
+    if (campCount <= 0) return;
+    closeDungeonTargetPicker();
+    startCampFromTools();
+  };
+  document.getElementById("toolsEggBtn").onclick = () => {
+    if (eggCount <= 0) return;
+    pickDungeonAllyTarget(`誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？`, (target) => {
+      state.inventory.onsenEgg--;
+      playSfx("heal");
+      useOnsenEgg(target, dlog);
+      saveState();
+      renderDungeon();
+    });
+  };
+  document.getElementById("cancelDungeonToolsBtn").onclick = () => {
+    closeDungeonTargetPicker();
+  };
+  positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 };
 
 // 「進む」「里に戻る」共通の1歩分の移動演出。背景画像(#dungeonBg)だけをscale/translateYで
@@ -3122,14 +3220,15 @@ function clog(msg) {
 }
 let campActionQueue = [];
 let campPendingComfortActor = null;
-document.getElementById("dungeonCampBtn").onclick = () => {
+// 野営具を使って野営を開始する(道具ボタンのメニューから呼ばれる)
+function startCampFromTools() {
   if ((state.inventory.campingKit || 0) <= 0) return;
   state.inventory.campingKit--;
   saveState();
   playCampTransition(() => {
     startCampPhase();
   });
-};
+}
 function startCampPhase() {
   showScreen("screen-camp");
   document.getElementById("campBg").style.backgroundImage = "url('assets/bg/camp_night.jpg')";
@@ -3320,60 +3419,167 @@ document.getElementById("advanceBtn").onclick = () => {
     return;
   }
   showPathChoice((pathBias) => {
-    const chosen = PATH_CHOICE_POOL.find((p) => p.key === pathBias);
+    const chosen = PATH_DEFS[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
   });
 };
 
-// スレイ・ザ・スパイア風の「進む前に道を選ぶ」お試し実装。選んだ道ごとに戦闘/財宝/静寂の出現率を
+// スレイ・ザ・スパイア風の「進む前に道を選ぶ」システム。選んだ道ごとに戦闘/財宝/静寂の出現率を
 // 傾ける(battle/gold値、残りが静寂)。フロア構成自体を分岐させる本格的なマップ化ではなく、
 // 既存の抽選ロジックに「狙った方向へ振れる」選択肢を挟むだけの軽量版。
-// 毎回同じ3択が固定で出ると単調なため、このプール(6種)からランダムに2〜3個抽選して見せる
-const PATH_CHOICE_POOL = [
-  { key: "battle", icon: "⚔️", label: "気配が濃い道", battle: 0.85, gold: 0.10 },
-  { key: "treasure", icon: "💰", label: "何かが光る道", battle: 0.35, gold: 0.55 },
-  { key: "quiet", icon: "🌫️", label: "静かな道", battle: 0.25, gold: 0.15 },
-  { key: "beast", icon: "👣", label: "獣道", battle: 0.55, gold: 0.35 },
-  { key: "grove", icon: "🍃", label: "木漏れ日の道", battle: 0.20, gold: 0.25 },
-  { key: "dusk", icon: "🌙", label: "薄暗い道", battle: 0.70, gold: 0.20 },
-];
-// 配列をその場でシャッフルする(Fisher-Yates)
-function shuffleArray(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+// 各道のbattle/gold率、ambushChance(暗い道の奇襲)、goldMult(暗い道の獲得金増)は
+// キーごとに1本化し、出現の重み(NORMAL_PATH_WEIGHTS/ONE_CHOICE_PATH_WEIGHTS)とは分離してある
+const PATH_DEFS = {
+  rindou: { icon: "🌲", label: "林道", battle: 0.60, gold: 0.20 },
+  kemono: { icon: "🐾", label: "獣道", battle: 0.75, gold: 0.15 },
+  kurai: { icon: "🌑", label: "暗い道", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
+  shizuka: { icon: "🍃", label: "静かな道", battle: 0.15, gold: 0.25 },
+  komorebi: { icon: "🌿", label: "木漏れ日の道", battle: 0.20, gold: 0.30 },
+  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.70 },
+  fuon: { icon: "👁️", label: "不穏な道", battle: 1.00, gold: 0.00 },
+  kamikakushi: { icon: "✨", label: "神隠しの道", battle: 0.00, gold: 0.00 },
+};
+// 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
+const NORMAL_PATH_WEIGHTS = {
+  rindou: 45, kemono: 30, kurai: 7.6, shizuka: 3.52,
+  komorebi: 3.2, hikaru: 3.2, fuon: 2, kamikakushi: 0.24,
+};
+// 1択専用プール: 静かな道を除外し、不穏な道の重みを引き上げて「避けて通れない恐怖」を演出
+// (不穏な道がこのプール内でちょうど15%のシェアになるよう他の重みから逆算した値)
+const ONE_CHOICE_PATH_WEIGHTS = {
+  rindou: 45, kemono: 30, kurai: 7.6,
+  komorebi: 3.2, hikaru: 3.2, kamikakushi: 0.24, fuon: 15.75,
+};
+// 1〜3択の出現割合(1択15%/2択70%/3択15%)。1択の時だけONE_CHOICE_PATH_WEIGHTSを使う
+function pickPathChoiceCount() {
+  const r = Math.random();
+  return r < 0.15 ? 1 : (r < 0.85 ? 2 : 3);
 }
+// 重み付き抽選(重複あり)で1つキーを選ぶ
+function weightedPickPathKey(weights) {
+  const keys = Object.keys(weights);
+  const total = keys.reduce((s, k) => s + weights[k], 0);
+  const r = Math.random() * total;
+  let acc = 0;
+  for (const k of keys) { acc += weights[k]; if (r < acc) return k; }
+  return keys[keys.length - 1];
+}
+// 進む→進路選択が出たら、その場のキャンセル(戻る)は無くし、選ぶまで後戻りできない設計にしてある。
+// 唯一の代替行動として「道具」(野営具/温泉卵)だけをこのパネル内で完結させて使えるようにする。
+// 温泉卵を使った場合は再抽選せず同じ選択肢に戻し(picked配列を使い回す)、野営具を使った場合は
+// そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
 function showPathChoice(onChosen) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
-  // 毎回2択か3択かもランダムにし、プールから重複なく抽選する(固定感をなくすための2点セット)
-  const count = Math.random() < 0.5 ? 2 : 3;
-  const picked = shuffleArray(PATH_CHOICE_POOL).slice(0, count);
-  div.innerHTML = `
-    <div class="critical-alert">
-      <p style="text-align:center;"><strong>どちらの道を進みますか？</strong></p>
-      <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-        ${picked.map((p) => `
-          <button class="big" data-path="${p.key}" style="flex:1; height:auto; padding:0.6rem 0.3rem; display:flex; flex-direction:column; gap:0.3rem;">
-            <span style="font-size:1.3rem;">${p.icon}</span>
-            <span style="font-size:0.7rem; white-space:normal;">${p.label}</span>
-          </button>
-        `).join("")}
+  const count = pickPathChoiceCount();
+  const weights = count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS;
+  const picked = [];
+  for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
+  document.body.classList.add("path-choice-active");
+  // 進路選択が出ている間は下部の行動ボタン(進む/里に戻る/回復薬/道具等)を完全に無効化し、
+  // 選択肢のカードか、このパネル内の道具ボタン以外から抜けられないようにする
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
+
+  function closePathChoice() {
+    document.body.classList.remove("path-choice-active");
+    div.innerHTML = "";
+    document.getElementById("dungeonLog").style.display = "";
+    // ボタンの有効/無効はこの後必ず呼ばれるrenderDungeon()(moveOneFloor経由、または野営から戻った時)側で
+    // 所持品状況に応じて正しく再設定されるため、ここでは一律のdisabled解除はしない
+  }
+
+  function renderCards() {
+    div.innerHTML = `
+      <div class="path-choice-panel">
+        <p class="path-choice-title">進路選択</p>
+        <div class="path-choice-cards">
+          ${picked.map((key, idx) => {
+            const p = PATH_DEFS[key];
+            return `
+              <button class="path-card" data-idx="${idx}">
+                <span class="path-card-icon">${p.icon}</span>
+                <span class="path-card-label">${p.label}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
+        <button class="path-choice-cancel" id="pathChoiceToolsBtn">道具</button>
       </div>
-    </div>
-  `;
-  picked.forEach((p) => {
-    div.querySelector(`button[data-path="${p.key}"]`).onclick = () => {
-      div.innerHTML = "";
-      document.getElementById("dungeonLog").style.display = "";
-      onChosen(p.key);
+    `;
+    picked.forEach((key, idx) => {
+      div.querySelector(`button[data-idx="${idx}"]`).onclick = () => {
+        closePathChoice();
+        onChosen(key);
+      };
+    });
+    document.getElementById("pathChoiceToolsBtn").onclick = () => {
+      renderTools();
     };
-  });
+  }
+
+  function renderTools() {
+    const campCount = state.inventory.campingKit || 0;
+    const eggCount = state.inventory.onsenEgg || 0;
+    div.innerHTML = `
+      <div class="path-choice-panel">
+        <p class="path-choice-title">道具を選んでください</p>
+        <div class="path-choice-cards">
+          <button class="path-card" id="pathToolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>
+            <span class="path-card-label">野営具(${campCount})</span>
+          </button>
+          <button class="path-card" id="pathToolsEggBtn" ${eggCount <= 0 ? "disabled" : ""}>
+            <span class="path-card-label">温泉卵(${eggCount})</span>
+          </button>
+        </div>
+        <button class="path-choice-cancel" id="pathToolsBackBtn">戻る</button>
+      </div>
+    `;
+    document.getElementById("pathToolsCampBtn").onclick = () => {
+      if (campCount <= 0) return;
+      closePathChoice();
+      startCampFromTools();
+    };
+    document.getElementById("pathToolsEggBtn").onclick = () => {
+      if (eggCount <= 0) return;
+      renderEggTargetPicker();
+    };
+    document.getElementById("pathToolsBackBtn").onclick = () => {
+      renderCards();
+    };
+  }
+
+  function renderEggTargetPicker() {
+    const targets = fieldParty.filter((c) => c.status === "active");
+    div.innerHTML = `
+      <div class="path-choice-panel">
+        <p class="path-choice-title">誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？</p>
+        <div class="path-choice-cards">
+          ${targets.map((c, idx) => `
+            <button class="path-card" data-target-idx="${idx}">
+              <span class="path-card-label">${c.name}(${c.hp}/${c.maxHp})</span>
+            </button>
+          `).join("")}
+        </div>
+        <button class="path-choice-cancel" id="pathToolsEggCancelBtn">やめる</button>
+      </div>
+    `;
+    targets.forEach((c, idx) => {
+      div.querySelector(`button[data-target-idx="${idx}"]`).onclick = () => {
+        state.inventory.onsenEgg--;
+        playSfx("heal");
+        useOnsenEgg(c, dlog);
+        saveState();
+        renderCards(); // 再抽選せず同じ進路選択に戻す
+      };
+    });
+    document.getElementById("pathToolsEggCancelBtn").onclick = () => {
+      renderTools();
+    };
+  }
+
+  renderCards();
 }
 
 // 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
@@ -3495,7 +3701,7 @@ function deliverCarriedAllies() {
 
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
 function rollEncounter(pathBias) {
-  const bias = !retreating && PATH_CHOICE_POOL.find((p) => p.key === pathBias);
+  const bias = !retreating && pathBias ? PATH_DEFS[pathBias] : null;
   const baseBattle = bias ? bias.battle : 0.65;
   const baseGold = bias ? bias.gold : 0.25;
   const battleChance = retreating ? baseBattle / 4 : baseBattle;
@@ -3503,7 +3709,7 @@ function rollEncounter(pathBias) {
   const roll = Math.random();
   if (roll < battleChance) {
     const enemies = pickEncounterForFloor(currentFloor);
-    startBattle(enemies);
+    startBattle(enemies, bias);
   } else if (roll < battleChance + goldChance) {
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
     // 旧仕様の問題を解消するため、下限も階層に応じて伸びるようにしてある)
@@ -3683,8 +3889,13 @@ function anyoneSpeaking() {
   const now = Date.now();
   return fieldParty.some((c) => c.__speechAt && c.__speechCategory !== "breakdown" && now - c.__speechAt < SPEECH_BUBBLE_DURATION_MS);
 }
+// ユーザー指示でストレス系セリフ(stressLight/Mid/High、発狂時のbreakdown)以外は
+// 一旦全て停止中。他の呼び出し箇所(dangerFloor/battleStart/pinch等)は無効化のため個別に
+// 触らず、ここで一括ガードしている
+const STRESS_ONLY_SPEECH_CATEGORIES = new Set(["stressLight", "stressMid", "stressHigh", "breakdown"]);
 // 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
 function trySpeak(speaker, category) {
+  if (!STRESS_ONLY_SPEECH_CATEGORIES.has(category)) return false;
   // 担がれた側(瀕死でstatus==="critical")のセリフだけは例外的に許可する
   const speakerOk = speaker && (speaker.status === "active" || (category === "carried" && speaker.status === "critical"));
   if (!speakerOk) return false;
@@ -3778,8 +3989,8 @@ function statusIconsFor(entity) {
   return s;
 }
 
-function startBattle(enemies) {
-  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null };
+function startBattle(enemies, pathDef) {
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1 };
   // 新しい戦闘のたびに前回の逃走状態/状態異常/一時バフ/戦闘限定の受動効果をリセット(毒などが戦闘をまたいで残らないように)
   fieldParty.forEach((c) => {
     c.fleeState = null;
@@ -3804,6 +4015,11 @@ function startBattle(enemies) {
   showScreen("screen-battle");
   playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。夜は専用曲)
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
+  // 暗い道の奇襲: 一定確率で敵全員の素早さを1ターン目だけ引き上げ、先手を取られやすくする
+  if (pathDef && pathDef.ambushChance && Math.random() < pathDef.ambushChance) {
+    enemies.forEach((e) => applyStatMod(e, "spd", 1.5, 1));
+    blog("奇襲だ！敵の動きが速い！");
+  }
   // 戦闘開始時の吹き出し(30%)。生存中の仲間からランダムに1人選ぶ
   if (Math.random() < DIALOGUE_CHANCE.battleStart) {
     const alive = fieldParty.filter((c) => c.status === "active");
@@ -4089,10 +4305,14 @@ function processNext() {
     }
     if (actor.reloading) {
       actor.reloading = false;
-      blog(`${actor.label}は装填中で動けない！`);
-      battle.orderIndex++;
-      setTimeout(processNext, 500);
-      return;
+      // 土嚢展開(reloadImmuneのstatMod)が有効な間は装填を発生させない
+      const reloadImmune = actor.statMods && actor.statMods.some((m) => m.stat === "reloadImmune");
+      if (!reloadImmune) {
+        blog(`${actor.label}は装填中で動けない！`);
+        battle.orderIndex++;
+        setTimeout(processNext, 500);
+        return;
+      }
     }
     if (actor.silenceTurns > 0) {
       blog(`${actor.label}は沈黙していて技が使えない！`);
@@ -4636,6 +4856,8 @@ function victory() {
       });
     }
   });
+  // 暗い道の危険手当: この戦闘が暗い道由来なら獲得銭を割増する
+  if (battle.goldMult && battle.goldMult !== 1) totalGold = Math.round(totalGold * battle.goldMult);
   // 温泉バフ「福招き」: パーティの誰か1人でも持っていれば獲得銭+10%
   if (fieldParty.some((c) => c.onsenBuffKey === "fukumaneki")) totalGold = Math.round(totalGold * 1.1);
   state.gold += totalGold;
@@ -4688,6 +4910,16 @@ function openSkillChoiceFor(characterId) {
   renderSkillTreeContent(character, level);
 }
 
+// 宿屋の名簿/ステータス詳細画面から、選択待ちの有無に関わらずいつでも系譜を閲覧できるようにする入口。
+// pendingLevelを渡さない(閲覧専用)ので、どのスキルも「選択待ち」扱いにならず決定ボタンも出ない
+function viewSkillTree(characterId, onClose) {
+  const character = getRosterChar(characterId);
+  if (!character || !SKILL_TREES[character.classId]) return;
+  const overlay = document.getElementById("skillChoiceOverlay");
+  overlay.style.display = "block";
+  renderSkillTreeContent(character, null, onClose);
+}
+
 // 実際にスキル選択を確定させる。選び終えたら、同じキャラにまだ選択待ちが残っていれば続けて出し、
 // 無ければオーバーレイを閉じて名簿を再描画する(「🎓スキル選択」バッジが消える)
 function resolveSkillChoice(character, level, side, skill) {
@@ -4704,9 +4936,10 @@ function resolveSkillChoice(character, level, side, skill) {
   }
 }
 
-function renderSkillTreeContent(character, pendingLevel) {
+function renderSkillTreeContent(character, pendingLevel, onClose) {
   const c2 = CLASSES[character.classId];
   const tree = SKILL_TREES[character.classId];
+  const treeNames = SKILL_TREE_NAMES[character.classId];
   const content = document.getElementById("skillChoiceContent");
   const levels = Object.keys(tree).map(Number).sort((a, b) => a - b);
   const rowsHtml = levels.map((lv) => {
@@ -4734,18 +4967,27 @@ function renderSkillTreeContent(character, pendingLevel) {
       </div>
     `;
   }).join("");
+  const hintText = pendingLevel != null
+    ? `Lv${pendingLevel}で新しいスキルを1つ選べます。スキル名をタップすると、その下に説明が開きます`
+    : "スキル名をタップすると、その下に説明が開きます";
   content.innerHTML = `
     <button class="big" id="skillTreeBackBtn" style="margin-bottom:0.8rem;">戻る</button>
     <div class="skill-tree-header">
       <div class="skill-tree-charname">${character.name}</div>
       <div class="skill-tree-classname">${c2.ja}の系譜</div>
-      <p class="skill-tree-hint">Lv${pendingLevel}で新しいスキルを1つ選べます。スキル名をタップすると、その下に説明が開きます</p>
+      <p class="skill-tree-hint">${hintText}</p>
+    </div>
+    <div class="skill-tree-names">
+      <span class="skill-tree-name left">${treeNames.left}</span>
+      <span class="skill-tree-name-spacer"></span>
+      <span class="skill-tree-name right">${treeNames.right}</span>
     </div>
     <div class="skill-tree-rows">${rowsHtml}</div>
   `;
   document.getElementById("skillTreeBackBtn").onclick = () => {
     document.getElementById("skillChoiceOverlay").style.display = "none";
-    renderRosterList();
+    if (onClose) onClose();
+    else renderRosterList();
   };
   // スキル名をタップすると、そのスキルの真下にだけ説明(+選択待ちの行なら決定ボタン)を開く。
   // 別のスキルをタップすると前に開いていたものは閉じる(アコーディオン式、同時に1つだけ開く)

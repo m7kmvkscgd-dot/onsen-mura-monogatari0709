@@ -82,6 +82,7 @@ function createCharacter(name, classId, classUpgrades) {
     tauntTurns: 0, // 挑発中の残りターン数(かばう同様、敵から必ず狙われる)
     statMods: [], // [{stat, mult, turns}] 一時的なステータス倍率(バフ/デバフ)。effectiveStatで乗算される
     campWeaponCareBattles: 0, // 野営「武器の手入れ」の攻撃力バフ残り戦闘回数。startBattle()ではリセットせず、戦闘終了時に1減る
+    guaranteedCritNext: false, // 反射神経(evadeCritCounter)などで、次の自分の攻撃だけ確定会心にするフラグ
     skills: {}, // { level: "left"|"right" } スキルツリーで選んだ側の記録
     unlockedSkills: [], // 選んだ能動スキル(action持ち)のリスト。戦闘中の行動選択に追加される
     passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
@@ -232,6 +233,13 @@ function effectiveStat(entity, key) {
     activeConditionalMods(entity).forEach((m) => {
       if (!m.statMult) return;
       m.statMult.forEach((sm) => { if (sm.stat === key) result = Math.max(1, Math.round(result * sm.mult)); });
+    });
+  }
+  // 状態フラグ条件つきの受動効果(挑発中/装填中/かばう中など、entity自身の一時状態を見て乗算する汎用フック)
+  if (entity.passives && entity.passives.flagMods && entity.passives.flagMods.length && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
+    entity.passives.flagMods.forEach((fm) => {
+      if (fm.stat !== key) return;
+      if (entity[fm.flag]) result = Math.max(1, Math.round(result * fm.mult));
     });
   }
   // 撃破時スタック系の受動効果(修羅・槍鬼など)。重複回数ぶん倍率を線形に積み増す
@@ -438,8 +446,21 @@ function initPassives() {
     onKillStacks: 0, onKillStacksTurns: 0,
     onHitInflicts: [], // [{type, chance, value, turns}] 通常攻撃に乗る状態異常付与(複数スキルぶん積み上がる)
     executeBonus: null, // {belowPct, mult} HPが閾値以下の相手への追加ダメージ倍率
-    woundBonus: null, // {mult} 毒/炎上/スタン/沈黙/能力低下など何らかの状態異常を負っている相手への追加ダメージ倍率
-    conditionalMods: [], // [{cmp, value, statMult:[{stat,mult}]|null, dmgTakenMult:number|null}] (stat基準は常にhpPct)
+    executeCritBonus: [], // [{belowPct, addRate, cmp}] 対象のHP割合条件つき追加会心率(剣豪など)。配列なので閾値違いを複数持てる
+    woundBonuses: [], // [{mult, ailment}] 状態異常(ailment未指定なら何らかの状態異常全般、指定時はそれだけ)を負っている相手への追加ダメージ倍率。
+    // 同じクラスが複数のailment条件違いを選べるよう配列にしてある(単一フィールドだと後から選んだ方が上書きしてしまうため)
+    conditionalMods: [], // [{cmp, value, statMult:[{stat,mult}]|null, dmgTakenMult:number|null, evasionAdd:number|null}] (stat基準は常にhpPct)
+    flagMods: [], // [{flag, stat, mult}] entity自身の一時状態(tauntTurns/reloading/guardingなど)が真の間だけ乗算する汎用フック
+    evadeCritCounter: false, // 回避に成功した直後、次の自分の攻撃が確定会心になる(反射神経など)
+    onCritSelfBuff: null, // {stat, mult} 自分が会心を出した直後、次の自分の1ターンだけそのステータスが上がる(連斬など)
+    fasterFoeDmgReduction: null, // 数値(mult) 自分より素早い相手から受けるダメージを軽減する(疾風など)
+    ailmentCritBonus: [], // [{ailment, addRate}] 対象が特定の状態異常を負っている時の追加会心率(毒を負わせた敵に会心、など)。配列なので複数のailment条件を持てる
+    onEvadeSelfBuff: null, // {stat, mult} 回避に成功した直後、次の自分の1ターンだけそのステータスが上がる(影分身など)
+    executeAccuracyBonus: null, // {belowPct, addRate, cmp} 対象のHP割合条件つき命中率ボーナス(弱点看破など)
+    comboFollowup: [], // [{tag, stat, mult}] 特定のcomboTag技を使った直後、次の自分の1ターンだけ効果を得る(連射の心得など)。配列なので同じ技に複数の追撃効果を紐付けられる
+    discountWhileFlag: null, // {statModName, pct} 特定のstatMod(reloadImmuneなど)が有効な間だけMP消費を追加割引する(装填術など)
+    healBonusRules: [], // [{trigger:"targetHpBelow"|"selfHpAbove"|"onCleanse", value, mult}] 回復量への条件つき倍率(治癒術・慈愛など)
+    mpOnCleanse: 0, // 状態異常を解除する回復/バフを使うたび、これだけMPが回復する(生命力循環など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -480,11 +501,23 @@ function applySkillChoice(character, skill, level) {
     if (add.conditionalMod) p.conditionalMods.push(add.conditionalMod);
     if (add.onHitInflict) p.onHitInflicts.push(add.onHitInflict);
     if (add.executeBonus) p.executeBonus = add.executeBonus;
-    if (add.woundBonus) p.woundBonus = add.woundBonus;
+    if (add.executeCritBonus) p.executeCritBonus.push(add.executeCritBonus);
+    if (add.woundBonus) p.woundBonuses.push(add.woundBonus);
+    if (add.flagMod) p.flagMods.push(add.flagMod);
+    if (add.evadeCritCounter) p.evadeCritCounter = true;
+    if (add.onCritSelfBuff) p.onCritSelfBuff = add.onCritSelfBuff;
+    if (add.fasterFoeDmgReduction) p.fasterFoeDmgReduction = add.fasterFoeDmgReduction;
+    if (add.ailmentCritBonus) p.ailmentCritBonus.push(add.ailmentCritBonus);
+    if (add.onEvadeSelfBuff) p.onEvadeSelfBuff = add.onEvadeSelfBuff;
+    if (add.executeAccuracyBonus) p.executeAccuracyBonus = add.executeAccuracyBonus;
+    if (add.comboFollowup) p.comboFollowup.push(add.comboFollowup);
+    if (add.discountWhileFlag) p.discountWhileFlag = add.discountWhileFlag;
+    if (add.healBonusRule) p.healBonusRules.push(add.healBonusRule);
+    if (add.mpOnCleanse) p.mpOnCleanse += add.mpOnCleanse;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
-    character.unlockedSkills.push({ id: skill.id, name: skill.name, mp: skill.mp, action: skill.action });
+    character.unlockedSkills.push({ id: skill.id, name: skill.name, mp: skill.mp, action: skill.action, comboTag: skill.comboTag });
   }
 }
 
@@ -495,19 +528,54 @@ function activeConditionalMods(character) {
   return character.passives.conditionalMods.filter((m) => (m.cmp === "gte" ? hpPct >= m.value : hpPct <= m.value));
 }
 // 被ダメージ軽減系の受動効果(気迫・仁王立ちなど、statMods経由のものも含む)をまとめて乗算で返す
+// 回復量に影響する条件つきボーナスをまとめて判定する(治癒術・慈愛・生命の奇跡・慈悲の心など)。
+// targetHpBelow: 対象のHP割合が閾値以下 / selfHpAbove: 自分(施術者)のHP割合が閾値以上 / onCleanse: 状態異常解除を伴う回復の時
+function healBonusMultiplier(actor, target, wasCleanse) {
+  let mult = 1;
+  if (!actor.passives || !actor.passives.healBonusRules || !actor.passives.healBonusRules.length) return mult;
+  actor.passives.healBonusRules.forEach((r) => {
+    if (r.trigger === "targetHpBelow" && target && target.maxHp > 0 && target.hp / target.maxHp <= r.value) mult *= r.mult;
+    if (r.trigger === "selfHpAbove" && actor.maxHp > 0 && actor.hp / actor.maxHp >= r.value) mult *= r.mult;
+    if (r.trigger === "onCleanse" && wasCleanse) mult *= r.mult;
+  });
+  return mult;
+}
 function damageTakenMultiplier(character) {
   let mult = 1;
   activeConditionalMods(character).forEach((m) => { if (m.dmgTakenMult) mult *= m.dmgTakenMult; });
   if (character.statMods) character.statMods.forEach((m) => { if (m.stat === "dmgTaken") mult *= m.mult; });
+  if (character.passives && character.passives.flagMods) {
+    character.passives.flagMods.forEach((fm) => { if (fm.stat === "dmgTaken" && character[fm.flag]) mult *= fm.mult; });
+  }
   return mult;
 }
 // 会心判定。会心なら会心時ダメージ倍率を、外れなら1を返す
-function rollCritMultiplier(actor, extraCritRate) {
+function rollCritMultiplier(actor, extraCritRate, target) {
   const p = actor.passives;
   if (!p) return 1;
+  // 直前に回避成功した時などに1回だけ立つ「次の攻撃は確定会心」フラグ(反射神経など)。使ったら消費する
+  if (actor.guaranteedCritNext) {
+    actor.guaranteedCritNext = false;
+    return BASE_CRIT_DMG_MULT + p.critDmgAdd;
+  }
   // 温泉バフ「気分爽快」: 会心率+5%
   const onsenCritBonus = actor.onsenBuffKey === "kibunsoukai" ? 0.05 : 0;
-  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + (extraCritRate || 0);
+  // 対象のHP割合条件つき会心率ボーナス(剣豪など、弱った敵ほど会心が出やすい系。cmp:"gte"なら逆に高HP時に発動)。
+  // 配列なので閾値違いを複数持てる場合は全部チェックして合算する
+  let executeCritAdd = 0;
+  if (p.executeCritBonus && p.executeCritBonus.length && target && target.maxHp > 0) {
+    const hpPct = target.hp / target.maxHp;
+    p.executeCritBonus.forEach((eb) => {
+      const matched = (eb.cmp || "lte") === "lte" ? hpPct <= eb.belowPct : hpPct >= eb.belowPct;
+      if (matched) executeCritAdd += eb.addRate;
+    });
+  }
+  // 対象が特定の状態異常を負っている時の追加会心率(毒を負わせた敵に会心、など)。複数条件を合算する
+  let ailmentCritAdd = 0;
+  if (p.ailmentCritBonus && p.ailmentCritBonus.length && target) {
+    p.ailmentCritBonus.forEach((ac) => { if (hasSpecificAilment(target, ac.ailment)) ailmentCritAdd += ac.addRate; });
+  }
+  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + (extraCritRate || 0);
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
   return 1;
 }
@@ -516,6 +584,11 @@ function skillMpCost(actor, baseMp) {
   let discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
   // 温泉バフ「英気充填」: MP消費-10%(他の割引と乗算ではなく加算で重ねる)
   if (actor.onsenBuffKey === "eikijuten") discount += 0.1;
+  // 特定のstatMod(土嚢展開のreloadImmuneなど)が有効な間だけ追加割引(装填術など)
+  if (actor.passives && actor.passives.discountWhileFlag && actor.statMods) {
+    const d = actor.passives.discountWhileFlag;
+    if (actor.statMods.some((m) => m.stat === d.statModName)) discount += d.pct;
+  }
   return Math.max(0, Math.round(baseMp * (1 - discount)));
 }
 // 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する。
@@ -540,12 +613,22 @@ function useTreeSkill(actor, target, skill, log) {
     const refund = actor.passives && Math.random() < actor.passives.mpRefundChance;
     if (!refund) actor.mp -= cost;
   }
+  // コンボタグ: 特定の技(comboTagで印付け)を使った時点で、次の自分の1ターンだけ効果を得る受動を発動する
+  // (連射の心得・式神召喚など)。actionの種類(damage/heal/buffSelf等)を問わず「使った」時点で一律に判定する
+  if (skill.comboTag && actor.passives && actor.passives.comboFollowup && actor.passives.comboFollowup.length) {
+    actor.passives.comboFollowup.forEach((f) => {
+      if (f.tag === skill.comboTag) applyStatMod(actor, f.stat, f.mult, 2);
+    });
+  }
   if (action.kind === "buffSelf" || action.kind === "buffParty") {
     const targets = action.kind === "buffParty" ? target : [actor];
     targets.forEach((t) => {
       (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
       if (action.hpRegenPct) applyStatMod(t, "hpRegenPct", action.hpRegenPct, action.turns); // effectiveStatでは使わず、tick時に直接参照する目印として保持
-      if (action.cleanse) { t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      if (action.cleanse) {
+        t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0;
+        if (actor.passives && actor.passives.mpOnCleanse) actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.mpOnCleanse);
+      }
       if (action.statusImmuneTurns) t.statusImmuneTurns = Math.max(t.statusImmuneTurns || 0, action.statusImmuneTurns);
       if (action.tauntTurns) t.tauntTurns = Math.max(t.tauntTurns || 0, action.tauntTurns);
     });
@@ -555,12 +638,16 @@ function useTreeSkill(actor, target, skill, log) {
   if (action.kind === "heal") {
     const targets = action.aoe ? target : [target];
     const heals = targets.map((t) => {
-      const heal = applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct)));
+      const bonusMult = healBonusMultiplier(actor, t, !!action.cleanse);
+      const heal = Math.round(applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct))) * bonusMult);
       if (t.status === "critical" && action.reviveHpPct) {
         return { target: t, revived: true, heal: 0 };
       }
       t.hp = Math.min(t.maxHp, t.hp + heal);
-      if (action.cleanse) { t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0; }
+      if (action.cleanse) {
+        t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0;
+        if (actor.passives && actor.passives.mpOnCleanse) actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.mpOnCleanse);
+      }
       log(`${actor.label}は${t.label}を${heal}回復！`);
       return { target: t, heal };
     });
@@ -595,6 +682,7 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "atkDown") applyStatMod(t, "atk", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
       if (action.inflict.type === "defDown") applyStatMod(t, "def", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
       if (action.inflict.type === "spdDown") applyStatMod(t, "spd", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
+      if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
     }
     return { hit: true, dmg };
   });
@@ -718,13 +806,30 @@ function evasionChance(entity) {
   const passiveAdd = (entity.passives && entity.passives.evasionAdd) || 0;
   let timedAdd = 0;
   if (entity.statMods) entity.statMods.forEach((m) => { if (m.stat === "evasionAdd") timedAdd += m.mult; });
+  // HP割合条件つきの回避ボーナス(見切りなど)
+  let condAdd = 0;
+  if (entity.passives && entity.passives.conditionalMods && entity.passives.conditionalMods.length) {
+    activeConditionalMods(entity).forEach((m) => { if (m.evasionAdd) condAdd += m.evasionAdd; });
+  }
+  // 状態フラグ条件つきの回避ボーナス(flagModsのうちstat==="evasionAdd"のもの、加算方式)
+  if (entity.passives && entity.passives.flagMods) {
+    entity.passives.flagMods.forEach((fm) => { if (fm.stat === "evasionAdd" && entity[fm.flag]) condAdd += fm.mult; });
+  }
   const fleeingAdd = entity.fleeState === "preparing" ? 0.25 : 0;
-  return Math.min(0.9, base + passiveAdd + timedAdd + fleeingAdd);
+  return Math.min(0.9, base + passiveAdd + timedAdd + condAdd + fleeingAdd);
 }
-function accuracyOf(entity) {
+function accuracyOf(entity, target) {
   const base = entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
-  const passiveAdd = (entity.passives && entity.passives.accuracyAdd) || 0;
-  return Math.min(0.99, base + passiveAdd);
+  let addTotal = (entity.passives && entity.passives.accuracyAdd) || 0;
+  if (entity.statMods) entity.statMods.forEach((m) => { if (m.stat === "accuracyAdd") addTotal += m.mult; });
+  // 対象のHP割合条件つき命中率ボーナス(弱点看破など)
+  if (entity.passives && entity.passives.executeAccuracyBonus && target && target.maxHp > 0) {
+    const b = entity.passives.executeAccuracyBonus;
+    const hpPct = target.hp / target.maxHp;
+    const matched = (b.cmp || "lte") === "lte" ? hpPct <= b.belowPct : hpPct >= b.belowPct;
+    if (matched) addTotal += b.addRate;
+  }
+  return Math.min(0.99, base + addTotal);
 }
 // 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)。
 // スキルツリーの「完全回避」系受動(見切り・分身など)は、この命中率とは別枠の追加判定として先に効く
@@ -732,7 +837,7 @@ function rollHit(actor, target) {
   let dodge = (target.passives && target.passives.dodgeChance) || 0;
   if (target.statMods) target.statMods.forEach((m) => { if (m.stat === "dodgeChance") dodge += m.mult; });
   if (dodge > 0 && Math.random() < dodge) return false;
-  const chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor) - evasionChance(target)));
+  const chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor, target) - evasionChance(target)));
   return Math.random() < chance;
 }
 
@@ -781,6 +886,16 @@ function hasStatusAilment(target) {
   if (target.statMods && target.statMods.some((m) => m.mult < 1)) return true;
   return false;
 }
+// woundBonus系の一部スキルは「状態異常全般」ではなく特定の状態異常(炎上/毒/スタン/能力低下)だけを
+// 対象にしたい場合があるため、typeを指定できる版を用意する(type未指定ならhasStatusAilmentと同じ)
+function hasSpecificAilment(target, type) {
+  if (!type) return hasStatusAilment(target);
+  if (type === "poison") return (target.poison || 0) > 0;
+  if (type === "burn") return (target.burnTurns || 0) > 0;
+  if (type === "stun") return (target.stunTurns || 0) > 0;
+  if (type === "debuff") return !!(target.statMods && target.statMods.some((m) => m.mult < 1));
+  return hasStatusAilment(target);
+}
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
@@ -794,15 +909,29 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
     if (hpPct <= actor.passives.executeBonus.belowPct) dmg = Math.round(dmg * actor.passives.executeBonus.mult);
   }
-  // 傷口狙い系の受動効果: 対象が毒/炎上/スタン/沈黙/能力低下など何らかの状態異常を負っていれば追加ダメージ
-  if (actor && actor.passives && actor.passives.woundBonus && hasStatusAilment(target)) {
-    dmg = Math.round(dmg * actor.passives.woundBonus.mult);
+  // 傷口狙い系の受動効果: 対象が(指定があれば特定の、無ければ何らかの)状態異常を負っていれば追加ダメージ。
+  // 同じクラスが複数持てるよう配列全部をチェックして掛け合わせる
+  if (actor && actor.passives && actor.passives.woundBonuses && actor.passives.woundBonuses.length) {
+    actor.passives.woundBonuses.forEach((wb) => {
+      if (hasSpecificAilment(target, wb.ailment)) dmg = Math.round(dmg * wb.mult);
+    });
   }
   lastHitWasCrit = false;
   if (actor) {
-    const critMult = rollCritMultiplier(actor, extraCritRate);
+    const critMult = rollCritMultiplier(actor, extraCritRate, target);
     dmg = Math.round(dmg * critMult);
     lastHitWasCrit = critMult > 1;
+    // 会心を出した直後、次の自分の1ターンだけ効果を得る受動(連斬など)。turns:2は「tickが自分の手番開始時に
+    // 先に走る」仕様上、mid-action付与で"次の1ターンだけ"にするための必要値(reloadImmune等と同じ考え方)
+    if (lastHitWasCrit && actor.passives && actor.passives.onCritSelfBuff) {
+      const b = actor.passives.onCritSelfBuff;
+      applyStatMod(actor, b.stat, b.mult, 2);
+    }
+  }
+  // 自分より素早い相手から受けるダメージを軽減する受動(疾風など)。actorは攻撃側なので、
+  // 敵からの攻撃(actor=敵)・味方からの攻撃(actor=味方)どちらでも同じロジックで比較できる
+  if (target.passives && target.passives.fasterFoeDmgReduction && actor && effectiveStat(actor, "spd") > effectiveStat(target, "spd")) {
+    dmg = Math.round(dmg * (1 - target.passives.fasterFoeDmgReduction));
   }
   // 大技の構え中(bigAttackPending)の敵は隙だらけとみなし、受けるダメージが増える(押し切る対抗策)
   if (target.bigAttackPending) dmg = Math.round(dmg * BIG_ATTACK_EXPOSED_BONUS);
@@ -892,7 +1021,8 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log);
   }
   if (abilityType === "heal") {
-    const heal = applyOnsenHealBonus(target, rollHeal(effectiveStat(actor, "mag")));
+    const bonusMult = healBonusMultiplier(actor, target, false);
+    const heal = Math.round(applyOnsenHealBonus(target, rollHeal(effectiveStat(actor, "mag"))) * bonusMult);
     target.hp = Math.min(target.maxHp, target.hp + heal);
     log(`${actor.label}は${target.label}を${heal}回復！`);
     return { heal };
@@ -921,16 +1051,42 @@ function useOnsenEgg(target, log) {
   return heal;
 }
 
-// enemy一体がtargets(生存中の味方)を攻撃する。かばう中の仲間がいれば、タンクとして必ずその相手が身代わりになって
-// 大幅減衰した上で構えを消費する(誰もかばっていなければランダムに1人を攻撃する)
+// かばう(guarding)の身代わり成功率。100%だと絶対に守り切れてしまうため95%に抑えてあり、
+// 5%は守り切れず別の味方が狙われる。挑発(tauntTurns)はタンク側の強制引きつけなので100%のまま変えない
+const GUARD_REDIRECT_CHANCE = 0.95;
+function findGuardTarget(alive) {
+  const taunter = alive.find((t) => t.tauntTurns > 0);
+  if (taunter) return taunter;
+  const guardian = alive.find((t) => t.guarding);
+  if (guardian && Math.random() < GUARD_REDIRECT_CHANCE) return guardian;
+  return null;
+}
+// enemy一体がtargets(生存中の味方)を攻撃する。かばう中の仲間がいれば、タンクとして95%の確率で身代わりになって
+// 大幅減衰した上で構えを消費する(誰もかばっていない、または5%で守り切れなければランダムに1人を攻撃する)
+// 回避に成功した瞬間、evadeCritCounter持ちなら「次の自分の攻撃は確定会心」フラグを立て(反射神経)、
+// onEvadeSelfBuff持ちなら次の自分の1ターンだけステータスが上がる(影分身)
+function onEvadeSuccess(target) {
+  if (target.passives && target.passives.evadeCritCounter) target.guaranteedCritNext = true;
+  if (target.passives && target.passives.onEvadeSelfBuff) {
+    const b = target.passives.onEvadeSelfBuff;
+    applyStatMod(target, b.stat, b.mult, 2);
+  }
+}
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
-  // かばう中、または挑発(tauntTurns)中の仲間がいれば、タンクとして必ずその相手が狙われる
-  const guardian = alive.find((t) => t.guarding || t.tauntTurns > 0);
+  const guardian = findGuardTarget(alive);
   const target = guardian || alive[Math.floor(Math.random() * alive.length)];
+  // 戦闘中1回だけ確実に攻撃を回避する受動(分身など)。dodgeChance(確率式)とは別枠の確定回避
+  if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
+    target.passives.onceGuardUsed = true;
+    log(`${target.label}は${enemy.label}の攻撃を完全に見切ってかわした！`);
+    onEvadeSuccess(target);
+    return { target, dmg: null, hit: false };
+  }
   if (!rollHit(enemy, target)) {
     log(`${target.label}は${enemy.label}の攻撃をかわした！`);
+    onEvadeSuccess(target);
     return { target, dmg: null, hit: false };
   }
   let rawDmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
@@ -990,14 +1146,21 @@ function enemyBigAttack(enemy, targets, log) {
   // 大技は敵1体につき1人だけを狙う(以前は「かばう中の人がいなければ全員に当たる」実質AOEに
   // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う
-  const guardian = profile && profile.ignoreGuardian ? null : alive.find((t) => t.guarding || t.tauntTurns > 0);
+  const guardian = profile && profile.ignoreGuardian ? null : findGuardTarget(alive);
   const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
   const hitTargets = [singleTarget];
   let mult = profile ? profile.mult : BIG_ATTACK_MULT;
   if (enemy.poison > 0 || enemy.burnTurns > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {
+    if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
+      target.passives.onceGuardUsed = true;
+      log(`${target.label}は${enemy.label}の大技を完全に見切ってかわした！`);
+      onEvadeSuccess(target);
+      return { target, dmg: null, hit: false };
+    }
     if (!rollHit(enemy, target)) {
       log(`${target.label}は${enemy.label}の大技をかわした！`);
+      onEvadeSuccess(target);
       return { target, dmg: null, hit: false };
     }
     let rawDmg = Math.round(rollBasicAttack(enemy.atk, effectiveStat(target, "def")) * mult);
