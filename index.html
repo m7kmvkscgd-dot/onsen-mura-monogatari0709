@@ -899,9 +899,6 @@
         <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
       </div>
     </div>
-    <div class="treasure-popup" id="treasurePopup" style="display:none;">
-      <img id="treasurePopupImg" src="" alt="">
-    </div>
   </div>
 
   <!-- 野営 -->
@@ -1003,11 +1000,17 @@
     </div>
   </div>
 
+  <!-- 財宝発見/敵撃破ゴールド獲得の演出。画面(探索/戦闘)を問わず表示できるよう.screenの外に置く -->
+  <div class="treasure-popup" id="treasurePopup" style="display:none;">
+    <img id="treasurePopupImg" src="" alt="">
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>
 <audio id="lodgingBgmAudio" src="assets/bgm/lodging_bgm.mp3" preload="none"></audio>
 <audio id="campBgmAudio" src="assets/bgm/camp_bgm.mp3" loop preload="none"></audio>
+<audio id="ambientBgmAudio" loop preload="none"></audio>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>
@@ -1338,28 +1341,32 @@ function advanceToNextMorning() {
 }
 
 // ============ 音声 ============
-// 場面ごとに曲を切り替える。ダンジョン探索と戦闘は「冒険中」として同じ曲を共有し、
-// 戦闘に入っても曲を切り替えない(=中断しない)ことで途切れず流れ続けるようにしている
+// 場面ごとに曲を切り替える。ダンジョン探索と戦闘はかつて「冒険中」として同じ曲を共有していたが、
+// 戦闘の緊張感を出すため、この曲(dungeon/dungeon_night)は戦闘中だけ流し、戦闘終了時にフェードアウトする
+// 「戦闘専用BGM」に変更した。探索中は下の虫の声アンビエント(AMBIENT_BGM_TRACKS)だけが流れる
 const BGM_TRACKS = {
   town: "assets/bgm/town_bgm.mp3",
   town_dawn: "assets/bgm/town_dawn_bgm.mp3", // 朝(dawn)の時間帯だけ町で流れる専用BGM
   town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
-  dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ探索・戦闘で流れる専用BGM
+  dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ戦闘で流れる専用BGM
 };
-// 深淵の森(探索+戦闘、統合済み)のBGMを時間帯に応じて選ぶ。夜だけ専用曲、それ以外は従来のまま
-function playDungeonAreaBgm() {
+// 戦闘BGMを時間帯に応じて選ぶ。夜だけ専用曲、それ以外は従来のまま
+function playBattleBgm() {
   playBgm(state.timeOfDay === "night" ? "dungeon_night" : "dungeon");
 }
 const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
+const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
+const AMBIENT_BGM_VOLUME = 0.45;
 bgmAudio.volume = BGM_BASE_VOLUME;
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
+ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
@@ -1372,6 +1379,7 @@ function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   bgmAudio.play().catch(() => {});
+  ambientBgmAudio.play().catch(() => {});
   // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
 }
@@ -1384,6 +1392,60 @@ function playBgm(key) {
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
   if (audioUnlocked) bgmAudio.play().catch(() => {});
+}
+
+// 戦闘終了時: 戦闘専用BGM(dungeon/dungeon_night)をフェードアウトして止める。探索中に流れ続ける
+// 虫の声アンビエント(ambientBgmAudio)は別要素なのでここでは一切触らない。
+// 毎回の戦闘開始時に必ず曲の頭から鳴らしたいので、フェード完了時に再生位置を0にリセットしてから
+// currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
+const BATTLE_BGM_FADE_OUT_MS = 2500;
+function stopBattleBgm() {
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night") return;
+  const key = currentBgmKey;
+  const startVol = bgmAudio.volume;
+  const startTime = performance.now();
+  function fadeStep() {
+    const t = Math.min(1, (performance.now() - startTime) / BATTLE_BGM_FADE_OUT_MS);
+    bgmAudio.volume = startVol * (1 - t);
+    if (t < 1) {
+      requestAnimationFrame(fadeStep);
+    } else {
+      bgmPositions[key] = 0;
+      bgmAudio.pause();
+      bgmAudio.volume = BGM_BASE_VOLUME;
+      if (currentBgmKey === key) currentBgmKey = null;
+    }
+  }
+  fadeStep();
+}
+
+// 虫の声アンビエント: 探索中・戦闘中を通して共通で流れ続ける環境音。朝昼はinsect_day、夕夜(野営時も含む)は
+// insect_nightを使う。forceKeyを渡すと時間帯に関わらずそのキーを強制する(野営演出が視覚的には常に夜へ
+// 切り替わるため、野営開始時だけ強制的にinsect_nightへ寄せる用途)
+const AMBIENT_BGM_TRACKS = { day: "assets/bgm/insect_day.mp3", night: "assets/bgm/insect_night.mp3" };
+let currentAmbientKey = null;
+function ambientKeyForTimeOfDay(tod) {
+  return tod === "dawn" || tod === "day" ? "day" : "night";
+}
+function playAmbientBgm(forceKey) {
+  const key = forceKey || ambientKeyForTimeOfDay(state.timeOfDay);
+  if (currentAmbientKey === key) return;
+  currentAmbientKey = key;
+  ambientBgmAudio.src = AMBIENT_BGM_TRACKS[key];
+  ambientBgmAudio.currentTime = 0;
+  if (audioUnlocked) ambientBgmAudio.play().catch(() => {});
+}
+function stopAmbientBgm() {
+  ambientBgmAudio.pause();
+  currentAmbientKey = null;
+}
+
+// 町のBGM(bgmAudio)を即座に止める。探索中はbgmAudioを戦闘専用として使うため、森に入る瞬間に
+// 明示的に止めておかないと、以前ここでplayBgm("dungeon")を呼んでいた(=同じ要素のsrcを上書きすることで
+// 自動的に町の曲が止まっていた)頃と違い、何もしなければ町のBGMが鳴りっぱなしになってしまう
+function stopTownBgm() {
+  bgmAudio.pause();
+  currentBgmKey = null;
 }
 
 // 宿泊時: 町のBGMをフェードで止め、代わりに宿泊専用の一度きりの曲を再生する。曲が鳴り終わったら
@@ -1438,7 +1500,6 @@ function playCampBgm() {
   }
   fadeStep();
 }
-const CAMP_BGM_RESUME_DELAY_MS = 6000; // 就寝直後に冒険中BGMが即座に鳴り始めると唐突なため、フェード完了後もしばらく無音の間を置く
 function stopCampBgm(onDone) {
   const startVol = campBgmAudio.volume;
   const startTime = performance.now();
@@ -1454,10 +1515,8 @@ function stopCampBgm(onDone) {
     }
   }
   fadeStep();
-  setTimeout(() => {
-    bgmAudio.currentTime = 0; // ユーザー指示で、途中からではなく必ず最初から再生し直す
-    if (audioUnlocked) bgmAudio.play().catch(() => {});
-  }, CAMP_BGM_RESUME_DELAY_MS);
+  // 探索中はbgmAudio(戦闘専用BGM)を鳴らさない設計に変更したため、以前ここにあった
+  // 「野営明けに冒険中BGMを再開する」処理は不要になった(虫の声アンビエントの継続はrenderDungeon側で行う)
 }
 
 // ============ 効果音(SE): Web Audio API低遅延方式 ============
@@ -1685,16 +1744,10 @@ function renderRosterList() {
     return c && c.status === "active";
   });
   const now = absoluteGameMinutes();
-  // HP/MPが満タンかつストレスも0(=宿泊で得るものが何も無い)なら宿泊対象から外す。ただし
-  // 「入浴中(2時間の出発ロック)」かつ「全回復済み」の仲間しか名簿にいない状況で対象が1人も
-  // いなくなると、時間を進める手段が一切無くなって詰む不具合が過去にあったため、そのケース
-  // (全員が対象外になる)だけは安全弁として全員を対象にする
-  const isRestedFull = (c) => c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp && (c.fatigue || 0) <= 0;
-  const anyLodgeableNormally = state.roster.some((c) => c.status === "active" && !isRestedFull(c));
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
-    const lodgeable = c.status === "active" && (anyLodgeableNormally ? !isRestedFull(c) : true);
+    const lodgeable = c.status === "active";
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : c.onsenBuffKey ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
     const overlaySrc = stressOverlaySrc(c.fatigue);
@@ -1861,6 +1914,7 @@ function playCampTransition(onDone) {
   if (campTransitionActive) return;
   campTransitionActive = true;
   playCampBgm();
+  playAmbientBgm("night"); // 野営は演出上常に夜になるため、実際のtimeOfDayに関わらず虫の声も夜側に固定する
   let campTransFinished = false;
   function finishCampTransition() {
     if (campTransFinished) return;
@@ -2747,6 +2801,7 @@ function enterDungeon() {
   // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)。夜専用曲も含めて両方リセットする
   bgmPositions.dungeon = 0;
   bgmPositions.dungeon_night = 0;
+  stopTownBgm();
   showScreen("screen-dungeon");
   renderDungeon();
   dlog("深淵の森に入った。");
@@ -2883,7 +2938,7 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
-  playDungeonAreaBgm();
+  playAmbientBgm(); // 探索中は虫の声アンビエントだけを流す(戦闘専用BGMはstartBattleでのみ開始する)
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
@@ -3200,6 +3255,7 @@ function finishCamping() {
 }
 
 function finishRetreat() {
+  stopAmbientBgm();
   retreating = false;
   deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
@@ -3264,29 +3320,45 @@ document.getElementById("advanceBtn").onclick = () => {
     return;
   }
   showPathChoice((pathBias) => {
-    const chosen = PATH_CHOICES.find((p) => p.key === pathBias);
+    const chosen = PATH_CHOICE_POOL.find((p) => p.key === pathBias);
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
   });
 };
 
-// スレイ・ザ・スパイア風の「進む前に道を選ぶ」お試し実装。3択それぞれ戦闘/財宝/静寂の出現率を
-// 大きく傾ける(rollEncounterのPATH_BIAS_WEIGHTS参照)。フロア構成自体を分岐させる本格的な
-// マップ化ではなく、既存の抽選ロジックに「狙った方向へ振れる」選択肢を挟むだけの軽量版
-const PATH_CHOICES = [
-  { key: "battle", icon: "⚔️", label: "気配が濃い道" },
-  { key: "treasure", icon: "💰", label: "何かが光る道" },
-  { key: "quiet", icon: "🌫️", label: "静かな道" },
+// スレイ・ザ・スパイア風の「進む前に道を選ぶ」お試し実装。選んだ道ごとに戦闘/財宝/静寂の出現率を
+// 傾ける(battle/gold値、残りが静寂)。フロア構成自体を分岐させる本格的なマップ化ではなく、
+// 既存の抽選ロジックに「狙った方向へ振れる」選択肢を挟むだけの軽量版。
+// 毎回同じ3択が固定で出ると単調なため、このプール(6種)からランダムに2〜3個抽選して見せる
+const PATH_CHOICE_POOL = [
+  { key: "battle", icon: "⚔️", label: "気配が濃い道", battle: 0.85, gold: 0.10 },
+  { key: "treasure", icon: "💰", label: "何かが光る道", battle: 0.35, gold: 0.55 },
+  { key: "quiet", icon: "🌫️", label: "静かな道", battle: 0.25, gold: 0.15 },
+  { key: "beast", icon: "👣", label: "獣道", battle: 0.55, gold: 0.35 },
+  { key: "grove", icon: "🍃", label: "木漏れ日の道", battle: 0.20, gold: 0.25 },
+  { key: "dusk", icon: "🌙", label: "薄暗い道", battle: 0.70, gold: 0.20 },
 ];
+// 配列をその場でシャッフルする(Fisher-Yates)
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 function showPathChoice(onChosen) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
+  // 毎回2択か3択かもランダムにし、プールから重複なく抽選する(固定感をなくすための2点セット)
+  const count = Math.random() < 0.5 ? 2 : 3;
+  const picked = shuffleArray(PATH_CHOICE_POOL).slice(0, count);
   div.innerHTML = `
     <div class="critical-alert">
       <p style="text-align:center;"><strong>どちらの道を進みますか？</strong></p>
       <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-        ${PATH_CHOICES.map((p) => `
+        ${picked.map((p) => `
           <button class="big" data-path="${p.key}" style="flex:1; height:auto; padding:0.6rem 0.3rem; display:flex; flex-direction:column; gap:0.3rem;">
             <span style="font-size:1.3rem;">${p.icon}</span>
             <span style="font-size:0.7rem; white-space:normal;">${p.label}</span>
@@ -3295,7 +3367,7 @@ function showPathChoice(onChosen) {
       </div>
     </div>
   `;
-  PATH_CHOICES.forEach((p) => {
+  picked.forEach((p) => {
     div.querySelector(`button[data-path="${p.key}"]`).onclick = () => {
       div.innerHTML = "";
       document.getElementById("dungeonLog").style.display = "";
@@ -3421,15 +3493,9 @@ function deliverCarriedAllies() {
   fieldParty.forEach((c) => { c.carryingId = null; });
 }
 
-// 進む前に選んだ道(pathBias)ごとの遭遇率。帰還中はこちらを使わず、従来通り安全側に大きく下げる
-const PATH_BIAS_WEIGHTS = {
-  battle: { battle: 0.85, gold: 0.10 },
-  treasure: { battle: 0.35, gold: 0.55 },
-  quiet: { battle: 0.25, gold: 0.15 },
-};
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
 function rollEncounter(pathBias) {
-  const bias = !retreating && PATH_BIAS_WEIGHTS[pathBias];
+  const bias = !retreating && PATH_CHOICE_POOL.find((p) => p.key === pathBias);
   const baseBattle = bias ? bias.battle : 0.65;
   const baseGold = bias ? bias.gold : 0.25;
   const battleChance = retreating ? baseBattle / 4 : baseBattle;
@@ -3736,7 +3802,7 @@ function startBattle(enemies) {
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
-  playDungeonAreaBgm(); // 戦闘中もダンジョン探索と同じ曲を途切れさせず流し続ける(夜は専用曲)
+  playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。夜は専用曲)
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
   // 戦闘開始時の吹き出し(30%)。生存中の仲間からランダムに1人選ぶ
   if (Math.random() < DIALOGUE_CHANCE.battleStart) {
@@ -4447,6 +4513,7 @@ function useExtinguish(actor) {
 }
 // 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
 function useSmokeBomb(actor) {
+  stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   state.inventory.smokeBomb--;
   saveState();
@@ -4543,6 +4610,7 @@ function afterPlayerAction() {
 }
 
 function victory() {
+  stopBattleBgm();
   playSfx("victory");
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
@@ -4573,6 +4641,12 @@ function victory() {
   state.gold += totalGold;
   advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
+  if (totalGold > 0) {
+    playSfx("coin");
+    // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
+    // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)
+    showTreasurePopup(Math.round(totalGold / battle.enemies.length));
+  }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
@@ -4702,6 +4776,7 @@ function renderSkillTreeContent(character, pendingLevel) {
 
 // パーティ全員(生きているメンバー)が一人ずつ逃げ切った時。誰も倒れていないので瀕死ペナルティ無しでそのまま探索画面に戻る
 function escapeBattle() {
+  stopBattleBgm();
   blog("残った仲間全員が戦闘から逃げ延びた。");
   battle = null;
   pendingEnemyPick = null;
@@ -4727,12 +4802,14 @@ function checkStrandedOnCurrentFloor() {
 }
 
 function defeat() {
+  stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
+    stopAmbientBgm();
     battle = null;
     toggleTimeOfDay();
     bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する

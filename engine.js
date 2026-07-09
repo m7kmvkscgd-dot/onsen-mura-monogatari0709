@@ -704,8 +704,10 @@ function applyGroupNerf(enemies) {
   return enemies;
 }
 
+const TRASH_MOB_GOLD_MULT = 0.9; // 雑魚(非ボス)戦のゴールド報酬を10%ナーフ。ボスはそのまま
 function goldReward(enemy) {
-  return enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
+  const base = enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
+  return enemy.isBoss ? base : Math.round(base * TRASH_MOB_GOLD_MULT);
 }
 
 // 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)。
@@ -1058,7 +1060,6 @@ function rescueCritical(character) {
   if (character.status !== "critical") return false;
   character.status = "active";
   character.hp = 1; // 瀕死から復帰した直後はHP1(ぎりぎり生きている状態。全快ではない)
-  character.fatigue = 0;
   character.criticalFloor = null;
   character.criticalExpireMinutes = null;
   character.carriedBy = null;
