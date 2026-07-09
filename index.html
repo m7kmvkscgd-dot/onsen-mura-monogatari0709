@@ -447,19 +447,30 @@
     55% { transform: translate(-50%, -7px) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
   }
-  /* ヒットストップ: シェイク/フラッシュの開始を0.05秒だけ遅らせ、一瞬の「間」を作ってから反応させる */
-  .hit-shake { animation: hitShake 0.4s ease-in-out; animation-delay: 0.05s; animation-fill-mode: backwards; }
+  /* ヒットストップ: シェイク/フラッシュの開始を0.05秒だけ遅らせ、一瞬の「間」を作ってから反応させる。
+     .hit-shakeと.hit-flashは常にセットで付与される(shakeClassFor参照)ため、
+     両方が同時に付いた状態を1つのセレクタでまとめてanimationプロパティに指定する必要がある。
+     .hit-shake単体/.hit-flash単体でそれぞれanimationを宣言すると、同じプロパティを取り合って
+     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正 */
   @keyframes hitFlash {
     0%, 100% { filter: brightness(1); }
     30% { filter: brightness(2.4); }
   }
-  .hit-flash { animation: hitFlash 0.22s ease-out; animation-delay: 0.05s; animation-fill-mode: backwards; }
+  .hit-shake.hit-flash {
+    animation: hitShake 0.4s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
+  }
+  /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更) */
   @keyframes hitShake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-6px); }
-    40% { transform: translateX(5px); }
-    60% { transform: translateX(-4px); }
-    80% { transform: translateX(3px); }
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-3px, 1px); }
+    20% { transform: translate(3px, -1px); }
+    30% { transform: translate(-3px, 1px); }
+    40% { transform: translate(2px, -1px); }
+    50% { transform: translate(-2px, 1px); }
+    60% { transform: translate(2px, -1px); }
+    70% { transform: translate(-1px, 1px); }
+    80% { transform: translate(1px, 0); }
+    90% { transform: translate(-1px, 0); }
   }
   .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
   @keyframes enemyLunge {
@@ -3421,6 +3432,8 @@ function popupOn(targetId, text, cls) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
   if (cls === "dmg") entity.__shakeUntil = Date.now() + 400;
+  // 赤いダメージ数字のポップアップ表示は敵/味方問わず廃止(揺れ+フラッシュの演出のみ残す)。回復の表示は継続する
+  if (cls === "dmg") return;
   entity.__popupText = text;
   entity.__popupCls = cls;
   entity.__popupAt = Date.now();
