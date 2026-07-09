@@ -70,6 +70,7 @@
   /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
   .owned-supply-icons { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-width: 296px; height: 68px; margin: 0.3rem 0 0.8rem; }
   .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
   .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: 16px 16px 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
@@ -789,6 +790,17 @@
           </div>
         </div>
       </div>
+      <div id="bombSection">
+        <div class="card" style="margin-top:0.6rem;">
+          <div class="shop-item">
+            <div>
+              <div><strong>爆弾</strong> <span id="bombOwned">0</span>個</div>
+              <div class="desc">敵全体にダメージ</div>
+            </div>
+            <button class="big" id="buyBombBtn">購入</button>
+          </div>
+        </div>
+      </div>
 
       <h2 style="margin-top:1rem;">パーティ編成</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる(最大4人)</p>
@@ -936,6 +948,10 @@
       <h2 style="margin-top:1.2rem;">♨️湯守屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">💣火薬庫</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
+      <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🍡茶屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
@@ -1115,7 +1131,7 @@ function defaultState() {
     gold: 170,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0 },
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0 },
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -1132,6 +1148,7 @@ function defaultState() {
     hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。効果は未定(建物のみ)
     beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
     shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
+    gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル6で解禁)。出発画面で爆弾を購入できるようになる
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
     onsenEggDailyCount: 0, // 温泉の売店で本日買った温泉卵の数(1日2個まで、翌朝リセット)
     onsenEggDailyDate: 1, // 上記カウントが対応しているdayCount(値が変わったらリセットする)
@@ -1178,6 +1195,9 @@ const TEA_HOUSE_COST = 250;
 // 湯守屋: 効果は未定(建物のみ、未実装)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 6;
 const HOT_SPRING_KEEPER_COST = 200;
+// 火薬庫: 建築すると出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
+const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 6;
+const GUNPOWDER_STORE_COST = 200;
 // 養蜂場: 効果は未定(建物のみ、未実装)
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 8;
 const BEE_FARM_COST = 300;
@@ -1295,6 +1315,8 @@ function loadState() {
       if (loaded.hotSpringKeeperLevel == null) loaded.hotSpringKeeperLevel = 0; // 旧セーブ用の初期値(湯守屋未建築)
       if (loaded.beeFarmLevel == null) loaded.beeFarmLevel = 0; // 旧セーブ用の初期値(養蜂場未建築)
       if (loaded.shrineLevel == null) loaded.shrineLevel = 0; // 旧セーブ用の初期値(神社未建築)
+      if (loaded.gunpowderStoreLevel == null) loaded.gunpowderStoreLevel = 0; // 旧セーブ用の初期値(火薬庫未建築)
+      if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
@@ -2529,7 +2551,7 @@ function renderPartySelect() {
 
 // 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠
 function renderSupplies() {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   document.getElementById("suppliesGold").textContent = state.gold + "G";
   document.getElementById("suppliesCount").textContent = `(${total}/${supplyCap()})`;
   document.getElementById("suppliesCapLabel").textContent = supplyCap();
@@ -2547,6 +2569,13 @@ function renderSupplies() {
     document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
     document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
   }
+  // 爆弾は火薬庫を建築するまで出発画面にラインナップされない(支援物資の共有枠を消費する)
+  document.getElementById("bombSection").style.display = state.gunpowderStoreLevel ? "" : "none";
+  if (state.gunpowderStoreLevel) {
+    document.getElementById("bombOwned").textContent = state.inventory.bomb || 0;
+    document.getElementById("buyBombBtn").textContent = `購入(${ITEMS.bomb.price}G)`;
+    document.getElementById("buyBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.bomb.price;
+  }
   renderOwnedSupplyIcons();
 }
 // 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
@@ -2554,17 +2583,21 @@ function renderSupplies() {
 function renderOwnedSupplyIcons() {
   const wrap = document.getElementById("ownedSupplyIcons");
   let html = "";
+  // image(画像)が用意されているものはimg、無いもの(絵文字のみ、爆弾など)はemojiをそのまま文字表示する
   const addIcons = (item, count) => {
-    for (let i = 0; i < count; i++) html += `<img src="${item.image}" alt="${item.ja}">`;
+    for (let i = 0; i < count; i++) {
+      html += item.image ? `<img src="${item.image}" alt="${item.ja}">` : `<span class="supply-icon-emoji" title="${item.ja}">${item.emoji || ""}</span>`;
+    }
   };
   addIcons(ITEMS.campingKit, state.inventory.campingKit || 0);
   addIcons(ITEMS.potion, state.inventory.potion || 0);
   addIcons(ITEMS.smokeBomb, state.inventory.smokeBomb || 0);
   addIcons(ITEMS.onsenEgg, state.inventory.onsenEgg || 0);
+  addIcons(ITEMS.bomb, state.inventory.bomb || 0);
   wrap.innerHTML = html;
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
@@ -2574,7 +2607,7 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buySmokeBombBtn").onclick = () => {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
@@ -2588,6 +2621,16 @@ document.getElementById("buyCampingKitBtn").onclick = () => {
   if (state.gold < ITEMS.campingKit.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.campingKit.price;
   state.inventory.campingKit = (state.inventory.campingKit || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderSupplies();
+};
+document.getElementById("buyBombBtn").onclick = () => {
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.bomb.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.bomb.price;
+  state.inventory.bomb = (state.inventory.bomb || 0) + 1;
   saveState();
   playSfx("coin");
   renderSupplies();
@@ -2713,7 +2756,7 @@ function renderOnsenShop() {
   resetOnsenEggStockIfNewDay();
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
   if (remaining <= 0) {
@@ -2727,7 +2770,7 @@ function renderOnsenShop() {
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
   if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0);
+  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.onsenEgg.price;
@@ -2772,6 +2815,7 @@ function renderExtension() {
   if (!state.hotSpringKeeperLevel && nextLevel === HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("湯守屋");
   if (!state.beeFarmLevel && nextLevel === BEE_FARM_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("養蜂場");
   if (!state.shrineLevel && nextLevel === SHRINE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("神社");
+  if (!state.gunpowderStoreLevel && nextLevel === GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("火薬庫");
   const nextUnlockEl = document.getElementById("extensionNextUnlock");
   nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
     ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
@@ -2798,6 +2842,7 @@ function renderExtension() {
   renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level);
   renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level);
   renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level);
+  renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level);
   renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level);
   renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level);
   renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level);
@@ -2862,6 +2907,7 @@ document.getElementById("teaHouseBuildBtn").onclick = () => buildSimpleBuilding(
 document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBuilding("hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST);
 document.getElementById("beeFarmBuildBtn").onclick = () => buildSimpleBuilding("beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST);
 document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
+document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
 document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
@@ -4771,6 +4817,24 @@ function renderItemMenu(actor) {
   smokeBtn.disabled = (state.inventory.smokeBomb || 0) <= 0;
   smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
   grid.appendChild(smokeBtn);
+
+  const bombBtn = document.createElement("button");
+  bombBtn.className = "big";
+  bombBtn.textContent = `爆弾(${state.inventory.bomb || 0})`;
+  bombBtn.disabled = (state.inventory.bomb || 0) <= 0;
+  bombBtn.onclick = () => {
+    state.inventory.bomb--;
+    playSfx("attack_gunner");
+    blog(`${actor.label}は爆弾を投げつけた！`);
+    aliveEnemies().forEach((e) => {
+      const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
+      popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+    });
+    saveState();
+    renderBattleScreen();
+    finishPlayerAction();
+  };
+  grid.appendChild(bombBtn);
 
   // 温泉卵: 回復薬と違い自分にしか使えない(対象選択なし)代わりに、使ってもターンを消費しない
   // (finishPlayerActionを呼ばず、行動選択メニューに戻すだけ)

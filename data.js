@@ -398,7 +398,10 @@ const ITEMS = {
   smokeBomb: { id: "smokeBomb", ja: "煙玉", price: 15, desc: "その戦闘から即座に逃げる", image: "assets/items/smoke_bomb.png" },
   campingKit: { id: "campingKit", ja: "野営具", price: 50, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
   onsenEgg: { id: "onsenEgg", ja: "温泉卵", price: 5, desc: "HPをほんの少し回復。ターンを消費しない(自分専用)", image: "assets/items/onsen_egg.png" },
+  bomb: { id: "bomb", ja: "爆弾", price: 30, desc: "敵全体にダメージ", emoji: "💣" }, // 画像は未用意。imageが無い場合は絵文字で代用する
 };
+// 火薬庫で購入できる爆弾: 敵全体に防御無視の固定ダメージ(猪の実HP約62の6割=約37を基準に設定)
+const BOMB_FLAT_DAMAGE = 37;
 const POTION_HEAL_RATIO = 0.38;
 // 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
 // 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
