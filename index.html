@@ -164,9 +164,9 @@
   /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
   .stress-wrap { position: relative; }
   .stress-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 2; }
-  /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に、元の1/4ほどの大きさで重ねる */
+  /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に重ねる(ユーザー指示で従来の1.3倍) */
   .carried-badge {
-    position: absolute; top: -6px; right: -6px; width: 28%; aspect-ratio: 1/1;
+    position: absolute; top: -6px; right: -6px; width: 36%; aspect-ratio: 1/1;
     object-fit: cover; object-position: top; border-radius: 50%;
     border: 2px solid var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.5); z-index: 3;
     transition: top 0.3s ease, right 0.3s ease, width 0.3s ease, opacity 0.3s ease;
@@ -811,7 +811,8 @@
       <h2 style="margin-top:1rem;">パーティ編成</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる(最大4人)</p>
       <div id="partySelectList"></div>
-      <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
+      <button class="big primary" id="departForestBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
+      <button class="big primary" id="departCoastBtn" style="margin-top:0.5rem;">海岸へ出発する</button>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
       </div>
 
@@ -1284,6 +1285,7 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
     c.criticalExpireMinutes = nowAbsoluteMinutes + CRITICAL_MIN_HOURS * 60;
   }
   if (c.criticalFloor === undefined) c.criticalFloor = null;
+  if (c.criticalStage === undefined) c.criticalStage = "forest"; // 旧セーブ(この機能追加以前)は全て森で瀕死になっていたと扱う
   if (c.criticalExpireMinutes === undefined) {
     // 旧halfDayStep方式のセーブから移行。瀕死中なら現在時刻起点で新しく猶予を与え、
     // それ以外(active/lost)はもともと使わない値なのでnullのままでよい
@@ -1295,6 +1297,7 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (!c.personality) c.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
   if (c.poison == null) c.poison = 0;
   if (c.burnTurns == null) c.burnTurns = 0;
+  if (c.bleed == null) c.bleed = 0;
   if (c.campWeaponCareBattles == null) c.campWeaponCareBattles = 0;
   if (c.stunTurns == null) c.stunTurns = 0;
   if (c.stunResistTurns == null) c.stunResistTurns = 0;
@@ -1384,11 +1387,11 @@ function saveState() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
 }
 
-// ============ 時間帯(朝→昼→夕→夜の4段階サイクル) ============
-// 町・宿屋・深淵の森は4段階それぞれの絵を持つが、温泉は昼/夜2種類の絵しか無いため
-// 朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
-const TIME_PHASES = ["dawn", "day", "dusk", "night"];
-const TIME_PHASE_LABEL = { dawn: "朝", day: "昼", dusk: "夕", night: "夜" };
+// ============ 時間帯(早朝→朝→昼→夕→夜の5段階サイクル) ============
+// 町・宿屋・深淵の森・海岸は5段階それぞれの絵を持つが、温泉は昼/夜2種類の絵しか無いため
+// 早朝→朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
+const TIME_PHASES = ["dawn", "asa", "day", "dusk", "night"];
+const TIME_PHASE_LABEL = { dawn: "早朝", asa: "朝", day: "昼", dusk: "夕", night: "夜" };
 // clockMinutes(0〜1439)を"HH:MM"表示に変換する。村パート(町画面)でのみ現在時刻を表示するために使う
 function formatClockTime(clockMinutes) {
   const m = ((clockMinutes || 0) % 1440 + 1440) % 1440;
@@ -1401,10 +1404,10 @@ function formatClockTime(clockMinutes) {
 // 下記の時間割の境界を跨いだらtimeOfDayも自動で切り替わる(生活感覚に近い長さにしてあり、均等4分割ではない)
 const MINUTES_PER_FLOOR_FORWARD = 30;
 const MINUTES_PER_FLOOR_RETREAT = 20;
-const PHASE_START_MINUTES = { dawn: 5 * 60, day: 10 * 60, dusk: 16 * 60, night: 19 * 60 }; // 朝5:00/昼10:00/夕16:00/夜19:00
+const PHASE_START_MINUTES = { dawn: 4 * 60 + 30, asa: 6 * 60 + 30, day: 10 * 60, dusk: 16 * 60, night: 19 * 60 }; // 早朝4:30/朝6:30/昼10:00/夕16:00/夜19:00
 function phaseForClockMinutes(minutes) {
   const m = ((minutes % 1440) + 1440) % 1440;
-  let phase = "night"; // 0:00〜4:59は前日の夜の続き
+  let phase = "night"; // 0:00〜4:29は前日の夜の続き
   TIME_PHASES.forEach((p) => { if (m >= PHASE_START_MINUTES[p]) phase = p; });
   return phase;
 }
@@ -1421,13 +1424,19 @@ function advanceExplorationClock(minutes) {
   state.clockMinutes = newTotal % 1440;
   state.timeOfDay = phaseForClockMinutes(state.clockMinutes);
 }
+// asa(朝)は元々dawn(早朝)として使っていた絵(4:30〜6:30の新イラストに差し替える前のもの)を
+// asa_*.jpgとして退避し、そのまま流用している。海岸はユーザー提供の5枚が揃っているためcoast_asa.jpgを使う
 const BG_SETS = {
-  town: { dawn: "assets/bg/town_dawn.jpg", day: "assets/bg/town.jpg", dusk: "assets/bg/town_dusk.jpg", night: "assets/bg/town_night.jpg" },
-  tavern: { dawn: "assets/bg/tavern_dawn.jpg", day: "assets/bg/tavern.jpg", dusk: "assets/bg/tavern_dusk.jpg", night: "assets/bg/tavern_night.jpg" },
-  dungeon: { dawn: "assets/bg/forest_dawn.jpg", day: "assets/bg/forest_day.jpg", dusk: "assets/bg/forest_dusk.jpg", night: "assets/bg/forest_night.jpg" },
+  town: { dawn: "assets/bg/town_dawn.jpg", asa: "assets/bg/town_asa.jpg", day: "assets/bg/town.jpg", dusk: "assets/bg/town_dusk.jpg", night: "assets/bg/town_night.jpg" },
+  tavern: { dawn: "assets/bg/tavern_dawn.jpg", asa: "assets/bg/tavern_asa.jpg", day: "assets/bg/tavern.jpg", dusk: "assets/bg/tavern_dusk.jpg", night: "assets/bg/tavern_night.jpg" },
+  dungeon: { dawn: "assets/bg/forest_dawn.jpg", asa: "assets/bg/forest_asa.jpg", day: "assets/bg/forest_day.jpg", dusk: "assets/bg/forest_dusk.jpg", night: "assets/bg/forest_night.jpg" },
+  coast: { dawn: "assets/bg/coast_dawn.jpg", asa: "assets/bg/coast_asa.jpg", day: "assets/bg/coast_day.jpg", dusk: "assets/bg/coast_dusk.jpg", night: "assets/bg/coast_night.jpg" },
   onsen: { day: "assets/bg/onsen.jpg", night: "assets/bg/onsen_night.jpg" },
-  departure: { dawn: "assets/bg/departure_gate_dawn.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
+  departure: { dawn: "assets/bg/departure_gate_dawn.jpg", asa: "assets/bg/departure_gate_asa.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
 };
+// 探索/戦闘の背景・野営背景は森/海岸のどちらのステージ中かで出し分ける
+function currentAreaBgSet() { return currentStage === "coast" ? BG_SETS.coast : BG_SETS.dungeon; }
+function currentCampBgUrl() { return currentStage === "coast" ? "assets/bg/coast_camp.jpg" : "assets/bg/camp_night.jpg"; }
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
 // 宿屋の4枚だけを先読みしておく。反応速度優先のため、対象は宿泊演出に必要な最小限(4枚、以前は
 // 町/森/温泉も含めた十数枚だった)に絞り、かつrequestIdleCallbackでブラウザが本当に暇な時だけ
@@ -1440,6 +1449,7 @@ function preloadTavernImages() {
 // 見えず突然切り替わったように見えてしまうことがあったための対策
 function preloadDungeonImages() {
   Object.values(BG_SETS.dungeon).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.coast).forEach((url) => { const img = new Image(); img.src = url; });
 }
 function scheduleIdlePreload(fn) {
   if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 5000 });
@@ -1455,7 +1465,7 @@ if (document.readyState === "complete") {
   });
 }
 function dayLikeOf(tod) {
-  return tod === "dawn" || tod === "day" ? "day" : "night";
+  return tod === "dawn" || tod === "asa" || tod === "day" ? "day" : "night";
 }
 function updateSceneBackgrounds() {
   const tod = state.timeOfDay || "day";
@@ -1463,8 +1473,8 @@ function updateSceneBackgrounds() {
   document.getElementById("townHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
-  document.getElementById("dungeonBgInner").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
-  document.getElementById("battleBg").style.backgroundImage = `url('${BG_SETS.dungeon[tod]}')`;
+  document.getElementById("dungeonBgInner").style.backgroundImage = `url('${currentAreaBgSet()[tod]}')`;
+  document.getElementById("battleBg").style.backgroundImage = `url('${currentAreaBgSet()[tod]}')`;
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("partySelectHeroInner").style.backgroundImage = `url('${BG_SETS.departure[tod]}')`;
@@ -1505,9 +1515,23 @@ const BGM_TRACKS = {
   town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
   dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ戦闘で流れる専用BGM
+  // 海岸ステージ: 森と同じ構造に統一。coast/coast_nightは探索専用(昼夜2曲)、coast_battleは戦闘専用の1曲
+  // (以前は探索/戦闘を通して同じ曲を流し続ける設計だったが、戦闘開始時に無音のまま戻らなくなる
+  // 不具合が解消しなかったため、実績のある森と同じ「戦闘は毎回playBattleBgmで確実に頭から鳴らす」方式に変更した)
+  coast: "assets/bgm/coast_bgm.mp3",
+  coast_night: "assets/bgm/coast_night_bgm.mp3",
+  coast_battle: "assets/bgm/coast_battle_bgm.mp3",
 };
-// 戦闘BGMを時間帯に応じて選ぶ。夜だけ専用曲、それ以外は従来のまま
+// 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸はcoast/coast_nightの2曲)
+function playExplorationAreaBgm() {
+  if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
+}
+// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸は探索と別のcoast_battle専用曲(昼夜共通)
 function playBattleBgm() {
+  if (currentStage === "coast") {
+    playBgm("coast_battle");
+    return;
+  }
   playBgm(state.timeOfDay === "night" ? "dungeon_night" : "dungeon");
 }
 const bgmAudio = document.getElementById("bgmAudio");
@@ -1540,22 +1564,37 @@ function unlockAudio() {
 }
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 
+// 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
+const COAST_BGM_VOLUME_MULT = 1.7;
+// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、ユーザー指示で音量を8割にする
+const TOWN_DAY_BGM_VOLUME_MULT = 0.8;
+function bgmVolumeForKey(key) {
+  if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
+  if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
+  return BGM_BASE_VOLUME;
+}
 function playBgm(key) {
-  if (currentBgmKey === key) return;
+  if (currentBgmKey === key) {
+    // 同じ曲を続けて流すはずの場面(海岸の探索→戦闘の継続再生など)で、何らかの理由で
+    // 要素が一時停止してしまっていた場合に無音のまま固まらないよう、ここで取りこぼさず再開する
+    if (bgmAudio.paused && audioUnlocked) bgmAudio.play().catch(() => {});
+    return;
+  }
   if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
+  bgmAudio.volume = bgmVolumeForKey(key);
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 }
 
-// 戦闘終了時: 戦闘専用BGM(dungeon/dungeon_night)をフェードアウトして止める。探索中に流れ続ける
-// 虫の声アンビエント(ambientBgmAudio)は別要素なのでここでは一切触らない。
+// 戦闘終了時: 戦闘専用BGM(森はdungeon/dungeon_night、海岸はcoast_battle)をフェードアウトして止める。
+// 探索中に流れ続ける虫の声アンビエント/海岸の探索用BGMは別要素・別キーなのでここでは一切触らない。
 // 毎回の戦闘開始時に必ず曲の頭から鳴らしたいので、フェード完了時に再生位置を0にリセットしてから
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
-const BATTLE_BGM_FADE_OUT_MS = 2500;
+const BATTLE_BGM_FADE_OUT_MS = 3000;
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle") return;
   const key = currentBgmKey;
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
@@ -1580,7 +1619,7 @@ function stopBattleBgm() {
 const AMBIENT_BGM_TRACKS = { day: "assets/bgm/insect_day.mp3", night: "assets/bgm/insect_night.mp3" };
 let currentAmbientKey = null;
 function ambientKeyForTimeOfDay(tod) {
-  return tod === "dawn" || tod === "day" ? "day" : "night";
+  return tod === "dawn" || tod === "asa" || tod === "day" ? "day" : "night";
 }
 function playAmbientBgm(forceKey) {
   const key = forceKey || ambientKeyForTimeOfDay(state.timeOfDay);
@@ -1593,6 +1632,14 @@ function playAmbientBgm(forceKey) {
 function stopAmbientBgm() {
   ambientBgmAudio.pause();
   currentAmbientKey = null;
+}
+// 海岸ステージの探索用BGM(coast/coast_night)を止める。里に帰る時に明示的に呼ぶ保険
+// (通常は戦闘用のcoast_battleに切り替わっている間はstopBattleBgm()側が既に処理済みのはず)
+function stopCoastAreaBgm() {
+  if (currentBgmKey !== "coast" && currentBgmKey !== "coast_night" && currentBgmKey !== "coast_battle") return;
+  bgmAudio.pause();
+  bgmPositions[currentBgmKey] = 0;
+  currentBgmKey = null;
 }
 
 // 町のBGM(bgmAudio)を即座に止める。探索中はbgmAudioを戦闘専用として使うため、森に入る瞬間に
@@ -1725,10 +1772,15 @@ function playSfx(name) {
     start();
   }
 }
-// ページがバックグラウンドから復帰した瞬間にもAudioContextの復旧を試みておく(念のための保険)
+// ページがバックグラウンドから復帰した瞬間にもAudioContextの復旧を試みておく(念のための保険)。
+// bgmAudioも、SE再生時のオーディオフォーカス関連などで意図せず一時停止したまま
+// currentBgmKeyだけが再生中のつもりで固まってしまうことがあるため、同様に復旧を試みる
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
     sfxAudioCtx.resume().catch(() => {});
+  }
+  if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
+    bgmAudio.play().catch(() => {});
   }
 });
 // 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
@@ -1766,7 +1818,7 @@ function statusLabel(c) {
     const daysLeft = Math.floor(totalHoursLeft / 24);
     const hoursLeft = totalHoursLeft % 24;
     const timeLeftStr = hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
-    return `深淵の森 ${c.criticalFloor}層目で瀕死(あと約${timeLeftStr}で救出しないとロスト)`;
+    return `${c.criticalStage === "coast" ? "海岸" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${timeLeftStr}で救出しないとロスト)`;
   }
   return "ロスト(消滅した)";
 }
@@ -2188,7 +2240,7 @@ function playCampTransition(onDone) {
   const NIGHT_CROSSFADE_MS = 1500;
 
   fromEl.style.opacity = "1";
-  fromEl.style.backgroundImage = `url('${BG_SETS.dungeon[state.timeOfDay] || BG_SETS.dungeon.night}')`;
+  fromEl.style.backgroundImage = `url('${currentAreaBgSet()[state.timeOfDay] || currentAreaBgSet().night}')`;
   toEl.style.opacity = "0";
   blackEl.style.opacity = "0";
   caption.textContent = "";
@@ -2199,13 +2251,13 @@ function playCampTransition(onDone) {
     if (state.timeOfDay === "night") {
       afterNightHold();
     } else {
-      crossfadeBg(fromEl, toEl, BG_SETS.dungeon.night, NIGHT_CROSSFADE_MS, () => setTimeout(afterNightHold, HOLD_MS));
+      crossfadeBg(fromEl, toEl, currentAreaBgSet().night, NIGHT_CROSSFADE_MS, () => setTimeout(afterNightHold, HOLD_MS));
     }
   }
   function afterNightHold() {
-    // 夜の森→暗転→野営地
+    // 夜の森/海岸→暗転→野営地
     fadeOpacity(blackEl, 0, 1, 2000, () => {
-      fromEl.style.backgroundImage = `url('assets/bg/camp_night.jpg')`;
+      fromEl.style.backgroundImage = `url('${currentCampBgUrl()}')`;
       setTimeout(() => {
         fadeOpacity(blackEl, 1, 0, 1500, finishCampTransition);
       }, 300);
@@ -2226,7 +2278,7 @@ function playCampSleepTransition(onBlack) {
     if (blackDone) return;
     blackDone = true;
     clearTimeout(safetyTimer);
-    fromEl.style.backgroundImage = `url('${BG_SETS.dungeon.dawn}')`;
+    fromEl.style.backgroundImage = `url('${currentAreaBgSet().dawn}')`;
     // 宿泊演出と同様、キャプションを表示して完全に消えてから回復画面(onBlack)を呼ぶ
     caption.textContent = pickCampNightMessage();
     caption.style.animation = "lodgingCaptionFade 3900ms ease forwards";
@@ -2240,7 +2292,7 @@ function playCampSleepTransition(onBlack) {
   const caption = document.getElementById("campTransitionCaption");
 
   fromEl.style.opacity = "1";
-  fromEl.style.backgroundImage = `url('assets/bg/camp_night.jpg')`;
+  fromEl.style.backgroundImage = `url('${currentCampBgUrl()}')`;
   toEl.style.opacity = "0";
   blackEl.style.opacity = "0";
   caption.textContent = "";
@@ -2778,14 +2830,17 @@ const DEPARTURE_FADEOUT_MS = 750;
 const DEPARTURE_FADEOUT_DELAY_MS = 800; // ズーム開始から暗転フェードアウトが始まるまでの間(ユーザー指示で0.8秒遅らせた)
 const DEPARTURE_FADEIN_MS = 500;
 const DEPARTURE_BLACK_HOLD_MS = 1500;
-document.getElementById("departBtn").onclick = () => {
+function startDeparture(stage) {
   if (state.activePartyIds.length === 0) {
     alert("パーティを1人以上選んでください");
     return;
   }
+  currentStage = stage;
   playSfx("departure");
-  const departBtnEl = document.getElementById("departBtn");
-  departBtnEl.disabled = true;
+  const departForestBtnEl = document.getElementById("departForestBtn");
+  const departCoastBtnEl = document.getElementById("departCoastBtn");
+  departForestBtnEl.disabled = true;
+  departCoastBtnEl.disabled = true;
   const bodyPad = document.querySelector("#screen-party-select .body-pad");
   const heroTitle = document.querySelector("#partySelectHero h1");
   const heroInner = document.getElementById("partySelectHeroInner");
@@ -2807,7 +2862,8 @@ document.getElementById("departBtn").onclick = () => {
         heroInner.style.transform = "";
         setTimeout(() => {
           enterDungeon();
-          departBtnEl.disabled = false;
+          departForestBtnEl.disabled = false;
+          departCoastBtnEl.disabled = false;
           bodyPad.style.display = "";
           heroTitle.style.display = "";
           const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
@@ -2820,7 +2876,9 @@ document.getElementById("departBtn").onclick = () => {
       };
     }, DEPARTURE_FADEOUT_DELAY_MS);
   }, DEPARTURE_BG_HOLD_MS);
-};
+}
+document.getElementById("departForestBtn").onclick = () => startDeparture("forest");
+document.getElementById("departCoastBtn").onclick = () => startDeparture("coast");
 
 // ============ 温泉 ============
 function renderOnsen() {
@@ -3121,6 +3179,8 @@ document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ ダンジョン ============
 let currentFloor = 0;
+let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸)。町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効
+function currentStageName() { return currentStage === "coast" ? "海岸" : "深淵の森"; }
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
@@ -3182,10 +3242,13 @@ function enterDungeon() {
   // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)。夜専用曲も含めて両方リセットする
   bgmPositions.dungeon = 0;
   bgmPositions.dungeon_night = 0;
+  bgmPositions.coast = 0;
+  bgmPositions.coast_night = 0;
+  bgmPositions.coast_battle = 0;
   stopTownBgm();
   showScreen("screen-dungeon");
   renderDungeon();
-  dlog("深淵の森に入った。");
+  dlog(`${currentStageName()}に入った。`);
 }
 
 let dungeonLogLines = [];
@@ -3273,7 +3336,10 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const overlaySrc = stressOverlaySrc(c.fatigue);
-    const carried = combatants.find((x) => x.carriedBy === c.id);
+    // 担がれている本人は今回の遠征の名簿(fieldParty/combatants)に居るとは限らない(別の冒険で瀕死のまま
+    // 取り残されていた仲間を、今回の探索中に見つけて担いだ場合など、deliverCarriedAlliesと同じ理由)。
+    // そのためcombatants内だけでなくstate.roster全体からも探す
+    const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
     const carriedC2 = carried ? CLASSES[carried.classId] : null;
     div.innerHTML = `
       <div class="stress-wrap">
@@ -3319,8 +3385,15 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
-  playAmbientBgm(); // 探索中は虫の声アンビエントだけを流す(戦闘専用BGMはstartBattleでのみ開始する)
-  updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、森の背景がその場で切り替わるように
+  // 森は探索中「虫の声」アンビエントだけを流す。海岸は専用の探索用BGM(coast/coast_night)を流す。
+  // どちらも戦闘専用BGM(dungeon系/coast_battle)はstartBattleでのみ別途開始する
+  if (currentStage === "coast") {
+    stopAmbientBgm();
+    playExplorationAreaBgm();
+  } else {
+    playAmbientBgm();
+  }
+  updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
@@ -3549,7 +3622,7 @@ function startCampFromTools() {
 }
 function startCampPhase() {
   showScreen("screen-camp");
-  document.getElementById("campBg").style.backgroundImage = "url('assets/bg/camp_night.jpg')";
+  document.getElementById("campBg").style.backgroundImage = `url('${currentCampBgUrl()}')`;
   document.getElementById("campLog").innerHTML = "";
   campActionQueue = fieldParty.filter((c) => c.status === "active");
   campPendingComfortActor = null;
@@ -3673,6 +3746,7 @@ function finishCamping() {
 
 function finishRetreat() {
   stopAmbientBgm();
+  stopCoastAreaBgm();
   retreating = false;
   deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
@@ -3719,7 +3793,7 @@ function moveOneFloor(pathBias) {
   tickCriticalExpiry(state.roster, absoluteGameMinutes());
   saveState();
 
-  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   renderDungeon();
   if (criticalHereList.length > 0) {
     queueCriticalAlerts(criticalHereList, () => rollEncounter(pathBias));
@@ -3738,7 +3812,7 @@ document.getElementById("advanceBtn").onclick = () => {
     return;
   }
   showPathChoice((pathBias) => {
-    const chosen = PATH_DEFS[pathBias];
+    const chosen = currentPathDefs()[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
   });
@@ -3759,6 +3833,18 @@ const PATH_DEFS = {
   fuon: { icon: "👁️", label: "不穏な道", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "神隠しの道", battle: 0.00, gold: 0.00 },
 };
+// 海岸ステージ版の進路(キーは共通、アイコン/ラベルだけ海のテーマに差し替え。battle/gold等の数値は森と完全に同じ)
+const COAST_PATH_DEFS = {
+  rindou: { icon: "🏝️", label: "砂浜", battle: 0.60, gold: 0.20 },
+  kemono: { icon: "🪨", label: "岩場", battle: 0.75, gold: 0.15 },
+  kurai: { icon: "🌊", label: "波打ち際", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
+  shizuka: { icon: "🐚", label: "静かな砂浜", battle: 0.15, gold: 0.25 },
+  komorebi: { icon: "🐟", label: "潮溜まり", battle: 0.20, gold: 0.30 },
+  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.70 },
+  fuon: { icon: "👁️", label: "不穏な砂浜", battle: 1.00, gold: 0.00 },
+  kamikakushi: { icon: "✨", label: "幻の島", battle: 0.00, gold: 0.00 },
+};
+function currentPathDefs() { return currentStage === "coast" ? COAST_PATH_DEFS : PATH_DEFS; }
 // 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
 const NORMAL_PATH_WEIGHTS = {
   rindou: 45, kemono: 30, kurai: 7.6, shizuka: 3.52,
@@ -3831,7 +3917,7 @@ function showPathChoice(onChosen) {
         <p class="path-choice-title">進路選択</p>
         <div class="path-choice-cards">
           ${picked.map((key, idx) => {
-            const p = PATH_DEFS[key];
+            const p = currentPathDefs()[key];
             return `
               <button class="path-card" data-idx="${idx}">
                 <span class="path-card-icon">${p.icon}</span>
@@ -3857,10 +3943,14 @@ function showPathChoice(onChosen) {
   function renderTools() {
     const campCount = state.inventory.campingKit || 0;
     const eggCount = state.inventory.onsenEgg || 0;
+    const potionCount = state.inventory.potion || 0;
     div.innerHTML = `
       <div class="path-choice-panel">
         <p class="path-choice-title">道具を選んでください</p>
         <div class="path-choice-cards">
+          <button class="path-card" id="pathToolsPotionBtn" ${potionCount <= 0 ? "disabled" : ""}>
+            <span class="path-card-label">回復薬(${potionCount})</span>
+          </button>
           <button class="path-card" id="pathToolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>
             <span class="path-card-label">野営具(${campCount})</span>
           </button>
@@ -3871,6 +3961,10 @@ function showPathChoice(onChosen) {
         <button class="path-choice-cancel" id="pathToolsBackBtn">戻る</button>
       </div>
     `;
+    document.getElementById("pathToolsPotionBtn").onclick = () => {
+      if (potionCount <= 0) return;
+      renderPotionTargetPicker();
+    };
     document.getElementById("pathToolsCampBtn").onclick = () => {
       if (campCount <= 0) return;
       closePathChoice();
@@ -3882,6 +3976,37 @@ function showPathChoice(onChosen) {
     };
     document.getElementById("pathToolsBackBtn").onclick = () => {
       renderCards();
+    };
+  }
+
+  // 回復薬: 温泉卵と違い対象を選ぶ(パーティの誰でも対象にできる)。使ってもターンは消費しない
+  function renderPotionTargetPicker() {
+    const targets = fieldParty.filter((c) => c.status === "active");
+    div.innerHTML = `
+      <div class="path-choice-panel">
+        <p class="path-choice-title">誰に回復薬(残り${state.inventory.potion || 0})を使いますか？</p>
+        <div class="path-choice-cards">
+          ${targets.map((c, idx) => `
+            <button class="path-card" data-potion-target-idx="${idx}">
+              <span class="path-card-label">${c.name}(${c.hp}/${c.maxHp})</span>
+            </button>
+          `).join("")}
+        </div>
+        <button class="path-choice-cancel" id="pathToolsPotionCancelBtn">やめる</button>
+      </div>
+    `;
+    targets.forEach((c, idx) => {
+      div.querySelector(`button[data-potion-target-idx="${idx}"]`).onclick = () => {
+        state.inventory.potion--;
+        usePotion(c, dlog);
+        playSfx("heal");
+        maybeSpeakHealed(c);
+        saveState();
+        renderCards(); // 再抽選せず同じ進路選択に戻す
+      };
+    });
+    document.getElementById("pathToolsPotionCancelBtn").onclick = () => {
+      renderTools();
     };
   }
 
@@ -4036,14 +4161,14 @@ function deliverCarriedAllies() {
 
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
 function rollEncounter(pathBias) {
-  const bias = !retreating && pathBias ? PATH_DEFS[pathBias] : null;
+  const bias = !retreating && pathBias ? currentPathDefs()[pathBias] : null;
   const baseBattle = bias ? bias.battle : 0.65;
   const baseGold = bias ? bias.gold : 0.25;
   const battleChance = retreating ? baseBattle / 4 : baseBattle;
   const goldChance = retreating ? baseGold / 5 : baseGold;
   const roll = Math.random();
   if (roll < battleChance) {
-    const enemies = pickEncounterForFloor(currentFloor);
+    const enemies = pickEncounterForFloor(currentFloor, currentStage);
     startBattle(enemies, bias);
   } else if (roll < battleChance + goldChance) {
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
@@ -4224,13 +4349,8 @@ function anyoneSpeaking() {
   const now = Date.now();
   return fieldParty.some((c) => c.__speechAt && c.__speechCategory !== "breakdown" && now - c.__speechAt < SPEECH_BUBBLE_DURATION_MS);
 }
-// ユーザー指示でストレス系セリフ(stressLight/Mid/High、発狂時のbreakdown)以外は
-// 一旦全て停止中。他の呼び出し箇所(dangerFloor/battleStart/pinch等)は無効化のため個別に
-// 触らず、ここで一括ガードしている
-const STRESS_ONLY_SPEECH_CATEGORIES = new Set(["stressLight", "stressMid", "stressHigh", "breakdown"]);
 // 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
 function trySpeak(speaker, category) {
-  if (!STRESS_ONLY_SPEECH_CATEGORIES.has(category)) return false;
   // 担がれた側(瀕死でstatus==="critical")のセリフだけは例外的に許可する
   const speakerOk = speaker && (speaker.status === "active" || (category === "carried" && speaker.status === "critical"));
   if (!speakerOk) return false;
@@ -4331,6 +4451,7 @@ function startBattle(enemies, pathDef) {
     c.fleeState = null;
     c.poison = 0;
     c.burnTurns = 0;
+    c.bleed = 0;
     c.stunTurns = 0;
     c.stunResistTurns = 0;
     c.silenceTurns = 0;
@@ -4463,6 +4584,9 @@ function aliveEnemies() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
+  // 海岸の戦闘BGM(coast_battle)が万が一一時停止してしまっていても自己修復できるよう、戦闘中の描画のたびに再アサートしておく。
+  // playBgm()は同じ曲なら実質何もしない(一時停止していた場合だけ再開する)ので、毎ターン呼んでも無害
+  if (currentStage === "coast") playBattleBgm();
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -4675,15 +4799,15 @@ function handleFieldDeaths() {
       // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
       const carried = fieldParty.find((x) => x.carriedBy === c.id);
       if (carried) {
-        markCritical(carried, currentFloor, absoluteGameMinutes());
+        markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
         carried.carriedBy = null;
         c.carryingId = null;
         blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
       // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
       c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
-      markCritical(c, currentFloor, absoluteGameMinutes());
-      blog(`${c.name}は倒れた...瀕死のまま深淵の森 ${currentFloor}層目に取り残された。`);
+      markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
+      blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
         if (ally.id !== c.id && ally.status === "active") {
@@ -4946,7 +5070,7 @@ function renderActionButtons(actor) {
     });
 
     // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
-    const carryTargets = fieldParty.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && !x.carriedBy);
+    const carryTargets = fieldParty.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
     if (carryTargets.length > 0) {
       const carryBtn = document.createElement("button");
       carryBtn.className = "big";
@@ -5236,7 +5360,7 @@ function victory() {
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
-  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">深淵の森に戻る</button>`;
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${currentStageName()}に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
     fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
@@ -5404,7 +5528,7 @@ function escapeBattle() {
 // 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
 // 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
 function checkStrandedOnCurrentFloor() {
-  const criticalList = fieldParty.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && !c.carriedBy);
+  const criticalList = fieldParty.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   if (criticalList.length > 0) queueCriticalAlerts(criticalList, () => {});
 }
 
@@ -5414,10 +5538,11 @@ function defeat() {
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   clearOmikujiExpeditionEffect();
-  blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
+  blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     stopAmbientBgm();
+    stopCoastAreaBgm();
     battle = null;
     toggleTimeOfDay();
     bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する

@@ -265,3 +265,20 @@ npx wrangler pages deploy . --project-name=onsen-mura-monogatari --branch=main -
 回復時、既存の赤い被弾トレイルとは別に淡いシアン(#B8FFF5)の回復用トレイルを追加。回復前のHP位置から現在HPまで少し遅れて伸び、追いついたら自動的に非表示になる。検証の過程で、既存の赤い被弾トレイルも含めてCSS transitionが実際には発火せず一瞬で目標値に飛んでいたバグ(宿泊演出のクロスフェードと同種の問題)を発見し、Web Animations API(`element.animate()`)に統一して修正した。
 
 **教訓**: このプロジェクトで「inline styleを設定→2連続requestAnimationFrameでCSS transitionを発火させる」手法は複数箇所で機能していなかった(宿泊演出のクロスフェード、HPバーのトレイル)。今後アニメーションを実装する際はCSS transitionのdouble-rAFトリックを避け、`element.animate()`(Web Animations API、`fill:"forwards"`+`onfinish`で`cancel()`して最終値を確定)を使うこと。
+
+## 💣火薬庫(建物)を新設し、爆弾(防御無視の全体ダメージ道具)を追加(コミット6a246a5)
+「火薬庫を建てると爆弾が買えるようになる」という指示で、増築画面に新しい建物「💣火薬庫」(家レベル6・200G)を追加した。既存の`renderSimpleBuilding`/`buildSimpleBuilding`の3点セット配線(unlocksAtNextLevel/render呼び出し/onclick)をそのまま流用。爆弾は1個30G、`BOMB_FLAT_DAMAGE=37`固定ダメージを敵全体に与える(猪の実HP≒62の約6割になるよう逆算、`ENEMY_SCALE`/`ENEMY_HP_MULT`から算出)。`data.js`の`ITEMS.bomb`は他アイテムと違い専用イラストが無いため`image`を持たせず`emoji:"💣"`だけの新パターンにし、`renderOwnedSupplyIcons()`側に画像/絵文字どちらでも表示できる分岐を追加した。戦闘中は`renderItemMenu`に「爆弾」ボタンを追加し、`applyDamageToTarget(enemy, BOMB_FLAT_DAMAGE, blog, actor.label, null)`と**actorをnullで渡す**ことで、会心・パッシブ・反撃といったキャラ由来の副作用を一切乗せない「防御無視の生ダメージ」を実現している(担いでいる最中でも道具メニュー自体はロックされないため、指示通り担いでいても使用可能)。支援物資の共有枠(`supplyCap()`)に爆弾も合算対象として追加。
+
+## 職業の初期解放/建築解放制+神社のおみくじ機能(コミット07e5e19)
+「侍・槍士・狩人・陰陽師は最初から雇えるが、忍・薙刀士・砲術士・僧侶は対応する建物を建てるまで雇えないようにしたい」という指示で、既存の建物システムに職業ゲートを組み込んだ。
+
+**職業アンロック**: `CLASS_UNLOCK_BUILDING`(classId→建物のstateキー名のマップ)+`isClassUnlocked(classId)`を新設し、宿屋の雇用画面(`renderClassGrid`)と最初の1人選び画面(`renderFirstCharacterScreen`)の両方で`Object.keys(CLASSES).filter(isClassUnlocked)`によりロック中の職業をリストから除外する方式にした(職業自体を隠すのではなく選択肢に出さない、というユーザーの「フィルターする」という言葉通りの実装)。対応関係: 忍=からくり屋敷(新設、家レベル4・150G。忍解放に加えて戦闘中の「消火」ボタンもここで解禁するよう`(state.karakuriLevel||0)>0`を消火の表示条件に追加)/薙刀士=道場(既存、経験値分け共有はそのまま)/砲術士=火薬庫(既存の爆弾購入用建物を流用、新しく別建物は作らずこの1つに2つの役割を持たせた)/僧侶=神社(既存、下記おみくじの解禁も兼ねる)。からくり屋敷の解禁レベル・建築費はユーザーから「未定でいいので適当に決めて」と一任されたため、他の建物(道場=家レベル4・50G、火薬庫=家レベル6・200G)とのバランスを見て家レベル4・150Gに設定した。既存セーブの互換対応(既にロック職業のキャラを持っている場合の解雇制限など)は「いらない」と明示されたため一切実装していない。
+
+**神社のおみくじ**: 出発準備画面(`screen-party-select`)に「支度/⛩️おみくじ」のタブを新設(`showPartySelectTab()`、ボタンのCSSクラス切り替えで簡易実装、新規CSSはほぼ無し)。神社が未建築の間はタブ自体を非表示にする。1日1回、`state.omikujiDrawnDate`と`state.dayCount`の比較で引けるかどうかを判定(温泉卵の`onsenEggDailyDate`と同じ日次リセットパターン)。5段階の結果(`OMIKUJI_TIERS`、data.js。大吉5%/中吉15%/吉30%/小吉35%/凶15%)はいずれも数値バフではなく「次の遠征1回限定」で展開そのものを変える効果にした:
+- **大吉**: パーティ全員で共有する1回だけの致命傷耐え。全員に同じ参照オブジェクト`{used:false}`を`passives.sharedSurviveFatal`として配ることで実装し、`engine.js`の`applyDamageToTarget`内で誰か1人が致命傷を受けた瞬間にそのオブジェクトの`used`を立てる(同じ参照を持つ他の3人は既に消費済みとして扱われるため、合計で必ず1回しか発動しない「パーティ共有の命綱」になる)
+- **中吉**: 不穏な道が一切出ない。`showPathChoice`の重み抽選の直前に通す`omikujiAdjustedWeights()`が、中吉が有効な間は候補の重みオブジェクトから`fuon`キー自体を削除してから抽選する
+- **吉**: 神隠しの道の出現率アップ。同じ`omikujiAdjustedWeights()`で`kamikakushi`の重みを一時的に8(通常0.24)へ引き上げる
+- **小吉**: 次の遠征最初の戦闘だけ先制確定。`state.omikujiFirstStrikePending`を立てておき、`startBattle()`内でその戦闘のターン順序(`nextRound(forceFirstStrike)`)を「味方全員→敵全員」に並べ替えてから消費する(2戦闘目以降には持ち越さない)
+- **凶**: 効果なし(何度か案を検討したが「不穏な道を狙っているプレイヤーもいる」「やりすぎ」という理由でペナルティ系は全て却下され、素通りの結果に落ち着いた経緯が前回セッションにある)
+
+上記の「次の遠征限定」という効果の生存期間は`state.omikujiEffect`という1つのフィールドで管理し、`enterDungeon()`(遠征開始時にfieldPartyへ実際の効果を配る`applyOmikujiExpeditionStart()`を呼ぶ)から`finishRetreat()`/`defeat()`(遠征終了時に`clearOmikujiExpeditionEffect()`でリセット)まで一貫して持たせている。おみくじを引くと、名簿からランダムな生存中の仲間1人が性格別の一言を喋る(`OMIKUJI_LINES`、data.js。5段階×10性格=50パターン。当初「60パターン」という指定だったが性格の総数が10種のため上限は50)。既存の`DIALOGUE_LINES`/`trySpeak`の仕組みはストレス系カテゴリ以外を全停止するガード(`STRESS_ONLY_SPEECH_CATEGORIES`)が掛かっているため使わず、おみくじ専用に独立した軽量な表示ロジック(結果パネルへの直書き)にしてある。

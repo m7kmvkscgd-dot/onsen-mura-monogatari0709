@@ -74,6 +74,7 @@ function createCharacter(name, classId, classUpgrades) {
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
     carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
+    bleed: 0, // 裂傷の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する。裂傷中は攻撃力-10%
     burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
     stunTurns: 0, // スタン(行動不能)の残りターン数
     stunResistTurns: 0, // スタンを受けた直後の一定ターン、スタン確率が大幅に下がる(連続スタンロック防止)
@@ -216,6 +217,8 @@ function effectiveStat(entity, key) {
   // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
   if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
   if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
+  // 裂傷: 出血中は常時攻撃力-10%(敵/味方どちらにも適用)
+  if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
   // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
   if (entity.statMods && entity.statMods.length) {
     let mult = 1;
@@ -299,10 +302,25 @@ function applyBurn(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
 }
-// 戦闘終了時(勝利/逃走)に、生き残った味方の毒/炎上を自動的に治す。戦闘のたびに持ち越される
+const BLEED_MAX_STACKS = 5; // 毒(6)よりわずかに低い上限。海岸ステージの敵向け新DOT
+// 裂傷: 毒と全く同じ蓄積減衰式のDOTだが、技側の付与量を毒より低めに設定する運用にしてあり
+// (毒を与える技より裂傷を与える技の方が数値が小さくなりがち)、代わりに裂傷中は常時攻撃力-10%が乗る(effectiveStat側)
+function applyBleed(entity, stacks) {
+  if (entity.statusImmuneTurns > 0) return;
+  entity.bleed = Math.min(BLEED_MAX_STACKS, Math.max(entity.bleed || 0, stacks));
+}
+function tickBleed(entity, log) {
+  if (!entity.bleed || entity.bleed <= 0) return 0;
+  const dmg = Math.min(entity.hp, entity.bleed);
+  entity.hp = Math.max(0, entity.hp - entity.bleed);
+  log(`${entity.label}は裂傷で${dmg}ダメージ！`);
+  entity.bleed = Math.max(0, entity.bleed - 1);
+  return dmg;
+}
+// 戦闘終了時(勝利/逃走)に、生き残った味方の毒/炎上/裂傷を自動的に治す。戦闘のたびに持ち越される
 // 鬱陶しさをなくすための措置(スタン等の他の状態異常はターン制でその場で切れるため対象外)
 function clearDotEffects(characters) {
-  characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; });
+  characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; c.bleed = 0; });
 }
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
@@ -331,7 +349,7 @@ function applySilence(entity, turns) {
 // 自分のターンの一番最初に呼ぶ共通処理(毒/炎上のダメージ+継続回復+バフ/デバフの残りターン消化)。ダメージ量を返す
 function tickTurnStartEffects(entity, log) {
   if (entity.stunResistTurns > 0) entity.stunResistTurns--;
-  const dmg = tickPoison(entity, log) + tickBurn(entity, log);
+  const dmg = tickPoison(entity, log) + tickBurn(entity, log) + tickBleed(entity, log);
   // 温泉バフ「湯治」: 自分のターンの最初に毎回HPの2%を回復する
   if (entity.hp > 0 && entity.onsenBuffKey === "touji") {
     const heal = Math.max(1, Math.round(entity.maxHp * 0.02));
@@ -626,7 +644,7 @@ function useTreeSkill(actor, target, skill, log) {
       (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
       if (action.hpRegenPct) applyStatMod(t, "hpRegenPct", action.hpRegenPct, action.turns); // effectiveStatでは使わず、tick時に直接参照する目印として保持
       if (action.cleanse) {
-        t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0;
+        t.poison = 0; t.burnTurns = 0; t.bleed = 0; t.stunTurns = 0; t.silenceTurns = 0;
         if (actor.passives && actor.passives.mpOnCleanse) actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.mpOnCleanse);
       }
       if (action.statusImmuneTurns) t.statusImmuneTurns = Math.max(t.statusImmuneTurns || 0, action.statusImmuneTurns);
@@ -645,7 +663,7 @@ function useTreeSkill(actor, target, skill, log) {
       }
       t.hp = Math.min(t.maxHp, t.hp + heal);
       if (action.cleanse) {
-        t.poison = 0; t.burnTurns = 0; t.stunTurns = 0; t.silenceTurns = 0;
+        t.poison = 0; t.burnTurns = 0; t.bleed = 0; t.stunTurns = 0; t.silenceTurns = 0;
         if (actor.passives && actor.passives.mpOnCleanse) actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.mpOnCleanse);
       }
       log(`${actor.label}は${t.label}を${heal}回復！`);
@@ -676,6 +694,7 @@ function useTreeSkill(actor, target, skill, log) {
     const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
       if (action.inflict.type === "poison") applyPoison(t, action.inflict.value || 3);
+      if (action.inflict.type === "bleed") applyBleed(t, action.inflict.value || 2);
       if (action.inflict.type === "burn") applyBurn(t, action.inflict.turns || 3);
       if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
       if (action.inflict.type === "silence") applySilence(t, action.inflict.turns || 2);
@@ -695,8 +714,9 @@ function useTreeSkill(actor, target, skill, log) {
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
-function pickEnemyForFloor(floor, mode) {
+function pickEnemyForFloor(floor, mode, stage) {
   const eligible = Object.values(ENEMIES).filter((e) => {
+    if ((e.stage || "forest") !== (stage || "forest")) return false;
     if (floor < e.minFloor || floor > e.maxFloor) return false;
     if (mode === true) return !!e.isBoss;
     if (mode === "swarm") return !!e.isSwarm;
@@ -730,14 +750,14 @@ function pickEnemyForFloor(floor, mode) {
 // 6体まで揃う確率が0.15^3のようにほぼ0まで潰れてしまうため、複数回のサイコロを重ねる設計を避けた)。
 // 絡まない場合は従来通り1〜3体の通常敵のみ。
 // 雑魚集団は範囲攻撃(魔法使いのメテオ/忍者の乱れ突き)で効率よく削れる、という職業差別化の要
-function pickEncounterForFloor(floor) {
+function pickEncounterForFloor(floor, stage) {
   if (floor % 10 === 0) {
-    const boss = pickEnemyForFloor(floor, true);
-    return [boss || pickEnemyForFloor(floor)];
+    const boss = pickEnemyForFloor(floor, true, stage);
+    return [boss || pickEnemyForFloor(floor, undefined, stage)];
   }
-  const hasSwarmHere = Object.values(ENEMIES).some((e) => e.isSwarm && floor >= e.minFloor && floor <= e.maxFloor);
+  const hasSwarmHere = Object.values(ENEMIES).some((e) => (e.stage || "forest") === (stage || "forest") && e.isSwarm && floor >= e.minFloor && floor <= e.maxFloor);
   if (hasSwarmHere && Math.random() < SWARM_ENCOUNTER_CHANCE) {
-    return applyGroupNerf(pickSwarmInvolvedEncounter(floor));
+    return applyGroupNerf(pickSwarmInvolvedEncounter(floor, stage));
   }
   const roll = Math.random();
   let count = 1;
@@ -748,7 +768,7 @@ function pickEncounterForFloor(floor) {
   }
   const enemies = [];
   for (let i = 0; i < count; i++) {
-    const e = pickEnemyForFloor(floor);
+    const e = pickEnemyForFloor(floor, undefined, stage);
     if (e.isBoss) return [e]; // ボス個体が紛れたら単体に差し戻す
     enemies.push(e);
   }
@@ -757,7 +777,7 @@ function pickEncounterForFloor(floor) {
 
 // 大群が絡むと決まった時の中身。65%は「大群のみ3〜6体」(6体の内訳20%=大群絡み全体の13%≒毎回の1.95%程度)、
 // 35%は「通常1〜2体+大群2体」の混成にする
-function pickSwarmInvolvedEncounter(floor) {
+function pickSwarmInvolvedEncounter(floor, stage) {
   const enemies = [];
   if (Math.random() < 0.65) {
     const roll = Math.random();
@@ -766,14 +786,14 @@ function pickSwarmInvolvedEncounter(floor) {
     else if (roll < 0.5) swarmCount = 4;
     else if (roll < 0.8) swarmCount = 5;
     else swarmCount = 6;
-    for (let i = 0; i < swarmCount; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
+    for (let i = 0; i < swarmCount; i++) enemies.push(pickEnemyForFloor(floor, "swarm", stage));
   } else {
     const normalCount = Math.random() < 0.5 ? 1 : 2;
     for (let i = 0; i < normalCount; i++) {
-      const e = pickEnemyForFloor(floor);
+      const e = pickEnemyForFloor(floor, undefined, stage);
       if (!e.isBoss) enemies.push(e); // ボスが紛れたらこの枠は諦める(滅多に起きない)
     }
-    for (let i = 0; i < 2; i++) enemies.push(pickEnemyForFloor(floor, "swarm"));
+    for (let i = 0; i < 2; i++) enemies.push(pickEnemyForFloor(floor, "swarm", stage));
   }
   return enemies;
 }
@@ -881,6 +901,7 @@ let lastHitWasCrit = false;
 function hasStatusAilment(target) {
   if ((target.poison || 0) > 0) return true;
   if ((target.burnTurns || 0) > 0) return true;
+  if ((target.bleed || 0) > 0) return true;
   if ((target.stunTurns || 0) > 0) return true;
   if ((target.silenceTurns || 0) > 0) return true;
   if (target.statMods && target.statMods.some((m) => m.mult < 1)) return true;
@@ -892,6 +913,7 @@ function hasSpecificAilment(target, type) {
   if (!type) return hasStatusAilment(target);
   if (type === "poison") return (target.poison || 0) > 0;
   if (type === "burn") return (target.burnTurns || 0) > 0;
+  if (type === "bleed") return (target.bleed || 0) > 0;
   if (type === "stun") return (target.stunTurns || 0) > 0;
   if (type === "debuff") return !!(target.statMods && target.statMods.some((m) => m.mult < 1));
   return hasStatusAilment(target);
@@ -978,6 +1000,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     actor.passives.onHitInflicts.forEach((oh) => {
       if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         if (oh.type === "poison") applyPoison(target, oh.value || 3);
+        if (oh.type === "bleed") applyBleed(target, oh.value || 2);
         if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
         if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
@@ -1137,6 +1160,7 @@ function resolveDebuffEffect(target, type, params, log) {
   if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }
   if (type === "spdDown") { applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params)); log(`${target.label}は素早さが下がった！`); }
   if (type === "poison") { applyPoison(target, params.value || 3); log(`${target.label}は毒を受けた！`); }
+  if (type === "bleed") { applyBleed(target, params.value || 2); log(`${target.label}は裂傷を負った！`); }
   if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
   if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
   if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }
@@ -1157,7 +1181,7 @@ function enemyBigAttack(enemy, targets, log) {
   const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
   const hitTargets = [singleTarget];
   let mult = profile ? profile.mult : BIG_ATTACK_MULT;
-  if (enemy.poison > 0 || enemy.burnTurns > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
+  if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {
     if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
       target.passives.onceGuardUsed = true;
@@ -1206,10 +1230,11 @@ function damageStress(dmg, maxHp) {
 // 別の仲間がそのフロアに到達し、救出コマンドを使えば連れ帰れる(ただし冒険はそこで終了する)。
 // 誰も助けに来ないまま、実ゲーム内時間で2.5〜3.5日(CRITICAL_MIN_HOURS〜MAX_HOURS)経過すると
 // ロスト(完全消滅)する。absoluteMinutesはその時点のゲーム内絶対分数(呼び出し側で算出)
-function markCritical(character, floor, absoluteMinutes) {
+function markCritical(character, floor, absoluteMinutes, stage) {
   character.status = "critical";
   character.hp = 0;
   character.criticalFloor = floor;
+  character.criticalStage = stage || "forest"; // 森/海岸どちらで瀕死になったかも記録し、階層番号だけでは区別できない別ステージでの誤救出/誤表示を防ぐ
   const spanHours = CRITICAL_MIN_HOURS + Math.random() * (CRITICAL_MAX_HOURS - CRITICAL_MIN_HOURS);
   character.criticalExpireMinutes = absoluteMinutes + spanHours * 60;
 }
@@ -1290,7 +1315,7 @@ if (typeof module !== "undefined") {
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, isOnsenLocked, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
-    applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, clearDotEffects, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
+    applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyBleed, tickBleed, BLEED_MAX_STACKS, clearDotEffects, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
   };
