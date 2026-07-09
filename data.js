@@ -477,8 +477,9 @@ const ENEMIES = {
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 大きなハサミで挟み、力を奪う。通常攻撃でも挟まれた傷が残る
   yadokari: { id: "yadokari", ja: "ヤドカリ", image: "assets/enemies/yadokari.png", stage: "coast", hp: 16, atk: 4, def: 5, spd: 4, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.2 } }, // 貝殻を盾に体当たり
-  isozakana: { id: "isozakana", ja: "磯魚", image: "assets/enemies/isozakana.png", stage: "coast", hp: 7, atk: 3, def: 1, spd: 8, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true,
-    bigAttack: { mult: 1.3 } }, // 群れで行動する小魚。bigAttack未設定だと汎用フォールバックでランダムに毒等が乗ってしまうため明示的に設定(飛び跳ねての体当たりのみ、デバフなし)
+  isozakana: { id: "isozakana", ja: "磯魚", image: "assets/enemies/isozakana.png", stage: "coast", hp: 7, atk: 2, def: 1, spd: 8, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true,
+    bigAttack: { mult: 1.3 }, // 群れで行動する小魚。bigAttack未設定だと汎用フォールバックでランダムに毒等が乗ってしまうため明示的に設定(飛び跳ねての体当たりのみ、デバフなし)
+    onHitInflict: { type: "bleed", chance: 1.0, valueMin: 1, valueMax: 2 } }, // 鋭い歯で噛みつき、通常攻撃で必ず出血1〜2を負わせる
   kurage_bou: { id: "kurage_bou", ja: "くらげ坊", image: "assets/enemies/kurage_bou.png", stage: "coast", hp: 13, atk: 4, def: 1, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 触手でびりびり痺れさせる
   kaiyose: { id: "kaiyose", ja: "貝寄せ", image: "assets/enemies/kaiyose.png", stage: "coast", hp: 13, atk: 4, def: 5, spd: 3, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,

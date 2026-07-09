@@ -1192,15 +1192,22 @@ function resolveTurns(params) {
   }
   return params.turns || 3;
 }
+// paramsにvalueMin/valueMaxがあれば範囲内でランダムな値を、無ければ固定のvalue(fallback)を返す
+function resolveValue(params, fallback) {
+  if (params.valueMin != null && params.valueMax != null) {
+    return params.valueMin + Math.floor(Math.random() * (params.valueMax - params.valueMin + 1));
+  }
+  return params.value || fallback;
+}
 // デバフ種別ごとの適用処理を共通化(大技の専用プロファイル・汎用ランダムプール・通常攻撃時デバフの
-// いずれからも呼ぶ)。paramsはvalue/turns(またはturnsMin/turnsMaxの範囲指定)を持つinflict設定オブジェクト
+// いずれからも呼ぶ)。paramsはvalue(またはvalueMin/valueMaxの範囲指定)/turns(またはturnsMin/turnsMaxの範囲指定)を持つinflict設定オブジェクト
 function resolveDebuffEffect(target, type, params, log) {
   params = params || {};
   if (type === "atkDown") { applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は攻撃力が下がった！`); }
   if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }
   if (type === "spdDown") { applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params)); log(`${target.label}は素早さが下がった！`); }
-  if (type === "poison") { applyPoison(target, params.value || 3); log(`${target.label}は毒を受けた！`); }
-  if (type === "bleed") { applyBleed(target, params.value || 2); log(`${target.label}は出血を負った！`); }
+  if (type === "poison") { applyPoison(target, resolveValue(params, 3)); log(`${target.label}は毒を受けた！`); }
+  if (type === "bleed") { applyBleed(target, resolveValue(params, 2)); log(`${target.label}は出血を負った！`); }
   if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
   if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
   if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }
