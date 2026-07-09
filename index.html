@@ -46,6 +46,23 @@
   .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
   .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
+  .time-skip-btn {
+    background: none; border: none; font-size: 1.1rem; margin-left: 0.4rem; padding: 0.1rem 0.3rem;
+    cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+  }
+  .time-skip-btn:active { transform: scale(0.9); }
+  /* 時間を進めるピッカー/演出オーバーレイ */
+  #timeSkipOverlay { position: fixed; inset: 0; z-index: 55; background: rgba(10,12,14,0.92); display: none; }
+  .time-skip-picker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 380px; text-align: center; }
+  .time-skip-picker h3 { color: var(--accent); margin: 0 0 1rem; font-size: 1.1rem; }
+  .time-skip-duration { font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 1.2rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .time-skip-stepper { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
+  .time-skip-stepper button { flex: 1; }
+  #timeSkipAnimView { position: absolute; inset: 0; display: none; }
+  .time-skip-clock {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
+    font-size: 1.6rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); white-space: nowrap;
+  }
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
   .gold { font-weight: 700; color: var(--accent); }
   /* 所持中の支援物資アイコン。野営具→回復薬→煙玉の順、最大11個(野営具1+回復薬/煙玉合計10)を
@@ -691,6 +708,7 @@
       </div>
       <div class="hero-title-row" style="margin-top:0.2rem;">
         <span class="time-of-day-label" id="townTimeLabel"></span>
+        <button class="time-skip-btn" id="timeSkipBtn">⌛️</button>
       </div>
       <span class="gold town-gold-badge" id="townGold" style="margin-top:0.5rem;">0G</span>
     </div>
@@ -1018,6 +1036,25 @@
     <div style="background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.2rem; max-width:320px; width:100%; text-align:center;">
       <p id="genericConfirmText" style="margin-bottom:1rem; font-size:0.95rem;"></p>
       <div id="genericConfirmButtons" style="display:flex; gap:0.6rem; justify-content:center;"></div>
+    </div>
+  </div>
+
+  <!-- 時間を進める(⌛️): 30分刻み・最長12時間のピッカーと、1秒1時間でのタイムラプス演出 -->
+  <div id="timeSkipOverlay">
+    <div class="time-skip-picker" id="timeSkipPickerView">
+      <h3>時間を進める</h3>
+      <div class="time-skip-duration" id="timeSkipDurationLabel">1時間</div>
+      <div class="time-skip-stepper">
+        <button class="big" id="timeSkipMinusBtn">−30分</button>
+        <button class="big" id="timeSkipPlusBtn">+30分</button>
+      </div>
+      <button class="big primary" id="timeSkipConfirmBtn" style="width:100%;margin-bottom:0.6rem;">進める</button>
+      <button class="big danger" id="timeSkipCancelBtn" style="width:100%;">やめる</button>
+    </div>
+    <div id="timeSkipAnimView">
+      <div class="lodging-transition-bg from" id="timeSkipBgFrom"></div>
+      <div class="lodging-transition-bg to" id="timeSkipBgTo"></div>
+      <div class="time-skip-clock" id="timeSkipClockDisplay"></div>
     </div>
   </div>
 
@@ -1708,6 +1745,87 @@ function renderTown() {
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
+}
+
+// ============ 時間を進める(⌛️) ============
+// 町の時計の横から、30分刻み・最長12時間まで時間を早送りできる。1時間ごとに1秒かけて進め、
+// 時間帯(朝/昼/夕/夜)の境界を跨いだ時だけ町の背景をフェードで自然に切り替える
+const TIME_SKIP_STEP_MIN = 30;
+const TIME_SKIP_MAX_MIN = 12 * 60;
+let timeSkipSelectedMin = 60;
+function formatTimeSkipDuration(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h === 0) return `${m}分`;
+  if (m === 0) return `${h}時間`;
+  return `${h}時間${m}分`;
+}
+function renderTimeSkipPicker() {
+  document.getElementById("timeSkipDurationLabel").textContent = formatTimeSkipDuration(timeSkipSelectedMin);
+  document.getElementById("timeSkipMinusBtn").disabled = timeSkipSelectedMin <= TIME_SKIP_STEP_MIN;
+  document.getElementById("timeSkipPlusBtn").disabled = timeSkipSelectedMin >= TIME_SKIP_MAX_MIN;
+}
+document.getElementById("timeSkipBtn").onclick = () => {
+  timeSkipSelectedMin = 60;
+  renderTimeSkipPicker();
+  document.getElementById("timeSkipPickerView").style.display = "block";
+  document.getElementById("timeSkipAnimView").style.display = "none";
+  document.getElementById("timeSkipOverlay").style.display = "block";
+};
+document.getElementById("timeSkipMinusBtn").onclick = () => {
+  timeSkipSelectedMin = Math.max(TIME_SKIP_STEP_MIN, timeSkipSelectedMin - TIME_SKIP_STEP_MIN);
+  renderTimeSkipPicker();
+};
+document.getElementById("timeSkipPlusBtn").onclick = () => {
+  timeSkipSelectedMin = Math.min(TIME_SKIP_MAX_MIN, timeSkipSelectedMin + TIME_SKIP_STEP_MIN);
+  renderTimeSkipPicker();
+};
+document.getElementById("timeSkipCancelBtn").onclick = () => {
+  document.getElementById("timeSkipOverlay").style.display = "none";
+};
+document.getElementById("timeSkipConfirmBtn").onclick = () => {
+  startTimeSkipAnimation(timeSkipSelectedMin);
+};
+function startTimeSkipAnimation(totalMin) {
+  document.getElementById("timeSkipPickerView").style.display = "none";
+  const animView = document.getElementById("timeSkipAnimView");
+  animView.style.display = "block";
+  const fromEl = document.getElementById("timeSkipBgFrom");
+  const toEl = document.getElementById("timeSkipBgTo");
+  const clockEl = document.getElementById("timeSkipClockDisplay");
+  fromEl.style.opacity = "1";
+  fromEl.style.backgroundImage = `url('${BG_SETS.town[state.timeOfDay]}')`;
+  toEl.style.opacity = "0";
+  const updateClockDisplay = () => {
+    clockEl.textContent = `${TIME_PHASE_LABEL[state.timeOfDay]} ${formatClockTime(state.clockMinutes)}`;
+  };
+  updateClockDisplay();
+  // 60分刻みに分解し、端数(30分)があれば最後に1ステップ追加する。1ステップ=1秒
+  const steps = [];
+  let remaining = totalMin;
+  while (remaining > 0) {
+    const step = Math.min(60, remaining);
+    steps.push(step);
+    remaining -= step;
+  }
+  function runStep(i) {
+    if (i >= steps.length) {
+      tickCriticalExpiry(state.roster, absoluteGameMinutes());
+      pruneActiveParty();
+      saveState();
+      document.getElementById("timeSkipOverlay").style.display = "none";
+      renderTown();
+      return;
+    }
+    const beforePhase = state.timeOfDay;
+    advanceExplorationClock(steps[i]);
+    updateClockDisplay();
+    if (state.timeOfDay !== beforePhase) {
+      crossfadeBg(fromEl, toEl, BG_SETS.town[state.timeOfDay], 1000, () => runStep(i + 1));
+    } else {
+      setTimeout(() => runStep(i + 1), 1000);
+    }
+  }
+  runStep(0);
 }
 
 // 冒険から町に帰る直前に挟むリザルト画面: 今回の冒険で稼いだゴールドと、キャラごとに得た経験値を
@@ -2488,6 +2606,7 @@ document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown();
 const DEPARTURE_BG_HOLD_MS = 1500;
 const DEPARTURE_WALK_MS = 1250;
 const DEPARTURE_FADEOUT_MS = 750;
+const DEPARTURE_FADEOUT_DELAY_MS = 800; // ズーム開始から暗転フェードアウトが始まるまでの間(ユーザー指示で0.8秒遅らせた)
 const DEPARTURE_FADEIN_MS = 500;
 const DEPARTURE_BLACK_HOLD_MS = 1500;
 document.getElementById("departBtn").onclick = () => {
@@ -2507,29 +2626,30 @@ document.getElementById("departBtn").onclick = () => {
     playSfx("footstep");
     const overlay = document.getElementById("moveTransitionBlack");
     overlay.style.display = "block";
-    // 揺れ/ズームの歩行アニメーションと暗転フェードアウトを同時に開始する(以前は歩行アニメーションが
-    // 終わってから暗転を始めていたため、暗転中は画面が完全に静止して見えていた。歩行の方が暗転より
-    // 長い時間続くので、これで暗転しきるまでずっと揺れ続けるようになる)
+    // 揺れ/ズームの歩行アニメーションはすぐ始めるが、暗転フェードアウトの開始だけ0.8秒遅らせる
+    // (ユーザー指示で、ズームだけ先に見せてから暗転に入るよう間を空けた)
     const walkAnim = heroInner.animate(buildWalkKeyframes(), { duration: DEPARTURE_WALK_MS, easing: "ease-in-out", fill: "forwards" });
-    const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
-    fadeOut.onfinish = () => {
-      fadeOut.cancel();
-      overlay.style.opacity = "1";
-      walkAnim.cancel();
-      heroInner.style.transform = "";
-      setTimeout(() => {
-        enterDungeon();
-        departBtnEl.disabled = false;
-        bodyPad.style.display = "";
-        heroTitle.style.display = "";
-        const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
-        fadeIn.onfinish = () => {
-          fadeIn.cancel();
-          overlay.style.opacity = "0";
-          overlay.style.display = "none";
-        };
-      }, DEPARTURE_BLACK_HOLD_MS);
-    };
+    setTimeout(() => {
+      const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
+      fadeOut.onfinish = () => {
+        fadeOut.cancel();
+        overlay.style.opacity = "1";
+        walkAnim.cancel();
+        heroInner.style.transform = "";
+        setTimeout(() => {
+          enterDungeon();
+          departBtnEl.disabled = false;
+          bodyPad.style.display = "";
+          heroTitle.style.display = "";
+          const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DEPARTURE_FADEIN_MS, easing: "ease", fill: "forwards" });
+          fadeIn.onfinish = () => {
+            fadeIn.cancel();
+            overlay.style.opacity = "0";
+            overlay.style.display = "none";
+          };
+        }, DEPARTURE_BLACK_HOLD_MS);
+      };
+    }, DEPARTURE_FADEOUT_DELAY_MS);
   }, DEPARTURE_BG_HOLD_MS);
 };
 
