@@ -882,6 +882,7 @@ function maybeShootDown(actor, target) {
   if (!canTriggerShootDown(actor) || !target.isFlying) return false;
   if (Math.random() >= SHOOT_DOWN_CHANCE) return false;
   target.isFlying = false;
+  applyStun(target, 1); // 撃ち落とした敵は1ターンだけ地に落ちて怯む(スタン)
   return true;
 }
 // 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)。

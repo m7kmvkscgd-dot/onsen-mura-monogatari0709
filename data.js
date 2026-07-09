@@ -25,7 +25,7 @@ const CLASS_DESC = {
   ninja: "抜群の素早さで先手を取り、奇襲で一撃を狙う俊敏な戦士。",
   spearman: "高いHPと防御力を誇り、「かばう」で仲間を守る守護者。",
   naginata: "薙ぎ払いで敵全体を攻撃できる範囲特化の武人。",
-  hunter: "抜群の命中率と会心の一矢で急所を突く弓使い。",
+  hunter: "抜群の命中率と会心の一矢で急所を突く弓使い。飛んでいる敵を撃ち落とすのも得意。",
   gunner: "圧倒的な火力の砲撃を放つが、撃った次のターンは装填で動けなくなる。",
   onmyoji: "呪符ノ術(単体)・大祓ノ術(全体)を操る魔法職。打たれ弱いが火力は高い。",
   priest: "治癒の術で仲間のHPを回復する支援役。",
@@ -381,8 +381,9 @@ const ABILITY_DESC = {
 };
 
 // key: id, ja, image, hp, atk, def, spd, goldMin, goldMax, xp, minFloor, maxFloor, isBoss
-// isFlying: true = 明らかに空を飛んでいる敵(HP/攻撃力を通常比-10%した代わりに、近接攻撃の命中率が
-// 25%下がる。狩人/砲術士が命中させると80%で撃ち落として解除できる。詳細はengine.js側のrollHit/maybeShootDown参照)
+// isFlying: true = 明らかに空を飛んでいる敵(素のステータスは変更なし)。近接攻撃の命中率が25%下がる。
+// 狩人/砲術士が命中させると80%で撃ち落として解除でき、成功時は1ターンのスタンも追加で付与する
+// (詳細はengine.js側のrollHit/maybeShootDown参照)
 // 序盤(Lv1-10)/中盤(Lv11-25)/後半(Lv26-40)/終盤(Lv41-50〜)の4段階、計40種。
 // 後半のがしゃどくろ・九尾の狐は中ボス、終盤の鬼神・羅刹王が最終ボス(いずれもisBoss:trueで
 // pickEncounterForFloor()により10の倍数フロアで単体ボス戦として優先的に選ばれる)
@@ -407,7 +408,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
   bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
-  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 11, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
     // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
     // 必ず全体を巻き込む(ignoreGuardian)。その代わり単体特化の大技より威力は抑えめ、通常攻撃も
     // 全体攻撃力を20%落とした代わりに、通常攻撃自体にも延焼(30%)を持たせてある
@@ -430,10 +431,10 @@ const ENEMIES = {
 
   // ---- 後半(Lv26-40 / floor 24-45)、うち2体は中ボス ----
   oni: { id: "oni", ja: "鬼", image: "assets/enemies/oni.png", hp: 58, atk: 18, def: 9, spd: 9, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45 },
-  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 43, atk: 15, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45, isFlying: true },
+  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45, isFlying: true },
   yamauba2: { id: "yamauba2", ja: "山姥", image: "assets/enemies/yamauba2.png", hp: 56, atk: 16, def: 9, spd: 8, goldMin: 23, goldMax: 35, xp: 41, minFloor: 24, maxFloor: 45 },
   gyuki: { id: "gyuki", ja: "牛鬼", image: "assets/enemies/gyuki.png", hp: 70, atk: 19, def: 11, spd: 7, goldMin: 28, goldMax: 40, xp: 46, minFloor: 24, maxFloor: 45 },
-  nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 47, atk: 16, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45, isFlying: true },
+  nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 52, atk: 18, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45, isFlying: true },
   wanyudo: { id: "wanyudo", ja: "輪入道", image: "assets/enemies/wanyudo.png", hp: 50, atk: 17, def: 8, spd: 13, goldMin: 25, goldMax: 37, xp: 43, minFloor: 24, maxFloor: 45 },
   gaikotsu_musha: { id: "gaikotsu_musha", ja: "骸骨武者", image: "assets/enemies/gaikotsu_musha.png", hp: 54, atk: 18, def: 10, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45 },
   orochi: { id: "orochi", ja: "大蛇", image: "assets/enemies/orochi.png", hp: 62, atk: 18, def: 10, spd: 9, goldMin: 27, goldMax: 39, xp: 45, minFloor: 24, maxFloor: 45 },
@@ -457,7 +458,7 @@ const ENEMIES = {
   // onHitInflict: 通常攻撃が命中するたび(大技を含まない毎ターンの攻撃)に確率で毒を蓄積させる。
   // かばう/挑発でタンク役が群れの攻撃を全て一身に受けると、複数体分の蓄積が重なって毒がすぐ危険域に達する
   // (槍士の「かばう」に対する天敵として設計。かばわず散らして受ければ1体あたりの蓄積は少ない)
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 5, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true, isFlying: true,
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true, isFlying: true,
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
   chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 8, atk: 2, def: 1, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 13, atk: 5, def: 2, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 9, maxFloor: 29, isSwarm: true },
@@ -489,7 +490,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.1 } }, // しなやかな体で攻め立てる
   harifugu: { id: "harifugu", ja: "ハリフグ", image: "assets/enemies/harifugu.png", stage: "coast", hp: 15, atk: 6, def: 2, spd: 5, goldMin: 8, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.5 } }, // 膨らんで針だらけの体で突進
-  umineko: { id: "umineko", ja: "ウミネコ", image: "assets/enemies/umineko.png", stage: "coast", hp: 12, atk: 5, def: 1, spd: 10, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
+  umineko: { id: "umineko", ja: "ウミネコ", image: "assets/enemies/umineko.png", stage: "coast", hp: 13, atk: 5, def: 1, spd: 10, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 高速で急降下し、くちばしでつつく
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----

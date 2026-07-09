@@ -1514,20 +1514,22 @@ const BGM_TRACKS = {
   town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
   dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ戦闘で流れる専用BGM
-  // 海岸ステージ: 探索用のcoast/coast_night(昼夜2曲)を戦闘中もそのまま流し続ける(ユーザー指示)。
-  // coast_battle_bgm.mp3は未使用だが将来また使う可能性があるので残してある
+  // 海岸ステージ: 森と同じ構造(探索用coast/coast_night、戦闘専用coast_battle)。
+  // 戦闘開始でplayBattleBgm()がcoast_battleに切り替え、戦闘終了でstopBattleBgm()が探索用BGMに戻す
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
 };
-// 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸はcoast/coast_nightの2曲)
+// 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸はcoast/coast_nightの2曲)。戦闘終了時にstopBattleBgm()からも呼ばれる
 function playExplorationAreaBgm() {
   if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
 }
-// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲。海岸は切り替えず、探索用BGMをそのまま流し続ける
+// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)
 function playBattleBgm() {
-  // 海岸は戦闘に入っても切り替えず、探索用BGM(coast/coast_night)をそのまま流し続ける(ユーザー指示)
-  if (currentStage === "coast") return;
+  if (currentStage === "coast") {
+    playBgm("coast_battle");
+    return;
+  }
   playBgm(state.timeOfDay === "night" ? "dungeon_night" : "dungeon");
 }
 const bgmAudio = document.getElementById("bgmAudio");
@@ -1590,8 +1592,9 @@ function playBgm(key) {
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
 const BATTLE_BGM_FADE_OUT_MS = 3000;
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle") return;
   const key = currentBgmKey;
+  const wasCoastBattle = key === "coast_battle";
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
   function fadeStep() {
@@ -1604,6 +1607,7 @@ function stopBattleBgm() {
       bgmAudio.pause();
       bgmAudio.volume = BGM_BASE_VOLUME;
       if (currentBgmKey === key) currentBgmKey = null;
+      if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
   }
   fadeStep();
@@ -3379,8 +3383,8 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
-  // 森は探索中「虫の声」アンビエントだけを流す(戦闘専用BGMはstartBattleでのみ開始)。
-  // 海岸は専用の探索用BGM(coast/coast_night)を流し、戦闘に入っても切り替えずそのまま流し続ける
+  // 森は探索中「虫の声」アンビエントだけを流す。海岸は専用の探索用BGM(coast/coast_night)を流す。
+  // どちらも戦闘専用BGM(森:dungeon系/海岸:coast_battle)はstartBattleでのみ開始し、stopBattleBgmで探索用に戻る
   if (currentStage === "coast") {
     stopAmbientBgm();
     playExplorationAreaBgm();
@@ -4474,9 +4478,7 @@ function startBattle(enemies, pathDef) {
   battleLogLines = [];
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
-  playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。夜は専用曲)
-  // 海岸は探索用BGMを止めずに継続する設計。画面遷移の瞬間に一時停止してしまっていないか、ここでも念のため確認する
-  if (currentStage === "coast") playExplorationAreaBgm();
+  playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。森は夜だけ専用曲、海岸はcoast_battle)
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
   // 暗い道の奇襲: 一定確率で敵全員の素早さを1ターン目だけ引き上げ、先手を取られやすくする
   if (pathDef && pathDef.ambushChance && Math.random() < pathDef.ambushChance) {
@@ -4591,10 +4593,6 @@ function aliveEnemies() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
-  // 海岸は戦闘中も探索用BGMを流し続ける設計のため、万が一一時停止してしまっていても自己修復できるよう
-  // 戦闘中の描画のたびに再アサートしておく。playBgm()は同じ曲なら実質何もしない
-  // (一時停止していた場合だけ再開する)ので、毎ターン呼んでも無害
-  if (currentStage === "coast") playExplorationAreaBgm();
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -4608,11 +4606,11 @@ function renderBattleScreen() {
     card.dataset.id = e.instanceId;
     card.innerHTML = `
       <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
-      <img src="${e.image}" alt="${e.label}">
-      <div style="display:flex;align-items:center;gap:3px;">
-        <div style="flex:1;">${hpBarHtml(e)}</div>
-        ${e.isFlying ? '<span title="飛行中(近接攻撃が当たりにくい)" style="font-size:0.75rem;line-height:1;">🪽</span>' : ""}
+      <div style="position:relative;">
+        <img src="${e.image}" alt="${e.label}">
+        ${e.isFlying ? '<span title="飛行中(近接攻撃が当たりにくい)" style="position:absolute;top:2px;left:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🪽</span>' : ""}
       </div>
+      ${hpBarHtml(e)}
     `;
     if (targetable) {
       card.onclick = () => {
