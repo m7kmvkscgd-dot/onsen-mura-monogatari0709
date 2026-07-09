@@ -74,7 +74,7 @@ function createCharacter(name, classId, classUpgrades) {
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
     carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
-    bleed: 0, // 裂傷の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する。裂傷中は攻撃力-10%
+    bleed: 0, // 出血の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する。出血中は攻撃力-10%
     burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
     stunTurns: 0, // スタン(行動不能)の残りターン数
     stunResistTurns: 0, // スタンを受けた直後の一定ターン、スタン確率が大幅に下がる(連続スタンロック防止)
@@ -217,7 +217,7 @@ function effectiveStat(entity, key) {
   // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
   if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
   if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
-  // 裂傷: 出血中は常時攻撃力-10%(敵/味方どちらにも適用)
+  // 出血中は常時攻撃力-10%(敵/味方どちらにも適用)
   if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
   // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
   if (entity.statMods && entity.statMods.length) {
@@ -303,8 +303,8 @@ function applyBurn(entity, turns) {
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
 }
 const BLEED_MAX_STACKS = 5; // 毒(6)よりわずかに低い上限。海岸ステージの敵向け新DOT
-// 裂傷: 毒と全く同じ蓄積減衰式のDOTだが、技側の付与量を毒より低めに設定する運用にしてあり
-// (毒を与える技より裂傷を与える技の方が数値が小さくなりがち)、代わりに裂傷中は常時攻撃力-10%が乗る(effectiveStat側)
+// 出血: 毒と全く同じ蓄積減衰式のDOTだが、技側の付与量を毒より低めに設定する運用にしてあり
+// (毒を与える技より出血を与える技の方が数値が小さくなりがち)、代わりに出血中は常時攻撃力-10%が乗る(effectiveStat側)
 function applyBleed(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
   entity.bleed = Math.min(BLEED_MAX_STACKS, Math.max(entity.bleed || 0, stacks));
@@ -313,11 +313,11 @@ function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
   const dmg = Math.min(entity.hp, entity.bleed);
   entity.hp = Math.max(0, entity.hp - entity.bleed);
-  log(`${entity.label}は裂傷で${dmg}ダメージ！`);
+  log(`${entity.label}は出血で${dmg}ダメージ！`);
   entity.bleed = Math.max(0, entity.bleed - 1);
   return dmg;
 }
-// 戦闘終了時(勝利/逃走)に、生き残った味方の毒/炎上/裂傷を自動的に治す。戦闘のたびに持ち越される
+// 戦闘終了時(勝利/逃走)に、生き残った味方の毒/炎上/出血を自動的に治す。戦闘のたびに持ち越される
 // 鬱陶しさをなくすための措置(スタン等の他の状態異常はターン制でその場で切れるため対象外)
 function clearDotEffects(characters) {
   characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; c.bleed = 0; });
@@ -676,8 +676,9 @@ function useTreeSkill(actor, target, skill, log) {
   if (action.selfReload) actor.reloading = true;
   // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
   const targets = action.aoe ? target : [target];
+  const skillRange = skillRangeType(actor, skill);
   const results = targets.map((t) => {
-    if (!action.guaranteedHit && !rollHit(actor, t)) {
+    if (!action.guaranteedHit && !rollHit(actor, t, skillRange)) {
       log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
       return { hit: false, dmg: 0 };
     }
@@ -703,7 +704,8 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "spdDown") applyStatMod(t, "spd", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
       if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
     }
-    return { hit: true, dmg };
+    const shotDown = maybeShootDown(actor, t);
+    return { hit: true, dmg, shotDown };
   });
   return { dmgs: results };
 }
@@ -851,45 +853,82 @@ function accuracyOf(entity, target) {
   }
   return Math.min(0.99, base + addTotal);
 }
+// 近接/遠距離攻撃の判定。侍・忍者・槍士・薙刀士・僧侶・陰陽師の通常攻撃は近接、狩人・砲術士の
+// 通常攻撃/スキルと陰陽師の魔法(呪符ノ術等)は遠距離。個別スキルにrangeTypeがあれば最優先で従う
+// (忍者のスタン手裏剣など、クラスの既定と逆になる例外用)
+const RANGED_NORMAL_ATTACK_CLASSES = new Set(["hunter", "gunner"]);
+const RANGED_TREE_SKILL_CLASSES = new Set(["hunter", "gunner", "onmyoji"]);
+const ABILITY_RANGE_TYPE = {
+  magicAttack: "ranged", magicAttackAll: "ranged", // 陰陽師の魔法
+  critAttack: "melee", powerAttack: "melee", physicalAttackAll: "melee", // 侍/忍者/薙刀士
+  preciseShot: "ranged", cannonShot: "ranged", // 狩人/砲術士
+};
+function normalAttackRangeType(actor) {
+  return RANGED_NORMAL_ATTACK_CLASSES.has(actor.classId) ? "ranged" : "melee";
+}
+function skillRangeType(actor, skill) {
+  if (skill.rangeType) return skill.rangeType;
+  return RANGED_TREE_SKILL_CLASSES.has(actor.classId) ? "ranged" : "melee";
+}
+// 飛行(🪽)の敵に対しては近接攻撃の命中率が下がる(遠距離攻撃は影響なし)
+const FLYING_MELEE_ACCURACY_PENALTY = 0.25;
+const FLYING_MIN_HIT_CHANCE = 0.10; // 通常のMIN_HIT_CHANCEより低い専用の下限(飛行を狙い撃ちする近接が機能しなくなりすぎないよう最低限だけ確保)
+// 狩人/砲術士が飛行の敵に攻撃を命中させた時、この確率で「撃ち落とす」(以後isFlyingが解除され近接も当てやすくなる)
+const SHOOT_DOWN_CHANCE = 0.8;
+function canTriggerShootDown(actor) {
+  return actor.classId === "hunter" || actor.classId === "gunner";
+}
+function maybeShootDown(actor, target) {
+  if (!canTriggerShootDown(actor) || !target.isFlying) return false;
+  if (Math.random() >= SHOOT_DOWN_CHANCE) return false;
+  target.isFlying = false;
+  return true;
+}
 // 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)。
 // スキルツリーの「完全回避」系受動(見切り・分身など)は、この命中率とは別枠の追加判定として先に効く
-function rollHit(actor, target) {
+function rollHit(actor, target, rangeType) {
   let dodge = (target.passives && target.passives.dodgeChance) || 0;
   if (target.statMods) target.statMods.forEach((m) => { if (m.stat === "dodgeChance") dodge += m.mult; });
   if (dodge > 0 && Math.random() < dodge) return false;
-  const chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor, target) - evasionChance(target)));
+  let chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor, target) - evasionChance(target)));
+  if (rangeType === "melee" && target.isFlying) chance = Math.max(FLYING_MIN_HIT_CHANCE, chance - FLYING_MELEE_ACCURACY_PENALTY);
   return Math.random() < chance;
 }
 
-// ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す
-function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate) {
-  if (!rollHit(actor, target)) {
+// ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す。rangeTypeは"melee"/"ranged"(飛行の敵への
+// 命中率補正・撃ち落としの判定に使う)。shotDown: 狩人/砲術士が飛行の敵に命中させた時、確率で🪽を解除する
+function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType) {
+  if (!rollHit(actor, target, rangeType)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
     return { hit: false, dmg: null };
   }
   const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate);
-  return { hit: true, dmg };
+  const shotDown = maybeShootDown(actor, target);
+  return { hit: true, dmg, shotDown };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
-function rollAoeAttack(actor, targets, rollFn, log) {
+function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
   const hits = [];
   const dmgs = [];
+  const shotDowns = [];
   targets.filter((t) => t.hp > 0).forEach((t) => {
-    if (!rollHit(actor, t)) {
+    if (!rollHit(actor, t, rangeType)) {
       log(`${t.label}は${actor.label}の攻撃をかわした！`);
       hits.push(false);
       dmgs.push(null);
+      shotDowns.push(false);
       return;
     }
     const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
     hits.push(true);
     dmgs.push(dmg);
+    shotDowns.push(maybeShootDown(actor, t));
   });
-  return { hits, dmgs };
+  return { hits, dmgs, shotDowns };
 }
 
 function performAttack(actor, target, log) {
-  return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log);
+  return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
 }
 
 // 直近で敵を倒した攻撃者(全滅時のセリフ抽選で「最後に倒した人物」を優先させるために使う)
@@ -1028,27 +1067,27 @@ function useAbility(actor, target, abilityType, log) {
     return { guard: true };
   }
   if (abilityType === "magicAttack") {
-    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log);
+    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack);
   }
   if (abilityType === "magicAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6)), log);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6)), log, ABILITY_RANGE_TYPE.magicAttackAll);
   }
   if (abilityType === "physicalAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
   }
   if (abilityType === "powerAttack") {
-    return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), target.def), log);
+    return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.powerAttack);
   }
   if (abilityType === "critAttack") {
-    return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log);
+    return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.critAttack);
   }
   if (abilityType === "preciseShot") {
     // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+45%を上乗せし、合計50%で急所を突く
-    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.45);
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.45, ABILITY_RANGE_TYPE.preciseShot);
   }
   if (abilityType === "cannonShot") {
     actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる
-    return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log);
+    return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.cannonShot);
   }
   if (abilityType === "heal") {
     const bonusMult = healBonusMultiplier(actor, target, false);
@@ -1160,7 +1199,7 @@ function resolveDebuffEffect(target, type, params, log) {
   if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }
   if (type === "spdDown") { applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params)); log(`${target.label}は素早さが下がった！`); }
   if (type === "poison") { applyPoison(target, params.value || 3); log(`${target.label}は毒を受けた！`); }
-  if (type === "bleed") { applyBleed(target, params.value || 2); log(`${target.label}は裂傷を負った！`); }
+  if (type === "bleed") { applyBleed(target, params.value || 2); log(`${target.label}は出血を負った！`); }
   if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
   if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
   if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }

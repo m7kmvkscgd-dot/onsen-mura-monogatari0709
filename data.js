@@ -381,6 +381,8 @@ const ABILITY_DESC = {
 };
 
 // key: id, ja, image, hp, atk, def, spd, goldMin, goldMax, xp, minFloor, maxFloor, isBoss
+// isFlying: true = 明らかに空を飛んでいる敵(HP/攻撃力を通常比-10%した代わりに、近接攻撃の命中率が
+// 25%下がる。狩人/砲術士が命中させると80%で撃ち落として解除できる。詳細はengine.js側のrollHit/maybeShootDown参照)
 // 序盤(Lv1-10)/中盤(Lv11-25)/後半(Lv26-40)/終盤(Lv41-50〜)の4段階、計40種。
 // 後半のがしゃどくろ・九尾の狐は中ボス、終盤の鬼神・羅刹王が最終ボス(いずれもisBoss:trueで
 // pickEncounterForFloor()により10の倍数フロアで単体ボス戦として優先的に選ばれる)
@@ -392,8 +394,9 @@ const ENEMIES = {
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 群れで足に食らいつき、動きを鈍らせる
   inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 18, atk: 5, def: 3, spd: 4, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.62 } }, // 猪突猛進、ただ単純に高威力
-  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 6, def: 2, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
-    bigAttack: { mult: 0.9, debuff: { type: "poison", chance: 1.0, value: 3 } } }, // 威力は控えめだが必ず毒を注入する
+  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 5, def: 2, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
+    bigAttack: { mult: 0.9, debuff: { type: "poison", chance: 1.0, value: 3 } },
+    onHitInflict: { type: "poison", chance: 0.5, value: 3 } }, // 攻撃力を落とす代わりに、通常攻撃でも高確率で毒を注入する
   oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で絡め取り、高確率で行動を封じる
   kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
@@ -404,7 +407,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
   bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
-  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 11, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
     // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
     // 必ず全体を巻き込む(ignoreGuardian)。その代わり単体特化の大技より威力は抑えめ、通常攻撃も
     // 全体攻撃力を20%落とした代わりに、通常攻撃自体にも延焼(30%)を持たせてある
@@ -427,10 +430,10 @@ const ENEMIES = {
 
   // ---- 後半(Lv26-40 / floor 24-45)、うち2体は中ボス ----
   oni: { id: "oni", ja: "鬼", image: "assets/enemies/oni.png", hp: 58, atk: 18, def: 9, spd: 9, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45 },
-  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45 },
+  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 43, atk: 15, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 24, maxFloor: 45, isFlying: true },
   yamauba2: { id: "yamauba2", ja: "山姥", image: "assets/enemies/yamauba2.png", hp: 56, atk: 16, def: 9, spd: 8, goldMin: 23, goldMax: 35, xp: 41, minFloor: 24, maxFloor: 45 },
   gyuki: { id: "gyuki", ja: "牛鬼", image: "assets/enemies/gyuki.png", hp: 70, atk: 19, def: 11, spd: 7, goldMin: 28, goldMax: 40, xp: 46, minFloor: 24, maxFloor: 45 },
-  nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 52, atk: 18, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45 },
+  nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 47, atk: 16, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45, isFlying: true },
   wanyudo: { id: "wanyudo", ja: "輪入道", image: "assets/enemies/wanyudo.png", hp: 50, atk: 17, def: 8, spd: 13, goldMin: 25, goldMax: 37, xp: 43, minFloor: 24, maxFloor: 45 },
   gaikotsu_musha: { id: "gaikotsu_musha", ja: "骸骨武者", image: "assets/enemies/gaikotsu_musha.png", hp: 54, atk: 18, def: 10, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45 },
   orochi: { id: "orochi", ja: "大蛇", image: "assets/enemies/orochi.png", hp: 62, atk: 18, def: 10, spd: 9, goldMin: 27, goldMax: 39, xp: 45, minFloor: 24, maxFloor: 45 },
@@ -454,7 +457,7 @@ const ENEMIES = {
   // onHitInflict: 通常攻撃が命中するたび(大技を含まない毎ターンの攻撃)に確率で毒を蓄積させる。
   // かばう/挑発でタンク役が群れの攻撃を全て一身に受けると、複数体分の蓄積が重なって毒がすぐ危険域に達する
   // (槍士の「かばう」に対する天敵として設計。かばわず散らして受ければ1体あたりの蓄積は少ない)
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true,
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 5, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true, isFlying: true,
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
   chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 8, atk: 2, def: 1, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true },
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 13, atk: 5, def: 2, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 9, maxFloor: 29, isSwarm: true },
@@ -466,24 +469,27 @@ const ENEMIES = {
 
   // ==== 海岸ステージ(stage:"coast")。森とは別枠のプール(pickEnemyForFloorがstageで絞り込む)。====
   // 甲殻類/貝類は防御力を高めに設計し、森とは違う「硬い敵」の手触りを狙った。
-  // 裂傷(bleed)は牙・刃物・突き技を持つ敵(鮫系・海賊骸骨・磯犬・魚人系)に優先的に持たせてある。
+  // 出血(bleed)は牙・刃物・突き技を持つ敵(鮫系・海賊骸骨・磯犬・魚人系)に優先的に持たせてある。
   // ---- 序盤(Lv1-10 / floor 1-12) ----
   iso_gani: { id: "iso_gani", ja: "磯ガニ", image: "assets/enemies/iso_gani.png", stage: "coast", hp: 14, atk: 4, def: 5, spd: 3, goldMin: 5, goldMax: 10, xp: 8, minFloor: 1, maxFloor: 12,
-    bigAttack: { mult: 1.3, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } } }, // 大きなハサミで挟み、力を奪う
+    bigAttack: { mult: 1.3, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 大きなハサミで挟み、力を奪う。通常攻撃でも挟まれた傷が残る
   yadokari: { id: "yadokari", ja: "ヤドカリ", image: "assets/enemies/yadokari.png", stage: "coast", hp: 16, atk: 4, def: 5, spd: 4, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.2 } }, // 貝殻を盾に体当たり
-  isozakana: { id: "isozakana", ja: "磯魚", image: "assets/enemies/isozakana.png", stage: "coast", hp: 7, atk: 3, def: 1, spd: 8, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true }, // 群れで行動する小魚
+  isozakana: { id: "isozakana", ja: "磯魚", image: "assets/enemies/isozakana.png", stage: "coast", hp: 7, atk: 3, def: 1, spd: 8, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 12, isSwarm: true,
+    bigAttack: { mult: 1.3 } }, // 群れで行動する小魚。bigAttack未設定だと汎用フォールバックでランダムに毒等が乗ってしまうため明示的に設定(飛び跳ねての体当たりのみ、デバフなし)
   kurage_bou: { id: "kurage_bou", ja: "くらげ坊", image: "assets/enemies/kurage_bou.png", stage: "coast", hp: 13, atk: 4, def: 1, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 触手でびりびり痺れさせる
   kaiyose: { id: "kaiyose", ja: "貝寄せ", image: "assets/enemies/kaiyose.png", stage: "coast", hp: 13, atk: 4, def: 5, spd: 3, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
-    bigAttack: { mult: 1.3 } }, // 貝殻を閉じて噛みつく
+    bigAttack: { mult: 1.3 },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 貝殻を閉じて噛みつく。鋭い殻の縁が傷を残す
   hama_tako: { id: "hama_tako", ja: "浜タコ", image: "assets/enemies/hama_tako.png", stage: "coast", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足を絡めて動きを封じる
   kaisou_douji: { id: "kaisou_douji", ja: "海藻童子", image: "assets/enemies/kaisou_douji.png", stage: "coast", hp: 14, atk: 5, def: 2, spd: 9, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.1 } }, // しなやかな体で攻め立てる
   harifugu: { id: "harifugu", ja: "ハリフグ", image: "assets/enemies/harifugu.png", stage: "coast", hp: 15, atk: 6, def: 2, spd: 5, goldMin: 8, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.5 } }, // 膨らんで針だらけの体で突進
-  umineko: { id: "umineko", ja: "ウミネコ", image: "assets/enemies/umineko.png", stage: "coast", hp: 13, atk: 5, def: 1, spd: 10, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
+  umineko: { id: "umineko", ja: "ウミネコ", image: "assets/enemies/umineko.png", stage: "coast", hp: 12, atk: 5, def: 1, spd: 10, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 高速で急降下し、くちばしでつつく
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
@@ -494,7 +500,8 @@ const ENEMIES = {
   oo_dako_1: { id: "oo_dako_1", ja: "大ダコ", image: "assets/enemies/oo_dako_1.png", stage: "coast", hp: 36, atk: 11, def: 5, spd: 6, goldMin: 20, goldMax: 30, xp: 26, minFloor: 9, maxFloor: 29,
     bigAttack: { mult: 1.2, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足で締め上げ、体勢を崩す
   iwa_gani: { id: "iwa_gani", ja: "岩ガニ", image: "assets/enemies/iwa_gani.png", stage: "coast", hp: 30, atk: 11, def: 9, spd: 5, goldMin: 19, goldMax: 29, xp: 24, minFloor: 9, maxFloor: 29,
-    bigAttack: { mult: 1.4 } }, // 岩の隙間から大きなハサミで挟み込む
+    bigAttack: { mult: 1.4 },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 岩の隙間から大きなハサミで挟み込む
   gyojin: { id: "gyojin", ja: "魚人", image: "assets/enemies/gyojin.png", stage: "coast", hp: 29, atk: 13, def: 5, spd: 9, goldMin: 20, goldMax: 31, xp: 26, minFloor: 9, maxFloor: 29,
     bigAttack: { mult: 1.1, debuff: { type: "bleed", chance: 0.45, value: 2 } } }, // 三叉槍の刺突が深い傷を残す
   shell_slime: { id: "shell_slime", ja: "シェルスライム", image: "assets/enemies/shell_slime.png", stage: "coast", hp: 32, atk: 10, def: 8, spd: 4, goldMin: 19, goldMax: 29, xp: 25, minFloor: 9, maxFloor: 29,
@@ -506,7 +513,8 @@ const ENEMIES = {
   iso_onna_1: { id: "iso_onna_1", ja: "磯女", image: "assets/enemies/iso_onna_1.png", stage: "coast", hp: 25, atk: 13, def: 4, spd: 8, goldMin: 20, goldMax: 31, xp: 26, minFloor: 9, maxFloor: 29,
     bigAttack: { mult: 1.1, debuff: { type: "spdDown", chance: 0.5, value: 0.25, turns: 3 } } }, // 伸びる髪で絡めとる
   oo_kai: { id: "oo_kai", ja: "大貝", image: "assets/enemies/oo_kai.png", stage: "coast", hp: 34, atk: 11, def: 9, spd: 3, goldMin: 20, goldMax: 30, xp: 25, minFloor: 9, maxFloor: 29,
-    bigAttack: { mult: 1.4 } }, // 貝殻を閉じて押しつぶす
+    bigAttack: { mult: 1.4 },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 貝殻を閉じて押しつぶす。鋭い殻の縁が傷を残す
 
   // ---- 後半(Lv26-40 / floor 24-45)、大蟹王は中ボス ----
   umibouzu: { id: "umibouzu", ja: "海坊主", image: "assets/enemies/umibouzu.png", stage: "coast", hp: 60, atk: 18, def: 9, spd: 6, goldMin: 25, goldMax: 37, xp: 43, minFloor: 24, maxFloor: 45,
@@ -529,7 +537,8 @@ const ENEMIES = {
   shinkai_no_bourei: { id: "shinkai_no_bourei", ja: "深海の亡霊", image: "assets/enemies/shinkai_no_bourei.png", stage: "coast", hp: 46, atk: 20, def: 6, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 24, maxFloor: 45,
     onHitInflict: { type: "poison", chance: 0.4, value: 3 } }, // 怨念の呪いが継続的に蝕む
   oo_kani_ou: { id: "oo_kani_ou", ja: "大蟹王", image: "assets/enemies/oo_kani_ou.png", stage: "coast", hp: 165, atk: 25, def: 16, spd: 7, goldMin: 90, goldMax: 130, xp: 150, minFloor: 26, maxFloor: 999, isBoss: true,
-    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 海岸の王、大鋏が鎧ごと粉砕する
+    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.2, turns: 3 } },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 海岸の王、大鋏が鎧ごと粉砕する
 
   // ---- 終盤(Lv41-50 / floor 38〜)、海妖女王が最終ボス ----
   kaima_daiou: { id: "kaima_daiou", ja: "海魔大王", image: "assets/enemies/kaima_daiou.png", stage: "coast", hp: 95, atk: 29, def: 12, spd: 8, goldMin: 48, goldMax: 68, xp: 86, minFloor: 38, maxFloor: 999,
@@ -542,9 +551,11 @@ const ENEMIES = {
     bigAttack: { mult: 0.6, ignoreGuardian: true, debuff: { type: "poison", chance: 0.7, value: 3 } },
     onHitInflict: { type: "poison", chance: 0.3, value: 2 } }, // 針を飛ばして毒をばら撒く、巨大化したハリフグ
   oo_kani_shougun: { id: "oo_kani_shougun", ja: "大蟹将軍", image: "assets/enemies/oo_kani_shougun.png", stage: "coast", hp: 100, atk: 28, def: 15, spd: 6, goldMin: 48, goldMax: 68, xp: 86, minFloor: 38, maxFloor: 999,
-    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.25, turns: 3 } } }, // 海岸を支配する巨蟹の将、大鋏で叩き潰す
+    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.25, turns: 3 } },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 海岸を支配する巨蟹の将、大鋏で叩き潰す
   kairyuu_ou: { id: "kairyuu_ou", ja: "海龍王", image: "assets/enemies/kairyuu_ou.png", stage: "coast", hp: 110, atk: 30, def: 13, spd: 10, goldMin: 50, goldMax: 70, xp: 90, minFloor: 38, maxFloor: 999,
-    bigAttack: { mult: 1.3, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 潮を操り、雷撃を放つ海の統べ手
+    bigAttack: { mult: 1.3, debuff: { type: "stun", chance: 0.4, turns: 1 } },
+    onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 潮を操り、雷撃を放つ海の統べ手。牙も鋭い
   same_no_bujin: { id: "same_no_bujin", ja: "鮫の武人", image: "assets/enemies/same_no_bujin.png", stage: "coast", hp: 92, atk: 30, def: 10, spd: 13, goldMin: 48, goldMax: 68, xp: 86, minFloor: 38, maxFloor: 999,
     bigAttack: { mult: 1.3, debuff: { type: "bleed", chance: 0.65, value: 2 } },
     onHitInflict: { type: "bleed", chance: 0.3, value: 1 } }, // 鎧を纏った人魚の戦士、鋭い歯と槍で敵を貫く
@@ -635,7 +646,7 @@ const SKILL_TREES = {
     },
     3: {
       left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
-      right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, rangeType: "ranged", action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     4: {
       left: { name: "俊足", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },

@@ -759,7 +759,6 @@
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
 
       <div id="partySelectTabBar" style="display:flex;gap:0.5rem;margin-bottom:0.8rem;">
-        <button class="big" id="partySelectMainTabBtn" style="flex:1;">支度</button>
         <button class="big" id="partySelectOmikujiTabBtn" style="flex:1;display:none;">⛩️おみくじ</button>
       </div>
 
@@ -828,7 +827,7 @@
           <div class="roster-sub" id="omikujiResultLine" style="margin-top:0.5rem;font-style:italic;"></div>
         </div>
         <button class="big primary" id="omikujiDrawBtn" style="margin-top:0.8rem;">おみくじを引く</button>
-        <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">町に戻る</button>
+        <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">戻る</button>
       </div>
     </div>
   </div>
@@ -1190,7 +1189,7 @@ function defaultState() {
 
 const HOUSE_MAX_LEVEL = 9; // レベル9で名簿上限10人に達し、それ以上は増築できない
 function houseUpgradeCost(level) {
-  return level === 1 ? 100 : 250; // レベル1→2は100G、以降(2→3以降)は一律250G
+  return level === 1 ? 90 : 250; // レベル1→2は90G、以降(2→3以降)は一律250G
 }
 function rosterCapacity() {
   return Math.min(10, (state.houseLevel || 1) + 1);
@@ -1515,9 +1514,8 @@ const BGM_TRACKS = {
   town_night: "assets/bgm/town_night_bgm.mp3", // 夜(night)の時間帯だけ町で流れる専用BGM
   dungeon: "assets/bgm/dungeon_bgm.mp3",
   dungeon_night: "assets/bgm/dungeon_night_bgm.mp3", // 夜(night)の時間帯だけ戦闘で流れる専用BGM
-  // 海岸ステージ: 森と同じ構造に統一。coast/coast_nightは探索専用(昼夜2曲)、coast_battleは戦闘専用の1曲
-  // (以前は探索/戦闘を通して同じ曲を流し続ける設計だったが、戦闘開始時に無音のまま戻らなくなる
-  // 不具合が解消しなかったため、実績のある森と同じ「戦闘は毎回playBattleBgmで確実に頭から鳴らす」方式に変更した)
+  // 海岸ステージ: 探索用のcoast/coast_night(昼夜2曲)を戦闘中もそのまま流し続ける(ユーザー指示)。
+  // coast_battle_bgm.mp3は未使用だが将来また使う可能性があるので残してある
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
@@ -1526,12 +1524,10 @@ const BGM_TRACKS = {
 function playExplorationAreaBgm() {
   if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
 }
-// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸は探索と別のcoast_battle専用曲(昼夜共通)
+// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲。海岸は切り替えず、探索用BGMをそのまま流し続ける
 function playBattleBgm() {
-  if (currentStage === "coast") {
-    playBgm("coast_battle");
-    return;
-  }
+  // 海岸は戦闘に入っても切り替えず、探索用BGM(coast/coast_night)をそのまま流し続ける(ユーザー指示)
+  if (currentStage === "coast") return;
   playBgm(state.timeOfDay === "night" ? "dungeon_night" : "dungeon");
 }
 const bgmAudio = document.getElementById("bgmAudio");
@@ -1588,13 +1584,13 @@ function playBgm(key) {
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 }
 
-// 戦闘終了時: 戦闘専用BGM(森はdungeon/dungeon_night、海岸はcoast_battle)をフェードアウトして止める。
-// 探索中に流れ続ける虫の声アンビエント/海岸の探索用BGMは別要素・別キーなのでここでは一切触らない。
+// 戦闘終了時: 森の戦闘専用BGM(dungeon/dungeon_night)をフェードアウトして止める。海岸は戦闘中も
+// 探索用BGMを切り替えず流し続ける設計のため、ここでは一切触らない(currentBgmKeyがcoast系なら即return)。
 // 毎回の戦闘開始時に必ず曲の頭から鳴らしたいので、フェード完了時に再生位置を0にリセットしてから
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
 const BATTLE_BGM_FADE_OUT_MS = 3000;
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night") return;
   const key = currentBgmKey;
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
@@ -1633,10 +1629,9 @@ function stopAmbientBgm() {
   ambientBgmAudio.pause();
   currentAmbientKey = null;
 }
-// 海岸ステージの探索用BGM(coast/coast_night)を止める。里に帰る時に明示的に呼ぶ保険
-// (通常は戦闘用のcoast_battleに切り替わっている間はstopBattleBgm()側が既に処理済みのはず)
+// 海岸ステージの探索用BGM(coast/coast_night、戦闘中も継続して流れている)を止める。里に帰る時に呼ぶ
 function stopCoastAreaBgm() {
-  if (currentBgmKey !== "coast" && currentBgmKey !== "coast_night" && currentBgmKey !== "coast_battle") return;
+  if (currentBgmKey !== "coast" && currentBgmKey !== "coast_night") return;
   bgmAudio.pause();
   bgmPositions[currentBgmKey] = 0;
   currentBgmKey = null;
@@ -1726,7 +1721,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -2607,14 +2602,13 @@ document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); };
 const LODGE_COST = 10; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
 
 // ============ パーティ編成(出発直前) ============
-// 出発準備画面のタブ切り替え(支度/おみくじ)。神社が未建築の間はおみくじタブ自体を表示しない
+// 出発準備画面のタブ切り替え(支度/おみくじ)。神社が未建築の間はおみくじタブ自体を表示しない。
+// 支度タブへの切り替えボタンは廃止したため、おみくじ画面の「戻る」がshowPartySelectTab("main")を呼ぶ
 function showPartySelectTab(tab) {
   document.getElementById("partySelectMainTab").style.display = tab === "omikuji" ? "none" : "";
   document.getElementById("partySelectOmikujiTab").style.display = tab === "omikuji" ? "" : "none";
-  document.getElementById("partySelectMainTabBtn").className = "big" + (tab === "omikuji" ? "" : " primary");
   document.getElementById("partySelectOmikujiTabBtn").className = "big" + (tab === "omikuji" ? " primary" : "");
 }
-document.getElementById("partySelectMainTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 document.getElementById("partySelectOmikujiTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("omikuji"); renderOmikujiTab(); };
 
 function renderPartySelect() {
@@ -2757,7 +2751,7 @@ document.getElementById("buyBombBtn").onclick = () => {
 
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
-document.getElementById("partySelectBackBtnFromOmikuji").onclick = () => { renderTown(); };
+document.getElementById("partySelectBackBtnFromOmikuji").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 
 // おみくじの結果ごとの表示ラベル(現在有効な御利益の説明用)
 const OMIKUJI_EFFECT_LABEL = {
@@ -3385,8 +3379,8 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("criticalAlert").innerHTML = "";
   document.getElementById("dungeonLog").style.display = "";
-  // 森は探索中「虫の声」アンビエントだけを流す。海岸は専用の探索用BGM(coast/coast_night)を流す。
-  // どちらも戦闘専用BGM(dungeon系/coast_battle)はstartBattleでのみ別途開始する
+  // 森は探索中「虫の声」アンビエントだけを流す(戦闘専用BGMはstartBattleでのみ開始)。
+  // 海岸は専用の探索用BGM(coast/coast_night)を流し、戦闘に入っても切り替えずそのまま流し続ける
   if (currentStage === "coast") {
     stopAmbientBgm();
     playExplorationAreaBgm();
@@ -4254,6 +4248,16 @@ function popupOn(targetId, text, cls, intensity) {
   entity.__popupAt = Date.now();
   renderVfxFor(targetId);
 }
+// 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
+// 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出して1秒間だけ次のonDoneを遅らせる
+const SHOOT_DOWN_PAUSE_MS = 1000;
+function triggerShootDownEvents(shotDownTargets, onDone) {
+  if (!shotDownTargets || shotDownTargets.length === 0) { onDone(); return; }
+  shotDownTargets.forEach((t) => blog(`${t.label}を撃ち落とした！`));
+  playSfx("shoot_down");
+  renderBattleScreen(); // 🪽解除後の見た目(HPバー横のマーク消失)をすぐ反映する
+  setTimeout(onDone, SHOOT_DOWN_PAUSE_MS);
+}
 // entityの現在のカードDOM要素に、保存済みのポップアップ/揺れ状態を反映する
 // (renderPartyBar/敵カード生成の直後に呼ぶことで、その場で作られたばかりのカードにも即座に反映する)
 // 同じキャラのカードは#dungeonPartyBar/#battlePartyBar/#campPartyBarなど複数の画面(.screen)に
@@ -4437,6 +4441,7 @@ function statusIconsFor(entity) {
   let s = "";
   if (entity.poison > 0) s += ` 🦠${entity.poison}`;
   if (entity.burnTurns > 0) s += ` 🔥${entity.burnTurns}`;
+  if (entity.bleed > 0) s += ` 🩸${entity.bleed}`;
   if (entity.stunTurns > 0) s += " 💫";
   if (entity.silenceTurns > 0) s += " 🔇";
   if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += " 🕸️";
@@ -4470,6 +4475,8 @@ function startBattle(enemies, pathDef) {
   document.getElementById("battleLog").innerHTML = "";
   showScreen("screen-battle");
   playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。夜は専用曲)
+  // 海岸は探索用BGMを止めずに継続する設計。画面遷移の瞬間に一時停止してしまっていないか、ここでも念のため確認する
+  if (currentStage === "coast") playExplorationAreaBgm();
   blog(enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`);
   // 暗い道の奇襲: 一定確率で敵全員の素早さを1ターン目だけ引き上げ、先手を取られやすくする
   if (pathDef && pathDef.ambushChance && Math.random() < pathDef.ambushChance) {
@@ -4584,9 +4591,10 @@ function aliveEnemies() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
-  // 海岸の戦闘BGM(coast_battle)が万が一一時停止してしまっていても自己修復できるよう、戦闘中の描画のたびに再アサートしておく。
-  // playBgm()は同じ曲なら実質何もしない(一時停止していた場合だけ再開する)ので、毎ターン呼んでも無害
-  if (currentStage === "coast") playBattleBgm();
+  // 海岸は戦闘中も探索用BGMを流し続ける設計のため、万が一一時停止してしまっていても自己修復できるよう
+  // 戦闘中の描画のたびに再アサートしておく。playBgm()は同じ曲なら実質何もしない
+  // (一時停止していた場合だけ再開する)ので、毎ターン呼んでも無害
+  if (currentStage === "coast") playExplorationAreaBgm();
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -4601,7 +4609,10 @@ function renderBattleScreen() {
     card.innerHTML = `
       <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
       <img src="${e.image}" alt="${e.label}">
-      ${hpBarHtml(e)}
+      <div style="display:flex;align-items:center;gap:3px;">
+        <div style="flex:1;">${hpBarHtml(e)}</div>
+        ${e.isFlying ? '<span title="飛行中(近接攻撃が当たりにくい)" style="font-size:0.75rem;line-height:1;">🪽</span>' : ""}
+      </div>
     `;
     if (targetable) {
       card.onclick = () => {
@@ -4902,19 +4913,24 @@ function runTreeSkill(actor, skill) {
     playSfx(attackSfxFor(actor.classId));
     const targetsList = aliveEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
+    const shotDownTargets = [];
     if (result && result.dmgs) {
       let anyEvaded = false;
       let anyHit = false;
       targetsList.forEach((t, i) => {
         const r = result.dmgs[i];
-        if (r && r.hit) { popupOn(t.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); anyHit = true; }
+        if (r && r.hit) {
+          popupOn(t.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+          anyHit = true;
+          if (r.shotDown) shotDownTargets.push(t);
+        }
         else anyEvaded = true;
       });
       if (anyEvaded) playSfx("evade");
       if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
     }
     renderBattleScreen();
-    finishPlayerAction();
+    triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
     return;
   }
   pickSingleEnemyTarget((target) => {
@@ -4924,7 +4940,7 @@ function runTreeSkill(actor, skill) {
     if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
     else if (r) playSfx("evade");
     renderBattleScreen();
-    finishPlayerAction();
+    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
   });
 }
 
@@ -5006,7 +5022,7 @@ function renderActionButtons(actor) {
         }
         else playSfx("evade");
         renderBattleScreen();
-        finishPlayerAction();
+        triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
       });
     };
     grid.appendChild(atkBtn);
@@ -5031,18 +5047,23 @@ function renderActionButtons(actor) {
           playSfx(attackSfxFor(actor.classId));
           const targetsList = aliveEnemies();
           const result = useAbility(actor, targetsList, ability, blog);
+          const shotDownTargets = [];
           if (result && result.hits) {
             let anyEvaded = false;
             let anyHit = false;
             targetsList.forEach((t, i) => {
-              if (result.hits[i]) { popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true)); anyHit = true; }
+              if (result.hits[i]) {
+                popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
+                anyHit = true;
+                if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
+              }
               else anyEvaded = true;
             });
             if (anyEvaded) playSfx("evade");
             if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
           }
           renderBattleScreen();
-          finishPlayerAction();
+          triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
           return;
         }
         // 単体系(会心の一撃/奇襲/呪符ノ術など)
@@ -5052,7 +5073,7 @@ function renderActionButtons(actor) {
           if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
           else if (result && !result.failed) playSfx("evade");
           renderBattleScreen();
-          finishPlayerAction();
+          triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
         });
       };
       grid.appendChild(abBtn);
