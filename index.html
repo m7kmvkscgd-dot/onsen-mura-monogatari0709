@@ -758,6 +758,12 @@
     <div class="body-pad">
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
 
+      <div id="partySelectTabBar" style="display:flex;gap:0.5rem;margin-bottom:0.8rem;">
+        <button class="big" id="partySelectMainTabBtn" style="flex:1;">支度</button>
+        <button class="big" id="partySelectOmikujiTabBtn" style="flex:1;display:none;">⛩️おみくじ</button>
+      </div>
+
+      <div id="partySelectMainTab">
       <h2>支援物資 <span id="suppliesCount"></span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">合計で最大<span id="suppliesCapLabel"></span>個まで持っていけます。</p>
       <p class="gold" id="suppliesGold">0G</p>
@@ -807,6 +813,22 @@
       <div id="partySelectList"></div>
       <button class="big primary" id="departBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
+      </div>
+
+      <div id="partySelectOmikujiTab" style="display:none;">
+        <h2>⛩️おみくじ</h2>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">1日1回引けます。結果は次の遠征にだけ効きます。</p>
+        <div class="card" id="omikujiCurrentEffectCard" style="display:none;">
+          <div class="roster-sub">現在の御利益: <span id="omikujiCurrentEffectText"></span></div>
+        </div>
+        <div class="card" id="omikujiResultCard" style="display:none;">
+          <div class="roster-name" id="omikujiResultTier"></div>
+          <div class="roster-sub" id="omikujiResultEffect" style="margin-top:0.3rem;"></div>
+          <div class="roster-sub" id="omikujiResultLine" style="margin-top:0.5rem;font-style:italic;"></div>
+        </div>
+        <button class="big primary" id="omikujiDrawBtn" style="margin-top:0.8rem;">おみくじを引く</button>
+        <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">町に戻る</button>
+      </div>
     </div>
   </div>
 
@@ -926,8 +948,12 @@
       <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🥋道場</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">道場を建てると、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
       <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
+
+      <h2 style="margin-top:1.2rem;">🎎からくり屋敷</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">忍が雇えるようになります。また、戦闘中に煙玉で仲間の炎上を消す「消火」が使えるようになります。</p>
+      <button class="big primary" id="karakuriBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🧳鞄屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">支援物資の所持上限が1つ増えます。</p>
@@ -942,7 +968,7 @@
       <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">⛩️神社</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">僧侶が雇えるようになります。また、出発準備画面でおみくじを引けるようになります(1日1回)。</p>
       <button class="big primary" id="shrineBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">♨️湯守屋</h2>
@@ -950,7 +976,7 @@
       <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">💣火薬庫</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">砲術士が雇えるようになります。また、出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
       <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🍡茶屋</h2>
@@ -1147,11 +1173,17 @@ function defaultState() {
     teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。効果は未定(建物のみ)
     hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。効果は未定(建物のみ)
     beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
-    shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
-    gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル6で解禁)。出発画面で爆弾を購入できるようになる
+    shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル5で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
+    gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル6で解禁)。砲術士が雇えるようになり、出発画面で爆弾を購入できるようになる
+    karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。家レベル4で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
     onsenEggDailyCount: 0, // 温泉の売店で本日買った温泉卵の数(1日2個まで、翌朝リセット)
     onsenEggDailyDate: 1, // 上記カウントが対応しているdayCount(値が変わったらリセットする)
+    omikujiDrawnDate: 0, // 最後におみくじを引いたdayCount(0=未使用。1日1回、dayCountが変わるとまた引ける)
+    omikujiLastTier: null, // 最後に引いたおみくじの結果(daikichi/chukichi/kichi/shokichi/kyou)。表示用
+    omikujiLastLine: "", // 最後に引いた時に仲間が喋った一言(表示用)
+    omikujiEffect: null, // 次の遠征に適用される効果(daikichi/chukichi/kichi/shokichi、kyouはnullのまま)。遠征終了時にクリアする
+    omikujiFirstStrikePending: false, // 小吉: 次の遠征の最初の戦闘だけ先制確定にする(1戦闘使ったら消費)
   };
 }
 
@@ -1195,13 +1227,16 @@ const TEA_HOUSE_COST = 250;
 // 湯守屋: 効果は未定(建物のみ、未実装)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 6;
 const HOT_SPRING_KEEPER_COST = 200;
-// 火薬庫: 建築すると出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
+// 火薬庫: 建築すると砲術士が雇えるようになり、出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
 const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 6;
 const GUNPOWDER_STORE_COST = 200;
+// からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
+const KARAKURI_UNLOCK_HOUSE_LEVEL = 4;
+const KARAKURI_COST = 150;
 // 養蜂場: 効果は未定(建物のみ、未実装)
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 8;
 const BEE_FARM_COST = 300;
-// 神社: 効果は未定(建物のみ、未実装)
+// 神社: 建築すると僧侶が雇えるようになり、出発画面でおみくじを引けるようになる
 const SHRINE_UNLOCK_HOUSE_LEVEL = 5;
 const SHRINE_COST = 200;
 
@@ -1316,9 +1351,15 @@ function loadState() {
       if (loaded.beeFarmLevel == null) loaded.beeFarmLevel = 0; // 旧セーブ用の初期値(養蜂場未建築)
       if (loaded.shrineLevel == null) loaded.shrineLevel = 0; // 旧セーブ用の初期値(神社未建築)
       if (loaded.gunpowderStoreLevel == null) loaded.gunpowderStoreLevel = 0; // 旧セーブ用の初期値(火薬庫未建築)
+      if (loaded.karakuriLevel == null) loaded.karakuriLevel = 0; // 旧セーブ用の初期値(からくり屋敷未建築)
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
+      if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)
+      if (loaded.omikujiLastTier === undefined) loaded.omikujiLastTier = null;
+      if (loaded.omikujiLastLine == null) loaded.omikujiLastLine = "";
+      if (loaded.omikujiEffect === undefined) loaded.omikujiEffect = null;
+      if (loaded.omikujiFirstStrikePending == null) loaded.omikujiFirstStrikePending = false;
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
       delete loaded.worldStep;
       if (loaded.inventory) {
@@ -1896,6 +1937,19 @@ function renderResultScreen(onContinue) {
   document.getElementById("resultContinueBtn").onclick = () => { onContinue(); };
   showScreen("screen-result");
 }
+// 職業の初期解放/建築解放の仕分け。侍・槍士・狩人・陰陽師は最初から雇える。
+// 残り4職業はそれぞれ対応する建物を建てるまで、宿屋の雇用画面にも最初の1人選び画面にも出てこない
+const CLASS_UNLOCK_BUILDING = {
+  ninja: "karakuriLevel",
+  naginata: "dojoLevel",
+  gunner: "gunpowderStoreLevel",
+  priest: "shrineLevel",
+};
+function isClassUnlocked(classId) {
+  const stateKey = CLASS_UNLOCK_BUILDING[classId];
+  if (!stateKey) return true;
+  return (state[stateKey] || 0) > 0;
+}
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
 document.getElementById("toOnsenBtn").onclick = () => { playSfx("select"); renderOnsen(); showScreen("screen-onsen"); };
@@ -1911,7 +1965,7 @@ function renderClassGrid() {
   grid.innerHTML = "";
   const descArea = document.getElementById("classDescArea");
   descArea.textContent = CLASS_DESC[selectedClass] || "";
-  Object.keys(CLASSES).forEach((classId) => {
+  Object.keys(CLASSES).filter(isClassUnlocked).forEach((classId) => {
     const c = CLASSES[classId];
     const div = document.createElement("div");
     div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
@@ -2434,7 +2488,7 @@ function renderFirstCharacterScreen() {
   showConfirmModal("職業を選びましょう。", [{ label: "はじめる", className: "big primary" }]);
   const list = document.getElementById("firstCharacterList");
   list.innerHTML = "";
-  Object.keys(CLASSES).forEach((classId) => {
+  Object.keys(CLASSES).filter(isClassUnlocked).forEach((classId) => {
     const c2 = CLASSES[classId];
     const card = document.createElement("div");
     card.className = "first-char-card";
@@ -2501,11 +2555,24 @@ document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); };
 const LODGE_COST = 10; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
 
 // ============ パーティ編成(出発直前) ============
+// 出発準備画面のタブ切り替え(支度/おみくじ)。神社が未建築の間はおみくじタブ自体を表示しない
+function showPartySelectTab(tab) {
+  document.getElementById("partySelectMainTab").style.display = tab === "omikuji" ? "none" : "";
+  document.getElementById("partySelectOmikujiTab").style.display = tab === "omikuji" ? "" : "none";
+  document.getElementById("partySelectMainTabBtn").className = "big" + (tab === "omikuji" ? "" : " primary");
+  document.getElementById("partySelectOmikujiTabBtn").className = "big" + (tab === "omikuji" ? " primary" : "");
+}
+document.getElementById("partySelectMainTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
+document.getElementById("partySelectOmikujiTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("omikuji"); renderOmikujiTab(); };
+
 function renderPartySelect() {
   playTownAreaBgm();
   updateSceneBackgrounds();
   pruneActiveParty();
   renderSupplies();
+  document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  showPartySelectTab("main");
+  renderOmikujiTab();
   const list = document.getElementById("partySelectList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -2638,6 +2705,65 @@ document.getElementById("buyBombBtn").onclick = () => {
 
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
+document.getElementById("partySelectBackBtnFromOmikuji").onclick = () => { renderTown(); };
+
+// おみくじの結果ごとの表示ラベル(現在有効な御利益の説明用)
+const OMIKUJI_EFFECT_LABEL = {
+  daikichi: "大吉(瀕死の一撃をパーティ全員で一度だけHP1に耐える)",
+  chukichi: "中吉(不穏な道が一切出ない)",
+  kichi: "吉(神隠しの道の出現率アップ)",
+  shokichi: "小吉(最初の戦闘だけ先制確定)",
+};
+function renderOmikujiTab() {
+  const canDraw = (state.omikujiDrawnDate || 0) !== state.dayCount;
+  const effectCard = document.getElementById("omikujiCurrentEffectCard");
+  if (state.omikujiEffect && OMIKUJI_EFFECT_LABEL[state.omikujiEffect]) {
+    effectCard.style.display = "";
+    document.getElementById("omikujiCurrentEffectText").textContent = OMIKUJI_EFFECT_LABEL[state.omikujiEffect];
+  } else {
+    effectCard.style.display = "none";
+  }
+  const resultCard = document.getElementById("omikujiResultCard");
+  if (state.omikujiLastTier && (state.omikujiDrawnDate || 0) === state.dayCount) {
+    resultCard.style.display = "";
+    const tier = OMIKUJI_TIERS[state.omikujiLastTier];
+    document.getElementById("omikujiResultTier").textContent = tier ? tier.label : "";
+    document.getElementById("omikujiResultEffect").textContent = tier ? tier.effectDesc : "";
+    document.getElementById("omikujiResultLine").textContent = state.omikujiLastLine || "";
+  } else {
+    resultCard.style.display = "none";
+  }
+  const btn = document.getElementById("omikujiDrawBtn");
+  btn.textContent = canDraw ? "おみくじを引く" : "本日は引き終わりました";
+  btn.disabled = !canDraw;
+}
+function drawOmikuji() {
+  if ((state.omikujiDrawnDate || 0) === state.dayCount) return;
+  const keys = Object.keys(OMIKUJI_TIERS);
+  const total = keys.reduce((s, k) => s + OMIKUJI_TIERS[k].weight, 0);
+  let r = Math.random() * total;
+  let tierKey = keys[keys.length - 1];
+  for (const k of keys) { r -= OMIKUJI_TIERS[k].weight; if (r <= 0) { tierKey = k; break; } }
+  state.omikujiDrawnDate = state.dayCount;
+  state.omikujiLastTier = tierKey;
+  state.omikujiEffect = tierKey === "kyou" ? null : tierKey;
+  const speaker = pickRandomActiveRosterChar();
+  let line = "";
+  if (speaker && OMIKUJI_LINES[tierKey] && OMIKUJI_LINES[tierKey][speaker.personality]) {
+    const lines = OMIKUJI_LINES[tierKey][speaker.personality];
+    line = `${speaker.name}「${lines[Math.floor(Math.random() * lines.length)]}」`;
+  }
+  state.omikujiLastLine = line;
+  saveState();
+  playSfx("select");
+  renderOmikujiTab();
+}
+function pickRandomActiveRosterChar() {
+  const alive = state.roster.filter((c) => c.status === "active");
+  if (alive.length === 0) return null;
+  return alive[Math.floor(Math.random() * alive.length)];
+}
+document.getElementById("omikujiDrawBtn").onclick = () => drawOmikuji();
 // 出発時の演出: 専用効果音を再生→パーティ編成画面のタブ(支援物資/パーティ編成)と見出しを
 // すべて隠して門イラストの背景だけを1.5秒見せる→探索中の「進む」と同じ歩行アニメーション
 // (buildWalkKeyframes、背景だけscale/translateY、足音効果音つき)を1.25秒かけて→
@@ -2816,6 +2942,7 @@ function renderExtension() {
   if (!state.beeFarmLevel && nextLevel === BEE_FARM_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("養蜂場");
   if (!state.shrineLevel && nextLevel === SHRINE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("神社");
   if (!state.gunpowderStoreLevel && nextLevel === GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("火薬庫");
+  if (!state.karakuriLevel && nextLevel === KARAKURI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("からくり屋敷");
   const nextUnlockEl = document.getElementById("extensionNextUnlock");
   nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
     ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
@@ -2843,6 +2970,7 @@ function renderExtension() {
   renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level);
   renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level);
   renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level);
+  renderSimpleBuilding("karakuriLevel", "karakuriBuildBtn", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST, level);
   renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level);
   renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level);
   renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level);
@@ -2908,6 +3036,7 @@ document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBu
 document.getElementById("beeFarmBuildBtn").onclick = () => buildSimpleBuilding("beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST);
 document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
 document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
+document.getElementById("karakuriBuildBtn").onclick = () => buildSimpleBuilding("karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
 document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
@@ -3015,6 +3144,28 @@ function pruneActiveParty() {
   }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
 }
 
+// おみくじの効果を、遠征開始のタイミングでfieldPartyに実際に反映する。
+// 大吉(sharedSurviveFatal)は前回の遠征の残り物が残っていないよう毎回クリアしてから、
+// 今回omikujiEffectがdaikichiの時だけ全員に同じ参照オブジェクトを配り直す(1回だけ効く共有の命綱)
+function applyOmikujiExpeditionStart() {
+  fieldParty.forEach((c) => {
+    if (c.passives) c.passives.sharedSurviveFatal = null;
+  });
+  if (state.omikujiEffect === "daikichi") {
+    const guard = { used: false };
+    fieldParty.forEach((c) => {
+      c.passives = c.passives || {};
+      c.passives.sharedSurviveFatal = guard;
+    });
+  }
+  state.omikujiFirstStrikePending = state.omikujiEffect === "shokichi";
+}
+// 遠征が終わった(里に帰った/全滅した)タイミングで、次の遠征専用だったおみくじ効果を消費し終える
+function clearOmikujiExpeditionEffect() {
+  state.omikujiEffect = null;
+  state.omikujiFirstStrikePending = false;
+}
+
 function enterDungeon() {
   currentFloor = 1;
   retreating = false;
@@ -3022,6 +3173,7 @@ function enterDungeon() {
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
   fieldParty.forEach((c) => applyOnsenHpBuffOnDeparture(c)); // 温泉バフ「ぽかぽか」(最大HP+7%)をこの遠征分だけ加算する
+  applyOmikujiExpeditionStart();
   advGoldEarned = 0;
   advXpGained = {};
   advLevelBefore = {};
@@ -3524,6 +3676,7 @@ function finishRetreat() {
   retreating = false;
   deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
+  clearOmikujiExpeditionEffect();
   dlog("里に戻った。");
   toggleTimeOfDay();
   // 里に帰るたびに町の曲を続きからではなく最初から再生する。時間帯によってtown/town_dawn/town_nightの
@@ -3622,6 +3775,22 @@ function pickPathChoiceCount() {
   const r = Math.random();
   return r < 0.15 ? 1 : (r < 0.85 ? 2 : 3);
 }
+// おみくじの効果を進路の重みに反映する。中吉なら不穏な道を候補から除外し、
+// 吉なら神隠しの道の重みを大きく引き上げる。それ以外はそのまま(元のオブジェクトは書き換えない)
+const OMIKUJI_KAMIKAKUSHI_BOOST_WEIGHT = 8;
+function omikujiAdjustedWeights(baseWeights) {
+  if (state.omikujiEffect === "chukichi" && baseWeights.fuon !== undefined) {
+    const w = Object.assign({}, baseWeights);
+    delete w.fuon;
+    return w;
+  }
+  if (state.omikujiEffect === "kichi" && baseWeights.kamikakushi !== undefined) {
+    const w = Object.assign({}, baseWeights);
+    w.kamikakushi = OMIKUJI_KAMIKAKUSHI_BOOST_WEIGHT;
+    return w;
+  }
+  return baseWeights;
+}
 // 重み付き抽選(重複あり)で1つキーを選ぶ
 function weightedPickPathKey(weights) {
   const keys = Object.keys(weights);
@@ -3640,7 +3809,7 @@ function showPathChoice(onChosen) {
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
   const count = pickPathChoiceCount();
-  const weights = count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS;
+  const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
   const picked = [];
   for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
   document.body.classList.add("path-choice-active");
@@ -4191,7 +4360,13 @@ function startBattle(enemies, pathDef) {
     const alive = fieldParty.filter((c) => c.status === "active");
     if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "battleStart");
   }
-  nextRound();
+  // おみくじ「小吉」: 次の遠征の最初の戦闘だけ先制確定。この戦闘で使い切る(2戦目以降には持ち越さない)
+  const forceFirstStrike = state.omikujiFirstStrikePending;
+  if (forceFirstStrike) {
+    state.omikujiFirstStrikePending = false;
+    blog("おみくじの御利益で先手を取った！");
+  }
+  nextRound(forceFirstStrike);
 }
 
 let battleLogLines = [];
@@ -4328,7 +4503,7 @@ function handleNoOneLeftToFight() {
   else defeat();
 }
 
-function nextRound() {
+function nextRound(forceFirstStrike) {
   // このラウンド中に「逃走準備」に入った仲間は、次のラウンドが始まる前にまとめて実際に逃げ出す。
   // 以前は本人の次の手番(=次のラウンドの自分の順番)まで待ってから逃げていたため、運が悪いと
   // 敵の攻撃をラウンドを跨いで2回受けてから逃げる、ということが起きていた。ラウンドの節目で
@@ -4344,6 +4519,12 @@ function nextRound() {
   if (aliveEnemies().length === 0) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
   battle.order = turnOrder([...alive, ...aliveEnemies()]);
+  // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
+  if (forceFirstStrike) {
+    const allies = battle.order.filter((e) => e.instanceId === undefined);
+    const foes = battle.order.filter((e) => e.instanceId !== undefined);
+    battle.order = [...allies, ...foes];
+  }
   battle.orderIndex = 0;
   processNext();
 }
@@ -4782,9 +4963,9 @@ function renderActionButtons(actor) {
   itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
 
-  // 消火: 味方に炎上中の仲間が1人でもいる時だけ表示。煙玉を1個消費して使い、パーティ全員の炎上を治す。
-  // 温泉卵と同様にターンを消費しない(誤タップ防止のため使用前に確認を挟む)
-  if (fieldParty.some((c) => c.burnTurns > 0) && (state.inventory.smokeBomb || 0) > 0) {
+  // 消火: からくり屋敷を建てるまでは使えない。味方に炎上中の仲間が1人でもいる時だけ表示。
+  // 煙玉を1個消費して使い、パーティ全員の炎上を治す。温泉卵と同様にターンを消費しない(誤タップ防止のため使用前に確認を挟む)
+  if ((state.karakuriLevel || 0) > 0 && fieldParty.some((c) => c.burnTurns > 0) && (state.inventory.smokeBomb || 0) > 0) {
     const extinguishBtn = document.createElement("button");
     extinguishBtn.className = "big";
     extinguishBtn.textContent = `消火(${state.inventory.smokeBomb || 0})`;
@@ -5232,6 +5413,7 @@ function defeat() {
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
+  clearOmikujiExpeditionEffect();
   blog("パーティは全滅した...瀕死の仲間を深淵の森に残し、町に戻った。別の仲間で助けに向かおう。");
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {

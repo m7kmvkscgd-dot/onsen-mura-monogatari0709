@@ -942,7 +942,14 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     return 0;
   }
   const lethal = target.hp - dmg <= 0;
-  if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
+  // おみくじ「大吉」: パーティ全員で共有する1回だけの致命傷耐え(同じオブジェクト参照を
+  // 全員のpassivesに配っておくことで、誰が最初に致命傷を受けても消費は1回だけになる)
+  if (lethal && target.passives && target.passives.sharedSurviveFatal && !target.passives.sharedSurviveFatal.used) {
+    target.passives.sharedSurviveFatal.used = true;
+    target.hp = 1;
+    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(`${target.label}はお守りの力で致命傷をこらえた！`);
+  } else if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
     target.hp = 1;
     log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
