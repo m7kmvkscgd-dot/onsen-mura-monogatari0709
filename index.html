@@ -168,7 +168,7 @@
   /* 町画面はボタン4つだけで縦にスクロールする必要が無いため、パネルを外して
      背景がそのまま透けて見える固定配置にする(ボタン自体は不透明のまま) */
   #screen-town .body-pad {
-    position: fixed; bottom: calc(300px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; bottom: calc(288px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 1;
     background: transparent; border-radius: 0; margin-top: 0; top: auto;
     padding: 0 1rem; flex: none;
@@ -182,14 +182,15 @@
   }
   #screen-town .btn-col button.big {
     width: 150px; white-space: nowrap; padding: 0.9rem 0.5rem;
+    font-weight: 700;
   }
   /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
      .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
-  .btn-icon { display: inline-flex; align-items: center; vertical-align: -3px; margin-right: 0.6em; }
+  .btn-icon { display: inline-flex; align-items: center; flex-shrink: 0; vertical-align: -3px; margin-right: 12px; }
   .btn-icon svg { width: 16px; height: 16px; }
   /* 町の施設アイコン(支給された和風イラストPNG)。文字より一回り大きく、影を薄く落として
      背景美術に馴染みつつも存在感を持たせる */
-  .btn-icon img { height: 21px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  .btn-icon img { height: 32px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
   /* ボタンの質感: 「和風の木札」。木目テクスチャ画像は使わず、上部を薄く明るく・下部を薄く暗くする
      グラデーション(--dw-btn-sheen)を色ベースの背景に重ねるだけで立体感を出す。焦げ茶の枠線+内側の
      ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
@@ -531,7 +532,10 @@
   .town-gold-badge {
     display: inline-block; font-size: 1.1rem;
     text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+    background: rgba(0,0,0,.35); padding: 0.2rem 10px; border-radius: var(--radius-sm);
   }
+  /* 日付/時刻の行は画面左端に寄りすぎていたため、施設アイコンの列と縦のラインを合わせる程度に右へ寄せる */
+  #screen-town .hero-title-row { margin-left: 16px; }
   .floor-badge { text-align: left; padding: 122px 0.6rem 0.6rem; }
   /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
   .floor-badge span {
