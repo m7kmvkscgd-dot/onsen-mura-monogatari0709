@@ -14,13 +14,27 @@
     /* 角丸のスケール。サムネイル画像/バッジ/カード/大枠の5段階に集約し、4/5/6/8/10/11/12/16/18pxが
        近似値のまま混在していた状態を整理した */
     --radius-xs: 6px; --radius-sm: 8px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+
+    /* ============ 和風UIデザインシステム(2026-07-10 全面統一) ============
+       ユーザー指定のデザインルール一式をトークン化。「和風・高級感・情報量は多いがスッキリ」を
+       基準に、色/余白/カード/ボタン/文字/アニメーション速度をこのファイル全体で共有する */
+    --dw-gold: #d7b66f; --dw-success: #6ea95b; --dw-danger: #c95d54; --dw-info: #7b93b9; --dw-desc: #9d998e;
+    --dw-card-bg: #2f3540; --dw-card-border: #5d4d35; --dw-card-shadow: 0 6px 18px rgba(0,0,0,.28);
+    --dw-btn-bg: #7b5d36; --dw-btn-hover: #937148;
+    --dw-title-color: #f3e7c6; --dw-heading-color: #ead8ab; --dw-body-color: #ece8dc; --dw-caption-color: #b6b0a2;
+    /* 画面共通余白 */
+    --dw-space-side: 16px; --dw-space-vert: 14px; --dw-space-card-gap: 12px; --dw-space-section: 20px;
+    /* ヘッダー */
+    --dw-header-h: 56px;
+    /* アニメーション速度(ボタン/カード展開/画面切替/ハンコ/ダメージ/会心/敵出現) */
+    --dw-t-btn: 100ms; --dw-t-card: 180ms; --dw-t-screen: 220ms; --dw-t-stamp: 350ms; --dw-t-dmg: 180ms; --dw-t-crit: 250ms; --dw-t-enemy: 250ms;
   }
   * { box-sizing: border-box; }
   html, body {
     touch-action: manipulation; /* ボタン連打時にダブルタップとみなされて画面がズームされるのを防ぐ */
   }
   body {
-    background: var(--bg); color: var(--text);
+    background: var(--bg); color: var(--dw-body-color);
     font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
     margin: 0; padding: 0; line-height: 1.5;
   }
@@ -29,7 +43,7 @@
   /* 画面切り替え時にふわっとフェードインさせる。opacityのみのアニメーションなので
      position:fixedの子要素(.hero/.dungeon-bg/.battle-bg等)の基準位置には一切影響しない
      (transformとは異なりopacityはfixed要素の containing block を作らないため安全) */
-  .screen.active { display: flex; animation: screenFadeIn 0.18s ease-out; }
+  .screen.active { display: flex; animation: screenFadeIn var(--dw-t-screen) ease-out; }
   @keyframes screenFadeIn { from { opacity: 0; } to { opacity: 1; } }
   .hero {
     position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
@@ -49,7 +63,7 @@
      同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
      さらに奥(z-index:-1)に配置する */
   .hero-bg-inner { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; }
-  .hero h1 { font-size: 1.15rem; margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .hero h1 { font-size: 22px; font-weight: 700; color: var(--dw-title-color); margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
   .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
   .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
@@ -100,21 +114,29 @@
     width: 150px; white-space: nowrap; padding: 0.9rem 0.5rem;
   }
   button.big {
-    padding: 0.9rem; border-radius: var(--radius-md); border: 1px solid var(--border);
-    background: var(--surface); color: var(--text); font-size: 0.95rem; font-weight: 700; cursor: pointer;
-    transition: transform 0.08s ease-out, filter 0.08s ease-out;
+    min-height: 48px; padding: 0.5rem 0.9rem; border-radius: 12px; border: none;
+    background: var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out;
+  }
+  @media (hover: hover) {
+    button.big:hover:not(:disabled) { background: var(--dw-btn-hover); }
   }
   /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる)。filterでの明度調整はbutton.big単体でも
      .primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに個別の:active色を
      用意する必要がない(全ボタン共通の1ルールで統一できる) */
-  button.big:active { transform: scale(0.96); filter: brightness(0.88); }
-  button.primary { background: var(--accent); color: #241d0a; border-color: var(--accent); }
-  button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  button.big:active { transform: scale(.97); filter: brightness(.88); }
+  button.primary { background: var(--dw-gold); color: #241d0a; }
+  button.danger { background: var(--dw-danger); color: #fff; }
   /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
      切り替わったことが一目でわかるようにする */
-  button.retreat-active { background: var(--danger); color: #fff; border-color: var(--danger); }
+  button.retreat-active { background: var(--dw-danger); color: #fff; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .card { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.8rem; margin-bottom: 0.7rem; }
+  .card {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
+    box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
+  }
   .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
   .roster-row.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
   .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
@@ -184,8 +206,46 @@
   }
   .roster-row .stress-wrap { display: block; width: 44px; height: 44px; flex-shrink: 0; }
   .party-member .stress-wrap { display: block; width: 100%; }
-  .status-portrait-wrap { position: relative; display: inline-block; width: 96px; height: 96px; }
+  /* ============ ステータス詳細画面(「情報を見る画面」ではなく「眺めたくなる画面」) ============
+     立ち絵を主役にするため96px→132px(約38%増)に拡大し、専用カードで名前直下の余白を整理。
+     ステータス表は罫線を全廃して余白のグルーピングのみで区切る方針にしてある */
+  .status-portrait-wrap { position: relative; display: inline-block; width: 132px; height: 132px; }
   .status-portrait-wrap .stress-overlay { border-radius: var(--radius-sm); }
+  .status-portrait-card { text-align: center; animation: statusPortraitIn 0.2s ease-out; }
+  @keyframes statusPortraitIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .status-portrait-meta { margin-top: 0.6rem; }
+  .status-portrait-class { font-size: 15px; font-weight: 700; color: var(--dw-heading-color); }
+  .status-portrait-personality { font-size: 13px; color: var(--dw-caption-color); margin-top: 0.15rem; }
+  /* カードの登場演出(下から8pxスライド+フェード)。screen.activeのフェードと重ねても違和感が
+     ないよう控えめな移動量にしてある */
+  .status-card-in { animation: statusCardIn var(--dw-t-card) ease-out; }
+  @keyframes statusCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .status-basic-row { display: flex; justify-content: space-between; padding: 0.2rem 0; font-size: 13px; color: var(--dw-caption-color); }
+  .status-basic-row + .status-basic-row { margin-top: 0.1rem; }
+  .status-stat-list { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--dw-card-border); }
+  .status-stat-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0; }
+  .status-stat-icon { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--dw-caption-color); }
+  .status-stat-label { flex: 1; font-size: 15px; color: var(--dw-body-color); }
+  .status-stat-value { font-size: 15px; font-weight: 700; color: var(--dw-body-color); font-variant-numeric: tabular-nums; }
+  .status-stat-row.is-hp .status-stat-icon, .status-stat-row.is-hp .status-stat-value { color: var(--dw-success); }
+  .status-stat-row.is-mp .status-stat-icon, .status-stat-row.is-mp .status-stat-value { color: var(--dw-info); }
+  .status-stat-row.is-stress .status-stat-icon, .status-stat-row.is-stress .status-stat-value { color: var(--dw-danger); }
+  .status-xp-value { color: var(--dw-gold); font-weight: 700; }
+  /* 習得スキル: 未習得(まだ到達していないレベル)は「？？？ Lv◯で習得」のプレースホルダーにして
+     レベルアップの楽しみを持たせる。開けない箱のような見た目にするため文字を薄くしてある */
+  .skill-entry.locked { cursor: default; opacity: 0.55; }
+  .skill-entry.locked:active { transform: none; }
+  .skill-entry-mystery { letter-spacing: 0.15em; }
+  /* ボタンの優先度: スキル系譜(primary)を最も目立たせ、戻るは控えめなゴースト調、解雇は危険色だが
+     小さめ+上に余白を大きく取って誤タップを防ぐ */
+  .status-back-btn-bottom { background: transparent; box-shadow: none; color: var(--dw-caption-color); font-weight: 600; }
+  .status-dismiss-btn {
+    display: block; margin: 1.6rem auto 0; padding: 0.4rem 0.9rem; min-height: auto;
+    background: transparent; border: 1px solid var(--dw-danger); color: var(--dw-danger);
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .status-dismiss-btn:active { transform: scale(.97); filter: brightness(1.3); }
   .roster-name { font-weight: 700; font-size: 0.88rem; }
   .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }
@@ -204,11 +264,16 @@
     width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border);
     background: var(--surface-2); color: var(--text); font-size: 0.9rem;
   }
-  h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--accent); }
-  .shop-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+  h2 { font-size: 18px; font-weight: 700; margin: 0 0 0.5rem; color: var(--dw-heading-color); }
+  .shop-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .shop-item > div:first-child { flex: 1; min-width: 0; }
+  .shop-item button { flex-shrink: 0; }
   .shop-item .desc { font-size: 0.72rem; color: var(--text-muted); }
-  .equip-class-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.7rem; margin-bottom: 0.6rem; }
-  .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .equip-class-card {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
+    box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
+  }
+  .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--dw-heading-color); }
   .equip-class-title img { width: 32px; height: 32px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
   /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
@@ -250,9 +315,22 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(4px); }
   }
-  .equip-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
-  .equip-row .desc { font-size: 0.68rem; color: var(--text-muted); }
+  /* 武器/防具/価格ボタンを一直線に揃える。infoブロックにflex:1+min-width:0を与えて
+     長い説明文があっても価格ボタン側が押し出されない(浮かない)ようにしてある */
+  .equip-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
+  .equip-row-info { flex: 1; min-width: 0; }
+  .equip-row button { flex-shrink: 0; }
+  .equip-row .desc { font-size: 13px; color: var(--dw-caption-color); }
+  /* 出発準備画面: 支援物資/パーティ/出発の3ブロックを視覚的に完全分離するための区切り線 */
+  .dw-divider { border: none; border-top: 1px solid var(--dw-card-border); margin: 16px 0; }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
+  /* 増築(施設一覧): 説明文を折りたたみ化して一覧を25%ほどコンパクトにし、スクロールしやすくする。
+     見出しをタップすると開閉する(スキル系譜のskill-entryと同じ「タップで開く」操作感に揃えた) */
+  .facility-toggle { cursor: pointer; display: flex; align-items: center; }
+  .facility-caret { margin-left: auto; color: var(--dw-caption-color); font-size: 0.8rem; transition: transform var(--dw-t-card) ease-out; flex-shrink: 0; }
+  .facility-toggle.open .facility-caret { transform: rotate(180deg); }
+  .facility-desc { display: none; }
+  .facility-toggle.open + .facility-desc { display: block; }
   .party-bar {
     /* 戦闘画面・探索画面のどちらでも自キャラの表示位置が変わらないよう、同じtop値を共有する。
        transform: translateZ(0)は以前ここに付いていたが、.enemy-row(position:relativeのみで
@@ -295,7 +373,7 @@
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 高さを少し太くし、黒い縁+上側だけ薄いハイライトを加えて立体感/高級感を出す
      (::afterのハイライト帯はfill/trail要素より後のスタッキングで自動的に最前面に来る) */
-  .hpbar-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
+  .hpbar-track { background: #3a3a3a; border-radius: var(--radius-pill); height: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
   .hpbar-track::after {
     content: ""; position: absolute; inset: 0; height: 45%;
     background: linear-gradient(to bottom, rgba(255,255,255,0.24), rgba(255,255,255,0));
@@ -384,7 +462,7 @@
      自然に従来通りの上詰め+overflow-yスクロールへフォールバックするため、両方のケースが両立する */
   #dungeonLog, #battleLog, #campLog {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-md);
-    padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem;
+    padding: 16px 18px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem;
     display: flex; flex-direction: column; justify-content: center;
   }
   #campLog { height: 70px; }
@@ -398,10 +476,10 @@
      影響しないよう#dungeonLog/#battleLogだけ上書きする */
   #dungeonLog, #battleLog {
     position: relative;
-    /* paddingは共通ルールの0.6rem/0.7rem(上下左右)のまま据え置き、display:flexの
+    /* paddingは共通ルールの16px/18px(上下/左右)のまま据え置き、display:flexの
        justify-content:centerで垂直中央寄せする(以前はpadding-topだけ0.95remに増やして
        上詰めのまま強引に体裁を整えていたが、行数によって微妙に中央からずれて見えていた) */
-    height: 78px;
+    height: 84px;
     background-image:
       radial-gradient(circle at top left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
       radial-gradient(circle at top right, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
@@ -614,7 +692,11 @@
   /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
      イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは
      一切変えない(インライン絵文字のspan化のみ) */
-  .status-icon { cursor: help; }
+  /* 状態異常アイコンのサイズ統一。指定値(24px)そのままだと敵1体あたり56px幅の集団戦カード等で
+     アイコン1個が横幅の半分近くを占めてしまい破綻するため、最小サイズのカードでも収まる16pxに
+     している(意図的な調整。長押し説明・6pxの横間隔は指定通り) */
+  .status-icon { cursor: help; font-size: 16px; line-height: 1; display: inline-flex; margin-right: 6px; vertical-align: middle; }
+  .status-icon:last-child { margin-right: 0; }
   #statusTooltip {
     display: none; position: fixed; z-index: 200; max-width: 220px;
     background: rgba(34,34,34,0.92); color: #fff; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm);
@@ -644,10 +726,10 @@
     30% { filter: brightness(2.4); }
   }
   .hit-shake.hit-flash.hit-shake-normal {
-    animation: hitShakeNormal 0.32s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
+    animation: hitShakeNormal 144ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
   }
   .hit-shake.hit-flash.hit-shake-strong {
-    animation: hitShakeStrong 0.48s ease-in-out 0.05s backwards, hitFlash 0.22s ease-out 0.05s backwards;
+    animation: hitShakeStrong 216ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
   }
   /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更)。基準(1倍)の値 */
   @keyframes hitShakeNormal {
@@ -675,17 +757,32 @@
     90% { transform: translate(-1.2px, 0); }
   }
   .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
+  .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
+  @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes enemyLunge {
     0% { transform: translateY(0); }
     35% { transform: translateY(14px); }
     65% { transform: translateY(-3px); }
     100% { transform: translateY(0); }
   }
-  /* 大技の構え中(bigAttackPending)の敵。対象選択中の赤パルスと区別するため橙色にしてある */
-  .enemy-card.charging { border-color: rgba(245,166,35,0.75); box-shadow: 0 0 10px rgba(245,166,35,0.5); animation: chargingPulse 0.9s ease-in-out infinite; }
+  /* 大技の構え中(bigAttackPending)の敵。「赤い鼓動」の指定を受けて色は対象選択中と同じ赤系にしたが、
+     対象選択のtargetPulse(なだらかな単純パルス)とは違い、「ドクン、ドクン」の二拍子(心拍)の
+     揺れ方にすることで、色が同じでも見分けが付くようにしてある */
+  .enemy-card.charging { border-color: rgba(201,93,84,0.8); box-shadow: 0 0 10px rgba(201,93,84,0.55); animation: chargingPulse 1s ease-in-out infinite; }
   @keyframes chargingPulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(245,166,35,0.4); }
-    50% { box-shadow: 0 0 18px rgba(245,166,35,0.9); }
+    0%, 28%, 60%, 100% { box-shadow: 0 0 8px rgba(201,93,84,0.35); }
+    14% { box-shadow: 0 0 22px rgba(201,93,84,0.95); }
+    42% { box-shadow: 0 0 17px rgba(201,93,84,0.8); }
+  }
+  /* HPバーの右横に出す💢アイコン(大技構え中の対象敵だけ)。心拍と合わせて軽く拍動させる */
+  .hp-with-warning { display: flex; align-items: center; gap: 4px; }
+  .hp-with-warning .hpbar-track { flex: 1; }
+  .big-attack-warning-icon { font-size: 0.85rem; line-height: 1; filter: drop-shadow(0 0 3px rgba(201,93,84,0.9)); animation: bigAttackIconBeat 1s ease-in-out infinite; }
+  @keyframes bigAttackIconBeat {
+    0%, 28%, 60%, 100% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    42% { transform: scale(1.15); }
   }
   @keyframes screenWarningFlash {
     0% { opacity: 0; }
@@ -1009,14 +1106,14 @@
       <p class="gold" id="tavernGold">0G</p>
 
       <h2>🏮HPとMPを全回復</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">宿泊したい仲間を選んで下の「宿泊する」を押して下さい。</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">宿泊したい仲間を選んで下の「宿泊する」を押して下さい。</p>
       <div id="rosterList"></div>
       <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;width:100%;">宿泊する</button>
 
       <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
       <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
       <div class="class-grid" id="classGrid"></div>
-      <p id="classDescArea" style="font-size:0.75rem;color:var(--text-muted);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
+      <p id="classDescArea" style="font-size:13px;color:var(--dw-caption-color);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
       <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(50G)</button>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
@@ -1038,7 +1135,7 @@
 
       <div id="partySelectMainTab">
       <h2>支援物資 <span id="suppliesCount"></span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">合計で最大<span id="suppliesCapLabel"></span>個まで持っていけます。</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">合計で最大<span id="suppliesCapLabel"></span>個まで持っていけます。</p>
       <p class="gold" id="suppliesGold">0G</p>
       <div id="ownedSupplyIcons" class="owned-supply-icons"></div>
       <div class="card">
@@ -1058,7 +1155,7 @@
         </div>
       </div>
       <div id="campingKitSection">
-        <p style="font-size:0.75rem;color:var(--text-muted);margin:0.8rem 0 0.5rem;">野営具は最大<span id="campingKitCapLabel"></span>つまで持てます。</p>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0.8rem 0 0.5rem;">野営具は最大<span id="campingKitCapLabel"></span>つまで持てます。</p>
         <div class="card">
           <div class="shop-item">
             <div>
@@ -1081,17 +1178,19 @@
         </div>
       </div>
 
-      <h2 style="margin-top:1rem;">出発メンバーを選ぶ</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで出発パーティに入れる(最大4人)</p>
+      <hr class="dw-divider">
+      <h2>出発メンバーを選ぶ</h2>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">タップで出発パーティに入れる(最大4人)</p>
       <div id="partySelectList"></div>
-      <button class="big primary" id="departForestBtn" style="margin-top:1rem;">深淵の森へ出発する</button>
+      <hr class="dw-divider">
+      <button class="big primary" id="departForestBtn">深淵の森へ出発する</button>
       <button class="big primary" id="departCoastBtn" style="margin-top:0.5rem;">海岸へ出発する</button>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
       </div>
 
       <div id="partySelectOmikujiTab" style="display:none;">
         <h2>⛩️おみくじ</h2>
-        <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">1日1回引けます。結果は次の遠征にだけ効きます。</p>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">1日1回引けます。結果は次の遠征にだけ効きます。</p>
         <div class="card" id="omikujiCurrentEffectCard" style="display:none;">
           <div class="roster-sub">現在の御利益: <span id="omikujiCurrentEffectText"></span></div>
         </div>
@@ -1122,34 +1221,35 @@
       <h1 id="statusName">-</h1>
     </div>
     <div class="body-pad">
-      <button class="big" id="statusBackBtnTop" style="margin-bottom:0.8rem;">戻る</button>
-      <div class="card" style="text-align:center;">
+      <button class="big" id="statusBackBtnTop" style="margin-bottom:var(--dw-space-section);">戻る</button>
+
+      <div class="card status-portrait-card" id="statusPortraitCard" style="margin-bottom:var(--dw-space-section);">
         <div class="status-portrait-wrap">
-          <img id="statusImg" src="" style="width:96px;height:96px;object-fit:cover;object-position:top;border-radius:8px;">
+          <img id="statusImg" src="" style="width:132px;height:132px;object-fit:cover;object-position:top;border-radius:var(--radius-md);">
           <img id="statusStressOverlay" class="stress-overlay" src="" style="display:none;">
         </div>
+        <div class="status-portrait-meta">
+          <div class="status-portrait-class" id="statClass"></div>
+          <div class="status-portrait-personality" id="statPersonality"></div>
+        </div>
       </div>
-      <div class="card">
-        <div class="stat-row"><span>職業</span><span id="statClass"></span></div>
-        <div class="stat-row"><span>性格</span><span id="statPersonality"></span></div>
-        <div class="stat-row"><span>レベル</span><span id="statLevel"></span></div>
-        <div class="stat-row"><span>経験値</span><span id="statXp"></span></div>
-        <div class="stat-row"><span>HP</span><span id="statHp"></span></div>
-        <div class="stat-row"><span>MP</span><span id="statMp"></span></div>
-        <div class="stat-row"><span>攻撃力</span><span id="statAtk"></span></div>
-        <div class="stat-row"><span>防御力</span><span id="statDef"></span></div>
-        <div class="stat-row"><span>素早さ</span><span id="statSpd"></span></div>
-        <div class="stat-row"><span>魔力</span><span id="statMag"></span></div>
-        <div class="stat-row"><span>状態</span><span id="statStatus"></span></div>
+
+      <div class="card" id="statusStatCard" style="margin-bottom:var(--dw-space-section);">
+        <div class="status-basic-row"><span>レベル</span><span id="statLevel"></span></div>
+        <div class="status-basic-row"><span>経験値</span><span id="statXp" class="status-xp-value"></span></div>
+        <div class="status-basic-row"><span>状態</span><span id="statStatus"></span></div>
+        <div class="status-stat-list" id="statStatList"></div>
       </div>
-      <div class="card">
-        <h3 style="margin:0 0 0.4rem;">習得スキル</h3>
-        <p style="font-size:0.7rem;color:var(--text-muted);margin:0 0 0.5rem;">タップで効果を表示</p>
+
+      <div class="card" id="statusSkillCard" style="margin-bottom:var(--dw-space-section);">
+        <h2 style="margin:0 0 0.3rem;">習得スキル</h2>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.6rem;">タップで効果を表示</p>
         <div id="statSkillList"></div>
       </div>
-      <button class="big" id="statusViewSkillTreeBtn" style="margin-bottom:0.8rem;">スキル系譜を見る</button>
-      <button class="big" id="statusBackBtn">戻る</button>
-      <button class="big danger" id="statusDismissBtn" style="margin-top:1.5rem;font-size:0.75rem;padding:0.5rem;">解雇</button>
+
+      <button class="big primary" id="statusViewSkillTreeBtn" style="margin-bottom:0.6rem;">⛩️ スキル系譜を見る</button>
+      <button class="big status-back-btn-bottom" id="statusBackBtn">戻る</button>
+      <button class="status-dismiss-btn" id="statusDismissBtn">解雇</button>
     </div>
   </div>
 
@@ -1179,8 +1279,8 @@
       <button class="big" id="onsenBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <button class="big" id="toOnsenShopBtn" style="margin-bottom:0.8rem;">🛍️売店</button>
       <p class="gold" id="onsenGold">0G</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴でストレスを大きく癒します。</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">入浴中は2時間の間、出発できません。</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">入浴でストレスを大きく癒します。</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">入浴中は2時間の間、出発できません。</p>
       <div id="onsenList"></div>
       <button class="big" id="onsenBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -1216,7 +1316,7 @@
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="extensionGold">0G</p>
       <h2>🏠家</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">待機できる仲間の人数上限が増えます。同時に出発できるのは最大4人です。</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">待機できる仲間の人数上限が増えます。同時に出発できるのは最大4人です。</p>
       <div class="card">
         <div class="roster-name">🏠家レベル <span id="extensionLevel"></span></div>
         <div class="roster-sub" style="margin-top:0.2rem;">仲間上限: <span id="extensionCapacity"></span>人</div>
@@ -1224,61 +1324,61 @@
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏯奉行所<span class="new-badge" id="magistrateNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">依頼を受けられるようになります(町の画面から見られます)。依頼は毎日入れ替わります。</p>
-      <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🏯奉行所<span class="new-badge" id="magistrateNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">依頼を受けられるようになります(町の画面から見られます)。依頼は毎日入れ替わります。</p>
+      <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏕️旅支度屋<span class="new-badge" id="travelPrepShopNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">出発画面で野営具を購入できるようになります。</p>
-      <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🏕️旅支度屋<span class="new-badge" id="travelPrepShopNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">出発画面で野営具を購入できるようになります。</p>
+      <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🥋道場<span class="new-badge" id="dojoNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
-      <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🥋道場<span class="new-badge" id="dojoNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
+      <button class="big primary" id="dojoBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🎎からくり屋敷<span class="new-badge" id="karakuriNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">忍が雇えるようになります。また、戦闘中に煙玉で仲間の炎上を消す「消火」が使えるようになります。</p>
-      <button class="big primary" id="karakuriBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🎎からくり屋敷<span class="new-badge" id="karakuriNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">忍が雇えるようになります。また、戦闘中に煙玉で仲間の炎上を消す「消火」が使えるようになります。</p>
+      <button class="big primary" id="karakuriBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🧳鞄屋<span class="new-badge" id="bagShopNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">支援物資の所持上限が1つ増えます。</p>
-      <button class="big primary" id="bagShopBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🧳鞄屋<span class="new-badge" id="bagShopNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">支援物資の所持上限が1つ増えます。</p>
+      <button class="big primary" id="bagShopBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏹見張り台<span class="new-badge" id="watchtowerNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">村が襲撃された時、狩人・砲術士が援護射撃できるようになります。</p>
-      <button class="big primary" id="watchtowerBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🏹見張り台<span class="new-badge" id="watchtowerNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">村が襲撃された時、狩人・砲術士が援護射撃できるようになります。</p>
+      <button class="big primary" id="watchtowerBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐓鶏小屋<span class="new-badge" id="henHouseNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
-      <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🐓鶏小屋<span class="new-badge" id="henHouseNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+      <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">⛩️神社<span class="new-badge" id="shrineNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">僧侶が雇えるようになります。また、出発準備画面でおみくじを引けるようになります(1日1回)。</p>
-      <button class="big primary" id="shrineBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">⛩️神社<span class="new-badge" id="shrineNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">僧侶が雇えるようになります。また、出発準備画面でおみくじを引けるようになります(1日1回)。</p>
+      <button class="big primary" id="shrineBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">♨️湯守屋<span class="new-badge" id="hotSpringKeeperNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
-      <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">♨️湯守屋<span class="new-badge" id="hotSpringKeeperNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+      <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">💣火薬庫<span class="new-badge" id="gunpowderStoreNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">砲術士が雇えるようになります。また、出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
-      <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">💣火薬庫<span class="new-badge" id="gunpowderStoreNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">砲術士が雇えるようになります。また、出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
+      <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🍡茶屋<span class="new-badge" id="teaHouseNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
-      <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🍡茶屋<span class="new-badge" id="teaHouseNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+      <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐎馬屋<span class="new-badge" id="stableNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">馬を購入すると、出発時の移動速度が上がります。</p>
-      <button class="big primary" id="stableBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🐎馬屋<span class="new-badge" id="stableNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">馬を購入すると、出発時の移動速度が上がります。</p>
+      <button class="big primary" id="stableBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐝養蜂場<span class="new-badge" id="beeFarmNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
-      <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">🐝養蜂場<span class="new-badge" id="beeFarmNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+      <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.6rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">⛴️渡し船<span class="new-badge" id="ferryNewBadge" style="display:none;">NEW</span></h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
-      <button class="big primary" id="ferryBuildBtn" style="margin-top:0.8rem;"></button>
+      <h2 class="facility-toggle" style="margin-top:12px;">⛴️渡し船<span class="new-badge" id="ferryNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
+      <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+      <button class="big primary" id="ferryBuildBtn" style="margin-top:0.6rem;"></button>
 
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -2943,6 +3043,24 @@ function renderTavern() {
 }
 
 // ============ ステータス詳細 ============
+// 和風・シンプルを守るため絵文字ではなく最小限の線画SVGを使う(currentColorで行ごとの色分けを継承する)
+const STATUS_STAT_ICONS = {
+  hp: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 13.5C4 10.8 2 8.7 2 6.2 2 4.4 3.4 3 5.1 3c1 0 2 .5 2.9 1.6C8.9 3.5 9.9 3 10.9 3 12.6 3 14 4.4 14 6.2c0 2.5-2 4.6-6 7.3Z"/></svg>',
+  mp: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 2c2.2 3 4 5.6 4 7.8A4 4 0 0 1 4 9.8C4 7.6 5.8 5 8 2Z"/></svg>',
+  atk: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 12 12 4"/><path d="M9.5 3.2 12.8 6.5"/><path d="M3.3 10.5 5.5 12.7"/></svg>',
+  def: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 2.2 13 4v4.3C13 11.5 10.8 13.2 8 14 5.2 13.2 3 11.5 3 8.3V4Z"/></svg>',
+  spd: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.5 6.5h7a2 2 0 1 0-1.8-2.9"/><path d="M2.5 9.5h9a2 2 0 1 1-1.8 2.9"/></svg>',
+  mag: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8 2v3.2M8 10.8V14M2 8h3.2M10.8 8H14M4.3 4.3l2.2 2.2M9.5 9.5l2.2 2.2M4.3 11.7l2.2-2.2M9.5 6.5l2.2-2.2"/></svg>',
+  stress: '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c1.5-2 2.5 2 4 0s2.5-2 4 0 2.5 2 4 0"/></svg>',
+};
+// カード等の登場アニメーションはCSSのanimationプロパティで書いているが、同じ要素に対して
+// renderStatusScreen()を2回目以降呼んだだけではクラスが既に付いたままなので再生されない。
+// 一度クラスを外してreflowを挟んでから付け直すことで、画面を開き直すたびに毎回再生されるようにする
+function retriggerEntryAnim(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
 function renderStatusScreen(charId) {
   const c = getRosterChar(charId);
   const c2 = CLASSES[c.classId];
@@ -2957,35 +3075,66 @@ function renderStatusScreen(charId) {
   document.getElementById("statPersonality").textContent = c.personality || "-";
   document.getElementById("statLevel").textContent = c.level;
   document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpToNext(c.level)}`;
-  document.getElementById("statHp").textContent = `${c.hp} / ${c.maxHp}`;
-  document.getElementById("statMp").textContent = c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-";
-  document.getElementById("statAtk").textContent = effectiveStat(c, "atk") + (c.equipBonus && c.equipBonus.atk ? ` (装備+${c.equipBonus.atk})` : "");
-  document.getElementById("statDef").textContent = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
-  document.getElementById("statSpd").textContent = effectiveStat(c, "spd");
-  document.getElementById("statMag").textContent = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
-  document.getElementById("statStatus").textContent = statusLabel(c) + ` / ストレス${c.fatigue || 0}`;
+  document.getElementById("statStatus").textContent = statusLabel(c);
 
+  const atkText = effectiveStat(c, "atk") + (c.equipBonus && c.equipBonus.atk ? ` (装備+${c.equipBonus.atk})` : "");
+  const defText = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
+  const magText = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
+  const statRows = [
+    { key: "hp", label: "HP", value: `${c.hp} / ${c.maxHp}` },
+    { key: "mp", label: "MP", value: c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-" },
+    { key: "atk", label: "攻撃力", value: atkText },
+    { key: "def", label: "防御力", value: defText },
+    { key: "spd", label: "素早さ", value: effectiveStat(c, "spd") },
+    { key: "mag", label: "魔力", value: magText },
+    { key: "stress", label: "ストレス", value: c.fatigue || 0 },
+  ];
+  document.getElementById("statStatList").innerHTML = statRows.map((row) => `
+    <div class="status-stat-row is-${row.key}">
+      <span class="status-stat-icon">${STATUS_STAT_ICONS[row.key]}</span>
+      <span class="status-stat-label">${row.label}</span>
+      <span class="status-stat-value">${row.value}</span>
+    </div>
+  `).join("");
+
+  // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
+  // レベルアップの楽しみを持たせる(選ばなかった方の枝は「二度と来ない」ので対象外、あくまで未来の枠のみ)
   const skillListEl = document.getElementById("statSkillList");
-  const skillLevels = Object.keys(c.skills || {}).map(Number).sort((a, b) => a - b);
-  const skillRows = skillLevels.map((lv) => {
-    const side = c.skills[lv];
-    const tree = SKILL_TREES[c.classId] && SKILL_TREES[c.classId][lv];
-    const skill = tree && tree[side];
-    if (!skill) return "";
-    return `
-      <div class="skill-entry" data-level="${lv}">
-        <div class="skill-entry-head">
-          <strong>Lv.${lv} ${skill.name}</strong>
-          <span class="skill-entry-side">${side === "left" ? "左" : "右"}</span>
+  const tree = SKILL_TREES[c.classId] || {};
+  const allLevels = Object.keys(tree).map(Number).sort((a, b) => a - b);
+  const skillRows = allLevels.map((lv) => {
+    const side = c.skills && c.skills[lv];
+    if (side) {
+      const skill = tree[lv][side];
+      if (!skill) return "";
+      return `
+        <div class="skill-entry" data-level="${lv}">
+          <div class="skill-entry-head">
+            <strong>Lv.${lv} ${skill.name}</strong>
+            <span class="skill-entry-side">${side === "left" ? "左" : "右"}</span>
+          </div>
+          <p class="skill-entry-desc">${skill.desc}</p>
         </div>
-        <p class="skill-entry-desc">${skill.desc}</p>
+      `;
+    }
+    if (lv <= c.level) return ""; // レベル到達済みだが選択待ち(スキル選択ポップアップ側で処理するためここには出さない)
+    return `
+      <div class="skill-entry locked">
+        <div class="skill-entry-head">
+          <strong class="skill-entry-mystery">？？？</strong>
+          <span class="skill-entry-side">Lv${lv}で習得</span>
+        </div>
       </div>
     `;
   }).join("");
-  skillListEl.innerHTML = skillRows || '<p style="color:var(--text-muted);font-size:0.8rem;">まだ習得したスキルがありません。</p>';
-  skillListEl.querySelectorAll(".skill-entry").forEach((el) => {
+  skillListEl.innerHTML = skillRows || '<p style="color:var(--dw-caption-color);font-size:13px;">まだ習得したスキルがありません。</p>';
+  skillListEl.querySelectorAll(".skill-entry:not(.locked)").forEach((el) => {
     el.onclick = () => { el.classList.toggle("open"); };
   });
+
+  retriggerEntryAnim(document.getElementById("statusPortraitCard"), "status-portrait-card");
+  [document.getElementById("statusStatCard"), document.getElementById("statusSkillCard")].forEach((el) => retriggerEntryAnim(el, "status-card-in"));
+
   document.getElementById("statusViewSkillTreeBtn").onclick = () => {
     viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
   };
@@ -3577,6 +3726,11 @@ function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
   badge.style.display = isNew ? "" : "none";
   if (isNew) state.seenUnlockedBuildings[stateKey] = true;
 }
+// 施設一覧の説明文はタップで開閉する(静的HTMLのまま一度だけイベントを貼る。renderExtension()の
+// たびに貼り直す必要はない)
+document.querySelectorAll(".facility-toggle").forEach((el) => {
+  el.onclick = () => { el.classList.toggle("open"); };
+});
 function renderExtension() {
   playTownAreaBgm();
   updateSceneBackgrounds();
@@ -3796,7 +3950,7 @@ function renderMagistrateScreen() {
     row.style.border = "1px solid var(--hp)";
     row.innerHTML = `
       <div class="roster-name" style="color:var(--hp);">${rDef.emoji}${rDef.title}</div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${rDef.requester}</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0;">依頼者: ${rDef.requester}</p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${rDef.text}</p>
       <p style="font-size:0.8rem;">深淵の森 ${rDef.targetFloor}層目まで到達すると${rDef.itemName}が手に入ります。持ち帰ってください。</p>
     `;
@@ -3823,7 +3977,7 @@ function renderMagistrateScreen() {
     row.style.border = "1px solid var(--danger)";
     row.innerHTML = `
       <div class="roster-name" style="color:#f0d43a;">${eDef.emoji}${eDef.title}</div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${eDef.requester}</p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0;">依頼者: ${eDef.requester}</p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${eDef.text}</p>
       <p style="font-size:0.8rem;">討伐状況: ${eDone ? "討伐済み" : "未討伐"}</p>
     `;
@@ -3856,7 +4010,7 @@ function renderMagistrateScreen() {
     }
     row.innerHTML = `
       <div class="roster-name">${def.emoji}${def.title}</div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${def.requester} <span style="font-size:0.68rem;">(契約金${fee}G)</span></p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0;">依頼者: ${def.requester} <span style="font-size:0.68rem;">(契約金${fee}G)</span></p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${def.text}</p>
       <p style="font-size:0.8rem;">深淵の森 ${def.targetFloor}層目に到達すると対象が現れます。</p>
       ${deadlineHtml}
@@ -3950,7 +4104,7 @@ function equipRowHtml(classId, slot, slotLabel) {
   const ownedTier = state.classUpgrades[classId][slot] || 0;
   const ownedName = ownedTier > 0 ? tiers[ownedTier - 1].name : "なし";
   if (ownedTier >= tiers.length) {
-    return `<div class="equip-row"><div><strong>${slotLabel}: ${ownedName}</strong> <span class="desc">最大強化済み</span></div></div>`;
+    return `<div class="equip-row"><div class="equip-row-info"><strong>${slotLabel}: ${ownedName}</strong> <span class="desc">最大強化済み</span></div></div>`;
   }
   const next = tiers[ownedTier];
   const statLabel = next.statKey === "mag" ? "魔力" : next.statKey === "def" ? "防御力" : "攻撃力";
@@ -3961,7 +4115,7 @@ function equipRowHtml(classId, slot, slotLabel) {
   const mpNote = slot === "armor" ? "、MP上限+2" : "";
   return `
     <div class="equip-row">
-      <div>
+      <div class="equip-row-info">
         <strong>${slotLabel}: ${ownedName} → ${next.name}</strong>
         <span class="desc">${statLabel}+${next.bonus}${mpNote} ${!levelOk ? `/ ${reason}` : ""}</span>
       </div>
@@ -4122,7 +4276,7 @@ function hpBarHtml(entity) {
 // ことがあったため、Web Animations API(element.animate())で確実にアニメーションさせる方式にした。
 // 回復用ゲージは追いついたら(アニメーション完了時)非表示にする
 function activateHpTrails(container) {
-  const HP_TRAIL_MS = 800;
+  const HP_TRAIL_MS = 250;
   const trails = container.querySelectorAll("[data-hp-trail]");
   const healTrails = container.querySelectorAll("[data-hp-heal-trail]");
   trails.forEach((el) => {
@@ -5590,7 +5744,7 @@ document.addEventListener("touchend", () => { clearTimeout(statusLongPressTimer)
 document.addEventListener("touchcancel", () => { clearTimeout(statusLongPressTimer); hideStatusTooltip(); }, { passive: true });
 
 function startBattle(enemies, pathDef, encounterText) {
-  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1 };
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true };
   // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
   // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
   enemies.forEach((e) => { e.__enemyAllies = enemies; });
@@ -5774,7 +5928,7 @@ function renderBattleScreen() {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + (battle.justAppeared ? " entering" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
     card.innerHTML = `
@@ -5785,7 +5939,10 @@ function renderBattleScreen() {
         ${e.isQuestTarget ? '<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🎯</span>' : ""}
         ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       </div>
-      ${hpBarHtml(e)}
+      <div class="hp-with-warning">
+        ${hpBarHtml(e)}
+        ${e.bigAttackPending && !dead ? '<span class="big-attack-warning-icon">💢</span>' : ""}
+      </div>
     `;
     if (targetable) {
       card.onclick = () => {
@@ -5796,6 +5953,7 @@ function renderBattleScreen() {
     }
     row.appendChild(card);
   });
+  battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
   activateHpTrails(row);
   fieldParty.forEach((c) => renderVfxFor(c.id));
   battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
