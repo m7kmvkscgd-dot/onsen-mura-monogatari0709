@@ -183,28 +183,39 @@
   #screen-town .btn-col button.big {
     width: 150px; white-space: nowrap; padding: 0.9rem 0.5rem;
   }
-  /* ボタン内アイコン(絵文字を使わずSVG線画で統一)。文字と高さを揃え、少し右に余白を空ける */
-  .btn-icon { display: inline-flex; vertical-align: -3px; margin-right: 0.35em; }
+  /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
+     .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
+  .btn-icon { display: inline-flex; align-items: center; vertical-align: -3px; margin-right: 0.6em; }
   .btn-icon svg { width: 16px; height: 16px; }
+  /* 町の施設アイコン(支給された和風イラストPNG)。文字より一回り大きく、影を薄く落として
+     背景美術に馴染みつつも存在感を持たせる */
+  .btn-icon img { height: 21px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  /* ボタンの質感: 「和風の木札」。木目テクスチャ画像は使わず、上部を薄く明るく・下部を薄く暗くする
+     グラデーション(--dw-btn-sheen)を色ベースの背景に重ねるだけで立体感を出す。焦げ茶の枠線+内側の
+     ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
+  :root { --dw-btn-sheen: linear-gradient(to bottom, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 14%, rgba(0,0,0,0) 46%, rgba(0,0,0,.16) 100%); --dw-btn-border: #3a2a17; }
   button.big {
-    min-height: 48px; padding: 0.5rem 0.9rem; border-radius: 12px; border: none;
-    background: var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
-    box-shadow: 0 3px 10px rgba(0,0,0,.25);
+    min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 2px solid var(--dw-btn-border);
+    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
     display: flex; align-items: center; justify-content: center; text-align: center;
-    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;
   }
   @media (hover: hover) {
-    button.big:hover:not(:disabled) { background: var(--dw-btn-hover); }
+    button.big:hover:not(:disabled) { background: var(--dw-btn-sheen), var(--dw-btn-hover); }
   }
-  /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる)。filterでの明度調整はbutton.big単体でも
-     .primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに個別の:active色を
-     用意する必要がない(全ボタン共通の1ルールで統一できる) */
-  button.big:active { transform: scale(.97); filter: brightness(.88); }
-  button.primary { background: var(--dw-gold); color: #241d0a; }
-  button.danger { background: var(--dw-danger); color: #fff; }
+  /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる+内側に沈み込むシャドウ)。filterでの明度調整は
+     button.big単体でも.primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに
+     個別の:active色を用意する必要がない(全ボタン共通の1ルールで統一できる) */
+  button.big:active { transform: scale(.97); filter: brightness(.88); box-shadow: inset 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
+  button.primary { background: var(--dw-btn-sheen), #e3c583; color: #241d0a; border-color: #f2dfa6; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 16px rgba(0,0,0,.42); }
+  @media (hover: hover) {
+    button.primary:hover:not(:disabled) { background: var(--dw-btn-sheen), #ecd093; }
+  }
+  button.danger { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
   /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
      切り替わったことが一目でわかるようにする */
-  button.retreat-active { background: var(--dw-danger); color: #fff; }
+  button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   .card {
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
@@ -956,7 +967,7 @@
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
   .action-grid button {
-    grid-column: span 1; height: 51px; padding: 0.3rem;
+    grid-column: span 1; height: 51px; min-height: 51px; padding: 0.3rem;
     display: flex; align-items: center; justify-content: center; text-align: center;
     font-size: 15px; line-height: 1.1; overflow: hidden;
     /* コマンドボタンの立体感: 通常時は下端に軽い段差影を付けて浮かせ、押下時は沈んで少し明るくなる */
@@ -1229,12 +1240,12 @@
     <div class="body-pad">
       <p id="townHireHint" style="display:none;"><span class="hire-hint-arrow">⬇︎</span>宿屋で仲間を雇いましょう</p>
       <div class="btn-col">
-        <button class="big" id="toTavernBtn"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2 8 8 3l6 5" stroke-linecap="round"/><path d="M3.3 7.2V13h9.4V7.2"/><path d="M6.3 13v-4h3.4v4"/></svg></span>旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
-        <button class="big" id="toShopBtn"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M9.2 2 13.5 6.3l-2.1 2.1-4.3-4.3Z" stroke-linecap="round"/><path d="M9.6 5.7 3 12.3l-1.3 1.3" stroke-linecap="round"/></svg></span>鍛冶屋</button>
-        <button class="big" id="toOnsenBtn"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M1.5 12.2c1-1 2-1 3 0s2 1 3 0 2-1 3 0 2 1 3 0"/><path d="M6.2 7.8c-1-1.2-1-2.2 0-3.4M9.3 7.8c-1-1.5-1-2.8.3-4.2"/></svg></span>温泉</button>
-        <button class="big" id="toExtensionBtn"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13 9.5 6.5"/><path d="M8.3 3.7l3 3-1.3 1.3-3-3Z"/><path d="M2.3 13.7l1.6-3.6 2 2Z"/></svg></span>建築<span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
-        <button class="big" id="toMagistrateBtn" style="display:none;"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2 6 8 2l6 4" stroke-linecap="round"/><path d="M2.8 6.5v6.8h10.4V6.5"/><path d="M5 13.3V9.5h1.8v3.8M9.2 13.3V9.5H11v3.8" stroke-linecap="round"/></svg></span>奉行所</button>
-        <button class="big primary" id="toDungeonBtn"><span class="btn-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 3.5"/><path d="M6.5 3.5H10M6.5 3.5l1 3"/><path d="M9 8.5l5 1.2-3.8 3.3"/></svg></span>出発</button>
+        <button class="big" id="toTavernBtn"><span class="btn-icon"><img src="assets/icons/town_yadoya.png" alt=""></span>旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
+        <button class="big" id="toShopBtn"><span class="btn-icon"><img src="assets/icons/town_kajiya.png" alt=""></span>鍛冶屋</button>
+        <button class="big" id="toOnsenBtn"><span class="btn-icon"><img src="assets/icons/town_onsen.png" alt=""></span>温泉</button>
+        <button class="big" id="toExtensionBtn"><span class="btn-icon"><img src="assets/icons/town_kenchiku.png" alt=""></span>建築<span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
+        <button class="big" id="toMagistrateBtn" style="display:none;"><span class="btn-icon"><img src="assets/icons/town_bugyosho.png" alt=""></span>奉行所</button>
+        <button class="big primary" id="toDungeonBtn"><span class="btn-icon"><img src="assets/icons/town_shuppatsu.png" alt=""></span>出発</button>
       </div>
     </div>
   </div>
