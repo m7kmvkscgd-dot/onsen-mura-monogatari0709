@@ -479,6 +479,10 @@ function initPassives() {
     discountWhileFlag: null, // {statModName, pct} 特定のstatMod(reloadImmuneなど)が有効な間だけMP消費を追加割引する(装填術など)
     healBonusRules: [], // [{trigger:"targetHpBelow"|"selfHpAbove"|"onCleanse", value, mult}] 回復量への条件つき倍率(治癒術・慈愛など)
     mpOnCleanse: 0, // 状態異常を解除する回復/バフを使うたび、これだけMPが回復する(生命力循環など)
+    guardCounter: false, // かばうが敵の攻撃を防いだ瞬間、確実に反撃する(会心の返し)
+    guardCritCounter: false, // かばうが成功した直後、次の自分の攻撃が確定会心になる(居合の構え)
+    guardMpRefund: false, // かばうが成功するとMPが1回復する(心眼)
+    extraGuardMitigation: 1, // かばう成功時の被ダメージにさらに掛かる倍率(1=無効化。金剛など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -523,6 +527,10 @@ function applySkillChoice(character, skill, level) {
     if (add.woundBonus) p.woundBonuses.push(add.woundBonus);
     if (add.flagMod) p.flagMods.push(add.flagMod);
     if (add.evadeCritCounter) p.evadeCritCounter = true;
+    if (add.guardCounter) p.guardCounter = true;
+    if (add.guardCritCounter) p.guardCritCounter = true;
+    if (add.guardMpRefund) p.guardMpRefund = true;
+    if (add.extraGuardMitigation) p.extraGuardMitigation *= add.extraGuardMitigation;
     if (add.onCritSelfBuff) p.onCritSelfBuff = add.onCritSelfBuff;
     if (add.fasterFoeDmgReduction) p.fasterFoeDmgReduction = add.fasterFoeDmgReduction;
     if (add.ailmentCritBonus) p.ailmentCritBonus.push(add.ailmentCritBonus);
@@ -1153,6 +1161,18 @@ function onEvadeSuccess(target) {
     applyStatMod(target, b.stat, b.mult, 2);
   }
 }
+// かばうが敵の攻撃を防いだ瞬間に発動する槍士のスキルツリー効果(会心の返し/居合の構え/心眼)。
+// enemyAttack/enemyBigAttackどちらの「target.guarding」消費ブロックからも同じ処理を呼べるよう共通化した
+function handleGuardSynergyPassives(target, enemy, log) {
+  if (!target.passives || target.hp <= 0) return;
+  if (target.passives.guardCritCounter) target.guaranteedCritNext = true;
+  if (target.passives.guardMpRefund) target.mp = Math.min(target.maxMp, target.mp + 1);
+  if (target.passives.guardCounter && enemy.hp > 0) {
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
+    enemy.hp = Math.max(0, enemy.hp - counterDmg);
+    log(`${target.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
+  }
+}
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
@@ -1174,10 +1194,12 @@ function enemyAttack(enemy, targets, log) {
   let suffix = "";
   if (target.guarding) {
     rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
+    if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
     target.guarding = false;
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
+  if (suffix === "(かばう)") handleGuardSynergyPassives(target, enemy, log);
   // 瀕死になった一撃は、既にHPが減っていて実際のダメージ量(dmg)が小さくても、
   // 気絶するという出来事自体が最大級のストレスになるはずなので、その場合はratio=1.0扱いで計算する
   const wentDown = target.hp <= 0;
@@ -1256,10 +1278,12 @@ function enemyBigAttack(enemy, targets, log) {
     let suffix = "";
     if (target.guarding) {
       rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
+      if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
       target.guarding = false;
       suffix = "(かばう)";
     }
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
+    if (suffix === "(かばう)") handleGuardSynergyPassives(target, enemy, log);
     const wentDown = target.hp <= 0;
     target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
     // 命中した対象ごとに独立してデバフ判定する(戦闘不能になった相手には付けない)

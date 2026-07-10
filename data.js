@@ -701,10 +701,10 @@ const SKILL_TREES = {
   spearman: {
     2: {
       left: { name: "貫通突き", desc: "敵単体へ150%ダメージ、防御力20%無視", mp: 3, action: { kind: "damage", mult: 1.5, defPierce: 0.2 } },
-      right: { name: "挑発", desc: "3ターンの間、敵から必ず狙われるようになり、防御力+15%", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.15 }], turns: 3, tauntTurns: 3 } },
+      right: { name: "会心の返し", desc: "かばうが敵の攻撃を防いだ瞬間、確実に反撃する", mp: 0, passive: { guardCounter: true } },
     },
     3: {
-      left: { name: "豪槍", desc: "挑発中、攻撃力+20%", mp: 0, passive: { flagMod: { flag: "tauntTurns", stat: "atk", mult: 1.2 } } },
+      left: { name: "居合の構え", desc: "かばうが成功した直後、次の自分の攻撃が確定会心になる", mp: 0, passive: { guardCritCounter: true } },
       right: { name: "鉄壁", desc: "防御力+15%", mp: 0, passive: { defMult: 1.15 } },
     },
     4: {
@@ -720,7 +720,7 @@ const SKILL_TREES = {
       right: { name: "不屈", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
     },
     7: {
-      left: { name: "警戒", desc: "挑発中、回避率+15%", mp: 0, passive: { flagMod: { flag: "tauntTurns", stat: "evasionAdd", mult: 0.15 } } },
+      left: { name: "心眼", desc: "かばうが成功するとMPが1回復する", mp: 0, passive: { guardMpRefund: true } },
       right: { name: "鋼の肉体", desc: "HPが50%以下の間、被ダメージ15%減少", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, dmgTakenMult: 0.85 } } },
     },
     8: {
@@ -729,7 +729,7 @@ const SKILL_TREES = {
     },
     9: {
       left: { name: "槍鬼", desc: "敵を倒すたび攻撃力+12%(最大3回まで重複)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.12 }], turns: 20, maxStacks: 3 } } },
-      right: { name: "金剛", desc: "挑発中、被ダメージ20%減少", mp: 0, passive: { flagMod: { flag: "tauntTurns", stat: "dmgTaken", mult: 0.8 } } },
+      right: { name: "金剛", desc: "かばう成功時の被ダメージをさらに20%軽減する", mp: 0, passive: { extraGuardMitigation: 0.8 } },
     },
     10: {
       left: { name: "天穿槍", desc: "敵単体へ290%ダメージ、防御力45%無視", mp: 7, action: { kind: "damage", mult: 2.9, defPierce: 0.45 } },
