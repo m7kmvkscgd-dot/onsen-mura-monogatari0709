@@ -438,6 +438,14 @@
     animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* 攻撃が命中した瞬間、対象カードに重ねて出すヒットエフェクト(職業ごとの素材をJSでsrc差し替え
+     アニメーションさせる)。表示幅は職業ごとにJS側(playAttackVfx)でstyle.widthを直接設定するため
+     ここでは指定しない。".enemy-card img"(width:92px固定)より詳細度を上げて上書きする必要がある */
+  .enemy-card img.slash-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+    max-width: none; height: auto; pointer-events: none; z-index: 25;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
   /* 吹き出しセリフ専用の全画面固定レイヤー。party-bar内蔵ではなく画面最前面の独立レイヤーに
      実測位置(JSでleft/topを設定)で配置することで、探索画面の文字などに埋もれないようにする */
   #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; transform: translateZ(0); }
@@ -4647,6 +4655,45 @@ function popupOn(targetId, text, cls, intensity) {
   entity.__popupAt = Date.now();
   renderVfxFor(targetId);
 }
+// 攻撃が命中した時に対象カードへ重ねるヒットエフェクト(職業ごとに素材/フレーム数/表示サイズが異なる)。
+// カード自体はrenderBattleScreen()のたびに作り直されるため、要素をDOMに残さず「今表示されている
+// カードに一度だけ追加→アニメーション完了で自分で消える」使い切り方式にしてある。
+// 侍/忍/薙刀士は共通のSlashFX斬撃(通常=黄/技=ティール)、槍士は専用の金属衝撃エフェクト
+// (通常=黄/技=紫)、狩人は星形の黄、砲術士は星形の赤、陰陽師は通常攻撃が槍士と共通の黄(小さめ)・
+// 呪符ノ術等の技だけ紫の星形、僧侶は通常攻撃のみ陰陽師と共通の黄(小さめ)を使う
+// 通常攻撃のエフェクトは全体的に90%サイズにする(スキル系は据え置き、というユーザー指示への対応)
+const CLASS_ATTACK_VFX = {
+  samurai:  { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 454 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 504 } },
+  ninja:    { normal: { prefix: "assets/vfx/slash_magenta_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/impact_ninja_skill_", frames: 4, size: 200 } },
+  naginata: { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 280 } },
+  spearman: { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 198 }, skill: { prefix: "assets/vfx/impact_spear_skill_", frames: 6, size: 220 } },
+  priest:   { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 } },
+  onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+  hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+  gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+};
+const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フレーム数は素材ごとに異なる(CLASS_ATTACK_VFX参照)
+function playAttackVfx(targetId, actor, kind) {
+  const cfg = CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind];
+  if (!cfg) return; // 対応するエフェクトが設定されていない組み合わせ(僧侶のskillなど)は何も出さない
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const img = document.createElement("img");
+  img.className = "slash-vfx";
+  img.style.width = cfg.size + "px";
+  img.src = `${cfg.prefix}1.png`;
+  el.appendChild(img);
+  let frame = 1;
+  const timer = setInterval(() => {
+    frame++;
+    if (frame > cfg.frames) {
+      clearInterval(timer);
+      img.remove();
+      return;
+    }
+    img.src = `${cfg.prefix}${frame}.png`;
+  }, ATTACK_VFX_FRAME_MS);
+}
 // 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
 // 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出して1秒間だけ次のonDoneを遅らせる
 const SHOOT_DOWN_PAUSE_MS = 1000;
@@ -5315,6 +5362,7 @@ function runTreeSkill(actor, skill) {
     const targetsList = aliveEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
     const shotDownTargets = [];
+    const hitTargets = [];
     if (result && result.dmgs) {
       let anyEvaded = false;
       let anyHit = false;
@@ -5323,6 +5371,7 @@ function runTreeSkill(actor, skill) {
         if (r && r.hit) {
           popupOn(t.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
           anyHit = true;
+          hitTargets.push(t);
           if (r.shotDown) shotDownTargets.push(t);
         }
         else anyEvaded = true;
@@ -5331,6 +5380,7 @@ function runTreeSkill(actor, skill) {
       if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
     }
     renderBattleScreen();
+    hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
     triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
     return;
   }
@@ -5341,6 +5391,7 @@ function runTreeSkill(actor, skill) {
     if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
     else if (r) playSfx("evade");
     renderBattleScreen();
+    if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
     triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
   });
 }
@@ -5424,6 +5475,7 @@ function renderActionButtons(actor) {
         }
         else playSfx("evade");
         renderBattleScreen();
+        if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
         triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
       });
     };
@@ -5450,6 +5502,7 @@ function renderActionButtons(actor) {
           const targetsList = aliveEnemies();
           const result = useAbility(actor, targetsList, ability, blog);
           const shotDownTargets = [];
+          const hitTargets = [];
           if (result && result.hits) {
             let anyEvaded = false;
             let anyHit = false;
@@ -5457,6 +5510,7 @@ function renderActionButtons(actor) {
               if (result.hits[i]) {
                 popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
                 anyHit = true;
+                hitTargets.push(t);
                 if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
               }
               else anyEvaded = true;
@@ -5465,6 +5519,7 @@ function renderActionButtons(actor) {
             if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
           }
           renderBattleScreen();
+          hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
           triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
           return;
         }
@@ -5475,6 +5530,7 @@ function renderActionButtons(actor) {
           if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
           else if (result && !result.failed) playSfx("evade");
           renderBattleScreen();
+          if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
           triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
         });
       };
