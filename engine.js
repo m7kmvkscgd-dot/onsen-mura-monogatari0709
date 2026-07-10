@@ -87,6 +87,8 @@ function createCharacter(name, classId, classUpgrades) {
     skills: {}, // { level: "left"|"right" } スキルツリーで選んだ側の記録
     unlockedSkills: [], // 選んだ能動スキル(action持ち)のリスト。戦闘中の行動選択に追加される
     passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
+    transformForm: null, // 忍の「変化の術」で変身中のform("karasu"|"gama"|"hebi"|null)
+    formCooldown: 0, // 変身中のform専用スキル(丸呑み/脱皮)の残りクールタイム
   };
 }
 
@@ -323,6 +325,47 @@ function tickBleed(entity, log) {
 function clearDotEffects(characters) {
   characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; c.bleed = 0; });
 }
+
+// 忍の「変化の術」: カラス/ガマ/ヘビいずれかへの変身。ステータスは変身前(装備込み)の値にform倍率を
+// 掛けた新しい値へ直接置き換える(一時バフのstatModsとは別枠。乗算バフ等は変身後の値にさらに乗る)。
+// 変身前の状態(HP/ステータス/ストレス/デバフ)は__preTransformに退避し、解除時にそのまま復元する
+function enterTransform(character, formKey) {
+  const form = TRANSFORM_FORMS[formKey];
+  character.__preTransform = {
+    hp: character.hp, maxHp: character.maxHp, atk: character.atk, def: character.def, spd: character.spd,
+    fatigue: character.fatigue,
+  };
+  character.transformForm = formKey;
+  character.maxHp = Math.max(1, Math.round(character.maxHp * form.hpMult));
+  character.hp = character.maxHp; // 変身直後は新しい姿の最大HPで満タンになる
+  character.atk = Math.max(1, Math.round(character.atk * form.atkMult));
+  character.def = Math.max(1, Math.round(character.def * form.defMult));
+  character.spd = Math.max(1, Math.round(character.spd * form.spdMult));
+  // ストレスの概念が無くなる(fatigueMalusが掛からなくなり、ストレス落書きオーバーレイも出なくなる)
+  character.fatigue = 0;
+  // 変身前のデバフは一切引き継がない
+  character.poison = 0; character.bleed = 0; character.burnTurns = 0;
+  character.stunTurns = 0; character.silenceTurns = 0; character.statMods = [];
+  character.isFlying = !!form.isFlying;
+  character.formCooldown = 0;
+}
+// 変身解除: 任意解除・戦闘不能相当のダメージ・戦闘/野営/帰還終了、いずれの経路からも呼ばれる共通処理。
+// 変身中に得ていたデバフは解除後にも一切引き継がず、HPは変身前の値(このダメージで変身中に0になった
+// 場合でも、瀕死にはせず変身前のHPのまま)に戻す
+function revertTransform(character) {
+  if (!character.transformForm || !character.__preTransform) return;
+  const pre = character.__preTransform;
+  character.maxHp = pre.maxHp;
+  character.hp = Math.min(pre.maxHp, Math.max(1, pre.hp));
+  character.atk = pre.atk; character.def = pre.def; character.spd = pre.spd;
+  character.fatigue = pre.fatigue;
+  character.poison = 0; character.bleed = 0; character.burnTurns = 0;
+  character.stunTurns = 0; character.silenceTurns = 0; character.statMods = [];
+  character.isFlying = false;
+  character.transformForm = null;
+  character.formCooldown = 0;
+  character.__preTransform = null;
+}
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
   const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT));
@@ -397,6 +440,8 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 // guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
 const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
 function abilityMpCost(abilityType, actor) {
+  // 変化の術で変身中はMPの概念が無くなる(かばう等も無料で使える)
+  if (actor && actor.transformForm) return 0;
   let cost = ABILITY_MP_COST[abilityType] || 0;
   // 温泉バフ「英気充填」: MP消費-10%
   if (actor && actor.onsenBuffKey === "eikijuten") cost = Math.max(0, Math.round(cost * 0.9));
@@ -633,6 +678,9 @@ function rollCritMultiplier(actor, extraCritRate, target) {
 }
 // スキルツリーの技のMPコストに、そのキャラのMP割引を適用する
 function skillMpCost(actor, baseMp) {
+  // 変化の術で変身中はMPの概念自体が無くなる(変身をかけるための消費自体はtransformFormがまだnullの
+  // 状態で判定されるため、ここでの0化は「変身後の他の技」向けの安全策)
+  if (actor.transformForm) return 0;
   let discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
   // 温泉バフ「英気充填」: MP消費-10%(他の割引と乗算ではなく加算で重ねる)
   if (actor.onsenBuffKey === "eikijuten") discount += 0.1;
@@ -672,6 +720,9 @@ function useTreeSkill(actor, target, skill, log) {
       if (f.tag === skill.comboTag) applyStatMod(actor, f.stat, f.mult, 2);
     });
   }
+  // 変化の術: MP消費とコンボタグ判定だけここで済ませ、実際にどのformへ変身するかの選択とenterTransform()の
+  // 呼び出しはindex.html側のUI(3択の表示)に任せる
+  if (action.kind === "transform") return {};
   if (action.kind === "buffSelf" || action.kind === "buffParty") {
     const targets = action.kind === "buffParty" ? target : [actor];
     targets.forEach((t) => {
@@ -726,7 +777,27 @@ function useTreeSkill(actor, target, skill, log) {
     }
     const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
+    const hpBeforeHit = t.hp;
     const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
+    // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
+    // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
+    // 巻き込んで連鎖処刑する狙い撃ちに変更した)。会心判定やonHitInflict等は敵を倒した本体の
+    // 一撃だけのものなので、貫通側では再判定せず素の数値のまま流し込む(defensiveな
+    // damageTakenMultiplierだけは対象自身の効果として尊重する)。
+    // t.__enemyAllies はstartBattle()で敵全員に配られる、その戦闘の敵配列への自己参照
+    if (action.overkillPierce && t.hp <= 0) {
+      const overkill = dmg - hpBeforeHit;
+      if (overkill > 0 && t.__enemyAllies) {
+        const others = t.__enemyAllies.filter((e) => e !== t && e.hp > 0);
+        if (others.length > 0) {
+          const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
+          const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
+          splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
+          log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
+          if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
+        }
+      }
+    }
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
       if (action.inflict.type === "poison") applyPoison(t, action.inflict.value || 3);
       if (action.inflict.type === "bleed") applyBleed(t, action.inflict.value || 2);
@@ -976,7 +1047,10 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
 }
 
 function performAttack(actor, target, log) {
-  return rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
+  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
+  // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
+  if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
+  return result;
 }
 
 // 直近で敵を倒した攻撃者(全滅時のセリフ抽選で「最後に倒した人物」を優先させるために使う)
@@ -1469,5 +1543,6 @@ if (typeof module !== "undefined") {
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyBleed, tickBleed, BLEED_MAX_STACKS, clearDotEffects, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,
+    enterTransform, revertTransform,
   };
 }

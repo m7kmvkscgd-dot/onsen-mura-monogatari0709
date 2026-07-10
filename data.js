@@ -440,7 +440,7 @@ const ENEMIES = {
   // 大技は「構え中(bigAttackPending)にスタンを入れると完全に潰せる」という既存仕組みを
   // プレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
   oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 42, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 7.5 } },
+    bigAttack: { mult: 8.0 } },
   q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 26, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
     bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
@@ -681,7 +681,7 @@ const SKILL_TREES = {
       right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
     },
     3: {
-      left: { name: "影斬り", desc: "敵単体へ170%ダメージ", mp: 3, action: { kind: "damage", mult: 1.7 } },
+      left: { name: "変化の術", desc: "MPを消費し、カラス・ガマ・ヘビのいずれかに変身する。変身は戦闘不能になるか戦闘/野営/帰還を終えるまで持続し、任意で解除もできる。変身中はMP・ストレスの概念が無くなる代わりに通常の技が使えなくなる", mp: 5, action: { kind: "transform" } },
       right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, rangeType: "ranged", action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     4: {
@@ -820,7 +820,7 @@ const SKILL_TREES = {
     },
     9: {
       left: { name: "弱者狩り", desc: "攻撃力が下がっている敵への会心率+30%", mp: 0, passive: { debuffCritBonus: { stat: "atk", addRate: 0.3 } } },
-      right: { name: "百歩穿楊", desc: "HPが50%以下の敵への会心率+10%", mp: 0, passive: { executeCritBonus: { belowPct: 0.5, addRate: 0.1 } } },
+      right: { name: "貫き矢", desc: "敵単体へ130%ダメージ。敵を倒した場合、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 2, action: { kind: "damage", mult: 1.3, overkillPierce: true } },
     },
     10: {
       left: { name: "流星射ち", desc: "敵単体へ290%ダメージ", mp: 7, action: { kind: "damage", mult: 2.9 } },
@@ -1156,7 +1156,8 @@ const QUEST_DEFS = {
   kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2 },
 };
 const QUEST_BOARD_SIZE = 3; // 1日に張り出される依頼の枚数(残り7件は翌日以降の入れ替わりで出てくる)
-const QUEST_REWARD_GOLD = 60;
+const QUEST_GOLD_PER_FLOOR = 8; // 討伐依頼の報酬金は「目標階層×この値」で計算する(到達階層が深い依頼ほど高額になる)
+function questGoldReward(def) { return def.targetFloor * QUEST_GOLD_PER_FLOOR; }
 const QUEST_REWARD_XP = 30;
 // 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
@@ -1196,6 +1197,33 @@ const STATUS_TOOLTIPS = {
   questTarget: { icon: "🎯", title: "討伐対象", desc: "受注中の依頼の討伐対象。" },
 };
 
+// 忍のスキル「変化の術」で変身できる3form。ステータス倍率は元の忍者のステータス(装備込み)に掛ける。
+// formSkillを持つform(ガマ/ヘビ)は、MPではなく専用のクールタイム(character.formCooldown)で管理する
+const TRANSFORM_FORMS = {
+  karasu: {
+    ja: "カラス", emoji: "🐦‍⬛", image: "assets/transform/karasu.png",
+    hpMult: 0.7, atkMult: 1, defMult: 1, spdMult: 1.2,
+    isFlying: true, canGuard: true, extraActionOnTransform: true, scoutVision: true,
+  },
+  gama: {
+    ja: "ガマ", emoji: "🐸", image: "assets/transform/gama.png",
+    hpMult: 1.3, atkMult: 0.7, defMult: 1, spdMult: 0.7,
+    formSkill: { key: "marunomi", name: "丸呑み", desc: "ボス・中ボス以外の敵単体を2ターンの間丸呑みにして行動不能にする(クールタイム6ターン)", cooldown: 6, swallowTurns: 2 },
+  },
+  hebi: {
+    ja: "ヘビ", emoji: "🐍", image: "assets/transform/hebi.png",
+    hpMult: 1, atkMult: 1.1, defMult: 1.1, spdMult: 0.9,
+    onHitPoison: 3,
+    formSkill: { key: "datsupi", name: "脱皮", desc: "HPを50%回復し、状態異常を全て取り除く(クールタイム6ターン)", cooldown: 6, healPct: 0.5 },
+  },
+};
+// 変身中は普段の性格セリフの代わりに、formごとの鳴き声を喋る
+const TRANSFORM_ANIMAL_SOUNDS = {
+  karasu: ["カーカー！", "カァ…", "カーッ！"],
+  gama: ["ゲロゲロ…", "ゲコッ！", "グルル…"],
+  hebi: ["シャー…", "シャアッ！", "シュル…"],
+};
+
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
@@ -1207,5 +1235,6 @@ if (typeof module !== "undefined") {
     BIG_ATTACK_DEBUFF_CHANCE, BIG_ATTACK_DEBUFF_POOL, SKILL_TREES,
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
     CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES, STATUS_TOOLTIPS,
+    TRANSFORM_FORMS, TRANSFORM_ANIMAL_SOUNDS,
   };
 }

@@ -229,7 +229,7 @@
        を持つこの要素が独自の合成レイヤーを持ち続けることで、bar.innerHTML=""による頻繁な再構築と
        組み合わさってiOS Safariで子要素/関連要素の再描画が更新されなくなる不具合の原因になっていた
        可能性が高いため外した(translateX(-50%)は中央寄せに必須なので残す) */
-    position: fixed; top: 276px; left: 50%;
+    position: fixed; top: 280px; left: 50%;
     transform: translateX(-50%);
     width: 100%; max-width: 480px; z-index: 4;
     display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
@@ -322,15 +322,25 @@
     text-align: center; margin: 0.3rem 1rem 0; font-size: 0.75rem; font-weight: 700; color: var(--accent);
     background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 0.3rem 0.6rem;
   }
+  /* カラス変身中の「観察眼」: 次に行動する味方/敵のカードに出す青い矢印バッジ */
+  .next-actor-badge {
+    position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+    font-size: 0.62rem; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(43,110,255,0.9); border-radius: 999px; padding: 0.1rem 0.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    z-index: 6;
+  }
   #dungeonLog, #battleLog, #campLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
-  #dungeonLog, #battleLog, #campLog { height: 70px; }
+  #campLog { height: 70px; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
 
-  /* ===== 戦闘ログ(#battleLog)専用の高級感テキストボックス: 木・漆・和紙・金箔を意識した和風意匠 =====
+  /* ===== 探索ログ(#dungeonLog)/戦闘ログ(#battleLog)共通の高級感テキストボックス:
+     木・漆・和紙・金箔を意識した和風意匠 =====
      二重枠(外枠#4b3728の焦げ茶漆風/内枠#d9c49aの金箔風)+微かな内側ハイライト+四隅の和柄(青海波)装飾。
      background-imageの4つのradial-gradientが四隅の小さな扇形(青海波)装飾、5つ目のlinear-gradientが
-     本体の縦グラデーション地。dungeonLog/campLogには影響しないよう#battleLogだけ上書きする */
-  #battleLog {
+     本体の縦グラデーション地。探索/戦闘でテキストUIの見た目・文字送り演出を揃えるため、campLogには
+     影響しないよう#dungeonLog/#battleLogだけ上書きする */
+  #dungeonLog, #battleLog {
     position: relative;
     /* 1行目の文字上部が枠に食い込んで見切れないよう、共通ルールより上側paddingとボックス自体の
        高さを少しだけ増やしてある(スクロールで最新行に合わせた時、直前の行の頭が枠際で切れるのを防ぐ) */
@@ -353,23 +363,23 @@
       inset 0 -6px 10px rgba(0,0,0,0.25),
       0 4px 10px rgba(0,0,0,0.45);
   }
-  #battleLog p {
+  #dungeonLog p, #battleLog p {
     color: #ffffff; line-height: 1.5;
     text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
   }
-  #battleLog .log-name { color: #d9c49a; }
+  #dungeonLog .log-name, #battleLog .log-name { color: #d9c49a; }
   @keyframes logLineEnter {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  #battleLog p.log-line-enter { animation: logLineEnter 0.15s ease-out forwards; }
+  #dungeonLog p.log-line-enter, #battleLog p.log-line-enter { animation: logLineEnter 0.15s ease-out forwards; }
   @keyframes logCharFadeIn { from { opacity: 0; } to { opacity: 1; } }
-  #battleLog .log-char { opacity: 0; animation: logCharFadeIn 0.08s ease-out forwards; }
+  #dungeonLog .log-char, #battleLog .log-char { opacity: 0; animation: logCharFadeIn 0.08s ease-out forwards; }
   @keyframes logArrowBob {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }
   }
-  #battleLog .log-arrow {
+  #dungeonLog .log-arrow, #battleLog .log-arrow {
     position: absolute; right: 8px; bottom: 4px; color: #d9c49a; font-size: 0.75rem;
     text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     display: none; animation: logArrowBob 1.3s ease-in-out infinite;
@@ -1522,8 +1532,10 @@ function loadState() {
   return defaultState();
 }
 
+// __allies/__enemyAllies(かばう連携/貫き矢がengine.js側から他の味方/敵を参照するための自己参照。
+// fieldParty自身を指すため循環参照になる)はJSON.stringifyできないので、保存対象から除外する
 function saveState() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state, (key, value) => (key === "__allies" || key === "__enemyAllies") ? undefined : value));
 }
 
 // ============ 時間帯(早朝→朝→昼→夕→夜の5段階サイクル) ============
@@ -1894,7 +1906,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -2095,6 +2107,19 @@ function devSetCharacterLevel(character, targetLevel) {
   character.hp = character.maxHp;
   character.mp = character.maxMp;
   character.xp = 0;
+  // 通常のレベルアップ(victory()経路)はここでqueueSkillChoices()を呼んでスキル選択待ちに積むが、
+  // devSetCharacterLevelはその呼び出しが抜けていたため、開発者モードでレベルを上げてもスキルが
+  // 一切取得できない不具合があった。character.skills[level]がまだ無いレベルだけ選び直しできるよう積む
+  // (既に選択済みのレベルを二重に積むと、applySkillChoiceが加算式の受動効果を二重付与してしまうため除外する。
+  // 同様に、既にpendingSkillChoicesへ積まれ未解決のままのレベルも二重に積まないよう除外する)
+  const alreadyPendingLevels = new Set(
+    state.pendingSkillChoices.filter((e) => e.characterId === character.id).map((e) => e.level)
+  );
+  const leveledUp = [];
+  for (let lv = 2; lv <= targetLevel; lv++) {
+    if ((!character.skills || !character.skills[lv]) && !alreadyPendingLevels.has(lv)) leveledUp.push({ character, level: lv });
+  }
+  queueSkillChoices(leveledUp);
 }
 document.getElementById("devGoldSetBtn").onclick = () => {
   const v = parseInt(document.getElementById("devGoldInput").value, 10);
@@ -2475,6 +2500,7 @@ let campTransitionActive = false;
 function playCampTransition(onDone) {
   if (campTransitionActive) return;
   campTransitionActive = true;
+  revertAllTransforms(); // 野営を始めたら変化の術は強制解除
   playCampBgm();
   playAmbientBgm("night"); // 野営は演出上常に夜になるため、実際のtimeOfDayに関わらず虫の声も夜側に固定する
   let campTransFinished = false;
@@ -3472,7 +3498,7 @@ function renderMagistrateScreen() {
       btn.disabled = true;
     } else {
       btn.className = "big primary";
-      btn.textContent = `受注する(報酬 ${QUEST_REWARD_GOLD}G / XP${QUEST_REWARD_XP})`;
+      btn.textContent = `受注する(報酬 ${questGoldReward(def)}G / XP${QUEST_REWARD_XP})`;
       btn.onclick = () => acceptQuest(id);
     }
     row.appendChild(btn);
@@ -3674,11 +3700,7 @@ function enterDungeon() {
 let dungeonLogLines = [];
 function dlog(msg) {
   dungeonLogLines.push(msg);
-  const el = document.getElementById("dungeonLog");
-  const p = document.createElement("p");
-  p.textContent = msg;
-  el.appendChild(p);
-  el.scrollTop = el.scrollHeight;
+  appendTypewriterLog("dungeonLog", "dungeonLogArrow", msg);
 }
 
 // ストレス段階に応じた落書き風オーバーレイ画像(無ければnull)
@@ -3761,15 +3783,21 @@ function renderPartyBar(elId, combatants, actingCharId) {
     // そのためcombatants内だけでなくstate.roster全体からも探す
     const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
     const carriedC2 = carried ? CLASSES[carried.classId] : null;
+    // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
+    const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
+    const portraitSrc = transformDef ? transformDef.image : c2.image;
+    // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
+    const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
       <div class="stress-wrap">
-        <img src="${c2.image}">
+        <img src="${portraitSrc}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
         ${carriedC2 ? `<img class="carried-badge" src="${carriedC2.image}" data-carried-id="${carried.id}">` : ""}
+        ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       </div>
       ${hpBarHtml(c)}
-      ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="nm">${c.name}${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>
+      ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
+      <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>
     `;
     if (targetable) {
       div.onclick = () => {
@@ -4766,9 +4794,16 @@ const CLASS_ATTACK_VFX = {
   hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
   gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
 };
+// 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
+// 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
+const TRANSFORM_ATTACK_VFX = {
+  gama: { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 } },
+  hebi: { normal: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+};
 const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フレーム数は素材ごとに異なる(CLASS_ATTACK_VFX参照)
 function playAttackVfx(targetId, actor, kind) {
-  const cfg = CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind];
+  const transformOverride = actor.transformForm && TRANSFORM_ATTACK_VFX[actor.transformForm];
+  const cfg = (transformOverride && transformOverride[kind]) || (CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind]);
   if (!cfg) return; // 対応するエフェクトが設定されていない組み合わせ(僧侶のskillなど)は何も出さない
   const el = findVisibleCard(targetId);
   if (!el) return;
@@ -4914,7 +4949,10 @@ function trySpeak(speaker, category) {
   // breakdown(発狂)とallDefeated(全滅)は他のセリフより優先させるため、表示中の吹き出しがあっても構わず発言させる
   const allowConcurrent = category === "breakdown" || category === "allDefeated";
   if (!allowConcurrent && anyoneSpeaking()) return false;
-  const lines = DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
+  // 変化の術で変身中は、性格ごとのセリフの代わりに鳴き声を喋る
+  const lines = speaker.transformForm
+    ? TRANSFORM_ANIMAL_SOUNDS[speaker.transformForm]
+    : DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
   if (!lines || !lines.length) return false;
   speaker.__speechText = lines[Math.floor(Math.random() * lines.length)];
   speaker.__speechAt = Date.now();
@@ -5082,6 +5120,9 @@ document.addEventListener("touchcancel", () => { clearTimeout(statusLongPressTim
 
 function startBattle(enemies, pathDef, encounterText) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1 };
+  // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
+  // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
+  enemies.forEach((e) => { e.__enemyAllies = enemies; });
   // 新しい戦闘のたびに前回の逃走状態/状態異常/一時バフ/戦闘限定の受動効果をリセット(毒などが戦闘をまたいで残らないように)
   fieldParty.forEach((c) => {
     c.fleeState = null;
@@ -5188,13 +5229,14 @@ function revealLogLine(p, text, onFinish) {
   const skipFn = () => { clearTimeout(timer); finish(); };
   activeLogFinishers.add(skipFn);
 }
-function blog(msg) {
-  battleLogLines.push(msg);
-  const el = document.getElementById("battleLog");
-  let arrow = document.getElementById("battleLogArrow");
+// 探索ログ(#dungeonLog)/戦闘ログ(#battleLog)共通の文字送り表示処理。両者でテキストUIの
+// 見た目・演出(1文字ずつフェードイン+名前の金箔色+文字送り完了後の▼)を完全に揃えるための共通化
+function appendTypewriterLog(elId, arrowId, msg) {
+  const el = document.getElementById(elId);
+  let arrow = document.getElementById(arrowId);
   if (!arrow) {
     arrow = document.createElement("span");
-    arrow.id = "battleLogArrow";
+    arrow.id = arrowId;
     arrow.className = "log-arrow";
     arrow.textContent = "▼";
     el.appendChild(arrow);
@@ -5210,7 +5252,12 @@ function blog(msg) {
   });
   el.scrollTop = el.scrollHeight;
 }
+function blog(msg) {
+  battleLogLines.push(msg);
+  appendTypewriterLog("battleLog", "battleLogArrow", msg);
+}
 document.getElementById("battleLog").onclick = () => { [...activeLogFinishers].forEach((fn) => fn()); };
+document.getElementById("dungeonLog").onclick = () => { [...activeLogFinishers].forEach((fn) => fn()); };
 
 // 戦闘中に「逃げた」(fleeState==="fled")キャラは、生きていても以後この戦闘には参加しない
 function aliveField() {
@@ -5218,6 +5265,21 @@ function aliveField() {
 }
 function aliveEnemies() {
   return battle.enemies.filter((e) => e.hp > 0);
+}
+
+// カラス変身の「観察眼」: 次に行動する組み合わせ(味方/敵問わず)を青い矢印バッジで示す。
+// battle.orderは1ラウンド分しか確定していないため、今のラウンドの残り分だけを覗き見る
+// (ラウンド末尾まで見ても次の行動者がいない=次ラウンドの並び順はまだ未確定、という場合は何も表示しない)
+function nextActingCombatant() {
+  if (!battle || !battle.order) return null;
+  for (let i = battle.orderIndex + 1; i < battle.order.length; i++) {
+    const c = battle.order[i];
+    if (c.hp > 0 && c.fleeState !== "fled" && (c.status === undefined || c.status === "active")) return c;
+  }
+  return null;
+}
+function anyCrowScoutActive() {
+  return fieldParty.some((c) => c.status === "active" && c.transformForm === "karasu");
 }
 
 function renderBattleScreen() {
@@ -5235,12 +5297,14 @@ function renderBattleScreen() {
     const card = document.createElement("div");
     card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
+    const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
     card.innerHTML = `
       <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
       <div style="position:relative;">
         <img src="${e.image}" alt="${e.label}">
         ${e.isFlying ? '<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🪽</span>' : ""}
         ${e.isQuestTarget ? '<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🎯</span>' : ""}
+        ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       </div>
       ${hpBarHtml(e)}
     `;
@@ -5321,6 +5385,14 @@ function processNext() {
     if (actor.stunTurns > 0) {
       actor.stunTurns--;
       blog(`${actor.label}はスタンして動けない！`);
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    // ガマの「丸呑み」で行動不能にされている間はスキップする
+    if (actor.swallowedTurns > 0) {
+      actor.swallowedTurns--;
+      blog(`${actor.label}は丸呑みにされて動けない！`);
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
       return;
@@ -5430,6 +5502,8 @@ function processNext() {
       blog(`${actor.label}は沈黙していて技が使えない！`);
       actor.silenceTurns--;
     }
+    // 変身中のform専用スキル(丸呑み/脱皮)のクールタイムは、この変身キャラ自身の手番が来るたびに1減る
+    if (actor.formCooldown > 0) actor.formCooldown--;
     renderActionButtons(actor);
   }
 }
@@ -5440,6 +5514,14 @@ function handleFieldDeaths() {
   // 戦い直す羽目になった時、瀕死者が出た当のフロアまで安全に戻れるとは限らないための救済措置)
   const rescueFloor = (battle && battle.questKey) ? Math.max(1, currentFloor - 1) : currentFloor;
   fieldParty.forEach((c) => {
+    // 変身中に致命傷級のダメージを受けても瀕死にはならず、変身が強制解除されて人間の姿(変身前のHP)に
+    // 戻るだけで済む(「変身が身代わりになる」仕様)
+    if (c.hp <= 0 && c.status === "active" && c.transformForm) {
+      const formName = TRANSFORM_FORMS[c.transformForm].ja;
+      revertTransform(c);
+      blog(`${c.name}は${formName}の姿を保てず、人間の姿に戻った！`);
+      return;
+    }
     if (c.hp <= 0 && c.status === "active") {
       // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
       const carried = fieldParty.find((x) => x.carriedBy === c.id);
@@ -5468,6 +5550,19 @@ function handleFieldDeaths() {
   });
   pruneActiveParty();
   saveState();
+}
+
+// 変化の術は「戦闘が終わるまで」しか持続しない仕様のため、勝利/逃走(煙玉含む)/全滅どの経路でも
+// 戦闘終了の瞬間に強制的に解除する。野営開始時にも同様に呼ぶ(renderTown()側は既存のpruneActiveParty
+// 等と同じ「保険」の位置づけとして呼ばない=ここで確実に処理できているはずのため)
+function revertAllTransforms() {
+  fieldParty.forEach((c) => {
+    if (c.transformForm) {
+      const formName = TRANSFORM_FORMS[c.transformForm].ja;
+      revertTransform(c);
+      blog(`${c.name}は${formName}の姿から人間に戻った。`);
+    }
+  });
 }
 
 // 対象選択/道具メニューなどのサブ画面(戻るボタンは置かず、コマンド外をタップすると呼ばれる)を
@@ -5514,6 +5609,12 @@ function pickSingleEnemyTarget(onPicked) {
 // スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
 function runTreeSkill(actor, skill) {
   const action = skill.action;
+  if (action.kind === "transform") {
+    const result = useTreeSkill(actor, actor, skill, blog); // MP消費/不足判定のみ処理される
+    if (result && result.failed) return;
+    renderTransformFormPicker(actor);
+    return;
+  }
   if (action.kind === "buffSelf") {
     playSfx("select");
     useTreeSkill(actor, actor, skill, blog);
@@ -5611,6 +5712,79 @@ function renderTreeSkillAllyPicker(actor, skill) {
   grid.appendChild(backBtn);
 }
 
+// 変化の術: カラス/ガマ/ヘビの3択を表示する。カラスだけは変身直後にすぐ行動できる
+// (ターンを消費せず同じactorの行動選択にそのまま戻る)特典があり、ガマ/ヘビは通常通りそこで手番を終える
+function renderTransformFormPicker(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  Object.keys(TRANSFORM_FORMS).forEach((formKey) => {
+    const form = TRANSFORM_FORMS[formKey];
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${form.emoji}${form.ja}`;
+    btn.onclick = () => {
+      playTransformEffect(() => {
+        enterTransform(actor, formKey);
+        blog(`${actor.name}は${form.ja}に変身した！`);
+        renderBattleScreen();
+        if (form.extraActionOnTransform) renderActionButtons(actor);
+        else finishPlayerAction();
+      });
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big danger";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+// ガマの「丸呑み」/ヘビの「脱皮」。どちらも専用クールタイム(MPではない)で管理する
+function runFormSkill(actor) {
+  const formKey = actor.transformForm;
+  const form = TRANSFORM_FORMS[formKey];
+  if (formKey === "gama") {
+    const targets = aliveEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
+    if (targets.length === 0) { alert("丸呑みにできる敵がいません"); return; }
+    battleSubMenuActive = true;
+    const grid = document.getElementById("actionGrid");
+    grid.innerHTML = "";
+    targets.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      btn.textContent = t.label;
+      btn.onclick = () => {
+        playSfx("select");
+        t.swallowedTurns = form.formSkill.swallowTurns;
+        actor.formCooldown = form.formSkill.cooldown;
+        blog(`${actor.name}は${t.label}を丸呑みにした！`);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.className = "big danger";
+    backBtn.textContent = "戻る";
+    backBtn.onclick = () => renderActionButtons(actor);
+    grid.appendChild(backBtn);
+    return;
+  }
+  if (formKey === "hebi") {
+    playSfx("heal");
+    const heal = Math.round(actor.maxHp * form.formSkill.healPct);
+    actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+    actor.poison = 0; actor.bleed = 0; actor.burnTurns = 0; actor.stunTurns = 0; actor.silenceTurns = 0;
+    actor.formCooldown = form.formSkill.cooldown;
+    popupOn(actor.id, `+${heal}`, "heal");
+    blog(`${actor.name}は脱皮してHPを${heal}回復し、状態異常を治した！`);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+}
+
 function renderCarryTargets(actor, targets) {
   battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
@@ -5671,72 +5845,99 @@ function renderActionButtons(actor) {
     };
     grid.appendChild(atkBtn);
 
-    // 沈黙中は技(会心の一撃・呪符ノ術など)が使えず、通常攻撃のみになる
-    (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
-      const abBtn = document.createElement("button");
-      abBtn.className = "big";
-      const cost = abilityMpCost(ability);
-      abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
-      if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
-      abBtn.onclick = () => {
-        if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
-        if (ability === "guard") {
+    // 変化の術で変身中は、通常の職業アビリティ/スキルツリー技の代わりに専用の行動(カラスのかばう、
+    // ガマ/ヘビのform専用スキル)だけを出す。MPの概念が無くなるため沈黙判定も無関係になる
+    if (actor.transformForm) {
+      const formDef = TRANSFORM_FORMS[actor.transformForm];
+      if (formDef.canGuard) {
+        const guardBtn = document.createElement("button");
+        guardBtn.className = "big";
+        guardBtn.textContent = "かばう";
+        guardBtn.onclick = () => {
           playSfx("guard");
           useAbility(actor, actor, "guard", blog);
           renderBattleScreen();
           finishPlayerAction();
-          return;
-        }
-        if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-          playSfx(attackSfxFor(actor.classId));
-          const targetsList = aliveEnemies();
-          const result = useAbility(actor, targetsList, ability, blog);
-          const shotDownTargets = [];
-          const hitTargets = [];
-          if (result && result.hits) {
-            let anyEvaded = false;
-            let anyHit = false;
-            targetsList.forEach((t, i) => {
-              if (result.hits[i]) {
-                popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
-                anyHit = true;
-                hitTargets.push(t);
-                if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
-              }
-              else anyEvaded = true;
-            });
-            if (anyEvaded) playSfx("evade");
-            if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
+        };
+        grid.appendChild(guardBtn);
+      }
+      if (formDef.formSkill) {
+        const skillBtn = document.createElement("button");
+        skillBtn.className = "big";
+        const onCooldown = actor.formCooldown > 0;
+        skillBtn.textContent = formDef.formSkill.name + (onCooldown ? `(あと${actor.formCooldown}T)` : "");
+        skillBtn.disabled = onCooldown;
+        skillBtn.onclick = () => { runFormSkill(actor); };
+        grid.appendChild(skillBtn);
+      }
+    } else {
+      // 沈黙中は技(会心の一撃・呪符ノ術など)が使えず、通常攻撃のみになる
+      (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
+        const abBtn = document.createElement("button");
+        abBtn.className = "big";
+        const cost = abilityMpCost(ability);
+        abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
+        if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
+        abBtn.onclick = () => {
+          if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
+          if (ability === "guard") {
+            playSfx("guard");
+            useAbility(actor, actor, "guard", blog);
+            renderBattleScreen();
+            finishPlayerAction();
+            return;
           }
-          renderBattleScreen();
-          hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
-          triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
-          return;
-        }
-        // 単体系(会心の一撃/奇襲/呪符ノ術など)
-        pickSingleEnemyTarget((target) => {
-          playSfx(attackSfxFor(actor.classId));
-          const result = useAbility(actor, target, ability, blog);
-          if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
-          else if (result && !result.failed) playSfx("evade");
-          renderBattleScreen();
-          if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
-          triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
-        });
-      };
-      grid.appendChild(abBtn);
-    });
+          if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+            playSfx(attackSfxFor(actor.classId));
+            const targetsList = aliveEnemies();
+            const result = useAbility(actor, targetsList, ability, blog);
+            const shotDownTargets = [];
+            const hitTargets = [];
+            if (result && result.hits) {
+              let anyEvaded = false;
+              let anyHit = false;
+              targetsList.forEach((t, i) => {
+                if (result.hits[i]) {
+                  popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
+                  anyHit = true;
+                  hitTargets.push(t);
+                  if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
+                }
+                else anyEvaded = true;
+              });
+              if (anyEvaded) playSfx("evade");
+              if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
+            }
+            renderBattleScreen();
+            hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
+            triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
+            return;
+          }
+          // 単体系(会心の一撃/奇襲/呪符ノ術など)
+          pickSingleEnemyTarget((target) => {
+            playSfx(attackSfxFor(actor.classId));
+            const result = useAbility(actor, target, ability, blog);
+            if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
+            else if (result && !result.failed) playSfx("evade");
+            renderBattleScreen();
+            if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
+            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
+          });
+        };
+        grid.appendChild(abBtn);
+      });
 
-    // スキルツリーで選んだ能動スキル(沈黙中は使えない)
-    (actor.silenceTurns > 0 ? [] : (actor.unlockedSkills || [])).forEach((skill) => {
-      const btn = document.createElement("button");
-      btn.className = "big";
-      const cost = skillMpCost(actor, skill.mp);
-      btn.textContent = skill.name + (cost > 0 ? `(MP${cost})` : "");
-      if (cost > 0 && actor.mp < cost) btn.disabled = true;
-      btn.onclick = () => { runTreeSkill(actor, skill); };
-      grid.appendChild(btn);
-    });
+      // スキルツリーで選んだ能動スキル(沈黙中は使えない)
+      (actor.silenceTurns > 0 ? [] : (actor.unlockedSkills || [])).forEach((skill) => {
+        const btn = document.createElement("button");
+        btn.className = "big";
+        const cost = skillMpCost(actor, skill.mp);
+        btn.textContent = skill.name + (cost > 0 ? `(MP${cost})` : "");
+        if (cost > 0 && actor.mp < cost) btn.disabled = true;
+        btn.onclick = () => { runTreeSkill(actor, skill); };
+        grid.appendChild(btn);
+      });
+    }
 
     // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
     const carryTargets = fieldParty.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
@@ -5747,6 +5948,24 @@ function renderActionButtons(actor) {
       carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
       grid.appendChild(carryBtn);
     }
+  }
+
+  // 変身解除: 任意のタイミングで解除できる。担いでいる間でも(変身自体は解除したいはずなので)表示し、
+  // ターンを消費せずそのまま行動選択に戻る(担ぐコマンドと同じ「無消費の意思決定」パターン)
+  if (actor.transformForm) {
+    const revertBtn = document.createElement("button");
+    revertBtn.className = "big danger";
+    revertBtn.textContent = "変身解除";
+    revertBtn.onclick = () => {
+      const formName = TRANSFORM_FORMS[actor.transformForm].ja;
+      playTransformEffect(() => {
+        revertTransform(actor);
+        blog(`${actor.name}は${formName}の姿から人間に戻った。`);
+        renderBattleScreen();
+        renderActionButtons(actor);
+      });
+    };
+    grid.appendChild(revertBtn);
   }
 
   const itemBtn = document.createElement("button");
@@ -5901,6 +6120,11 @@ function playSmokeBombEffect(onDone) {
     onDone();
   }, SMOKE_BOMB_EFFECT_MS);
 }
+// 忍の変化の術: 発動/解除どちらの瞬間も同じ煙エフェクト(既存の煙玉演出を流用)+専用SEを鳴らす
+function playTransformEffect(onDone) {
+  playSfx("transform");
+  playSmokeBombEffect(onDone);
+}
 function useSmokeBomb(actor) {
   markQuestChasingIfFled();
   stopBattleBgm();
@@ -5910,6 +6134,7 @@ function useSmokeBomb(actor) {
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   renderBattleScreen();
   playSmokeBombEffect(() => {
     battle = null;
@@ -6007,6 +6232,7 @@ function victory() {
   playSfx("victory");
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
+  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   // 奉行所の緊急依頼(荒熊等)の討伐判定は受注制の討伐依頼とは別枠のまま維持
@@ -6020,8 +6246,9 @@ function victory() {
   // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりに緊急依頼解禁フラグを立てる
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     const qDef = QUEST_DEFS[battle.questKey];
-    advQuestCompleted = { title: qDef.title, gold: QUEST_REWARD_GOLD, xp: QUEST_REWARD_XP };
-    totalGold += QUEST_REWARD_GOLD;
+    const questGold = questGoldReward(qDef);
+    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP };
+    totalGold += questGold;
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
       grantXp(c, QUEST_REWARD_XP, blog);
@@ -6232,6 +6459,7 @@ function escapeBattle() {
   pendingEnemyPick = null;
   pendingAllyPick = null;
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
@@ -6256,6 +6484,7 @@ function defeat() {
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
+  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除(通常はhandleFieldDeaths側で既に解除済みのはずの保険)
   clearOmikujiExpeditionEffect();
   blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big danger" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
