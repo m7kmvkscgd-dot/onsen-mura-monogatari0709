@@ -2615,7 +2615,9 @@ function renderTown() {
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   // 最初の1人を選んだ直後(まだ宿屋で誰も雇っていない間)だけ、宿屋への案内を出す
-  document.getElementById("townHireHint").style.display = state.roster.length === 1 ? "" : "none";
+  // (ゲーム開始時にチュートリアル「表示しない」を選んだ場合は出さない。tutorialEnabled===undefinedは
+  // この機能追加前の既存セーブなので、旧来通り表示する側にフォールバックする)
+  document.getElementById("townHireHint").style.display = (state.roster.length === 1 && state.tutorialEnabled !== false) ? "" : "none";
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
   document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
@@ -3545,6 +3547,20 @@ function firstCharClassIds() {
   return Object.keys(CLASSES).filter(isClassUnlocked);
 }
 function renderFirstCharacterScreen() {
+  // ゲーム開始時(名簿が空の間)だけ、チュートリアル案内(宿屋で仲間を雇いましょう等)の
+  // 表示可否を一度だけ選ばせる。既存セーブでroster.length===1のまま(この機能追加前に
+  // 最初の1人を作った)場合はtutorialEnabledがundefinedのままになるが、
+  // townHireHint側は「undefined=表示する」扱いにしてあるため、旧来通りの挙動を保つ
+  if (state.tutorialEnabled === undefined) {
+    showConfirmModal("チュートリアル(宿屋で仲間を雇いましょう、等の案内)を表示しますか？", [
+      { label: "表示する", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
+      { label: "表示しない", className: "big", onClick: () => { state.tutorialEnabled = false; saveState(); startFirstCharacterPick(); } },
+    ]);
+  } else {
+    startFirstCharacterPick();
+  }
+}
+function startFirstCharacterPick() {
   showConfirmModal("職業を選びましょう。", [{ label: "はじめる", className: "big primary" }]);
   firstCharIndex = 0;
   renderFirstCharacterCard();
