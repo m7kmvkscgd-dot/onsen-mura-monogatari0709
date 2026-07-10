@@ -259,6 +259,21 @@ const DIALOGUE_LINES = {
     無口: ["……帰る。", "……戻る。", "……今日は終わり。", "……休む。", "……帰還する。", "……村へ。", "……立て直す。", "……また来る。", "……行こう。", "……帰ろう。"],
     豪快: ["帰るぞ！", "今日はここまでだ！", "生きて帰るぞ！", "立て直すぞ！", "次は勝つ！", "まだ終わっちゃいない！", "戻るぞ！", "全員帰る！", "また暴れるぞ！", "仕切り直しだ！"],
   },
+  // 奉行所の依頼(受注制)で確定出現した討伐対象を発見した瞬間の特別な一言。ミューテックスの
+  // 空きがあれば確実に発言させる(発生頻度が低い特別なイベントのため、他のセリフのような
+  // 確率抽選は挟まずtrySpeakを直接呼ぶ、indexHtml側のtryForceQuestEncounter参照)
+  questTargetFound: {
+    優しい: ["見つけた…みんな、気をつけて。"],
+    熱血: ["見つけたぞ！ここからが本番だ！"],
+    冷静: ["対象を確認。予定通りだ。"],
+    生意気: ["やっと見つけた。待たせたね。"],
+    のんびり: ["あ、いた。ようやくだね。"],
+    真面目: ["対象を発見しました。油断なく。"],
+    世話好き: ["見つけたよ、みんな油断しないでね。"],
+    お調子者: ["見っけ！待ってました！"],
+    無口: ["……いた。"],
+    豪快: ["見つけたぞ！かかってこい！"],
+  },
 };
 
 // おみくじ: 神社で1日1回引ける5段階の運勢。数値バフではなく次の遠征の展開そのものを変える効果にしてある
@@ -636,8 +651,8 @@ const SKILL_TREES = {
       right: { name: "武士道", desc: "HPが50%以下の間、攻撃力・防御力+18%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, statMult: [{ stat: "atk", mult: 1.18 }, { stat: "def", mult: 1.18 }] } } },
     },
     5: {
-      left: { name: "剣圧", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
-      right: { name: "心眼", desc: "命中率+15%", mp: 0, passive: { accuracyAdd: 0.15 } },
+      left: { name: "隙討ち", desc: "防御力が下がっている敵への会心率+22%", mp: 0, passive: { debuffCritBonus: { stat: "def", addRate: 0.22 } } },
+      right: { name: "連携の呼吸", desc: "仲間がかばっている間、会心率+15%", mp: 0, passive: { allyGuardCritAdd: 0.15 } },
     },
     6: {
       left: { name: "剣豪", desc: "HPが50%以下の敵への会心率+25%", mp: 0, passive: { executeCritBonus: { belowPct: 0.5, addRate: 0.25 } } },
@@ -662,7 +677,7 @@ const SKILL_TREES = {
   },
   ninja: {
     2: {
-      left: { name: "急所狙い", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      left: { name: "怯み討ち", desc: "スタン中の敵への会心率+30%", mp: 0, passive: { ailmentCritBonus: { ailment: "stun", addRate: 0.3 } } },
       right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
     },
     3: {
@@ -690,7 +705,7 @@ const SKILL_TREES = {
       right: { name: "影縫い", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     9: {
-      left: { name: "忍の極意", desc: "会心ダメージ+40%", mp: 0, passive: { critDmgAdd: 0.4 } },
+      left: { name: "百鬼断", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+12%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.12 } },
       right: { name: "空蝉", desc: "戦闘中1回だけ、受けるダメージを完全に無効化する", mp: 0, passive: { onceGuardType: "nullifyDamage" } },
     },
     10: {
@@ -705,7 +720,7 @@ const SKILL_TREES = {
     },
     3: {
       left: { name: "居合の構え", desc: "かばうが成功した直後、次の自分の攻撃が確定会心になる", mp: 0, passive: { guardCritCounter: true } },
-      right: { name: "鉄壁", desc: "防御力+15%", mp: 0, passive: { defMult: 1.15 } },
+      right: { name: "鼓舞の盾", desc: "かばうが成功した瞬間、3ターンの間味方全体の攻撃力+8%", mp: 0, passive: { guardPartyAtkBuff: 0.08 } },
     },
     4: {
       left: { name: "連突き", desc: "敵単体へ2連続攻撃(合計150%ダメージ)、3ターンの間防御力-15%", mp: 3, action: { kind: "damage", mult: 1.5, hits: 2, inflict: { type: "defDown", chance: 0.4, value: 0.15, turns: 3 } } },
@@ -738,7 +753,7 @@ const SKILL_TREES = {
   },
   naginata: {
     2: {
-      left: { name: "円月の構え", desc: "薙ぎ払いの威力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      left: { name: "援護薙ぎ", desc: "仲間がかばっている間、与えるダメージ+12%", mp: 0, passive: { allyGuardDmgMult: 1.12 } },
       right: { name: "足払い", desc: "敵単体へ90%ダメージ、85%の確率でスタン(1ターン)", mp: 2, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     3: {
@@ -750,7 +765,7 @@ const SKILL_TREES = {
       right: { name: "威圧", desc: "通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
-      left: { name: "追刃", desc: "会心率+15%", mp: 0, passive: { critRateAdd: 0.15 } },
+      left: { name: "拍子外し", desc: "素早さが下がっている敵への会心率+25%", mp: 0, passive: { debuffCritBonus: { stat: "spd", addRate: 0.25 } } },
       right: { name: "舞姫", desc: "回避に成功すると、次の自分の1ターンだけ回避率+20%", mp: 0, passive: { onEvadeSelfBuff: { stat: "evasionAdd", mult: 0.2 } } },
     },
     6: {
@@ -759,7 +774,7 @@ const SKILL_TREES = {
     },
     7: {
       left: { name: "豪舞", desc: "HPが70%以上の間、攻撃力+12%", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.7, statMult: [{ stat: "atk", mult: 1.12 }] } } },
-      right: { name: "制圧の心得", desc: "防御力+10%", mp: 0, passive: { defMult: 1.1 } },
+      right: { name: "護りの薙刀", desc: "仲間がかばっている間、被ダメージ-10%", mp: 0, passive: { allyGuardDmgTakenMult: 0.9 } },
     },
     8: {
       left: { name: "花吹雪", desc: "敵全体へ150%ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.5 } },
@@ -788,7 +803,7 @@ const SKILL_TREES = {
       right: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
     },
     5: {
-      left: { name: "鷹の目", desc: "命中率+10%、会心ダメージ+15%", mp: 0, passive: { accuracyAdd: 0.1, critDmgAdd: 0.15 } },
+      left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
       right: { name: "弱点看破", desc: "炎上している敵へのダメージ+20%", mp: 0, passive: { woundBonus: { mult: 1.2, ailment: "burn" } } },
     },
     6: {
@@ -804,7 +819,7 @@ const SKILL_TREES = {
       right: { name: "腐食毒", desc: "通常攻撃が命中した敵の防御力を20%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.2, value: 0.2, turns: 3 } } },
     },
     9: {
-      left: { name: "射手の極意", desc: "会心率+15%、会心ダメージ+25%", mp: 0, passive: { critRateAdd: 0.15, critDmgAdd: 0.25 } },
+      left: { name: "弱者狩り", desc: "攻撃力が下がっている敵への会心率+30%", mp: 0, passive: { debuffCritBonus: { stat: "atk", addRate: 0.3 } } },
       right: { name: "百歩穿楊", desc: "HPが50%以下の敵への会心率+10%", mp: 0, passive: { executeCritBonus: { belowPct: 0.5, addRate: 0.1 } } },
     },
     10: {
@@ -826,7 +841,7 @@ const SKILL_TREES = {
       right: { name: "炸裂弾", desc: "敵全体へ100%ダメージ、30%の確率で攻撃力-15%(3ターン)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.0, inflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
-      left: { name: "照準", desc: "命中率+15%", mp: 0, passive: { accuracyAdd: 0.15 } },
+      left: { name: "援護砲撃", desc: "仲間がかばっている間、与えるダメージ+12%", mp: 0, passive: { allyGuardDmgMult: 1.12 } },
       right: { name: "焼夷弾", desc: "通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.2, turns: 3 } } },
     },
     6: {
@@ -834,7 +849,7 @@ const SKILL_TREES = {
       right: { name: "爆風拡大", desc: "装填中、素早さ+20%", mp: 0, passive: { flagMod: { flag: "reloading", stat: "spd", mult: 1.2 } } },
     },
     7: {
-      left: { name: "急所射撃", desc: "会心ダメージ+35%", mp: 0, passive: { critDmgAdd: 0.35 } },
+      left: { name: "会心装填", desc: "会心を出した直後、次の自分の1ターンだけ攻撃力+20%", mp: 0, passive: { onCritSelfBuff: { stat: "atk", mult: 1.2 } } },
       right: { name: "衝撃波", desc: "通常攻撃が命中した敵を15%の確率でスタンさせる(1ターン)", mp: 0, passive: { onHitInflict: { type: "stun", chance: 0.15, turns: 1 } } },
     },
     8: {
@@ -864,7 +879,7 @@ const SKILL_TREES = {
       right: { name: "衰弱符", desc: "敵単体へ80%の魔法ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
     },
     5: {
-      left: { name: "五行の理", desc: "術の威力+10%", mp: 0, passive: { atkMult: 1.1 } },
+      left: { name: "呪符の見切り", desc: "回避に成功すると、次の自分の1ターンだけ術の威力+20%", mp: 0, passive: { onEvadeSelfBuff: { stat: "mag", mult: 1.2 } } },
       right: { name: "封魔符", desc: "敵単体へ60%の魔法ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.6, useMag: true, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     6: {
@@ -880,7 +895,7 @@ const SKILL_TREES = {
       right: { name: "呪詛", desc: "通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.2, turns: 3 } } },
     },
     9: {
-      left: { name: "四神加護", desc: "会心ダメージ+30%", mp: 0, passive: { critDmgAdd: 0.3 } },
+      left: { name: "衰弱撃ち", desc: "防御力が下がっている敵への会心率+25%", mp: 0, passive: { debuffCritBonus: { stat: "def", addRate: 0.25 } } },
       right: { name: "霊脈支配", desc: "結界術を使った直後、次の自分の1ターンだけ防御力+15%", mp: 0, passive: { comboFollowup: { tag: "kekkai", stat: "def", mult: 1.15 } } },
     },
     10: {
@@ -1164,6 +1179,23 @@ const EMERGENCY_QUEST_ENCOUNTER_CHANCE = 0.25; // 発生中、戦闘の遭遇の
 const EMERGENCY_QUEST_REWARD_GOLD = 150;
 const EMERGENCY_QUEST_REWARD_XP = 80;
 
+// 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。
+// キーはstatusIconsFor()等がdata-status属性に埋め込む識別子。今後アイコンが増えた場合は
+// ここに1エントリ足すだけで、既存のイベント委譲(index.html)がそのまま説明を拾って表示できる
+const STATUS_TOOLTIPS = {
+  poison: { icon: "🦠", title: "毒", desc: "毎ターンダメージを受ける。毒は蓄積し、数値が大きいほど威力が上がる。" },
+  burn: { icon: "🔥", title: "炎上", desc: "毎ターン最大HPの一定割合のダメージを受ける、ターン数固定のデバフ。" },
+  bleed: { icon: "🩸", title: "出血", desc: "毎ターンダメージを受け、攻撃力も下がる。" },
+  stun: { icon: "💫", title: "スタン", desc: "行動できない。" },
+  silence: { icon: "🔇", title: "沈黙", desc: "技・術が使えなくなり、通常攻撃しかできない。" },
+  tangle: { icon: "🕸️", title: "束縛", desc: "素早さが下がる。" },
+  bigAttackPending: { icon: "⚡", title: "大技の構え", desc: "次の自分のターンに強力な一撃(大技)を放つ構えに入っている。" },
+  guarding: { icon: "🛡", title: "かばう", desc: "仲間の代わりに攻撃を引き受け、被ダメージを軽減する。" },
+  carrying: { icon: "🎒", title: "担いでいる", desc: "瀕死の仲間を担いでいる。素早さが下がり、攻撃・技が使えなくなる。" },
+  flying: { icon: "🪽", title: "飛行", desc: "空中にいるため近接攻撃がかなり当てにくい(命中率大幅減)上、回避率自体も上がっている。狩人・砲術士の遠距離攻撃を命中させると高確率で撃ち落とせる。撃ち落とすと🪽が解除されて近接も当てやすくなり、さらに1ターンの間スタンして行動できなくなる。" },
+  questTarget: { icon: "🎯", title: "討伐対象", desc: "受注中の依頼の討伐対象。" },
+};
+
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
@@ -1174,6 +1206,6 @@ if (typeof module !== "undefined") {
     BIG_ATTACK_CYCLE_LENGTH, BIG_ATTACK_MULT, BIG_ATTACK_DOT_REDUCTION, BIG_ATTACK_EXPOSED_BONUS,
     BIG_ATTACK_DEBUFF_CHANCE, BIG_ATTACK_DEBUFF_POOL, SKILL_TREES,
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
-    CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES,
+    CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES, STATUS_TOOLTIPS,
   };
 }

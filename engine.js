@@ -303,11 +303,12 @@ function applyBurn(entity, turns) {
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
 }
 const BLEED_MAX_STACKS = 5; // 毒(6)よりわずかに低い上限。海岸ステージの敵向け新DOT
-// 出血: 毒と全く同じ蓄積減衰式のDOTだが、技側の付与量を毒より低めに設定する運用にしてあり
-// (毒を与える技より出血を与える技の方が数値が小さくなりがち)、代わりに出血中は常時攻撃力-10%が乗る(effectiveStat側)
+// 出血: 毒(重ね掛けは大きい方に上書き)とは違い、こちらは加算で積み上がる方式にしてある
+// (磯魚などの低威力多段ヒットで着実に蓄積していく手触りを狙ったもの、上限で頭打ちにはなる)。
+// 技側の付与量を毒より低めに設定する運用にしてあり、代わりに出血中は常時攻撃力-10%が乗る(effectiveStat側)
 function applyBleed(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
-  entity.bleed = Math.min(BLEED_MAX_STACKS, Math.max(entity.bleed || 0, stacks));
+  entity.bleed = Math.min(BLEED_MAX_STACKS, (entity.bleed || 0) + stacks);
 }
 function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
@@ -483,6 +484,14 @@ function initPassives() {
     guardCritCounter: false, // かばうが成功した直後、次の自分の攻撃が確定会心になる(居合の構え)
     guardMpRefund: false, // かばうが成功するとMPが1回復する(心眼)
     extraGuardMitigation: 1, // かばう成功時の被ダメージにさらに掛かる倍率(1=無効化。金剛など)
+    debuffCritBonuses: [], // [{stat, addRate}] 対象の指定ステータス(atk/def/spd)が下がっている時の追加会心率(隙討ち・拍子外し・弱者狩り・衰弱撃ちなど)。
+    // 誰がそのデバフを与えたかは問わないため、デバフを持つ別クラスと組み合わせるほど機能する
+    stackedWoundBonusPerAilment: 0, // 対象が負っている状態異常の「種類数」×この値、ダメージ倍率が伸びる(1+n*value)。
+    // 複数クラスがそれぞれ違う状態異常を持ち寄るほど強くなる(百鬼断・急所連撃・気枯らしの術など)
+    allyGuardCritAdd: 0, // 自分以外の生存中の仲間が今かばっている間、追加会心率(連携の呼吸など)
+    allyGuardDmgMult: 1, // 自分以外の仲間がかばっている間、自分の与ダメージ倍率(援護薙ぎ・援護砲撃など)
+    allyGuardDmgTakenMult: 1, // 自分以外の仲間がかばっている間、自分の被ダメージ倍率(護りの薙刀など)
+    guardPartyAtkBuff: 0, // 自分のかばうが成功した瞬間、味方全体に3ターンの攻撃力+この値を配る(鼓舞の盾)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -540,6 +549,12 @@ function applySkillChoice(character, skill, level) {
     if (add.discountWhileFlag) p.discountWhileFlag = add.discountWhileFlag;
     if (add.healBonusRule) p.healBonusRules.push(add.healBonusRule);
     if (add.mpOnCleanse) p.mpOnCleanse += add.mpOnCleanse;
+    if (add.debuffCritBonus) p.debuffCritBonuses.push(add.debuffCritBonus);
+    if (add.stackedWoundBonusPerAilment) p.stackedWoundBonusPerAilment += add.stackedWoundBonusPerAilment;
+    if (add.allyGuardCritAdd) p.allyGuardCritAdd += add.allyGuardCritAdd;
+    if (add.allyGuardDmgMult) p.allyGuardDmgMult *= add.allyGuardDmgMult;
+    if (add.allyGuardDmgTakenMult) p.allyGuardDmgTakenMult *= add.allyGuardDmgTakenMult;
+    if (add.guardPartyAtkBuff) p.guardPartyAtkBuff += add.guardPartyAtkBuff;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -573,6 +588,10 @@ function damageTakenMultiplier(character) {
   if (character.passives && character.passives.flagMods) {
     character.passives.flagMods.forEach((fm) => { if (fm.stat === "dmgTaken" && character[fm.flag]) mult *= fm.mult; });
   }
+  // 自分以外の仲間がかばっている間の被ダメージ倍率(護りの薙刀など)
+  if (character.passives && character.passives.allyGuardDmgTakenMult !== 1 && anyOtherAllyGuarding(character)) {
+    mult *= character.passives.allyGuardDmgTakenMult;
+  }
   return mult;
 }
 // 会心判定。会心なら会心時ダメージ倍率を、外れなら1を返す
@@ -601,7 +620,14 @@ function rollCritMultiplier(actor, extraCritRate, target) {
   if (p.ailmentCritBonus && p.ailmentCritBonus.length && target) {
     p.ailmentCritBonus.forEach((ac) => { if (hasSpecificAilment(target, ac.ailment)) ailmentCritAdd += ac.addRate; });
   }
-  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + (extraCritRate || 0);
+  // 対象の指定ステータスが下がっている時の追加会心率(隙討ち・拍子外し・弱者狩り・衰弱撃ちなど)
+  let debuffCritAdd = 0;
+  if (p.debuffCritBonuses && p.debuffCritBonuses.length && target) {
+    p.debuffCritBonuses.forEach((db) => { if (hasStatDebuff(target, db.stat)) debuffCritAdd += db.addRate; });
+  }
+  // 自分以外の仲間がかばっている間の追加会心率(連携の呼吸など)
+  const allyGuardCritAdd = p.allyGuardCritAdd > 0 && anyOtherAllyGuarding(actor) ? p.allyGuardCritAdd : 0;
+  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0);
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
   return 1;
 }
@@ -857,7 +883,8 @@ function evasionChance(entity) {
     entity.passives.flagMods.forEach((fm) => { if (fm.stat === "evasionAdd" && entity[fm.flag]) condAdd += fm.mult; });
   }
   const fleeingAdd = entity.fleeState === "preparing" ? 0.25 : 0;
-  return Math.min(0.9, base + passiveAdd + timedAdd + condAdd + fleeingAdd);
+  const flyingAdd = entity.isFlying ? FLYING_EVASION_BONUS : 0; // 飛行(🪽)の敵は空中にいる分、素早さ由来の回避率とは別に+5%
+  return Math.min(0.9, base + passiveAdd + timedAdd + condAdd + fleeingAdd + flyingAdd);
 }
 function accuracyOf(entity, target) {
   const base = entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
@@ -891,6 +918,7 @@ function skillRangeType(actor, skill) {
 }
 // 飛行(🪽)の敵に対しては近接攻撃の命中率が下がる(遠距離攻撃は影響なし)
 const FLYING_MELEE_ACCURACY_PENALTY = 0.25;
+const FLYING_EVASION_BONUS = 0.05; // 飛行の敵自身の回避率+5%(素早さ由来の回避とは別枠、遠距離攻撃にも効く)
 const FLYING_MIN_HIT_CHANCE = 0.10; // 通常のMIN_HIT_CHANCEより低い専用の下限(飛行を狙い撃ちする近接が機能しなくなりすぎないよう最低限だけ確保)
 // 狩人/砲術士が飛行の敵に攻撃を命中させた時、この確率で「撃ち落とす」(以後isFlyingが解除され近接も当てやすくなる)
 const SHOOT_DOWN_CHANCE = 0.8;
@@ -977,6 +1005,32 @@ function hasSpecificAilment(target, type) {
   if (type === "debuff") return !!(target.statMods && target.statMods.some((m) => m.mult < 1));
   return hasStatusAilment(target);
 }
+// 対象の指定ステータス(atk/def/spd)に、現在有効なデバフ(mult<1のstatMod)が乗っているかどうか。
+// 隙討ち・拍子外し・弱者狩り・衰弱撃ちなど、誰がデバフを与えたかを問わない会心率ボーナス系が使う
+function hasStatDebuff(target, stat) {
+  return !!(target.statMods && target.statMods.some((m) => m.stat === stat && m.mult < 1));
+}
+// 状態異常の「種類数」(毒/炎上/出血/スタン/沈黙/能力低下のいずれか、最大6種)を数える。
+// hasStatusAilmentの発展形で、単発の有無だけでなく「何種類重なっているか」を見て、複数クラスの
+// 状態異常が揃うほど強くなるダメージボーナス(百鬼断・急所連撃・気枯らしの術など)に使う
+function countDistinctAilments(target) {
+  let n = 0;
+  if ((target.poison || 0) > 0) n++;
+  if ((target.burnTurns || 0) > 0) n++;
+  if ((target.bleed || 0) > 0) n++;
+  if ((target.stunTurns || 0) > 0) n++;
+  if ((target.silenceTurns || 0) > 0) n++;
+  if (target.statMods && target.statMods.some((m) => m.mult < 1)) n++;
+  return n;
+}
+// 自分以外の生存中の仲間が、今かばっているかどうか(連携の呼吸・援護薙ぎ・護りの薙刀など、
+// 「誰かがかばっている間」系のスキルが参照する)。__alliesはstartBattle()で全プレイヤーキャラに
+// 配られる自パーティ全体への参照(index.html側)で、これを辿ることでengine.js単体では
+// 本来アクセスできない「他の味方の状態」を、このフック専用に安全に参照できるようにしている
+function anyOtherAllyGuarding(entity) {
+  if (!entity.__allies) return false;
+  return entity.__allies.some((c) => c !== entity && c.status === "active" && c.guarding);
+}
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
@@ -996,6 +1050,15 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     actor.passives.woundBonuses.forEach((wb) => {
       if (hasSpecificAilment(target, wb.ailment)) dmg = Math.round(dmg * wb.mult);
     });
+  }
+  // 複合デバフ系の受動効果: 対象に乗っている状態異常の「種類数」に応じてダメージが伸びる(百鬼断・急所連撃・気枯らしの術など)
+  if (actor && actor.passives && actor.passives.stackedWoundBonusPerAilment > 0) {
+    const ailmentCount = countDistinctAilments(target);
+    if (ailmentCount > 0) dmg = Math.round(dmg * (1 + actor.passives.stackedWoundBonusPerAilment * ailmentCount));
+  }
+  // 自分以外の仲間がかばっている間の与ダメージ倍率(援護薙ぎ・援護砲撃など)
+  if (actor && actor.passives && actor.passives.allyGuardDmgMult !== 1 && anyOtherAllyGuarding(actor)) {
+    dmg = Math.round(dmg * actor.passives.allyGuardDmgMult);
   }
   lastHitWasCrit = false;
   if (actor) {
@@ -1171,6 +1234,12 @@ function handleGuardSynergyPassives(target, enemy, log) {
     const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     log(`${target.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
+  }
+  // かばうが成功した瞬間、味方全体に3ターンの攻撃力バフを配る(鼓舞の盾)。__alliesはstartBattle()で
+  // 全プレイヤーキャラに配られる自パーティ全体への参照
+  if (target.passives.guardPartyAtkBuff > 0 && target.__allies) {
+    target.__allies.forEach((c) => { if (c.status === "active") applyStatMod(c, "atk", 1 + target.passives.guardPartyAtkBuff, 3); });
+    log(`${target.label}の気迫が味方を鼓舞した！`);
   }
 }
 function enemyAttack(enemy, targets, log) {

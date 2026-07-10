@@ -317,6 +317,11 @@
     border-radius: 999px; padding: 0.4rem 1.5rem;
     text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
   }
+  /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ */
+  .quest-target-badge {
+    text-align: center; margin: 0.3rem 1rem 0; font-size: 0.75rem; font-weight: 700; color: var(--accent);
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 0.3rem 0.6rem;
+  }
   #dungeonLog, #battleLog, #campLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
   #dungeonLog, #battleLog, #campLog { height: 70px; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
@@ -462,8 +467,10 @@
     white-space: normal; pointer-events: none;
     opacity: 0;
   }
+  /* leftはJSが画面端でクランプした吹き出し自体の中心。矢印だけは--arrow-offsetでキャラの実際の
+     中心へずらし、吹き出し本体が画面端で押し戻されてもキャラを指しているように見せる */
   .speech-bubble::after {
-    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    content: ""; position: absolute; top: 100%; left: calc(50% + var(--arrow-offset, 0px)); transform: translateX(-50%);
     border: 5px solid transparent; border-top-color: rgba(255,255,255,0.95);
   }
   /* 味方カードは戦闘画面のレイアウト上、真上に戦闘ログ(#battleLog、頻繁に文字が書き換わる)が
@@ -473,8 +480,18 @@
      出すようにする。三角の吹き出し口も上向きに反転する */
   .speech-bubble.below { transform: translate(-50%, 8px) translateZ(0); }
   .speech-bubble.below::after {
-    top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: rgba(255,255,255,0.95);
+    top: auto; bottom: 100%; left: calc(50% + var(--arrow-offset, 0px)); border-top-color: transparent; border-bottom-color: rgba(255,255,255,0.95);
   }
+  /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
+     イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは
+     一切変えない(インライン絵文字のspan化のみ) */
+  .status-icon { cursor: help; }
+  #statusTooltip {
+    display: none; position: fixed; z-index: 200; max-width: 220px;
+    background: rgba(34,34,34,0.92); color: #fff; padding: 0.45rem 0.6rem; border-radius: 8px;
+    font-size: 0.72rem; line-height: 1.45; pointer-events: none;
+  }
+  #statusTooltip .status-tooltip-title { font-weight: 700; margin-bottom: 0.2rem; }
   /* 0.05秒ほど間を置いてから跳ねる(ヒットストップ風の一瞬の間)。跳ね自体も少しオーバーシュートさせて
      弾みを持たせる(爽快感重視、暴れすぎないよう振れ幅は控えめにしてある) */
   @keyframes dmgFloat {
@@ -560,6 +577,13 @@
      枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
   .enemy-card.midboss img { width: 112px; height: 112px; }
   .enemy-card.midboss .enemy-name { font-size: 0.7rem; margin: 0.1rem 0 0.05rem; }
+  /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
+     オレンジとは別枠。狙われている側=targetableとは違い「これが依頼の対象そのもの」を示す表示) */
+  .enemy-card.quest-target { border-color: rgba(201,162,74,0.85); box-shadow: 0 0 10px rgba(201,162,74,0.6); animation: questTargetPulse 1.3s ease-in-out infinite; }
+  @keyframes questTargetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
+    50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
+  }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
   .action-grid button {
@@ -592,9 +616,11 @@
     text-align: center; font-size: 1.08rem; font-weight: 800; color: #ecdfc0;
     letter-spacing: 0.12em; margin: 0 0 0.85rem; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
   }
-  .path-choice-cards { display: flex; gap: 0.5rem; }
+  /* 選択肢が1〜3択と可変のため、flex:1で均等割りにすると1択の時だけ異様に大きくなっていた。
+     カード自体を固定サイズにしてjustify-content:centerで中央寄せし、選択肢数に関わらず同じ大きさで揃える */
+  .path-choice-cards { display: flex; gap: 0.5rem; justify-content: center; }
   .path-card {
-    flex: 1; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 128px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 0.35rem; background: rgba(8,8,8,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
     color: #d8d0bf; opacity: 0.78; font: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
     transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -642,6 +668,28 @@
   /* 「進む」「里に戻る」の移動演出用の暗転オーバーレイ。背景画像自体(#dungeonBg)はJSでtransformを
      アニメーションさせ、こちらは画面全体を一瞬暗転させて処理を挟むための単純な黒幕 */
   .move-transition-black { position: fixed; inset: 0; z-index: 61; background: #000; opacity: 0; pointer-events: none; }
+  /* 煙玉使用時、画面いっぱいに煙が広がって消える演出。複数の煙玉(radial-gradient+blur)を
+     少しずつ時間差で膨らませて重ね、最後にまとめてフェードアウトさせることで自然な煙の広がりを表現する */
+  .smoke-effect { position: fixed; inset: 0; z-index: 62; overflow: hidden; pointer-events: none; }
+  .smoke-puff {
+    position: absolute; width: 70vw; height: 70vw; max-width: 420px; max-height: 420px;
+    border-radius: 50%; filter: blur(18px);
+    background: radial-gradient(circle, rgba(210,210,205,0.95), rgba(160,160,155,0.55) 55%, rgba(160,160,155,0) 78%);
+    opacity: 0; transform: scale(0.4);
+    animation: smokePuffGrow 1.4s ease-out forwards;
+  }
+  .smoke-puff.p1 { left: -10%; top: 30%; animation-delay: 0s; }
+  .smoke-puff.p2 { left: 25%; top: 10%; animation-delay: 0.08s; }
+  .smoke-puff.p3 { left: 55%; top: 25%; animation-delay: 0.16s; }
+  .smoke-puff.p4 { left: 10%; top: 45%; animation-delay: 0.22s; }
+  .smoke-puff.p5 { left: 45%; top: 45%; animation-delay: 0.3s; }
+  .smoke-puff.p6 { left: 70%; top: 15%; animation-delay: 0.12s; }
+  @keyframes smokePuffGrow {
+    0% { opacity: 0; transform: scale(0.4) translateY(0); }
+    35% { opacity: 1; transform: scale(1) translateY(-4%); }
+    75% { opacity: 0.95; transform: scale(1.25) translateY(-10%); }
+    100% { opacity: 0; transform: scale(1.4) translateY(-16%); }
+  }
   .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
   .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
@@ -1042,6 +1090,7 @@
     <div class="dungeon-content">
       <div class="dungeon-top">
         <div class="floor-badge" id="floorBadge"><span id="floorBadgeText">1層目</span></div>
+        <div class="quest-target-badge" id="questTargetBadge" style="display:none;"></div>
         <div id="criticalAlert"></div>
         <div id="dungeonLog"></div>
       </div>
@@ -1160,9 +1209,23 @@
   <!-- 「進む」「里に戻る」で1階層分歩く時の暗転オーバーレイ -->
   <div id="moveTransitionBlack" class="move-transition-black" style="display:none;"></div>
 
+  <!-- 煙玉使用時、画面いっぱいに煙が広がって消える演出 -->
+  <div id="smokeBombEffect" class="smoke-effect" style="display:none;">
+    <div class="smoke-puff p1"></div>
+    <div class="smoke-puff p2"></div>
+    <div class="smoke-puff p3"></div>
+    <div class="smoke-puff p4"></div>
+    <div class="smoke-puff p5"></div>
+    <div class="smoke-puff p6"></div>
+  </div>
+
   <!-- 吹き出しセリフ専用の全画面固定レイヤー。.party-bar内に置くとスタッキングコンテキストの都合で
        探索画面の文字より奥に埋もれてしまうため、画面最前面の独立レイヤーに実測位置で配置する -->
   <div id="speechBubbleLayer"></div>
+
+  <!-- 状態異常/バフ/デバフアイコンのホバー/長押し説明ツールチップ。単一の要素を使い回し、
+       表示のたびにJSでアイコンの真上に位置を実測配置する(#speechBubbleLayerと同じパターン) -->
+  <div id="statusTooltip"></div>
 
   <!-- 宿泊時の「一晩がすぎる」演出。現在の時間帯→昼→夕→夜とめくり、最後(夜→朝)だけ暗転を挟む。
        動画は使わず、既存の背景イラストをCSSでクロスフェードするだけ -->
@@ -1632,6 +1695,11 @@ const bgmPositions = {};
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
+  // 最初の1人選び画面はまだ一度もplayBgm()が呼ばれていないため、<audio>要素にHTML側で
+  // 焼き込まれたデフォルトsrc(town_bgm.mp3="town"キーと同一)がここでそのまま鳴り始める。
+  // currentBgmKeyを揃えておかないと、直後の職業確定でrenderTown()がplayBgm("town")を呼んだ時に
+  // 「別の曲への切替」と誤認され、同じ曲なのに頭から再生し直されてしまう(実際に報告されたバグ)
+  if (!currentBgmKey) currentBgmKey = "town";
   bgmAudio.play().catch(() => {});
   ambientBgmAudio.play().catch(() => {});
   // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
@@ -1773,12 +1841,13 @@ function playLodgingBgm() {
   fadeStep();
 }
 lodgingBgmAudio.addEventListener("ended", () => {
-  // 宿泊で寝ている間にtimeOfDayが変わっているので、旧時間帯のまま止まっていたBGMキーへ単純に
-  // 戻すのではなく、今の時間帯(通常は朝)に合った町BGMを選び直す。頭出しではなく途中から
-  // 再開されてしまうのを防ぐため、対象キーの記憶位置も0にリセットしてから切り替える
-  const targetKey = state.timeOfDay === "dawn" ? "town_dawn" : state.timeOfDay === "night" ? "town_night" : "town";
-  bgmPositions[targetKey] = 0;
-  playBgm(targetKey);
+  // 宿泊は必ず翌朝(dawn)に進む(advanceToNextMorning()参照)ため、目的地は常にtown_dawnで確定している。
+  // 以前はここでstate.timeOfDayを見て選び直していたが、この曲が自然に鳴り終わるタイミング(音源自体の
+  // 長さ次第)とadvanceToNextMorning()が実際にtimeOfDayを"dawn"へ書き換えるタイミング(暗転演出の
+  // onBlackコールバック内)は無関係な非同期処理同士のため、曲の方が先に鳴り終わるとまだ更新前の
+  // (寝る前の)時間帯を見てしまい、暗転明けの一瞬だけ昼/夜の町BGMが誤って鳴ってしまう不具合があった
+  bgmPositions.town_dawn = 0;
+  playBgm("town_dawn");
 });
 
 // 野営時: 冒険中BGMをフェードで止め、代わりに野営専用の曲をループ再生する。就寝時にstopCampBgm()で
@@ -3700,7 +3769,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       </div>
       ${hpBarHtml(c)}
       ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="nm">${c.name}${c.guarding ? " 🛡" : ""}${c.carryingId ? " 🎒" : ""}${statusIconsFor(c)}</div>
+      <div class="nm">${c.name}${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>
     `;
     if (targetable) {
       div.onclick = () => {
@@ -3732,7 +3801,9 @@ function visibleFieldParty() {
   return fieldParty.filter((c) => c.status !== "critical" || c.carriedBy);
 }
 function renderDungeon() {
+  hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
+  updateQuestTargetBadge();
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("dungeonLog").style.display = "";
   // 担ぐ/見送るの選択中に道具ボタン等を使うとrenderDungeon()が呼ばれ、そのままだと
@@ -4168,15 +4239,38 @@ function tryForceQuestEncounter() {
   if (!isFirstEncounter && !isChaseEncounter) return false;
   const enemies = [];
   for (let i = 0; i < q.count; i++) enemies.push(instantiateEnemyById(q.enemyId));
+  enemies.forEach((e) => { e.isQuestTarget = true; }); // 敵カードに🎯マークと金色パルス枠を出すための目印
   const def = QUEST_DEFS[q.questKey];
   const encounterText = isChaseEncounter && def.chaseText ? def.chaseText : null;
   startBattle(enemies, null, encounterText);
   battle.questKey = q.questKey; // victory()でこの戦闘がどの依頼の討伐対象だったと判定するための目印
+  // 依頼の討伐対象を発見した特別な一言(性格ごとに10種、確実に発言させる)
+  const alive = aliveField();
+  if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
   return true;
 }
 function resolveFloorArrival(pathBias) {
   if (tryForceQuestEncounter()) return;
   rollEncounter(pathBias);
+}
+// 探索画面に、受注中の依頼の討伐対象と残り層数(or 追跡中)を常時表示するバッジ
+function updateQuestTargetBadge() {
+  const badge = document.getElementById("questTargetBadge");
+  const q = state.acceptedQuest;
+  if (!q || currentStage !== "forest") {
+    badge.style.display = "none";
+    return;
+  }
+  const enemyDef = ENEMIES[q.enemyId];
+  let distanceText;
+  if (q.chasing) {
+    distanceText = "追跡中";
+  } else {
+    const diff = q.targetFloor - currentFloor;
+    distanceText = diff > 0 ? `あと${diff}層` : diff === 0 ? "この階に…！" : `${Math.abs(diff)}層通り過ぎた`;
+  }
+  badge.style.display = "";
+  badge.textContent = `🎯 ${enemyDef.ja}討伐: ${distanceText}`;
 }
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
@@ -4786,8 +4880,21 @@ function renderVfxFor(targetId) {
       const rect = freshEl.getBoundingClientRect();
       // 自キャラ(味方)の吹き出しだけ、ユーザー指示によりさらに5px下にずらす(敵はそのまま)
       const isPartySide = freshEl.classList.contains("party-member") || freshEl.classList.contains("carried-badge");
-      freshBubble.style.left = `${rect.left + rect.width / 2}px`;
+      // 4人パーティの左端/右端キャラだと、キャラ中心に吹き出しを置くと画面外にはみ出て
+      // 文字が読めなくなることがあった。吹き出し自体の位置は画面内に収まるようクランプし、
+      // 矢印(::after)だけ--arrow-offsetでキャラの実際の中心へずらして指し示す
+      const desiredCenterX = rect.left + rect.width / 2;
+      const bubbleWidth = freshBubble.getBoundingClientRect().width;
+      const EDGE_MARGIN = 8;
+      const minCenter = EDGE_MARGIN + bubbleWidth / 2;
+      const maxCenter = window.innerWidth - EDGE_MARGIN - bubbleWidth / 2;
+      const clampedCenterX = Math.min(Math.max(desiredCenterX, minCenter), maxCenter);
+      const ARROW_EDGE_MARGIN = 12; // 矢印が吹き出しの丸角にめり込まないための余白
+      const maxArrowOffset = Math.max(0, bubbleWidth / 2 - ARROW_EDGE_MARGIN);
+      const arrowOffset = Math.min(Math.max(desiredCenterX - clampedCenterX, -maxArrowOffset), maxArrowOffset);
+      freshBubble.style.left = `${clampedCenterX}px`;
       freshBubble.style.top = `${rect.top + (isPartySide ? 5 : 0)}px`;
+      freshBubble.style.setProperty("--arrow-offset", `${arrowOffset}px`);
     });
   } else if (existingBubble) {
     existingBubble.remove();
@@ -4818,14 +4925,16 @@ function trySpeak(speaker, category) {
 // スキル命中時の吹き出し判定(10%)。命中させた本人か、ランダムな他の仲間のどちらかが発言する
 function maybeSpeakSkillHit(actor) {
   if (Math.random() >= DIALOGUE_CHANCE.skillHit) return;
-  const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
-  if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
-  else trySpeak(actor, "selfSkillHit");
+  setTimeout(() => {
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
+    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
+    else trySpeak(actor, "selfSkillHit");
+  }, 500);
 }
 // 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する
 function maybeSpeakHealed(target) {
   if (Math.random() >= DIALOGUE_CHANCE.selfHealed) return;
-  trySpeak(target, "selfHealed");
+  setTimeout(() => trySpeak(target, "selfHealed"), 500);
 }
 // 敵を全滅させた直後に呼ぶ(通常攻撃/技どちらの撃破でも共通)。「全滅させた時」のセリフ(35%、
 // 他のセリフより優先=ミューテックスを無視して発言できる)を、最後に倒した本人(lastEnemyKillActor、
@@ -4854,9 +4963,11 @@ function checkPinchTrigger(target, hpBefore) {
   const nowAtOrBelow = target.hp / target.maxHp <= 0.3 && target.hp > 0;
   if (!wasAbove || !nowAtOrBelow) return;
   if (Math.random() >= DIALOGUE_CHANCE.pinch) return;
-  const others = fieldParty.filter((c) => c.status === "active" && c.id !== target.id);
-  if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allyPinch");
-  else trySpeak(target, "selfPinch");
+  setTimeout(() => {
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== target.id);
+    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allyPinch");
+    else trySpeak(target, "selfPinch");
+  }, 500);
 }
 // 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)と、
 // ストレスを抱えている仲間の愚痴セリフ(20%、発狂=tier4は別枠で処理済みなのでtier1〜3のみ対象)を判定する
@@ -4882,18 +4993,92 @@ function shakeClassFor(entity) {
   const intensityClass = entity.__shakeIntensity === "strong" ? "hit-shake-strong" : "hit-shake-normal";
   return ` hit-shake hit-flash ${intensityClass}`;
 }
+// 状態異常/バフ/デバフアイコン1個分のHTMLを組み立てる。data-status属性にSTATUS_TOOLTIPSのキーを
+// 埋め込み、ホバー/長押しの説明表示(index.html下部のイベント委譲)から共通の辞書一発で拾えるようにする
+function statusIconHtml(key, value) {
+  const t = STATUS_TOOLTIPS[key];
+  if (!t) return "";
+  return ` <span class="status-icon" data-status="${key}">${t.icon}${value != null ? value : ""}</span>`;
+}
 // 毒/炎上/スタン/沈黙/大技の構えの状態アイコンを名前の横に表示する
 function statusIconsFor(entity) {
   let s = "";
-  if (entity.poison > 0) s += ` 🦠${entity.poison}`;
-  if (entity.burnTurns > 0) s += ` 🔥${entity.burnTurns}`;
-  if (entity.bleed > 0) s += ` 🩸${entity.bleed}`;
-  if (entity.stunTurns > 0) s += " 💫";
-  if (entity.silenceTurns > 0) s += " 🔇";
-  if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += " 🕸️";
-  if (entity.bigAttackPending) s += " ⚡";
+  if (entity.poison > 0) s += statusIconHtml("poison", entity.poison);
+  if (entity.burnTurns > 0) s += statusIconHtml("burn", entity.burnTurns);
+  if (entity.bleed > 0) s += statusIconHtml("bleed", entity.bleed);
+  if (entity.stunTurns > 0) s += statusIconHtml("stun");
+  if (entity.silenceTurns > 0) s += statusIconHtml("silence");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += statusIconHtml("tangle");
+  if (entity.bigAttackPending) s += statusIconHtml("bigAttackPending");
   return s;
 }
+
+// ============ 状態異常アイコンの説明ツールチップ(PC:ホバー/スマホ:0.5秒長押し) ============
+// イベント委譲で実装しているため、.status-iconがどの画面のどのタイミングで描画されても
+// (再描画のたびにDOM要素が作り直されても)個別にイベントを貼り直す必要が無い
+const STATUS_TOOLTIP_FADE_MS = 100;
+let statusTooltipAnim = null;
+function showStatusTooltip(el) {
+  const info = STATUS_TOOLTIPS[el.dataset.status];
+  if (!info) return;
+  const tip = document.getElementById("statusTooltip");
+  tip.innerHTML = `<div class="status-tooltip-title">${info.icon} ${info.title}</div><div>${info.desc}</div>`;
+  tip.style.display = "block";
+  const rect = el.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const EDGE_MARGIN = 8;
+  let left = rect.left + rect.width / 2 - tipRect.width / 2;
+  left = Math.min(Math.max(left, EDGE_MARGIN), window.innerWidth - tipRect.width - EDGE_MARGIN);
+  let top = rect.top - tipRect.height - 8;
+  if (top < EDGE_MARGIN) top = rect.bottom + 8; // 画面上端に近い時だけアイコンの下側に出す
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+  if (statusTooltipAnim) statusTooltipAnim.cancel();
+  tip.style.opacity = "0";
+  statusTooltipAnim = tip.animate([{ opacity: 0 }, { opacity: 1 }], { duration: STATUS_TOOLTIP_FADE_MS, fill: "forwards" });
+}
+function hideStatusTooltip() {
+  if (statusTooltipAnim) { statusTooltipAnim.cancel(); statusTooltipAnim = null; }
+  document.getElementById("statusTooltip").style.display = "none";
+}
+// PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
+// pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
+document.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const el = e.target.closest(".status-icon");
+  if (el) showStatusTooltip(el);
+});
+document.addEventListener("pointerout", (e) => {
+  if (e.pointerType !== "mouse") return;
+  if (e.target.closest(".status-icon")) hideStatusTooltip();
+});
+// スマホ: 0.5秒長押しで表示、指を離すか一定距離動かす(=スクロール意図とみなす)とキャンセル。
+// passive:trueのままpreventDefaultを一切呼ばないため、スクロール操作そのものは妨げない
+const STATUS_LONG_PRESS_MS = 500;
+const STATUS_LONG_PRESS_MOVE_TOLERANCE = 10;
+let statusLongPressTimer = null;
+let statusLongPressStartX = 0;
+let statusLongPressStartY = 0;
+document.addEventListener("touchstart", (e) => {
+  const el = e.target.closest(".status-icon");
+  clearTimeout(statusLongPressTimer);
+  if (!el) return;
+  const touch = e.touches[0];
+  statusLongPressStartX = touch.clientX;
+  statusLongPressStartY = touch.clientY;
+  statusLongPressTimer = setTimeout(() => showStatusTooltip(el), STATUS_LONG_PRESS_MS);
+}, { passive: true });
+document.addEventListener("touchmove", (e) => {
+  const touch = e.touches[0];
+  const dx = Math.abs(touch.clientX - statusLongPressStartX);
+  const dy = Math.abs(touch.clientY - statusLongPressStartY);
+  if (dx > STATUS_LONG_PRESS_MOVE_TOLERANCE || dy > STATUS_LONG_PRESS_MOVE_TOLERANCE) {
+    clearTimeout(statusLongPressTimer);
+    hideStatusTooltip();
+  }
+}, { passive: true });
+document.addEventListener("touchend", () => { clearTimeout(statusLongPressTimer); hideStatusTooltip(); }, { passive: true });
+document.addEventListener("touchcancel", () => { clearTimeout(statusLongPressTimer); hideStatusTooltip(); }, { passive: true });
 
 function startBattle(enemies, pathDef, encounterText) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1 };
@@ -4910,6 +5095,9 @@ function startBattle(enemies, pathDef, encounterText) {
     c.tauntTurns = 0;
     c.statMods = [];
     c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
+    // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
+    // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
+    c.__allies = fieldParty;
     if (c.passives) {
       c.passives.onceGuardUsed = false;
       c.passives.firstAttackUsed = false;
@@ -5035,6 +5223,7 @@ function aliveEnemies() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
+  hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
@@ -5044,13 +5233,14 @@ function renderBattleScreen() {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     card.innerHTML = `
       <div class="enemy-name">${e.label}${statusIconsFor(e)}</div>
       <div style="position:relative;">
         <img src="${e.image}" alt="${e.label}">
-        ${e.isFlying ? '<span title="飛行中(近接攻撃が当たりにくい)" style="position:absolute;top:2px;left:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🪽</span>' : ""}
+        ${e.isFlying ? '<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🪽</span>' : ""}
+        ${e.isQuestTarget ? '<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:0.9rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">🎯</span>' : ""}
       </div>
       ${hpBarHtml(e)}
     `;
@@ -5700,6 +5890,17 @@ function useExtinguish(actor) {
   renderActionButtons(actor);
 }
 // 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
+// 煙玉使用時、画面いっぱいに煙が広がって消える演出。CSSのkeyframeアニメーションは
+// (transitionと違い)inline style設定直後でも確実に発火するため、double-rAFのような小細工は不要
+const SMOKE_BOMB_EFFECT_MS = 1700; // 最後のpuffのanimation-delay(0.3s)+アニメーション本体(1.4s)を少し超える長さ
+function playSmokeBombEffect(onDone) {
+  const el = document.getElementById("smokeBombEffect");
+  el.style.display = "block";
+  setTimeout(() => {
+    el.style.display = "none";
+    onDone();
+  }, SMOKE_BOMB_EFFECT_MS);
+}
 function useSmokeBomb(actor) {
   markQuestChasingIfFled();
   stopBattleBgm();
@@ -5709,12 +5910,15 @@ function useSmokeBomb(actor) {
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
-  battle = null;
-  pendingEnemyPick = null;
-  pendingAllyPick = null;
-  showScreen("screen-dungeon");
-  renderDungeon();
-  checkStrandedOnCurrentFloor();
+  renderBattleScreen();
+  playSmokeBombEffect(() => {
+    battle = null;
+    pendingEnemyPick = null;
+    pendingAllyPick = null;
+    showScreen("screen-dungeon");
+    renderDungeon();
+    checkStrandedOnCurrentFloor();
+  });
 }
 
 // 逃げる: 押した本人だけが「逃走準備」に入り、その場では離脱せず今のターンを消費する。次に自分の番が来た時に
