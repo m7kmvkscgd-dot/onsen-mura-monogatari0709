@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>温泉村物語</title>
 <style>
   :root {
@@ -720,6 +720,7 @@
         <button class="big" id="toShopBtn">⚒️ 鍛冶屋</button>
         <button class="big" id="toOnsenBtn">♨️ 温泉</button>
         <button class="big" id="toExtensionBtn">🪵建築</button>
+        <button class="big" id="toMagistrateBtn" style="display:none;">🏯奉行所</button>
         <button class="big primary" id="toDungeonBtn">⛰️出発</button>
       </div>
     </div>
@@ -832,6 +833,16 @@
     </div>
   </div>
 
+  <!-- 出発前の最終確認: このメンバーで出発するかどうかを確認する -->
+  <div id="departConfirmOverlay" style="display:none; position:fixed; inset:0; z-index:90; background:rgba(10,12,14,0.94); overflow-y:auto;">
+    <div style="max-width:480px; margin:0 auto; padding:1.2rem 1rem 2rem;">
+      <h3 style="color:var(--accent); text-align:center; margin-bottom:1rem;">このメンバーでよろしいですか？</h3>
+      <div id="departConfirmList"></div>
+      <button class="big primary" id="departConfirmYesBtn" style="width:100%;margin-top:1rem;">出発する</button>
+      <button class="big" id="departConfirmNoBtn" style="width:100%;margin-top:0.5rem;">やめる</button>
+    </div>
+  </div>
+
   <!-- ステータス詳細 -->
   <div class="screen" id="screen-status">
     <div class="hero" id="statusHero" style="background-image:url('assets/bg/tavern.jpg')">
@@ -940,7 +951,7 @@
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🏯奉行所</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">依頼を受けられるようになります。</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">依頼を受けられるようになります(町の画面から見られます)。依頼は毎日入れ替わります。</p>
       <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.8rem;"></button>
 
       <h2 style="margin-top:1.2rem;">🏕️旅支度屋</h2>
@@ -983,7 +994,7 @@
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐎馬小屋</h2>
+      <h2 style="margin-top:1.2rem;">🐎馬屋</h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">馬を購入すると、出発時の移動速度が上がります。</p>
       <button class="big primary" id="stableBuildBtn" style="margin-top:0.8rem;"></button>
 
@@ -991,7 +1002,24 @@
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.8rem;"></button>
 
+      <h2 style="margin-top:1.2rem;">⛴️渡し船</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
+      <button class="big primary" id="ferryBuildBtn" style="margin-top:0.8rem;"></button>
+
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
+    </div>
+  </div>
+
+  <!-- 奉行所: 討伐依頼(日替わり) -->
+  <div class="screen" id="screen-magistrate">
+    <div class="hero" id="magistrateHero">
+      <h1>🏯奉行所</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="magistrateBackBtnTop" style="margin-bottom:0.8rem;">戻る</button>
+      <p style="font-size:0.8rem;color:var(--text-muted);">本日の依頼(毎日入れ替わります)</p>
+      <div id="magistrateQuestList"></div>
+      <button class="big" id="magistrateBackBtn" style="margin-top:1rem;">戻る</button>
     </div>
   </div>
 
@@ -1100,6 +1128,22 @@
     </div>
   </div>
 
+  <!-- 開発者モード: 町の時刻表示を7回連続タップすると開く隠しデバッグ画面。ゴールド/仲間のレベルを直接書き換えられる -->
+  <div id="devModeOverlay" style="display:none; position:fixed; inset:0; z-index:90; background:rgba(10,12,14,0.94); overflow-y:auto;">
+    <div style="max-width:480px; margin:0 auto; padding:1.2rem 1rem 2rem;">
+      <h3 style="color:var(--accent); text-align:center; margin-bottom:1rem;">🛠開発者モード</h3>
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem;">
+          <span>所持金</span>
+          <input type="number" id="devGoldInput" style="width:110px; text-align:right; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem;">
+          <button class="big" id="devGoldSetBtn" style="width:auto; padding:0.4rem 0.8rem;">設定</button>
+        </div>
+      </div>
+      <div id="devRosterList"></div>
+      <button class="big danger" id="devModeCloseBtn" style="width:100%; margin-top:1rem;">閉じる</button>
+    </div>
+  </div>
+
   <!-- 「進む」「里に戻る」で1階層分歩く時の暗転オーバーレイ -->
   <div id="moveTransitionBlack" class="move-transition-black" style="display:none;"></div>
 
@@ -1164,7 +1208,12 @@ function defaultState() {
     dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
     houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限2人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
-    magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル4で解禁)。依頼を受けられるようになる(未実装、建物のみ)
+    magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
+    magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
+    magistrateQuests: [], // 本日張り出されている依頼 [{enemyId, kills, claimed}]
+    emergencyQuest: null, // 緊急依頼(序盤ボス級の指名討伐)。進行中は{enemyId, kills, claimed}、無い時はnull
+    magistrateNormalClears: 0, // 通常の討伐依頼を受け取った累計件数(EMERGENCY_QUEST_CLEAR_THRESHOLD件で緊急依頼が1件発生し、消費されて0に戻る)
+    emergencyQuestEverAppeared: false, // 一番最初の緊急依頼は必ず荒熊にするためのフラグ(発生済みならfalse→trueにし、以降はランダム)
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
@@ -1175,7 +1224,8 @@ function defaultState() {
     beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
     shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル5で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
     gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル6で解禁)。砲術士が雇えるようになり、出発画面で爆弾を購入できるようになる
-    karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。家レベル4で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
+    karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。家レベル3で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
+    ferryLevel: 0, // 増築の1つ、渡し船のレベル(0=未建築、1=建築済み。家レベル7で解禁)。効果は未定(建物のみ)
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
     onsenEggDailyCount: 0, // 温泉の売店で本日買った温泉卵の数(1日2個まで、翌朝リセット)
     onsenEggDailyDate: 1, // 上記カウントが対応しているdayCount(値が変わったらリセットする)
@@ -1197,11 +1247,11 @@ function rosterCapacity() {
 const DOJO_LEVEL1_COST = 50; // 道場レベル1の建築費用
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
 const DOJO_MAX_LEVEL = 2;
-const DOJO_UNLOCK_HOUSE_LEVEL = 4; // 家レベルがこの値に達するまで道場は建築できない
+const DOJO_UNLOCK_HOUSE_LEVEL = 3; // 家レベルがこの値に達するまで道場は建築できない
 const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
 
 // 奉行所: 依頼を受けられるようになる(建物のみ、依頼の中身は未実装)
-const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 3;
+const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 50;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;
@@ -1215,30 +1265,33 @@ function supplyCap() {
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
 const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;
 const WATCHTOWER_COST = 200;
-// 馬小屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
+// 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
 // 鶏小屋: 効果は未定(建物のみ、未実装)
-const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 5;
+const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
 const HEN_HOUSE_COST = 200;
 // 茶屋: 効果は未定(建物のみ、未実装)
-const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 7;
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
 const TEA_HOUSE_COST = 250;
 // 湯守屋: 効果は未定(建物のみ、未実装)
-const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 6;
+const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 4;
 const HOT_SPRING_KEEPER_COST = 200;
 // 火薬庫: 建築すると砲術士が雇えるようになり、出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
-const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 6;
+const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 5;
 const GUNPOWDER_STORE_COST = 200;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
-const KARAKURI_UNLOCK_HOUSE_LEVEL = 4;
+const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
 const KARAKURI_COST = 150;
 // 養蜂場: 効果は未定(建物のみ、未実装)
-const BEE_FARM_UNLOCK_HOUSE_LEVEL = 8;
+const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
 const BEE_FARM_COST = 300;
 // 神社: 建築すると僧侶が雇えるようになり、出発画面でおみくじを引けるようになる
 const SHRINE_UNLOCK_HOUSE_LEVEL = 5;
 const SHRINE_COST = 200;
+// 渡し船: 効果は未定(建物のみ、未実装)
+const FERRY_UNLOCK_HOUSE_LEVEL = 7;
+const FERRY_COST = 250;
 
 // ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(2時間)など、
 // 日をまたぐ可能性のある時間比較はdayCount/clockMinutesを別々に見るのではなくこの値で行う
@@ -1343,6 +1396,11 @@ function loadState() {
       if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、元々の名簿上限だった10人を維持できるよう最大レベル扱いにする
       if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
+      if (loaded.magistrateQuestDate == null) loaded.magistrateQuestDate = 0; // 旧セーブ用の初期値(依頼未生成)
+      if (loaded.magistrateQuests == null) loaded.magistrateQuests = []; // 旧セーブ用の初期値
+      if (loaded.emergencyQuest === undefined) loaded.emergencyQuest = null; // 旧セーブ用の初期値(緊急依頼未発生)
+      if (loaded.magistrateNormalClears == null) loaded.magistrateNormalClears = 0; // 旧セーブ用の初期値
+      if (loaded.emergencyQuestEverAppeared == null) loaded.emergencyQuestEverAppeared = false; // 旧セーブ用の初期値
       if (loaded.travelPrepShopLevel == null) loaded.travelPrepShopLevel = 0; // 旧セーブ用の初期値(旅支度屋未建築)
       if (loaded.bagShopLevel == null) loaded.bagShopLevel = 0; // 旧セーブ用の初期値(鞄屋未建築)
       if (loaded.watchtowerLevel == null) loaded.watchtowerLevel = 0; // 旧セーブ用の初期値(見張り台未建築)
@@ -1354,6 +1412,7 @@ function loadState() {
       if (loaded.shrineLevel == null) loaded.shrineLevel = 0; // 旧セーブ用の初期値(神社未建築)
       if (loaded.gunpowderStoreLevel == null) loaded.gunpowderStoreLevel = 0; // 旧セーブ用の初期値(火薬庫未建築)
       if (loaded.karakuriLevel == null) loaded.karakuriLevel = 0; // 旧セーブ用の初期値(からくり屋敷未建築)
+      if (loaded.ferryLevel == null) loaded.ferryLevel = 0; // 旧セーブ用の初期値(渡し船未建築)
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
@@ -1561,6 +1620,23 @@ function unlockAudio() {
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
 }
 document.addEventListener("pointerdown", unlockAudio, { once: true });
+
+// iPhone Safariのダブルタップズーム対策。touch-action:manipulation(html,body)とviewportの
+// maximum-scale=1/user-scalable=noだけでは、探索画面のように連続してボタンをタップする場面で
+// ズームが発生してしまうことがあったため、素早い連続タップの2回目のtouchendを明示的に
+// preventDefault()してズームジェスチャー自体の発生を止める。
+// 最初は「350ms以内なら問答無用でブロック」だったが、攻撃連打など通常の高速操作まで
+// 潰してしまう(反応しないボタンがある)という指摘を受け、「同じ要素への連打」限定+
+// ウィンドウを150msまで短縮する形に調整した(別の要素を素早く連続タップする通常操作は影響を受けない)
+let lastTouchEndAt = 0;
+let lastTouchEndTarget = null;
+const DOUBLE_TAP_ZOOM_WINDOW_MS = 150;
+document.addEventListener("touchend", (e) => {
+  const now = Date.now();
+  if (e.target === lastTouchEndTarget && now - lastTouchEndAt <= DOUBLE_TAP_ZOOM_WINDOW_MS) e.preventDefault();
+  lastTouchEndAt = now;
+  lastTouchEndTarget = e.target;
+}, { passive: false });
 
 // 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
 const COAST_BGM_VOLUME_MULT = 1.7;
@@ -1862,10 +1938,88 @@ function renderTown() {
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   // 最初の1人を選んだ直後(まだ宿屋で誰も雇っていない間)だけ、宿屋への案内を出す
   document.getElementById("townHireHint").style.display = state.roster.length === 1 ? "" : "none";
+  document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
 }
+
+// ============ 開発者モード(町の時刻表示を7回連続タップで起動) ============
+let devTapCount = 0;
+let devTapLastAt = 0;
+const DEV_TAP_REQUIRED = 7;
+const DEV_TAP_WINDOW_MS = 600; // タップ間隔がこれを超えたらカウントをリセットする
+function handleDevTimeLabelTap() {
+  const now = Date.now();
+  devTapCount = (now - devTapLastAt <= DEV_TAP_WINDOW_MS) ? devTapCount + 1 : 1;
+  devTapLastAt = now;
+  if (devTapCount >= DEV_TAP_REQUIRED) {
+    devTapCount = 0;
+    openDevMode();
+  }
+}
+// タップ専用: ページ全体のダブルタップズーム対策(350ms以内の連続タップのtouchendをpreventDefaultする処理)が
+// このボタン上でも働き、素早く連続タップすると合成されるclickイベントごと消えてしまい7回タップが
+// カウントできなくなっていたため、このボタンだけtouchend自体をカウント源にして回避する
+// (このボタンのtouchendは常にpreventDefaultし、その後に合成されるclickと二重カウントしないようにする)
+document.getElementById("townTimeLabel").addEventListener("touchend", (e) => {
+  e.preventDefault();
+  handleDevTimeLabelTap();
+}, { passive: false });
+document.getElementById("townTimeLabel").addEventListener("click", handleDevTimeLabelTap);
+function openDevMode() {
+  document.getElementById("devGoldInput").value = state.gold;
+  renderDevRosterList();
+  document.getElementById("devModeOverlay").style.display = "block";
+}
+function renderDevRosterList() {
+  const list = document.getElementById("devRosterList");
+  list.innerHTML = "";
+  state.roster.forEach((c) => {
+    const row = document.createElement("div");
+    row.className = "card";
+    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:0.5rem;";
+    const label = document.createElement("span");
+    label.textContent = `${c.label}(${CLASSES[c.classId].ja} Lv${c.level})`;
+    label.style.cssText = "flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+    const input = document.createElement("input");
+    input.type = "number"; input.min = 1; input.max = MAX_LEVEL; input.value = c.level;
+    input.style.cssText = "width:55px; text-align:right; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem;";
+    const btn = document.createElement("button");
+    btn.className = "big"; btn.style.cssText = "width:auto; padding:0.4rem 0.6rem;";
+    btn.textContent = "設定";
+    btn.onclick = () => {
+      devSetCharacterLevel(c, parseInt(input.value, 10) || 1);
+      saveState();
+      renderDevRosterList();
+    };
+    row.appendChild(label); row.appendChild(input); row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+// レベルを直接指定する(levelUpは1段ずつしか上げられないため、一度基礎値まで戻してから
+// 目的のレベルまでlevelUpを繰り返し適用することで、成長式を通した正しいステータスを再現する)
+function devSetCharacterLevel(character, targetLevel) {
+  targetLevel = Math.max(1, Math.min(MAX_LEVEL, Math.round(targetLevel)));
+  const c = CLASSES[character.classId];
+  character.level = 1;
+  character.maxHp = c.hp; character.atk = c.atk; character.def = c.def; character.spd = c.spd; character.mag = c.mag;
+  for (let i = 1; i < targetLevel; i++) levelUp(character, () => {});
+  character.hp = character.maxHp;
+  character.mp = character.maxMp;
+  character.xp = 0;
+}
+document.getElementById("devGoldSetBtn").onclick = () => {
+  const v = parseInt(document.getElementById("devGoldInput").value, 10);
+  state.gold = isNaN(v) ? state.gold : Math.max(0, v);
+  saveState();
+  document.getElementById("devGoldInput").value = state.gold;
+  document.getElementById("townGold").textContent = state.gold + "G";
+};
+document.getElementById("devModeCloseBtn").onclick = () => {
+  document.getElementById("devModeOverlay").style.display = "none";
+  renderTown();
+};
 
 // ============ 時間を進める(⌛️) ============
 // 町の時計の横から、30分刻み・最長12時間まで時間を早送りできる。1時間ごとに1秒かけて進め、
@@ -2881,8 +3035,37 @@ function startDeparture(stage) {
     }, DEPARTURE_FADEOUT_DELAY_MS);
   }, DEPARTURE_BG_HOLD_MS);
 }
-document.getElementById("departForestBtn").onclick = () => startDeparture("forest");
-document.getElementById("departCoastBtn").onclick = () => startDeparture("coast");
+// 出発前の最終確認: 選んだメンバーの一覧を見せてから、間違えて出発してしまわないようにする
+let pendingDepartureStage = null;
+function showDepartConfirm(stage) {
+  if (state.activePartyIds.length === 0) {
+    alert("パーティを1人以上選んでください");
+    return;
+  }
+  pendingDepartureStage = stage;
+  const list = document.getElementById("departConfirmList");
+  list.innerHTML = "";
+  state.activePartyIds.forEach((id) => {
+    const c = getRosterChar(id);
+    if (!c) return;
+    const c2 = CLASSES[c.classId];
+    const row = document.createElement("div");
+    row.className = "card";
+    row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
+    row.innerHTML = `<img src="${c2.image}" style="width:44px;height:44px;object-fit:cover;object-position:top;border-radius:6px;"><span>${c.name}(${c2.ja} Lv${c.level})</span>`;
+    list.appendChild(row);
+  });
+  document.getElementById("departConfirmOverlay").style.display = "block";
+}
+document.getElementById("departForestBtn").onclick = () => showDepartConfirm("forest");
+document.getElementById("departCoastBtn").onclick = () => showDepartConfirm("coast");
+document.getElementById("departConfirmYesBtn").onclick = () => {
+  document.getElementById("departConfirmOverlay").style.display = "none";
+  startDeparture(pendingDepartureStage);
+};
+document.getElementById("departConfirmNoBtn").onclick = () => {
+  document.getElementById("departConfirmOverlay").style.display = "none";
+};
 
 // ============ 温泉 ============
 function renderOnsen() {
@@ -2997,7 +3180,7 @@ function renderExtension() {
   if (!state.travelPrepShopLevel && nextLevel === TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅支度屋");
   if (!state.bagShopLevel && nextLevel === BAG_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鞄屋");
   if (!state.watchtowerLevel && nextLevel === WATCHTOWER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("見張り台");
-  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬小屋");
+  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬屋");
   if (!state.henHouseLevel && nextLevel === HEN_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鶏小屋");
   if (!state.teaHouseLevel && nextLevel === TEA_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("茶屋");
   if (!state.hotSpringKeeperLevel && nextLevel === HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("湯守屋");
@@ -3005,6 +3188,7 @@ function renderExtension() {
   if (!state.shrineLevel && nextLevel === SHRINE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("神社");
   if (!state.gunpowderStoreLevel && nextLevel === GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("火薬庫");
   if (!state.karakuriLevel && nextLevel === KARAKURI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("からくり屋敷");
+  if (!state.ferryLevel && nextLevel === FERRY_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("渡し船");
   const nextUnlockEl = document.getElementById("extensionNextUnlock");
   nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
     ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
@@ -3037,6 +3221,7 @@ function renderExtension() {
   renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level);
   renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level);
   renderSimpleBuilding("beeFarmLevel", "beeFarmBuildBtn", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST, level);
+  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level);
 }
 // 奉行所/鞄屋/見張り台/馬屋は全て「家レベルで解禁→1回建築したら終わり(レベル1のみ)」という
 // 同じ形の建物なので、表示更新の共通処理をまとめている
@@ -3099,9 +3284,136 @@ document.getElementById("beeFarmBuildBtn").onclick = () => buildSimpleBuilding("
 document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
 document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
 document.getElementById("karakuriBuildBtn").onclick = () => buildSimpleBuilding("karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST);
+document.getElementById("ferryBuildBtn").onclick = () => buildSimpleBuilding("ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
+document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); renderMagistrateScreen(); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
 document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
+
+// ============ 奉行所: 討伐依頼(日替わり) ============
+// 全10件を一度に出さず、QUEST_BOARD_SIZE件だけ毎日ランダムに選び直す。dayCountが変わるまでは
+// 同じ顔ぶれ(と進捗)を維持し、変わった瞬間に新しい顔ぶれへ入れ替える(未達成分は流れる)
+function refreshMagistrateQuestsIfNeeded() {
+  if (state.magistrateQuestDate === state.dayCount && state.magistrateQuests && state.magistrateQuests.length > 0) return;
+  const pool = Object.keys(QUEST_DEFS);
+  const picked = [];
+  for (let i = 0; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
+    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  state.magistrateQuests = picked.map((id) => ({ enemyId: id, kills: 0, claimed: false }));
+  state.magistrateQuestDate = state.dayCount;
+}
+// 緊急依頼(序盤ボス級の指名討伐)。モンハン風に、通常の討伐依頼をEMERGENCY_QUEST_CLEAR_THRESHOLD件
+// クリア(報酬受け取り)するたびに1件発生する。既に進行中(未達成)の緊急依頼がある間は増発しない。
+// 一番最初に発生する緊急依頼は必ず荒熊、以降はランダムに選ぶ
+function maybeTriggerEmergencyQuest() {
+  if (state.emergencyQuest && !state.emergencyQuest.claimed) return;
+  if (state.magistrateNormalClears < EMERGENCY_QUEST_CLEAR_THRESHOLD) return;
+  state.magistrateNormalClears -= EMERGENCY_QUEST_CLEAR_THRESHOLD;
+  const ids = Object.keys(EMERGENCY_QUEST_DEFS);
+  const id = state.emergencyQuestEverAppeared ? ids[Math.floor(Math.random() * ids.length)] : "q_arakuma";
+  state.emergencyQuest = { enemyId: id, kills: 0, claimed: false };
+  state.emergencyQuestEverAppeared = true;
+}
+function renderMagistrateScreen() {
+  refreshMagistrateQuestsIfNeeded();
+  maybeTriggerEmergencyQuest(); // 前回の受け取り時点でしきい値に達していた場合の保険
+  saveState();
+  const list = document.getElementById("magistrateQuestList");
+  list.innerHTML = "";
+  if (state.emergencyQuest) {
+    const eq = state.emergencyQuest;
+    const eDef = EMERGENCY_QUEST_DEFS[eq.enemyId];
+    const eDone = eq.kills >= 1;
+    const row = document.createElement("div");
+    row.className = "card";
+    row.style.border = "1px solid var(--danger)";
+    row.innerHTML = `
+      <div class="roster-name">${eDef.emoji}${eDef.title}</div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${eDef.requester}</p>
+      <p style="font-size:0.8rem;margin:0 0 0.5rem;">${eDef.text}</p>
+      <p style="font-size:0.8rem;">討伐状況: ${eDone ? "討伐済み" : "未討伐"}</p>
+    `;
+    const eBtn = document.createElement("button");
+    eBtn.className = "big danger";
+    eBtn.style.marginTop = "0.5rem";
+    if (eq.claimed) {
+      eBtn.textContent = "報酬受け取り済み";
+      eBtn.disabled = true;
+    } else if (!eDone) {
+      eBtn.textContent = "討伐を進めよう";
+      eBtn.disabled = true;
+    } else {
+      eBtn.textContent = `報酬を受け取る(${EMERGENCY_QUEST_REWARD_GOLD}G / XP${EMERGENCY_QUEST_REWARD_XP})`;
+      eBtn.onclick = () => claimEmergencyQuest();
+    }
+    row.appendChild(eBtn);
+    list.appendChild(row);
+  }
+  state.magistrateQuests.forEach((q) => {
+    const def = QUEST_DEFS[q.enemyId];
+    const done = q.kills >= QUEST_REQUIRED_KILLS;
+    const row = document.createElement("div");
+    row.className = "card";
+    row.innerHTML = `
+      <div class="roster-name">${def.emoji}${def.title}</div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${def.requester}</p>
+      <p style="font-size:0.8rem;margin:0 0 0.5rem;">${def.text}</p>
+      <p style="font-size:0.8rem;">討伐状況: ${Math.min(q.kills, QUEST_REQUIRED_KILLS)}/${QUEST_REQUIRED_KILLS}</p>
+    `;
+    const btn = document.createElement("button");
+    btn.className = "big primary";
+    btn.style.marginTop = "0.5rem";
+    if (q.claimed) {
+      btn.textContent = "報酬受け取り済み";
+      btn.disabled = true;
+    } else if (!done) {
+      btn.textContent = "討伐を進めよう";
+      btn.disabled = true;
+    } else {
+      btn.textContent = `報酬を受け取る(${QUEST_REWARD_GOLD}G / XP${QUEST_REWARD_XP})`;
+      btn.onclick = () => claimMagistrateQuest(q);
+    }
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+  showScreen("screen-magistrate");
+}
+function claimMagistrateQuest(q) {
+  if (q.claimed || q.kills < QUEST_REQUIRED_KILLS) return;
+  q.claimed = true;
+  state.gold += QUEST_REWARD_GOLD;
+  state.magistrateNormalClears = (state.magistrateNormalClears || 0) + 1;
+  maybeTriggerEmergencyQuest();
+  const leveledUp = [];
+  state.roster.filter((c) => c.status === "active").forEach((c) => {
+    const beforeLevel = c.level;
+    grantXp(c, QUEST_REWARD_XP, () => {});
+    for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+  });
+  queueSkillChoices(leveledUp);
+  saveState();
+  playSfx("coin");
+  renderMagistrateScreen();
+}
+function claimEmergencyQuest() {
+  const eq = state.emergencyQuest;
+  if (!eq || eq.claimed || eq.kills < 1) return;
+  eq.claimed = true;
+  state.gold += EMERGENCY_QUEST_REWARD_GOLD;
+  const leveledUp = [];
+  state.roster.filter((c) => c.status === "active").forEach((c) => {
+    const beforeLevel = c.level;
+    grantXp(c, EMERGENCY_QUEST_REWARD_XP, () => {});
+    for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+  });
+  queueSkillChoices(leveledUp);
+  saveState();
+  playSfx("coin");
+  renderMagistrateScreen();
+}
+document.getElementById("magistrateBackBtnTop").onclick = () => { renderTown(); };
+document.getElementById("magistrateBackBtn").onclick = () => { renderTown(); };
 
 // ゲームオーバー画面の「最初から」: セーブを消してページごと再読み込みし、完全に初期状態からやり直す
 document.getElementById("gameoverRestartBtn").onclick = () => {
@@ -4064,6 +4376,9 @@ function queueCriticalAlerts(criticalList, onAllDone) {
 }
 function showNextQueuedCriticalAlert() {
   if (pendingCriticalQueue.length === 0) {
+    // 「担ぐ/見送る」の判断が全て終わるまでは進む/里に戻るを封じていたので、ここで解除する
+    document.getElementById("advanceBtn").disabled = false;
+    document.getElementById("retreatBtn").disabled = false;
     const cb = afterCriticalQueue;
     afterCriticalQueue = null;
     if (cb) cb();
@@ -4081,6 +4396,11 @@ function showNextQueuedCriticalAlert() {
 // 瀕死の仲間を助ける手段は「担ぐ」(歩いて連れて帰る必要がある)のみにしてある
 function showCriticalAlert(critical, onResolved) {
   activeCriticalAlert = { critical, onResolved, screen: "alert" };
+  // 「担ぐ/見送る」を選ぶまでは進む/里に戻るを封じる(でないと選ばずに階層を進めてしまい、
+  // 元の階に取り残されたキャラのアラートが新しい階でも(activeCriticalAlertの復元により)
+  // 出続けてしまうバグがあった)。道具ボタンはこれまで通り使用可(既存の中断復元の仕組みを維持)
+  document.getElementById("advanceBtn").disabled = true;
+  document.getElementById("retreatBtn").disabled = true;
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   const overlaySrc = stressOverlaySrc(critical.fatigue);
@@ -4122,6 +4442,8 @@ function showCarryPicker(critical, onResolved) {
     return;
   }
   activeCriticalAlert = { critical, onResolved, screen: "carryPicker" };
+  document.getElementById("advanceBtn").disabled = true;
+  document.getElementById("retreatBtn").disabled = true;
   const rowHtml = (c) => {
     const c2 = CLASSES[c.classId];
     return `
@@ -4184,7 +4506,14 @@ function rollEncounter(pathBias) {
   const goldChance = retreating ? baseGold / 5 : baseGold;
   const roll = Math.random();
   if (roll < battleChance) {
-    const enemies = pickEncounterForFloor(currentFloor, currentStage);
+    // 緊急依頼が発生中(未討伐)なら、序盤の森(floor1-12)限定で一定確率でその的が代わりに現れる
+    const eq = state.emergencyQuest;
+    let enemies;
+    if (eq && !eq.claimed && eq.kills < 1 && !retreating && currentStage === "forest" && currentFloor <= 12 && Math.random() < EMERGENCY_QUEST_ENCOUNTER_CHANCE) {
+      enemies = [instantiateEnemyById(eq.enemyId)];
+    } else {
+      enemies = pickEncounterForFloor(currentFloor, currentStage);
+    }
     startBattle(enemies, bias);
   } else if (roll < battleChance + goldChance) {
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
@@ -5367,6 +5696,17 @@ function victory() {
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
+  // 奉行所の討伐依頼: 建築済みなら、勝った戦闘の敵の種族idが本日の依頼と一致する分だけ進捗を積む
+  if (state.magistrateLevel > 0) {
+    refreshMagistrateQuestsIfNeeded();
+    battle.enemies.forEach((e) => {
+      const quest = state.magistrateQuests.find((q) => q.enemyId === e.id && !q.claimed);
+      if (quest) quest.kills = Math.min(QUEST_REQUIRED_KILLS, quest.kills + 1);
+      if (state.emergencyQuest && state.emergencyQuest.enemyId === e.id && !state.emergencyQuest.claimed) {
+        state.emergencyQuest.kills = 1;
+      }
+    });
+  }
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;

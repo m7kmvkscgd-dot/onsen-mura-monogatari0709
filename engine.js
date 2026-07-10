@@ -716,21 +716,9 @@ function useTreeSkill(actor, target, skill, log) {
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
-function pickEnemyForFloor(floor, mode, stage) {
-  const eligible = Object.values(ENEMIES).filter((e) => {
-    if ((e.stage || "forest") !== (stage || "forest")) return false;
-    if (floor < e.minFloor || floor > e.maxFloor) return false;
-    if (mode === true) return !!e.isBoss;
-    if (mode === "swarm") return !!e.isSwarm;
-    return !e.isSwarm;
-  });
-  if (mode === true && eligible.length === 0) return null;
-  const weighted = [];
-  eligible.forEach((e) => {
-    const weight = e.isBoss ? (floor % 10 === 0 ? 6 : 1) : 10;
-    for (let i = 0; i < weight; i++) weighted.push(e);
-  });
-  const pick = weighted[Math.floor(Math.random() * weighted.length)];
+// ENEMIESカタログの素の1体(pick)から、実際の戦闘インスタンス(スケーリング済みステータス+instanceId)を作る。
+// 通常抽選(pickEnemyForFloor)と、緊急依頼専用の狙い撃ちスポーン(instantiateEnemyById)の両方から使う共通処理
+function instantiateEnemy(pick) {
   const hp = Math.round(pick.hp * ENEMY_SCALE * (pick.isSwarm ? 1 : ENEMY_HP_MULT));
   return {
     ...pick,
@@ -744,6 +732,29 @@ function pickEnemyForFloor(floor, mode, stage) {
     bigAttackCounter: Math.floor(Math.random() * (BIG_ATTACK_CYCLE_LENGTH - 1)),
     bigAttackPending: false,
   };
+}
+// 緊急依頼の対象など、通常の階層抽選を経由せず特定の種族idを名指しでスポーンさせる時に使う
+function instantiateEnemyById(id) {
+  const pick = ENEMIES[id];
+  return pick ? instantiateEnemy(pick) : null;
+}
+function pickEnemyForFloor(floor, mode, stage) {
+  const eligible = Object.values(ENEMIES).filter((e) => {
+    if ((e.stage || "forest") !== (stage || "forest")) return false;
+    if (floor < e.minFloor || floor > e.maxFloor) return false;
+    if (e.questOnly) return false; // 緊急依頼専用の敵は通常の階層抽選には出ない(instantiateEnemyByIdからのみ出す)
+    if (mode === true) return !!e.isBoss;
+    if (mode === "swarm") return !!e.isSwarm;
+    return !e.isSwarm;
+  });
+  if (mode === true && eligible.length === 0) return null;
+  const weighted = [];
+  eligible.forEach((e) => {
+    const weight = e.isBoss ? (floor % 10 === 0 ? 6 : 1) : 10;
+    for (let i = 0; i < weight; i++) weighted.push(e);
+  });
+  const pick = weighted[Math.floor(Math.random() * weighted.length)];
+  return instantiateEnemy(pick);
 }
 
 // そのフロアの遭遇を組み立てる。ボスフロア(10の倍数)は必ず単体。
@@ -1357,7 +1368,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect,
+    pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
