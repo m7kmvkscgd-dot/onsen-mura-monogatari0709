@@ -540,7 +540,9 @@ function initPassives() {
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
-const BASE_CRIT_DMG_MULT = 1.5; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)
+const BASE_CRIT_DMG_MULT = 1.55; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)。
+// 敵はpassivesを持たずrollCritMultiplierが常に1を返す(=会心しない)ため、この値の変更は
+// 実質的に味方→敵の会心ダメージにのみ影響する(ユーザー指示で1.5→1.55に+5%)
 
 // レベルアップで選んだスキルを反映する。受動効果はpassivesに蓄積し、能動スキルはunlockedSkillsに追加する。
 // level引数は「このスキルを選んだのはレベル何の時か」を明示的に渡すためのもの。
@@ -765,7 +767,7 @@ function useTreeSkill(actor, target, skill, log) {
   const results = targets.map((t) => {
     if (!action.guaranteedHit && !rollHit(actor, t, skillRange)) {
       log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
-      return { hit: false, dmg: 0 };
+      return { hit: false, dmg: 0, crit: false };
     }
     const hits = action.hits || 1;
     const atkStat = action.useMag ? effectiveStat(actor, "mag") : effectiveStat(actor, "atk");
@@ -779,6 +781,7 @@ function useTreeSkill(actor, target, skill, log) {
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
     const hpBeforeHit = t.hp;
     const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
+    const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
     // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
     // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
     // 巻き込んで連鎖処刑する狙い撃ちに変更した)。会心判定やonHitInflict等は敵を倒した本体の
@@ -810,7 +813,7 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
     }
     const shotDown = maybeShootDown(actor, t);
-    return { hit: true, dmg, shotDown };
+    return { hit: true, dmg, shotDown, crit };
   });
   return { dmgs: results };
 }
@@ -1019,31 +1022,35 @@ function rollHit(actor, target, rangeType) {
 function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType) {
   if (!rollHit(actor, target, rangeType)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
-    return { hit: false, dmg: null };
+    return { hit: false, dmg: null, crit: false };
   }
   const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate);
+  const crit = lastHitWasCrit; // このヒット固有の会心判定(直後にshotDown等の別処理でlastHitWasCritが上書きされる前に確保する)
   const shotDown = maybeShootDown(actor, target);
-  return { hit: true, dmg, shotDown };
+  return { hit: true, dmg, shotDown, crit };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
 function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
   const hits = [];
   const dmgs = [];
   const shotDowns = [];
+  const crits = [];
   targets.filter((t) => t.hp > 0).forEach((t) => {
     if (!rollHit(actor, t, rangeType)) {
       log(`${t.label}は${actor.label}の攻撃をかわした！`);
       hits.push(false);
       dmgs.push(null);
       shotDowns.push(false);
+      crits.push(false);
       return;
     }
     const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
     hits.push(true);
     dmgs.push(dmg);
+    crits.push(lastHitWasCrit); // 対象ごとに個別記録(AOEの各ヒットで会心の有無が異なりうるため)
     shotDowns.push(maybeShootDown(actor, t));
   });
-  return { hits, dmgs, shotDowns };
+  return { hits, dmgs, shotDowns, crits };
 }
 
 function performAttack(actor, target, log) {

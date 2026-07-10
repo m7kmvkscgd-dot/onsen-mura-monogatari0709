@@ -199,14 +199,34 @@
   .equip-class-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; margin-bottom: 0.6rem; }
   .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; }
   .equip-class-title img { width: 32px; height: 32px; object-fit: cover; object-position: top; border-radius: 5px; }
-  .first-char-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; margin-bottom: 0.6rem; }
-  .first-char-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
-  .first-char-head img { width: 48px; height: 48px; object-fit: cover; object-position: top; border-radius: 6px; }
-  .first-char-head strong { font-size: 0.95rem; }
-  .first-char-card .desc { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-  .first-char-card .skill-row { font-size: 0.72rem; margin-bottom: 0.15rem; }
-  .first-char-card .skill-row .skill-name { color: var(--accent); font-weight: 700; }
-  .first-char-card button { width: 100%; margin-top: 0.5rem; }
+  /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
+     見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
+     地味な一覧だった) */
+  .first-char-carousel { display: flex; flex-direction: column; align-items: center; }
+  .first-char-photo-wrap { position: relative; width: 100%; max-width: 300px; margin: 0 auto 0.7rem; }
+  .first-char-photo {
+    display: block; width: 100%; aspect-ratio: 4 / 3.3; object-fit: cover; object-position: top;
+    border-radius: 16px; border: 2px solid var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+    background: var(--surface-2); animation: firstCharPhotoIn 220ms ease-out;
+  }
+  @keyframes firstCharPhotoIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .first-char-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: none;
+    border-radius: 50%; background: rgba(20,24,27,0.68); color: var(--text); font-size: 1.5rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .first-char-arrow:active { transform: translateY(-50%) scale(0.9); }
+  .first-char-arrow.left { left: -6px; }
+  .first-char-arrow.right { right: -6px; }
+  .first-char-dots { display: flex; gap: 0.35rem; justify-content: center; margin-bottom: 0.6rem; }
+  .first-char-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+  .first-char-dot.active { background: var(--accent); }
+  .first-char-name { font-size: 1.35rem; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+  .first-char-desc { font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 0.7rem; }
+  .first-char-skills { width: 100%; margin-bottom: 0.9rem; }
+  .first-char-skills .skill-row { font-size: 0.76rem; margin-bottom: 0.25rem; }
+  .first-char-skills .skill-row .skill-name { color: var(--accent); font-weight: 700; }
+  .first-char-choose-btn { width: 100%; }
   /* 町画面: 名簿が1人しかいない間だけ、宿屋ボタンの上に表示する案内。.body-padの通常の
      流し込みで.btn-colの直前に置くことで、既存の固定位置調整をそのまま利用する */
   #townHireHint {
@@ -309,7 +329,7 @@
     display: inline-block; font-size: 1.1rem;
     text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
   }
-  .floor-badge { text-align: center; padding: 122px 0.6rem 0.6rem; }
+  .floor-badge { text-align: left; padding: 122px 0.6rem 0.6rem; }
   /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
   .floor-badge span {
     display: inline-block; font-size: 1.45rem; font-weight: 800; color: var(--accent);
@@ -317,10 +337,13 @@
     border-radius: 999px; padding: 0.4rem 1.5rem;
     text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
   }
-  /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ */
+  /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ。
+     依頼が無い時はdisplay:noneではなくvisibility:hiddenにして、常に同じ高さを確保しておく
+     (display:noneで出し入れすると、下のログ欄が依頼の有無によって上下にずれてしまっていたため) */
   .quest-target-badge {
     text-align: center; margin: 0.3rem 1rem 0; font-size: 0.75rem; font-weight: 700; color: var(--accent);
     background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 0.3rem 0.6rem;
+    min-height: 1.6rem; box-sizing: border-box; visibility: hidden;
   }
   /* カラス変身中の「観察眼」: 次に行動する味方/敵のカードに出す青い矢印バッジ */
   .next-actor-badge {
@@ -330,7 +353,14 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     z-index: 6;
   }
-  #dungeonLog, #battleLog, #campLog { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem; }
+  /* display:flex+justify-content:centerで、行数(1〜3行)に関わらず中身を垂直方向に正しく中央寄せする。
+     内容がボックスの高さを超える(古いログが多く溜まった)場合はjustify-content自体が効かなくなり、
+     自然に従来通りの上詰め+overflow-yスクロールへフォールバックするため、両方のケースが両立する */
+  #dungeonLog, #battleLog, #campLog {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.6rem 0.7rem; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem;
+    display: flex; flex-direction: column; justify-content: center;
+  }
   #campLog { height: 70px; }
   #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
 
@@ -342,9 +372,9 @@
      影響しないよう#dungeonLog/#battleLogだけ上書きする */
   #dungeonLog, #battleLog {
     position: relative;
-    /* 1行目の文字上部が枠に食い込んで見切れないよう、共通ルールより上側paddingとボックス自体の
-       高さを少しだけ増やしてある(スクロールで最新行に合わせた時、直前の行の頭が枠際で切れるのを防ぐ) */
-    padding-top: 0.95rem;
+    /* paddingは共通ルールの0.6rem/0.7rem(上下左右)のまま据え置き、display:flexの
+       justify-content:centerで垂直中央寄せする(以前はpadding-topだけ0.95remに増やして
+       上詰めのまま強引に体裁を整えていたが、行数によって微妙に中央からずれて見えていた) */
     height: 78px;
     background-image:
       radial-gradient(circle at top left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
@@ -415,7 +445,12 @@
     width: 100%; max-width: 480px; z-index: 5;
   }
   .battle-bg {
-    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; top: 0; left: 50%;
+    /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
+       bodyにtransformを掛ける方式だと、position:fixed要素の基準(containing block)が
+       viewportからbodyに変わってしまい、実機で画面が一瞬ジャンプする不具合があったため、
+       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した */
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
     width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
   }
@@ -428,13 +463,15 @@
       linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
   }
   .battle-top {
-    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; top: 0; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
     width: 100%; max-width: 480px; z-index: 5;
   }
   .battle-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(端末ごとの表示領域の違いに左右されないようにするため)。
        ここでのtopは計算が走るまでの初期値 */
-    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; top: 500px; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
     width: 100%; max-width: 480px; z-index: 4;
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
@@ -453,6 +490,62 @@
     animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
+     気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
+  .dmg-pop.crit {
+    font-size: 1.61rem; font-weight: 900;
+    background: linear-gradient(180deg, #fff6c8, #f0c419 45%, #b8860b 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    animation: critDmgFloat 1.1s ease-out forwards;
+  }
+  @keyframes critDmgFloat {
+    0%, 10% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); }
+    25% { opacity: 1; transform: translate(-50%, -14px) scale(1.35); }
+    38% { transform: translate(-50%, -6px) scale(1.05); }
+    50% { transform: translate(-50%, -11px) scale(1.15); }
+    65% { transform: translate(-50%, -9px) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1.08); }
+  }
+  /* 会心の白閃光/衝撃波/火花(既存の斬撃・打撃エフェクトとは別枠、素材不要のCSSのみで表現) */
+  .crit-flash-overlay {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 26;
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%);
+    animation: critFlash 0.2s ease-out forwards;
+  }
+  @keyframes critFlash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  .crit-shockwave {
+    position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,235,150,0.9); border-radius: 50%; pointer-events: none; z-index: 27;
+    animation: critShockwave 0.28s ease-out forwards;
+  }
+  @keyframes critShockwave { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(4.5); } }
+  .crit-spark {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    background: #fff6c0; border-radius: 50%; box-shadow: 0 0 6px 2px rgba(255,240,170,0.9);
+    pointer-events: none; z-index: 27; animation: critSparkFly var(--spark-dur, 0.25s) ease-out forwards;
+  }
+  @keyframes critSparkFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--spark-x, 20px), var(--spark-y, -20px)) scale(0.3); }
+  }
+  /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
+  .crit-banner {
+    position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
+    font-size: 1.05rem; font-weight: 900; color: #ffe066;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    white-space: nowrap; pointer-events: none; z-index: 28;
+    animation: critBannerPop 0.5s ease-out forwards;
+  }
+  @keyframes critBannerPop {
+    0% { opacity: 0; transform: translate(-50%, -100%) scale(0.4); }
+    25% { opacity: 1; transform: translate(-50%, -100%) scale(1.3); }
+    45% { transform: translate(-50%, -100%) scale(0.95); }
+    60% { transform: translate(-50%, -100%) scale(1.08); }
+    80% { transform: translate(-50%, -100%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.9); }
+  }
   /* 攻撃が命中した瞬間、対象カードに重ねて出すヒットエフェクト(職業ごとの素材をJSでsrc差し替え
      アニメーションさせる)。表示幅は職業ごとにJS側(playAttackVfx)でstyle.widthを直接設定するため
      ここでは指定しない。".enemy-card img"(width:92px固定)より詳細度を上げて上書きする必要がある */
@@ -630,7 +723,9 @@
      カード自体を固定サイズにしてjustify-content:centerで中央寄せし、選択肢数に関わらず同じ大きさで揃える */
   .path-choice-cards { display: flex; gap: 0.5rem; justify-content: center; }
   .path-card {
-    flex: 0 0 auto; width: 128px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    /* 3択の時に横幅が親パネルからはみ出ていた不具合の修正: flex-shrinkを1にして、
+       1〜2択の時は128pxのまま、3択で収まりきらない時だけ縮んで必ずパネル内に収まるようにする */
+    flex: 0 1 128px; min-width: 0; width: 128px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 0.35rem; background: rgba(8,8,8,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
     color: #d8d0bf; opacity: 0.78; font: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
     transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -699,6 +794,88 @@
     35% { opacity: 1; transform: scale(1) translateY(-4%); }
     75% { opacity: 0.95; transform: scale(1.25) translateY(-10%); }
     100% { opacity: 0; transform: scale(1.4) translateY(-16%); }
+  }
+  /* ===== 奉行所の依頼受注演出(モンハン風の朱印スタンプ) =====
+     「紙」「印鑑(木製、CSSのみで表現)」「朱印(受領)」を別レイヤーで持たせ、印鑑だけ独立して
+     画面上から回転しながら落下→着地の瞬間に紙が揺れる→朱印がインクの染み込みのように現れる、
+     という一連の流れをrequestAnimationFrame無しの純粋なCSSアニメーション(クラス付け外しのみ)で作る */
+  .quest-stamp-overlay {
+    position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;
+    background: rgba(10,8,6,0.6); pointer-events: none;
+  }
+  /* 紙(questStampPaper)と印鑑(questStampSeal)は元は兄弟要素で、印鑑の位置は本来「紙の上のどこか」を
+     指したいのにfixed配置のoverlay(画面全体)基準のパーセントになっていたため、紙の実際の位置とズレ
+     (紙にちゃんと乗らない)不具合の原因になっていた。この.stageで両方を包み、印鑑の絶対位置指定が
+     紙と同じ矩形を基準にするようにする(stage自身はseal側がposition:absoluteで幅を持たないため、
+     中身のpaperとぴったり同じサイズになる) */
+  .quest-stamp-stage { position: relative; }
+  .quest-stamp-paper {
+    position: relative; width: 250px; background: linear-gradient(180deg, #f2e8d0, #e6d8b8);
+    border: 2px solid #4b3728; border-radius: 8px; padding: 1.6rem 1rem 1.8rem; text-align: center;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.55); transform: scale(1); overflow: hidden;
+  }
+  .quest-stamp-paper.scale-up { animation: questStampPaperScale 120ms ease-out forwards; }
+  @keyframes questStampPaperScale { from { transform: scale(1); } to { transform: scale(1.03); } }
+  .quest-stamp-paper.impact-shake { animation: questStampPaperShake 150ms ease-in-out; }
+  @keyframes questStampPaperShake {
+    0%, 100% { transform: scale(1.03) translate(0, 0); }
+    25% { transform: scale(1.03) translate(-3px, 2px); }
+    50% { transform: scale(1.03) translate(3px, -2px); }
+    75% { transform: scale(1.03) translate(-2px, 1px); }
+  }
+  .quest-stamp-paper-title {
+    font-weight: 800; font-size: 1rem; color: #2b2118; letter-spacing: 0.04em;
+  }
+  /* 印鑑(木製)。画像素材が無いため、木目調のradial-gradientと縁取りだけでそれらしく見せる。
+     朱印(questStampMark)と全く同じ基準点(left:50%/top:58%)に着地するようにし、サイズも朱印の
+     文字の箱(2文字・font-size1.7rem+padding)を余裕をもって覆えるよう横長の矩形にしてある
+     (以前は60x60の正方形で朱印の箱より小さく、着地位置も紙ではなくoverlay基準でズレていた) */
+  .quest-stamp-seal {
+    position: absolute; left: 50%; top: 58%; width: 108px; height: 58px;
+    transform: translate(-50%, -50%) translateY(-220px) rotate(-24deg);
+    border-radius: 12px; background: radial-gradient(circle at 35% 30%, #a9784f, #6b4226 65%, #4a2c16 100%);
+    border: 3px solid #3a2414; box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+    opacity: 0; z-index: 4; pointer-events: none;
+  }
+  .quest-stamp-seal.falling { animation: questStampSealFall 320ms cubic-bezier(0.55,0,0.85,0.4) forwards; }
+  @keyframes questStampSealFall {
+    0% { opacity: 1; transform: translate(-50%, -50%) translateY(-220px) rotate(-24deg); }
+    82% { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(374deg); }
+    91% { transform: translate(-50%, -50%) translateY(-8px) rotate(366deg); }
+    100% { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(368deg); }
+  }
+  .quest-stamp-seal.retreat { animation: questStampSealRetreat 250ms ease-in forwards; }
+  @keyframes questStampSealRetreat {
+    from { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(368deg); }
+    to { opacity: 0; transform: translate(-50%, -50%) translateY(-240px) rotate(368deg); }
+  }
+  /* 朱印(受領)。インクが染み込むように、透明度と大げさな拡大→縮小のオーバーシュートで押印の勢いを出す */
+  .quest-stamp-mark {
+    position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%) rotate(8deg) scale(0);
+    font-size: 1.7rem; font-weight: 900; color: #b3222b; border: 4px solid #b3222b; border-radius: 12px;
+    padding: 0.15rem 0.7rem; opacity: 0; z-index: 3; letter-spacing: 0.1em;
+  }
+  .quest-stamp-mark.show { animation: questStampMarkPop 200ms ease-out forwards; }
+  @keyframes questStampMarkPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(8deg) scale(1.6); }
+    55% { opacity: 1; transform: translate(-50%, -50%) rotate(8deg) scale(0.95); }
+    80% { transform: translate(-50%, -50%) rotate(8deg) scale(1.05); }
+    100% { opacity: 1; transform: translate(-50%, -50%) rotate(8deg) scale(1.0); }
+  }
+  /* 埃エフェクト。画像を使わず、2つの小さな円が着地点から左右にふわっと散る */
+  .quest-stamp-dust { position: absolute; left: 50%; top: 58%; width: 4px; height: 4px; pointer-events: none; }
+  .quest-stamp-dust.burst::before, .quest-stamp-dust.burst::after {
+    content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(214,196,158,0.9); animation: questStampDustFly 300ms ease-out forwards;
+  }
+  .quest-stamp-dust.burst::after { animation-name: questStampDustFlyLeft; animation-delay: 30ms; }
+  @keyframes questStampDustFly {
+    0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(22px, -16px) scale(0.4); }
+  }
+  @keyframes questStampDustFlyLeft {
+    0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-22px, -14px) scale(0.4); }
   }
   .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
   .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
@@ -1100,7 +1277,7 @@
     <div class="dungeon-content">
       <div class="dungeon-top">
         <div class="floor-badge" id="floorBadge"><span id="floorBadgeText">1層目</span></div>
-        <div class="quest-target-badge" id="questTargetBadge" style="display:none;"></div>
+        <div class="quest-target-badge" id="questTargetBadge"></div>
         <div id="criticalAlert"></div>
         <div id="dungeonLog"></div>
       </div>
@@ -1229,6 +1406,20 @@
     <div class="smoke-puff p6"></div>
   </div>
 
+  <!-- 奉行所の依頼受注演出。「紙(依頼書)」「印鑑(木製)」「朱印(受領)」を別レイヤーで重ね、
+       紙が少し拡大→間→印鑑が回転しながら落下→着地の瞬間に揺れ+SE+埃→朱印がフェード/スケールで
+       押される→印鑑が上へ引っ込む、というモンハン風の「ドン！」演出を作る -->
+  <div id="questAcceptStampOverlay" class="quest-stamp-overlay" style="display:none;">
+    <div class="quest-stamp-stage">
+      <div class="quest-stamp-paper" id="questStampPaper">
+        <div class="quest-stamp-paper-title" id="questStampPaperTitle"></div>
+        <div class="quest-stamp-mark" id="questStampMark">受領</div>
+        <div class="quest-stamp-dust" id="questStampDust"></div>
+      </div>
+      <div class="quest-stamp-seal" id="questStampSeal"></div>
+    </div>
+  </div>
+
   <!-- 吹き出しセリフ専用の全画面固定レイヤー。.party-bar内に置くとスタッキングコンテキストの都合で
        探索画面の文字より奥に埋もれてしまうため、画面最前面の独立レイヤーに実測位置で配置する -->
   <div id="speechBubbleLayer"></div>
@@ -1296,12 +1487,15 @@ function defaultState() {
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
     magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
-    magistrateAvailableQuests: [], // 本日張り出されている依頼のid一覧(QUEST_BOARD_SIZE件)。受注制のため進捗は持たない
+    magistrateAvailableQuests: [], // 本日張り出されている依頼のid一覧(最大QUEST_BOARD_SIZE件)。受注制のため進捗は持たない
+    magistrateQuestLastShown: {}, // { questId: dayCount } 直近で張り出された日。QUEST_COOLDOWN_DAYS日は再抽選対象から外す
     acceptedQuest: null, // 受注中の依頼。{enemyId, targetFloor, count}。同時に1件までしか受けられない
     emergencyQuest: null, // 緊急依頼(序盤ボス級の指名討伐)。進行中は{enemyId, kills, claimed}、無い時はnull
     magistrateNormalClears: 0, // 通常の討伐依頼を受け取った累計件数(EMERGENCY_QUEST_CLEAR_THRESHOLD件で緊急依頼が1件発生し、消費されて0に戻る)
     emergencyQuestEverAppeared: false, // 一番最初の緊急依頼は必ず荒熊にするためのフラグ(発生済みならfalse→trueにし、以降はランダム)
     defeatedOoInoshishi: false, // 大猪(猪の依頼の中ボス)を一度でも倒したか。緊急依頼の解禁条件の1つ(一度trueになったらそのまま)
+    rescueQuestAccepted: false, // 破綻寸前パーティ救済クエスト(薬草摘み)を受注中かどうか
+    rescueQuestItemObtained: false, // 森の対象階層で薬草を入手済みかどうか(受注中のみ意味を持つ)
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
@@ -1486,12 +1680,15 @@ function loadState() {
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
       if (loaded.magistrateQuestDate == null) loaded.magistrateQuestDate = 0; // 旧セーブ用の初期値(依頼未生成)
       if (loaded.magistrateAvailableQuests == null) loaded.magistrateAvailableQuests = []; // 旧セーブ用の初期値(受注制への移行に伴い名称変更)
+      if (loaded.magistrateQuestLastShown == null) loaded.magistrateQuestLastShown = {}; // 旧セーブ用の初期値
       if (loaded.acceptedQuest === undefined) loaded.acceptedQuest = null; // 旧セーブ用の初期値
       delete loaded.magistrateQuests; // 旧: 進捗を持つ配列だったが受注制への移行で不要に
       if (loaded.emergencyQuest === undefined) loaded.emergencyQuest = null; // 旧セーブ用の初期値(緊急依頼未発生)
       if (loaded.magistrateNormalClears == null) loaded.magistrateNormalClears = 0; // 旧セーブ用の初期値
       if (loaded.emergencyQuestEverAppeared == null) loaded.emergencyQuestEverAppeared = false; // 旧セーブ用の初期値
       if (loaded.defeatedOoInoshishi == null) loaded.defeatedOoInoshishi = false; // 旧セーブ用の初期値
+      if (loaded.rescueQuestAccepted == null) loaded.rescueQuestAccepted = false; // 旧セーブ用の初期値(破綻寸前救済クエスト未受注)
+      if (loaded.rescueQuestItemObtained == null) loaded.rescueQuestItemObtained = false; // 旧セーブ用の初期値
       if (loaded.travelPrepShopLevel == null) loaded.travelPrepShopLevel = 0; // 旧セーブ用の初期値(旅支度屋未建築)
       if (loaded.bagShopLevel == null) loaded.bagShopLevel = 0; // 旧セーブ用の初期値(鞄屋未建築)
       if (loaded.watchtowerLevel == null) loaded.watchtowerLevel = 0; // 旧セーブ用の初期値(見張り台未建築)
@@ -1637,6 +1834,7 @@ function updateSceneBackgrounds() {
 function advanceCalendar(applyPhase) {
   applyPhase();
   tickCriticalExpiry(state.roster, absoluteGameMinutes()); // 瀕死のまま猶予が切れた仲間をロストにする
+  checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
   pruneActiveParty();
   saveState();
   updateSceneBackgrounds();
@@ -1906,7 +2104,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -1967,6 +2165,12 @@ document.addEventListener("visibilitychange", () => {
 const CLASS_ATTACK_SFX = { hunter: "attack_hunter", samurai: "attack_samurai", priest: "attack_caster", onmyoji: "attack_caster", gunner: "attack_gunner", spearman: "attack_spearman", naginata: "attack_naginata", ninja: "attack_ninja" };
 function attackSfxFor(classId) {
   return CLASS_ATTACK_SFX[classId] || "attack";
+}
+// 会心専用効果音(通常攻撃音とは別に鳴らす)。侍/薙刀士/槍士は共通のcrit_slash、忍は専用、
+// 僧侶/陰陽師は共通のcrit_caster、狩人/砲術士はそれぞれ専用
+const CLASS_CRIT_SFX = { samurai: "crit_slash", naginata: "crit_slash", spearman: "crit_slash", ninja: "crit_ninja", priest: "crit_caster", onmyoji: "crit_caster", hunter: "crit_hunter", gunner: "crit_gunner" };
+function critSfxFor(classId) {
+  return CLASS_CRIT_SFX[classId] || "crit_slash";
 }
 
 document.getElementById("muteBtn").onclick = () => {
@@ -2196,6 +2400,7 @@ function startTimeSkipAnimation(totalMin) {
   function runStep(i) {
     if (i >= steps.length) {
       tickCriticalExpiry(state.roster, absoluteGameMinutes());
+      checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
       pruneActiveParty();
       saveState();
       document.getElementById("timeSkipOverlay").style.display = "none";
@@ -2223,7 +2428,7 @@ function renderResultScreen(onContinue) {
     questCard.style.display = "";
     questCard.innerHTML = `
       <div class="roster-name">🏯依頼達成: ${advQuestCompleted.title}</div>
-      <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G + XP${advQuestCompleted.xp}</p>
+      <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G${advQuestCompleted.xp > 0 ? ` + XP${advQuestCompleted.xp}` : ""}</p>
     `;
   } else {
     questCard.style.display = "none";
@@ -2818,44 +3023,66 @@ function hideConfirmModal() {
 }
 
 // ============ 最初の1人選び(ゲーム開始時、名簿が空の間だけ表示) ============
+// つかみの画面のため、一覧をずらっと並べるのではなく1体ずつ大きい絵で見せるカルーセル形式にしてある。
+// firstCharIndexは画面遷移のたびにrenderFirstCharacterScreen()でリセットされ、
+// 左右ボタンはrenderFirstCharacterCard()だけを呼び直す(確認モーダルは再表示しない)
+let firstCharIndex = 0;
+function firstCharClassIds() {
+  return Object.keys(CLASSES).filter(isClassUnlocked);
+}
 function renderFirstCharacterScreen() {
   showConfirmModal("職業を選びましょう。", [{ label: "はじめる", className: "big primary" }]);
+  firstCharIndex = 0;
+  renderFirstCharacterCard();
+}
+function renderFirstCharacterCard() {
+  const ids = firstCharClassIds();
+  if (firstCharIndex < 0) firstCharIndex = ids.length - 1;
+  if (firstCharIndex >= ids.length) firstCharIndex = 0;
+  const classId = ids[firstCharIndex];
+  const c2 = CLASSES[classId];
+  const skillsHtml = c2.abilities.map((ab) => `
+    <div class="skill-row"><span class="skill-name">${ABILITY_LABEL[ab]}</span> ${ABILITY_DESC[ab]}</div>
+  `).join("");
+  const dotsHtml = ids.map((id, i) => `<span class="first-char-dot${i === firstCharIndex ? " active" : ""}"></span>`).join("");
   const list = document.getElementById("firstCharacterList");
-  list.innerHTML = "";
-  Object.keys(CLASSES).filter(isClassUnlocked).forEach((classId) => {
-    const c2 = CLASSES[classId];
-    const card = document.createElement("div");
-    card.className = "first-char-card";
-    const skillsHtml = c2.abilities.map((ab) => `
-      <div class="skill-row"><span class="skill-name">${ABILITY_LABEL[ab]}</span> ${ABILITY_DESC[ab]}</div>
-    `).join("");
-    card.innerHTML = `
-      <div class="first-char-head"><img src="${c2.image}"><strong>${c2.ja}</strong></div>
-      <div class="desc">${CLASS_DESC[classId]}</div>
-      ${skillsHtml}
-      <button class="big primary" data-class="${classId}">この職業を選ぶ</button>
-    `;
-    card.querySelector("button").onclick = () => {
-      showConfirmModal(`${c2.ja}にしますか？`, [
-        {
-          label: "はい",
-          className: "big primary",
-          onClick: () => {
-            const name = randomFemaleName();
-            const c = createCharacter(name, classId, state.classUpgrades);
-            c.personality = FIRST_CHARACTER_PERSONALITY[classId];
-            state.roster.push(c);
-            state.activePartyIds = [c.id];
-            saveState();
-            playSfx("select");
-            renderTown();
-          },
+  list.innerHTML = `
+    <div class="first-char-carousel">
+      <div class="first-char-photo-wrap">
+        ${ids.length > 1 ? '<button class="first-char-arrow left" id="firstCharPrevBtn">‹</button>' : ""}
+        <img class="first-char-photo" src="${c2.image}">
+        ${ids.length > 1 ? '<button class="first-char-arrow right" id="firstCharNextBtn">›</button>' : ""}
+      </div>
+      ${ids.length > 1 ? `<div class="first-char-dots">${dotsHtml}</div>` : ""}
+      <div class="first-char-name">${c2.ja}</div>
+      <div class="first-char-desc">${CLASS_DESC[classId]}</div>
+      <div class="first-char-skills">${skillsHtml}</div>
+      <button class="big primary first-char-choose-btn" id="firstCharChooseBtn">この職業に決める</button>
+    </div>
+  `;
+  if (ids.length > 1) {
+    document.getElementById("firstCharPrevBtn").onclick = () => { playSfx("select"); firstCharIndex--; renderFirstCharacterCard(); };
+    document.getElementById("firstCharNextBtn").onclick = () => { playSfx("select"); firstCharIndex++; renderFirstCharacterCard(); };
+  }
+  document.getElementById("firstCharChooseBtn").onclick = () => {
+    showConfirmModal(`${c2.ja}にしますか？`, [
+      {
+        label: "はい",
+        className: "big primary",
+        onClick: () => {
+          const name = randomFemaleName();
+          const c = createCharacter(name, classId, state.classUpgrades);
+          c.personality = FIRST_CHARACTER_PERSONALITY[classId];
+          state.roster.push(c);
+          state.activePartyIds = [c.id];
+          saveState();
+          playSfx("select");
+          renderTown();
         },
-        { label: "いいえ", className: "big" },
-      ]);
-    };
-    list.appendChild(card);
-  });
+      },
+      { label: "いいえ", className: "big" },
+    ]);
+  };
 }
 
 const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
@@ -3414,18 +3641,43 @@ document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
 document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 奉行所: 討伐依頼(日替わり・受注制) ============
-// 全10件を一度に出さず、QUEST_BOARD_SIZE件だけ毎日ランダムに選び直す。dayCountが変わるまでは
+// 全10件を一度に出さず、最大QUEST_BOARD_SIZE件だけ毎日ランダムに選び直す。dayCountが変わるまでは
 // 同じ顔ぶれを維持し、変わった瞬間に新しい顔ぶれへ入れ替える。受注制のため、この一覧自体は
-// idの配列だけを持てばよく(進捗は受注中の1件=state.acceptedQuestだけが持つ)
+// idの配列だけを持てばよく(進捗は受注中の1件=state.acceptedQuestだけが持つ)。
+// 受注中の依頼だけは入れ替え対象から除外し、それ以外の枠だけ毎日ローテーションする。
+// 1件目は確定、2件目/3件目はそれぞれ抽選(外れたらそこで打ち切り、3件目だけ出るような逆転はしない)。
+// 一度張り出された依頼はQUEST_COOLDOWN_DAYS日の間、再抽選の候補から外れる
 function refreshMagistrateQuestsIfNeeded() {
   if (state.magistrateQuestDate === state.dayCount && state.magistrateAvailableQuests && state.magistrateAvailableQuests.length > 0) return;
-  const pool = Object.keys(QUEST_DEFS);
-  const picked = [];
-  for (let i = 0; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
+  const keepKey = state.acceptedQuest ? state.acceptedQuest.questKey : null;
+  const lastShown = state.magistrateQuestLastShown || {};
+  const pool = Object.keys(QUEST_DEFS).filter((id) => {
+    if (id === keepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
+    const shownDay = lastShown[id];
+    return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
+  });
+  const picked = keepKey ? [keepKey] : [];
+  const slotChances = [1.0, QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE];
+  for (let i = picked.length; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
+    const chance = slotChances[i] != null ? slotChances[i] : 1.0;
+    if (Math.random() >= chance) break;
     picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   }
+  picked.forEach((id) => { if (id !== keepKey) lastShown[id] = state.dayCount; });
+  state.magistrateQuestLastShown = lastShown;
   state.magistrateAvailableQuests = picked;
   state.magistrateQuestDate = state.dayCount;
+}
+// 依頼の期限切れ判定。tickCriticalExpiryと同じく、実時間(絶対分数)ベースで期限を過ぎていないか
+// 確認する。過ぎていたら強制的に取り下げ(契約金は没収)、「間に合いませんでした」のポップアップを出す
+function checkQuestDeadline() {
+  const q = state.acceptedQuest;
+  if (!q || q.expireMinutes == null) return;
+  if (absoluteGameMinutes() <= q.expireMinutes) return;
+  const def = QUEST_DEFS[q.questKey];
+  state.acceptedQuest = null;
+  saveState();
+  showConfirmModal(`依頼「${def ? def.title : ""}」は期限までに完了できませんでした…間に合いませんでした。`, [{ label: "OK", className: "big danger" }]);
 }
 // 緊急依頼(序盤ボス級の指名討伐)。モンハン風に、通常の討伐依頼をEMERGENCY_QUEST_CLEAR_THRESHOLD件
 // クリア(報酬受け取り)するたびに1件発生する。既に進行中(未達成)の緊急依頼がある間は増発しない。
@@ -3440,12 +3692,51 @@ function maybeTriggerEmergencyQuest() {
   state.emergencyQuest = { enemyId: id, kills: 0, claimed: false };
   state.emergencyQuestEverAppeared = true;
 }
+// 破綻寸前パーティ救済クエスト(薬草摘み)の張り出し条件。既に受注中なら現在の所持金/人数に
+// 関わらず表示し続ける(受注後に持ち直しても、進行中のクエストを取り上げたりはしない)
+function rescueQuestAvailable() {
+  const activeCount = state.roster.filter((c) => c.status === "active").length;
+  return state.gold <= RESCUE_QUEST_GOLD_THRESHOLD && activeCount <= RESCUE_QUEST_MAX_ACTIVE_MEMBERS;
+}
+function acceptRescueQuest() {
+  if (state.rescueQuestAccepted) return;
+  state.rescueQuestAccepted = true;
+  state.rescueQuestItemObtained = false;
+  saveState();
+  playSfx("select");
+  renderMagistrateScreen();
+}
 function renderMagistrateScreen() {
   refreshMagistrateQuestsIfNeeded();
   maybeTriggerEmergencyQuest(); // 前回の受け取り時点でしきい値に達していた場合の保険
   saveState();
   const list = document.getElementById("magistrateQuestList");
   list.innerHTML = "";
+  if (state.rescueQuestAccepted || rescueQuestAvailable()) {
+    const rDef = RESCUE_QUEST_DEF;
+    const row = document.createElement("div");
+    row.className = "card";
+    row.style.border = "1px solid var(--hp)";
+    row.innerHTML = `
+      <div class="roster-name" style="color:var(--hp);">${rDef.emoji}${rDef.title}</div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${rDef.requester}</p>
+      <p style="font-size:0.8rem;margin:0 0 0.5rem;">${rDef.text}</p>
+      <p style="font-size:0.8rem;">深淵の森 ${rDef.targetFloor}層目まで到達すると${rDef.itemName}が手に入ります。持ち帰ってください。</p>
+    `;
+    const rBtn = document.createElement("button");
+    rBtn.style.marginTop = "0.5rem";
+    if (state.rescueQuestAccepted) {
+      rBtn.className = "big";
+      rBtn.textContent = state.rescueQuestItemObtained ? `${rDef.itemName}を手に里へ戻ろう` : "依頼を進行中です";
+      rBtn.disabled = true;
+    } else {
+      rBtn.className = "big primary";
+      rBtn.textContent = `受注する(報酬${rDef.rewardGold}G)`;
+      rBtn.onclick = () => acceptRescueQuest();
+    }
+    row.appendChild(rBtn);
+    list.appendChild(row);
+  }
   if (state.emergencyQuest) {
     const eq = state.emergencyQuest;
     const eDef = EMERGENCY_QUEST_DEFS[eq.enemyId];
@@ -3454,7 +3745,7 @@ function renderMagistrateScreen() {
     row.className = "card";
     row.style.border = "1px solid var(--danger)";
     row.innerHTML = `
-      <div class="roster-name">${eDef.emoji}${eDef.title}</div>
+      <div class="roster-name" style="color:#f0d43a;">${eDef.emoji}${eDef.title}</div>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${eDef.requester}</p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${eDef.text}</p>
       <p style="font-size:0.8rem;">討伐状況: ${eDone ? "討伐済み" : "未討伐"}</p>
@@ -3478,28 +3769,41 @@ function renderMagistrateScreen() {
   state.magistrateAvailableQuests.forEach((id) => {
     const def = QUEST_DEFS[id];
     const isAccepted = state.acceptedQuest && state.acceptedQuest.questKey === id;
+    const fee = questContractFee(def);
     const row = document.createElement("div");
     row.className = "card";
+    let deadlineHtml = "";
+    if (isAccepted && state.acceptedQuest.expireMinutes != null) {
+      const daysLeft = Math.max(0, Math.ceil((state.acceptedQuest.expireMinutes - absoluteGameMinutes()) / (24 * 60)));
+      deadlineHtml = `<p style="font-size:0.75rem;color:var(--danger);margin:0.3rem 0 0;">期限: あと${daysLeft}日</p>`;
+    }
     row.innerHTML = `
       <div class="roster-name">${def.emoji}${def.title}</div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${def.requester}</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.3rem 0;">依頼者: ${def.requester} <span style="font-size:0.68rem;">(契約金${fee}G)</span></p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${def.text}</p>
       <p style="font-size:0.8rem;">深淵の森 ${def.targetFloor}層目に到達すると対象が現れます。</p>
+      ${deadlineHtml}
     `;
     const btn = document.createElement("button");
     btn.style.marginTop = "0.5rem";
     if (isAccepted) {
       btn.className = "big danger";
-      btn.textContent = "依頼を取り下げる";
+      btn.textContent = "依頼を取り下げる(契約金没収)";
       btn.onclick = () => abandonQuest();
     } else if (state.acceptedQuest) {
       btn.className = "big";
       btn.textContent = "他の依頼を進行中です";
       btn.disabled = true;
     } else {
+      // 所持金不足の時、以前はボタンをdisabledにして押せなくしていたが、見た目の変化が地味で
+      // 「押しても反応しない=壊れている」と誤解される不具合報告があったため、押せる状態のまま残し、
+      // タップした瞬間にアラートで理由をはっきり伝える方式に変更した
       btn.className = "big primary";
-      btn.textContent = `受注する(報酬 ${questGoldReward(def)}G / XP${QUEST_REWARD_XP})`;
-      btn.onclick = () => acceptQuest(id);
+      btn.textContent = `受注する(報酬 ${questGoldReward(def)}G${QUEST_REWARD_XP > 0 ? ` / XP${QUEST_REWARD_XP}` : ""})`;
+      btn.onclick = () => {
+        if (state.gold < fee) { alert(`契約金が足りません(あと${fee - state.gold}G不足)`); return; }
+        acceptQuest(id);
+      };
     }
     row.appendChild(btn);
     list.appendChild(row);
@@ -3514,11 +3818,17 @@ function renderMagistrateScreen() {
 function acceptQuest(enemyId) {
   if (state.acceptedQuest) return;
   const def = QUEST_DEFS[enemyId];
-  state.acceptedQuest = { questKey: enemyId, enemyId: def.spawnId || enemyId, targetFloor: def.targetFloor, count: def.count, chasing: false };
+  const fee = questContractFee(def);
+  if (state.gold < fee) return;
+  state.gold -= fee; // 契約金は前払い。達成時に全額返還、失敗/取り下げ時は没収される
+  state.acceptedQuest = {
+    questKey: enemyId, enemyId: def.spawnId || enemyId, targetFloor: def.targetFloor, count: def.count, chasing: false,
+    contractFee: fee, expireMinutes: absoluteGameMinutes() + QUEST_DEADLINE_DAYS * 24 * 60,
+  };
   saveState();
-  playSfx("select");
-  renderMagistrateScreen();
+  playQuestAcceptStamp(def.title, () => { renderMagistrateScreen(); });
 }
+// 取り下げは契約金を返還しない(没収)。期限切れ(checkQuestDeadline)も同様に没収扱いになる
 function abandonQuest() {
   state.acceptedQuest = null;
   saveState();
@@ -3772,7 +4082,8 @@ function renderPartyBar(elId, combatants, actingCharId) {
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
     const c2 = CLASSES[c.classId];
     const dead = c.hp <= 0 || c.status !== "active";
-    const targetable = !!pendingAllyPick && !dead;
+    // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
+    const targetable = !!pendingAllyPick && !dead && !c.transformForm;
     const div = document.createElement("div");
     div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
@@ -3884,7 +4195,7 @@ function closeDungeonTargetPicker() {
   renderDungeon();
 }
 function pickDungeonAllyTarget(promptText, onPicked) {
-  const targets = fieldParty.filter((c) => c.status === "active");
+  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
   pendingAllyPick = (t) => {
     pendingAllyPick = null;
     closeDungeonTargetPicker();
@@ -4207,6 +4518,14 @@ function finishRetreat() {
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearOmikujiExpeditionEffect();
   dlog("里に戻った。");
+  // 破綻寸前パーティ救済クエスト(薬草摘み): 薬草を持ったまま無事に里へ戻れたら達成
+  if (state.rescueQuestAccepted && state.rescueQuestItemObtained) {
+    state.gold += RESCUE_QUEST_DEF.rewardGold;
+    advGoldEarned += RESCUE_QUEST_DEF.rewardGold; // リザルト画面の「収穫」にも反映されるよう、他の金銭報酬と同じ集計に加算する
+    state.rescueQuestAccepted = false;
+    state.rescueQuestItemObtained = false;
+    dlog(`${RESCUE_QUEST_DEF.itemName}を無事に届けた！謝礼${RESCUE_QUEST_DEF.rewardGold}Gを受け取った。`);
+  }
   toggleTimeOfDay();
   // 里に帰るたびに町の曲を続きからではなく最初から再生する。時間帯によってtown/town_dawn/town_nightの
   // どのBGMキーが実際に使われるか変わるため、3つとも記憶位置をリセットしておく
@@ -4246,6 +4565,13 @@ function moveOneFloor(pathBias) {
   // ダンジョン内を歩き回っている間も時計は進んでいるので、町へ帰る/宿泊する時だけでなく
   // ここでも瀕死ロスト判定を行う(担がれている間は消化されない)
   tickCriticalExpiry(state.roster, absoluteGameMinutes());
+  checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
+  // 破綻寸前パーティ救済クエスト(薬草摘み): 受注中に森の対象階層へ到達したら、戦闘/宝箱の抽選とは
+  // 独立して確定でキーアイテムを入手する(帰り道で通り過ぎても再入手はしない)
+  if (!retreating && currentStage === "forest" && state.rescueQuestAccepted && !state.rescueQuestItemObtained && currentFloor === RESCUE_QUEST_DEF.targetFloor) {
+    state.rescueQuestItemObtained = true;
+    dlog(`${RESCUE_QUEST_DEF.itemName}を見つけた！大切に持ち帰ろう。`);
+  }
   saveState();
 
   const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
@@ -4286,7 +4612,7 @@ function updateQuestTargetBadge() {
   const badge = document.getElementById("questTargetBadge");
   const q = state.acceptedQuest;
   if (!q || currentStage !== "forest") {
-    badge.style.display = "none";
+    badge.style.visibility = "hidden";
     return;
   }
   const enemyDef = ENEMIES[q.enemyId];
@@ -4297,7 +4623,7 @@ function updateQuestTargetBadge() {
     const diff = q.targetFloor - currentFloor;
     distanceText = diff > 0 ? `あと${diff}層` : diff === 0 ? "この階に…！" : `${Math.abs(diff)}層通り過ぎた`;
   }
-  badge.style.display = "";
+  badge.style.visibility = "visible";
   badge.textContent = `🎯 ${enemyDef.ja}討伐: ${distanceText}`;
 }
 document.getElementById("advanceBtn").onclick = () => {
@@ -4480,7 +4806,7 @@ function showPathChoice(onChosen) {
 
   // 回復薬: 温泉卵と違い対象を選ぶ(パーティの誰でも対象にできる)。使ってもターンは消費しない
   function renderPotionTargetPicker() {
-    const targets = fieldParty.filter((c) => c.status === "active");
+    const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
     div.innerHTML = `
       <div class="path-choice-panel">
         <p class="path-choice-title">誰に回復薬(残り${state.inventory.potion || 0})を使いますか？</p>
@@ -4510,7 +4836,7 @@ function showPathChoice(onChosen) {
   }
 
   function renderEggTargetPicker() {
-    const targets = fieldParty.filter((c) => c.status === "active");
+    const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
     div.innerHTML = `
       <div class="path-choice-panel">
         <p class="path-choice-title">誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？</p>
@@ -4695,8 +5021,9 @@ function rollEncounter(pathBias) {
     startBattle(enemies, bias);
   } else if (roll < battleChance + goldChance) {
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
-    // 旧仕様の問題を解消するため、下限も階層に応じて伸びるようにしてある)
-    const treasureMax = 6 + currentFloor;
+    // 旧仕様の問題を解消するため、下限も階層に応じて伸びるようにしてある)。
+    // 森だけユーザー指示で基準値を6→5に1G下げた(海岸はこれまでどおり6のまま)
+    const treasureMax = (currentStage === "coast" ? 6 : 5) + currentFloor;
     const treasureMin = Math.max(1, Math.round(treasureMax * 0.5));
     const g = treasureMin + Math.floor(Math.random() * (treasureMax - treasureMin + 1));
     state.gold += g;
@@ -4823,15 +5150,79 @@ function playAttackVfx(targetId, actor, kind) {
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
 }
+// 会心専用の演出。通常攻撃の処理そのものは一切変更せず、会心が発生した時だけ追加で呼ぶ。
+// 「ヒットストップ」は本物の処理停止ではなく、通常の斬撃エフェクト/シェイクが鳴った直後に
+// 一呼吸(80ms)置いてから、追加のご褒美演出(画面全体の揺れ・特大金色ダメージ数字・白閃光/衝撃波/
+// 火花・「クリティカル！」バナー・専用SE)がまとめて畳み掛ける、という「間→ドカン」の2段構えで
+// 気持ちよさを表現している。全体の演出時間はヒットストップ80ms+効果本体約250msで0.3秒強に収めてある
+const CRIT_HITSTOP_MS = 80;
+// 会心の画面揺れ: 戦闘画面の固定要素(背景/敵表示・行動選択)自体のtransformにCSS変数経由で
+// オフセットを足し込む方式。以前はbody要素にtransformを掛けてposition:fixedの子要素ごと
+// 揺らしていたが、その方式だとfixed要素の基準(containing block)がviewportからbodyに切り替わり、
+// 実機で画面が一瞬ジャンプする不具合が起きたため、揺らしたい要素そのものを直接動かす方式に変更した。
+// .party-barは過去にtransform常時付与でiOS Safariの再描画不具合を起こした前科があるため対象から除外している
+const SCREEN_SHAKE_FRAMES = [[0, 0], [-6, 3], [5, -3], [-3, 2], [2, -1], [0, 0]];
+const SCREEN_SHAKE_DURATION_MS = 180;
+function playScreenShakeCrit() {
+  const targets = [document.getElementById("battleBg"), document.getElementById("battleTop"), document.querySelector(".battle-actions")].filter(Boolean);
+  if (targets.length === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / SCREEN_SHAKE_DURATION_MS);
+    const idx = Math.min(SCREEN_SHAKE_FRAMES.length - 1, Math.floor(t * (SCREEN_SHAKE_FRAMES.length - 1)));
+    const [dx, dy] = SCREEN_SHAKE_FRAMES[idx];
+    targets.forEach((el) => { el.style.setProperty("--crit-shake-x", `${dx}px`); el.style.setProperty("--crit-shake-y", `${dy}px`); });
+    if (t < 1) requestAnimationFrame(step);
+    else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
+  }
+  requestAnimationFrame(step);
+}
+function playCritEffects(targetId, actor, dmg) {
+  setTimeout(() => {
+    playScreenShakeCrit();
+    playSfx(critSfxFor(actor.classId));
+    const el = findVisibleCard(targetId);
+    if (!el) return;
+    const pop = document.createElement("div");
+    pop.className = "dmg-pop crit";
+    pop.textContent = `-${dmg}`;
+    el.appendChild(pop);
+    setTimeout(() => pop.remove(), 1150);
+    const flash = document.createElement("div");
+    flash.className = "crit-flash-overlay";
+    el.appendChild(flash);
+    setTimeout(() => flash.remove(), 220);
+    const wave = document.createElement("div");
+    wave.className = "crit-shockwave";
+    el.appendChild(wave);
+    setTimeout(() => wave.remove(), 300);
+    for (let i = 0; i < 6; i++) {
+      const spark = document.createElement("div");
+      spark.className = "crit-spark";
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 18 + Math.random() * 14;
+      spark.style.setProperty("--spark-x", `${Math.cos(angle) * dist}px`);
+      spark.style.setProperty("--spark-y", `${Math.sin(angle) * dist}px`);
+      spark.style.setProperty("--spark-dur", `${0.2 + Math.random() * 0.1}s`);
+      el.appendChild(spark);
+      setTimeout(() => spark.remove(), 320);
+    }
+    const banner = document.createElement("div");
+    banner.className = "crit-banner";
+    banner.textContent = "クリティカル！";
+    el.appendChild(banner);
+    setTimeout(() => banner.remove(), 520);
+  }, CRIT_HITSTOP_MS);
+}
 // 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
-// 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出して1秒間だけ次のonDoneを遅らせる
-const SHOOT_DOWN_PAUSE_MS = 1000;
+// 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出す
+// (以前は1秒間画面が停止していたが、ユーザー指示で廃止し即座に次へ進行するようにした)
 function triggerShootDownEvents(shotDownTargets, onDone) {
   if (!shotDownTargets || shotDownTargets.length === 0) { onDone(); return; }
   shotDownTargets.forEach((t) => blog(`${t.label}を撃ち落とした！`));
   playSfx("shoot_down");
   renderBattleScreen(); // 🪽解除後の見た目(HPバー横のマーク消失)をすぐ反映する
-  setTimeout(onDone, SHOOT_DOWN_PAUSE_MS);
+  onDone();
 }
 // entityの現在のカードDOM要素に、保存済みのポップアップ/揺れ状態を反映する
 // (renderPartyBar/敵カード生成の直後に呼ぶことで、その場で作られたばかりのカードにも即座に反映する)
@@ -4960,9 +5351,12 @@ function trySpeak(speaker, category) {
   renderVfxFor(speaker.id);
   return true;
 }
-// スキル命中時の吹き出し判定(10%)。命中させた本人か、ランダムな他の仲間のどちらかが発言する
-function maybeSpeakSkillHit(actor) {
-  if (Math.random() >= DIALOGUE_CHANCE.skillHit) return;
+// 会心発生時の吹き出し判定(70%)。以前は攻撃成功時に一律の確率で発言していたが、
+// ユーザー指示で「会心が発生した時だけ」に置き換えた(通常攻撃/技どちらの会心でも共通)。
+// 命中させた本人か、ランダムな他の仲間のどちらかが発言する
+function maybeSpeakOnCrit(actor, wasCrit) {
+  if (!wasCrit) return;
+  if (Math.random() >= DIALOGUE_CHANCE.critHit) return;
   setTimeout(() => {
     const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
     if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
@@ -5266,6 +5660,11 @@ function aliveField() {
 function aliveEnemies() {
   return battle.enemies.filter((e) => e.hp > 0);
 }
+// 丸呑みされている敵は攻撃対象として選べない/表示もされない(ただしhpは残っているのでaliveEnemies()には
+// 含まれ続け、丸呑み中の敵が最後の1体でも戦闘終了にはならない)
+function targetableEnemies() {
+  return aliveEnemies().filter((e) => !(e.swallowedTurns > 0));
+}
 
 // カラス変身の「観察眼」: 次に行動する組み合わせ(味方/敵問わず)を青い矢印バッジで示す。
 // battle.orderは1ラウンド分しか確定していないため、今のラウンドの残り分だけを覗き見る
@@ -5290,8 +5689,11 @@ function renderBattleScreen() {
   renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
-  row.classList.toggle("crowded", battle.enemies.length >= 4);
-  battle.enemies.forEach((e) => {
+  // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
+  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない
+  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
+  row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  visibleEnemies.forEach((e) => {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
@@ -5509,10 +5911,8 @@ function processNext() {
 }
 
 function handleFieldDeaths() {
-  // 確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ、そのフロアではなく
-  // 1つ手前のフロアで救助できることにする(追いかけてくる相手を撃退できず何度も同じフロアで
-  // 戦い直す羽目になった時、瀕死者が出た当のフロアまで安全に戻れるとは限らないための救済措置)
-  const rescueFloor = (battle && battle.questKey) ? Math.max(1, currentFloor - 1) : currentFloor;
+  // 以前は確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ1つ手前のフロアで
+  // 救助できる特例があったが、ユーザー指示で廃止。敵がいたフロアにそのまま取り残す通常仕様に統一する
   fieldParty.forEach((c) => {
     // 変身中に致命傷級のダメージを受けても瀕死にはならず、変身が強制解除されて人間の姿(変身前のHP)に
     // 戻るだけで済む(「変身が身代わりになる」仕様)
@@ -5526,15 +5926,15 @@ function handleFieldDeaths() {
       // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
       const carried = fieldParty.find((x) => x.carriedBy === c.id);
       if (carried) {
-        markCritical(carried, rescueFloor, absoluteGameMinutes(), currentStage);
+        markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
         carried.carriedBy = null;
         c.carryingId = null;
         blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
       // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
       c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
-      markCritical(c, rescueFloor, absoluteGameMinutes(), currentStage);
-      blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${rescueFloor}層目に取り残された。`);
+      markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
+      blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
         if (ally.id !== c.id && ally.status === "active") {
@@ -5580,7 +5980,7 @@ function cancelBattleSubMenu() {
 // 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする。
 // 対象選択中は上の敵カード画像を直接タップしても選べる(pendingEnemyPick、renderBattleScreen側で処理)
 function pickSingleEnemyTarget(onPicked) {
-  const targets = aliveEnemies();
+  const targets = targetableEnemies();
   if (targets.length === 1) { onPicked(targets[0]); return; }
   battleSubMenuActive = true;
   pendingEnemyPick = (t) => { onPicked(t); };
@@ -5632,7 +6032,7 @@ function runTreeSkill(actor, skill) {
   if (action.kind === "heal") {
     if (action.aoe) {
       playSfx("heal");
-      const targets = fieldParty.filter((c) => c.status === "active" || (action.reviveHpPct && c.status === "critical"));
+      const targets = fieldParty.filter((c) => !c.transformForm && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
       const result = useTreeSkill(actor, targets, skill, blog);
       if (result && result.healed) {
         result.healed.forEach((h) => {
@@ -5650,10 +6050,11 @@ function runTreeSkill(actor, skill) {
   // ダメージ系
   if (action.aoe) {
     playSfx(attackSfxFor(actor.classId));
-    const targetsList = aliveEnemies();
+    const targetsList = targetableEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
     const shotDownTargets = [];
     const hitTargets = [];
+    let anyCrit = false;
     if (result && result.dmgs) {
       let anyEvaded = false;
       let anyHit = false;
@@ -5664,11 +6065,12 @@ function runTreeSkill(actor, skill) {
           anyHit = true;
           hitTargets.push(t);
           if (r.shotDown) shotDownTargets.push(t);
+          if (r.crit) { anyCrit = true; playCritEffects(t.instanceId, actor, r.dmg); }
         }
         else anyEvaded = true;
       });
       if (anyEvaded) playSfx("evade");
-      if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
     }
     renderBattleScreen();
     hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
@@ -5679,7 +6081,11 @@ function runTreeSkill(actor, skill) {
     playSfx(attackSfxFor(actor.classId));
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
-    if (r && r.hit) { popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
+    if (r && r.hit) {
+      popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+      if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
+    }
     else if (r) playSfx("evade");
     renderBattleScreen();
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
@@ -5692,7 +6098,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
   battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
-  aliveField().forEach((target) => {
+  aliveField().filter((target) => !target.transformForm).forEach((target) => {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
@@ -5745,7 +6151,7 @@ function runFormSkill(actor) {
   const formKey = actor.transformForm;
   const form = TRANSFORM_FORMS[formKey];
   if (formKey === "gama") {
-    const targets = aliveEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
+    const targets = targetableEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
     if (targets.length === 0) { alert("丸呑みにできる敵がいません"); return; }
     battleSubMenuActive = true;
     const grid = document.getElementById("actionGrid");
@@ -5835,6 +6241,8 @@ function renderActionButtons(actor) {
         const result = performAttack(actor, target, blog);
         if (result.hit) {
           popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+          if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+          maybeSpeakOnCrit(actor, result.crit);
           maybeSpeakOnKill(actor, target);
         }
         else playSfx("evade");
@@ -5889,24 +6297,24 @@ function renderActionButtons(actor) {
           }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
             playSfx(attackSfxFor(actor.classId));
-            const targetsList = aliveEnemies();
+            const targetsList = targetableEnemies();
             const result = useAbility(actor, targetsList, ability, blog);
             const shotDownTargets = [];
             const hitTargets = [];
+            let anyCrit = false;
             if (result && result.hits) {
               let anyEvaded = false;
-              let anyHit = false;
               targetsList.forEach((t, i) => {
                 if (result.hits[i]) {
                   popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
-                  anyHit = true;
                   hitTargets.push(t);
                   if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
+                  if (result.crits && result.crits[i]) { anyCrit = true; playCritEffects(t.instanceId, actor, result.dmgs[i]); }
                 }
                 else anyEvaded = true;
               });
               if (anyEvaded) playSfx("evade");
-              if (anyHit && !maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor);
+              if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
             }
             renderBattleScreen();
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
@@ -5917,7 +6325,11 @@ function renderActionButtons(actor) {
           pickSingleEnemyTarget((target) => {
             playSfx(attackSfxFor(actor.classId));
             const result = useAbility(actor, target, ability, blog);
-            if (result && result.hit) { popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true)); if (!maybeSpeakAllDefeated()) maybeSpeakSkillHit(actor); }
+            if (result && result.hit) {
+              popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
+              if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+              if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
+            }
             else if (result && !result.failed) playSfx("evade");
             renderBattleScreen();
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
@@ -6019,7 +6431,7 @@ function renderItemMenu(actor) {
     state.inventory.bomb--;
     playSfx("attack_gunner");
     blog(`${actor.label}は爆弾を投げつけた！`);
-    aliveEnemies().forEach((e) => {
+    targetableEnemies().forEach((e) => {
       const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
       popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
     });
@@ -6125,6 +6537,49 @@ function playTransformEffect(onDone) {
   playSfx("transform");
   playSmokeBombEffect(onDone);
 }
+// 奉行所の依頼受注演出。①紙が少し拡大→②0.1秒静止→③印鑑が回転しながら落下→④着地の瞬間に
+// ヒットストップ+紙が揺れる+SE+埃→⑤朱印(受領)がインクの染み込みのように現れる→⑥印鑑が上へ戻る、
+// という一連の流れをsetTimeoutでの直列オーケストレーション(CSSアニメーション自体はクラス付与のみ)で作る
+const QUEST_STAMP_TIMINGS = { paperScaleMs: 120, holdMs: 100, sealFallMs: 320, hitstopMs: 60, markMs: 200, liftHoldMs: 250, finalWaitMs: 400 };
+function playQuestAcceptStamp(title, onDone) {
+  const overlay = document.getElementById("questAcceptStampOverlay");
+  const paper = document.getElementById("questStampPaper");
+  const seal = document.getElementById("questStampSeal");
+  const mark = document.getElementById("questStampMark");
+  const dust = document.getElementById("questStampDust");
+  document.getElementById("questStampPaperTitle").textContent = title;
+  // 前回分のクラスをリセットしてから表示する(同じアニメーションを毎回最初からやり直せるように)
+  paper.className = "quest-stamp-paper";
+  seal.className = "quest-stamp-seal";
+  mark.className = "quest-stamp-mark";
+  dust.className = "quest-stamp-dust";
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => {
+    paper.classList.add("scale-up"); // ①→②紙が少し拡大
+    setTimeout(() => {
+      // ③0.1秒静止の後、印鑑が落下
+      seal.classList.add("falling");
+      setTimeout(() => {
+        // ④着地の瞬間: 60msのヒットストップを置いてから、紙の揺れ+SE+埃をまとめて出す
+        setTimeout(() => {
+          paper.classList.add("impact-shake");
+          dust.classList.add("burst");
+          playSfx("quest_accept");
+          // ⑤朱印(受領)が現れる
+          mark.classList.add("show");
+          setTimeout(() => {
+            // ⑥印鑑が上へ戻る
+            seal.classList.add("retreat");
+            setTimeout(() => {
+              overlay.style.display = "none";
+              onDone();
+            }, QUEST_STAMP_TIMINGS.finalWaitMs);
+          }, QUEST_STAMP_TIMINGS.markMs);
+        }, QUEST_STAMP_TIMINGS.hitstopMs);
+      }, QUEST_STAMP_TIMINGS.sealFallMs);
+    }, QUEST_STAMP_TIMINGS.paperScaleMs + QUEST_STAMP_TIMINGS.holdMs);
+  });
+}
 function useSmokeBomb(actor) {
   markQuestChasingIfFled();
   stopBattleBgm();
@@ -6193,7 +6648,7 @@ function resolveAllyTarget(actor, kind, target) {
 // 味方対象の選択中は、上の味方イラストを直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)
 function renderAllyTargets(actor, kind) {
   battleSubMenuActive = true;
-  const targets = aliveField();
+  const targets = aliveField().filter((c) => !c.transformForm);
   pendingAllyPick = (t) => { pendingAllyPick = null; resolveAllyTarget(actor, kind, t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
@@ -6246,7 +6701,7 @@ function victory() {
   // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりに緊急依頼解禁フラグを立てる
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     const qDef = QUEST_DEFS[battle.questKey];
-    const questGold = questGoldReward(qDef);
+    const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
     advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP };
     totalGold += questGold;
     aliveField().forEach((c) => {

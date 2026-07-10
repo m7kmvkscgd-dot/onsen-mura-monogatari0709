@@ -33,7 +33,7 @@ const CLASS_DESC = {
 
 // ゲーム開始時に最初の1人を選んだ時だけ、性格をランダムではなく職業ごとに固定する
 const FIRST_CHARACTER_PERSONALITY = {
-  samurai: "真面目",
+  samurai: "熱血",
   ninja: "無口",
   spearman: "世話好き",
   naginata: "優しい",
@@ -227,7 +227,7 @@ const DIALOGUE_LINES = {
     冷静: ["制圧完了。", "終わった。", "勝利だ。", "問題ない。", "次へ進もう。", "順調だ。", "片付いたな。", "任務完了。", "予定どおりだ。", "警戒は続けよう。"],
     生意気: ["あっけなかったね。", "弱かったね。", "こんなもの？", "物足りないな。", "退屈だった。", "もう終わり？", "いい運動だったね。", "相手にならないね。", "楽勝。", "次いこう。"],
     のんびり: ["終わったぁ。", "よかったぁ。", "疲れたねぇ。", "ほっとした。", "勝てたね。", "安心したぁ。", "ひと休みしたいな。", "なんとかなったね。", "無事でよかった。", "次も頑張ろう。"],
-    真面目: ["勝利しました！", "任務完了です！", "無事に終わりました！", "よく戦いました！", "次へ進みましょう！", "油断は禁物です！", "順調です！", "お疲れさまでした！", "作戦成功です！", "勝利を確認しました！"],
+    真面目: ["勝利しました！", "任務完了です！", "無事に終わりました！", "よく戦いました！", "次へ進みましょう！", "油断は禁物です！", "順調です！", "お疲れさまでした！", "作戦成功です！", "作戦完了です！"],
     世話好き: ["みんなお疲れさま。", "無事でよかった。", "よく頑張ったね。", "安心したよ。", "怪我はない？", "ひと安心だね。", "次も一緒に頑張ろう。", "勝ててよかった。", "今日はよく戦ったね。", "ありがとう。"],
     お調子者: ["やったー！", "勝った勝った！", "最高ー！", "楽しかった！", "イェーイ！", "余裕だったね！", "いい感じ！", "ノッてきた！", "ナイス！", "また勝ったー！"],
     無口: ["……終わり。", "……勝った。", "……片付いた。", "……十分だ。", "……次へ。", "……問題ない。", "……よくやった。", "……安心した。", "……戻ろう。", "……終戦。"],
@@ -352,7 +352,7 @@ const OMIKUJI_LINES = {
 // 吹き出しセリフの発生確率。selfSkillHit/allySkillHit、selfPinch/allyPinchは同じイベントの
 // 抽選(どちらが発言するか)に使うので同じ値を共有する
 const DIALOGUE_CHANCE = {
-  skillHit: 0.30, // 全体で30%発動、発動時は自分/仲間のどちらが発言するか50%ずつ抽選(=各15%)
+  critHit: 0.70, // 会心発生時のみ発動(以前は攻撃成功時に一律30%だったが、会心限定+70%に置き換えた)。発動時は自分/仲間のどちらが発言するか50%ずつ抽選
   normalKill: 0.25,
   allyDefeated: 0.75,
   selfHealed: 0.20,
@@ -421,7 +421,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 相撲さながらに組み伏せ、構えを崩す
   hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
-  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 3, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
+  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 4, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
   onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
     // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
@@ -1145,7 +1145,7 @@ const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn
 // 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
 const QUEST_DEFS = {
   yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 3 },
-  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "畑荒らしの暴れ猪", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 4, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！" },
+  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "畑荒らしの暴れ猪", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！" },
   dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2 },
   oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1 },
   kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。", targetFloor: 4, count: 2 },
@@ -1155,10 +1155,27 @@ const QUEST_DEFS = {
   onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。", targetFloor: 6, count: 3 },
   kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2 },
 };
-const QUEST_BOARD_SIZE = 3; // 1日に張り出される依頼の枚数(残り7件は翌日以降の入れ替わりで出てくる)
+const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
+// 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある
+const QUEST_BOARD_SECOND_SLOT_CHANCE = 0.75;
+const QUEST_BOARD_THIRD_SLOT_CHANCE = 0.5;
+const QUEST_COOLDOWN_DAYS = 5; // 一度張り出された依頼は、外れてから最低この日数が経つまで再抽選の対象にならない
+const QUEST_DEADLINE_DAYS = 2; // 受注してからこの日数以内に達成しないと失敗扱いになる
+const QUEST_CONTRACT_FEE_DIVISOR = 5; // 契約金 = 報酬金 ÷ この値(受注時に前払いし、達成時に全額返還される。失敗/取り下げ時は没収)
 const QUEST_GOLD_PER_FLOOR = 8; // 討伐依頼の報酬金は「目標階層×この値」で計算する(到達階層が深い依頼ほど高額になる)
 function questGoldReward(def) { return def.targetFloor * QUEST_GOLD_PER_FLOOR; }
-const QUEST_REWARD_XP = 30;
+function questContractFee(def) { return Math.round(questGoldReward(def) / QUEST_CONTRACT_FEE_DIVISOR); }
+const QUEST_REWARD_XP = 0; // ユーザー指示で一旦XP報酬を廃止(金銭報酬のみ)
+// 破綻寸前パーティ救済クエスト(討伐ではなく採取型)。他の依頼と違い常設の1件で、
+// 所持金が少なく稼働中の仲間もほぼいない「詰みかけ」の時だけ奉行所に張り出される
+const RESCUE_QUEST_DEF = {
+  emoji: "🌿", requester: "百姓・佐吉",
+  title: "妻のための薬草摘み",
+  text: "女房が夏の暑さにやられて臥せってしまいました。深淵の森に生える薬草を煎じれば良くなるはずなのですが、わっし自身は足腰が悪く森には入れません。どうか代わりに薬草を摘んできてもらえないでしょうか。",
+  targetFloor: 3, rewardGold: 25, itemName: "薬草",
+};
+const RESCUE_QUEST_GOLD_THRESHOLD = 20; // 所持金がこれ以下
+const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(瀕死・ロストを除く)の仲間がこの人数以下の時だけ張り出される
 // 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
 const CHASE_ENCOUNTER_CHANCE = 0.6;
@@ -1236,5 +1253,8 @@ if (typeof module !== "undefined") {
     CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
     CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES, STATUS_TOOLTIPS,
     TRANSFORM_FORMS, TRANSFORM_ANIMAL_SOUNDS,
+    RESCUE_QUEST_DEF, RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,
+    QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE, QUEST_COOLDOWN_DAYS,
+    QUEST_DEADLINE_DAYS, QUEST_CONTRACT_FEE_DIVISOR, questContractFee,
   };
 }
