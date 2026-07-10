@@ -417,8 +417,15 @@ const ENEMIES = {
   kamaitachi: { id: "kamaitachi", ja: "かまいたち", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 6, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.55, value: 0.2, turns: 3 } } }, // かまいたちの一閃が鎧ごと切り裂く
 
-  // ---- 序盤のボス級(奉行所の緊急依頼専用。questOnly:trueのため通常の階層抽選には出ず、
-  //      指名討伐でのみスポーンする。isBoss:trueだが10の倍数フロアの通常ボス抽選にも出ない) ----
+  // ---- 序盤の中ボス級(奉行所の依頼専用。questOnly:trueのため通常の階層抽選には出ず、
+  //      指名討伐でのみスポーンする) ----
+  // 大猪(猪の討伐依頼で実際にスポーンする上位個体、QUEST_DEFS.inoshishi.spawnId参照)。
+  // 高HPで通常攻撃は控えめだが、大技(bigAttack.mult:7.5)は庇う槍士でもギリギリ耐えられるかどうかの
+  // 一撃になるよう逆算した(かばう成功で被ダメ0.4倍、槍士の実効防御力想定でHPの8割前後を削る計算)。
+  // 大技は「構え中(bigAttackPending)にスタンを入れると完全に潰せる」という既存仕組みを
+  // プレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
+  oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 42, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
+    bigAttack: { mult: 7.5 } },
   q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 26, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
     bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
@@ -1118,28 +1125,34 @@ const BIG_ATTACK_DEBUFF_CHANCE = 0.35;
 const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn", "bleed"];
 
 // 奉行所: 序盤(floor1-12)の10種の敵をそれぞれ討伐対象にした依頼。全部を一度に張り出さず、
-// QUEST_BOARD_SIZE枚だけを毎日ランダムに選んで張り替える(indexHtml側のrefreshMagistrateQuestsIfNeeded参照)
+// QUEST_BOARD_SIZE枚だけを毎日ランダムに選んで張り替える(indexHtml側のrefreshMagistrateQuestsIfNeeded参照)。
+// 受注制(同時に1件まで)。受注すると、深淵の森でtargetFloorに到達した時にcount体の群れが確定出現し、
+// 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
 const QUEST_DEFS = {
-  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。" },
-  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "畑荒らしの暴れ猪", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。" },
-  dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。" },
-  oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。" },
-  kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。" },
-  kappa: { emoji: "🐢", requester: "漁師・浜吉", title: "川辺の怪", text: "川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。" },
-  hitotsume_kozo: { emoji: "👁", requester: "寺子屋師匠・文左衛門", title: "夜道の怪影", text: "子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。" },
-  bake_danuki: { emoji: "🦝", requester: "旅商人・喜兵衛", title: "消えない山道", text: "山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。" },
-  onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。" },
-  kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。" },
+  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 3 },
+  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "畑荒らしの暴れ猪", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 4, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！" },
+  dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2 },
+  oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1 },
+  kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。", targetFloor: 4, count: 2 },
+  kappa: { emoji: "🐢", requester: "漁師・浜吉", title: "川辺の怪", text: "川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。", targetFloor: 5, count: 1 },
+  hitotsume_kozo: { emoji: "👁", requester: "寺子屋師匠・文左衛門", title: "夜道の怪影", text: "子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。", targetFloor: 6, count: 2 },
+  bake_danuki: { emoji: "🦝", requester: "旅商人・喜兵衛", title: "消えない山道", text: "山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。", targetFloor: 7, count: 1 },
+  onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。", targetFloor: 6, count: 3 },
+  kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2 },
 };
 const QUEST_BOARD_SIZE = 3; // 1日に張り出される依頼の枚数(残り7件は翌日以降の入れ替わりで出てくる)
-const QUEST_REQUIRED_KILLS = 3; // 1件の依頼を達成するのに必要な討伐数
 const QUEST_REWARD_GOLD = 60;
 const QUEST_REWARD_XP = 30;
+// 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
+// この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
+const CHASE_ENCOUNTER_CHANCE = 0.6;
 
 // 奉行所: 緊急依頼(序盤のボス級、questOnly:trueの専用個体を名指しで討伐する特別枠)。
-// 通常の討伐依頼(QUEST_DEFS)とは別枠で、同時に1件だけ発生する。モンハン風に、通常の討伐依頼を
-// EMERGENCY_QUEST_CLEAR_THRESHOLD件クリア(報酬受け取り)するたびに1件発生する(indexHtml側の
-// maybeTriggerEmergencyQuest参照)。一番最初に発生する緊急依頼は必ず荒熊(q_arakuma)、以降はランダム
+// 通常の討伐依頼(QUEST_DEFS)とは別枠で、同時に1件だけ発生する。解禁条件は2段階:
+// ①大猪(猪の依頼で出てくる中ボス、QUEST_DEFS.inoshishi.spawnId)を1度は討伐済みであること(一生モノの
+//   フラグ、state.defeatedOoInoshishi)②その上で、大猪以外の通常討伐依頼をEMERGENCY_QUEST_CLEAR_THRESHOLD件
+// クリアするたびに1件発生する(indexHtml側のmaybeTriggerEmergencyQuest参照)。
+// 一番最初に発生する緊急依頼は必ず荒熊(q_arakuma)、以降はランダム
 const EMERGENCY_QUEST_DEFS = {
   q_arakuma: { emoji: "🐻", requester: "街道番・源蔵", title: "緊急依頼『森の主』", text: "山へ向かった者が誰一人戻ってきません。現場には巨大な爪痕と足跡だけが残されていました。あれは普通の熊ではありません。どうか森の主を討ち倒してください。" },
   q_daija: { emoji: "🐍", requester: "庄屋・善兵衛", title: "緊急依頼『川を塞ぐ影』", text: "川へ近づいた者が次々と姿を消しています。生き残った者は巨大な蛇を見たと震えています。村へ現れる前に討伐してください。奉行所より緊急依頼です。" },
