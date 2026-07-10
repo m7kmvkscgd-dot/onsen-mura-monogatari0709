@@ -554,7 +554,7 @@
     display: flex; flex-direction: column; justify-content: center;
   }
   #campLog { height: 70px; }
-  #dungeonLog p, #battleLog p { margin: 0.2rem 0; }
+  #dungeonLog p, #battleLog p { margin: 0; }
 
   /* ===== 探索ログ(#dungeonLog)/戦闘ログ(#battleLog)共通の高級感テキストボックス:
      木・漆・和紙・金箔を意識した和風意匠 =====
@@ -566,7 +566,16 @@
     position: relative;
     /* paddingは共通ルールの16px/18px(上下/左右)のまま据え置き、display:flexの
        justify-content:centerで垂直中央寄せする(以前はpadding-topだけ0.95remに増やして
-       上詰めのまま強引に体裁を整えていたが、行数によって微妙に中央からずれて見えていた) */
+       上詰めのまま強引に体裁を整えていたが、行数によって微妙に中央からずれて見えていた)。
+       行間はp要素のmarginではなくgapで作る: 以前はp要素にmargin:0.2rem 0を付けていたが、
+       flexboxの子要素間ではブロック要素同士のような margin相殺が起きず、さらに一番上の行の
+       margin-topと一番下の行のmargin-bottomまで余白として残ってしまう。実測すると3行(高さ84px、
+       box-sizing:border-boxで実際に使える内側は48px)では必要な高さが上回ってオーバーフローし、
+       justify-content:centerによる中央寄せが崩れて上寄りに見えていた。gapは兄弟要素の"間"にしか
+       入らず最初/最後の外側には余白を作らないため、同じ行数でも必要な高さが正しく縮み、
+       1〜2行では中央寄せが自然に揃うようになる(この構成だと3行は物理的に84pxへ収まりきらないため、
+       appendTypewriterLog側のトリミングで常に収まる行数までしか表示しない設計にしてある) */
+    gap: 0.2rem;
     height: 84px;
     background-image:
       radial-gradient(circle at top left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
@@ -590,11 +599,6 @@
     text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
   }
   #dungeonLog .log-name, #battleLog .log-name { color: #d9c49a; }
-  @keyframes logLineEnter {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  #dungeonLog p.log-line-enter, #battleLog p.log-line-enter { animation: logLineEnter 0.15s ease-out forwards; }
   @keyframes logCharFadeIn { from { opacity: 0; } to { opacity: 1; } }
   #dungeonLog .log-char, #battleLog .log-char { opacity: 0; animation: logCharFadeIn 0.08s ease-out forwards; }
   @keyframes logArrowBob {
@@ -645,12 +649,24 @@
   .dungeon-content { position: relative; z-index: 5; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; pointer-events: none; }
   .dungeon-content > * { pointer-events: auto; }
   .dungeon-top {
-    /* 戦闘画面の.battle-topと同じtop:0にして、ログ欄の開始位置(floor-badgeの余白で調整)を戦闘画面と揃える。
-       z-indexも.battle-top(5)と同じにして.party-bar(4)より上にし、瀕死アラートのボタンが増えて
-       縦に伸びた時にparty-barに隠れてタップできなくなるのを防ぐ */
+    /* 戦闘画面の.battle-topと同じtop:0にする。z-indexも.battle-top(5)と同じにして
+       .party-bar(4)より上にし、瀕死アラートのボタンが増えて縦に伸びた時に
+       party-barに隠れてタップできなくなるのを防ぐ */
     position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 5;
   }
+  /* #dungeonLogの開始Y座標を#battleLogと確実に一致させるための構造。以前はfloor-badge/
+     quest-target-badge/criticalAlertが通常フローで縦に並び、その合計の高さ分だけ
+     #dungeonLogが下に押し下げられていた(floor-badgeのpadding-topやmarginの数値をどれだけ
+     調整しても、しょせん実際の合計高さと一致させる保証がなく、根本的にズレる作りだった)。
+     .dungeon-info-rowを.enemy-row(height:176px固定)と全く同じ高さの箱にし、その直後に
+     #dungeonLogを置くことで、戦闘画面の「.enemy-row(176px)→#battleLog」と全く同じ構造にする。
+     中身(floor-badge等)は.dungeon-info-stackにまとめてposition:absoluteにし、
+     実際の内容の高さが.dungeon-info-rowの高さ(176px)に一切影響しないようにしてある
+     (瀕死アラートで中身が伸びる場合はこの170px枠をはみ出して表示されるが、それは
+     .enemy-row側にも無い状況なので、はみ出し自体は許容している) */
+  .dungeon-info-row { position: relative; height: 176px; }
+  .dungeon-info-stack { position: absolute; top: 0; left: 0; right: 0; }
   .battle-bg {
     position: fixed; top: 0; left: 50%;
     /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
@@ -942,7 +958,7 @@
   .action-grid button {
     grid-column: span 1; height: 51px; padding: 0.3rem;
     display: flex; align-items: center; justify-content: center; text-align: center;
-    font-size: 0.82rem; line-height: 1.1; overflow: hidden;
+    font-size: 15px; line-height: 1.1; overflow: hidden;
     /* コマンドボタンの立体感: 通常時は下端に軽い段差影を付けて浮かせ、押下時は沈んで少し明るくなる */
     box-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 4px 6px rgba(0,0,0,0.3);
     transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
@@ -1602,9 +1618,13 @@
     <div class="party-bar" id="dungeonPartyBar"></div>
     <div class="dungeon-content">
       <div class="dungeon-top">
-        <div class="floor-badge" id="floorBadge"><span id="floorBadgeText">1層目</span></div>
-        <div class="quest-target-badge" id="questTargetBadge"></div>
-        <div id="criticalAlert"></div>
+        <div class="dungeon-info-row">
+          <div class="dungeon-info-stack">
+            <div class="floor-badge" id="floorBadge"><span id="floorBadgeText">1層目</span></div>
+            <div class="quest-target-badge" id="questTargetBadge"></div>
+            <div id="criticalAlert"></div>
+          </div>
+        </div>
         <div id="dungeonLog"></div>
       </div>
       <div class="bottom-actions">
@@ -6267,12 +6287,37 @@ function appendTypewriterLog(elId, arrowId, msg) {
   activeTypingCount++;
   arrow.style.display = "none";
   const p = document.createElement("p");
-  p.className = "log-line-enter";
   el.insertBefore(p, arrow);
+  // 行の登場演出(ふわっと下から現れる)は、以前はCSSの@keyframes+animationクラス付与で
+  // 実装していたが、要素が生成された直後にクラスを付けるこの方式だとブラウザ側の
+  // スタイル再計算のタイミング次第でアニメーションが開始状態(translateY(10px)、つまり
+  // 中央より少し下にずれた位置)のまま止まって見えることがあり、これが「ログの文字が
+  // ボックス内で中央からずれて見える」不具合の実際の原因だった(実測で確認済み)。
+  // このプロジェクトで過去に何度も踏んだ「CSSのtransition/animationクラス切り替えは
+  // 信頼できない」問題と同じ系統のため、element.animate()(Web Animations API)に統一する
+  const enterAnim = p.animate(
+    [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" }],
+    { duration: 150, easing: "ease-out", fill: "forwards" }
+  );
+  enterAnim.onfinish = () => {
+    enterAnim.cancel();
+    p.style.opacity = "1";
+    p.style.transform = "translateY(0)";
+  };
   revealLogLine(p, msg, () => {
     activeTypingCount = Math.max(0, activeTypingCount - 1);
     if (activeTypingCount === 0) arrow.style.display = "block";
   });
+  // ログは行を追加するだけで一切消していなかったため、#battleLogは戦闘開始のたびに
+  // innerHTMLごとクリアされて実質問題が起きない一方、#dungeonLogは同じ遠征中(何度も「進む」
+  // を押す間)ずっと蓄積し続け、固定84pxの枠に収まりきらなくなって最下部までスクロールされ、
+  // 一番上の行が枠の上端で欠けて見える不具合になっていた。ボックスの実際の高さを超えた分の
+  // 古い行(矢印を除く)を削除して、常に最新の1〜3行分だけが残るようにする
+  const lines = [...el.children].filter((c) => c !== arrow);
+  while (lines.length > 1 && el.scrollHeight > el.clientHeight) {
+    const oldest = lines.shift();
+    oldest.remove();
+  }
   el.scrollTop = el.scrollHeight;
 }
 function blog(msg) {
