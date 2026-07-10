@@ -38,7 +38,11 @@
     font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
     margin: 0; padding: 0; line-height: 1.5;
   }
-  .wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  /* .hero/.dungeon-bg/.battle-bgは全てheight:100vh;height:100dvh;(アドレスバーの表示/非表示で
+     変わる実際の可視領域に追従)なのに対し、.wrapだけ100vh(アドレスバー非表示時の最大値扱い)のままだと、
+     アドレスバー表示中は.wrapの方が.heroより長くなり、その差分だけ下にスクロールできてしまい、
+     何も描画されていない<body>の背景(黒)が見えてしまう不具合があった。同じdvh対応にして揃える */
+  .wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
   .screen { display: none; flex-direction: column; flex: 1; position: relative; }
   /* 画面切り替え時にふわっとフェードインさせる。opacityのみのアニメーションなので
      position:fixedの子要素(.hero/.dungeon-bg/.battle-bg等)の基準位置には一切影響しない
@@ -1605,7 +1609,7 @@
       </div>
       <div class="bottom-actions">
         <button class="big primary" id="advanceBtn">進む</button>
-        <button class="big" id="retreatBtn">里に戻る</button>
+        <button class="big danger" id="retreatBtn">里に戻る</button>
         <button class="big" id="dungeonPotionBtn">回復薬</button>
         <button class="big" id="dungeonHealBtn" style="display:none;">治癒の術</button>
         <button class="big" id="dungeonToolsBtn">道具</button>
@@ -4732,12 +4736,28 @@ function renderPartyBar(elId, combatants, actingCharId) {
 // 行動選択ボタン欄を、味方表示の実際の描画位置のすぐ下に配置する。
 // 端末ごとにブラウザの表示領域の高さが違い、固定pxの当て推量では重なったりズレたりするため、
 // 実測したgetBoundingClientRect()を元に毎回計算し直す
+let lastPartyBarPositionCall = null; // 直近の呼び出し引数を覚えておき、visualViewportの変化時に再計算できるようにする
 function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
   const partyBar = document.getElementById(partyBarId);
   const actions = document.querySelector(actionsSelector);
   if (!partyBar || !actions) return;
-  const rect = partyBar.getBoundingClientRect();
-  actions.style.top = `${Math.round(rect.bottom) + 10}px`;
+  const apply = () => {
+    const rect = partyBar.getBoundingClientRect();
+    actions.style.top = `${Math.round(rect.bottom) + 10}px`;
+  };
+  apply();
+  lastPartyBarPositionCall = { partyBarId, actionsSelector };
+  // ごく稀に、呼び出し直後はまだレイアウトが完全に確定しておらず(iOS Safariのアドレスバー表示/非表示の
+  // 切り替わり中など)、ボタン位置が実際の味方表示より上にズレたまま固定されてしまうことがあったため、
+  // 次の描画フレームでもう一度測り直して補正する(既に正しい場合は同じ値を書き込むだけで無害)
+  requestAnimationFrame(apply);
+}
+// iOS Safariでアドレスバーの表示/非表示が切り替わり実際の可視領域(visualViewport)が変化した時、
+// 直前に配置したボタン列を同じ組み合わせで再計算する(再描画を待たずに追従させるための保険)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    if (lastPartyBarPositionCall) positionActionsBelowPartyBar(lastPartyBarPositionCall.partyBarId, lastPartyBarPositionCall.actionsSelector);
+  });
 }
 
 // 瀕死(critical)のまま誰にも担がれていない(carriedByが無い)仲間は、その場に置いていかれた
@@ -4957,18 +4977,27 @@ document.getElementById("retreatBtn").onclick = () => {
     alert("行動できる仲間がいません");
     return;
   }
-  // 瀕死の仲間を担いでいる(=ピンチで帰還を決めた)かどうかで別のセリフ枠を抽選する
-  const alive = fieldParty.filter((c) => c.status === "active");
-  const isCarrying = fieldParty.some((c) => c.carryingId);
-  if (alive.length > 0) {
-    if (isCarrying) { if (Math.random() < DIALOGUE_CHANCE.retreatPinch) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreatPinch"); }
-    else { if (Math.random() < DIALOGUE_CHANCE.retreat) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreat"); }
-  }
-  playDungeonMoveTransition(() => {
-    retreating = true;
-    dlog("引き返すことにした。ここから階層を下って里へ戻る。");
-    moveOneFloor();
-  });
+  showConfirmModal("里に戻りますか？", [
+    {
+      label: "はい",
+      className: "big danger",
+      onClick: () => {
+        // 瀕死の仲間を担いでいる(=ピンチで帰還を決めた)かどうかで別のセリフ枠を抽選する
+        const alive = fieldParty.filter((c) => c.status === "active");
+        const isCarrying = fieldParty.some((c) => c.carryingId);
+        if (alive.length > 0) {
+          if (isCarrying) { if (Math.random() < DIALOGUE_CHANCE.retreatPinch) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreatPinch"); }
+          else { if (Math.random() < DIALOGUE_CHANCE.retreat) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreat"); }
+        }
+        playDungeonMoveTransition(() => {
+          retreating = true;
+          dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+          moveOneFloor();
+        });
+      },
+    },
+    { label: "いいえ", className: "big" },
+  ]);
 };
 
 // ============ 野営 ============
@@ -6080,6 +6109,7 @@ function showStatusTooltip(el) {
 function hideStatusTooltip() {
   if (statusTooltipAnim) { statusTooltipAnim.cancel(); statusTooltipAnim = null; }
   document.getElementById("statusTooltip").style.display = "none";
+  statusTooltipShownFor = null;
 }
 // PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
 // pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
@@ -6092,33 +6122,24 @@ document.addEventListener("pointerout", (e) => {
   if (e.pointerType !== "mouse") return;
   if (e.target.closest(".status-icon")) hideStatusTooltip();
 });
-// スマホ: 0.5秒長押しで表示、指を離すか一定距離動かす(=スクロール意図とみなす)とキャンセル。
-// passive:trueのままpreventDefaultを一切呼ばないため、スクロール操作そのものは妨げない
-const STATUS_LONG_PRESS_MS = 500;
-const STATUS_LONG_PRESS_MOVE_TOLERANCE = 10;
-let statusLongPressTimer = null;
-let statusLongPressStartX = 0;
-let statusLongPressStartY = 0;
-document.addEventListener("touchstart", (e) => {
+// スマホ: タップで表示し、そのまま指を離しても消えない。もう一度同じアイコンをタップするか、
+// 画面のどこか他の場所をタップすると消える(以前の0.5秒長押し方式から変更)
+let statusTooltipShownFor = null; // 現在表示中の.status-icon要素(nullなら非表示)
+document.addEventListener("touchend", (e) => {
   const el = e.target.closest(".status-icon");
-  clearTimeout(statusLongPressTimer);
-  if (!el) return;
-  const touch = e.touches[0];
-  statusLongPressStartX = touch.clientX;
-  statusLongPressStartY = touch.clientY;
-  statusLongPressTimer = setTimeout(() => showStatusTooltip(el), STATUS_LONG_PRESS_MS);
-}, { passive: true });
-document.addEventListener("touchmove", (e) => {
-  const touch = e.touches[0];
-  const dx = Math.abs(touch.clientX - statusLongPressStartX);
-  const dy = Math.abs(touch.clientY - statusLongPressStartY);
-  if (dx > STATUS_LONG_PRESS_MOVE_TOLERANCE || dy > STATUS_LONG_PRESS_MOVE_TOLERANCE) {
-    clearTimeout(statusLongPressTimer);
+  if (el) {
+    if (statusTooltipShownFor === el) {
+      hideStatusTooltip();
+      statusTooltipShownFor = null;
+    } else {
+      showStatusTooltip(el);
+      statusTooltipShownFor = el;
+    }
+  } else if (statusTooltipShownFor) {
     hideStatusTooltip();
+    statusTooltipShownFor = null;
   }
 }, { passive: true });
-document.addEventListener("touchend", () => { clearTimeout(statusLongPressTimer); hideStatusTooltip(); }, { passive: true });
-document.addEventListener("touchcancel", () => { clearTimeout(statusLongPressTimer); hideStatusTooltip(); }, { passive: true });
 
 function startBattle(enemies, pathDef, encounterText) {
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true };
@@ -6318,7 +6339,7 @@ function renderBattleScreen() {
       </div>
       <div class="hp-with-warning">
         ${hpBarHtml(e)}
-        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon">${ICONS.bigAttackPending}</span>` : ""}
+        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon">💢</span>` : ""}
       </div>
       <div class="status-icon-row">${statusIconsFor(e)}</div>
     `;
