@@ -322,6 +322,21 @@
     font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
     animation: levelupPulse 1.2s ease-in-out infinite;
   }
+  /* 新しく建築可能になった施設/雇えるようになった職業に付ける「NEW」バッジ。レベルアップバッジ(黄色)とは
+     意図的に別の色(赤〜オレンジ)にして「まだ見ていない新着」であることを視覚的に区別している。
+     一度画面を表示すると自動的に非表示化される(state.seenUnlockedBuildings/seenUnlockedClassesに記録) */
+  .new-badge {
+    display: inline-block; margin-left: 0.3rem; padding: 0.1rem 0.45rem; border-radius: 999px;
+    background: linear-gradient(90deg, #ff6a4d, #d1503f); color: #fff;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; vertical-align: middle;
+    animation: newBadgePulse 1.1s ease-in-out infinite;
+  }
+  @keyframes newBadgePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(209,80,63,0); }
+    50% { transform: scale(1.12); box-shadow: 0 0 8px rgba(255,106,77,0.7); }
+  }
+  .class-pick { position: relative; }
+  .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   /* 町画面の所持金表示。背景に埋もれて見にくいという指摘を受け時計の下に移動しつつ、
      枠のバッジ風デザインは「ダサい」との指摘で撤去し、文字を少し大きく+影を強めるだけにした */
@@ -963,10 +978,10 @@
     <div class="body-pad">
       <p id="townHireHint" style="display:none;"><span class="hire-hint-arrow">⬇︎</span>宿屋で仲間を雇いましょう</p>
       <div class="btn-col">
-        <button class="big" id="toTavernBtn">🏮旅の宿</button>
+        <button class="big" id="toTavernBtn">🏮旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toShopBtn">⚒️ 鍛冶屋</button>
         <button class="big" id="toOnsenBtn">♨️ 温泉</button>
-        <button class="big" id="toExtensionBtn">🪵建築</button>
+        <button class="big" id="toExtensionBtn">🪵建築<span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toMagistrateBtn" style="display:none;">🏯奉行所</button>
         <button class="big primary" id="toDungeonBtn">⛰️出発</button>
       </div>
@@ -1197,59 +1212,59 @@
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏯奉行所</h2>
+      <h2 style="margin-top:1.2rem;">🏯奉行所<span class="new-badge" id="magistrateNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">依頼を受けられるようになります(町の画面から見られます)。依頼は毎日入れ替わります。</p>
       <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏕️旅支度屋</h2>
+      <h2 style="margin-top:1.2rem;">🏕️旅支度屋<span class="new-badge" id="travelPrepShopNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">出発画面で野営具を購入できるようになります。</p>
       <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🥋道場</h2>
+      <h2 style="margin-top:1.2rem;">🥋道場<span class="new-badge" id="dojoNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
       <button class="big primary" id="dojoBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🎎からくり屋敷</h2>
+      <h2 style="margin-top:1.2rem;">🎎からくり屋敷<span class="new-badge" id="karakuriNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">忍が雇えるようになります。また、戦闘中に煙玉で仲間の炎上を消す「消火」が使えるようになります。</p>
       <button class="big primary" id="karakuriBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🧳鞄屋</h2>
+      <h2 style="margin-top:1.2rem;">🧳鞄屋<span class="new-badge" id="bagShopNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">支援物資の所持上限が1つ増えます。</p>
       <button class="big primary" id="bagShopBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🏹見張り台</h2>
+      <h2 style="margin-top:1.2rem;">🏹見張り台<span class="new-badge" id="watchtowerNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">村が襲撃された時、狩人・砲術士が援護射撃できるようになります。</p>
       <button class="big primary" id="watchtowerBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐓鶏小屋</h2>
+      <h2 style="margin-top:1.2rem;">🐓鶏小屋<span class="new-badge" id="henHouseNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">⛩️神社</h2>
+      <h2 style="margin-top:1.2rem;">⛩️神社<span class="new-badge" id="shrineNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">僧侶が雇えるようになります。また、出発準備画面でおみくじを引けるようになります(1日1回)。</p>
       <button class="big primary" id="shrineBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">♨️湯守屋</h2>
+      <h2 style="margin-top:1.2rem;">♨️湯守屋<span class="new-badge" id="hotSpringKeeperNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">💣火薬庫</h2>
+      <h2 style="margin-top:1.2rem;">💣火薬庫<span class="new-badge" id="gunpowderStoreNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">砲術士が雇えるようになります。また、出発画面で爆弾(敵全体に防御無視のダメージ)を購入できるようになります。</p>
       <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🍡茶屋</h2>
+      <h2 style="margin-top:1.2rem;">🍡茶屋<span class="new-badge" id="teaHouseNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐎馬屋</h2>
+      <h2 style="margin-top:1.2rem;">🐎馬屋<span class="new-badge" id="stableNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">馬を購入すると、出発時の移動速度が上がります。</p>
       <button class="big primary" id="stableBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">🐝養蜂場</h2>
+      <h2 style="margin-top:1.2rem;">🐝養蜂場<span class="new-badge" id="beeFarmNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.8rem;"></button>
 
-      <h2 style="margin-top:1.2rem;">⛴️渡し船</h2>
+      <h2 style="margin-top:1.2rem;">⛴️渡し船<span class="new-badge" id="ferryNewBadge" style="display:none;">NEW</span></h2>
       <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">(詳細は未定)</p>
       <button class="big primary" id="ferryBuildBtn" style="margin-top:0.8rem;"></button>
 
@@ -1516,6 +1531,8 @@ function defaultState() {
     omikujiLastLine: "", // 最後に引いた時に仲間が喋った一言(表示用)
     omikujiEffect: null, // 次の遠征に適用される効果(daikichi/chukichi/kichi/shokichi、kyouはnullのまま)。遠征終了時にクリアする
     omikujiFirstStrikePending: false, // 小吉: 次の遠征の最初の戦闘だけ先制確定にする(1戦闘使ったら消費)
+    seenUnlockedBuildings: {}, // { stateKey: true } 建築可能(houseLevel到達済み・未建築)になった施設を一度でも増築画面で見たか。NEWバッジの表示制御用
+    seenUnlockedClasses: {}, // { classId: true } 雇用可能になった職業を一度でも宿屋の職業一覧で見たか。NEWバッジの表示制御用
   };
 }
 
@@ -1710,6 +1727,8 @@ function loadState() {
       if (loaded.omikujiEffect === undefined) loaded.omikujiEffect = null;
       if (loaded.omikujiFirstStrikePending == null) loaded.omikujiFirstStrikePending = false;
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
+      if (loaded.seenUnlockedBuildings == null) loaded.seenUnlockedBuildings = {}; // 旧セーブ用の初期値(NEWバッジ機能実装前は無条件で空扱い)
+      if (loaded.seenUnlockedClasses == null) loaded.seenUnlockedClasses = {};
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
@@ -2231,6 +2250,25 @@ function playTownAreaBgm() {
 }
 
 // ============ 町 ============
+// 町画面のボタンに出す「NEWがあるかどうか」の覗き見用チェック。実際にその画面(宿屋/増築)を
+// 開いた時に初めてseenUnlockedClasses/seenUnlockedBuildingsへ記録されるため、ここでは
+// state を書き換えない(読み取るだけ)
+function hasAnyNewClass() {
+  return Object.keys(CLASSES).some((classId) => isClassUnlocked(classId) && CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId]);
+}
+function hasAnyNewBuilding() {
+  const level = state.houseLevel || 1;
+  const checks = [
+    ["dojoLevel", DOJO_UNLOCK_HOUSE_LEVEL], ["magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL],
+    ["travelPrepShopLevel", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL], ["bagShopLevel", BAG_SHOP_UNLOCK_HOUSE_LEVEL],
+    ["watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL], ["henHouseLevel", HEN_HOUSE_UNLOCK_HOUSE_LEVEL],
+    ["shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL], ["gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL],
+    ["karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL], ["hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL],
+    ["teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL], ["stableLevel", STABLE_UNLOCK_HOUSE_LEVEL],
+    ["beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL], ["ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL],
+  ];
+  return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0) && !state.seenUnlockedBuildings[key]);
+}
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
@@ -2242,6 +2280,8 @@ function renderTown() {
   // 最初の1人を選んだ直後(まだ宿屋で誰も雇っていない間)だけ、宿屋への案内を出す
   document.getElementById("townHireHint").style.display = state.roster.length === 1 ? "" : "none";
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
+  document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
+  document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
@@ -2498,22 +2538,28 @@ document.getElementById("toDungeonBtn").onclick = () => {
 };
 
 // ============ 宿屋 ============
+// 建物で解禁されたばかり(まだこの一覧で見ていない)の職業に「NEW」を出す。侍/槍士/狩人/陰陽師のような
+// 建物不要で最初から雇える職業は対象外(CLASS_UNLOCK_BUILDINGにエントリが無い=判定自体をスキップする)
 function renderClassGrid() {
   const grid = document.getElementById("classGrid");
   grid.innerHTML = "";
   const descArea = document.getElementById("classDescArea");
   descArea.textContent = CLASS_DESC[selectedClass] || "";
+  let anyNewlySeen = false;
   Object.keys(CLASSES).filter(isClassUnlocked).forEach((classId) => {
     const c = CLASSES[classId];
     const div = document.createElement("div");
     div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
-    div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>`;
+    const isNew = !!CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId];
+    div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>${isNew ? '<span class="new-badge">NEW</span>' : ""}`;
+    if (isNew) { state.seenUnlockedClasses[classId] = true; anyNewlySeen = true; }
     div.onclick = () => { selectedClass = classId; renderClassGrid(); };
     // カーソルを乗せている間だけそのクラスの説明を表示し、離れたら選択中のクラスの説明に戻す
     div.onmouseenter = () => { descArea.textContent = CLASS_DESC[classId] || ""; };
     div.onmouseleave = () => { descArea.textContent = CLASS_DESC[selectedClass] || ""; };
     grid.appendChild(div);
   });
+  if (anyNewlySeen) saveState();
 }
 let selectedClass = "samurai";
 
@@ -3506,6 +3552,15 @@ document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); sho
 document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
 // ============ 増築 ============
+// 新しく建築可能(houseLevelは足りたがまだ未建築)になった施設に「NEW」バッジを出す。
+// 一度でもこの画面で表示されるとその場でseenUnlockedBuildingsに記録するため、次にこの画面を
+// 開いた時にはもう出ない(「見た瞬間に消える」方式。建てるまで粘り強く出し続ける方式ではない)
+function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
+  const badge = document.getElementById(badgeId);
+  const isNew = unlocked && !built && !state.seenUnlockedBuildings[stateKey];
+  badge.style.display = isNew ? "" : "none";
+  if (isNew) state.seenUnlockedBuildings[stateKey] = true;
+}
 function renderExtension() {
   playTownAreaBgm();
   updateSceneBackgrounds();
@@ -3559,26 +3614,29 @@ function renderExtension() {
     dojoBtn.textContent = `増築する(${DOJO_LEVEL2_COST}G) 分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%→${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel + 1] * 100)}%`;
     dojoBtn.disabled = state.gold < DOJO_LEVEL2_COST;
   }
-  renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level);
-  renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level);
-  renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level);
-  renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level);
-  renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level);
-  renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level);
-  renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level);
-  renderSimpleBuilding("karakuriLevel", "karakuriBuildBtn", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST, level);
-  renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level);
-  renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level);
-  renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level);
-  renderSimpleBuilding("beeFarmLevel", "beeFarmBuildBtn", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST, level);
-  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level);
+  markBuildingNewBadge("dojoLevel", "dojoNewBadge", level >= DOJO_UNLOCK_HOUSE_LEVEL, dojoLevel >= 1);
+  renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level, "magistrateNewBadge");
+  renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
+  renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level, "bagShopNewBadge");
+  renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge");
+  renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level, "henHouseNewBadge");
+  renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level, "shrineNewBadge");
+  renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level, "gunpowderStoreNewBadge");
+  renderSimpleBuilding("karakuriLevel", "karakuriBuildBtn", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST, level, "karakuriNewBadge");
+  renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level, "hotSpringKeeperNewBadge");
+  renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level, "teaHouseNewBadge");
+  renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level, "stableNewBadge");
+  renderSimpleBuilding("beeFarmLevel", "beeFarmBuildBtn", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST, level, "beeFarmNewBadge");
+  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level, "ferryNewBadge");
+  saveState();
 }
 // 奉行所/鞄屋/見張り台/馬屋は全て「家レベルで解禁→1回建築したら終わり(レベル1のみ)」という
 // 同じ形の建物なので、表示更新の共通処理をまとめている
-function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLevel) {
+function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLevel, badgeId) {
   const built = (state[stateKey] || 0) >= 1;
   const btn = document.getElementById(btnId);
-  if (!built && houseLevel < unlockHouseLevel) {
+  const unlocked = houseLevel >= unlockHouseLevel;
+  if (!built && !unlocked) {
     btn.textContent = `家レベル${unlockHouseLevel}で解禁されます`;
     btn.disabled = true;
   } else if (built) {
@@ -3588,6 +3646,7 @@ function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLeve
     btn.textContent = `建築する(${cost}G)`;
     btn.disabled = state.gold < cost;
   }
+  if (badgeId) markBuildingNewBadge(stateKey, badgeId, unlocked, built);
 }
 function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   const built = (state[stateKey] || 0) >= 1;
