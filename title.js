@@ -146,7 +146,7 @@ function resetTitleVisualState() {
   els.logo.style.transform = "scale(0.98)";
   els.tapPrompt.style.opacity = "0";
   els.tapPrompt.style.display = "none";
-  els.buttons.forEach((b) => { b.style.opacity = "0"; b.style.transform = "translateY(16px)"; });
+  els.buttons.forEach((b) => { b.style.opacity = "0"; });
   els.footer.style.opacity = "0";
   els.menu.style.pointerEvents = "none";
 }
@@ -220,9 +220,8 @@ async function runTitleSequence(full) {
   els.buttons.forEach((b, i) => {
     setTimeout(() => {
       if (myToken !== titleSeqToken) return;
-      // transformは完了後に""でクリアする(ボタンのentrance演出が:active { transform: scale(0.97) }を
-      // 塞いでしまわないように。空文字はtranslateY(0)と見た目上同じ「変形なし」の状態になる)
-      titleAnimate(b, [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1", transform: "" });
+      // 下からのスライド(translateY)は廃止し、フェードインのみにした(ユーザー指示)
+      titleAnimate(b, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
     }, i * 80);
   });
   await sleep(Math.max(0, els.buttons.length - 1) * 80 + 300);
