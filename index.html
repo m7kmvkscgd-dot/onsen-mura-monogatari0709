@@ -40,6 +40,18 @@
 <body>
 <div class="wrap">
 
+  <!-- タップして開始ゲート: ブラウザの自動再生制限(信頼できるユーザー操作の中でしか
+       <audio>を再生できない)により、何もタップせず演出を眺めているだけではオープニングBGMを
+       開始と同時に鳴らすことができない。ここで最初の一回だけ実際のタップを挟むことで、
+       その直後に始まるオープニング(動画+BGM)が確実に音付きで始まるようにしている。
+       画像等の読み込み状況に左右されずに即座に出したいため、中身はCSSのみで構成 -->
+  <div id="openingTapGate">
+    <div class="opening-tap-gate-inner">
+      <div class="opening-tap-gate-title">温泉村物語</div>
+      <div class="opening-tap-gate-prompt">タップして開始</div>
+    </div>
+  </div>
+
   <!-- オープニング動画(最上位に重ねる。動画が無い/読み込めない場合は即座にタイトルへ) -->
   <div id="openingOverlay">
     <video id="openingVideo" src="assets/opening/opening.mp4" playsinline preload="auto"></video>

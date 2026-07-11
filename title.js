@@ -372,8 +372,28 @@ function initOpeningSequence() {
   }
 }
 
+// ============ タップして開始ゲート ============
+// ブラウザの自動再生制限(信頼できるユーザー操作の中でしか<audio>を再生できない)により、
+// 何もタップせず演出を眺めているだけの間はオープニングBGMを鳴らせない。ここで最初の
+// 一回だけ実際のタップを挟むことで、直後に始まるオープニング一式(動画+BGM)が
+// 開始と同時に確実に音付きで始まるようにしている。タップ自体はaudio.js側の
+// unlockAudio()(document全体のpointerdown等で発火)も同じイベントの中で動くため、
+// ここで個別にBGMを再生する処理は書かず、ゲートを閉じてinitOpeningSequence()を
+// 呼ぶだけでよい(unlockAudio()が同じ呼び出しスタックの中で先に解決している)
+function initOpeningTapGate() {
+  const gate = document.getElementById("openingTapGate");
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    gate.style.display = "none";
+    initOpeningSequence();
+  };
+  gate.addEventListener("pointerdown", start, { once: true });
+}
+
 // ============ 初期化 ============
 // タイトル画面はオープニング動画の背後で先に非表示状態にしておく(動画フェード中に完成形が
 // 透けて見えないように)。実際の表示はinitOpeningSequence()の完了後、renderTitleScreen({full:true})で行う
 resetTitleVisualState();
-initOpeningSequence();
+initOpeningTapGate();
