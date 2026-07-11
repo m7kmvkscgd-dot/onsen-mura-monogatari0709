@@ -987,6 +987,10 @@ function goldReward(enemy) {
   const base = enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
   return enemy.isBoss ? base : Math.round(base * TRASH_MOB_GOLD_MULT);
 }
+// 深層(DEEP_FLOOR_XP_THRESHOLD階以上)では敵を倒して得られる経験値を減らす(ゴールドは対象外)
+function xpMultiplierForFloor(floor) {
+  return floor >= DEEP_FLOOR_XP_THRESHOLD ? DEEP_FLOOR_XP_MULT : 1;
+}
 
 // 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)。
 // 逃走準備中(fleeState==="preparing")は、逃げ出そうと隙を伺っている分+25%回避率が上がる

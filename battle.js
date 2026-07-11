@@ -936,15 +936,16 @@ function victory() {
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
+    const xpAmount = Math.round(e.xp * xpMultiplierForFloor(currentFloor));
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
-      grantXp(c, e.xp, blog);
-      advXpGained[c.id] = (advXpGained[c.id] || 0) + e.xp;
+      grantXp(c, xpAmount, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + xpAmount;
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
     // 道場があれば、この冒険に同行しなかった(名簿にいるが出発していない)仲間にも経験値の一部を分配する
     if ((state.dojoLevel || 0) >= 1) {
-      const reserveXp = Math.round(e.xp * DOJO_XP_SHARE_BY_LEVEL[state.dojoLevel]);
+      const reserveXp = Math.round(xpAmount * DOJO_XP_SHARE_BY_LEVEL[state.dojoLevel]);
       state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c)).forEach((c) => {
         const beforeLevel = c.level;
         grantXp(c, reserveXp, blog);

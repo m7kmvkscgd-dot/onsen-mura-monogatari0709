@@ -1146,6 +1146,9 @@ const ENEMY_HP_MULT = 0.9;
 const ENEMY_SWARM_ATK_MULT = 1.1;
 // 大群系が絡んだ遭遇になる確率(1回の遭遇につき1回だけ判定する)。毎回出るとうざいので控えめにしてある
 const SWARM_ENCOUNTER_CHANCE = 0.15;
+// 深層(この階層以上)で敵を倒した時に得られる経験値を減らす倍率。ゴールドや装備には影響しない
+const DEEP_FLOOR_XP_THRESHOLD = 15;
+const DEEP_FLOOR_XP_MULT = 0.7;
 
 // 炎上(毒とは別系統のDOT): 毒が固定ダメージ+蓄積減衰なのに対し、炎上は最大HPの割合ダメージ+ターン数固定(減衰なし)。
 // 低HPの相手には毒が、高HPのタンクには炎上がよく効く、という住み分けを狙っている(陰陽師/砲術士の専売)
