@@ -124,6 +124,7 @@ function loadState() {
       if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)
       if (loaded.omikujiLastTier === undefined) loaded.omikujiLastTier = null;
       if (loaded.omikujiLastLine == null) loaded.omikujiLastLine = "";
+      if (loaded.omikujiLastSpeakerId === undefined) loaded.omikujiLastSpeakerId = null;
       if (loaded.omikujiEffect === undefined) loaded.omikujiEffect = null;
       if (loaded.omikujiFirstStrikePending == null) loaded.omikujiFirstStrikePending = false;
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)

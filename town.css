@@ -4,6 +4,17 @@
     cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
   }
   .time-skip-btn:active { transform: scale(0.9); }
+  /* 出発準備画面のおみくじボタン。他のbutton.bigと並ぶ主要導線ではなく、右上に控えめに置く
+     「ちょっと楽しい寄り道」の位置づけにするため、あえて小さい丸みのあるチップ型にしてある */
+  .omikuji-chip-btn {
+    background: var(--dw-btn-sheen), linear-gradient(135deg, #6b3a1f, #4a2a1f);
+    color: #ffbe7a; border: 1px solid #d98a3d; border-radius: var(--radius-pill);
+    padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .omikuji-chip-btn:active { transform: scale(.95); filter: brightness(.88); }
+  .omikuji-chip-btn.active { background: var(--dw-btn-sheen), linear-gradient(135deg, #e3c583, #b3822f); color: #241d0a; border-color: #f2dfa6; }
   /* ============ 時間を進めるピッカー ============
      「村で時間を調整する」ゲーム内行動として見せるため、設定画面然としたモーダルではなく
      木札(タグ)が宙に浮くデザインにした。背景は15〜20%だけ暗くし(以前は92%でほぼ塗りつぶし)、

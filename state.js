@@ -45,6 +45,7 @@ function defaultState() {
     omikujiDrawnDate: 0, // 最後におみくじを引いたdayCount(0=未使用。1日1回、dayCountが変わるとまた引ける)
     omikujiLastTier: null, // 最後に引いたおみくじの結果(daikichi/chukichi/kichi/shokichi/kyou)。表示用
     omikujiLastLine: "", // 最後に引いた時に仲間が喋った一言(表示用)
+    omikujiLastSpeakerId: null, // 上記セリフを喋ったキャラのid(結果画面にポートレートを出すため)
     omikujiEffect: null, // 次の遠征に適用される効果(daikichi/chukichi/kichi/shokichi、kyouはnullのまま)。遠征終了時にクリアする
     omikujiFirstStrikePending: false, // 小吉: 次の遠征の最初の戦闘だけ先制確定にする(1戦闘使ったら消費)
     seenUnlockedBuildings: {}, // { stateKey: true } 建築可能(houseLevel到達済み・未建築)になった施設を一度でも増築画面で見たか。NEWバッジの表示制御用
