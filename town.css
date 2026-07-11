@@ -44,7 +44,6 @@
      立ち絵を主役にするため96px→132px(約38%増)に拡大し、専用カードで名前直下の余白を整理。
      ステータス表は罫線を全廃して余白のグルーピングのみで区切る方針にしてある */
   .status-portrait-wrap { position: relative; display: inline-block; width: 132px; height: 132px; }
-  .status-portrait-wrap .stress-overlay { border-radius: var(--radius-sm); }
   .status-portrait-card { text-align: center; animation: statusPortraitIn 0.2s ease-out; }
   @keyframes statusPortraitIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
   .status-portrait-meta { margin-top: 0.6rem; }
@@ -98,7 +97,7 @@
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
   }
   .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--dw-heading-color); }
-  .equip-class-title img { width: 32px; height: 32px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
+  .equip-class-title img { width: 32px; height: 32px; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
      地味な一覧だった) */

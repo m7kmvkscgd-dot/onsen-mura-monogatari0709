@@ -93,7 +93,7 @@
   .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
   .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }
   .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
-  .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
+  .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .class-pick span { display: block; font-size: 0.68rem; margin-top: 0.2rem; }
   input[type="text"] {
     width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border);

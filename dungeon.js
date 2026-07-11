@@ -625,7 +625,6 @@ function showCriticalAlert(critical, onResolved) {
   document.body.classList.add("critical-alert-active");
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
-  const overlaySrc = stressOverlaySrc(critical.fatigue);
   // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
   // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
   document.getElementById("dungeonLog").style.display = "none";
@@ -633,9 +632,8 @@ function showCriticalAlert(critical, onResolved) {
   div.innerHTML = `
     <div class="critical-alert">
       <p class="critical-alert-title">仲間が倒れている</p>
-      <div class="critical-alert-portrait stress-wrap">
-        <img src="${c2.image}">
-        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
+      <div class="critical-alert-portrait">
+        <img src="${characterPortraitSrc(critical)}">
       </div>
       <p class="critical-alert-name">${critical.name}</p>
       <p class="critical-alert-job">${c2.ja}</p>
@@ -689,10 +687,9 @@ function showCarryPicker(critical, onResolved) {
   document.getElementById("advanceBtn").disabled = true;
   document.getElementById("retreatBtn").disabled = true;
   const rowHtml = (c) => {
-    const c2 = CLASSES[c.classId];
     return `
       <button class="big" data-carrier-id="${c.id}" style="margin-top:0.3rem; display:flex; align-items:center; gap:0.6rem; justify-content:flex-start; padding-left:0.8rem;">
-        <img src="${c2.image}" style="width:36px;height:36px;object-fit:cover;object-position:top;border-radius:4px;">
+        <img src="${characterPortraitSrc(c)}" style="width:36px;height:36px;object-fit:contain;background:#353a44;border-radius:4px;">
         <span>${c.name}</span>
       </button>
     `;

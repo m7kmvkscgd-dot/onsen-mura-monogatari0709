@@ -284,7 +284,6 @@ function renderRosterList() {
     const lodgeable = c.status === "active";
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : c.onsenBuffKey ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
-    const overlaySrc = stressOverlaySrc(c.fatigue);
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
@@ -293,10 +292,7 @@ function renderRosterList() {
     const row = document.createElement("div");
     row.className = "roster-row" + (lodgeSelected ? " selected" : "");
     row.innerHTML = `
-      <div class="stress-wrap">
-        <img src="${c2.image}">
-        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
-      </div>
+      <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
         <div class="roster-sub">${statusLabel(c)}</div>
@@ -477,11 +473,7 @@ function renderStatusScreen(charId) {
   const reading = NAME_READINGS[c.name];
   document.getElementById("statusName").textContent = reading ? `${c.name}(${reading})` : c.name;
   renderDwHeader("status", c.name, () => { renderTavern(); showScreen("screen-tavern"); });
-  document.getElementById("statusImg").src = c2.image;
-  const overlaySrc = stressOverlaySrc(c.fatigue);
-  const overlayEl = document.getElementById("statusStressOverlay");
-  overlayEl.style.display = overlaySrc ? "block" : "none";
-  if (overlaySrc) overlayEl.src = overlaySrc;
+  document.getElementById("statusImg").src = characterPortraitSrc(c);
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statPersonality").textContent = c.personality || "-";
   document.getElementById("statLevel").textContent = c.level;
@@ -784,12 +776,8 @@ function renderPartySelect() {
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : c.onsenBuffKey ? onsenBuffName(c.onsenBuffKey) : "待機中";
-    const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
-      <div class="stress-wrap">
-        <img src="${c2.image}">
-        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
-      </div>
+      <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
         ${hpBarHtml(c)}
@@ -1039,7 +1027,7 @@ function showDepartConfirm(stage) {
     const row = document.createElement("div");
     row.className = "card";
     row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
-    row.innerHTML = `<img src="${c2.image}" style="width:44px;height:44px;object-fit:cover;object-position:top;border-radius:6px;"><span>${c.name}(${c2.ja} Lv${c.level})</span>`;
+    row.innerHTML = `<img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;"><span>${c.name}(${c2.ja} Lv${c.level})</span>`;
     list.appendChild(row);
   });
   document.getElementById("departConfirmOverlay").style.display = "block";
@@ -1076,12 +1064,8 @@ function renderOnsen() {
     if (noFatigue) label = "ストレスなし";
     const row = document.createElement("div");
     row.className = "roster-row";
-    const overlaySrc = stressOverlaySrc(c.fatigue);
     row.innerHTML = `
-      <div class="stress-wrap">
-        <img src="${c2.image}">
-        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
-      </div>
+      <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
         <div class="roster-sub">ストレス ${c.fatigue || 0}</div>

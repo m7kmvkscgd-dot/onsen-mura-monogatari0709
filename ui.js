@@ -277,11 +277,10 @@ function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext) {
   list.innerHTML = beforeSnapshot.map(({ id, fatigueBefore }) => {
     const c = getRosterChar(id);
     if (!c) return "";
-    const c2 = CLASSES[c.classId];
     const fatigueDelta = fatigueBefore - (c.fatigue || 0);
     return `
       <div class="camp-rest-row">
-        <img src="${c2.image}">
+        <img src="${characterPortraitSrc(c)}">
         <div class="camp-rest-info">
           <div class="nm">${c.name}</div>
           <div class="camp-rest-stat-label">HP</div>
@@ -333,16 +332,6 @@ const ICONS = {
   magistrate: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2 6 8 2l6 4" stroke-linecap="round"/><path d="M2.8 6.5v6.8h10.4V6.5"/><path d="M5 13.3V9.5h1.8v3.8M9.2 13.3V9.5H11v3.8" stroke-linecap="round"/></svg>',
   depart: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 3.5"/><path d="M6.5 3.5H10M6.5 3.5l1 3"/><path d="M9 8.5l5 1.2-3.8 3.3"/></svg>',
 };
-const STRESS_OVERLAY_SRC = {
-  1: "assets/stress/tier1.png",
-  2: "assets/stress/tier2.png",
-  3: "assets/stress/tier3.png",
-  4: "assets/stress/frenzy.png",
-};
-function stressOverlaySrc(fatigue) {
-  return STRESS_OVERLAY_SRC[stressTier(fatigue)] || null;
-}
-
 // 被弾時、緑ゲージは即座に新しい残量まで落とし、赤ゲージ(トレイル)は前回表示していた残量から
 // 緑の位置までゆっくり追いついて消えていく。entity.__hpDisplayRatioに前回表示分を記憶しておく。
 // 回復時(前回より残量が増えた時)は、赤ゲージとは別に淡いシアンの回復用トレイルも重ねて出し、
@@ -399,7 +388,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
   bar.innerHTML = "";
   // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
-    const c2 = CLASSES[c.classId];
     const dead = c.hp <= 0 || c.status !== "active";
     // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
     const targetable = !!pendingAllyPick && !dead && !c.transformForm;
@@ -407,24 +395,19 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-    const overlaySrc = stressOverlaySrc(c.fatigue);
     // 担がれている本人は今回の遠征の名簿(fieldParty/combatants)に居るとは限らない(別の冒険で瀕死のまま
     // 取り残されていた仲間を、今回の探索中に見つけて担いだ場合など、deliverCarriedAlliesと同じ理由)。
     // そのためcombatants内だけでなくstate.roster全体からも探す
     const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
-    const carriedC2 = carried ? CLASSES[carried.classId] : null;
     // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
     const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
-    const portraitSrc = transformDef ? transformDef.image : c2.image;
+    const portraitSrc = transformDef ? transformDef.image : characterPortraitSrc(c);
     // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
-      <div class="stress-wrap">
-        <img src="${portraitSrc}">
-        ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
-        ${carriedC2 ? `<img class="carried-badge" src="${carriedC2.image}" data-carried-id="${carried.id}">` : ""}
-        ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
-      </div>
+      <img src="${portraitSrc}">
+      ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
+      ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}

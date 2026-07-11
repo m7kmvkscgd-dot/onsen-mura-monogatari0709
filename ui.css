@@ -53,20 +53,18 @@
      残量から追いつくように少し遅れて伸びる)。data-hp-heal-trailを共有しているのでactivateHpTrails()が
      そのままアニメーションさせてくれる */
   .mpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #BFD9FF; }
-  .roster-row img:not(.stress-overlay) { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); background: var(--surface-2); }
+  /* キャラのストレス段階(通常/軽度/重度/パニック)は立ち絵そのものを差し替えて表現する
+     (黒もやもやの透過オーバーレイ方式は廃止)。背景は新しい立ち絵の透過部分に合わせた#353a44、
+     引き伸ばし/クロップを避けるためobject-fit:containにしている */
+  .roster-row img { width: 44px; height: 44px; flex-shrink: 0; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .roster-info { flex: 1; }
-  /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
-  .stress-wrap { position: relative; }
-  .stress-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 2; }
   /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に重ねる(ユーザー指示で従来の1.3倍) */
   .carried-badge {
     position: absolute; top: -6px; right: -6px; width: 36%; aspect-ratio: 1/1;
-    object-fit: cover; object-position: top; border-radius: 50%;
+    object-fit: contain; background: #353a44; border-radius: 50%;
     border: 2px solid var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.5); z-index: 3;
     transition: top 0.3s ease, right 0.3s ease, width 0.3s ease, opacity 0.3s ease;
   }
-  .roster-row .stress-wrap { display: block; width: 44px; height: 44px; flex-shrink: 0; }
-  .party-member .stress-wrap { display: block; width: 100%; }
   .party-bar {
     /* 戦闘画面・探索画面のどちらでも自キャラの表示位置が変わらないよう、同じtop値を共有する。
        transform: translateZ(0)は以前ここに付いていたが、.enemy-row(position:relativeのみで
@@ -105,7 +103,7 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.stress-overlay):not(.carried-badge) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: var(--radius-xs); background: var(--surface-2); }
+  .party-member img:not(.carried-badge) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 高さを少し太くし、黒い縁+上側だけ薄いハイライトを加えて立体感/高級感を出す
      (::afterのハイライト帯はfill/trail要素より後のスタッキングで自動的に最前面に来る) */

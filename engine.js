@@ -192,6 +192,18 @@ function stressTier(fatigue) {
   return 0;
 }
 
+// キャラの立ち絵を、ストレス段階に応じて丸ごと差し替える(黒もやもやの透過オーバーレイ方式は廃止)。
+// tier0=通常、tier1(40-59)=軽度、tier2/3(60-99)=重度、tier4(100)=パニック
+function characterPortraitSrc(c) {
+  const cls = CLASSES[c.classId];
+  const tier = stressTier(c.fatigue);
+  if (tier === 0) return cls.image;
+  const variants = CLASS_STRESS_IMAGES[c.classId];
+  if (tier === 1) return variants.mild;
+  if (tier === 4) return variants.panic;
+  return variants.severe;
+}
+
 // ストレスによる攻撃力/防御力/素早さ/魔力の低下率。段階が上がるごとに重くなり、
 // 80〜99で半減、100(発狂)は数値上も0(=そもそも行動不能として別途扱う)
 function fatigueMalus(fatigue) {

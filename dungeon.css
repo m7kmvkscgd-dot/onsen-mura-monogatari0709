@@ -107,8 +107,7 @@
     letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   }
   .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
-  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px; }
-  .critical-alert-portrait .stress-overlay { border-radius: 8px; }
+  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: contain; background: #353a44; border-radius: 8px; }
   .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0; }
   .critical-alert-job { text-align: center; font-size: 0.7rem; color: #c7bda3; margin: 0 0 0.4rem; }
   .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.35rem; margin: 0 0 0.35rem; }

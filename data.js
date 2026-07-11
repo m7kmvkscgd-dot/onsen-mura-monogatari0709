@@ -19,6 +19,19 @@ const CLASSES = {
   priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 6, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
 };
 
+// ストレス段階ごとのキャラ立ち絵差し替え(通常時はCLASSES[classId].imageをそのまま使う)。
+// mild=ストレス40〜59、severe=60〜99、panic=100(stressTier()の1/2・3/4に対応)
+const CLASS_STRESS_IMAGES = {
+  samurai: { mild: "assets/class_samurai_mild.png", severe: "assets/class_samurai_severe.png", panic: "assets/class_samurai_panic.png" },
+  ninja: { mild: "assets/class_ninja_mild.png", severe: "assets/class_ninja_severe.png", panic: "assets/class_ninja_panic.png" },
+  spearman: { mild: "assets/class_spearman_mild.png", severe: "assets/class_spearman_severe.png", panic: "assets/class_spearman_panic.png" },
+  naginata: { mild: "assets/class_naginata_mild.png", severe: "assets/class_naginata_severe.png", panic: "assets/class_naginata_panic.png" },
+  hunter: { mild: "assets/class_hunter_mild.png", severe: "assets/class_hunter_severe.png", panic: "assets/class_hunter_panic.png" },
+  gunner: { mild: "assets/class_gunner_mild.png", severe: "assets/class_gunner_severe.png", panic: "assets/class_gunner_panic.png" },
+  onmyoji: { mild: "assets/class_onmyoji_mild.png", severe: "assets/class_onmyoji_severe.png", panic: "assets/class_onmyoji_panic.png" },
+  priest: { mild: "assets/class_priest_mild.png", severe: "assets/class_priest_severe.png", panic: "assets/class_priest_panic.png" },
+};
+
 // 職業ごとのざっくりとした説明文(ゲーム開始時の最初の1人選び画面で表示する)
 const CLASS_DESC = {
   samurai: "会心の一撃を得意とする単体特化の剣士。攻撃力・防御力ともに高水準で扱いやすい。",
