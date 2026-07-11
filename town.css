@@ -142,6 +142,33 @@
   }
   .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--dw-heading-color); }
   .equip-class-title img { width: 32px; height: 32px; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+
+  /* 温泉の入浴完了ポップアップ(町画面でのみ表示。checkOnsenReliefPopups参照) */
+  .onsen-relief-overlay {
+    position: fixed; inset: 0; z-index: 85; background: rgba(10,12,14,0.92);
+    align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; box-sizing: border-box;
+  }
+  .onsen-relief-panel {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: var(--radius-lg);
+    box-shadow: var(--dw-card-shadow); padding: 1.4rem 1.1rem 1.1rem; max-width: 380px; width: 100%;
+    box-sizing: border-box; margin: auto;
+  }
+  .onsen-relief-title {
+    text-align: center; color: var(--dw-gold); font-size: 1.05rem; letter-spacing: 0.05em;
+    margin: 0 0 1rem;
+  }
+  .onsen-relief-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.1rem; }
+  .onsen-relief-row {
+    display: flex; align-items: center; gap: 0.8rem; background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 0.6rem 0.7rem;
+  }
+  .onsen-relief-img {
+    width: 64px; height: 64px; object-fit: cover; object-position: top center;
+    background: #353a44; border-radius: var(--radius-sm); flex-shrink: 0;
+  }
+  .onsen-relief-info { flex: 1; min-width: 0; }
+  .onsen-relief-name { font-weight: 700; font-size: 0.88rem; color: var(--dw-heading-color); margin-bottom: 0.3rem; }
+  .onsen-relief-stress { font-size: 0.72rem; color: #9fd8ff; margin-top: 0.25rem; }
   /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
      地味な一覧だった) */

@@ -69,6 +69,7 @@ function createCharacter(name, classId, classUpgrades) {
     fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
     status: "active", // active | critical | lost
     onsenLockUntilMinutes: null, // 入浴した時点の絶対分数+ONSEN_LOCK_MINUTES。この値を過ぎるまでパーティ編成に組み込めない
+    onsenPendingRelief: false, // 入浴済みでまだ「リラックスできた！」演出(ストレス減少)を再生していない場合true
     criticalFloor: null,
     criticalExpireMinutes: null, // ロストするゲーム内絶対分数(この値を過ぎるとtickCriticalExpiryでロストになる)
     carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
@@ -147,12 +148,28 @@ function isAvailable(character, absoluteMinutes) {
   return true;
 }
 
-// 温泉に入り、ストレスを半分(ONSEN_FATIGUE_RELIEF分)回復する。以後2時間はパーティ編成に組み込めない
+// 温泉に入る。以後2時間はパーティ編成に組み込めない。
+// 【仕様変更】ストレスはこの時点では減らさない。入浴が明ける(2時間経過する)瞬間に町画面へ
+// 「温泉でリラックスできた！」ポップアップを出しながら演出的に減らす(collectReadyOnsenReliefs参照)。
+// そのため実際のfatigue減算はここでは行わず、onsenPendingReliefを立てておくだけにとどめる
 function useOnsen(character, absoluteMinutes) {
-  character.fatigue = Math.max(0, (character.fatigue || 0) - ONSEN_FATIGUE_RELIEF);
   character.onsenLockUntilMinutes = absoluteMinutes + ONSEN_LOCK_MINUTES;
+  character.onsenPendingRelief = true;
   // 次の遠征中限定のランダムバフを付与する(野営する、または町へ帰ると失効する)
   character.onsenBuffKey = pickOnsenBuff();
+}
+// 入浴ロックが明けた(=2時間経過した)のに、まだ「リラックスできた！」演出を再生していないキャラを
+// 集め、この時点で実際にストレスを減らして一覧を返す(呼び出し元がポップアップ表示に使う)。
+// 町画面(renderTown)からのみ呼ぶ想定(探索/戦闘パートでは表示不要という仕様のため)
+function collectReadyOnsenReliefs(roster, absoluteMinutes) {
+  const ready = roster.filter((c) => c.onsenPendingRelief && c.onsenLockUntilMinutes != null && absoluteMinutes >= c.onsenLockUntilMinutes);
+  return ready.map((c) => {
+    const before = c.fatigue || 0;
+    const after = Math.max(0, before - ONSEN_FATIGUE_RELIEF);
+    c.fatigue = after;
+    c.onsenPendingRelief = false;
+    return { id: c.id, name: c.name, classId: c.classId, before, after };
+  });
 }
 // バフ「ぽかぽか」(最大HP+7%)は他のバフと違い実効ステータス計算だけでは足りず、実際のHPの
 // 器そのものを一時的に増やす必要があるため、遠征開始時(enterDungeon)に一度だけ加算し、
@@ -1565,7 +1582,7 @@ if (typeof module !== "undefined") {
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
-    onsenCost, useOnsen, isOnsenLocked, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
+    onsenCost, useOnsen, isOnsenLocked, collectReadyOnsenReliefs, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,
     applyStatMod, tickStatMods, applyPoison, tickPoison, applyBurn, tickBurn, applyBleed, tickBleed, BLEED_MAX_STACKS, clearDotEffects, applyStun, applySilence, tickTurnStartEffects, POISON_MAX_STACKS,
     initPassives, applySkillChoice, useTreeSkill, rollCritMultiplier, damageTakenMultiplier, activeConditionalMods,
     skillMpCost, resistedChance, applyDamageToTarget, BASE_CRIT_RATE, BASE_CRIT_DMG_MULT, mitigation, withVariance,

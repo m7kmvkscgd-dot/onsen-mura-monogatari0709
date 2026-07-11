@@ -34,6 +34,18 @@ const CLASS_STATUS_PORTRAIT = {
   priest: "assets/class_priest_status.png",
 };
 
+// 温泉の入浴が明けた時の「リラックスできた！」ポップアップ専用の風呂上り立ち絵(JPEG、背景#353a44)
+const CLASS_ONSEN_RELIEF_IMAGE = {
+  samurai: "assets/class_samurai_onsen.jpg",
+  ninja: "assets/class_ninja_onsen.jpg",
+  spearman: "assets/class_spearman_onsen.jpg",
+  naginata: "assets/class_naginata_onsen.jpg",
+  hunter: "assets/class_hunter_onsen.jpg",
+  gunner: "assets/class_gunner_onsen.jpg",
+  onmyoji: "assets/class_onmyoji_onsen.jpg",
+  priest: "assets/class_priest_onsen.jpg",
+};
+
 // ストレス段階ごとのキャラ立ち絵差し替え(通常時はCLASSES[classId].imageをそのまま使う)。
 // mild=ストレス40〜59、severe=60〜99、panic=100(stressTier()の1/2・3/4に対応)
 const CLASS_STRESS_IMAGES = {

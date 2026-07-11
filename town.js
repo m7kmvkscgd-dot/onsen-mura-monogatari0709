@@ -39,6 +39,48 @@ function renderTown() {
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
+  checkOnsenReliefPopups(); // 入浴ロックが明けたキャラがいれば「リラックスできた！」ポップアップを出す(町画面限定)
+}
+
+// ============ 温泉の入浴完了ポップアップ ============
+// 入浴後2時間のロックが明けた瞬間にストレスを減らす演出。探索/戦闘パートでは呼ばれない
+// (renderTown()からのみ呼ぶ)ため、仕様通り町画面に戻ってきた時だけ表示される。
+// バーの減少アニメーションが始まるまでの間(キャラを見せるだけの間)
+const ONSEN_RELIEF_REVEAL_DELAY_MS = 800;
+// バー自体が減っていくアニメーションの所要時間
+const ONSEN_RELIEF_BAR_ANIM_MS = 1000;
+function checkOnsenReliefPopups() {
+  const entries = collectReadyOnsenReliefs(state.roster, absoluteGameMinutes());
+  if (entries.length === 0) return;
+  saveState();
+  showOnsenReliefOverlay(entries);
+}
+function showOnsenReliefOverlay(entries) {
+  const list = document.getElementById("onsenReliefList");
+  list.innerHTML = entries.map((e) => `
+    <div class="onsen-relief-row">
+      <img src="${CLASS_ONSEN_RELIEF_IMAGE[e.classId]}" class="onsen-relief-img">
+      <div class="onsen-relief-info">
+        <div class="onsen-relief-name">${e.name}</div>
+        <div class="fatigue-track"><div class="fatigue-fill" data-onsen-relief-bar data-from="${e.before}" data-target="${e.after}" style="width:${e.before}%"></div></div>
+        <div class="onsen-relief-stress">ストレス -${e.before - e.after}</div>
+      </div>
+    </div>
+  `).join("");
+  document.getElementById("onsenReliefOverlay").style.display = "flex";
+  setTimeout(() => activateOnsenReliefBars(list), ONSEN_RELIEF_REVEAL_DELAY_MS);
+  document.getElementById("onsenReliefCloseBtn").onclick = () => {
+    document.getElementById("onsenReliefOverlay").style.display = "none";
+  };
+}
+function activateOnsenReliefBars(container) {
+  container.querySelectorAll("[data-onsen-relief-bar]").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const target = Number(el.dataset.target);
+    if (from === target) return;
+    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: ONSEN_RELIEF_BAR_ANIM_MS, easing: "ease-out", fill: "forwards" });
+    anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; };
+  });
 }
 
 // ============ 開発者モード(町の時刻表示を7回連続タップで起動) ============

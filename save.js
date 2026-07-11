@@ -6,6 +6,9 @@ const SAVE_KEY = "dungeon1_save";
 // ロード時に不足しているフィールドを補完し、旧「死体(corpse)」状態も瀕死(critical)に変換する
 function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (c.onsenLockUntilMinutes === undefined) c.onsenLockUntilMinutes = null; // 旧セーブ(入浴ロック導入前)はロック無し扱い
+  // 旧セーブ(入浴時に即ストレスを減らしていた仕様)はfalse扱いにする。既にonsenLockUntilMinutesが
+  // 設定されていた場合でも、旧仕様では入浴と同時にストレス減算済みのため演出の再生対象にはしない
+  if (c.onsenPendingRelief === undefined) c.onsenPendingRelief = false;
   if (c.maxMp == null) c.maxMp = baseMaxMpFor(c.classId);
   if (c.mp == null || isNaN(c.mp)) c.mp = c.maxMp;
   if (c.fatigue == null) c.fatigue = 0;

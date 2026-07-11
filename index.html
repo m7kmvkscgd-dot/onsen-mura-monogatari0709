@@ -646,6 +646,16 @@
     </div>
   </div>
 
+  <!-- 温泉の入浴完了ポップアップ: 入浴ロックが明けた瞬間、町画面に戻ってきた時だけ表示する。
+       複数人が同時に明けている場合はまとめて1つのポップアップに表示する -->
+  <div id="onsenReliefOverlay" class="onsen-relief-overlay" style="display:none;">
+    <div class="onsen-relief-panel">
+      <h3 class="onsen-relief-title">温泉でリラックスできた！</h3>
+      <div class="onsen-relief-list" id="onsenReliefList"></div>
+      <button class="big primary" id="onsenReliefCloseBtn">閉じる</button>
+    </div>
+  </div>
+
   <!-- 時間を進める(⌛️): 30分刻み・最長12時間のピッカーと、1秒1時間でのタイムラプス演出 -->
   <div id="timeSkipOverlay">
     <div class="time-skip-picker" id="timeSkipPickerView">
