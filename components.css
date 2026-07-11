@@ -1,0 +1,166 @@
+  /* ============ components.css: ボタン・カード・バッジ・スキル系譜など画面横断の再利用パーツ ============ */
+  .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+  .gold { font-weight: 700; color: var(--accent); }
+  /* 所持中の支援物資アイコン。野営具→回復薬→煙玉の順、最大11個(野営具1+回復薬/煙玉合計10)を
+     1行8個までで折り返し、最大量でも2行に収まるようにしてある */
+  /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
+  .owned-supply-icons { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-width: 296px; height: 68px; margin: 0.3rem 0 0.8rem; }
+  .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
+  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
+  .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
+  /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
+     .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
+  .btn-icon { display: inline-flex; align-items: center; flex-shrink: 0; vertical-align: -3px; margin-right: 12px; }
+  .btn-icon svg { width: 16px; height: 16px; }
+  /* 町の施設アイコン(支給された和風イラストPNG)。文字より一回り大きく、影を薄く落として
+     背景美術に馴染みつつも存在感を持たせる */
+  .btn-icon img { height: 32px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  /* ボタンの質感: 「和風の木札」。木目テクスチャ画像は使わず、上部を薄く明るく・下部を薄く暗くする
+     グラデーション(--dw-btn-sheen)を色ベースの背景に重ねるだけで立体感を出す。焦げ茶の枠線+内側の
+     ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
+  button.big {
+    min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 2px solid var(--dw-btn-border);
+    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;
+  }
+  /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる+内側に沈み込むシャドウ)。filterでの明度調整は
+     button.big単体でも.primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに
+     個別の:active色を用意する必要がない(全ボタン共通の1ルールで統一できる) */
+  button.big:active { transform: scale(.97); filter: brightness(.88); box-shadow: inset 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
+  button.primary { background: var(--dw-btn-sheen), #e3c583; color: #241d0a; border-color: #f2dfa6; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 16px rgba(0,0,0,.42); }
+  button.danger { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
+  /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
+     切り替わったことが一目でわかるようにする */
+  button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .card {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
+    box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
+  }
+  .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+  .roster-row.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
+  .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
+  .detail-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.55rem 0.8rem; font-size: 0.8rem; cursor: pointer; }
+  .roster-actions { display: flex; flex-direction: column; gap: 0.3rem; }
+  .skill-pending-btn { background: #8a5fd6; border: 1px solid #8a5fd6; color: #fff; border-radius: var(--radius-xs); padding: 0.3rem 0.5rem; font-size: 0.68rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .skill-entry { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; cursor: pointer; }
+  .skill-entry-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; }
+  .skill-entry-side { color: var(--text-muted); font-size: 0.7rem; }
+  .skill-entry-desc { display: none; font-size: 0.78rem; color: var(--text-muted); margin: 0.4rem 0 0; }
+  .skill-entry.open .skill-entry-desc { display: block; }
+
+  /* スキル選択画面(宿屋の名簿から開く「系譜」一覧)。XCOM風のレイアウトを、温泉宿らしい金・焦げ茶の配色に置き換えている */
+  .skill-tree-header { text-align: center; margin-bottom: 1rem; }
+  .skill-tree-charname { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+  .skill-tree-classname { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
+  .skill-tree-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0.7rem 0 0; }
+  /* 左右ツリーの通り名(剣豪/明鏡など)。下の系譜一覧と同じ列幅(レベルバッジ42px分)で
+     左右に振り分けて表示し、「かっこいい見出し」として金色+レタースペーシングで強調する */
+  .skill-tree-names { display: flex; align-items: center; gap: 0.4rem; margin: 1rem 0 0.2rem; }
+  .skill-tree-name { flex: 1; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .skill-tree-name.left { text-align: left; padding-left: 0.3rem; }
+  .skill-tree-name.right { text-align: right; padding-right: 0.3rem; }
+  .skill-tree-name-spacer { flex: 0 0 42px; width: 42px; }
+  .skill-tree-rows { border-top: 1px solid var(--border); }
+  .skill-tree-row-wrap { border-bottom: 1px solid var(--border); }
+  .skill-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; }
+  .skill-tree-row.pending { background: var(--accent-soft); border-radius: var(--radius-sm); padding-left: 0.3rem; padding-right: 0.3rem; }
+  .skill-tree-level-badge {
+    flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.68rem;
+    background: rgba(20,24,27,0.5);
+  }
+  .skill-tree-row.locked .skill-tree-level-badge { border-color: var(--border); color: var(--text-muted); }
+  .skill-tree-row.pending .skill-tree-level-badge { box-shadow: 0 0 8px rgba(201,162,74,0.7); }
+  .skill-tree-opt { flex: 1; background: none; border: none; padding: 0.4rem 0.3rem; cursor: pointer; text-align: left; border-radius: var(--radius-xs); }
+  .skill-tree-opt.right { text-align: right; }
+  .skill-tree-opt-name { font-size: 0.8rem; line-height: 1.3; }
+  .skill-tree-opt.chosen .skill-tree-opt-name { color: var(--accent); font-weight: 700; }
+  .skill-tree-opt.rejected .skill-tree-opt-name { color: var(--text-muted); opacity: 0.6; }
+  .skill-tree-opt.locked .skill-tree-opt-name { color: var(--text-muted); opacity: 0.4; }
+  .skill-tree-opt.pending-choice { background: rgba(28,34,38,0.7); }
+  .skill-tree-opt.pending-choice:active { background: var(--accent-soft); }
+  .skill-tree-inline-detail { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surface-2); }
+  .skill-tree-inline-detail h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.85rem; }
+  .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
+  .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
+  .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
+  .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }
+  .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
+  .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
+  .class-pick span { display: block; font-size: 0.68rem; margin-top: 0.2rem; }
+  input[type="text"] {
+    width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font-size: 0.9rem;
+  }
+  .levelup-badge {
+    margin-top: 0.4rem; padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.82rem; font-weight: 700; text-align: center; letter-spacing: 0.03em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes levelupPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,106,0); }
+    50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(255,215,106,0.6); }
+  }
+  .levelup-badge-small {
+    display: inline-block; margin-top: 0.2rem; padding: 0.12rem 0.5rem; border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
+  /* 新しく建築可能になった施設/雇えるようになった職業に付ける「NEW」バッジ。レベルアップバッジ(黄色)とは
+     意図的に別の色(赤〜オレンジ)にして「まだ見ていない新着」であることを視覚的に区別している。
+     一度画面を表示すると自動的に非表示化される(state.seenUnlockedBuildings/seenUnlockedClassesに記録) */
+  .new-badge {
+    display: inline-block; margin-left: 0.3rem; padding: 0.1rem 0.45rem; border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #ff6a4d, #d1503f); color: #fff;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; vertical-align: middle;
+    animation: newBadgePulse 1.1s ease-in-out infinite;
+  }
+  @keyframes newBadgePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(209,80,63,0); }
+    50% { transform: scale(1.12); box-shadow: 0 0 8px rgba(255,106,77,0.7); }
+  }
+  .class-pick { position: relative; }
+  .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
+  .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+  /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
+     イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは
+     一切変えない(インライン絵文字のspan化のみ) */
+  /* 状態異常アイコンのサイズ統一。指定値(24px)そのままだと敵1体あたり56px幅の集団戦カード等で
+     アイコン1個が横幅の半分近くを占めてしまい破綻するため、最小サイズのカードでも収まる16pxに
+     している(意図的な調整。長押し説明・6pxの横間隔は指定通り) */
+  .status-icon { cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; }
+  .status-icon:last-child { margin-right: 0; }
+  .status-icon svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+  .status-icon-value { font-size: 0.68rem; font-weight: 700; }
+  /* HPバー直下に横一列で並べる専用の行。中身が無い時は高さ0に潰れ、レイアウトに余計な余白を残さない */
+  .status-icon-row { display: flex; flex-wrap: wrap; gap: 0 4px; margin-top: 0.15rem; min-height: 0; }
+  .status-icon-row:empty { margin-top: 0; }
+  #statusTooltip {
+    display: none; position: fixed; z-index: 200; max-width: 220px;
+    background: rgba(34,34,34,0.92); color: #fff; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm);
+    font-size: 0.72rem; line-height: 1.45; pointer-events: none;
+  }
+  #statusTooltip .status-tooltip-title { font-weight: 700; margin-bottom: 0.2rem; }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
+  .action-grid button {
+    grid-column: span 1; height: 51px; min-height: 51px; padding: 0.3rem;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 15px; line-height: 1.1; overflow: hidden;
+    /* コマンドボタンの立体感: 通常時は下端に軽い段差影を付けて浮かせ、押下時は沈んで少し明るくなる */
+    box-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 4px 6px rgba(0,0,0,0.3);
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+  }
+  .action-grid button:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 2px 3px rgba(0,0,0,0.3);
+    filter: brightness(1.15);
+  }

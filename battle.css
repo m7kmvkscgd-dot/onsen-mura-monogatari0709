@@ -1,0 +1,185 @@
+  /* ============ battle.css: 戦闘画面(敵カード・ダメージ演出・会心演出・コマンドボタン) ============ */
+  .battle-bg {
+    position: fixed; top: 0; left: 50%;
+    /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
+       bodyにtransformを掛ける方式だと、position:fixed要素の基準(containing block)が
+       viewportからbodyに変わってしまい、実機で画面が一瞬ジャンプする不具合があったため、
+       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した */
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
+  }
+  .battle-bg::after {
+    content: ''; position: absolute; inset: 0;
+    /* 敵表示の背後だけ淡く明るいスポットライト状のビネットを重ね、視線を敵に誘導する
+       (既存の縦グラデーションによる暗転はそのまま維持し、その上に重ねるだけ) */
+    background:
+      radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
+  .battle-top {
+    position: fixed; top: 0; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 5;
+  }
+  .battle-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(端末ごとの表示領域の違いに左右されないようにするため)。
+       ここでのtopは計算が走るまでの初期値 */
+    position: fixed; top: 500px; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 4;
+  }
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
+  .enemy-row.crowded { gap: 0.25rem; }
+  .enemy-card {
+    position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;
+    border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+  }
+  /* 敵絵(セミリアル)とSDの味方絵の画風差を、UI側の額装(木枠+和紙背景)で緩和する。
+     絵自体は変更せず、::beforeで敵絵の背後に古紙風の下地を敷くだけ */
+  .enemy-card::before {
+    content: "";
+    position: absolute; inset: 4px; z-index: 0;
+    border-radius: calc(var(--radius-md) - 3px);
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(circle at 78% 85%, rgba(0,0,0,0.15), transparent 60%),
+      #3c3527;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .enemy-card img, .enemy-card .enemy-name, .enemy-card .status-icon-row, .enemy-card .hp-with-warning { position: relative; z-index: 1; }
+  .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
+  .enemy-card.targetable:active { transform: scale(0.94); }
+  @keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(209,80,63,0.35); }
+    50% { box-shadow: 0 0 16px rgba(209,80,63,0.8); }
+  }
+  .dmg-pop {
+    position: absolute; left: 50%; top: 25%; transform: translate(-50%, 0);
+    font-weight: 800; font-size: 1.15rem; color: #ff4d4d;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95); pointer-events: none;
+    animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
+  }
+  .dmg-pop.heal { color: #8fe0a0; }
+  /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
+     気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
+  .dmg-pop.crit {
+    font-size: 1.61rem; font-weight: 900;
+    background: linear-gradient(180deg, #fff6c8, #f0c419 45%, #b8860b 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    animation: critDmgFloat 1.1s ease-out forwards;
+  }
+  @keyframes critDmgFloat {
+    0%, 10% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); }
+    25% { opacity: 1; transform: translate(-50%, -14px) scale(1.35); }
+    38% { transform: translate(-50%, -6px) scale(1.05); }
+    50% { transform: translate(-50%, -11px) scale(1.15); }
+    65% { transform: translate(-50%, -9px) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1.08); }
+  }
+  /* 会心の白閃光/衝撃波/火花(既存の斬撃・打撃エフェクトとは別枠、素材不要のCSSのみで表現) */
+  .crit-flash-overlay {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 26;
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%);
+    animation: critFlash 0.2s ease-out forwards;
+  }
+  @keyframes critFlash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  .crit-shockwave {
+    position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,235,150,0.9); border-radius: 50%; pointer-events: none; z-index: 27;
+    animation: critShockwave 0.28s ease-out forwards;
+  }
+  @keyframes critShockwave { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(4.5); } }
+  .crit-spark {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    background: #fff6c0; border-radius: 50%; box-shadow: 0 0 6px 2px rgba(255,240,170,0.9);
+    pointer-events: none; z-index: 27; animation: critSparkFly var(--spark-dur, 0.25s) ease-out forwards;
+  }
+  @keyframes critSparkFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--spark-x, 20px), var(--spark-y, -20px)) scale(0.3); }
+  }
+  /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
+  .crit-banner {
+    position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
+    font-size: 1.05rem; font-weight: 900; color: #ffe066;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    white-space: nowrap; pointer-events: none; z-index: 28;
+    animation: critBannerPop 0.5s ease-out forwards;
+  }
+  @keyframes critBannerPop {
+    0% { opacity: 0; transform: translate(-50%, -100%) scale(0.4); }
+    25% { opacity: 1; transform: translate(-50%, -100%) scale(1.3); }
+    45% { transform: translate(-50%, -100%) scale(0.95); }
+    60% { transform: translate(-50%, -100%) scale(1.08); }
+    80% { transform: translate(-50%, -100%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.9); }
+  }
+  /* 攻撃が命中した瞬間、対象カードに重ねて出すヒットエフェクト(職業ごとの素材をJSでsrc差し替え
+     アニメーションさせる)。表示幅は職業ごとにJS側(playAttackVfx)でstyle.widthを直接設定するため
+     ここでは指定しない。".enemy-card img"(width:92px固定)より詳細度を上げて上書きする必要がある */
+  .enemy-card img.slash-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+    max-width: none; height: auto; pointer-events: none; z-index: 25;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
+  .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
+  @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes enemyLunge {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(14px); }
+    65% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+  }
+  /* 大技の構え中(bigAttackPending)の敵。「赤い鼓動」の指定を受けて色は対象選択中と同じ赤系にしたが、
+     対象選択のtargetPulse(なだらかな単純パルス)とは違い、「ドクン、ドクン」の二拍子(心拍)の
+     揺れ方にすることで、色が同じでも見分けが付くようにしてある */
+  .enemy-card.charging { border-color: rgba(201,93,84,0.8); box-shadow: 0 0 10px rgba(201,93,84,0.55); animation: chargingPulse 1s ease-in-out infinite; }
+  @keyframes chargingPulse {
+    0%, 28%, 60%, 100% { box-shadow: 0 0 8px rgba(201,93,84,0.35); }
+    14% { box-shadow: 0 0 22px rgba(201,93,84,0.95); }
+    42% { box-shadow: 0 0 17px rgba(201,93,84,0.8); }
+  }
+  /* HPバーの右横に出す💢アイコン(大技構え中の対象敵だけ)。心拍と合わせて軽く拍動させる */
+  .hp-with-warning { display: flex; align-items: center; gap: 4px; }
+  .hp-with-warning .hpbar-track { flex: 1; }
+  .big-attack-warning-icon { display: inline-flex; color: #d95c50; line-height: 1; filter: drop-shadow(0 0 3px rgba(201,93,84,0.9)); animation: bigAttackIconBeat 1s ease-in-out infinite; }
+  .big-attack-warning-icon svg { width: 15px; height: 15px; }
+  @keyframes bigAttackIconBeat {
+    0%, 28%, 60%, 100% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    42% { transform: scale(1.15); }
+  }
+  @keyframes screenWarningFlash {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #screenWarningFlash {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(245,166,35,0) 55%, rgba(245,166,35,0.35) 100%);
+    opacity: 0;
+  }
+  .enemy-card.dead { opacity: 0.25; }
+  .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .enemy-card.swarm { width: 56px; padding: 0.2rem; }
+  .enemy-card.swarm img { width: 48px; height: 48px; }
+  .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
+  /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定+overflow:hidden)の
+     枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
+  .enemy-card.midboss img { width: 112px; height: 112px; }
+  .enemy-card.midboss .enemy-name { font-size: 0.7rem; margin: 0.1rem 0 0.05rem; }
+  /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
+     オレンジとは別枠。狙われている側=targetableとは違い「これが依頼の対象そのもの」を示す表示) */
+  .enemy-card.quest-target { border-color: rgba(201,162,74,0.85); box-shadow: 0 0 10px rgba(201,162,74,0.6); animation: questTargetPulse 1.3s ease-in-out infinite; }
+  @keyframes questTargetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
+    50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
+  }
+  .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }

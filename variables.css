@@ -1,0 +1,26 @@
+  /* ============ variables.css: デザイントークン(色・余白・角丸・アニメーション速度のCSS変数) ============ */
+  :root {
+    --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
+    --text: #e8ecea; --text-muted: #9aa79f; --accent: #c9a24a;
+    --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #7A1F2B; --hp-critical: #d1503f;
+    --danger: #d1503f;
+    --panel: rgba(20,24,27,0.72); --panel-2: rgba(28,34,38,0.6);
+    /* 角丸のスケール。サムネイル画像/バッジ/カード/大枠の5段階に集約し、4/5/6/8/10/11/12/16/18pxが
+       近似値のまま混在していた状態を整理した */
+    --radius-xs: 6px; --radius-sm: 8px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+
+    /* ============ 和風UIデザインシステム(2026-07-10 全面統一) ============
+       ユーザー指定のデザインルール一式をトークン化。「和風・高級感・情報量は多いがスッキリ」を
+       基準に、色/余白/カード/ボタン/文字/アニメーション速度をこのファイル全体で共有する */
+    --dw-gold: #d7b66f; --dw-success: #6ea95b; --dw-danger: #c95d54; --dw-info: #7b93b9; --dw-desc: #9d998e;
+    --dw-card-bg: #2f3540; --dw-card-border: #5d4d35; --dw-card-shadow: 0 6px 18px rgba(0,0,0,.28);
+    --dw-btn-bg: #7b5d36; --dw-btn-hover: #937148;
+    --dw-title-color: #f3e7c6; --dw-heading-color: #ead8ab; --dw-body-color: #ece8dc; --dw-caption-color: #b6b0a2;
+    /* 画面共通余白 */
+    --dw-space-side: 16px; --dw-space-vert: 14px; --dw-space-card-gap: 12px; --dw-space-section: 20px;
+    /* ヘッダー */
+    --dw-header-h: 56px;
+    /* アニメーション速度(ボタン/カード展開/画面切替/ハンコ/ダメージ/会心/敵出現) */
+    --dw-t-btn: 100ms; --dw-t-card: 180ms; --dw-t-screen: 220ms; --dw-t-stamp: 350ms; --dw-t-dmg: 180ms; --dw-t-crit: 250ms; --dw-t-enemy: 250ms;
+  }
+  :root { --dw-btn-sheen: linear-gradient(to bottom, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 14%, rgba(0,0,0,0) 46%, rgba(0,0,0,.16) 100%); --dw-btn-border: #3a2a17; }

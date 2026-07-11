@@ -1,0 +1,10 @@
+  /* ============ responsive.css: hover対応/prefers-reduced-motionなど環境条件によるCSS ============ */
+  @media (hover: hover) {
+    button.big:hover:not(:disabled) { background: var(--dw-btn-sheen), var(--dw-btn-hover); }
+  }
+  @media (hover: hover) {
+    button.primary:hover:not(:disabled) { background: var(--dw-btn-sheen), #ecd093; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dungeon-bg::after { animation: none; }
+  }
