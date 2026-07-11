@@ -713,14 +713,12 @@ function showCarryPicker(critical, onResolved) {
       dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
       if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(critical, "carried");
       playSfx("carry");
-      // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
-      setTimeout(() => {
-        activeCriticalAlert = null;
-        div.innerHTML = "";
-        document.body.classList.remove("critical-alert-active");
-        renderDungeon();
-        onResolved();
-      }, 2000);
+      // ユーザー指示により、以前あった2秒間の静止(演出のための強制停止)を廃止し、即座に再開する
+      activeCriticalAlert = null;
+      div.innerHTML = "";
+      document.body.classList.remove("critical-alert-active");
+      renderDungeon();
+      onResolved();
     };
   });
   document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, onResolved);
