@@ -143,9 +143,9 @@ function advanceFatigue(characters) {
   });
 }
 
-// 温泉: 一人あたり定額(ONSEN_FLAT_COST)
+// 温泉: レベル1でONSEN_FLAT_COST、以降レベルごとにONSEN_COST_PER_LEVELずつ上がる
 function onsenCost(level) {
-  return ONSEN_FLAT_COST;
+  return ONSEN_FLAT_COST + (level - 1) * ONSEN_COST_PER_LEVEL;
 }
 
 // 入浴後、まだONSEN_LOCK_MINUTES(2時間)経っていなければパーティ編成に組み込めない
