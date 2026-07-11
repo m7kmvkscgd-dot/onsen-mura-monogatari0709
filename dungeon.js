@@ -640,13 +640,13 @@ function showCriticalAlert(critical, onResolved) {
       </div>
       <p class="critical-alert-name">${critical.name}</p>
       <div class="critical-alert-timer">
-        <span class="critical-alert-timer-label">残り</span>
+        <span class="critical-alert-timer-label">消滅まで残り</span>
         <span class="critical-alert-timer-value">${criticalTimeLeftStr(critical)}</span>
       </div>
       <p class="critical-alert-place">${stageLabel} ${critical.criticalFloor}層目</p>
       <div class="critical-alert-actions">
-        <button class="big primary critical-alert-btn" id="carryBtn">担いで連れて帰る</button>
-        <button class="big critical-alert-skip-btn critical-alert-btn" id="skipCriticalBtn">今回は見送る</button>
+        <button class="big primary critical-alert-btn" id="carryBtn">連れて帰る</button>
+        <button class="big critical-alert-skip-btn critical-alert-btn" id="skipCriticalBtn">見送る</button>
       </div>
     </div>
   `;

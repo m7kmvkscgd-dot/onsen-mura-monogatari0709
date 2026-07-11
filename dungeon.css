@@ -103,8 +103,8 @@
   /* 「読む画面」ではなく「2秒で理解できる画面」を目指し、情報量を最小限(タイトル/キャラ/名前・職業/
      残り時間/場所のみ)に絞り、上下の余白も詰めてコンパクトにしてある */
   .critical-alert-title {
-    text-align: center; font-size: 1.28rem; font-weight: 800; color: #efe2c2;
-    letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    text-align: center; font-size: 1.42rem; font-weight: 800; color: var(--danger);
+    letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 6px rgba(0,0,0,0.7);
   }
   .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
   .critical-alert-portrait img { width: 100%; height: 100%; object-fit: contain; background: #353a44; border-radius: 8px; }
