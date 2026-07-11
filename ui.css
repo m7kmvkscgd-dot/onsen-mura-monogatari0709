@@ -17,7 +17,7 @@
      同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
      さらに奥(z-index:-1)に配置する */
   .hero-bg-inner { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; }
-  .hero h1 { font-size: 22px; font-weight: 700; color: var(--dw-title-color); margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .hero h1 { font-size: 22px; color: var(--dw-title-color); margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
   /* ============ 全画面共通ヘッダー(戦闘・探索を除く) ============
      戻る(左)/タイトル(中央)/所持金・時刻(右)の位置を全画面で完全に統一する。
      .heroの最上部56pxに重ねる帯で、既存のhero画像・body-padの構造自体は変えない
@@ -35,18 +35,18 @@
   .dw-header-back:active { transform: scale(.9); filter: brightness(.8); }
   .dw-header-back svg { width: 18px; height: 18px; }
   .dw-header-title {
-    flex: 1; min-width: 0; text-align: center; font-size: 18px; font-weight: 700;
+    flex: 1; min-width: 0; text-align: center; font-size: 18px; font-weight: var(--fw-heading);
     color: var(--dw-title-color); text-shadow: 0 2px 6px rgba(0,0,0,0.8);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .dw-header-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; min-width: 44px; }
-  .dw-header-gold { font-size: 0.82rem; font-weight: 700; color: var(--dw-gold); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .dw-header-gold { font-size: 0.82rem; font-weight: var(--fw-number); color: var(--dw-gold); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
   .dw-header-time { font-size: 0.68rem; color: #d9d5c8; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
   /* ヘッダー導入後、hero内の旧h1(画面によっては残置)は二重表示を避けるため隠す */
   .hero.has-dw-header h1 { display: none; }
   .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
-  .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
+  .time-of-day-label { font-size: 1.3rem; font-weight: var(--fw-number); color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
   .stat-row span:first-child { color: var(--text-muted); }
   .mpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
   /* MP版の回復トレイル(hpbar-heal-trailと同じ考え方。緑ならぬ青は即座に伸び、この淡い水色が回復前の

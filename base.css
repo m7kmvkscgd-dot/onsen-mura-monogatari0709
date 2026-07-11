@@ -5,9 +5,11 @@
   }
   body {
     background: var(--bg); color: var(--dw-body-color);
-    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
-    margin: 0; padding: 0; line-height: 1.5;
+    font-family: var(--font-main); font-weight: var(--fw-body);
+    margin: 0; padding: 0; line-height: 1.6;
   }
+  h1, h2, h3 { font-weight: var(--fw-heading); }
+  button { font-weight: var(--fw-button); }
   /* .hero/.dungeon-bg/.battle-bgは全てheight:100vh;height:100dvh;(アドレスバーの表示/非表示で
      変わる実際の可視領域に追従)なのに対し、.wrapだけ100vh(アドレスバー非表示時の最大値扱い)のままだと、
      アドレスバー表示中は.wrapの方が.heroより長くなり、その差分だけ下にスクロールできてしまい、
@@ -18,4 +20,4 @@
      position:fixedの子要素(.hero/.dungeon-bg/.battle-bg等)の基準位置には一切影響しない
      (transformとは異なりopacityはfixed要素の containing block を作らないため安全) */
   .screen.active { display: flex; animation: screenFadeIn var(--dw-t-screen) ease-out; }
-  h2 { font-size: 18px; font-weight: 700; margin: 0 0 0.5rem; color: var(--dw-heading-color); }
+  h2 { font-size: 18px; margin: 0 0 0.5rem; color: var(--dw-heading-color); }

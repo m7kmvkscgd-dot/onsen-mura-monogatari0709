@@ -39,7 +39,7 @@
   .time-skip-arrow-btn:active { transform: scale(0.9); filter: brightness(1.3); }
   .time-skip-arrow-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   /* 数字を主役にする(以前の2rem→30%増の2.6rem) */
-  .time-skip-duration { flex: 1; min-width: 0; font-size: 2.6rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.85); }
+  .time-skip-duration { flex: 1; min-width: 0; font-size: 2.6rem; font-weight: var(--fw-heading); color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.85); }
   .time-skip-compare {
     display: flex; align-items: center; justify-content: center; gap: 0.5rem;
     margin-top: 0.75rem; padding-top: 0.7rem; border-top: 1px solid rgba(255,255,255,0.12);
@@ -103,7 +103,7 @@
   .status-stat-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0; }
   .status-stat-icon { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--dw-caption-color); }
   .status-stat-label { flex: 1; font-size: 15px; color: var(--dw-body-color); }
-  .status-stat-value { font-size: 15px; font-weight: 700; color: var(--dw-body-color); font-variant-numeric: tabular-nums; }
+  .status-stat-value { font-size: 15px; font-weight: var(--fw-number); color: var(--dw-body-color); font-variant-numeric: tabular-nums; }
   .status-stat-row.is-hp .status-stat-icon, .status-stat-row.is-hp .status-stat-value { color: var(--dw-success); }
   .status-stat-row.is-mp .status-stat-icon, .status-stat-row.is-mp .status-stat-value { color: var(--dw-info); }
   .status-stat-row.is-stress .status-stat-icon, .status-stat-row.is-stress .status-stat-value { color: var(--dw-danger); }
@@ -171,16 +171,37 @@
   .first-char-skills .skill-row .skill-name { color: var(--accent); font-weight: 700; }
   .first-char-choose-btn { width: 100%; }
   /* 町画面: 名簿が1人しかいない間だけ、宿屋ボタンの上に表示する案内。.body-padの通常の
-     流し込みで.btn-colの直前に置くことで、既存の固定位置調整をそのまま利用する */
+     流し込みで.btn-colの直前に置くことで、既存の固定位置調整をそのまま利用する。
+     以前は黒背景+赤い矢印の素朴なバナーで「取ってつけた感」が強かったため、他のカード類と
+     同じ意匠(--dw-card-bg系の落ち着いた色+金の縁取り)に揃え、下端に小さな三角の「しっぽ」を
+     付けて宿屋ボタンを指し示す吹き出し風に変更した。点滅ではなく、金の縁がごくゆっくり
+     呼吸するだけの控えめな強調にしてある */
   #townHireHint {
-    text-align: center; color: #fff; font-size: 0.95rem; font-weight: 700;
-    background: rgba(0,0,0,0.75); border: 1px solid var(--accent); border-radius: var(--radius-md);
-    padding: 0.5rem 0.8rem; margin-bottom: 0.6rem;
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    text-align: center; color: var(--dw-body-color); font-size: 0.85rem;
+    background: var(--dw-card-bg); border: 1px solid var(--dw-gold); border-radius: var(--radius-md);
+    box-shadow: var(--dw-card-shadow), 0 0 0 rgba(215,182,111,0);
+    padding: 0.55rem 0.9rem; margin-bottom: 1rem;
+    animation: hireHintGlow 2.6s ease-in-out infinite;
   }
-  .hire-hint-arrow { display: inline-block; color: #ff5a3c; font-size: 1.2rem; margin-right: 0.3rem; animation: hireHintBounce 1.1s ease-in-out infinite; }
-  @keyframes hireHintBounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(4px); }
+  #townHireHint::after {
+    content: ''; position: absolute; left: 28px; top: 100%;
+    width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent;
+    border-top: 7px solid var(--dw-gold);
+  }
+  #townHireHint::before {
+    content: ''; position: absolute; left: 29px; top: 100%;
+    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 6px solid var(--dw-card-bg); z-index: 1;
+  }
+  .hire-hint-arrow { width: 16px; height: 16px; color: var(--dw-gold); flex-shrink: 0; }
+  @keyframes hireHintGlow {
+    0%, 100% { box-shadow: var(--dw-card-shadow), 0 0 0 rgba(215,182,111,0); border-color: var(--dw-gold); }
+    50% { box-shadow: var(--dw-card-shadow), 0 0 10px rgba(215,182,111,0.5); border-color: #f2dfa6; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #townHireHint { animation: none; }
   }
   /* 武器/防具/価格ボタンを一直線に揃える。infoブロックにflex:1+min-width:0を与えて
      長い説明文があっても価格ボタン側が押し出されない(浮かない)ようにしてある */

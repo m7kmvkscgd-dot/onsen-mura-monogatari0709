@@ -1,6 +1,6 @@
   /* ============ components.css: ボタン・カード・バッジ・スキル系譜など画面横断の再利用パーツ ============ */
   .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
-  .gold { font-weight: 700; color: var(--accent); }
+  .gold { font-weight: var(--fw-number); color: var(--accent); }
   /* 所持中の支援物資アイコン。野営具→回復薬→煙玉の順、最大11個(野営具1+回復薬/煙玉合計10)を
      1行8個までで折り返し、最大量でも2行に収まるようにしてある */
   /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
@@ -22,7 +22,7 @@
      ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
   button.big {
     min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 2px solid var(--dw-btn-border);
-    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
+    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: var(--fw-button); cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
     display: flex; align-items: center; justify-content: center; text-align: center;
     transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;

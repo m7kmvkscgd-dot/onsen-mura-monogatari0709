@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>温泉村物語</title>
+<!-- Google Fonts: Zen Kaku Gothic New(開発中のWeb版で使用。Steam版移植時はvariables.cssの
+     font-main変数1箇所を@font-faceのローカルフォントへ差し替えるだけで済む構造にしてある)。
+     通常のrel="stylesheet"は読み込み完了までページ全体の描画をブロックしてしまうため
+     (回線が遅い/Google Fonts側が混雑している場合、ゲーム本体のCSSまで巻き込んで真っ白になり得る)、
+     preload+onloadで非同期に読み込み、フォント自体はdisplay=swapによりまず代替フォントで
+     即座に表示してから差し替える。noscriptタグはJS無効環境向けの通常読み込みフォールバック -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet';">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet"></noscript>
+<!-- タイトル画面で最初に必要な画像を優先度順にプリロード(①背景 ②ロゴ)。ゲーム開始後にしか
+     使わない画像はここに含めない。ボタンはCSS(グラデーション)+インラインSVGのみで構成されており
+     追加の画像リクエストが発生しないため、プリロード対象はこの2枚のみで足りる -->
+<link rel="preload" as="image" href="assets/title/title_bg_base.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/title/title_bg.webp" fetchpriority="high">
 <link rel="stylesheet" href="variables.css">
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="animation.css">
@@ -28,10 +43,9 @@
 
   <!-- タイトル画面(常にここから起動する) -->
   <div class="screen active" id="screen-title">
-    <div class="title-bg-base" id="titleBgBase" style="background-image:url('assets/title/title_bg_base.jpg')"></div>
-    <div class="title-logo-reveal" id="titleLogoReveal" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-bg-base" id="titleBgBase" style="background-image:url('assets/title/title_bg_base.webp')"></div>
+    <div class="title-logo-reveal" id="titleLogoReveal" style="background-image:url('assets/title/title_bg.webp')"></div>
     <div class="title-fx-layer" id="titleFxLayer" aria-hidden="true"></div>
-    <div class="title-tap-prompt" id="titleTapPrompt">画面をタップ</div>
     <div class="title-menu" id="titleMenu">
       <button class="title-menu-btn" id="titleStartBtn">
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
@@ -55,7 +69,7 @@
 
   <!-- 設定 -->
   <div class="screen" id="screen-settings">
-    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.webp')"></div>
     <div class="title-sub-panel">
       <h1>設定</h1>
       <div class="title-setting-row">
@@ -73,13 +87,17 @@
   <!-- 製作者より(タイトル画面の上に重なるオーバーレイ。背景は暗くするだけで画面遷移はしない) -->
   <div id="titleCreditsOverlay">
     <div class="title-credits-panel">
-      <p class="title-credits-body">温泉村物語を遊んでいただき、<br>本当にありがとうございます。</p>
-      <p class="title-credits-body">このゲームは私にとって初めて制作した作品です。</p>
-      <p class="title-credits-body">ゲーム開発を学びながら少しずつ制作を進めています。</p>
-      <p class="title-credits-body">そのため、まだバグや調整不足な部分が残っているかもしれません。</p>
-      <p class="title-credits-body">今後もアップデートを続け、<br>より面白い作品に育てていきたいと思っています。</p>
-      <p class="title-credits-body">遊んでくださった皆様、<br>本当にありがとうございます。</p>
-      <p class="title-credits-sign">―― 制作者　けい<br>ーー協力 えりさん/ひーさん/古都/総理</p>
+      <h1 class="title-credits-heading">製作者より</h1>
+      <div class="title-credits-body">
+        <p>温泉村物語を遊んでいただき、<br>本当にありがとうございます。</p>
+        <p>このゲームは私にとって<br>初めて制作した作品です。</p>
+        <p>ゲーム開発を学びながら、<br>少しずつ制作を進めています。</p>
+        <p>そのため、<br>まだバグや調整不足な部分が<br>残っているかもしれません。</p>
+        <p>今後もアップデートを続け、<br>より面白い作品へ育てていきます。</p>
+        <p>遊んでくださった皆様、<br>本当にありがとうございます。</p>
+      </div>
+      <p class="title-credits-sign">―― 制作者　けい</p>
+      <p class="title-credits-sign-sub">協力　えりさん</p>
       <button class="big title-credits-close-btn" id="titleCreditsCloseBtn">閉じる</button>
     </div>
   </div>
@@ -111,7 +129,10 @@
       <span class="gold town-gold-badge" id="townGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
-      <p id="townHireHint" style="display:none;"><span class="hire-hint-arrow">⬇︎</span>宿屋で仲間を雇いましょう</p>
+      <p id="townHireHint" style="display:none;">
+        <svg class="hire-hint-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        宿屋で仲間を雇いましょう
+      </p>
       <div class="btn-col">
         <button class="big" id="toTavernBtn"><span class="btn-icon"><img src="assets/icons/town_yadoya.png" alt=""></span>旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toShopBtn"><span class="btn-icon"><img src="assets/icons/town_kajiya.png" alt=""></span>鍛冶屋</button>
@@ -714,6 +735,7 @@
 <audio id="lodgingBgmAudio" src="assets/bgm/lodging_bgm.mp3" preload="none"></audio>
 <audio id="campBgmAudio" src="assets/bgm/camp_bgm.mp3" loop preload="none"></audio>
 <audio id="ambientBgmAudio" loop preload="none"></audio>
+<audio id="openingBgmAudio" src="assets/bgm/opening_bgm.mp3" loop preload="auto"></audio>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>

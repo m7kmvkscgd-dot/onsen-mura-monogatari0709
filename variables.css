@@ -22,5 +22,15 @@
     --dw-header-h: 56px;
     /* アニメーション速度(ボタン/カード展開/画面切替/ハンコ/ダメージ/会心/敵出現) */
     --dw-t-btn: 100ms; --dw-t-card: 180ms; --dw-t-screen: 220ms; --dw-t-stamp: 350ms; --dw-t-dmg: 180ms; --dw-t-crit: 250ms; --dw-t-enemy: 250ms;
+
+    /* ============ フォント(2026-07-11 Google Fonts導入) ============
+       ゲーム全体のフォント指定はこの1箇所(--font-main)にまとめてある。開発中のWeb版はGoogle Fontsの
+       Zen Kaku Gothic Newを使うが、Steam版へ移植する際はこの1行を
+       --font-main: "ZenKakuGothicNewLocal", sans-serif; のようなローカル@font-face名に
+       差し替えるだけで全画面に反映される(他のCSSファイルはvar(--font-main)を参照するのみで、
+       フォント名を直接書いている箇所は無い)。
+       太さは4段階に統一: 本文400/ボタン700/見出し900/数字(G・HP・時間等)700 */
+    --font-main: "Zen Kaku Gothic New", "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    --fw-body: 400; --fw-button: 700; --fw-heading: 900; --fw-number: 700;
   }
   :root { --dw-btn-sheen: linear-gradient(to bottom, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 14%, rgba(0,0,0,0) 46%, rgba(0,0,0,.16) 100%); --dw-btn-border: #3a2a17; }

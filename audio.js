@@ -39,14 +39,17 @@ const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
+const openingBgmAudio = document.getElementById("openingBgmAudio");
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
+const OPENING_BGM_VOLUME = 0.55;
 bgmAudio.volume = BGM_BASE_VOLUME;
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
 ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
+openingBgmAudio.volume = OPENING_BGM_VOLUME;
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
@@ -64,13 +67,16 @@ let battleBgmFadeToken = 0;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  // 最初の1人選び画面はまだ一度もplayBgm()が呼ばれていないため、<audio>要素にHTML側で
-  // 焼き込まれたデフォルトsrc(town_bgm.mp3="town"キーと同一)がここでそのまま鳴り始める。
-  // currentBgmKeyを揃えておかないと、直後の職業確定でrenderTown()がplayBgm("town")を呼んだ時に
-  // 「別の曲への切替」と誤認され、同じ曲なのに頭から再生し直されてしまう(実際に報告されたバグ)
-  if (!currentBgmKey) currentBgmKey = "town";
-  bgmAudio.play().catch(() => {});
-  ambientBgmAudio.play().catch(() => {});
+  if (currentBgmKey) {
+    // 既に町/冒険用のBGMキーが決まっている(=タイトルより先に進んでいる)場合はそちらを再開する
+    bgmAudio.play().catch(() => {});
+    ambientBgmAudio.play().catch(() => {});
+  } else {
+    // まだタイトル/オープニング中(currentBgmKeyは最初のplayBgm()呼び出しまでnullのまま)。
+    // オープニングBGMの再生を試みる。起動直後の自動再生が制限で失敗していた場合、
+    // ユーザーの最初の操作によるこの呼び出しが確実な再試行のタイミングになる
+    openingBgmAudio.play().catch(() => {});
+  }
   // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
 }
@@ -93,7 +99,34 @@ function bgmVolumeForKey(key) {
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
   return BGM_BASE_VOLUME;
 }
+// タイトル/オープニングBGM(openingBgmAudio)からの引き継ぎ用フェードアウト。
+// playBgm()が最初に呼ばれた時点(=タイトルを離れて実際のゲーム画面のBGMが決まった時点)で
+// 自動的に呼ばれる。0.6秒で滑らかに消し、二重再生や急なブツ切りにならないようにする
+let openingBgmFadeToken = 0;
+function fadeOutOpeningBgm() {
+  if (openingBgmAudio.paused) return;
+  const startVol = openingBgmAudio.volume;
+  const startTime = performance.now();
+  const myToken = ++openingBgmFadeToken;
+  const durationMs = 600;
+  function step() {
+    if (openingBgmFadeToken !== myToken) return;
+    const t = Math.min(1, (performance.now() - startTime) / durationMs);
+    openingBgmAudio.volume = startVol * (1 - t);
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      openingBgmAudio.pause();
+      openingBgmAudio.currentTime = 0;
+      openingBgmAudio.volume = OPENING_BGM_VOLUME;
+    }
+  }
+  step();
+}
 function playBgm(key) {
+  // タイトル画面を離れて最初の本編BGMが決まった瞬間、流れっぱなしのオープニング/タイトル曲を
+  // フェードアウトする(このガードが無いと、町BGMと二重に鳴り続けてしまう)
+  fadeOutOpeningBgm();
   if (currentBgmKey === key) {
     // 同じ曲を続けて流すはずの場面(海岸の探索→戦闘の継続再生など)で、何らかの理由で
     // 要素が一時停止してしまっていた場合に無音のまま固まらないよう、ここで取りこぼさず再開する
@@ -329,6 +362,7 @@ document.getElementById("muteBtn").onclick = () => {
   muted = !muted;
   bgmAudio.muted = muted;
   lodgingBgmAudio.muted = muted;
+  openingBgmAudio.muted = muted;
   document.getElementById("muteBtn").textContent = muted ? "🔇" : "🔊";
 };
 

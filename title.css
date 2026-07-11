@@ -6,10 +6,10 @@
      最終的な見た目(完全に表示された状態)だけを既定値として持たせ、万一JSが動かない場合でも
      要素が消えたままにはならないようにしてある */
 
+  /* フォントはGoogle Fonts導入(2026-07-11)によりゲーム全体でZen Kaku Gothic Newに統一。
+     以前はタイトル/設定/製作者よりだけ明朝体にしていたが、var(--font-main)はbodyから継承されるため
+     ここで個別のfont-family指定は不要になった(統一の一環として明朝体指定は削除) */
   #screen-title { position: relative; overflow: hidden; }
-  #screen-title, #screen-settings, #titleCreditsOverlay {
-    font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS Mincho", serif;
-  }
 
   .title-bg-base, .title-logo-reveal {
     position: fixed; inset: 0; z-index: 0;
@@ -64,22 +64,6 @@
     #screen-title::after, .title-petal, .title-steam { animation: none; display: none; }
   }
 
-  /* 「画面をタップ」プロンプト。派手な明滅ではなく、ごくゆっくりした呼吸のみ */
-  .title-tap-prompt {
-    position: fixed; z-index: 4; left: 0; right: 0; bottom: 30%;
-    text-align: center; color: #fff; font-size: 14px; letter-spacing: 0.2em;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
-    animation: titleTapBreathe 2.4s ease-in-out infinite;
-    pointer-events: none;
-  }
-  @keyframes titleTapBreathe {
-    0%, 100% { opacity: 0.45; }
-    50% { opacity: 1; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .title-tap-prompt { animation: none; opacity: 0.8; }
-  }
-
   /* ============ メニュー ============ */
   .title-menu {
     position: fixed; z-index: 3; left: 50%; transform: translateX(-50%);
@@ -92,13 +76,13 @@
     width: min(280px, 100%); height: 64px; border-radius: 18px;
     border: 1px solid rgba(215,182,111,0.55);
     background: linear-gradient(180deg, #2a2420 0%, #1c1712 55%, #120d0a 100%);
-    color: #fff; font-size: 22px; font-weight: 600; letter-spacing: 0.12em;
+    color: #fff; font-size: 22px; font-weight: var(--fw-button); letter-spacing: 0.1em;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     box-shadow: 0 6px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
     transition: transform 0.1s ease-out, filter 0.1s ease-out, box-shadow 0.4s ease-out;
     cursor: pointer;
   }
-  .title-menu-btn:active { transform: translateY(2px); filter: brightness(0.9); }
+  .title-menu-btn:active { transform: scale(0.97); filter: brightness(0.9); }
   .title-menu-btn:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: not-allowed; }
   .title-menu-btn .title-menu-icon { width: 18px; height: 18px; color: var(--dw-gold); visibility: hidden; flex-shrink: 0; }
   .title-menu-btn.primary .title-menu-icon { visibility: visible; }
@@ -130,7 +114,7 @@
     background: var(--dw-card-bg); border: 1px solid var(--dw-card-border); border-radius: var(--radius-lg);
     box-shadow: var(--dw-card-shadow); padding: 24px 20px; text-align: center;
   }
-  .title-sub-panel h1 { font-size: 20px; color: var(--dw-title-color); margin: 0 0 18px; font-weight: 700; }
+  .title-sub-panel h1 { font-size: 20px; color: var(--dw-title-color); margin: 0 0 18px; }
   .title-setting-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--dw-body-color); font-size: 15px;
@@ -143,25 +127,37 @@
   .title-toggle-btn.is-on { background: var(--dw-gold); color: #2a2015; border-color: var(--dw-gold); }
   .title-sub-back-btn { width: 100%; margin-top: 6px; }
 
-  /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============ */
+  /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============
+     読み物として自然に読めるよう、中央揃えではなく左揃えのレイアウトにしてある。
+     余白を大きめに取り、見出し/本文/署名の3段階で文字サイズにメリハリを付けた。
+     基本はスクロール無しで収まる分量に文章量・行間を調整しているが、極端に縦の狭い端末向けの
+     保険としてmax-height+overflow-yだけは残してある(通常は発火しない) */
   #titleCreditsOverlay {
     position: fixed; inset: 0; z-index: 40; display: none;
-    background: rgba(8,8,10,0.55);
+    background: rgba(8,8,10,0.6);
     align-items: center; justify-content: center;
   }
   .title-credits-panel {
-    width: min(340px, 86%); max-height: 78vh; overflow-y: auto;
+    width: min(360px, 88%); max-height: 92vh; overflow-y: auto;
     margin: auto;
     background: linear-gradient(180deg, #3a2c1c 0%, #2a2015 55%, #201810 100%);
     border: 1.5px solid #5d4d35; border-radius: var(--radius-lg);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-    padding: 26px 22px 20px; text-align: center;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+    padding: 30px 28px 24px; text-align: left;
   }
-  .title-credits-body {
-    margin: 0 0 14px; font-size: 14px; line-height: 1.8; color: #ece5d6;
+  .title-credits-heading {
+    font-size: 19px; color: var(--dw-title-color); margin: 0 0 18px; text-align: left;
   }
+  .title-credits-body p {
+    margin: 0 0 14px; font-size: 14.5px; line-height: 1.75; color: #ece5d6; font-weight: var(--fw-body);
+  }
+  .title-credits-body p:last-child { margin-bottom: 0; }
   .title-credits-sign {
-    margin: 18px 0 20px; font-size: 13px; line-height: 1.9; color: var(--dw-gold);
+    margin: 20px 0 0; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 13.5px; line-height: 1.7; color: var(--dw-gold); font-weight: var(--fw-number);
+  }
+  .title-credits-sign-sub {
+    margin: 4px 0 22px; font-size: 12.5px; line-height: 1.7; color: var(--dw-caption-color);
   }
   .title-credits-close-btn { width: 100%; }
 

@@ -11,6 +11,29 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ============ タイトル画面プリロード ============
+// 起動直後に必要な画像だけを優先度順(①背景 ②ロゴ)でプリロードする。ゲーム開始後にしか
+// 使わない画像(職業アイコン・施設アイコン等)はここに含めない。index.html側の
+// <link rel="preload">はブラウザへの早期ヒントで、こちらはJS側で「確実に読み込み終わった」ことを
+// 検知してからフェードインを始めるための保険(低速回線でpreloadヒントが間に合わなかった場合でも、
+// 「まだ来ていない画像がいきなりポップインする」のではなく読み込み完了を待ってから表示できる)
+const TITLE_CRITICAL_IMAGES = ["assets/title/title_bg_base.webp", "assets/title/title_bg.webp"];
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+}
+// 万一画像サーバーが極端に遅い場合でも起動が止まらないよう、1.5秒で見切りを付けて先へ進む
+function preloadTitleImages() {
+  return Promise.race([
+    Promise.all(TITLE_CRITICAL_IMAGES.map(preloadImage)),
+    sleep(1500),
+  ]);
+}
+
 // ============ タイトル演出のシーケンス制御 ============
 // 以前はCSSの@keyframes+classList付け外し(クラスを外してreflowを挟んで付け直す方式)で
 // 演出をリプレイしていたが、このプロジェクトでは同じ手法がHPバーの被弾トレイル・ログ行の登場演出・
@@ -23,12 +46,10 @@ function sleep(ms) {
 // 万一JSが例外で止まっても要素が消えたままになることはない(せいぜい演出が省略されるだけ)。
 let titleSeqToken = 0;
 let titleSeqAnimations = [];
-let titleTapCleanup = null;
 
 function cancelTitleSequence() {
   titleSeqAnimations.forEach((a) => { try { a.cancel(); } catch (e) {} });
   titleSeqAnimations = [];
-  if (titleTapCleanup) { titleTapCleanup(); titleTapCleanup = null; }
 }
 
 // element.animate()の.finishedはタブが背面に回った直後など極めて稀な状況で解決が遅れる/されない
@@ -37,22 +58,20 @@ function cancelTitleSequence() {
 // ―― まさに今回JSで置き換えた旧CSS方式のバグ(背景が消えたまま戻らない)と同じ「詰み」のリスクが
 // 形を変えて残ることになる。これを避けるため、指定時間+200msのタイムアウトと.finishedを
 // Promise.raceさせ、アニメーションAPI側が万一応答しなくても必ず先へ進めるようにしてある
-function titleAnimate(el, keyframes, opts) {
+// finalStyleは完了後にelへ書き込む素のinline style(例: {opacity:"1", transform:""})。
+// fill:"forwards"のアニメーションはWeb Animations APIの効果として残り続け、通常のCSS(:active等)
+// より優先されてしまう(ボタンの登場演出のtransformが残ったままだと、後で押した時の
+// :active { transform: scale(0.97) } が一切効かなくなる)。完了後にアニメーションをcancel()した上で
+// finalStyleを自分で書き込むことで、以降は普通のCSSカスケード(:active含む)が効くようにしている
+// (transformは""で明示的にクリアし、次にelement.animate()もCSSの:activeも触っていない
+// transform: none相当の状態に戻す。opacityだけは最終値をそのままinlineに残す)
+function titleAnimate(el, keyframes, opts, finalStyle) {
   const a = el.animate(keyframes, opts);
   titleSeqAnimations.push(a);
   const duration = typeof opts.duration === "number" ? opts.duration : 300;
-  return Promise.race([a.finished.catch(() => {}), sleep(duration + 200)]);
-}
-
-function waitForTap() {
-  return new Promise((resolve) => {
-    const handler = () => { cleanup(); resolve(); };
-    const cleanup = () => {
-      document.removeEventListener("pointerdown", handler);
-      titleTapCleanup = null;
-    };
-    titleTapCleanup = cleanup;
-    document.addEventListener("pointerdown", handler, { once: true });
+  return Promise.race([a.finished.catch(() => {}), sleep(duration + 200)]).then(() => {
+    try { a.cancel(); } catch (e) {}
+    if (finalStyle) Object.assign(el.style, finalStyle);
   });
 }
 
@@ -60,7 +79,6 @@ function titleSeqElements() {
   return {
     bgBase: document.getElementById("titleBgBase"),
     logo: document.getElementById("titleLogoReveal"),
-    tapPrompt: document.getElementById("titleTapPrompt"),
     menu: document.getElementById("titleMenu"),
     buttons: Array.from(document.querySelectorAll("#titleMenu .title-menu-btn")),
     footer: document.querySelector("#screen-title .title-footer"),
@@ -73,8 +91,6 @@ function resetTitleVisualState() {
   els.bgBase.style.opacity = "0";
   els.logo.style.opacity = "0";
   els.logo.style.transform = "scale(0.98)";
-  els.tapPrompt.style.opacity = "0";
-  els.tapPrompt.style.display = "none";
   els.buttons.forEach((b) => { b.style.opacity = "0"; b.style.transform = "translateY(16px)"; });
   els.footer.style.opacity = "0";
   els.menu.style.pointerEvents = "none";
@@ -86,17 +102,16 @@ function showTitleVisualStateInstantly() {
   els.bgBase.style.opacity = "1";
   els.logo.style.opacity = "1";
   els.logo.style.transform = "scale(1)";
-  els.tapPrompt.style.opacity = "0";
-  els.tapPrompt.style.display = "none";
-  els.buttons.forEach((b) => { b.style.opacity = "1"; b.style.transform = "translateY(0)"; });
+  els.buttons.forEach((b) => { b.style.opacity = "1"; b.style.transform = ""; });
   els.footer.style.opacity = "1";
   els.menu.style.pointerEvents = "";
 }
 
-// full=trueの時だけ「背景表示→1.5秒→ロゴ→0.5秒→タップ待ち→ボタン0.08秒差でスライドイン」の
+// full=trueの時だけ「背景表示→0.5秒→ロゴフェードイン→0.3秒→ボタン0.08秒差でスライドイン」の
 // 一連の演出を再生する。トークンで世代管理しており、演出の途中でrenderTitleScreen()が
 // 再度呼ばれた場合(例:演出中に設定へ移動して戻ってきた等)は古い世代のawaitが目を覚ましても
-// 何もせず即座に抜ける
+// 何もせず即座に抜ける。以前あった「画面をタップ」待ちは、演出全体を一つの自然な流れにする
+// という指示により廃止し、プリロード完了後は無条件で自動的に最後まで進む
 async function runTitleSequence(full) {
   const myToken = ++titleSeqToken;
   cancelTitleSequence();
@@ -108,38 +123,33 @@ async function runTitleSequence(full) {
   }
 
   resetTitleVisualState();
-
-  await titleAnimate(els.bgBase, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: "ease-out", fill: "forwards" });
-  if (myToken !== titleSeqToken) return;
-  await sleep(1500);
+  await preloadTitleImages();
   if (myToken !== titleSeqToken) return;
 
-  await titleAnimate(els.logo, [{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "scale(1)" }], { duration: 500, easing: "ease-out", fill: "forwards" });
+  // 背景→0.5秒→ロゴ、という短い間だけを置く(以前の1.5秒待ちが「読み込みが遅い」という
+  // 印象を与えていたため大幅に短縮。プリロード済みのため背景は表示した瞬間に完全な状態で出る)
+  await titleAnimate(els.bgBase, [{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
   if (myToken !== titleSeqToken) return;
   await sleep(500);
   if (myToken !== titleSeqToken) return;
 
-  els.tapPrompt.style.display = "block";
-  await titleAnimate(els.tapPrompt, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: "ease-out", fill: "forwards" });
+  await titleAnimate(els.logo, [{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "scale(1)" }], { duration: 400, easing: "ease-out", fill: "forwards" }, { opacity: "1", transform: "scale(1)" });
   if (myToken !== titleSeqToken) return;
-
-  await waitForTap();
-  if (myToken !== titleSeqToken) return;
-
-  await titleAnimate(els.tapPrompt, [{ opacity: 1 }, { opacity: 0 }], { duration: 250, easing: "ease-out", fill: "forwards" });
-  els.tapPrompt.style.display = "none";
+  await sleep(300);
   if (myToken !== titleSeqToken) return;
 
   els.menu.style.pointerEvents = "";
   els.buttons.forEach((b, i) => {
     setTimeout(() => {
       if (myToken !== titleSeqToken) return;
-      titleAnimate(b, [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300, easing: "ease-out", fill: "forwards" });
+      // transformは完了後に""でクリアする(ボタンのentrance演出が:active { transform: scale(0.97) }を
+      // 塞いでしまわないように。空文字はtranslateY(0)と見た目上同じ「変形なし」の状態になる)
+      titleAnimate(b, [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1", transform: "" });
     }, i * 80);
   });
   await sleep(Math.max(0, els.buttons.length - 1) * 80 + 300);
   if (myToken !== titleSeqToken) return;
-  titleAnimate(els.footer, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out", fill: "forwards" });
+  titleAnimate(els.footer, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
 }
 
 function renderTitlePetals() {
@@ -296,6 +306,16 @@ function initOpeningSequence() {
 
   overlay.style.display = "flex";
   overlay.style.opacity = "1";
+
+  // オープニングBGMはこの時点(オープニング開始と同時)で再生を試みる。動画の有無に関わらず
+  // 同じ曲がそのままタイトル画面のBGMとしても鳴り続ける設計のため、動画が無い場合(現状)でも
+  // ここで開始しておけば「オープニング→タイトルへ自然に切り替わる」体験になる。
+  // ブラウザの自動再生制限で拒否された場合は、audio.jsのunlockAudio()が最初のユーザー操作の
+  // タイミングで再試行する(この関数はcatchだけしてエラーを握りつぶさず、そちらに委ねる)
+  if (openingBgmAudio.paused) {
+    openingBgmAudio.currentTime = 0;
+    openingBgmAudio.play().catch(() => {});
+  }
 
   // 音声付き再生を試み、自動再生制限で拒否された場合はミュートで再試行する(動画自体は見せる)
   const playPromise = video.play();
