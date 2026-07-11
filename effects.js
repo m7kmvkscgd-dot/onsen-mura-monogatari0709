@@ -377,16 +377,27 @@ function statusIconsFor(entity) {
   return s;
 }
 
-// ============ 状態異常アイコンの説明ツールチップ(PC:ホバー/スマホ:0.5秒長押し) ============
-// イベント委譲で実装しているため、.status-iconがどの画面のどのタイミングで描画されても
-// (再描画のたびにDOM要素が作り直されても)個別にイベントを貼り直す必要が無い
+// ============ 状態異常/温泉効果アイコンの説明ツールチップ(PC:ホバー/スマホ:タップ) ============
+// イベント委譲で実装しているため、.status-icon/.onsen-buff-tagがどの画面のどのタイミングで
+// 描画されても(再描画のたびにDOM要素が作り直されても)個別にイベントを貼り直す必要が無い。
+// 温泉効果(.onsen-buff-tag、宿屋の名簿・出発準備画面の「血行促進」等の表示)も状態異常アイコンと
+// 全く同じ見た目・操作方法でタップすると効果説明が出るようにしてあり、かつ「温泉効果」という
+// 見出しを必ず添えることで、状態異常ではなくバフ(温泉に入って得た良い効果)だと分かるようにしている
 const STATUS_TOOLTIP_FADE_MS = 100;
 let statusTooltipAnim = null;
 function showStatusTooltip(el) {
-  const info = STATUS_TOOLTIPS[el.dataset.status];
-  if (!info) return;
+  let title, desc, iconHtml, category;
+  if (el.classList.contains("onsen-buff-tag")) {
+    const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
+    if (!buff) return;
+    title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
+  } else {
+    const info = STATUS_TOOLTIPS[el.dataset.status];
+    if (!info) return;
+    title = info.title; desc = info.desc; iconHtml = ICONS[el.dataset.status] || ""; category = null;
+  }
   const tip = document.getElementById("statusTooltip");
-  tip.innerHTML = `<div class="status-tooltip-title">${ICONS[el.dataset.status] || ""} ${info.title}</div><div>${info.desc}</div>`;
+  tip.innerHTML = `${category ? `<div class="status-tooltip-category">${category}</div>` : ""}<div class="status-tooltip-title">${iconHtml} ${title}</div><div>${desc}</div>`;
   tip.style.display = "block";
   const rect = el.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
@@ -406,22 +417,23 @@ function hideStatusTooltip() {
   document.getElementById("statusTooltip").style.display = "none";
   statusTooltipShownFor = null;
 }
+const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag";
 // PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
 // pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
 document.addEventListener("pointerover", (e) => {
   if (e.pointerType !== "mouse") return;
-  const el = e.target.closest(".status-icon");
+  const el = e.target.closest(TOOLTIP_TARGET_SELECTOR);
   if (el) showStatusTooltip(el);
 });
 document.addEventListener("pointerout", (e) => {
   if (e.pointerType !== "mouse") return;
-  if (e.target.closest(".status-icon")) hideStatusTooltip();
+  if (e.target.closest(TOOLTIP_TARGET_SELECTOR)) hideStatusTooltip();
 });
 // スマホ: タップで表示し、そのまま指を離しても消えない。もう一度同じアイコンをタップするか、
 // 画面のどこか他の場所をタップすると消える(以前の0.5秒長押し方式から変更)
-let statusTooltipShownFor = null; // 現在表示中の.status-icon要素(nullなら非表示)
+let statusTooltipShownFor = null; // 現在表示中の.status-icon/.onsen-buff-tag要素(nullなら非表示)
 document.addEventListener("touchend", (e) => {
-  const el = e.target.closest(".status-icon");
+  const el = e.target.closest(TOOLTIP_TARGET_SELECTOR);
   if (el) {
     if (statusTooltipShownFor === el) {
       hideStatusTooltip();

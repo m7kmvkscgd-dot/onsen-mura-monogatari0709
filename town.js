@@ -297,7 +297,8 @@ function renderRosterList() {
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
     const lodgeable = c.status === "active";
     const lodgeSelected = lodgingSelectedIds.includes(c.id);
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : c.onsenBuffKey ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
+    const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
@@ -308,7 +309,7 @@ function renderRosterList() {
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
         <div class="roster-sub">${statusLabel(c)}</div>
         ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！ Lv.${levelUpFrom}→${c.level}</div>` : ""}
         ${c.status === "active" ? `
@@ -346,7 +347,8 @@ function renderRosterList() {
     // 宿泊対象として選択/解除できるようにする
     if (lodgeable) {
       row.style.cursor = "pointer";
-      row.onclick = () => {
+      row.onclick = (e) => {
+        if (e.target.closest(".onsen-buff-tag")) return; // 温泉効果タグのタップはツールチップ表示のみ、宿泊選択を巻き込まない
         if (lodgeSelected) lodgingSelectedIds = lodgingSelectedIds.filter((id) => id !== c.id);
         else lodgingSelectedIds.push(c.id);
         renderRosterList();
@@ -806,17 +808,19 @@ function renderPartySelect() {
     const selectable = isAvailable(c, now);
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : c.onsenBuffKey ? onsenBuffName(c.onsenBuffKey) : "待機中";
+    const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
+    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}">${tagText}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
         <div class="roster-sub">${statusLabel(c)}</div>
       </div>
     `;
-    row.onclick = () => {
+    row.onclick = (e) => {
+      if (e.target.closest(".onsen-buff-tag")) return; // 温泉効果タグのタップはツールチップ表示のみ、パーティ選択を巻き込まない
       if (!selectable) return;
       if (inParty) {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);

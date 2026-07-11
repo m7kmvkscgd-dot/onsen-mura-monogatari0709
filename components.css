@@ -150,6 +150,8 @@
     font-size: 0.72rem; line-height: 1.45; pointer-events: none;
   }
   #statusTooltip .status-tooltip-title { font-weight: 700; margin-bottom: 0.2rem; }
+  #statusTooltip .status-tooltip-category { font-size: 0.62rem; color: var(--dw-gold); letter-spacing: 0.05em; margin-bottom: 0.15rem; }
+  .onsen-buff-tag { cursor: help; }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
   .action-grid button {
     grid-column: span 1; height: 51px; min-height: 51px; padding: 0.3rem;
