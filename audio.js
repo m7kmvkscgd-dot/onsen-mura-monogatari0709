@@ -64,6 +64,16 @@ const bgmPositions = {};
 // この値を進めることで、進行中の古いフェードを確実に止める
 let battleBgmFadeToken = 0;
 
+// 【②の根本原因】iOS Safari(および多くのモバイルブラウザ)は<audio>要素の再生を、実在する
+// 「信頼できるユーザー操作(トラステッドイベント)」の呼び出しスタックの中でしか許可しない。
+// これはブラウザの仕様上の制約であり、コードのバグではなく回避不可能な既定動作。
+// 以前の実装はこの解除リスナーをpointerdownイベント1種類だけに依存していたため、
+// 万一その端末/OSバージョンでPointer Eventsの発火が遅い・不安定であれば解除が漏れる余地があった。
+// ここではtouchstart/mousedown/pointerdown/keydownの複数種類を同時に張り、どれか最初に
+// 発火したものだけで解除する(audioUnlockedガードで二重実行は防止)ことで取りこぼしを無くしている。
+// なお「オープニング開始と同時に」を100%保証することは、ユーザーが何もタップしないまま
+// 演出だけを眺めている間はブラウザの仕様上不可能(タップ0回=トラステッドイベント無し=
+// 再生許可が一切下りない)。このため実際に音が鳴り始めるのは「ページ内の最初の操作の瞬間」になる
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -80,7 +90,9 @@ function unlockAudio() {
   // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
 }
-document.addEventListener("pointerdown", unlockAudio, { once: true });
+["pointerdown", "touchstart", "mousedown", "keydown"].forEach((evt) => {
+  document.addEventListener(evt, unlockAudio, { once: true, passive: true });
+});
 
 // iPhone Safariのダブルタップズーム対策。touch-action:manipulation(html,body)とviewportの
 // maximum-scale=1/user-scalable=noだけでは、探索画面のように連続してボタンをタップする場面で

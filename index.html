@@ -14,11 +14,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet';">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet"></noscript>
-<!-- タイトル画面で最初に必要な画像を優先度順にプリロード(①背景 ②ロゴ)。ゲーム開始後にしか
-     使わない画像はここに含めない。ボタンはCSS(グラデーション)+インラインSVGのみで構成されており
-     追加の画像リクエストが発生しないため、プリロード対象はこの2枚のみで足りる -->
+<!-- タイトル画面で最初に必要なものだけを優先度順にプリロードする(①背景 ②ロゴ ③オープニングBGM
+     ④タイトルBGM)。②のロゴは①と同じ画像ファイル(title_bg.webp、clip-pathで帯だけ切り抜いて
+     ロゴ部分として重ねている)なので実質2枚。③④のBGMも同じ1曲(opening_bgm.mp3、オープニングで
+     鳴り始めた曲がそのまま途切れずタイトル画面のBGMとしても流れ続ける設計)なので1ファイルで足りる。
+     ゲーム開始後にしか使わない画像(職業/施設アイコン等)や町・冒険用BGMはここに含めない。
+     ボタンはCSS(グラデーション)+インラインSVGのみで構成されており追加の画像リクエストが
+     発生しないため、画像のプリロード対象はこの2枚のみで足りる -->
 <link rel="preload" as="image" href="assets/title/title_bg_base.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/title/title_bg.webp" fetchpriority="high">
+<link rel="preload" as="audio" href="assets/bgm/opening_bgm.mp3" fetchpriority="high">
 <link rel="stylesheet" href="variables.css">
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="animation.css">
@@ -43,8 +48,10 @@
 
   <!-- タイトル画面(常にここから起動する) -->
   <div class="screen active" id="screen-title">
-    <div class="title-bg-base" id="titleBgBase" style="background-image:url('assets/title/title_bg_base.webp')"></div>
-    <div class="title-logo-reveal" id="titleLogoReveal" style="background-image:url('assets/title/title_bg.webp')"></div>
+    <div class="title-bg-drift">
+      <div class="title-bg-base" id="titleBgBase" style="background-image:url('assets/title/title_bg_base.webp')"></div>
+      <div class="title-logo-reveal" id="titleLogoReveal" style="background-image:url('assets/title/title_bg.webp')"></div>
+    </div>
     <div class="title-fx-layer" id="titleFxLayer" aria-hidden="true"></div>
     <div class="title-menu" id="titleMenu">
       <button class="title-menu-btn" id="titleStartBtn">

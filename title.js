@@ -11,6 +11,49 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ============ ロゴのclip-path動的計算(①の根本修正) ============
+// title_bg.webpは853x1844で、ロゴ帯は画像のy=195〜575の範囲に焼き込まれている。
+// 背景は.title-bg-base/.title-logo-revealともbackground-size:coverで表示しており、
+// coverは「要素(=画面)の縦横比」と「画像の縦横比」がずれるほど画像の一部が上下または左右に
+// はみ出してトリミングされる。以前はこのロゴ帯の範囲を「画像の高さ1844pxに対する割合」
+// (10.575%〜68.818%)としてclip-path: inset()に直接指定していたが、clip-path: inset()の
+// パーセンテージは画像ではなく要素(=画面)の高さに対する割合として解釈されるため、
+// 画面の縦横比が画像の縦横比(853:1844≈0.4626)とたまたま近い端末でしか正しい位置にならず、
+// 縦横比が大きく異なる端末(例: iPhone SEのような相対的に横長の画面)では coverによる
+// 上下トリミング量が変わり、ロゴ帯が画面外(クリップ範囲の外)にずれて「ロゴが表示されない」
+// 不具合を起こしていた。これがタイトルロゴ非表示の根本原因。
+// 対策として、実際のビューポートサイズ・画像の実寸・coverのスケール計算をJSで毎回行い、
+// 「画像のロゴ帯が画面のどの位置に実際に描画されているか」を逆算してclip-pathを都度書き込む。
+// Safariはアドレスバーの表示/非表示で実効ビューポート高さが動的に変わるため、
+// resize/orientationchangeのたびに再計算する
+const TITLE_LOGO_IMAGE_W = 853;
+const TITLE_LOGO_IMAGE_H = 1844;
+const TITLE_LOGO_BAND_TOP_PX = 195;
+const TITLE_LOGO_BAND_BOTTOM_PX = 575;
+function updateTitleLogoClipPath() {
+  const el = document.getElementById("titleLogoReveal");
+  if (!el) return;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (!vw || !vh) return;
+  // background-size:coverと同じ計算: 画面を隙間なく覆うために必要な最小スケール
+  const scale = Math.max(vw / TITLE_LOGO_IMAGE_W, vh / TITLE_LOGO_IMAGE_H);
+  const scaledH = TITLE_LOGO_IMAGE_H * scale;
+  // background-position:centerのため、画像は縦方向にも中央揃え(はみ出す分は上下均等にトリミング)
+  const offsetY = (vh - scaledH) / 2;
+  const topPx = offsetY + TITLE_LOGO_BAND_TOP_PX * scale;
+  const bottomPx = offsetY + TITLE_LOGO_BAND_BOTTOM_PX * scale;
+  const topPct = Math.max(0, Math.min(100, (topPx / vh) * 100));
+  const bottomInsetPct = Math.max(0, Math.min(100, ((vh - bottomPx) / vh) * 100));
+  el.style.clipPath = `inset(${topPct.toFixed(3)}% 0 ${bottomInsetPct.toFixed(3)}% 0)`;
+  // scale(0.98→1)のフェードイン演出がロゴ帯の中心を基準に膨らむよう、transform-originも
+  // 同じ計算で揃える(clip-pathと基準がずれていると、拡大時にロゴが変な位置にずれて見える)
+  const centerPct = ((topPx + bottomPx) / 2 / vh) * 100;
+  el.style.transformOrigin = `50% ${Math.max(0, Math.min(100, centerPct)).toFixed(3)}%`;
+}
+window.addEventListener("resize", updateTitleLogoClipPath);
+window.addEventListener("orientationchange", updateTitleLogoClipPath);
+
 // ============ タイトル画面プリロード ============
 // 起動直後に必要な画像だけを優先度順(①背景 ②ロゴ)でプリロードする。ゲーム開始後にしか
 // 使わない画像(職業アイコン・施設アイコン等)はここに含めない。index.html側の
@@ -87,6 +130,7 @@ function titleSeqElements() {
 
 // JSシーケンス開始前の非表示状態にする(CSSの既定値は常時表示なので、ここで都度隠す)
 function resetTitleVisualState() {
+  updateTitleLogoClipPath(); // 演出開始のたびに最新のビューポート寸法でclip-pathを計算し直す
   const els = titleSeqElements();
   els.bgBase.style.opacity = "0";
   els.logo.style.opacity = "0";
@@ -98,6 +142,7 @@ function resetTitleVisualState() {
 
 // 演出を待たず、いきなり完成形で表示する(設定画面等からタイトルへ戻ってきた時用)
 function showTitleVisualStateInstantly() {
+  updateTitleLogoClipPath(); // 画面回転等でビューポートが変わっていた場合に備えて再計算
   const els = titleSeqElements();
   els.bgBase.style.opacity = "1";
   els.logo.style.opacity = "1";
@@ -107,11 +152,13 @@ function showTitleVisualStateInstantly() {
   els.menu.style.pointerEvents = "";
 }
 
-// full=trueの時だけ「背景表示→0.5秒→ロゴフェードイン→0.3秒→ボタン0.08秒差でスライドイン」の
-// 一連の演出を再生する。トークンで世代管理しており、演出の途中でrenderTitleScreen()が
+// full=trueの時だけ「背景表示→0.3秒→ロゴフェードイン→0.3秒→ボタン0.08秒差でスライドイン」の
+// 一連の演出を再生する(指定仕様通り)。トークンで世代管理しており、演出の途中でrenderTitleScreen()が
 // 再度呼ばれた場合(例:演出中に設定へ移動して戻ってきた等)は古い世代のawaitが目を覚ましても
-// 何もせず即座に抜ける。以前あった「画面をタップ」待ちは、演出全体を一つの自然な流れにする
-// という指示により廃止し、プリロード完了後は無条件で自動的に最後まで進む
+// 何もせず即座に抜ける。「画面をタップ」待ちは廃止済みで、プリロード完了後は無条件で
+// 自動的に最後まで進む(背景だけが表示され続ける時間を作らないため、背景のフェードは
+// ごく短く、直後の0.3秒はあくまで「背景→ロゴ」の間の意図的な一拍であって「待たされている」
+// 感覚を与えない長さにしてある)
 async function runTitleSequence(full) {
   const myToken = ++titleSeqToken;
   cancelTitleSequence();
@@ -126,11 +173,9 @@ async function runTitleSequence(full) {
   await preloadTitleImages();
   if (myToken !== titleSeqToken) return;
 
-  // 背景→0.5秒→ロゴ、という短い間だけを置く(以前の1.5秒待ちが「読み込みが遅い」という
-  // 印象を与えていたため大幅に短縮。プリロード済みのため背景は表示した瞬間に完全な状態で出る)
-  await titleAnimate(els.bgBase, [{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
+  await titleAnimate(els.bgBase, [{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
   if (myToken !== titleSeqToken) return;
-  await sleep(500);
+  await sleep(300);
   if (myToken !== titleSeqToken) return;
 
   await titleAnimate(els.logo, [{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "scale(1)" }], { duration: 400, easing: "ease-out", fill: "forwards" }, { opacity: "1", transform: "scale(1)" });

@@ -11,15 +11,34 @@
      ここで個別のfont-family指定は不要になった(統一の一環として明朝体指定は削除) */
   #screen-title { position: relative; overflow: hidden; }
 
+  /* 背景全体(本体+ロゴ)をひとまとめにして、ごくゆっくり拡大するだけの控えめな動き(⑤)を付ける。
+     bg-baseとlogo-revealを個別にtransformで動かすと、logo-revealは別途JSのentrance演出でも
+     transformを使っているため競合してしまう。親要素だけを動かすことで、中の2枚は常に
+     ぴったり重なったまま一緒に動く(clip-pathの基準もズレない) */
+  .title-bg-drift {
+    position: fixed; inset: 0; z-index: 0;
+    animation: titleBgDrift 30s ease-in-out infinite alternate;
+  }
+  @keyframes titleBgDrift {
+    from { transform: scale(1); }
+    to { transform: scale(1.045); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .title-bg-drift { animation: none; }
+  }
+
   .title-bg-base, .title-logo-reveal {
     position: fixed; inset: 0; z-index: 0;
     background-size: cover; background-position: center;
   }
   /* ロゴ部分だけを他の位置と全く同じ画像・同じcover/center基準で切り抜いて重ねる。
-     背景本体(title_bg_base.jpg)はロゴの位置だけぼかし処理済みのため、
+     背景本体(title_bg_base.webp)はロゴの位置だけぼかし処理済みのため、
      2枚が同じ座標系で重なることで「ロゴだけくっきり浮かび上がる」効果になる。
-     パーセンテージは元画像1844px中、ロゴ帯がy=195〜575の範囲であることから算出 */
-  .title-logo-reveal { clip-path: inset(10.575% 0 68.818% 0); transform-origin: 50% 20.6%; }
+     clip-path/transform-originの実際の値はtitle.jsのupdateTitleLogoClipPath()が
+     ビューポート実寸から都度計算してinline styleで書き込む(理由はtitle.js側のコメント参照)。
+     ここではJSが万一失敗した場合の保険として、クリップ無し(画像全体=ロゴも常に見える)を
+     既定値にしておく(誤ったハードコード値で「見えない」よりは、常に見える方が安全) */
+  .title-logo-reveal { clip-path: inset(0 0 0 0); transform-origin: 50% 20%; }
 
   /* 淡い夕焼けのゆらぎ(太陽の位置あたりに、非常にゆっくり明滅する光暈) */
   #screen-title::after {
