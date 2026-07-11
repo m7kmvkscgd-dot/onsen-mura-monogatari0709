@@ -168,7 +168,7 @@
   /* 町画面はボタン4つだけで縦にスクロールする必要が無いため、パネルを外して
      背景がそのまま透けて見える固定配置にする(ボタン自体は不透明のまま) */
   #screen-town .body-pad {
-    position: fixed; bottom: calc(258px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; bottom: calc(243px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 1;
     background: transparent; border-radius: 0; margin-top: 0; top: auto;
     padding: 0 1rem; flex: none;
@@ -180,10 +180,15 @@
     display: grid; grid-template-columns: repeat(2, auto); gap: 0.7rem;
     justify-content: start; margin-top: 0;
   }
+  /* 施設ボタンは全体の90%サイズ(実機で大きすぎるとの指摘)。widthだけでなく高さ・余白・文字・
+     アイコンも同じ比率で縮小し、単純なtransform:scaleではなく実寸で縮めている(scaleだと
+     グリッドのセル自体は縮まずボタン周りに不自然な余白が残るため) */
   #screen-town .btn-col button.big {
-    width: 150px; white-space: nowrap; padding: 0.9rem 0.5rem;
-    font-weight: 700;
+    width: 135px; white-space: nowrap; padding: 0.81rem 0.45rem; min-height: 48px;
+    font-weight: 700; font-size: 13.5px; border-radius: 13px;
   }
+  #screen-town .btn-icon { margin-right: 11px; }
+  #screen-town .btn-icon img { height: 29px; }
   /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
      .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
   .btn-icon { display: inline-flex; align-items: center; flex-shrink: 0; vertical-align: -3px; margin-right: 12px; }
