@@ -1035,63 +1035,61 @@
   body.path-choice-active #dungeonPartyBar, body.path-choice-active .bottom-actions {
     opacity: 0.65; transition: opacity 0.18s ease;
   }
-  /* ============ 進路選択の演出リニューアル(木札が縦に連なる「森の分岐」演出) ============
+  /* ============ 進路選択の演出(木札が縦に連なる「森の分岐」演出) ============
      既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
      残し、ここでは新しいクラス(.path-tags-*)を追加するだけに留めて上書きする。ゲーム性・抽選ロジック・
-     クリック時のコールバックは一切変更していない(見た目と演出のみ) */
-  /* ①背景を15〜20%暗くし、選択中であることを分かりやすくする。.dungeon-bg(z-index:0)より前、
-     .party-bar(z-index:4)より後ろに挟むことで、背景美術だけが沈み込み手前のUIには影響しない */
+     クリック時のコールバックは一切変更していない(見た目と演出のみ)。
+     「常時揺れる/半透明すぎる/安っぽい」という指摘を受け、無限アニメーションを全廃し、
+     動くのは表示された瞬間・押した瞬間・決定した瞬間だけにしてある(静止状態が基本) */
+  /* ①③背景を20〜25%暗くし、選択中であることを分かりやすくする。.dungeon-bg(z-index:0)より前、
+     .party-bar(z-index:4)より後ろに挟むことで、背景美術だけが沈み込み手前のUIには影響しない。
+     真っ黒にはせず、木札の向こうに森がうっすら見える程度に留める */
   body.path-choice-active::before {
     content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
-    background: rgba(0,0,0,0.18); opacity: 0; animation: pathDimIn 0.15s ease forwards;
+    background: rgba(0,0,0,0.23); opacity: 0; animation: pathDimIn 0.15s ease forwards;
   }
   @keyframes pathDimIn { from { opacity: 0; } to { opacity: 1; } }
   /* パネル自体は箱を持たず、木札だけが宙に浮くようにする(背景の写真をそのまま見せたいため) */
   .path-tags-panel { background: none; border: none; box-shadow: none; padding: 0; }
-  /* ②木札を縦に並べる。木札同士は.path-tag-ropeという細い縄目(reapeating-gradient)で繋ぐ */
+  /* ②木札を縦に並べる。木札同士は.path-tag-ropeという細い縄目(repeating-gradient)で繋ぐ(静止) */
   .path-choice-cards.path-tags-stack { flex-direction: column; align-items: center; gap: 0; }
   .path-tag-rope {
     display: block; width: 2px; height: 13px; margin: 0 auto;
     background: repeating-linear-gradient(to bottom, rgba(224,204,153,0.6) 0 3px, transparent 3px 6px);
   }
-  /* ③木札本体: 和紙+木の半透明カード。アイコン(左)+名称/説明(右)の横並び */
+  /* ③木札本体: 焦げ茶の枠+上だけ薄く明るく/下だけ薄く暗いグラデーション+内側ハイライトで
+     「木札の質感」を表現する(木目テクスチャ画像は不使用)。背景に溶けないよう90〜95%の
+     不透明度にし、常時アニメーションは持たせない(静止が基本) */
   .path-tag {
     flex: 0 0 auto; width: min(78vw, 260px); height: auto; flex-direction: row; align-items: center; justify-content: flex-start;
-    gap: 0.65rem; padding: 0.6rem 0.85rem; margin: 0.25rem 0;
-    background: linear-gradient(180deg, rgba(64,52,34,0.72), rgba(28,22,15,0.78));
-    border: 1px solid rgba(201,162,74,0.4); border-radius: 11px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.07);
-    /* ⑥風に揺れるような、ごく僅かな回転+横揺れ(2〜3px/2〜3度)。indexごとにdelayをずらし、
-       全員が同じ周期で揺れる不自然さを避ける */
-    animation: pathTagSway 3.6s ease-in-out infinite;
-    animation-delay: calc(var(--i, 0) * 0.35s);
+    gap: 0.7rem; padding: 0.65rem 0.9rem; margin: 0.25rem 0; opacity: 1;
+    background: linear-gradient(180deg, rgba(69,54,36,0.95) 0%, rgba(69,54,36,0.94) 45%, rgba(38,29,19,0.96) 100%);
+    border: 1.5px solid #3a2a17; border-radius: 10px;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -6px 10px -6px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
   }
-  @keyframes pathTagSway {
-    0%, 100% { transform: rotate(-1.4deg) translateX(-2px); }
-    50% { transform: rotate(1.4deg) translateX(2px); }
+  /* ⑤押した瞬間だけ軽く浮かせる(0.15秒、scale(1.03))。常時は動かさない。派手なグロー装飾も禁止 */
+  .path-tag:hover, .path-tag:active {
+    transform: scale(1.03); border-color: var(--accent); opacity: 1;
+    box-shadow: 0 4px 9px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.14);
   }
-  .path-tag .path-card-icon { font-size: 1.5rem; flex-shrink: 0; }
-  .path-tag-text { display: flex; flex-direction: column; gap: 0.15rem; text-align: left; min-width: 0; }
-  .path-tag .path-card-label { font-size: 0.92rem; font-weight: 700; color: #ecdfc0; white-space: normal; line-height: 1.2; }
-  .path-tag .path-card-desc { font-size: 0.68rem; color: #c7bda3; opacity: 0.85; line-height: 1.3; }
-  /* ④選択中(押した瞬間): 浮く+110%拡大+明るくなる+軽い光。揺れアニメーションは即座に止める */
+  .path-tag .path-card-icon { font-size: 1.7rem; flex-shrink: 0; }
+  .path-tag-text { display: flex; flex-direction: column; gap: 0.18rem; text-align: left; min-width: 0; }
+  .path-tag .path-card-label { font-size: 0.95rem; font-weight: 800; color: #efe2c2; white-space: normal; line-height: 1.2; }
+  .path-tag .path-card-desc { font-size: 0.64rem; color: #c7bda3; opacity: 0.85; line-height: 1.3; }
+  /* ⑥決定演出: 選んだ木札だけ少し前へ出る(scale+わずかに浮く程度、光や輝きは付けない) */
   .path-tag.path-tag-selected {
-    animation: none; transform: scale(1.1) translateY(-4px); filter: brightness(1.15);
-    border-color: var(--accent); opacity: 1;
-    box-shadow: 0 0 16px rgba(201,162,74,0.6), 0 8px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
-    transition: transform 0.15s ease-out, filter 0.15s ease-out, box-shadow 0.15s ease-out;
+    transform: scale(1.04) translateY(-2px); border-color: var(--accent); opacity: 1;
+    box-shadow: 0 5px 11px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
     z-index: 2; position: relative;
   }
-  /* ⑤決定演出: 選ばれなかった木札は0.15秒でフェードアウト。テンポを落とさないため短く */
+  /* 選ばれなかった木札は0.15〜0.2秒でopacityのみフェードアウト(transformは動かさない) */
   .path-tag.path-tag-fading {
-    animation: none; transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-    opacity: 0; transform: scale(0.94); pointer-events: none;
+    transition: opacity 0.18s ease-out; opacity: 0; pointer-events: none;
   }
   .path-tags-stack.path-tags-locked .path-tag-rope { transition: opacity 0.15s ease-out; opacity: 0; }
-  @media (prefers-reduced-motion: reduce) {
-    .path-tag { animation: none; }
-  }
   /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
      イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
   .treasure-popup {
