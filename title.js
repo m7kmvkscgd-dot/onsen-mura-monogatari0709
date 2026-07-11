@@ -107,14 +107,22 @@ function cancelTitleSequence() {
 // :active { transform: scale(0.97) } が一切効かなくなる)。完了後にアニメーションをcancel()した上で
 // finalStyleを自分で書き込むことで、以降は普通のCSSカスケード(:active含む)が効くようにしている
 // (transformは""で明示的にクリアし、次にelement.animate()もCSSの:activeも触っていない
-// transform: none相当の状態に戻す。opacityだけは最終値をそのままinlineに残す)
+// transform: none相当の状態に戻す。opacityだけは最終値をそのままinlineに残す)。
+// 【ボタン出現直後の一瞬のチラつきの原因】以前はa.cancel()を先に呼んでからfinalStyleを
+// 書き込んでいたが、cancel()はアニメーションの効果をその場で取り除くため、次の行が実行される
+// までの一瞬、要素は「アニメーション開始前のinline style」(resetTitleVisualState()が設定した
+// opacity:"0"のまま)に戻ってしまう瞬間が生まれ得る。同じ関数内の連続した同期処理でも、
+// ブラウザによっては(特にSafari/WebKit系のコンポジタ)この中間状態を実際に1フレーム描画してしまい、
+// 「出た瞬間に一瞬消えてまた出る」というチラつきとして視認されていた。finalStyleを先に書き込み、
+// その後でcancel()する順序に入れ替えることで、アニメーションが外れた瞬間には既に正しい
+// inline styleが書き込まれた状態になり、古い値が一瞬でも露出する隙が無くなる
 function titleAnimate(el, keyframes, opts, finalStyle) {
   const a = el.animate(keyframes, opts);
   titleSeqAnimations.push(a);
   const duration = typeof opts.duration === "number" ? opts.duration : 300;
   return Promise.race([a.finished.catch(() => {}), sleep(duration + 200)]).then(() => {
-    try { a.cancel(); } catch (e) {}
     if (finalStyle) Object.assign(el.style, finalStyle);
+    try { a.cancel(); } catch (e) {}
   });
 }
 
@@ -122,6 +130,7 @@ function titleSeqElements() {
   return {
     bgBase: document.getElementById("titleBgBase"),
     logo: document.getElementById("titleLogoReveal"),
+    tapPrompt: document.getElementById("titleTapPrompt"),
     menu: document.getElementById("titleMenu"),
     buttons: Array.from(document.querySelectorAll("#titleMenu .title-menu-btn")),
     footer: document.querySelector("#screen-title .title-footer"),
@@ -135,6 +144,8 @@ function resetTitleVisualState() {
   els.bgBase.style.opacity = "0";
   els.logo.style.opacity = "0";
   els.logo.style.transform = "scale(0.98)";
+  els.tapPrompt.style.opacity = "0";
+  els.tapPrompt.style.display = "none";
   els.buttons.forEach((b) => { b.style.opacity = "0"; b.style.transform = "translateY(16px)"; });
   els.footer.style.opacity = "0";
   els.menu.style.pointerEvents = "none";
@@ -147,18 +158,25 @@ function showTitleVisualStateInstantly() {
   els.bgBase.style.opacity = "1";
   els.logo.style.opacity = "1";
   els.logo.style.transform = "scale(1)";
+  els.tapPrompt.style.opacity = "0";
+  els.tapPrompt.style.display = "none";
   els.buttons.forEach((b) => { b.style.opacity = "1"; b.style.transform = ""; });
   els.footer.style.opacity = "1";
   els.menu.style.pointerEvents = "";
 }
 
-// full=trueの時だけ「背景表示→0.3秒→ロゴフェードイン→0.3秒→ボタン0.08秒差でスライドイン」の
-// 一連の演出を再生する(指定仕様通り)。トークンで世代管理しており、演出の途中でrenderTitleScreen()が
-// 再度呼ばれた場合(例:演出中に設定へ移動して戻ってきた等)は古い世代のawaitが目を覚ましても
-// 何もせず即座に抜ける。「画面をタップ」待ちは廃止済みで、プリロード完了後は無条件で
-// 自動的に最後まで進む(背景だけが表示され続ける時間を作らないため、背景のフェードは
-// ごく短く、直後の0.3秒はあくまで「背景→ロゴ」の間の意図的な一拍であって「待たされている」
-// 感覚を与えない長さにしてある)
+function waitForTitleTap() {
+  return new Promise((resolve) => {
+    const handler = () => { document.removeEventListener("pointerdown", handler); resolve(); };
+    document.addEventListener("pointerdown", handler, { once: true });
+  });
+}
+
+// full=trueの時だけ「背景表示→0.3秒→ロゴフェードイン→0.3秒→画面をタップ→(タップで専用SE+1秒)→
+// ボタン0.08秒差でスライドイン」の一連の演出を再生する。イラストをまず見せてから操作に入りたい
+// という指示のため、ロゴが出た後は自動で進めずタップ待ちにしている。トークンで世代管理しており、
+// 演出の途中でrenderTitleScreen()が再度呼ばれた場合(例:演出中に設定へ移動して戻ってきた等)は
+// 古い世代のawaitが目を覚ましても何もせず即座に抜ける
 async function runTitleSequence(full) {
   const myToken = ++titleSeqToken;
   cancelTitleSequence();
@@ -181,6 +199,21 @@ async function runTitleSequence(full) {
   await titleAnimate(els.logo, [{ opacity: 0, transform: "scale(0.98)" }, { opacity: 1, transform: "scale(1)" }], { duration: 400, easing: "ease-out", fill: "forwards" }, { opacity: "1", transform: "scale(1)" });
   if (myToken !== titleSeqToken) return;
   await sleep(300);
+  if (myToken !== titleSeqToken) return;
+
+  els.tapPrompt.style.display = "block";
+  await titleAnimate(els.tapPrompt, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
+  if (myToken !== titleSeqToken) return;
+
+  await waitForTitleTap();
+  if (myToken !== titleSeqToken) return;
+  playSfx("title_tap");
+
+  await titleAnimate(els.tapPrompt, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease-out", fill: "forwards" }, { opacity: "0" });
+  els.tapPrompt.style.display = "none";
+  if (myToken !== titleSeqToken) return;
+
+  await sleep(1000);
   if (myToken !== titleSeqToken) return;
 
   els.menu.style.pointerEvents = "";

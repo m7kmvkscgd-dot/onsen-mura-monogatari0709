@@ -55,6 +55,23 @@
 
   .title-fx-layer { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 
+  /* 「画面をタップ」プロンプト: ロゴ表示後、ボタンを出す前に一呼吸置く。イラストをまず
+     しっかり見せたいという指示のため、小さめの白文字でごくゆっくり点滅させるだけに留め、
+     派手な演出は付けない */
+  .title-tap-prompt {
+    position: fixed; z-index: 4; left: 0; right: 0; bottom: 32%;
+    text-align: center; color: #fff; font-size: 13px; letter-spacing: 0.2em;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    animation: titleTapBreathe 2.6s ease-in-out infinite;
+  }
+  @keyframes titleTapBreathe {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .title-tap-prompt { animation: none; opacity: 0.7; }
+  }
+
   .title-petal {
     position: absolute; top: -5%;
     background: radial-gradient(circle at 30% 30%, #ffd9e6, #f6a8c4 70%);
