@@ -1,0 +1,485 @@
+// ============ effects.js: 戦闘演出(VFX/会心演出/セリフ/状態異常アイコンとツールチップ/朱印演出) ============
+function findVfxEntity(targetId) {
+  const ally = fieldParty.find((c) => c.id === targetId);
+  if (ally) return ally;
+  return battle && battle.enemies ? battle.enemies.find((e) => e.instanceId === targetId) : null;
+}
+
+// 与えたダメージ/回復の演出(数字ポップアップ・揺れ)は、DOM要素ではなくキャラ/敵オブジェクト自身に
+// 「いつ・何を表示すべきか」を記録しておく方式にする。renderPartyBar/敵カード生成が毎回このデータを見て
+// その場でポップアップ要素を作るため、ターンのたびにDOM要素が作り直されても消えたり出そびれたりしない
+// 敵の大技予告(bigAttackPending)が発生した瞬間、画面端を一瞬だけ橙色に光らせる警告演出。
+// アニメーションを毎回頭から再生させるため、一度クラスを外してリフローを挟んでから付け直す
+function triggerWarningFlash() {
+  const el = document.getElementById("screenWarningFlash");
+  if (!el) return;
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = "screenWarningFlash 0.6s ease-out";
+}
+// 攻撃系のdmgポップアップ呼び出し時、技/会心なら"strong"(揺れ1.2倍)、通常攻撃なら"normal"(揺れ0.8倍)を
+// 呼び出し元で明示的に渡す(毒/炎上などの継続ダメージは渡さず、常にnormal扱いにする)
+function dmgShakeIntensity(isSkill) {
+  return (isSkill || (typeof lastHitWasCrit !== "undefined" && lastHitWasCrit)) ? "strong" : "normal";
+}
+function popupOn(targetId, text, cls, intensity) {
+  const entity = findVfxEntity(targetId);
+  if (!entity) return;
+  if (cls === "dmg") {
+    entity.__shakeUntil = Date.now() + 400;
+    entity.__shakeIntensity = intensity || "normal";
+  }
+  // 赤いダメージ数字のポップアップ表示は敵/味方問わず廃止(揺れ+フラッシュの演出のみ残す)。回復の表示は継続する
+  if (cls === "dmg") return;
+  entity.__popupText = text;
+  entity.__popupCls = cls;
+  entity.__popupAt = Date.now();
+  renderVfxFor(targetId);
+}
+// 攻撃が命中した時に対象カードへ重ねるヒットエフェクト(職業ごとに素材/フレーム数/表示サイズが異なる)。
+// カード自体はrenderBattleScreen()のたびに作り直されるため、要素をDOMに残さず「今表示されている
+// カードに一度だけ追加→アニメーション完了で自分で消える」使い切り方式にしてある。
+// 侍/忍/薙刀士は共通のSlashFX斬撃(通常=黄/技=ティール)、槍士は専用の金属衝撃エフェクト
+// (通常=黄/技=紫)、狩人は星形の黄、砲術士は星形の赤、陰陽師は通常攻撃が槍士と共通の黄(小さめ)・
+// 呪符ノ術等の技だけ紫の星形、僧侶は通常攻撃のみ陰陽師と共通の黄(小さめ)を使う
+// 通常攻撃のエフェクトは全体的に90%サイズにする(スキル系は据え置き、というユーザー指示への対応)
+const CLASS_ATTACK_VFX = {
+  samurai:  { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 454 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 504 } },
+  ninja:    { normal: { prefix: "assets/vfx/slash_magenta_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/impact_ninja_skill_", frames: 4, size: 200 } },
+  naginata: { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 280 } },
+  spearman: { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 198 }, skill: { prefix: "assets/vfx/impact_spear_skill_", frames: 6, size: 220 } },
+  priest:   { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 } },
+  onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+  hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+  gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+};
+// 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
+// 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
+const TRANSFORM_ATTACK_VFX = {
+  gama: { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 } },
+  hebi: { normal: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+};
+const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フレーム数は素材ごとに異なる(CLASS_ATTACK_VFX参照)
+function playAttackVfx(targetId, actor, kind) {
+  const transformOverride = actor.transformForm && TRANSFORM_ATTACK_VFX[actor.transformForm];
+  const cfg = (transformOverride && transformOverride[kind]) || (CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind]);
+  if (!cfg) return; // 対応するエフェクトが設定されていない組み合わせ(僧侶のskillなど)は何も出さない
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const img = document.createElement("img");
+  img.className = "slash-vfx";
+  img.style.width = cfg.size + "px";
+  img.src = `${cfg.prefix}1.png`;
+  el.appendChild(img);
+  let frame = 1;
+  const timer = setInterval(() => {
+    frame++;
+    if (frame > cfg.frames) {
+      clearInterval(timer);
+      img.remove();
+      return;
+    }
+    img.src = `${cfg.prefix}${frame}.png`;
+  }, ATTACK_VFX_FRAME_MS);
+}
+// 会心専用の演出。通常攻撃の処理そのものは一切変更せず、会心が発生した時だけ追加で呼ぶ。
+// 「ヒットストップ」は本物の処理停止ではなく、通常の斬撃エフェクト/シェイクが鳴った直後に
+// 一呼吸(80ms)置いてから、追加のご褒美演出(画面全体の揺れ・特大金色ダメージ数字・白閃光/衝撃波/
+// 火花・「クリティカル！」バナー・専用SE)がまとめて畳み掛ける、という「間→ドカン」の2段構えで
+// 気持ちよさを表現している。全体の演出時間はヒットストップ80ms+効果本体約250msで0.3秒強に収めてある
+const CRIT_HITSTOP_MS = 80;
+// 会心の画面揺れ: 戦闘画面の固定要素(背景/敵表示・行動選択)自体のtransformにCSS変数経由で
+// オフセットを足し込む方式。以前はbody要素にtransformを掛けてposition:fixedの子要素ごと
+// 揺らしていたが、その方式だとfixed要素の基準(containing block)がviewportからbodyに切り替わり、
+// 実機で画面が一瞬ジャンプする不具合が起きたため、揺らしたい要素そのものを直接動かす方式に変更した。
+// .party-barは過去にtransform常時付与でiOS Safariの再描画不具合を起こした前科があるため対象から除外している
+const SCREEN_SHAKE_FRAMES = [[0, 0], [-6, 3], [5, -3], [-3, 2], [2, -1], [0, 0]];
+const SCREEN_SHAKE_DURATION_MS = 180;
+function playScreenShakeCrit() {
+  const targets = [document.getElementById("battleBg"), document.getElementById("battleTop"), document.querySelector(".battle-actions")].filter(Boolean);
+  if (targets.length === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / SCREEN_SHAKE_DURATION_MS);
+    const idx = Math.min(SCREEN_SHAKE_FRAMES.length - 1, Math.floor(t * (SCREEN_SHAKE_FRAMES.length - 1)));
+    const [dx, dy] = SCREEN_SHAKE_FRAMES[idx];
+    targets.forEach((el) => { el.style.setProperty("--crit-shake-x", `${dx}px`); el.style.setProperty("--crit-shake-y", `${dy}px`); });
+    if (t < 1) requestAnimationFrame(step);
+    else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
+  }
+  requestAnimationFrame(step);
+}
+function playCritEffects(targetId, actor, dmg) {
+  setTimeout(() => {
+    playScreenShakeCrit();
+    playSfx(critSfxFor(actor.classId));
+    const el = findVisibleCard(targetId);
+    if (!el) return;
+    const pop = document.createElement("div");
+    pop.className = "dmg-pop crit";
+    pop.textContent = `-${dmg}`;
+    el.appendChild(pop);
+    setTimeout(() => pop.remove(), 1150);
+    const flash = document.createElement("div");
+    flash.className = "crit-flash-overlay";
+    el.appendChild(flash);
+    setTimeout(() => flash.remove(), 220);
+    const wave = document.createElement("div");
+    wave.className = "crit-shockwave";
+    el.appendChild(wave);
+    setTimeout(() => wave.remove(), 300);
+    for (let i = 0; i < 6; i++) {
+      const spark = document.createElement("div");
+      spark.className = "crit-spark";
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 18 + Math.random() * 14;
+      spark.style.setProperty("--spark-x", `${Math.cos(angle) * dist}px`);
+      spark.style.setProperty("--spark-y", `${Math.sin(angle) * dist}px`);
+      spark.style.setProperty("--spark-dur", `${0.2 + Math.random() * 0.1}s`);
+      el.appendChild(spark);
+      setTimeout(() => spark.remove(), 320);
+    }
+    const banner = document.createElement("div");
+    banner.className = "crit-banner";
+    banner.textContent = "クリティカル！";
+    el.appendChild(banner);
+    setTimeout(() => banner.remove(), 520);
+  }, CRIT_HITSTOP_MS);
+}
+// 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
+// 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出す
+// (以前は1秒間画面が停止していたが、ユーザー指示で廃止し即座に次へ進行するようにした)
+function triggerShootDownEvents(shotDownTargets, onDone) {
+  if (!shotDownTargets || shotDownTargets.length === 0) { onDone(); return; }
+  shotDownTargets.forEach((t) => blog(`${t.label}を撃ち落とした！`));
+  playSfx("shoot_down");
+  renderBattleScreen(); // 🪽解除後の見た目(HPバー横のマーク消失)をすぐ反映する
+  onDone();
+}
+// entityの現在のカードDOM要素に、保存済みのポップアップ/揺れ状態を反映する
+// (renderPartyBar/敵カード生成の直後に呼ぶことで、その場で作られたばかりのカードにも即座に反映する)
+// 同じキャラのカードは#dungeonPartyBar/#battlePartyBar/#campPartyBarなど複数の画面(.screen)に
+// 同時に存在しうる(現在表示されていない画面の分もDOM上には残っている)。data-idだけで
+// document.querySelector(...)すると、たまたまDOM順で先に出てくる「非表示画面側」のカードに
+// マッチしてしまい、そちらはdisplay:noneの祖先を持つため getBoundingClientRect() が全て0を
+// 返す、という不具合があった(敵側は#enemyRowが戦闘画面にしか存在しないため起こらなかった)。
+// 複数マッチする中から実際にレイアウトされている(幅/高さが0でない)ものを選ぶ
+function findVisibleCard(targetId) {
+  // 担がれているキャラは自分の.party-memberを持たず、担いでいるキャラのカードに重ねた
+  // .carried-badge(data-carried-id)としてしか存在しないため、そちらも検索対象に含める
+  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"], .carried-badge[data-carried-id="${targetId}"]`);
+  for (const c of candidates) {
+    const r = c.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return c;
+  }
+  return candidates[0] || null;
+}
+function renderVfxFor(targetId) {
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const entity = findVfxEntity(targetId);
+  if (!entity) return;
+  if (entity.__popupAt && Date.now() - entity.__popupAt < 1500) {
+    const existing = el.querySelector(".dmg-pop");
+    // 前の被弾からまだ1.5秒経っていない状態でもう一度被弾すると、__popupAtが更新されるのに
+    // 「既にポップアップがある」という判定だけで新しい数字がスキップされ、2発目以降が一切表示されなくなる
+    // バグがあった。表示中の数字がどの被弾のものかをdata属性で区別し、最新の被弾なら必ず作り直す
+    const alreadyShowingLatest = existing && Number(existing.dataset.popupAt) === entity.__popupAt;
+    if (!alreadyShowingLatest) {
+      if (existing) existing.remove();
+      const pop = document.createElement("div");
+      pop.className = "dmg-pop" + (entity.__popupCls ? " " + entity.__popupCls : "");
+      pop.textContent = entity.__popupText;
+      pop.dataset.popupAt = String(entity.__popupAt);
+      const elapsed = Date.now() - entity.__popupAt;
+      // カード自体がrenderBattleScreen()の再構築(innerHTML=""での作り直し)で差し替わり、
+      // 表示中のポップアップごと消えてしまうことがある。その場合でも見た目上は同じ1回のポップアップに
+      // 見えるよう、経過時間分だけ負のanimation-delayでアニメーションを巻き戻して途中から再開させる
+      // (これをしないと、作り直しのたびにアニメーションが最初から再生され「2回表示された」ように見える)
+      pop.style.animationDelay = `-${elapsed}ms`;
+      el.appendChild(pop);
+      const remaining = 1500 - elapsed;
+      setTimeout(() => pop.remove(), Math.max(0, remaining));
+    }
+  }
+  // 吹き出しは.party-member/.enemy-cardの中には置かず、専用の全画面固定レイヤー(#speechBubbleLayer)に
+  // カード位置を実測して配置する(.party-barのスタッキングコンテキストの都合で、内部にどんな高い
+  // z-indexを置いても探索画面側の要素の手前に出せなかったための対策)
+  const layer = document.getElementById("speechBubbleLayer");
+  const existingBubble = layer.querySelector(`[data-speech-id="${targetId}"]`);
+  const withinWindow = entity.__speechAt && Date.now() - entity.__speechAt < SPEECH_BUBBLE_DURATION_MS;
+  if (withinWindow) {
+    const speechAtSnapshot = entity.__speechAt;
+    const alreadyShowingLatest = existingBubble && Number(existingBubble.dataset.speechAt) === speechAtSnapshot;
+    if (!alreadyShowingLatest) {
+      if (existingBubble) existingBubble.remove();
+      const bubble = document.createElement("div");
+      bubble.className = "speech-bubble";
+      bubble.textContent = entity.__speechText;
+      bubble.dataset.speechId = targetId;
+      bubble.dataset.speechAt = String(speechAtSnapshot);
+      layer.appendChild(bubble);
+      const fadeAnim = bubble.animate(
+        [
+          { opacity: 0, offset: 0 },
+          { opacity: 1, offset: 0.12 },
+          { opacity: 1, offset: 0.85 },
+          { opacity: 0, offset: 1 },
+        ],
+        { duration: SPEECH_BUBBLE_DURATION_MS, easing: "linear", fill: "forwards" }
+      );
+      const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - speechAtSnapshot);
+      setTimeout(() => { fadeAnim.cancel(); bubble.remove(); }, Math.max(0, remaining));
+    }
+    requestAnimationFrame(() => {
+      const freshEl = findVisibleCard(targetId);
+      const freshBubble = layer.querySelector(`[data-speech-id="${targetId}"][data-speech-at="${speechAtSnapshot}"]`);
+      if (!freshEl || !freshBubble) return;
+      const rect = freshEl.getBoundingClientRect();
+      // 自キャラ(味方)の吹き出しだけ、ユーザー指示によりさらに5px下にずらす(敵はそのまま)
+      const isPartySide = freshEl.classList.contains("party-member") || freshEl.classList.contains("carried-badge");
+      // 4人パーティの左端/右端キャラだと、キャラ中心に吹き出しを置くと画面外にはみ出て
+      // 文字が読めなくなることがあった。吹き出し自体の位置は画面内に収まるようクランプし、
+      // 矢印(::after)だけ--arrow-offsetでキャラの実際の中心へずらして指し示す
+      const desiredCenterX = rect.left + rect.width / 2;
+      const bubbleWidth = freshBubble.getBoundingClientRect().width;
+      const EDGE_MARGIN = 8;
+      const minCenter = EDGE_MARGIN + bubbleWidth / 2;
+      const maxCenter = window.innerWidth - EDGE_MARGIN - bubbleWidth / 2;
+      const clampedCenterX = Math.min(Math.max(desiredCenterX, minCenter), maxCenter);
+      const ARROW_EDGE_MARGIN = 12; // 矢印が吹き出しの丸角にめり込まないための余白
+      const maxArrowOffset = Math.max(0, bubbleWidth / 2 - ARROW_EDGE_MARGIN);
+      const arrowOffset = Math.min(Math.max(desiredCenterX - clampedCenterX, -maxArrowOffset), maxArrowOffset);
+      freshBubble.style.left = `${clampedCenterX}px`;
+      freshBubble.style.top = `${rect.top + (isPartySide ? 5 : 0)}px`;
+      freshBubble.style.setProperty("--arrow-offset", `${arrowOffset}px`);
+    });
+  } else if (existingBubble) {
+    existingBubble.remove();
+  }
+}
+// 現在、発狂(breakdown)以外の理由で吹き出しを表示中の仲間がいるかどうか。
+// 通常は同時に1人しか喋らない(発狂中のセリフだけこのミューテックスを無視して複数同時発言を許す)
+function anyoneSpeaking() {
+  const now = Date.now();
+  return fieldParty.some((c) => c.__speechAt && c.__speechCategory !== "breakdown" && now - c.__speechAt < SPEECH_BUBBLE_DURATION_MS);
+}
+// 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
+function trySpeak(speaker, category) {
+  // 担がれた側(瀕死でstatus==="critical")のセリフだけは例外的に許可する
+  const speakerOk = speaker && (speaker.status === "active" || (category === "carried" && speaker.status === "critical"));
+  if (!speakerOk) return false;
+  // breakdown(発狂)とallDefeated(全滅)は他のセリフより優先させるため、表示中の吹き出しがあっても構わず発言させる
+  const allowConcurrent = category === "breakdown" || category === "allDefeated";
+  if (!allowConcurrent && anyoneSpeaking()) return false;
+  // 変化の術で変身中は、性格ごとのセリフの代わりに鳴き声を喋る
+  const lines = speaker.transformForm
+    ? TRANSFORM_ANIMAL_SOUNDS[speaker.transformForm]
+    : DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
+  if (!lines || !lines.length) return false;
+  speaker.__speechText = lines[Math.floor(Math.random() * lines.length)];
+  speaker.__speechAt = Date.now();
+  speaker.__speechCategory = category;
+  renderVfxFor(speaker.id);
+  return true;
+}
+// 会心発生時の吹き出し判定(70%)。以前は攻撃成功時に一律の確率で発言していたが、
+// ユーザー指示で「会心が発生した時だけ」に置き換えた(通常攻撃/技どちらの会心でも共通)。
+// 命中させた本人か、ランダムな他の仲間のどちらかが発言する
+function maybeSpeakOnCrit(actor, wasCrit) {
+  if (!wasCrit) return;
+  if (Math.random() >= DIALOGUE_CHANCE.critHit) return;
+  setTimeout(() => {
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
+    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
+    else trySpeak(actor, "selfSkillHit");
+  }, 500);
+}
+// 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する
+function maybeSpeakHealed(target) {
+  if (Math.random() >= DIALOGUE_CHANCE.selfHealed) return;
+  setTimeout(() => trySpeak(target, "selfHealed"), 500);
+}
+// 敵を全滅させた直後に呼ぶ(通常攻撃/技どちらの撃破でも共通)。「全滅させた時」のセリフ(35%、
+// 他のセリフより優先=ミューテックスを無視して発言できる)を、最後に倒した本人(lastEnemyKillActor、
+// engine.js側で自動記録)が65%、別の生存中の仲間が35%の割合で抽選する。全滅していなければ何もしない
+function maybeSpeakAllDefeated() {
+  if (aliveEnemies().length > 0) return false;
+  if (Math.random() >= DIALOGUE_CHANCE.allDefeated) return false;
+  const killer = lastEnemyKillActor;
+  const others = fieldParty.filter((c) => c.status === "active" && (!killer || c.id !== killer.id));
+  if (killer && Math.random() < 0.65) trySpeak(killer, "allDefeated");
+  else if (others.length > 0) trySpeak(others[Math.floor(Math.random() * others.length)], "allDefeated");
+  else if (killer) trySpeak(killer, "allDefeated");
+  return true;
+}
+// 通常攻撃で敵を倒した直後に呼ぶ。全滅していれば全滅セリフを優先し、そうでなければ通常の撃破セリフ(25%)を抽選する
+function maybeSpeakOnKill(killer, target) {
+  if (!target || target.hp > 0) return;
+  if (maybeSpeakAllDefeated()) return;
+  if (Math.random() < DIALOGUE_CHANCE.normalKill) trySpeak(killer, "normalKill");
+}
+// ダメージ判定の前後でHPを比較し、瀕死ライン(30%)を新たに下回った瞬間だけ判定する(20%)。
+// 本人か、ランダムな他の仲間のどちらかが発言する
+function checkPinchTrigger(target, hpBefore) {
+  if (!target || target.status !== "active" || !(target.maxHp > 0)) return;
+  const wasAbove = hpBefore / target.maxHp > 0.3;
+  const nowAtOrBelow = target.hp / target.maxHp <= 0.3 && target.hp > 0;
+  if (!wasAbove || !nowAtOrBelow) return;
+  if (Math.random() >= DIALOGUE_CHANCE.pinch) return;
+  setTimeout(() => {
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== target.id);
+    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allyPinch");
+    else trySpeak(target, "selfPinch");
+  }, 500);
+}
+// 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)と、
+// ストレスを抱えている仲間の愚痴セリフ(20%、発狂=tier4は別枠で処理済みなのでtier1〜3のみ対象)を判定する
+function maybeSpeakOnFloorAdvance() {
+  const alive = fieldParty.filter((c) => c.status === "active");
+  if (alive.length === 0) return;
+  const avgLevel = alive.reduce((sum, c) => sum + c.level, 0) / alive.length;
+  if (currentFloor > avgLevel * DANGER_FLOOR_LEVEL_MULT && Math.random() < DIALOGUE_CHANCE.dangerFloor) {
+    trySpeak(alive[Math.floor(Math.random() * alive.length)], "dangerFloor");
+  }
+  if (Math.random() < DIALOGUE_CHANCE.stressFloor) {
+    const stressed = alive.filter((c) => { const t = stressTier(c.fatigue); return t >= 1 && t <= 3; });
+    if (stressed.length > 0) {
+      const speaker = stressed[Math.floor(Math.random() * stressed.length)];
+      const tier = stressTier(speaker.fatigue);
+      trySpeak(speaker, tier === 1 ? "stressLight" : tier === 2 ? "stressMid" : "stressHigh");
+    }
+  }
+}
+// entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す
+function shakeClassFor(entity) {
+  if (!entity.__shakeUntil || entity.__shakeUntil <= Date.now()) return "";
+  const intensityClass = entity.__shakeIntensity === "strong" ? "hit-shake-strong" : "hit-shake-normal";
+  return ` hit-shake hit-flash ${intensityClass}`;
+}
+// 状態異常/バフ/デバフアイコン1個分のHTMLを組み立てる。data-status属性にSTATUS_TOOLTIPSのキーを
+// 埋め込み、ホバー/長押しの説明表示(index.html下部のイベント委譲)から共通の辞書一発で拾えるようにする
+function statusIconHtml(key, value) {
+  const t = STATUS_TOOLTIPS[key];
+  if (!t || !ICONS[key]) return "";
+  return `<span class="status-icon" data-status="${key}">${ICONS[key]}${value != null ? `<span class="status-icon-value">${value}</span>` : ""}</span>`;
+}
+// 毒/炎上/スタン/沈黙/大技の構えの状態アイコンを名前の横に表示する
+function statusIconsFor(entity) {
+  let s = "";
+  if (entity.poison > 0) s += statusIconHtml("poison", entity.poison);
+  if (entity.burnTurns > 0) s += statusIconHtml("burn", entity.burnTurns);
+  if (entity.bleed > 0) s += statusIconHtml("bleed", entity.bleed);
+  if (entity.stunTurns > 0) s += statusIconHtml("stun");
+  if (entity.silenceTurns > 0) s += statusIconHtml("silence");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += statusIconHtml("tangle");
+  if (entity.bigAttackPending) s += statusIconHtml("bigAttackPending");
+  return s;
+}
+
+// ============ 状態異常アイコンの説明ツールチップ(PC:ホバー/スマホ:0.5秒長押し) ============
+// イベント委譲で実装しているため、.status-iconがどの画面のどのタイミングで描画されても
+// (再描画のたびにDOM要素が作り直されても)個別にイベントを貼り直す必要が無い
+const STATUS_TOOLTIP_FADE_MS = 100;
+let statusTooltipAnim = null;
+function showStatusTooltip(el) {
+  const info = STATUS_TOOLTIPS[el.dataset.status];
+  if (!info) return;
+  const tip = document.getElementById("statusTooltip");
+  tip.innerHTML = `<div class="status-tooltip-title">${ICONS[el.dataset.status] || ""} ${info.title}</div><div>${info.desc}</div>`;
+  tip.style.display = "block";
+  const rect = el.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const EDGE_MARGIN = 8;
+  let left = rect.left + rect.width / 2 - tipRect.width / 2;
+  left = Math.min(Math.max(left, EDGE_MARGIN), window.innerWidth - tipRect.width - EDGE_MARGIN);
+  let top = rect.top - tipRect.height - 8;
+  if (top < EDGE_MARGIN) top = rect.bottom + 8; // 画面上端に近い時だけアイコンの下側に出す
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+  if (statusTooltipAnim) statusTooltipAnim.cancel();
+  tip.style.opacity = "0";
+  statusTooltipAnim = tip.animate([{ opacity: 0 }, { opacity: 1 }], { duration: STATUS_TOOLTIP_FADE_MS, fill: "forwards" });
+}
+function hideStatusTooltip() {
+  if (statusTooltipAnim) { statusTooltipAnim.cancel(); statusTooltipAnim = null; }
+  document.getElementById("statusTooltip").style.display = "none";
+  statusTooltipShownFor = null;
+}
+// PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
+// pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
+document.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const el = e.target.closest(".status-icon");
+  if (el) showStatusTooltip(el);
+});
+document.addEventListener("pointerout", (e) => {
+  if (e.pointerType !== "mouse") return;
+  if (e.target.closest(".status-icon")) hideStatusTooltip();
+});
+// スマホ: タップで表示し、そのまま指を離しても消えない。もう一度同じアイコンをタップするか、
+// 画面のどこか他の場所をタップすると消える(以前の0.5秒長押し方式から変更)
+let statusTooltipShownFor = null; // 現在表示中の.status-icon要素(nullなら非表示)
+document.addEventListener("touchend", (e) => {
+  const el = e.target.closest(".status-icon");
+  if (el) {
+    if (statusTooltipShownFor === el) {
+      hideStatusTooltip();
+      statusTooltipShownFor = null;
+    } else {
+      showStatusTooltip(el);
+      statusTooltipShownFor = el;
+    }
+  } else if (statusTooltipShownFor) {
+    hideStatusTooltip();
+    statusTooltipShownFor = null;
+  }
+}, { passive: true });
+
+function playTransformEffect(onDone) {
+  playSfx("transform");
+  playSmokeBombEffect(onDone);
+}
+// 奉行所の依頼受注演出。①紙が少し拡大→②0.1秒静止→③印鑑が回転しながら落下→④着地の瞬間に
+// ヒットストップ+紙が揺れる+SE+埃→⑤朱印(受領)がインクの染み込みのように現れる→⑥印鑑が上へ戻る、
+// という一連の流れをsetTimeoutでの直列オーケストレーション(CSSアニメーション自体はクラス付与のみ)で作る
+const QUEST_STAMP_TIMINGS = { paperScaleMs: 120, holdMs: 100, sealFallMs: 320, hitstopMs: 60, markMs: 200, liftHoldMs: 250, finalWaitMs: 400 };
+function playQuestAcceptStamp(title, onDone) {
+  const overlay = document.getElementById("questAcceptStampOverlay");
+  const paper = document.getElementById("questStampPaper");
+  const seal = document.getElementById("questStampSeal");
+  const mark = document.getElementById("questStampMark");
+  const dust = document.getElementById("questStampDust");
+  document.getElementById("questStampPaperTitle").textContent = title;
+  // 前回分のクラスをリセットしてから表示する(同じアニメーションを毎回最初からやり直せるように)
+  paper.className = "quest-stamp-paper";
+  seal.className = "quest-stamp-seal";
+  mark.className = "quest-stamp-mark";
+  dust.className = "quest-stamp-dust";
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => {
+    paper.classList.add("scale-up"); // ①→②紙が少し拡大
+    setTimeout(() => {
+      // ③0.1秒静止の後、印鑑が落下
+      seal.classList.add("falling");
+      setTimeout(() => {
+        // ④着地の瞬間: 60msのヒットストップを置いてから、紙の揺れ+SE+埃をまとめて出す
+        setTimeout(() => {
+          paper.classList.add("impact-shake");
+          dust.classList.add("burst");
+          playSfx("quest_accept");
+          // ⑤朱印(受領)が現れる
+          mark.classList.add("show");
+          setTimeout(() => {
+            // ⑥印鑑が上へ戻る
+            seal.classList.add("retreat");
+            setTimeout(() => {
+              overlay.style.display = "none";
+              onDone();
+            }, QUEST_STAMP_TIMINGS.finalWaitMs);
+          }, QUEST_STAMP_TIMINGS.markMs);
+        }, QUEST_STAMP_TIMINGS.hitstopMs);
+      }, QUEST_STAMP_TIMINGS.sealFallMs);
+    }, QUEST_STAMP_TIMINGS.paperScaleMs + QUEST_STAMP_TIMINGS.holdMs);
+  });
+}
