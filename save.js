@@ -111,6 +111,10 @@ function loadState() {
       if (loaded.gunpowderStoreLevel == null) loaded.gunpowderStoreLevel = 0; // 旧セーブ用の初期値(火薬庫未建築)
       if (loaded.karakuriLevel == null) loaded.karakuriLevel = 0; // 旧セーブ用の初期値(からくり屋敷未建築)
       if (loaded.ferryLevel == null) loaded.ferryLevel = 0; // 旧セーブ用の初期値(渡し船未建築)
+      // 鍛冶屋の解禁制はこの機能追加より後から導入したため、それ以前のセーブは家レベルに関わらず
+      // 既に鍛冶屋を使えていた。互換性のため、旧セーブ(この項目が無い=既存プレイヤー)は
+      // 建築済み(1)扱いにする。新規セーブはdefaultState()通り0(未建築)から始まる
+      if (loaded.shopLevel == null) loaded.shopLevel = 1;
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値

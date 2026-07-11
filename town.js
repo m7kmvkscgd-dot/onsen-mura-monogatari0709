@@ -16,6 +16,7 @@ function hasAnyNewBuilding() {
     ["karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL], ["hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL],
     ["teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL], ["stableLevel", STABLE_UNLOCK_HOUSE_LEVEL],
     ["beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL], ["ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL],
+    ["shopLevel", SHOP_UNLOCK_HOUSE_LEVEL],
   ];
   return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0) && !state.seenUnlockedBuildings[key]);
 }
@@ -32,6 +33,7 @@ function renderTown() {
   // この機能追加前の既存セーブなので、旧来通り表示する側にフォールバックする)
   document.getElementById("townHireHint").style.display = (state.roster.length === 1 && state.tutorialEnabled !== false) ? "" : "none";
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
+  document.getElementById("toShopBtn").style.display = state.shopLevel ? "" : "none";
   document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
   document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
   playTownAreaBgm();
@@ -1192,6 +1194,7 @@ document.querySelectorAll(".facility-toggle").forEach((el) => {
 // appendChildで移動させるだけ(要素を作り直さないのでイベントハンドラや開閉状態を保持できる)
 const FACILITY_GROUP_DEFS = [
   { key: "magistrate", levelField: "magistrateLevel", unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL },
+  { key: "shop", levelField: "shopLevel", unlock: SHOP_UNLOCK_HOUSE_LEVEL },
   { key: "travelPrepShop", levelField: "travelPrepShopLevel", unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL },
   { key: "dojo", levelField: "dojoLevel", unlock: DOJO_UNLOCK_HOUSE_LEVEL },
   { key: "karakuri", levelField: "karakuriLevel", unlock: KARAKURI_UNLOCK_HOUSE_LEVEL },
@@ -1253,6 +1256,7 @@ function renderExtension() {
   const unlocksAtNextLevel = [];
   if ((state.dojoLevel || 0) === 0 && nextLevel === DOJO_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("道場");
   if (!state.magistrateLevel && nextLevel === MAGISTRATE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("奉行所");
+  if (!state.shopLevel && nextLevel === SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鍛冶屋");
   if (!state.travelPrepShopLevel && nextLevel === TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅支度屋");
   if (!state.bagShopLevel && nextLevel === BAG_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鞄屋");
   if (!state.watchtowerLevel && nextLevel === WATCHTOWER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("見張り台");
@@ -1287,6 +1291,7 @@ function renderExtension() {
   }
   markBuildingNewBadge("dojoLevel", "dojoNewBadge", level >= DOJO_UNLOCK_HOUSE_LEVEL, dojoLevel >= 1);
   renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level, "magistrateNewBadge");
+  renderSimpleBuilding("shopLevel", "shopBuildBtn", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST, level, "shopNewBadge");
   renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
   renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level, "bagShopNewBadge");
   renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge");
@@ -1354,6 +1359,7 @@ document.getElementById("dojoBuildBtn").onclick = () => {
   renderExtension();
 };
 document.getElementById("magistrateBuildBtn").onclick = () => buildSimpleBuilding("magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST);
+document.getElementById("shopBuildBtn").onclick = () => buildSimpleBuilding("shopLevel", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST);
 document.getElementById("travelPrepShopBuildBtn").onclick = () => buildSimpleBuilding("travelPrepShopLevel", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST);
 document.getElementById("bagShopBuildBtn").onclick = () => buildSimpleBuilding("bagShopLevel", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST);
 document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuilding("watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST);
