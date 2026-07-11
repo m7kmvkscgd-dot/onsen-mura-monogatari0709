@@ -1,0 +1,1304 @@
+  :root {
+    --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
+    --text: #e8ecea; --text-muted: #9aa79f; --accent: #c9a24a;
+    --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #7A1F2B; --hp-critical: #d1503f;
+    --danger: #d1503f;
+    --panel: rgba(20,24,27,0.72); --panel-2: rgba(28,34,38,0.6);
+    /* 角丸のスケール。サムネイル画像/バッジ/カード/大枠の5段階に集約し、4/5/6/8/10/11/12/16/18pxが
+       近似値のまま混在していた状態を整理した */
+    --radius-xs: 6px; --radius-sm: 8px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+
+    /* ============ 和風UIデザインシステム(2026-07-10 全面統一) ============
+       ユーザー指定のデザインルール一式をトークン化。「和風・高級感・情報量は多いがスッキリ」を
+       基準に、色/余白/カード/ボタン/文字/アニメーション速度をこのファイル全体で共有する */
+    --dw-gold: #d7b66f; --dw-success: #6ea95b; --dw-danger: #c95d54; --dw-info: #7b93b9; --dw-desc: #9d998e;
+    --dw-card-bg: #2f3540; --dw-card-border: #5d4d35; --dw-card-shadow: 0 6px 18px rgba(0,0,0,.28);
+    --dw-btn-bg: #7b5d36; --dw-btn-hover: #937148;
+    --dw-title-color: #f3e7c6; --dw-heading-color: #ead8ab; --dw-body-color: #ece8dc; --dw-caption-color: #b6b0a2;
+    /* 画面共通余白 */
+    --dw-space-side: 16px; --dw-space-vert: 14px; --dw-space-card-gap: 12px; --dw-space-section: 20px;
+    /* ヘッダー */
+    --dw-header-h: 56px;
+    /* アニメーション速度(ボタン/カード展開/画面切替/ハンコ/ダメージ/会心/敵出現) */
+    --dw-t-btn: 100ms; --dw-t-card: 180ms; --dw-t-screen: 220ms; --dw-t-stamp: 350ms; --dw-t-dmg: 180ms; --dw-t-crit: 250ms; --dw-t-enemy: 250ms;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    touch-action: manipulation; /* ボタン連打時にダブルタップとみなされて画面がズームされるのを防ぐ */
+  }
+  body {
+    background: var(--bg); color: var(--dw-body-color);
+    font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    margin: 0; padding: 0; line-height: 1.5;
+  }
+  /* .hero/.dungeon-bg/.battle-bgは全てheight:100vh;height:100dvh;(アドレスバーの表示/非表示で
+     変わる実際の可視領域に追従)なのに対し、.wrapだけ100vh(アドレスバー非表示時の最大値扱い)のままだと、
+     アドレスバー表示中は.wrapの方が.heroより長くなり、その差分だけ下にスクロールできてしまい、
+     何も描画されていない<body>の背景(黒)が見えてしまう不具合があった。同じdvh対応にして揃える */
+  .wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .screen { display: none; flex-direction: column; flex: 1; position: relative; }
+  /* 画面切り替え時にふわっとフェードインさせる。opacityのみのアニメーションなので
+     position:fixedの子要素(.hero/.dungeon-bg/.battle-bg等)の基準位置には一切影響しない
+     (transformとは異なりopacityはfixed要素の containing block を作らないため安全) */
+  .screen.active { display: flex; animation: screenFadeIn var(--dw-t-screen) ease-out; }
+  @keyframes screenFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  /* 勝利/敗北の告知バナー。同じ入れ物を使い回すが、victory/defeatで背景・文字色・尺・動きを
+     完全に分ける(ユーザー指定: 演出/色/SEを勝敗で共有しない)。z-indexは汎用確認モーダル(80)より
+     さらに前面(96)にして、戦闘画面のどの要素よりも必ず上に出るようにしている */
+  .result-banner-overlay {
+    position: fixed; inset: 0; z-index: 96; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; transition: background 0.3s ease-out;
+  }
+  .result-banner-overlay.victory { background: rgba(24,18,6,0.32); }
+  .result-banner-overlay.defeat { background: rgba(4,4,5,0.95); }
+  .result-banner-text { font-weight: 900; letter-spacing: 0.2em; opacity: 0; }
+  .result-banner-text.victory {
+    font-size: 2.6rem; color: var(--dw-gold, #d7b66f);
+    text-shadow: 0 0 24px rgba(215,182,111,0.55), 0 4px 10px rgba(0,0,0,0.7);
+    animation: victoryBannerPop 550ms cubic-bezier(0.2,0.9,0.3,1) forwards;
+  }
+  @keyframes victoryBannerPop {
+    0% { opacity: 0; transform: scale(1.5); }
+    35% { opacity: 1; transform: scale(0.94); }
+    50% { transform: scale(1.03); }
+    65%, 82% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+  .result-banner-text.defeat {
+    font-size: 2rem; color: #8f8b85; letter-spacing: 0.4em;
+    text-shadow: 0 4px 14px rgba(0,0,0,0.8);
+    animation: defeatBannerFade 2300ms ease-in-out forwards;
+  }
+  @keyframes defeatBannerFade {
+    0% { opacity: 0; transform: translateY(6px); }
+    25%, 78% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(0); }
+  }
+  /* リザルト画面: 収穫/経験値を一気に出さず、順番にふわっと浮かび上がらせる */
+  .result-fade { opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
+  .result-fade.reveal-in { opacity: 1; transform: translateY(0); }
+  .result-xp-row { opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
+  .result-xp-row.reveal-in { opacity: 1; transform: translateY(0); }
+  /* 敗北時のリザルト画面: 金色の祝祭感を消し、彩度を落とした配色に切り替える */
+  #screen-result.is-defeat #resultGold { color: var(--dw-caption-color, #b6b0a2) !important; }
+  #screen-result.is-defeat #resultHeroTitle { color: #cfc9bd; }
+  .hero {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    background-size: cover; background-position: center;
+    padding: 1.2rem 1rem 0; display: flex; flex-direction: column; justify-content: flex-start;
+    z-index: 0;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.03) 0%, rgba(20,24,27,0.5) 100%);
+  }
+  /* パーティ編成画面(出発直前)は門イラストの背景をそのまま見せたいため、共通の暗いグラデーションを外す */
+  #partySelectHero::before { background: none; }
+  .hero > * { position: relative; z-index: 1; }
+  /* パーティ編成画面の出発演出で背景だけをscale/translateさせるための内側レイヤー(dungeon-bg-innerと
+     同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
+     さらに奥(z-index:-1)に配置する */
+  .hero-bg-inner { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; }
+  .hero h1 { font-size: 22px; font-weight: 700; color: var(--dw-title-color); margin: 0 0 0.3rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  /* ============ 全画面共通ヘッダー(戦闘・探索を除く) ============
+     戻る(左)/タイトル(中央)/所持金・時刻(右)の位置を全画面で完全に統一する。
+     .heroの最上部56pxに重ねる帯で、既存のhero画像・body-padの構造自体は変えない
+     (「レイアウトを極力維持」の指示に沿い、上に薄い帯を1枚重ねるだけの追加要素にしてある) */
+  .dw-header {
+    position: relative; z-index: 2; height: 56px; display: flex; align-items: center;
+    padding: 0 16px; gap: 0.5rem;
+    background: linear-gradient(to bottom, rgba(10,10,8,0.55), rgba(10,10,8,0));
+  }
+  .dw-header-back {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(10,10,8,0.4); color: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .dw-header-back:active { transform: scale(.9); filter: brightness(.8); }
+  .dw-header-back svg { width: 18px; height: 18px; }
+  .dw-header-title {
+    flex: 1; min-width: 0; text-align: center; font-size: 18px; font-weight: 700;
+    color: var(--dw-title-color); text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dw-header-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; min-width: 44px; }
+  .dw-header-gold { font-size: 0.82rem; font-weight: 700; color: var(--dw-gold); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .dw-header-time { font-size: 0.68rem; color: #d9d5c8; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  /* ヘッダー導入後、hero内の旧h1(画面によっては残置)は二重表示を避けるため隠す */
+  .hero.has-dw-header h1 { display: none; }
+  .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
+  .hero-title-row h1 { margin: 0; }
+  .time-of-day-label { font-size: 1.3rem; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
+  .time-skip-btn {
+    background: none; border: none; font-size: 1.1rem; margin-left: 0.4rem; padding: 0.1rem 0.3rem;
+    cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+  }
+  .time-skip-btn:active { transform: scale(0.9); }
+  /* 時間を進めるピッカー/演出オーバーレイ */
+  #timeSkipOverlay { position: fixed; inset: 0; z-index: 55; background: rgba(10,12,14,0.92); display: none; }
+  .time-skip-picker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 380px; text-align: center; }
+  .time-skip-picker h3 { color: var(--accent); margin: 0 0 1rem; font-size: 1.1rem; }
+  .time-skip-duration { font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 1.2rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .time-skip-stepper { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
+  .time-skip-stepper button { flex: 1; }
+  #timeSkipAnimView { position: absolute; inset: 0; display: none; }
+  .time-skip-clock {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
+    font-size: 1.6rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); white-space: nowrap;
+  }
+  .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+  .gold { font-weight: 700; color: var(--accent); }
+  /* 所持中の支援物資アイコン。野営具→回復薬→煙玉の順、最大11個(野営具1+回復薬/煙玉合計10)を
+     1行8個までで折り返し、最大量でも2行に収まるようにしてある */
+  /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
+  .owned-supply-icons { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-width: 296px; height: 68px; margin: 0.3rem 0 0.8rem; }
+  .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
+  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
+  .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
+  /* 町画面はボタン4つだけで縦にスクロールする必要が無いため、パネルを外して
+     背景がそのまま透けて見える固定配置にする(ボタン自体は不透明のまま) */
+  #screen-town .body-pad {
+    position: fixed; bottom: calc(243px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; z-index: 1;
+    background: transparent; border-radius: 0; margin-top: 0; top: auto;
+    padding: 0 1rem; flex: none;
+  }
+  /* 宿屋画面は名簿+仲間作成で縦に長く、下部のボタンが画面最下部に来て押しにくいため、下側に大きめの余白を追加 */
+  #screen-tavern .body-pad { padding-bottom: calc(1rem + 220px); }
+  /* 町画面のボタンは2x2で、それぞれ文字数に合わせた大きさの箱にする(全幅ボタンにしない) */
+  #screen-town .btn-col {
+    display: grid; grid-template-columns: repeat(2, auto); gap: 0.7rem;
+    justify-content: start; margin-top: 0;
+  }
+  /* 施設ボタンは全体の90%サイズ(実機で大きすぎるとの指摘)。widthだけでなく高さ・余白・文字・
+     アイコンも同じ比率で縮小し、単純なtransform:scaleではなく実寸で縮めている(scaleだと
+     グリッドのセル自体は縮まずボタン周りに不自然な余白が残るため) */
+  #screen-town .btn-col button.big {
+    width: 135px; white-space: nowrap; padding: 0.81rem 0.45rem; min-height: 48px;
+    font-weight: 700; font-size: 13.5px; border-radius: 13px;
+  }
+  #screen-town .btn-icon { margin-right: 11px; }
+  #screen-town .btn-icon img { height: 29px; }
+  /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
+     .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
+  .btn-icon { display: inline-flex; align-items: center; flex-shrink: 0; vertical-align: -3px; margin-right: 12px; }
+  .btn-icon svg { width: 16px; height: 16px; }
+  /* 町の施設アイコン(支給された和風イラストPNG)。文字より一回り大きく、影を薄く落として
+     背景美術に馴染みつつも存在感を持たせる */
+  .btn-icon img { height: 32px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  /* ボタンの質感: 「和風の木札」。木目テクスチャ画像は使わず、上部を薄く明るく・下部を薄く暗くする
+     グラデーション(--dw-btn-sheen)を色ベースの背景に重ねるだけで立体感を出す。焦げ茶の枠線+内側の
+     ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
+  :root { --dw-btn-sheen: linear-gradient(to bottom, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 14%, rgba(0,0,0,0) 46%, rgba(0,0,0,.16) 100%); --dw-btn-border: #3a2a17; }
+  button.big {
+    min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 2px solid var(--dw-btn-border);
+    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: 600; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;
+  }
+  @media (hover: hover) {
+    button.big:hover:not(:disabled) { background: var(--dw-btn-sheen), var(--dw-btn-hover); }
+  }
+  /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる+内側に沈み込むシャドウ)。filterでの明度調整は
+     button.big単体でも.primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに
+     個別の:active色を用意する必要がない(全ボタン共通の1ルールで統一できる) */
+  button.big:active { transform: scale(.97); filter: brightness(.88); box-shadow: inset 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
+  button.primary { background: var(--dw-btn-sheen), #e3c583; color: #241d0a; border-color: #f2dfa6; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 16px rgba(0,0,0,.42); }
+  @media (hover: hover) {
+    button.primary:hover:not(:disabled) { background: var(--dw-btn-sheen), #ecd093; }
+  }
+  button.danger { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
+  /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
+     切り替わったことが一目でわかるようにする */
+  button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .card {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
+    box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
+  }
+  .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+  .roster-row.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
+  .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
+  .detail-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.55rem 0.8rem; font-size: 0.8rem; cursor: pointer; }
+  .roster-actions { display: flex; flex-direction: column; gap: 0.3rem; }
+  .skill-pending-btn { background: #8a5fd6; border: 1px solid #8a5fd6; color: #fff; border-radius: var(--radius-xs); padding: 0.3rem 0.5rem; font-size: 0.68rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .skill-entry { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; cursor: pointer; }
+  .skill-entry-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; }
+  .skill-entry-side { color: var(--text-muted); font-size: 0.7rem; }
+  .skill-entry-desc { display: none; font-size: 0.78rem; color: var(--text-muted); margin: 0.4rem 0 0; }
+  .skill-entry.open .skill-entry-desc { display: block; }
+
+  /* スキル選択画面(宿屋の名簿から開く「系譜」一覧)。XCOM風のレイアウトを、温泉宿らしい金・焦げ茶の配色に置き換えている */
+  .skill-tree-header { text-align: center; margin-bottom: 1rem; }
+  .skill-tree-charname { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+  .skill-tree-classname { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
+  .skill-tree-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0.7rem 0 0; }
+  /* 左右ツリーの通り名(剣豪/明鏡など)。下の系譜一覧と同じ列幅(レベルバッジ42px分)で
+     左右に振り分けて表示し、「かっこいい見出し」として金色+レタースペーシングで強調する */
+  .skill-tree-names { display: flex; align-items: center; gap: 0.4rem; margin: 1rem 0 0.2rem; }
+  .skill-tree-name { flex: 1; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .skill-tree-name.left { text-align: left; padding-left: 0.3rem; }
+  .skill-tree-name.right { text-align: right; padding-right: 0.3rem; }
+  .skill-tree-name-spacer { flex: 0 0 42px; width: 42px; }
+  .skill-tree-rows { border-top: 1px solid var(--border); }
+  .skill-tree-row-wrap { border-bottom: 1px solid var(--border); }
+  .skill-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; }
+  .skill-tree-row.pending { background: var(--accent-soft); border-radius: var(--radius-sm); padding-left: 0.3rem; padding-right: 0.3rem; }
+  .skill-tree-level-badge {
+    flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.68rem;
+    background: rgba(20,24,27,0.5);
+  }
+  .skill-tree-row.locked .skill-tree-level-badge { border-color: var(--border); color: var(--text-muted); }
+  .skill-tree-row.pending .skill-tree-level-badge { box-shadow: 0 0 8px rgba(201,162,74,0.7); }
+  .skill-tree-opt { flex: 1; background: none; border: none; padding: 0.4rem 0.3rem; cursor: pointer; text-align: left; border-radius: var(--radius-xs); }
+  .skill-tree-opt.right { text-align: right; }
+  .skill-tree-opt-name { font-size: 0.8rem; line-height: 1.3; }
+  .skill-tree-opt.chosen .skill-tree-opt-name { color: var(--accent); font-weight: 700; }
+  .skill-tree-opt.rejected .skill-tree-opt-name { color: var(--text-muted); opacity: 0.6; }
+  .skill-tree-opt.locked .skill-tree-opt-name { color: var(--text-muted); opacity: 0.4; }
+  .skill-tree-opt.pending-choice { background: rgba(28,34,38,0.7); }
+  .skill-tree-opt.pending-choice:active { background: var(--accent-soft); }
+  .skill-tree-inline-detail { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surface-2); }
+  .skill-tree-inline-detail h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.85rem; }
+  .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
+  .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
+  .stat-row span:first-child { color: var(--text-muted); }
+  .mpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a7fd1; transition: width 0.4s ease; }
+  /* MP版の回復トレイル(hpbar-heal-trailと同じ考え方。緑ならぬ青は即座に伸び、この淡い水色が回復前の
+     残量から追いつくように少し遅れて伸びる)。data-hp-heal-trailを共有しているのでactivateHpTrails()が
+     そのままアニメーションさせてくれる */
+  .mpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #BFD9FF; }
+  .roster-row img:not(.stress-overlay) { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); background: var(--surface-2); }
+  .roster-info { flex: 1; }
+  /* ストレスの見た目表現: バーではなくキャラアイコンに落書き風の透過イラストを段階的に重ねる */
+  .stress-wrap { position: relative; }
+  .stress-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 2; }
+  /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に重ねる(ユーザー指示で従来の1.3倍) */
+  .carried-badge {
+    position: absolute; top: -6px; right: -6px; width: 36%; aspect-ratio: 1/1;
+    object-fit: cover; object-position: top; border-radius: 50%;
+    border: 2px solid var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.5); z-index: 3;
+    transition: top 0.3s ease, right 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+  }
+  .roster-row .stress-wrap { display: block; width: 44px; height: 44px; flex-shrink: 0; }
+  .party-member .stress-wrap { display: block; width: 100%; }
+  /* ============ ステータス詳細画面(「情報を見る画面」ではなく「眺めたくなる画面」) ============
+     立ち絵を主役にするため96px→132px(約38%増)に拡大し、専用カードで名前直下の余白を整理。
+     ステータス表は罫線を全廃して余白のグルーピングのみで区切る方針にしてある */
+  .status-portrait-wrap { position: relative; display: inline-block; width: 132px; height: 132px; }
+  .status-portrait-wrap .stress-overlay { border-radius: var(--radius-sm); }
+  .status-portrait-card { text-align: center; animation: statusPortraitIn 0.2s ease-out; }
+  @keyframes statusPortraitIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .status-portrait-meta { margin-top: 0.6rem; }
+  .status-portrait-class { font-size: 15px; font-weight: 700; color: var(--dw-heading-color); }
+  .status-portrait-personality { font-size: 13px; color: var(--dw-caption-color); margin-top: 0.15rem; }
+  /* カードの登場演出(下から8pxスライド+フェード)。screen.activeのフェードと重ねても違和感が
+     ないよう控えめな移動量にしてある */
+  .status-card-in { animation: statusCardIn var(--dw-t-card) ease-out; }
+  @keyframes statusCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .status-basic-row { display: flex; justify-content: space-between; padding: 0.2rem 0; font-size: 13px; color: var(--dw-caption-color); }
+  .status-basic-row + .status-basic-row { margin-top: 0.1rem; }
+  .status-stat-list { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--dw-card-border); }
+  .status-stat-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0; }
+  .status-stat-icon { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--dw-caption-color); }
+  .status-stat-label { flex: 1; font-size: 15px; color: var(--dw-body-color); }
+  .status-stat-value { font-size: 15px; font-weight: 700; color: var(--dw-body-color); font-variant-numeric: tabular-nums; }
+  .status-stat-row.is-hp .status-stat-icon, .status-stat-row.is-hp .status-stat-value { color: var(--dw-success); }
+  .status-stat-row.is-mp .status-stat-icon, .status-stat-row.is-mp .status-stat-value { color: var(--dw-info); }
+  .status-stat-row.is-stress .status-stat-icon, .status-stat-row.is-stress .status-stat-value { color: var(--dw-danger); }
+  .status-xp-value { color: var(--dw-gold); font-weight: 700; }
+  /* 習得スキル: 未習得(まだ到達していないレベル)は「？？？ Lv◯で習得」のプレースホルダーにして
+     レベルアップの楽しみを持たせる。開けない箱のような見た目にするため文字を薄くしてある */
+  .skill-entry.locked { cursor: default; opacity: 0.55; }
+  .skill-entry.locked:active { transform: none; }
+  .skill-entry-mystery { letter-spacing: 0.15em; }
+  /* ボタンの優先度: スキル系譜(primary)を最も目立たせ、戻るは控えめなゴースト調、解雇は危険色だが
+     小さめ+上に余白を大きく取って誤タップを防ぐ */
+  .status-back-btn-bottom { background: transparent; box-shadow: none; color: var(--dw-caption-color); font-weight: 600; }
+  .status-dismiss-btn {
+    display: block; margin: 1.6rem auto 0; padding: 0.4rem 0.9rem; min-height: auto;
+    background: transparent; border: 1px solid var(--dw-danger); color: var(--dw-danger);
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .status-dismiss-btn:active { transform: scale(.97); filter: brightness(1.3); }
+  .roster-name { font-weight: 700; font-size: 0.88rem; }
+  .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
+  .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }
+  .status-tag.active { background: #234a2e; color: #7fe0a0; }
+  .status-tag.critical { background: #4a2323; color: #e08787; }
+  .status-tag.lost { background: #333; color: #888; }
+  .status-tag.bathing { background: #1f3a4a; color: #7fd4f0; border: 1px solid #3a7a95; }
+  /* 入浴中が終わった後、次の遠征まで持ち越すバフ名表示。湯上がりのぽかぽかした雰囲気を出すため暖色系の配色にしてある */
+  .status-tag.onsen-buffed { background: linear-gradient(135deg, #4a2a1f, #6b3a1f); color: #ffbe7a; border: 1px solid #d98a3d; }
+  .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
+  .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }
+  .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
+  .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
+  .class-pick span { display: block; font-size: 0.68rem; margin-top: 0.2rem; }
+  input[type="text"] {
+    width: 100%; padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font-size: 0.9rem;
+  }
+  h2 { font-size: 18px; font-weight: 700; margin: 0 0 0.5rem; color: var(--dw-heading-color); }
+  .shop-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .shop-item > div:first-child { flex: 1; min-width: 0; }
+  .shop-item button { flex-shrink: 0; }
+  .shop-item .desc { font-size: 0.72rem; color: var(--text-muted); }
+  .equip-class-card {
+    background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
+    box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
+  }
+  .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--dw-heading-color); }
+  .equip-class-title img { width: 32px; height: 32px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); }
+  /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
+     見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
+     地味な一覧だった) */
+  .first-char-carousel { display: flex; flex-direction: column; align-items: center; }
+  .first-char-photo-wrap { position: relative; width: 100%; max-width: 300px; margin: 0 auto 0.7rem; }
+  .first-char-photo {
+    display: block; width: 100%; aspect-ratio: 4 / 3.3; object-fit: cover; object-position: top;
+    border-radius: var(--radius-lg); border: 2px solid var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+    background: var(--surface-2); animation: firstCharPhotoIn 220ms ease-out;
+  }
+  @keyframes firstCharPhotoIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .first-char-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: none;
+    border-radius: 50%; background: rgba(20,24,27,0.68); color: var(--text); font-size: 1.5rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .first-char-arrow:active { transform: translateY(-50%) scale(0.9); }
+  .first-char-arrow.left { left: -6px; }
+  .first-char-arrow.right { right: -6px; }
+  .first-char-dots { display: flex; gap: 0.35rem; justify-content: center; margin-bottom: 0.6rem; }
+  .first-char-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+  .first-char-dot.active { background: var(--accent); }
+  .first-char-name { font-size: 1.35rem; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+  .first-char-desc { font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 0.7rem; }
+  .first-char-skills { width: 100%; margin-bottom: 0.9rem; }
+  .first-char-skills .skill-row { font-size: 0.76rem; margin-bottom: 0.25rem; }
+  .first-char-skills .skill-row .skill-name { color: var(--accent); font-weight: 700; }
+  .first-char-choose-btn { width: 100%; }
+  /* 町画面: 名簿が1人しかいない間だけ、宿屋ボタンの上に表示する案内。.body-padの通常の
+     流し込みで.btn-colの直前に置くことで、既存の固定位置調整をそのまま利用する */
+  #townHireHint {
+    text-align: center; color: #fff; font-size: 0.95rem; font-weight: 700;
+    background: rgba(0,0,0,0.75); border: 1px solid var(--accent); border-radius: var(--radius-md);
+    padding: 0.5rem 0.8rem; margin-bottom: 0.6rem;
+  }
+  .hire-hint-arrow { display: inline-block; color: #ff5a3c; font-size: 1.2rem; margin-right: 0.3rem; animation: hireHintBounce 1.1s ease-in-out infinite; }
+  @keyframes hireHintBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+  /* 武器/防具/価格ボタンを一直線に揃える。infoブロックにflex:1+min-width:0を与えて
+     長い説明文があっても価格ボタン側が押し出されない(浮かない)ようにしてある */
+  .equip-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
+  .equip-row-info { flex: 1; min-width: 0; }
+  .equip-row button { flex-shrink: 0; }
+  .equip-row .desc { font-size: 13px; color: var(--dw-caption-color); }
+  /* 出発準備画面: 支援物資/パーティ/出発の3ブロックを視覚的に完全分離するための区切り線 */
+  .dw-divider { border: none; border-top: 1px solid var(--dw-card-border); margin: 16px 0; }
+  .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
+  /* 購入した瞬間、その職業のキャラカードにキラッと一瞬光る演出を足す(新機能ではなく既存の
+     購入フローへの微演出追加、ダメージ180ms/会心250msの系統に合わせ500ms程度で「間」を作る) */
+  @keyframes equipPurchaseGlint {
+    0% { filter: brightness(1) drop-shadow(0 0 0 rgba(215,182,111,0)); }
+    35% { filter: brightness(1.7) drop-shadow(0 0 12px rgba(215,182,111,0.95)); }
+    100% { filter: brightness(1) drop-shadow(0 0 0 rgba(215,182,111,0)); }
+  }
+  .equip-class-title img.purchase-glint { animation: equipPurchaseGlint 500ms ease-out; }
+  /* 増築(施設一覧): 説明文を折りたたみ化して一覧を25%ほどコンパクトにし、スクロールしやすくする。
+     見出しをタップすると開閉する(スキル系譜のskill-entryと同じ「タップで開く」操作感に揃えた) */
+  .facility-toggle { cursor: pointer; display: flex; align-items: center; }
+  .facility-caret { margin-left: auto; color: var(--dw-caption-color); font-size: 0.8rem; transition: transform var(--dw-t-card) ease-out; flex-shrink: 0; }
+  .facility-toggle.open .facility-caret { transform: rotate(180deg); }
+  .facility-desc { display: none; }
+  .facility-toggle.open + .facility-desc { display: block; }
+  /* 施設一覧の3グループ化(建築可能/建築済み/未解放)。建築可能だけ最初から展開しておき、
+     残り2グループは見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
+  .facility-group-heading { cursor: pointer; display: flex; align-items: center; color: var(--dw-caption-color); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+  .facility-group-count { font-size: 12px; color: var(--dw-caption-color); margin-left: 0.35rem; font-weight: 400; }
+  .facility-group-body { display: none; }
+  .facility-group-body.open { display: block; }
+  .facility-group-heading.open .facility-caret { transform: rotate(180deg); }
+  .party-bar {
+    /* 戦闘画面・探索画面のどちらでも自キャラの表示位置が変わらないよう、同じtop値を共有する。
+       transform: translateZ(0)は以前ここに付いていたが、.enemy-row(position:relativeのみで
+       transformを持たない)には対応する常時transformが無い非対称な作りになっており、常時transform
+       を持つこの要素が独自の合成レイヤーを持ち続けることで、bar.innerHTML=""による頻繁な再構築と
+       組み合わさってiOS Safariで子要素/関連要素の再描画が更新されなくなる不具合の原因になっていた
+       可能性が高いため外した(translateX(-50%)は中央寄せに必須なので残す) */
+    position: fixed; top: 284px; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 480px; z-index: 4;
+    display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); justify-content: center;
+  }
+  /* transform:translateZ(0)を常時ではなく.acting/:active等の個別状態だけに限定してある。
+     常時transformを持たせると要素が独自のスタッキングコンテキスト/合成レイヤーを持ち続けることになり、
+     iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
+     再描画・位置取得が更新されなくなる不具合の原因になっていた可能性が高いため外した */
+  .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: var(--radius-sm); padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+  /* 行動中のキャラは金枠の発光+ごくわずかな浮遊を重ねて、派手すぎない上品な強調にする */
+  .party-member.acting {
+    border-color: var(--accent); background: rgba(201,162,74,0.18);
+    animation: actingGlow 2.4s ease-in-out infinite, actingFloat 2.4s ease-in-out infinite;
+  }
+  @keyframes actingGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
+    50% { box-shadow: 0 0 15px rgba(201,162,74,0.75); }
+  }
+  @keyframes actingFloat {
+    0%, 100% { transform: translateY(-10px) translateZ(0); }
+    50% { transform: translateY(-13px) translateZ(0); }
+  }
+  .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
+  .party-member.targetable { cursor: pointer; border-color: rgba(76,175,111,0.75); box-shadow: 0 0 10px rgba(76,175,111,0.5); animation: targetPulseAlly 1.1s ease-in-out infinite; }
+  .party-member.targetable:active { transform: scale(0.94) translateZ(0); }
+  @keyframes targetPulseAlly {
+    0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
+    50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
+  }
+  .party-member img:not(.stress-overlay):not(.carried-badge) { width: 100%; aspect-ratio: 1/1; object-fit: cover; object-position: top; border-radius: var(--radius-xs); background: var(--surface-2); }
+  .party-member.dead img { filter: grayscale(1) brightness(0.4); }
+  /* 高さを少し太くし、黒い縁+上側だけ薄いハイライトを加えて立体感/高級感を出す
+     (::afterのハイライト帯はfill/trail要素より後のスタッキングで自動的に最前面に来る) */
+  .hpbar-track { background: #3a3a3a; border-radius: var(--radius-pill); height: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
+  .hpbar-track::after {
+    content: ""; position: absolute; inset: 0; height: 45%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.24), rgba(255,255,255,0));
+    pointer-events: none; z-index: 2;
+  }
+  /* 被弾時、緑は即座に新しい残量へ落とし、赤(hpbar-fill-trail)は被弾前の残量から緑の位置までゆっくり追いつくように減っていく。
+     アニメーション自体はCSS transitionではなくJS(element.animate())側で制御しているのでwidthのtransitionは指定しない */
+  .hpbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp-low); }
+  .hpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--hp); transition: background-color 0.3s; }
+  .hpbar-fill.low { background: var(--hp-critical); }
+  /* 回復時、緑は即座に新しい残量へ伸ばし、この淡いシアンのゲージは回復前の残量から緑の位置まで
+     少し遅れて追いつくように伸びる(赤のhpbar-fill-trailとは逆方向・別要素)。.hpbar-fillより後の
+     DOM順で描画するため上に重なり、追いつくまでの間だけ見えて、完了後は非表示にする */
+  .hpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #B8FFF5; }
+  .mpbar-track { position: relative; background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
+  .fatigue-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 3px; overflow: hidden; margin-top: 0.15rem; }
+  .fatigue-fill { height: 100%; background: #b06a2a; }
+  /* リザルト画面の経験値バー: 今回の冒険より前からの分(xpbar-fill)と、今回新たに得た分(xpbar-gain、明るい色で強調)の2色重ね */
+  .xpbar-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.35rem; position: relative; }
+  .xpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a6f8f; }
+  .xpbar-gain { position: absolute; top: 0; height: 100%; background: #ffd76a; }
+  .levelup-badge {
+    margin-top: 0.4rem; padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.82rem; font-weight: 700; text-align: center; letter-spacing: 0.03em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes levelupPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,106,0); }
+    50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(255,215,106,0.6); }
+  }
+  .levelup-badge-small {
+    display: inline-block; margin-top: 0.2rem; padding: 0.12rem 0.5rem; border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #ffd76a, #ffb84d); color: #3a2a00;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+    animation: levelupPulse 1.2s ease-in-out infinite;
+  }
+  /* 新しく建築可能になった施設/雇えるようになった職業に付ける「NEW」バッジ。レベルアップバッジ(黄色)とは
+     意図的に別の色(赤〜オレンジ)にして「まだ見ていない新着」であることを視覚的に区別している。
+     一度画面を表示すると自動的に非表示化される(state.seenUnlockedBuildings/seenUnlockedClassesに記録) */
+  .new-badge {
+    display: inline-block; margin-left: 0.3rem; padding: 0.1rem 0.45rem; border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #ff6a4d, #d1503f); color: #fff;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; vertical-align: middle;
+    animation: newBadgePulse 1.1s ease-in-out infinite;
+  }
+  @keyframes newBadgePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(209,80,63,0); }
+    50% { transform: scale(1.12); box-shadow: 0 0 8px rgba(255,106,77,0.7); }
+  }
+  .class-pick { position: relative; }
+  .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
+  .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+  /* 町画面の所持金表示。背景に埋もれて見にくいという指摘を受け時計の下に移動しつつ、
+     枠のバッジ風デザインは「ダサい」との指摘で撤去し、文字を少し大きく+影を強めるだけにした */
+  .town-gold-badge {
+    display: inline-block; font-size: 1.1rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+    background: rgba(0,0,0,.35); padding: 0.2rem 10px; border-radius: var(--radius-sm);
+  }
+  /* 日付/時刻の行は画面左端に寄りすぎていたため、施設アイコンの列と縦のラインを合わせる程度に右へ寄せる */
+  #screen-town .hero-title-row { margin-left: 16px; }
+  .floor-badge { text-align: left; padding: 122px 0.6rem 0.6rem; }
+  /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
+  .floor-badge span {
+    display: inline-block; font-size: 1.45rem; font-weight: 800; color: var(--accent);
+    letter-spacing: 0.05em; background: var(--panel-2); border: 1px solid var(--accent);
+    border-radius: var(--radius-pill); padding: 0.4rem 1.5rem;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
+  }
+  /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ。
+     依頼が無い時はdisplay:noneではなくvisibility:hiddenにして、常に同じ高さを確保しておく
+     (display:noneで出し入れすると、下のログ欄が依頼の有無によって上下にずれてしまっていたため) */
+  .quest-target-badge {
+    text-align: center; margin: 0.3rem 1rem 0; font-size: 0.75rem; font-weight: 700; color: var(--accent);
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 0.3rem 0.6rem;
+    min-height: 1.6rem; box-sizing: border-box; visibility: hidden;
+  }
+  /* カラス変身中の「観察眼」: 次に行動する味方/敵のカードに出す青い矢印バッジ */
+  .next-actor-badge {
+    position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+    font-size: 0.62rem; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(43,110,255,0.9); border-radius: var(--radius-pill); padding: 0.1rem 0.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    z-index: 6;
+  }
+  /* display:flex+justify-content:centerで、行数(1〜3行)に関わらず中身を垂直方向に正しく中央寄せする。
+     内容がボックスの高さを超える(古いログが多く溜まった)場合はjustify-content自体が効かなくなり、
+     自然に従来通りの上詰め+overflow-yスクロールへフォールバックするため、両方のケースが両立する */
+  #dungeonLog, #battleLog, #campLog {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 16px 18px; overflow-y: auto; font-size: 0.78rem; margin: 0.5rem 1rem;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  #campLog { height: 70px; }
+  #dungeonLog p, #battleLog p { margin: 0; }
+
+  /* ===== 探索ログ(#dungeonLog)/戦闘ログ(#battleLog)共通の高級感テキストボックス:
+     木・漆・和紙・金箔を意識した和風意匠 =====
+     二重枠(外枠#4b3728の焦げ茶漆風/内枠#d9c49aの金箔風)+微かな内側ハイライト+四隅の和柄(青海波)装飾。
+     background-imageの4つのradial-gradientが四隅の小さな扇形(青海波)装飾、5つ目のlinear-gradientが
+     本体の縦グラデーション地。探索/戦闘でテキストUIの見た目・文字送り演出を揃えるため、campLogには
+     影響しないよう#dungeonLog/#battleLogだけ上書きする */
+  #dungeonLog, #battleLog {
+    position: relative;
+    /* paddingは共通ルールの16px/18px(上下/左右)のまま据え置き、display:flexの
+       justify-content:centerで垂直中央寄せする(以前はpadding-topだけ0.95remに増やして
+       上詰めのまま強引に体裁を整えていたが、行数によって微妙に中央からずれて見えていた)。
+       行間はp要素のmarginではなくgapで作る: 以前はp要素にmargin:0.2rem 0を付けていたが、
+       flexboxの子要素間ではブロック要素同士のような margin相殺が起きず、さらに一番上の行の
+       margin-topと一番下の行のmargin-bottomまで余白として残ってしまう。実測すると3行(高さ84px、
+       box-sizing:border-boxで実際に使える内側は48px)では必要な高さが上回ってオーバーフローし、
+       justify-content:centerによる中央寄せが崩れて上寄りに見えていた。gapは兄弟要素の"間"にしか
+       入らず最初/最後の外側には余白を作らないため、同じ行数でも必要な高さが正しく縮み、
+       1〜2行では中央寄せが自然に揃うようになる(この構成だと3行は物理的に84pxへ収まりきらないため、
+       appendTypewriterLog側のトリミングで常に収まる行数までしか表示しない設計にしてある) */
+    gap: 0.2rem;
+    height: 84px;
+    background-image:
+      radial-gradient(circle at top left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
+      radial-gradient(circle at top right, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
+      radial-gradient(circle at bottom left, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
+      radial-gradient(circle at bottom right, transparent 62%, rgba(217,196,154,0.55) 63%, rgba(217,196,154,0.55) 65%, transparent 66%),
+      linear-gradient(to bottom, rgba(43,43,43,0.89), rgba(24,24,24,0.87));
+    background-repeat: no-repeat;
+    background-size: 16px 16px, 16px 16px, 16px 16px, 16px 16px, 100% 100%;
+    background-position: top left, top right, bottom left, bottom right, 0 0;
+    border: 2px solid #4b3728;
+    border-radius: 11px;
+    box-shadow:
+      inset 0 0 0 2px #d9c49a,
+      inset 0 2px 3px rgba(255,255,255,0.10),
+      inset 0 -6px 10px rgba(0,0,0,0.25),
+      0 4px 10px rgba(0,0,0,0.45);
+  }
+  #dungeonLog p, #battleLog p {
+    color: #ffffff; line-height: 1.5;
+    text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
+  }
+  #dungeonLog .log-name, #battleLog .log-name { color: #d9c49a; }
+  @keyframes logCharFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #dungeonLog .log-char, #battleLog .log-char { opacity: 0; animation: logCharFadeIn 0.08s ease-out forwards; }
+  @keyframes logArrowBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  #dungeonLog .log-arrow, #battleLog .log-arrow {
+    position: absolute; right: 8px; bottom: 4px; color: #d9c49a; font-size: 0.75rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    display: none; animation: logArrowBob 1.3s ease-in-out infinite;
+  }
+  .dungeon-bg {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    background-size: cover; background-position: center; z-index: 0;
+  }
+  /* 探索背景への極弱の環境アニメーション(霧+木漏れ日)。既存の暗いグラデーションと同じ::afterに
+     レイヤーとして重ね、position:absoluteの重なり順を追加せずに済ませている(新規要素は増やさない)。
+     動きは50秒超の非常にゆっくりした往復のみ、不透明度もごく薄く、背景が主張しすぎないようにしてある */
+  .dungeon-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 55% 38% at 25% 28%, rgba(255,246,214,0.06), transparent 62%),
+      radial-gradient(ellipse 48% 34% at 78% 68%, rgba(255,255,255,0.04), transparent 65%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.55) 55%, rgba(20,24,27,0.88));
+    background-size: 160% 160%, 160% 160%, 100% 100%;
+    animation: dungeonAmbientDrift 55s ease-in-out infinite;
+  }
+  @keyframes dungeonAmbientDrift {
+    0%, 100% { background-position: 20% 25%, 80% 70%, 0 0; }
+    50% { background-position: 32% 18%, 68% 78%, 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dungeon-bg::after { animation: none; }
+  }
+  /* 「進む」「里に戻る」の移動演出で背景だけをscale/translateさせるための内側レイヤー。
+     親(#dungeonBg)はposition:fixedの中央寄せ(translateX(-50%))を担うだけにし、画像と
+     アニメーション対象はこの子要素に分離することで、アニメーションが中央寄せの位置指定を
+     上書きして背景が右に寄って見えてしまう不具合を避ける */
+  .dungeon-bg-inner { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  /* 野営の夜の行動選択シーンは背景の野営地イラストを見せたいため、共通の.dungeon-bgが持つ暗いグラデーションを外す */
+  #campBg::after { background: none; animation: none; }
+  /* z-indexは.party-bar(4)より高くする: 内側の.dungeon-top(z-index:5)はこのスタッキングコンテキストに
+     閉じ込められるため、こちら自体を.party-barより上げないと瀕死アラートのボタンが増えた時に隠れてしまう。
+     ただしflex:1で画面全体に引き伸ばされるため、pointer-events:noneにしないと実体の無い透明な部分が
+     .party-bar(z-indexが低い)より手前になり、味方イラストのタップを奪ってしまう(実際に発生したバグ)。
+     実際にクリックさせたい子要素(.dungeon-top/.bottom-actions)側だけpointer-events:autoで戻す */
+  .dungeon-content { position: relative; z-index: 5; display: flex; flex-direction: column; flex: 1; padding-top: 16px; padding-bottom: 80px; pointer-events: none; }
+  .dungeon-content > * { pointer-events: auto; }
+  .dungeon-top {
+    /* 戦闘画面の.battle-topと同じtop:0にする。z-indexも.battle-top(5)と同じにして
+       .party-bar(4)より上にし、瀕死アラートのボタンが増えて縦に伸びた時に
+       party-barに隠れてタップできなくなるのを防ぐ */
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; z-index: 5;
+  }
+  /* #dungeonLogの開始Y座標を#battleLogと確実に一致させるための構造。以前はfloor-badge/
+     quest-target-badge/criticalAlertが通常フローで縦に並び、その合計の高さ分だけ
+     #dungeonLogが下に押し下げられていた(floor-badgeのpadding-topやmarginの数値をどれだけ
+     調整しても、しょせん実際の合計高さと一致させる保証がなく、根本的にズレる作りだった)。
+     .dungeon-info-rowを.enemy-row(height:176px固定)と全く同じ高さの箱にし、その直後に
+     #dungeonLogを置くことで、戦闘画面の「.enemy-row(176px)→#battleLog」と全く同じ構造にする。
+     中身(floor-badge等)は.dungeon-info-stackにまとめてposition:absoluteにし、
+     実際の内容の高さが.dungeon-info-rowの高さ(176px)に一切影響しないようにしてある
+     (瀕死アラートで中身が伸びる場合はこの170px枠をはみ出して表示されるが、それは
+     .enemy-row側にも無い状況なので、はみ出し自体は許容している) */
+  .dungeon-info-row { position: relative; height: 176px; }
+  .dungeon-info-stack { position: absolute; top: 0; left: 0; right: 0; }
+  .battle-bg {
+    position: fixed; top: 0; left: 50%;
+    /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
+       bodyにtransformを掛ける方式だと、position:fixed要素の基準(containing block)が
+       viewportからbodyに変わってしまい、実機で画面が一瞬ジャンプする不具合があったため、
+       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した */
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
+  }
+  .battle-bg::after {
+    content: ''; position: absolute; inset: 0;
+    /* 敵表示の背後だけ淡く明るいスポットライト状のビネットを重ね、視線を敵に誘導する
+       (既存の縦グラデーションによる暗転はそのまま維持し、その上に重ねるだけ) */
+    background:
+      radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
+  .battle-top {
+    position: fixed; top: 0; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 5;
+  }
+  .battle-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(端末ごとの表示領域の違いに左右されないようにするため)。
+       ここでのtopは計算が走るまでの初期値 */
+    position: fixed; top: 500px; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 4;
+  }
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
+  .enemy-row.crowded { gap: 0.25rem; }
+  .enemy-card {
+    position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;
+    border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+  }
+  /* 敵絵(セミリアル)とSDの味方絵の画風差を、UI側の額装(木枠+和紙背景)で緩和する。
+     絵自体は変更せず、::beforeで敵絵の背後に古紙風の下地を敷くだけ */
+  .enemy-card::before {
+    content: "";
+    position: absolute; inset: 4px; z-index: 0;
+    border-radius: calc(var(--radius-md) - 3px);
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(circle at 78% 85%, rgba(0,0,0,0.15), transparent 60%),
+      #3c3527;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .enemy-card img, .enemy-card .enemy-name, .enemy-card .status-icon-row, .enemy-card .hp-with-warning { position: relative; z-index: 1; }
+  .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
+  .enemy-card.targetable:active { transform: scale(0.94); }
+  @keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(209,80,63,0.35); }
+    50% { box-shadow: 0 0 16px rgba(209,80,63,0.8); }
+  }
+  .dmg-pop {
+    position: absolute; left: 50%; top: 25%; transform: translate(-50%, 0);
+    font-weight: 800; font-size: 1.15rem; color: #ff4d4d;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95); pointer-events: none;
+    animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
+  }
+  .dmg-pop.heal { color: #8fe0a0; }
+  /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
+     気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
+  .dmg-pop.crit {
+    font-size: 1.61rem; font-weight: 900;
+    background: linear-gradient(180deg, #fff6c8, #f0c419 45%, #b8860b 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    animation: critDmgFloat 1.1s ease-out forwards;
+  }
+  @keyframes critDmgFloat {
+    0%, 10% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); }
+    25% { opacity: 1; transform: translate(-50%, -14px) scale(1.35); }
+    38% { transform: translate(-50%, -6px) scale(1.05); }
+    50% { transform: translate(-50%, -11px) scale(1.15); }
+    65% { transform: translate(-50%, -9px) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1.08); }
+  }
+  /* 会心の白閃光/衝撃波/火花(既存の斬撃・打撃エフェクトとは別枠、素材不要のCSSのみで表現) */
+  .crit-flash-overlay {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 26;
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%);
+    animation: critFlash 0.2s ease-out forwards;
+  }
+  @keyframes critFlash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  .crit-shockwave {
+    position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,235,150,0.9); border-radius: 50%; pointer-events: none; z-index: 27;
+    animation: critShockwave 0.28s ease-out forwards;
+  }
+  @keyframes critShockwave { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(4.5); } }
+  .crit-spark {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    background: #fff6c0; border-radius: 50%; box-shadow: 0 0 6px 2px rgba(255,240,170,0.9);
+    pointer-events: none; z-index: 27; animation: critSparkFly var(--spark-dur, 0.25s) ease-out forwards;
+  }
+  @keyframes critSparkFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--spark-x, 20px), var(--spark-y, -20px)) scale(0.3); }
+  }
+  /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
+  .crit-banner {
+    position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
+    font-size: 1.05rem; font-weight: 900; color: #ffe066;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    white-space: nowrap; pointer-events: none; z-index: 28;
+    animation: critBannerPop 0.5s ease-out forwards;
+  }
+  @keyframes critBannerPop {
+    0% { opacity: 0; transform: translate(-50%, -100%) scale(0.4); }
+    25% { opacity: 1; transform: translate(-50%, -100%) scale(1.3); }
+    45% { transform: translate(-50%, -100%) scale(0.95); }
+    60% { transform: translate(-50%, -100%) scale(1.08); }
+    80% { transform: translate(-50%, -100%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.9); }
+  }
+  /* 攻撃が命中した瞬間、対象カードに重ねて出すヒットエフェクト(職業ごとの素材をJSでsrc差し替え
+     アニメーションさせる)。表示幅は職業ごとにJS側(playAttackVfx)でstyle.widthを直接設定するため
+     ここでは指定しない。".enemy-card img"(width:92px固定)より詳細度を上げて上書きする必要がある */
+  .enemy-card img.slash-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+    max-width: none; height: auto; pointer-events: none; z-index: 25;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
+  /* 吹き出しセリフ専用の全画面固定レイヤー。party-bar内蔵ではなく画面最前面の独立レイヤーに
+     実測位置(JSでleft/topを設定)で配置することで、探索画面の文字などに埋もれないようにする */
+  #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; transform: translateZ(0); }
+  /* キャラの上に浮かせて、フェードイン→少し静止→フェードアウトする。widthはmax-contentにして
+     (max-widthだけだと環境によって極端に狭く折り返されることがあったため)テキスト量に応じて
+     自然に広がるようにしてある。セリフなので白地に黒文字の吹き出し配色にしている。
+     translateZ(0)は、戦闘中の頻繁な再描画でiOS Safariがposition:fixed要素の再合成を
+     怠って表示が更新されない(実機で報告された不具合)のを防ぐためのGPUレイヤー昇格 */
+  .speech-bubble {
+    position: absolute; transform: translate(-50%, calc(-100% - 5px)) translateZ(0);
+    width: max-content; max-width: 150px; padding: 0.3rem 0.55rem;
+    background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius-md);
+    font-size: 0.72rem; line-height: 1.3; color: #201a14; text-align: center;
+    white-space: normal; pointer-events: none;
+    opacity: 0;
+  }
+  /* leftはJSが画面端でクランプした吹き出し自体の中心。矢印だけは--arrow-offsetでキャラの実際の
+     中心へずらし、吹き出し本体が画面端で押し戻されてもキャラを指しているように見せる */
+  .speech-bubble::after {
+    content: ""; position: absolute; top: 100%; left: calc(50% + var(--arrow-offset, 0px)); transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: rgba(255,255,255,0.95);
+  }
+  /* 味方カードは戦闘画面のレイアウト上、真上に戦闘ログ(#battleLog、頻繁に文字が書き換わる)が
+     重なる位置になる。敵側の吹き出し(カードの上に出す、こちらは何とも重ならない)と違い、
+     味方の吹き出しだけiOS実機で描画されない不具合の原因が「戦闘ログと同じ領域に重なること」
+     である可能性を検証するため、味方の吹き出しだけカードの下(ログと重ならない空白部分)に
+     出すようにする。三角の吹き出し口も上向きに反転する */
+  .speech-bubble.below { transform: translate(-50%, 8px) translateZ(0); }
+  .speech-bubble.below::after {
+    top: auto; bottom: 100%; left: calc(50% + var(--arrow-offset, 0px)); border-top-color: transparent; border-bottom-color: rgba(255,255,255,0.95);
+  }
+  /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
+     イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは
+     一切変えない(インライン絵文字のspan化のみ) */
+  /* 状態異常アイコンのサイズ統一。指定値(24px)そのままだと敵1体あたり56px幅の集団戦カード等で
+     アイコン1個が横幅の半分近くを占めてしまい破綻するため、最小サイズのカードでも収まる16pxに
+     している(意図的な調整。長押し説明・6pxの横間隔は指定通り) */
+  .status-icon { cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; }
+  .status-icon:last-child { margin-right: 0; }
+  .status-icon svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+  .status-icon-value { font-size: 0.68rem; font-weight: 700; }
+  /* HPバー直下に横一列で並べる専用の行。中身が無い時は高さ0に潰れ、レイアウトに余計な余白を残さない */
+  .status-icon-row { display: flex; flex-wrap: wrap; gap: 0 4px; margin-top: 0.15rem; min-height: 0; }
+  .status-icon-row:empty { margin-top: 0; }
+  #statusTooltip {
+    display: none; position: fixed; z-index: 200; max-width: 220px;
+    background: rgba(34,34,34,0.92); color: #fff; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm);
+    font-size: 0.72rem; line-height: 1.45; pointer-events: none;
+  }
+  #statusTooltip .status-tooltip-title { font-weight: 700; margin-bottom: 0.2rem; }
+  /* 0.05秒ほど間を置いてから跳ねる(ヒットストップ風の一瞬の間)。跳ね自体も少しオーバーシュートさせて
+     弾みを持たせる(爽快感重視、暴れすぎないよう振れ幅は控えめにしてある) */
+  @keyframes dmgFloat {
+    0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+    5% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+    18% { opacity: 1; transform: translate(-50%, -12px) scale(1.3); }
+    30% { transform: translate(-50%, -4px) scale(1.02); }
+    42% { transform: translate(-50%, -9px) scale(1.12); }
+    55% { transform: translate(-50%, -7px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+  }
+  /* ヒットストップ: シェイク/フラッシュの開始を0.05秒だけ遅らせ、一瞬の「間」を作ってから反応させる。
+     .hit-shakeと.hit-flashは常にセットで付与される(shakeClassFor参照)ため、
+     両方が同時に付いた状態を1つのセレクタでまとめてanimationプロパティに指定する必要がある。
+     .hit-shake単体/.hit-flash単体でそれぞれanimationを宣言すると、同じプロパティを取り合って
+     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正。
+     通常ヒットはhitShakeNormal(振幅/時間ともに基準の0.8倍)、会心/スキル攻撃はhitShakeStrong
+     (同1.2倍)を使い分ける(shakeClassForが.hit-shake-normal/.hit-shake-strongを付与する) */
+  @keyframes hitFlash {
+    0%, 100% { filter: brightness(1); }
+    30% { filter: brightness(2.4); }
+  }
+  .hit-shake.hit-flash.hit-shake-normal {
+    animation: hitShakeNormal 144ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
+  }
+  .hit-shake.hit-flash.hit-shake-strong {
+    animation: hitShakeStrong 216ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
+  }
+  /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更)。基準(1倍)の値 */
+  @keyframes hitShakeNormal {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-2.4px, 0.8px); }
+    20% { transform: translate(2.4px, -0.8px); }
+    30% { transform: translate(-2.4px, 0.8px); }
+    40% { transform: translate(1.6px, -0.8px); }
+    50% { transform: translate(-1.6px, 0.8px); }
+    60% { transform: translate(1.6px, -0.8px); }
+    70% { transform: translate(-0.8px, 0.8px); }
+    80% { transform: translate(0.8px, 0); }
+    90% { transform: translate(-0.8px, 0); }
+  }
+  @keyframes hitShakeStrong {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-3.6px, 1.2px); }
+    20% { transform: translate(3.6px, -1.2px); }
+    30% { transform: translate(-3.6px, 1.2px); }
+    40% { transform: translate(2.4px, -1.2px); }
+    50% { transform: translate(-2.4px, 1.2px); }
+    60% { transform: translate(2.4px, -1.2px); }
+    70% { transform: translate(-1.2px, 1.2px); }
+    80% { transform: translate(1.2px, 0); }
+    90% { transform: translate(-1.2px, 0); }
+  }
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
+  .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
+  @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes enemyLunge {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(14px); }
+    65% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+  }
+  /* 大技の構え中(bigAttackPending)の敵。「赤い鼓動」の指定を受けて色は対象選択中と同じ赤系にしたが、
+     対象選択のtargetPulse(なだらかな単純パルス)とは違い、「ドクン、ドクン」の二拍子(心拍)の
+     揺れ方にすることで、色が同じでも見分けが付くようにしてある */
+  .enemy-card.charging { border-color: rgba(201,93,84,0.8); box-shadow: 0 0 10px rgba(201,93,84,0.55); animation: chargingPulse 1s ease-in-out infinite; }
+  @keyframes chargingPulse {
+    0%, 28%, 60%, 100% { box-shadow: 0 0 8px rgba(201,93,84,0.35); }
+    14% { box-shadow: 0 0 22px rgba(201,93,84,0.95); }
+    42% { box-shadow: 0 0 17px rgba(201,93,84,0.8); }
+  }
+  /* HPバーの右横に出す💢アイコン(大技構え中の対象敵だけ)。心拍と合わせて軽く拍動させる */
+  .hp-with-warning { display: flex; align-items: center; gap: 4px; }
+  .hp-with-warning .hpbar-track { flex: 1; }
+  .big-attack-warning-icon { display: inline-flex; color: #d95c50; line-height: 1; filter: drop-shadow(0 0 3px rgba(201,93,84,0.9)); animation: bigAttackIconBeat 1s ease-in-out infinite; }
+  .big-attack-warning-icon svg { width: 15px; height: 15px; }
+  @keyframes bigAttackIconBeat {
+    0%, 28%, 60%, 100% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    42% { transform: scale(1.15); }
+  }
+  @keyframes screenWarningFlash {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #screenWarningFlash {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(245,166,35,0) 55%, rgba(245,166,35,0.35) 100%);
+    opacity: 0;
+  }
+  .enemy-card.dead { opacity: 0.25; }
+  .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .enemy-card.swarm { width: 56px; padding: 0.2rem; }
+  .enemy-card.swarm img { width: 48px; height: 48px; }
+  .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
+  /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定+overflow:hidden)の
+     枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
+  .enemy-card.midboss img { width: 112px; height: 112px; }
+  .enemy-card.midboss .enemy-name { font-size: 0.7rem; margin: 0.1rem 0 0.05rem; }
+  /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
+     オレンジとは別枠。狙われている側=targetableとは違い「これが依頼の対象そのもの」を示す表示) */
+  .enemy-card.quest-target { border-color: rgba(201,162,74,0.85); box-shadow: 0 0 10px rgba(201,162,74,0.6); animation: questTargetPulse 1.3s ease-in-out infinite; }
+  @keyframes questTargetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
+    50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
+  }
+  .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.7rem 1rem; }
+  .action-grid button {
+    grid-column: span 1; height: 51px; min-height: 51px; padding: 0.3rem;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 15px; line-height: 1.1; overflow: hidden;
+    /* コマンドボタンの立体感: 通常時は下端に軽い段差影を付けて浮かせ、押下時は沈んで少し明るくなる */
+    box-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 4px 6px rgba(0,0,0,0.3);
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+  }
+  .action-grid button:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 2px 3px rgba(0,0,0,0.3);
+    filter: brightness(1.15);
+  }
+  /* ============ 瀕死救出アラート: 「和風の高級な告知札」演出 ============
+     赤い確認ダイアログではなく、黒〜濃茶ベース+金の細枠の告知札に変更。表示/非表示ともごく短い
+     scale+opacityの演出のみ(重い演出・常時アニメーションは無し)。ゲームロジック・イベント処理は
+     一切変更せず、既存の#criticalAlert/onResolved/showCarryPicker等の仕組みをそのまま流用している */
+  .critical-alert {
+    background: linear-gradient(180deg, rgba(46,37,26,0.97) 0%, rgba(46,37,26,0.96) 45%, rgba(22,17,12,0.97) 100%);
+    border: 1.5px solid var(--accent); border-radius: var(--radius-lg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+    padding: 0.8rem 1rem; margin: 0.55rem 1rem;
+    animation: criticalAlertIn 0.15s ease-out;
+  }
+  @keyframes criticalAlertIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+  .critical-alert.critical-alert-closing { animation: criticalAlertOut 0.15s ease-in forwards; pointer-events: none; }
+  @keyframes criticalAlertOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
+  /* 選択中は背景を暗くして「重大イベント」であることを示す。閉じれば自動的に消える(bodyクラス連動) */
+  body.critical-alert-active::before {
+    content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
+    background: rgba(0,0,0,0.23); opacity: 0; animation: pathDimIn 0.15s ease forwards;
+  }
+  /* 「読む画面」ではなく「2秒で理解できる画面」を目指し、情報量を最小限(タイトル/キャラ/名前・職業/
+     残り時間/場所のみ)に絞り、上下の余白も詰めてコンパクトにしてある */
+  .critical-alert-title {
+    text-align: center; font-size: 1.28rem; font-weight: 800; color: #efe2c2;
+    letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
+  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px; }
+  .critical-alert-portrait .stress-overlay { border-radius: 8px; }
+  .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0; }
+  .critical-alert-job { text-align: center; font-size: 0.7rem; color: #c7bda3; margin: 0 0 0.4rem; }
+  .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.35rem; margin: 0 0 0.35rem; }
+  .critical-alert-timer-label { font-size: 0.7rem; color: #e08e84; font-weight: 600; }
+  .critical-alert-timer-value { font-size: 1.75rem; font-weight: 800; color: var(--danger); text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  .critical-alert-place { text-align: center; font-size: 0.74rem; color: #c7bda3; margin: 0 0 0.6rem; }
+  .critical-alert-actions { display: flex; flex-direction: column; gap: 0.4rem; }
+  .critical-alert-btn { min-height: 45px; }
+  .critical-alert-skip-btn {
+    padding: 0.35rem; font-size: 0.82rem; opacity: 0.82;
+  }
+  /* 進路選択パネル(critical-alertの赤枠とは別の専用デザイン。和風の落ち着いた高級感を出すため
+     黒〜濃いグレーの半透明+細い金枠にしている) */
+  .path-choice-panel {
+    background: linear-gradient(180deg, rgba(26,22,18,0.92), rgba(12,11,9,0.90));
+    border: 1px solid var(--accent); border-radius: var(--radius-lg);
+    padding: 1rem 0.9rem; margin: 0.7rem 1rem;
+    animation: pathChoiceFadeIn 0.2s ease forwards;
+  }
+  @keyframes pathChoiceFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .path-choice-title {
+    text-align: center; font-size: 1.08rem; font-weight: 800; color: #ecdfc0;
+    letter-spacing: 0.12em; margin: 0 0 0.85rem; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  }
+  /* 選択肢が1〜3択と可変のため、flex:1で均等割りにすると1択の時だけ異様に大きくなっていた。
+     カード自体を固定サイズにしてjustify-content:centerで中央寄せし、選択肢数に関わらず同じ大きさで揃える */
+  .path-choice-cards { display: flex; gap: 0.5rem; justify-content: center; }
+  .path-card {
+    /* 3択の時に横幅が親パネルからはみ出ていた不具合の修正: flex-shrinkを1にして、
+       1〜2択の時は128pxのまま、3択で収まりきらない時だけ縮んで必ずパネル内に収まるようにする */
+    flex: 0 1 128px; min-width: 0; width: 128px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.35rem; background: rgba(8,8,8,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-md);
+    color: #d8d0bf; opacity: 0.78; font: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .path-card .path-card-icon { font-size: 1.35rem; }
+  .path-card .path-card-label { font-size: 0.72rem; white-space: normal; line-height: 1.25; }
+  .path-card:hover, .path-card:active {
+    transform: scale(1.03); border-color: var(--accent);
+    box-shadow: 0 0 14px rgba(201,162,74,0.55); opacity: 1;
+  }
+  /* 進路選択を閉じるだけの「戻る」(里に戻る、ではない)。道カードより目立たせない控えめな見た目 */
+  .path-choice-cancel {
+    display: block; width: 100%; margin-top: 0.7rem; padding: 0.5rem;
+    background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-md);
+    color: var(--text-muted); font-size: 0.78rem; font: inherit; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .path-choice-cancel:hover, .path-choice-cancel:active { border-color: var(--accent); color: var(--text); }
+  /* 進路選択パネルの表示中は、視線をそちらへ集中させるため味方表示/操作ボタンを一時的に薄くする */
+  body.path-choice-active #dungeonPartyBar, body.path-choice-active .bottom-actions {
+    opacity: 0.65; transition: opacity 0.18s ease;
+  }
+  /* ============ 進路選択の演出(木札が縦に連なる「森の分岐」演出) ============
+     既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
+     残し、ここでは新しいクラス(.path-tags-*)を追加するだけに留めて上書きする。ゲーム性・抽選ロジック・
+     クリック時のコールバックは一切変更していない(見た目と演出のみ)。
+     「常時揺れる/半透明すぎる/安っぽい」という指摘を受け、無限アニメーションを全廃し、
+     動くのは表示された瞬間・押した瞬間・決定した瞬間だけにしてある(静止状態が基本) */
+  /* ①③背景を20〜25%暗くし、選択中であることを分かりやすくする。.dungeon-bg(z-index:0)より前、
+     .party-bar(z-index:4)より後ろに挟むことで、背景美術だけが沈み込み手前のUIには影響しない。
+     真っ黒にはせず、木札の向こうに森がうっすら見える程度に留める */
+  body.path-choice-active::before {
+    content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
+    background: rgba(0,0,0,0.23); opacity: 0; animation: pathDimIn 0.15s ease forwards;
+  }
+  @keyframes pathDimIn { from { opacity: 0; } to { opacity: 1; } }
+  /* パネル自体は箱を持たず、木札だけが宙に浮くようにする(背景の写真をそのまま見せたいため) */
+  .path-tags-panel { background: none; border: none; box-shadow: none; padding: 0; }
+  /* ②木札を縦に並べる。木札同士は.path-tag-ropeという細い縄目(repeating-gradient)で繋ぐ(静止) */
+  .path-choice-cards.path-tags-stack { flex-direction: column; align-items: center; gap: 0; }
+  .path-tag-rope {
+    display: block; width: 2px; height: 13px; margin: 0 auto;
+    background: repeating-linear-gradient(to bottom, rgba(224,204,153,0.6) 0 3px, transparent 3px 6px);
+  }
+  /* ③木札本体: 焦げ茶の枠+上だけ薄く明るく/下だけ薄く暗いグラデーション+内側ハイライトで
+     「木札の質感」を表現する(木目テクスチャ画像は不使用)。背景に溶けないよう90〜95%の
+     不透明度にし、常時アニメーションは持たせない(静止が基本) */
+  .path-tag {
+    flex: 0 0 auto; width: min(78vw, 260px); height: auto; flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 0.7rem; padding: 0.65rem 0.9rem; margin: 0.25rem 0; opacity: 1;
+    background: linear-gradient(180deg, rgba(69,54,36,0.95) 0%, rgba(69,54,36,0.94) 45%, rgba(38,29,19,0.96) 100%);
+    border: 1.5px solid #3a2a17; border-radius: 10px;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -6px 10px -6px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+  }
+  /* ⑤押した瞬間だけ軽く浮かせる(0.15秒、scale(1.03))。常時は動かさない。派手なグロー装飾も禁止 */
+  .path-tag:hover, .path-tag:active {
+    transform: scale(1.03); border-color: var(--accent); opacity: 1;
+    box-shadow: 0 4px 9px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.14);
+  }
+  .path-tag .path-card-icon { font-size: 1.7rem; flex-shrink: 0; }
+  .path-tag-text { display: flex; flex-direction: column; gap: 0.18rem; text-align: left; min-width: 0; }
+  .path-tag .path-card-label { font-size: 0.95rem; font-weight: 800; color: #efe2c2; white-space: normal; line-height: 1.2; }
+  .path-tag .path-card-desc { font-size: 0.64rem; color: #c7bda3; opacity: 0.85; line-height: 1.3; }
+  /* ⑥決定演出: 選んだ木札だけ少し前へ出る(scale+わずかに浮く程度、光や輝きは付けない) */
+  .path-tag.path-tag-selected {
+    transform: scale(1.04) translateY(-2px); border-color: var(--accent); opacity: 1;
+    box-shadow: 0 5px 11px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+    z-index: 2; position: relative;
+  }
+  /* 選ばれなかった木札は0.15〜0.2秒でopacityのみフェードアウト(transformは動かさない) */
+  .path-tag.path-tag-fading {
+    transition: opacity 0.18s ease-out; opacity: 0; pointer-events: none;
+  }
+  .path-tags-stack.path-tags-locked .path-tag-rope { transition: opacity 0.15s ease-out; opacity: 0; }
+  /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
+     イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
+  .treasure-popup {
+    position: fixed; top: 110px; left: 50%; transform: translate(-50%, 0) translateZ(0);
+    z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center;
+  }
+  .treasure-popup img {
+    width: 110px; max-width: 32vw; height: auto;
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
+    animation: treasurePop 1.8s ease forwards;
+  }
+  @keyframes treasurePop {
+    0% { opacity: 0; transform: scale(0.7); }
+    12% { opacity: 1; transform: scale(1.05); }
+    20% { opacity: 1; transform: scale(1); }
+    78% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.05); }
+  }
+  /* 宿泊時の夜明け演出: 朝→昼→夕→夜と背景をクロスフェードでめくっていき、最後(夜→朝)だけ
+     暗転を挟んでから朝の映像で明ける。動画ファイルは使わず、背景イラストの重ね合わせ+
+     JSで制御するopacity遷移だけで表現しているので読み込み負荷は増えない */
+  /* 「進む」「里に戻る」の移動演出用の暗転オーバーレイ。背景画像自体(#dungeonBg)はJSでtransformを
+     アニメーションさせ、こちらは画面全体を一瞬暗転させて処理を挟むための単純な黒幕 */
+  .move-transition-black { position: fixed; inset: 0; z-index: 61; background: #000; opacity: 0; pointer-events: none; }
+  /* 煙玉使用時、画面いっぱいに煙が広がって消える演出。複数の煙玉(radial-gradient+blur)を
+     少しずつ時間差で膨らませて重ね、最後にまとめてフェードアウトさせることで自然な煙の広がりを表現する */
+  .smoke-effect { position: fixed; inset: 0; z-index: 62; overflow: hidden; pointer-events: none; }
+  .smoke-puff {
+    position: absolute; width: 70vw; height: 70vw; max-width: 420px; max-height: 420px;
+    border-radius: 50%; filter: blur(18px);
+    background: radial-gradient(circle, rgba(210,210,205,0.95), rgba(160,160,155,0.55) 55%, rgba(160,160,155,0) 78%);
+    opacity: 0; transform: scale(0.4);
+    animation: smokePuffGrow 1.4s ease-out forwards;
+  }
+  .smoke-puff.p1 { left: -10%; top: 30%; animation-delay: 0s; }
+  .smoke-puff.p2 { left: 25%; top: 10%; animation-delay: 0.08s; }
+  .smoke-puff.p3 { left: 55%; top: 25%; animation-delay: 0.16s; }
+  .smoke-puff.p4 { left: 10%; top: 45%; animation-delay: 0.22s; }
+  .smoke-puff.p5 { left: 45%; top: 45%; animation-delay: 0.3s; }
+  .smoke-puff.p6 { left: 70%; top: 15%; animation-delay: 0.12s; }
+  @keyframes smokePuffGrow {
+    0% { opacity: 0; transform: scale(0.4) translateY(0); }
+    35% { opacity: 1; transform: scale(1) translateY(-4%); }
+    75% { opacity: 0.95; transform: scale(1.25) translateY(-10%); }
+    100% { opacity: 0; transform: scale(1.4) translateY(-16%); }
+  }
+  /* ===== 奉行所の依頼受注演出(モンハン風の朱印スタンプ) =====
+     「紙」「印鑑(木製、CSSのみで表現)」「朱印(受領)」を別レイヤーで持たせ、印鑑だけ独立して
+     画面上から回転しながら落下→着地の瞬間に紙が揺れる→朱印がインクの染み込みのように現れる、
+     という一連の流れをrequestAnimationFrame無しの純粋なCSSアニメーション(クラス付け外しのみ)で作る */
+  .quest-stamp-overlay {
+    position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;
+    background: rgba(10,8,6,0.6); pointer-events: none;
+  }
+  /* 紙(questStampPaper)と印鑑(questStampSeal)は元は兄弟要素で、印鑑の位置は本来「紙の上のどこか」を
+     指したいのにfixed配置のoverlay(画面全体)基準のパーセントになっていたため、紙の実際の位置とズレ
+     (紙にちゃんと乗らない)不具合の原因になっていた。この.stageで両方を包み、印鑑の絶対位置指定が
+     紙と同じ矩形を基準にするようにする(stage自身はseal側がposition:absoluteで幅を持たないため、
+     中身のpaperとぴったり同じサイズになる) */
+  .quest-stamp-stage { position: relative; }
+  .quest-stamp-paper {
+    position: relative; width: 250px; background: linear-gradient(180deg, #f2e8d0, #e6d8b8);
+    border: 2px solid #4b3728; border-radius: var(--radius-sm); padding: 1.6rem 1rem 1.8rem; text-align: center;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.55); transform: scale(1); overflow: hidden;
+  }
+  .quest-stamp-paper.scale-up { animation: questStampPaperScale 120ms ease-out forwards; }
+  @keyframes questStampPaperScale { from { transform: scale(1); } to { transform: scale(1.03); } }
+  .quest-stamp-paper.impact-shake { animation: questStampPaperShake 150ms ease-in-out; }
+  @keyframes questStampPaperShake {
+    0%, 100% { transform: scale(1.03) translate(0, 0); }
+    25% { transform: scale(1.03) translate(-3px, 2px); }
+    50% { transform: scale(1.03) translate(3px, -2px); }
+    75% { transform: scale(1.03) translate(-2px, 1px); }
+  }
+  .quest-stamp-paper-title {
+    font-weight: 800; font-size: 1rem; color: #2b2118; letter-spacing: 0.04em;
+  }
+  /* 印鑑(木製)。画像素材が無いため、木目調のradial-gradientと縁取りだけでそれらしく見せる。
+     朱印(questStampMark)と全く同じ基準点(left:50%/top:58%)に着地するようにし、サイズも朱印の
+     文字の箱(2文字・font-size1.7rem+padding)を余裕をもって覆えるよう横長の矩形にしてある
+     (以前は60x60の正方形で朱印の箱より小さく、着地位置も紙ではなくoverlay基準でズレていた) */
+  .quest-stamp-seal {
+    position: absolute; left: 50%; top: 58%; width: 108px; height: 58px;
+    transform: translate(-50%, -50%) translateY(-220px) rotate(-24deg);
+    border-radius: var(--radius-md); background: radial-gradient(circle at 35% 30%, #a9784f, #6b4226 65%, #4a2c16 100%);
+    border: 3px solid #3a2414; box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+    opacity: 0; z-index: 4; pointer-events: none;
+  }
+  .quest-stamp-seal.falling { animation: questStampSealFall 320ms cubic-bezier(0.55,0,0.85,0.4) forwards; }
+  @keyframes questStampSealFall {
+    0% { opacity: 1; transform: translate(-50%, -50%) translateY(-220px) rotate(-24deg); }
+    82% { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(374deg); }
+    91% { transform: translate(-50%, -50%) translateY(-8px) rotate(366deg); }
+    100% { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(368deg); }
+  }
+  .quest-stamp-seal.retreat { animation: questStampSealRetreat 250ms ease-in forwards; }
+  @keyframes questStampSealRetreat {
+    from { opacity: 1; transform: translate(-50%, -50%) translateY(0) rotate(368deg); }
+    to { opacity: 0; transform: translate(-50%, -50%) translateY(-240px) rotate(368deg); }
+  }
+  /* 朱印(受領)。インクが染み込むように、透明度と大げさな拡大→縮小のオーバーシュートで押印の勢いを出す */
+  .quest-stamp-mark {
+    position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%) rotate(8deg) scale(0);
+    font-size: 1.7rem; font-weight: 900; color: #b3222b; border: 4px solid #b3222b; border-radius: var(--radius-md);
+    padding: 0.15rem 0.7rem; opacity: 0; z-index: 3; letter-spacing: 0.1em;
+  }
+  .quest-stamp-mark.show { animation: questStampMarkPop 200ms ease-out forwards; }
+  @keyframes questStampMarkPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(8deg) scale(1.6); }
+    55% { opacity: 1; transform: translate(-50%, -50%) rotate(8deg) scale(0.95); }
+    80% { transform: translate(-50%, -50%) rotate(8deg) scale(1.05); }
+    100% { opacity: 1; transform: translate(-50%, -50%) rotate(8deg) scale(1.0); }
+  }
+  /* 埃エフェクト。画像を使わず、2つの小さな円が着地点から左右にふわっと散る */
+  .quest-stamp-dust { position: absolute; left: 50%; top: 58%; width: 4px; height: 4px; pointer-events: none; }
+  .quest-stamp-dust.burst::before, .quest-stamp-dust.burst::after {
+    content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(214,196,158,0.9); animation: questStampDustFly 300ms ease-out forwards;
+  }
+  .quest-stamp-dust.burst::after { animation-name: questStampDustFlyLeft; animation-delay: 30ms; }
+  @keyframes questStampDustFly {
+    0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(22px, -16px) scale(0.4); }
+  }
+  @keyframes questStampDustFlyLeft {
+    0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-22px, -14px) scale(0.4); }
+  }
+  .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
+  .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
+  .lodging-transition-caption {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #fff; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.15em;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9); white-space: nowrap;
+    opacity: 0;
+  }
+  @keyframes lodgingCaptionFade {
+    0% { opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  /* 野営の就寝後、暗転中に表示する回復サマリー画面 */
+  .camp-rest-summary {
+    position: absolute; inset: 0; z-index: 2; overflow-y: auto;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2.5rem 1.2rem 2rem; box-sizing: border-box;
+  }
+  .camp-rest-summary h2 { color: #fff; text-align: center; margin: 0 0 1.2rem; letter-spacing: 0.1em; }
+  .camp-rest-row {
+    display: flex; align-items: center; gap: 0.7rem; width: 100%; max-width: 420px;
+    background: rgba(20,24,27,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md);
+    padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; box-sizing: border-box;
+  }
+  .camp-rest-row img { width: 44px; height: 44px; object-fit: cover; object-position: top; border-radius: var(--radius-xs); flex-shrink: 0; }
+  .camp-rest-info { flex: 1; color: #fff; min-width: 0; }
+  .camp-rest-info .nm { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .camp-rest-stat-label { font-size: 0.65rem; color: var(--text-muted); }
+  .camp-rest-stress { font-size: 0.72rem; color: #9fd8ff; margin-top: 0.3rem; }
+  #campRestNextBtn { margin-top: 0.5rem; width: 100%; max-width: 420px; }
+  .critical-alert p { margin: 0.2rem 0; font-size: 0.82rem; }
+  .bottom-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(戦闘画面と同じ仕組み) */
+    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
+    padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
+  }
+  .bottom-actions button { flex: 1 1 auto; min-width: 90px; }
+  /* 道具ボタンは他がhealBtn非表示等で奇数本になった時、行に1つだけ残ってflex:1 1 autoのまま
+     横幅いっぱいに伸びてしまう(他のボタンだけ並んだ時より不自然に大きく見える)ため、
+     他のボタンと同じくらいのサイズで頭打ちにする */
+  #dungeonToolsBtn { flex: 0 1 160px; }
+  .camp-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(.bottom-actions/.battle-actionsと同じ仕組み) */
+    position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; box-sizing: border-box; z-index: 3;
+    padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.6rem;
+  }
+  .camp-actions button { flex: 1 1 auto; min-width: 90px; }
