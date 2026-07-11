@@ -54,7 +54,9 @@ function defaultState() {
 
 const HOUSE_MAX_LEVEL = 9; // レベル9で名簿上限10人に達し、それ以上は増築できない
 function houseUpgradeCost(level) {
-  return level === 1 ? 90 : 250; // レベル1→2は90G、以降(2→3以降)は一律250G
+  if (level === 1) return 90; // レベル1→2
+  if (level === 2) return 250; // レベル2→3
+  return 250 + (level - 2) * 100; // レベル3以降は1レベルごとに250Gから+100Gずつ上がる(レベル3→4=350G、4→5=450G…)
 }
 function rosterCapacity() {
   return Math.min(10, (state.houseLevel || 1) + 1);
