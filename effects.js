@@ -373,7 +373,9 @@ function statusIconsFor(entity) {
   if (entity.stunTurns > 0) s += statusIconHtml("stun");
   if (entity.silenceTurns > 0) s += statusIconHtml("silence");
   if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += statusIconHtml("tangle");
-  if (entity.bigAttackPending) s += statusIconHtml("bigAttackPending");
+  // 大技の構え中(bigAttackPending)は、HPバー横の💢マーク(big-attack-warning-icon)だけで示す。
+  // 以前はここ(状態異常アイコン列)にも三角形の警告SVGを重複して出していたが、
+  // 同じ情報を2箇所で示すのは冗長なため削除した(ユーザー指示)。ツールチップは💢側に統合済み
   return s;
 }
 

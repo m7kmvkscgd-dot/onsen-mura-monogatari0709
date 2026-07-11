@@ -115,7 +115,7 @@ function renderBattleScreen() {
       </div>
       <div class="hp-with-warning">
         ${hpBarHtml(e)}
-        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon">💢</span>` : ""}
+        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending">💢</span>` : ""}
       </div>
       <div class="status-icon-row">${statusIconsFor(e)}</div>
     `;
