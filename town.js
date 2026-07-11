@@ -1236,13 +1236,19 @@ function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
   if (isNew) state.seenUnlockedBuildings[stateKey] = true;
 }
 // 施設一覧の説明文はタップで開閉する(静的HTMLのまま一度だけイベントを貼る。renderExtension()の
-// たびに貼り直す必要はない)
+// たびに貼り直す必要はない)。ただし家レベルが足りず未解放の施設は、タップしても説明を開けない
+// (setFacilityLockedStateが付与する.lockedクラスで判定し、どんな効果かを完全に隠す)
 document.querySelectorAll(".facility-toggle").forEach((el) => {
-  el.onclick = () => { el.classList.toggle("open"); };
+  el.onclick = () => {
+    if (el.classList.contains("locked")) return;
+    el.classList.toggle("open");
+  };
 });
-// 施設一覧を「建築可能/建築済み/未解放」の3グループへ分けて表示する。各施設のブロック
+// 施設一覧を「建築可能(建築済みも含む)/未解放」の2グループへ分けて表示する。各施設のブロック
 // (h2+説明+ボタンの3点セット)自体は元のまま、renderExtension()のたびに該当グループへ
-// appendChildで移動させるだけ(要素を作り直さないのでイベントハンドラや開閉状態を保持できる)
+// appendChildで移動させるだけ(要素を作り直さないのでイベントハンドラや開閉状態を保持できる)。
+// 建築済みの施設を別グループへ隔離せず「建築可能」内にそのまま残すことで、既に建てた施設も
+// 一覧からすぐ見つけられるようにしている(ユーザー指示)
 const FACILITY_GROUP_DEFS = [
   { key: "magistrate", levelField: "magistrateLevel", unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL },
   { key: "shop", levelField: "shopLevel", unlock: SHOP_UNLOCK_HOUSE_LEVEL },
@@ -1260,7 +1266,7 @@ const FACILITY_GROUP_DEFS = [
   { key: "beeFarm", levelField: "beeFarmLevel", unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL },
   { key: "ferry", levelField: "ferryLevel", unlock: FERRY_UNLOCK_HOUSE_LEVEL },
 ];
-["Available", "Built", "Locked"].forEach((name) => {
+["Available", "Locked"].forEach((name) => {
   const toggle = document.getElementById("facilityGroup" + name + "Toggle");
   const body = document.getElementById("facilityGroup" + name);
   toggle.onclick = () => {
@@ -1270,20 +1276,29 @@ const FACILITY_GROUP_DEFS = [
 });
 function groupFacilityBlocks(houseLevel) {
   const availEl = document.getElementById("facilityGroupAvailable");
-  const builtEl = document.getElementById("facilityGroupBuilt");
   const lockedEl = document.getElementById("facilityGroupLocked");
-  let availCount = 0, builtCount = 0, lockedCount = 0;
+  let availCount = 0, lockedCount = 0;
   FACILITY_GROUP_DEFS.forEach((def) => {
     const block = document.getElementById("facilityBlock-" + def.key);
     if (!block) return;
     const lv = state[def.levelField] || 0;
-    if (lv > 0) { builtEl.appendChild(block); builtCount++; }
-    else if (houseLevel >= def.unlock) { availEl.appendChild(block); availCount++; }
+    // 建築済み/建築可能はどちらも同じ「建築可能」グループにまとめて表示する(建築済みの項目だけを
+    // 別グループへ隔離しない、というユーザー指示)。家レベルが足りていない施設だけ未解放グループへ
+    if (lv > 0 || houseLevel >= def.unlock) { availEl.appendChild(block); availCount++; }
     else { lockedEl.appendChild(block); lockedCount++; }
   });
   document.getElementById("facilityGroupAvailableCount").textContent = `(${availCount})`;
-  document.getElementById("facilityGroupBuiltCount").textContent = `(${builtCount})`;
   document.getElementById("facilityGroupLockedCount").textContent = `(${lockedCount})`;
+}
+// 家レベルが足りず未解放の施設は、タップしても効果の説明文を開けないようにする
+// (.facility-toggleへ.lockedクラスを付け、開いていればその場で強制的に閉じる)
+function setFacilityLockedState(blockKey, locked) {
+  const block = document.getElementById("facilityBlock-" + blockKey);
+  if (!block) return;
+  const toggle = block.querySelector(".facility-toggle");
+  if (!toggle) return;
+  toggle.classList.toggle("locked", locked);
+  if (locked) toggle.classList.remove("open");
 }
 function renderExtension() {
   playTownAreaBgm();
@@ -1341,6 +1356,7 @@ function renderExtension() {
     dojoBtn.disabled = state.gold < DOJO_LEVEL2_COST;
   }
   markBuildingNewBadge("dojoLevel", "dojoNewBadge", level >= DOJO_UNLOCK_HOUSE_LEVEL, dojoLevel >= 1);
+  setFacilityLockedState("dojo", dojoLocked);
   renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level, "magistrateNewBadge");
   renderSimpleBuilding("shopLevel", "shopBuildBtn", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST, level, "shopNewBadge");
   renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
@@ -1375,6 +1391,7 @@ function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLeve
     btn.disabled = state.gold < cost;
   }
   if (badgeId) markBuildingNewBadge(stateKey, badgeId, unlocked, built);
+  setFacilityLockedState(stateKey.replace(/Level$/, ""), !built && !unlocked);
 }
 function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   const built = (state[stateKey] || 0) >= 1;

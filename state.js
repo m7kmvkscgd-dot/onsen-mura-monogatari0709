@@ -104,7 +104,7 @@ const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 5;
 const GUNPOWDER_STORE_COST = 200;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
-const KARAKURI_COST = 150;
+const KARAKURI_COST = 50;
 // 養蜂場: 効果は未定(建物のみ、未実装)
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
 const BEE_FARM_COST = 300;

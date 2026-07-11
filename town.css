@@ -254,13 +254,20 @@
   .facility-toggle.open .facility-caret { transform: rotate(180deg); }
   .facility-desc { display: none; }
   .facility-toggle.open + .facility-desc { display: block; }
-  /* 施設一覧の3グループ化(建築可能/建築済み/未解放)。建築可能だけ最初から展開しておき、
-     残り2グループは見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
+  /* 家レベルが足りず未解放の施設は、タップしても効果の説明を開けない(setFacilityLockedState参照)。
+     カーソル/キャレットを非活性の見た目にして「ここは開かない」ことを示す */
+  .facility-toggle.locked { cursor: default; opacity: 0.6; }
+  .facility-toggle.locked .facility-caret { visibility: hidden; }
+  /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能だけ最初から展開しておき、
+     未解放は見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
   .facility-group-heading { cursor: pointer; display: flex; align-items: center; color: var(--dw-caption-color); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
   .facility-group-count { font-size: 12px; color: var(--dw-caption-color); margin-left: 0.35rem; font-weight: 400; }
   .facility-group-body { display: none; }
   .facility-group-body.open { display: block; }
   .facility-group-heading.open .facility-caret { transform: rotate(180deg); }
+  /* 未解放グループの開閉ボタンだけ、他の施設一覧に埋もれず目立つよう通常のbutton.bigと同じ見た目にする */
+  .facility-group-locked-btn.facility-group-heading { color: var(--dw-title-color); font-size: 15px; }
+  .facility-group-locked-btn .facility-group-count { color: var(--dw-caption-color); }
   /* ===== 奉行所の依頼受注演出(モンハン風の朱印スタンプ) =====
      「紙」「印鑑(木製、CSSのみで表現)」「朱印(受領)」を別レイヤーで持たせ、印鑑だけ独立して
      画面上から回転しながら落下→着地の瞬間に紙が揺れる→朱印がインクの染み込みのように現れる、
