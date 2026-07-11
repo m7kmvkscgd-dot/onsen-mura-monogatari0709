@@ -1239,8 +1239,8 @@ const EMERGENCY_QUEST_DEFS = {
 };
 const EMERGENCY_QUEST_CLEAR_THRESHOLD = 3; // 通常の討伐依頼をこの件数クリアするたびに緊急依頼が1件発生する
 const EMERGENCY_QUEST_ENCOUNTER_CHANCE = 0.25; // 発生中、戦闘の遭遇のたびに指名の的が代わりに出てくる確率
-const EMERGENCY_QUEST_REWARD_GOLD = 135; // 旧150Gから1割減
-const EMERGENCY_QUEST_REWARD_XP = 72; // 旧XP80から1割減
+const EMERGENCY_QUEST_REWARD_GOLD = 150;
+const EMERGENCY_QUEST_REWARD_XP = 80;
 
 // 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。
 // キーはstatusIconsFor()等がdata-status属性に埋め込む識別子。今後アイコンが増えた場合は
