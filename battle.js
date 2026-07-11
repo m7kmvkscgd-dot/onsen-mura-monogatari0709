@@ -197,6 +197,7 @@ function processNext() {
     if (actor.stunTurns > 0) {
       actor.stunTurns--;
       blog(`${actor.label}はスタンして動けない！`);
+      popupOn(actor.instanceId, "💫スタン", "stun");
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
       return;
@@ -278,6 +279,7 @@ function processNext() {
     if (actor.stunTurns > 0) {
       actor.stunTurns--;
       blog(`${actor.label}はスタンして動けない！`);
+      popupOn(actor.id, "💫スタン", "stun");
       renderBattleScreen();
       battle.orderIndex++;
       setTimeout(processNext, 500);

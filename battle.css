@@ -63,6 +63,8 @@
     animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* スタンで行動不能になった瞬間だけの素朴な浮き出し表示(会心のような派手な演出はしない) */
+  .dmg-pop.stun { color: #e0d27a; font-size: 1rem; }
   /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
      気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
   .dmg-pop.crit {
@@ -104,7 +106,9 @@
   }
   /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
   .crit-banner {
-    position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
+    /* 敵カードが画面上端に近いと文字が画面外に切れて見えなくなっていたため、カード真上ではなく
+       カード内側に寄せて表示位置を下げた(ユーザー指示) */
+    position: absolute; left: 50%; top: 18px; transform: translate(-50%, -100%);
     font-size: 1.05rem; font-weight: 900; color: #ffe066;
     -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
     text-shadow: 0 2px 6px rgba(0,0,0,0.6);

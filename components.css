@@ -138,10 +138,17 @@
   /* 状態異常アイコンのサイズ統一。指定値(24px)そのままだと敵1体あたり56px幅の集団戦カード等で
      アイコン1個が横幅の半分近くを占めてしまい破綻するため、最小サイズのカードでも収まる16pxに
      している(意図的な調整。長押し説明・6pxの横間隔は指定通り) */
-  .status-icon { cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; }
+  .status-icon { cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
   .status-icon:last-child { margin-right: 0; }
   .status-icon svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
   .status-icon-value { font-size: 0.68rem; font-weight: 700; }
+  /* スタンだけ「行動不能になった瞬間」がわかりにくいという指摘があったため、常設バッジ自体に
+     ごく控えめな明滅を付けて他の状態異常より少し目立たせる(毒・出血はやりすぎないようそのまま) */
+  .status-icon[data-status="stun"] { animation: stunIconPulse 1.4s ease-in-out infinite; }
+  @keyframes stunIconPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.15); }
+  }
   /* HPバー直下に横一列で並べる専用の行。中身が無い時は高さ0に潰れ、レイアウトに余計な余白を残さない */
   .status-icon-row { display: flex; flex-wrap: wrap; gap: 0 4px; margin-top: 0.15rem; min-height: 0; }
   .status-icon-row:empty { margin-top: 0; }
