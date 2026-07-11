@@ -1,29 +1,25 @@
-  /* ============ title.css: タイトル画面・設定・スタッフ画面 ============ */
+  /* ============ title.css: タイトル画面・設定・製作者より・オープニング動画 ============ */
+  /* 演出のタイミング制御はすべてJS(title.js)のelement.animate()で行う。CSSの@keyframes+
+     classList付け外しでの「再生し直し」は、このプロジェクトで過去に複数回(HPバーの被弾トレイル、
+     ログ行の登場演出、宿泊のクロスフェード等)信頼性の低さが判明している手法のため、
+     タイトル画面でも同じ理由で採用しない。CSS側は「JSが確実に初期状態/最終状態を書き込む前提」の
+     最終的な見た目(完全に表示された状態)だけを既定値として持たせ、万一JSが動かない場合でも
+     要素が消えたままにはならないようにしてある */
 
   #screen-title { position: relative; overflow: hidden; }
-  #screen-title, #screen-settings, #screen-staff {
+  #screen-title, #screen-settings, #titleCreditsOverlay {
     font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS Mincho", serif;
   }
 
-  .title-bg {
+  .title-bg-base, .title-logo-reveal {
     position: fixed; inset: 0; z-index: 0;
     background-size: cover; background-position: center;
-    opacity: 0; transform: scale(1.03);
   }
-  .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards; }
-
-  /* 全体をごくわずかに上下させる、演出上の「タイトルの呼吸」。ロゴ自体は背景に焼き込まれた一枚絵の
-     ため単体では動かせないが、画像全体に±3px程度の極小な上下移動を与えることで近い効果を狙う */
-  .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards, titleBgBob 7s ease-in-out 0.6s infinite; }
-
-  @keyframes titleFadeUp {
-    from { opacity: 0; transform: scale(1.03) translateY(0); }
-    to { opacity: 1; transform: scale(1.0) translateY(0); }
-  }
-  @keyframes titleBgBob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
-  }
+  /* ロゴ部分だけを他の位置と全く同じ画像・同じcover/center基準で切り抜いて重ねる。
+     背景本体(title_bg_base.jpg)はロゴの位置だけぼかし処理済みのため、
+     2枚が同じ座標系で重なることで「ロゴだけくっきり浮かび上がる」効果になる。
+     パーセンテージは元画像1844px中、ロゴ帯がy=195〜575の範囲であることから算出 */
+  .title-logo-reveal { clip-path: inset(10.575% 0 68.818% 0); transform-origin: 50% 20.6%; }
 
   /* 淡い夕焼けのゆらぎ(太陽の位置あたりに、非常にゆっくり明滅する光暈) */
   #screen-title::after {
@@ -65,8 +61,23 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards; }
     #screen-title::after, .title-petal, .title-steam { animation: none; display: none; }
+  }
+
+  /* 「画面をタップ」プロンプト。派手な明滅ではなく、ごくゆっくりした呼吸のみ */
+  .title-tap-prompt {
+    position: fixed; z-index: 4; left: 0; right: 0; bottom: 30%;
+    text-align: center; color: #fff; font-size: 14px; letter-spacing: 0.2em;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    animation: titleTapBreathe 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes titleTapBreathe {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .title-tap-prompt { animation: none; opacity: 0.8; }
   }
 
   /* ============ メニュー ============ */
@@ -77,19 +88,6 @@
     display: flex; flex-direction: column; align-items: center; gap: 14px;
     padding: 0 24px;
   }
-  .title-menu-btn {
-    opacity: 0; transform: translateY(10px);
-  }
-  .title-menu.title-seq-in .title-menu-btn { animation: titleBtnIn 0.3s ease-out forwards; }
-  .title-menu.title-seq-in .title-menu-btn:nth-child(1) { animation-delay: 0.3s; }
-  .title-menu.title-seq-in .title-menu-btn:nth-child(2) { animation-delay: 0.38s; }
-  .title-menu.title-seq-in .title-menu-btn:nth-child(3) { animation-delay: 0.46s; }
-  .title-menu.title-seq-in .title-menu-btn:nth-child(4) { animation-delay: 0.54s; }
-  @keyframes titleBtnIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
   .title-menu-btn {
     width: min(280px, 100%); height: 64px; border-radius: 18px;
     border: 1px solid rgba(215,182,111,0.55);
@@ -112,17 +110,17 @@
     0%, 100% { box-shadow: 0 6px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 10px rgba(215,182,111,0.25); }
     50% { box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 22px rgba(215,182,111,0.6); }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .title-menu-btn.primary { animation: none; box-shadow: 0 6px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 14px rgba(215,182,111,0.4); }
+  }
 
   .title-footer {
     position: fixed; z-index: 3; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     text-align: center; font-size: 11px; letter-spacing: 0.05em; color: rgba(255,255,255,0.55);
     text-shadow: 0 1px 3px rgba(0,0,0,0.7);
-    opacity: 0;
   }
-  .title-footer.title-seq-in { animation: titleFooterIn 0.3s ease-out 0.62s forwards; }
-  @keyframes titleFooterIn { from { opacity: 0; } to { opacity: 1; } }
 
-  /* ============ 設定・スタッフ画面(タイトルと同じ背景を暗くぼかして流用) ============ */
+  /* ============ 設定画面(タイトルと同じ背景を暗くぼかして流用) ============ */
   .title-sub-bg {
     position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center;
     filter: blur(3px) brightness(0.45); transform: scale(1.05);
@@ -143,7 +141,40 @@
     transition: background var(--dw-t-btn) ease-out, color var(--dw-t-btn) ease-out;
   }
   .title-toggle-btn.is-on { background: var(--dw-gold); color: #2a2015; border-color: var(--dw-gold); }
-  .title-staff-list { padding: 8px 0 18px; color: var(--dw-body-color); }
-  .title-staff-list p { margin: 0 0 6px; font-size: 15px; }
-  .title-staff-list .title-staff-role { font-size: 12px; color: var(--dw-caption-color); }
   .title-sub-back-btn { width: 100%; margin-top: 6px; }
+
+  /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============ */
+  #titleCreditsOverlay {
+    position: fixed; inset: 0; z-index: 40; display: none;
+    background: rgba(8,8,10,0.55);
+    align-items: center; justify-content: center;
+  }
+  .title-credits-panel {
+    width: min(340px, 86%); max-height: 78vh; overflow-y: auto;
+    margin: auto;
+    background: linear-gradient(180deg, #3a2c1c 0%, #2a2015 55%, #201810 100%);
+    border: 1.5px solid #5d4d35; border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    padding: 26px 22px 20px; text-align: center;
+  }
+  .title-credits-body {
+    margin: 0 0 14px; font-size: 14px; line-height: 1.8; color: #ece5d6;
+  }
+  .title-credits-sign {
+    margin: 18px 0 20px; font-size: 13px; line-height: 1.9; color: var(--dw-gold);
+  }
+  .title-credits-close-btn { width: 100%; }
+
+  /* ============ オープニング動画 ============ */
+  #openingOverlay {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    background: #000;
+    align-items: center; justify-content: center;
+  }
+  #openingVideo { width: 100%; height: 100%; object-fit: cover; }
+  #openingSkipHint {
+    position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    color: rgba(255,255,255,0.75); font-size: 12px; letter-spacing: 0.05em;
+    background: rgba(0,0,0,0.35); padding: 6px 12px; border-radius: var(--radius-pill);
+    display: none;
+  }

@@ -20,10 +20,18 @@
 <body>
 <div class="wrap">
 
+  <!-- オープニング動画(最上位に重ねる。動画が無い/読み込めない場合は即座にタイトルへ) -->
+  <div id="openingOverlay">
+    <video id="openingVideo" src="assets/opening/opening.mp4" playsinline preload="auto"></video>
+    <div id="openingSkipHint">タップでスキップ</div>
+  </div>
+
   <!-- タイトル画面(常にここから起動する) -->
   <div class="screen active" id="screen-title">
-    <div class="title-bg" id="titleBg" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-bg-base" id="titleBgBase" style="background-image:url('assets/title/title_bg_base.jpg')"></div>
+    <div class="title-logo-reveal" id="titleLogoReveal" style="background-image:url('assets/title/title_bg.jpg')"></div>
     <div class="title-fx-layer" id="titleFxLayer" aria-hidden="true"></div>
+    <div class="title-tap-prompt" id="titleTapPrompt">画面をタップ</div>
     <div class="title-menu" id="titleMenu">
       <button class="title-menu-btn" id="titleStartBtn">
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
@@ -39,7 +47,7 @@
       </button>
       <button class="title-menu-btn" id="titleStaffBtn">
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
-        <span>スタッフ</span>
+        <span>製作者より</span>
       </button>
     </div>
     <div class="title-footer">Ver 1.0　© 温泉村物語</div>
@@ -62,16 +70,17 @@
     </div>
   </div>
 
-  <!-- スタッフ -->
-  <div class="screen" id="screen-staff">
-    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.jpg')"></div>
-    <div class="title-sub-panel">
-      <h1>スタッフ</h1>
-      <div class="title-staff-list">
-        <p>温泉村物語</p>
-        <p class="title-staff-role">企画・開発協力: Claude Code</p>
-      </div>
-      <button class="big title-sub-back-btn" id="staffBackBtn">戻る</button>
+  <!-- 製作者より(タイトル画面の上に重なるオーバーレイ。背景は暗くするだけで画面遷移はしない) -->
+  <div id="titleCreditsOverlay">
+    <div class="title-credits-panel">
+      <p class="title-credits-body">温泉村物語を遊んでいただき、<br>本当にありがとうございます。</p>
+      <p class="title-credits-body">このゲームは私にとって初めて制作した作品です。</p>
+      <p class="title-credits-body">ゲーム開発を学びながら少しずつ制作を進めています。</p>
+      <p class="title-credits-body">そのため、まだバグや調整不足な部分が残っているかもしれません。</p>
+      <p class="title-credits-body">今後もアップデートを続け、<br>より面白い作品に育てていきたいと思っています。</p>
+      <p class="title-credits-body">遊んでくださった皆様、<br>本当にありがとうございます。</p>
+      <p class="title-credits-sign">―― 制作者　けい<br>ーー協力 えりさん/ひーさん/古都/総理</p>
+      <button class="big title-credits-close-btn" id="titleCreditsCloseBtn">閉じる</button>
     </div>
   </div>
 
