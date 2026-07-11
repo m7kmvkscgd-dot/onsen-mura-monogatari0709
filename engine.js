@@ -204,6 +204,13 @@ function characterPortraitSrc(c) {
   return variants.severe;
 }
 
+// ステータス詳細画面専用。ストレス無し(tier0)の時だけCLASS_STATUS_PORTRAITを使い、
+// ストレスがある時はcharacterPortraitSrc()と同じくCLASS_STRESS_IMAGESを使う
+function statusPortraitSrc(c) {
+  if (stressTier(c.fatigue) === 0) return CLASS_STATUS_PORTRAIT[c.classId];
+  return characterPortraitSrc(c);
+}
+
 // ストレスによる攻撃力/防御力/素早さ/魔力の低下率。段階が上がるごとに重くなり、
 // 80〜99で半減、100(発狂)は数値上も0(=そもそも行動不能として別途扱う)
 function fatigueMalus(fatigue) {

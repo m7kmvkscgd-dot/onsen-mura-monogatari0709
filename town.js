@@ -326,6 +326,15 @@ function renderRosterList() {
       renderStatusScreen(c.id);
       showScreen("screen-status");
     };
+    // アイコン写真自体をタップしても詳細ステータスを開けるようにする(既存の「詳細」ボタンと同じ遷移)。
+    // 行全体のクリック(宿泊選択トグル)を巻き込まないようstopPropagationする
+    const rosterImg = row.querySelector("img");
+    rosterImg.style.cursor = "pointer";
+    rosterImg.onclick = (e) => {
+      e.stopPropagation();
+      renderStatusScreen(c.id);
+      showScreen("screen-status");
+    };
     const skillBtn = row.querySelector(".skill-pending-btn");
     if (skillBtn) {
       skillBtn.onclick = (e) => {
@@ -481,13 +490,21 @@ function retriggerEntryAnim(el, cls) {
   void el.offsetWidth;
   el.classList.add(cls);
 }
-function renderStatusScreen(charId) {
+// 詳細ステータスは宿屋の名簿だけでなく、出発準備画面のキャラアイコンからも開けるようにしたため、
+// 「戻る」の遷移先を呼び出し元ごとに変える必要がある。onBackを省略した場合(スキル系譜からの
+// 復帰など、明示的に渡さない内部呼び出し)は直前に使われたonBackをそのまま引き継ぐ。
+// statusBackBtn/statusBackBtnTopは画面ロード時に1度だけイベント登録される固定ボタンのため、
+// このモジュール変数を参照する形で常に「今表示中のキャラの正しい戻り先」を辿れるようにしてある
+let statusScreenOnBack = null;
+function defaultStatusOnBack() { renderTavern(); showScreen("screen-tavern"); }
+function renderStatusScreen(charId, onBack) {
+  statusScreenOnBack = onBack || statusScreenOnBack || defaultStatusOnBack;
   const c = getRosterChar(charId);
   const c2 = CLASSES[c.classId];
   const reading = NAME_READINGS[c.name];
   document.getElementById("statusName").textContent = reading ? `${c.name}(${reading})` : c.name;
-  renderDwHeader("status", c.name, () => { renderTavern(); showScreen("screen-tavern"); });
-  document.getElementById("statusImg").src = characterPortraitSrc(c);
+  renderDwHeader("status", c.name, statusScreenOnBack);
+  document.getElementById("statusImg").src = statusPortraitSrc(c);
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statPersonality").textContent = c.personality || "-";
   document.getElementById("statLevel").textContent = c.level;
@@ -576,8 +593,8 @@ function renderStatusScreen(charId) {
     );
   };
 }
-document.getElementById("statusBackBtn").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
-document.getElementById("statusBackBtnTop").onclick = () => { renderTavern(); showScreen("screen-tavern"); };
+document.getElementById("statusBackBtn").onclick = () => { (statusScreenOnBack || defaultStatusOnBack)(); };
+document.getElementById("statusBackBtnTop").onclick = () => { (statusScreenOnBack || defaultStatusOnBack)(); };
 
 // 各キャラ名表示は基本的に漢字のみ(ふりがなの丸括弧は非表示)。宿屋の詳細ステータス画面
 // (renderStatusScreen)でだけ、NAME_READINGSで引いたふりがなを名前の横に括弧書きで表示する
@@ -809,6 +826,16 @@ function renderPartySelect() {
       }
       saveState();
       renderPartySelect();
+    };
+    // アイコン写真をタップした時だけ詳細ステータスを開く(行全体のクリックはパーティ編成の
+    // 選択/解除に使われているため、stopPropagationで巻き込まないようにする)。
+    // 戻るボタンはこの出発準備画面へ戻れるようonBackを明示的に渡す
+    const partyImg = row.querySelector("img");
+    partyImg.style.cursor = "pointer";
+    partyImg.onclick = (e) => {
+      e.stopPropagation();
+      renderStatusScreen(c.id, () => { renderPartySelect(); showScreen("screen-party-select"); });
+      showScreen("screen-status");
     };
     list.appendChild(row);
   });

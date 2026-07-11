@@ -19,6 +19,21 @@ const CLASSES = {
   priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 6, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
 };
 
+// ステータス詳細画面(renderStatusScreen)専用の「ストレス無し時」立ち絵。
+// パーティ編成/出発準備/パーティバー等、他の画面で使われるCLASSES[classId].imageとは
+// あえて別ファイルにしてあり、ここを差し替えても他画面には一切影響しない
+// (ストレスがある時はこれまで通りCLASS_STRESS_IMAGESを使う。statusPortraitSrc()参照)
+const CLASS_STATUS_PORTRAIT = {
+  samurai: "assets/class_samurai_status.png",
+  ninja: "assets/class_ninja_status.png",
+  spearman: "assets/class_spearman_status.png",
+  naginata: "assets/class_naginata_status.png",
+  hunter: "assets/class_hunter_status.png",
+  gunner: "assets/class_gunner_status.png",
+  onmyoji: "assets/class_onmyoji_status.png",
+  priest: "assets/class_priest_status.png",
+};
+
 // ストレス段階ごとのキャラ立ち絵差し替え(通常時はCLASSES[classId].imageをそのまま使う)。
 // mild=ストレス40〜59、severe=60〜99、panic=100(stressTier()の1/2・3/4に対応)
 const CLASS_STRESS_IMAGES = {
