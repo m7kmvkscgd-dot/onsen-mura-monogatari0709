@@ -59,7 +59,7 @@
      しっかり見せたいという指示のため、小さめの白文字でごくゆっくり点滅させるだけに留め、
      派手な演出は付けない */
   .title-tap-prompt {
-    position: fixed; z-index: 4; left: 0; right: 0; bottom: 32%;
+    position: fixed; z-index: 4; left: 0; right: 0; bottom: calc(32% + 20px);
     text-align: center; color: #fff; font-size: 13px; letter-spacing: 0.2em;
     text-shadow: 0 2px 6px rgba(0,0,0,0.8);
     animation: titleTapBreathe 2.6s ease-in-out infinite;
