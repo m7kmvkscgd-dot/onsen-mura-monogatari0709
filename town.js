@@ -1102,25 +1102,34 @@ function renderOnsen() {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">入浴できる仲間がいません。</p>';
     return;
   }
+  const now = absoluteGameMinutes();
   bathable.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const cost = onsenCost(c.level);
     const noFatigue = (c.fatigue || 0) <= 0;
-    const disabled = noFatigue || state.gold < cost;
+    // 【バグ修正】以前はここでisOnsenLocked()を確認していなかったため、入浴中(2時間ロック中)の
+    // キャラでも「入る」ボタンが押せる状態のままになっており、再度タップするとuseOnsen()が
+    // ロック期限を「今から2時間後」に上書きしてしまっていた(=見かけ上ロックが解除されて
+    // 連続入浴できてしまうバグ)。他のキャラを入浴させたことが直接の原因ではなく、
+    // この画面のボタン自体が最初からロック状態を見ていなかったのが根本原因
+    const locked = isOnsenLocked(c, now);
+    const disabled = locked || noFatigue || state.gold < cost;
     let label = `入る(${cost}G)`;
-    if (noFatigue) label = "ストレスなし";
+    if (locked) label = "入浴中";
+    else if (noFatigue) label = "ストレスなし";
     const row = document.createElement("div");
     row.className = "roster-row";
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag active">Lv.${c.level} ${c2.ja}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${locked ? "bathing" : "active"}">Lv.${c.level} ${c2.ja}</span></div>
         <div class="roster-sub">ストレス ${c.fatigue || 0}</div>
         <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
       </div>
       <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
     `;
     row.querySelector("button").onclick = () => {
+      if (isOnsenLocked(c, absoluteGameMinutes())) return; // 二重タップ等での再ロック上書きを保険として防ぐ
       state.gold -= cost;
       useOnsen(c, absoluteGameMinutes());
       saveState();
