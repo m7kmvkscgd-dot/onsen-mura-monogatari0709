@@ -1035,6 +1035,63 @@
   body.path-choice-active #dungeonPartyBar, body.path-choice-active .bottom-actions {
     opacity: 0.65; transition: opacity 0.18s ease;
   }
+  /* ============ 進路選択の演出リニューアル(木札が縦に連なる「森の分岐」演出) ============
+     既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
+     残し、ここでは新しいクラス(.path-tags-*)を追加するだけに留めて上書きする。ゲーム性・抽選ロジック・
+     クリック時のコールバックは一切変更していない(見た目と演出のみ) */
+  /* ①背景を15〜20%暗くし、選択中であることを分かりやすくする。.dungeon-bg(z-index:0)より前、
+     .party-bar(z-index:4)より後ろに挟むことで、背景美術だけが沈み込み手前のUIには影響しない */
+  body.path-choice-active::before {
+    content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
+    background: rgba(0,0,0,0.18); opacity: 0; animation: pathDimIn 0.15s ease forwards;
+  }
+  @keyframes pathDimIn { from { opacity: 0; } to { opacity: 1; } }
+  /* パネル自体は箱を持たず、木札だけが宙に浮くようにする(背景の写真をそのまま見せたいため) */
+  .path-tags-panel { background: none; border: none; box-shadow: none; padding: 0; }
+  /* ②木札を縦に並べる。木札同士は.path-tag-ropeという細い縄目(reapeating-gradient)で繋ぐ */
+  .path-choice-cards.path-tags-stack { flex-direction: column; align-items: center; gap: 0; }
+  .path-tag-rope {
+    display: block; width: 2px; height: 13px; margin: 0 auto;
+    background: repeating-linear-gradient(to bottom, rgba(224,204,153,0.6) 0 3px, transparent 3px 6px);
+  }
+  /* ③木札本体: 和紙+木の半透明カード。アイコン(左)+名称/説明(右)の横並び */
+  .path-tag {
+    flex: 0 0 auto; width: min(78vw, 260px); height: auto; flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 0.65rem; padding: 0.6rem 0.85rem; margin: 0.25rem 0;
+    background: linear-gradient(180deg, rgba(64,52,34,0.72), rgba(28,22,15,0.78));
+    border: 1px solid rgba(201,162,74,0.4); border-radius: 11px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.07);
+    /* ⑥風に揺れるような、ごく僅かな回転+横揺れ(2〜3px/2〜3度)。indexごとにdelayをずらし、
+       全員が同じ周期で揺れる不自然さを避ける */
+    animation: pathTagSway 3.6s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 0.35s);
+  }
+  @keyframes pathTagSway {
+    0%, 100% { transform: rotate(-1.4deg) translateX(-2px); }
+    50% { transform: rotate(1.4deg) translateX(2px); }
+  }
+  .path-tag .path-card-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .path-tag-text { display: flex; flex-direction: column; gap: 0.15rem; text-align: left; min-width: 0; }
+  .path-tag .path-card-label { font-size: 0.92rem; font-weight: 700; color: #ecdfc0; white-space: normal; line-height: 1.2; }
+  .path-tag .path-card-desc { font-size: 0.68rem; color: #c7bda3; opacity: 0.85; line-height: 1.3; }
+  /* ④選択中(押した瞬間): 浮く+110%拡大+明るくなる+軽い光。揺れアニメーションは即座に止める */
+  .path-tag.path-tag-selected {
+    animation: none; transform: scale(1.1) translateY(-4px); filter: brightness(1.15);
+    border-color: var(--accent); opacity: 1;
+    box-shadow: 0 0 16px rgba(201,162,74,0.6), 0 8px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: transform 0.15s ease-out, filter 0.15s ease-out, box-shadow 0.15s ease-out;
+    z-index: 2; position: relative;
+  }
+  /* ⑤決定演出: 選ばれなかった木札は0.15秒でフェードアウト。テンポを落とさないため短く */
+  .path-tag.path-tag-fading {
+    animation: none; transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    opacity: 0; transform: scale(0.94); pointer-events: none;
+  }
+  .path-tags-stack.path-tags-locked .path-tag-rope { transition: opacity 0.15s ease-out; opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .path-tag { animation: none; }
+  }
   /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
      イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
   .treasure-popup {
@@ -5349,6 +5406,18 @@ const COAST_PATH_DEFS = {
   kamikakushi: { icon: "✨", label: "幻の島", battle: 0.00, gold: 0.00 },
 };
 function currentPathDefs() { return currentStage === "coast" ? COAST_PATH_DEFS : PATH_DEFS; }
+// 進路選択カードの短い情景描写(演出用の雰囲気テキストのみ。battle/gold等の数値には一切影響しない)
+const PATH_FLAVOR = {
+  rindou: "木々に囲まれた広い道", kemono: "草木が生い茂っている", kurai: "危険な気配が漂う",
+  shizuka: "静かな竹林が続く", komorebi: "木漏れ日が差し込む小道", hikaru: "何かが遠くで光っている",
+  fuon: "得体の知れない気配がする", kamikakushi: "空気が違う…",
+};
+const COAST_PATH_FLAVOR = {
+  rindou: "波の音が心地よい浜辺", kemono: "足場の悪い岩場が続く", kurai: "危険な気配が漂う",
+  shizuka: "静かな砂浜が広がる", komorebi: "小さな生き物がいる潮溜まり", hikaru: "何かが波間で光っている",
+  fuon: "得体の知れない気配がする", kamikakushi: "見えるはずのない島影…",
+};
+function currentPathFlavor() { return currentStage === "coast" ? COAST_PATH_FLAVOR : PATH_FLAVOR; }
 // 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
 const NORMAL_PATH_WEIGHTS = {
   rindou: 45, kemono: 30, kurai: 7.6, shizuka: 3.52,
@@ -5415,132 +5484,45 @@ function showPathChoice(onChosen) {
     // 所持品状況に応じて正しく再設定されるため、ここでは一律のdisabled解除はしない
   }
 
+  // 進路選択中は道具(回復薬/野営具/温泉卵)を使えない(テンポを落とさず「どちらへ進むか」だけに
+  // 集中させる意図的な仕様。道具自体は探索画面下部の既存「道具」ボタンから引き続き使用可能)
   function renderCards() {
+    const flavor = currentPathFlavor();
     div.innerHTML = `
-      <div class="path-choice-panel">
+      <div class="path-choice-panel path-tags-panel">
         <p class="path-choice-title">進路選択</p>
-        <div class="path-choice-cards">
+        <div class="path-choice-cards path-tags-stack">
           ${picked.map((key, idx) => {
             const p = currentPathDefs()[key];
             return `
-              <button class="path-card" data-idx="${idx}">
+              ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
+              <button class="path-card path-tag" data-idx="${idx}" style="--i:${idx}">
                 <span class="path-card-icon">${p.icon}</span>
-                <span class="path-card-label">${p.label}</span>
+                <span class="path-tag-text">
+                  <span class="path-card-label">${p.label}</span>
+                  <span class="path-card-desc">${flavor[key] || ""}</span>
+                </span>
               </button>
             `;
           }).join("")}
         </div>
-        <button class="path-choice-cancel" id="pathChoiceToolsBtn">道具</button>
       </div>
     `;
+    const stack = div.querySelector(".path-tags-stack");
     picked.forEach((key, idx) => {
-      div.querySelector(`button[data-idx="${idx}"]`).onclick = () => {
-        closePathChoice();
-        onChosen(key);
+      const btn = div.querySelector(`button[data-idx="${idx}"]`);
+      btn.onclick = () => {
+        if (stack.classList.contains("path-tags-locked")) return;
+        stack.classList.add("path-tags-locked");
+        stack.querySelectorAll(".path-tag").forEach((el) => {
+          el.classList.add(el === btn ? "path-tag-selected" : "path-tag-fading");
+        });
+        setTimeout(() => {
+          closePathChoice();
+          onChosen(key);
+        }, 170);
       };
     });
-    document.getElementById("pathChoiceToolsBtn").onclick = () => {
-      renderTools();
-    };
-  }
-
-  function renderTools() {
-    const campCount = state.inventory.campingKit || 0;
-    const eggCount = state.inventory.onsenEgg || 0;
-    const potionCount = state.inventory.potion || 0;
-    div.innerHTML = `
-      <div class="path-choice-panel">
-        <p class="path-choice-title">道具を選んでください</p>
-        <div class="path-choice-cards">
-          <button class="path-card" id="pathToolsPotionBtn" ${potionCount <= 0 ? "disabled" : ""}>
-            <span class="path-card-label">回復薬(${potionCount})</span>
-          </button>
-          <button class="path-card" id="pathToolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>
-            <span class="path-card-label">野営具(${campCount})</span>
-          </button>
-          <button class="path-card" id="pathToolsEggBtn" ${eggCount <= 0 ? "disabled" : ""}>
-            <span class="path-card-label">温泉卵(${eggCount})</span>
-          </button>
-        </div>
-        <button class="path-choice-cancel" id="pathToolsBackBtn">戻る</button>
-      </div>
-    `;
-    document.getElementById("pathToolsPotionBtn").onclick = () => {
-      if (potionCount <= 0) return;
-      renderPotionTargetPicker();
-    };
-    document.getElementById("pathToolsCampBtn").onclick = () => {
-      if (campCount <= 0) return;
-      closePathChoice();
-      startCampFromTools();
-    };
-    document.getElementById("pathToolsEggBtn").onclick = () => {
-      if (eggCount <= 0) return;
-      renderEggTargetPicker();
-    };
-    document.getElementById("pathToolsBackBtn").onclick = () => {
-      renderCards();
-    };
-  }
-
-  // 回復薬: 温泉卵と違い対象を選ぶ(パーティの誰でも対象にできる)。使ってもターンは消費しない
-  function renderPotionTargetPicker() {
-    const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
-    div.innerHTML = `
-      <div class="path-choice-panel">
-        <p class="path-choice-title">誰に回復薬(残り${state.inventory.potion || 0})を使いますか？</p>
-        <div class="path-choice-cards">
-          ${targets.map((c, idx) => `
-            <button class="path-card" data-potion-target-idx="${idx}">
-              <span class="path-card-label">${c.name}(${c.hp}/${c.maxHp})</span>
-            </button>
-          `).join("")}
-        </div>
-        <button class="path-choice-cancel" id="pathToolsPotionCancelBtn">やめる</button>
-      </div>
-    `;
-    targets.forEach((c, idx) => {
-      div.querySelector(`button[data-potion-target-idx="${idx}"]`).onclick = () => {
-        state.inventory.potion--;
-        usePotion(c, dlog);
-        playSfx("heal");
-        maybeSpeakHealed(c);
-        saveState();
-        renderCards(); // 再抽選せず同じ進路選択に戻す
-      };
-    });
-    document.getElementById("pathToolsPotionCancelBtn").onclick = () => {
-      renderTools();
-    };
-  }
-
-  function renderEggTargetPicker() {
-    const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
-    div.innerHTML = `
-      <div class="path-choice-panel">
-        <p class="path-choice-title">誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？</p>
-        <div class="path-choice-cards">
-          ${targets.map((c, idx) => `
-            <button class="path-card" data-target-idx="${idx}">
-              <span class="path-card-label">${c.name}(${c.hp}/${c.maxHp})</span>
-            </button>
-          `).join("")}
-        </div>
-        <button class="path-choice-cancel" id="pathToolsEggCancelBtn">やめる</button>
-      </div>
-    `;
-    targets.forEach((c, idx) => {
-      div.querySelector(`button[data-target-idx="${idx}"]`).onclick = () => {
-        state.inventory.onsenEgg--;
-        playSfx("heal");
-        useOnsenEgg(c, dlog);
-        saveState();
-        renderCards(); // 再抽選せず同じ進路選択に戻す
-      };
-    });
-    document.getElementById("pathToolsEggCancelBtn").onclick = () => {
-      renderTools();
-    };
   }
 
   renderCards();
