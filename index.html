@@ -538,13 +538,20 @@
   <div id="timeSkipOverlay">
     <div class="time-skip-picker" id="timeSkipPickerView">
       <h3>時間を進める</h3>
-      <div class="time-skip-duration" id="timeSkipDurationLabel">1時間</div>
-      <div class="time-skip-stepper">
-        <button class="big" id="timeSkipMinusBtn">−30分</button>
-        <button class="big" id="timeSkipPlusBtn">+30分</button>
+      <div class="time-skip-tag">
+        <div class="time-skip-row">
+          <button class="time-skip-arrow-btn" id="timeSkipMinusBtn">◀</button>
+          <div class="time-skip-duration" id="timeSkipDurationLabel">1時間</div>
+          <button class="time-skip-arrow-btn" id="timeSkipPlusBtn">▶</button>
+        </div>
+        <div class="time-skip-compare">
+          <span class="time-skip-compare-row"><span class="time-skip-compare-caption">現在</span><span class="time-skip-phase-badge" id="timeSkipNowPhase"></span><span id="timeSkipNowLabel"></span></span>
+          <span class="time-skip-compare-arrow">↓</span>
+          <span class="time-skip-compare-row"><span class="time-skip-compare-caption">変更後</span><span class="time-skip-phase-badge" id="timeSkipAfterPhase"></span><span id="timeSkipAfterLabel"></span></span>
+        </div>
       </div>
-      <button class="big primary" id="timeSkipConfirmBtn" style="width:100%;margin-bottom:0.6rem;">進める</button>
-      <button class="big" id="timeSkipCancelBtn" style="width:100%;">やめる</button>
+      <button class="big primary time-skip-confirm-btn" id="timeSkipConfirmBtn" style="width:100%;margin-top:1rem;margin-bottom:0.6rem;">進める</button>
+      <button class="big time-skip-cancel-btn" id="timeSkipCancelBtn" style="width:100%;">やめる</button>
     </div>
     <div id="timeSkipAnimView">
       <div class="lodging-transition-bg from" id="timeSkipBgFrom"></div>

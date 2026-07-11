@@ -4,13 +4,57 @@
     cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
   }
   .time-skip-btn:active { transform: scale(0.9); }
-  /* 時間を進めるピッカー/演出オーバーレイ */
-  #timeSkipOverlay { position: fixed; inset: 0; z-index: 55; background: rgba(10,12,14,0.92); display: none; }
-  .time-skip-picker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 380px; text-align: center; }
-  .time-skip-picker h3 { color: var(--accent); margin: 0 0 1rem; font-size: 1.1rem; }
-  .time-skip-duration { font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 1.2rem; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
-  .time-skip-stepper { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
-  .time-skip-stepper button { flex: 1; }
+  /* ============ 時間を進めるピッカー ============
+     「村で時間を調整する」ゲーム内行動として見せるため、設定画面然としたモーダルではなく
+     木札(タグ)が宙に浮くデザインにした。背景は15〜20%だけ暗くし(以前は92%でほぼ塗りつぶし)、
+     中央だけradial-gradientでわずかに明るくしてポップアップへ視線を誘導する */
+  #timeSkipOverlay {
+    position: fixed; inset: 0; z-index: 55; display: none;
+    background: radial-gradient(ellipse 260px 320px at 50% 46%, rgba(255,240,210,0.05), transparent 65%), rgba(10,12,14,0.2);
+  }
+  .time-skip-picker {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); width: 85%; max-width: 380px; text-align: center;
+    animation: timeSkipPopIn 0.15s ease-out;
+  }
+  @keyframes timeSkipPopIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .time-skip-picker h3 { color: var(--dw-caption-color); margin: 0 0 0.7rem; font-size: 0.92rem; font-weight: 600; letter-spacing: 0.08em; }
+  /* 木札(タグ)本体: 焦げ茶の枠+上だけ薄く明るく/下だけ薄く暗いグラデーションのみで質感を出す(木目画像は不使用) */
+  .time-skip-tag {
+    background: linear-gradient(180deg, rgba(69,54,36,0.95) 0%, rgba(69,54,36,0.94) 45%, rgba(38,29,19,0.96) 100%);
+    border: 1.5px solid #3a2a17; border-radius: var(--radius-lg);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12);
+    padding: 1rem 1rem 0.9rem; transition: transform 0.12s ease-out, filter 0.12s ease-out;
+  }
+  .time-skip-tag.pressed { transform: scale(0.97) translateY(2px); filter: brightness(0.9); }
+  .time-skip-row { display: flex; align-items: center; justify-content: center; gap: 0.9rem; }
+  .time-skip-arrow-btn {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid rgba(201,162,74,0.5);
+    background: rgba(0,0,0,0.25); color: var(--dw-title-color); font-size: 0.85rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: transform 0.1s ease-out, filter 0.1s ease-out;
+  }
+  .time-skip-arrow-btn:active { transform: scale(0.9); filter: brightness(1.3); }
+  .time-skip-arrow-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  /* 数字を主役にする(以前の2rem→30%増の2.6rem) */
+  .time-skip-duration { flex: 1; min-width: 0; font-size: 2.6rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.85); }
+  .time-skip-compare {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    margin-top: 0.75rem; padding-top: 0.7rem; border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.74rem; color: var(--dw-caption-color);
+  }
+  .time-skip-compare-row { display: flex; align-items: center; gap: 0.35rem; }
+  .time-skip-compare-caption { color: var(--dw-caption-color); opacity: 0.8; }
+  .time-skip-compare-arrow { color: var(--accent); opacity: 0.7; }
+  /* 時間帯ラベル(早朝/朝/昼/夕/夜)。絵文字は使わず、小さな金枠の和風タグのみで表現する */
+  .time-skip-phase-badge {
+    display: inline-block; padding: 0.05rem 0.4rem; border-radius: var(--radius-pill);
+    border: 1px solid rgba(201,162,74,0.55); color: var(--accent); font-size: 0.68rem; font-weight: 700;
+  }
+  .time-skip-confirm-btn { min-height: 56px; }
+  .time-skip-cancel-btn { min-height: 44px; font-size: 0.85rem; opacity: 0.88; }
   #timeSkipAnimView { position: absolute; inset: 0; display: none; }
   .time-skip-clock {
     position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 2;

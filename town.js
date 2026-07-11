@@ -141,14 +141,26 @@ function formatTimeSkipDuration(min) {
   if (m === 0) return `${h}時間`;
   return `${h}時間${m}分`;
 }
+// 選んだ時間だけ進めた後の時刻・時間帯を(実際には進めず)プレビュー計算する。
+// phaseForClockMinutes/formatClockTimeはどちらも副作用の無い純粋関数なので、ここでstateを書き換えずに使える
 function renderTimeSkipPicker() {
   document.getElementById("timeSkipDurationLabel").textContent = formatTimeSkipDuration(timeSkipSelectedMin);
   document.getElementById("timeSkipMinusBtn").disabled = timeSkipSelectedMin <= TIME_SKIP_STEP_MIN;
   document.getElementById("timeSkipPlusBtn").disabled = timeSkipSelectedMin >= TIME_SKIP_MAX_MIN;
+  const nowMinutes = state.clockMinutes || 0;
+  const afterMinutes = (nowMinutes + timeSkipSelectedMin) % 1440;
+  const nowPhase = phaseForClockMinutes(nowMinutes);
+  const afterPhase = phaseForClockMinutes(afterMinutes);
+  document.getElementById("timeSkipNowPhase").textContent = TIME_PHASE_LABEL[nowPhase];
+  document.getElementById("timeSkipNowLabel").textContent = formatClockTime(nowMinutes);
+  document.getElementById("timeSkipAfterPhase").textContent = TIME_PHASE_LABEL[afterPhase];
+  document.getElementById("timeSkipAfterLabel").textContent = formatClockTime(afterMinutes);
 }
 document.getElementById("timeSkipBtn").onclick = () => {
   timeSkipSelectedMin = 60;
   renderTimeSkipPicker();
+  const tag = document.querySelector(".time-skip-tag");
+  if (tag) tag.classList.remove("pressed");
   document.getElementById("timeSkipPickerView").style.display = "block";
   document.getElementById("timeSkipAnimView").style.display = "none";
   document.getElementById("timeSkipOverlay").style.display = "block";
@@ -165,7 +177,9 @@ document.getElementById("timeSkipCancelBtn").onclick = () => {
   document.getElementById("timeSkipOverlay").style.display = "none";
 };
 document.getElementById("timeSkipConfirmBtn").onclick = () => {
-  startTimeSkipAnimation(timeSkipSelectedMin);
+  const tag = document.querySelector(".time-skip-tag");
+  if (tag) tag.classList.add("pressed");
+  setTimeout(() => { startTimeSkipAnimation(timeSkipSelectedMin); }, 130);
 };
 function startTimeSkipAnimation(totalMin) {
   document.getElementById("timeSkipPickerView").style.display = "none";
