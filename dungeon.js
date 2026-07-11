@@ -43,6 +43,10 @@ function enterDungeon() {
   advQuestCompleted = null;
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
+  // dungeonLogLines(配列)を空にするだけでは前回の遠征のログ行がDOMに残ったままになる
+  // (appendTypewriterLogは行を追加するだけで、#dungeonLog自体をクリアしない設計のため。
+  // #battleLogは戦闘開始のたびにstartBattle()でinnerHTMLごとクリアされるので同じ対処をする)
+  document.getElementById("dungeonLog").innerHTML = "";
   // 新しい冒険のたびに曲を最初から再生する(前回の続きから再開しないようにする)。夜専用曲も含めて両方リセットする
   bgmPositions.dungeon = 0;
   bgmPositions.dungeon_night = 0;
@@ -623,7 +627,6 @@ function showCriticalAlert(critical, onResolved) {
   document.getElementById("advanceBtn").disabled = true;
   document.getElementById("retreatBtn").disabled = true;
   document.body.classList.add("critical-alert-active");
-  const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
   // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
@@ -636,7 +639,6 @@ function showCriticalAlert(critical, onResolved) {
         <img src="${characterPortraitSrc(critical)}">
       </div>
       <p class="critical-alert-name">${critical.name}</p>
-      <p class="critical-alert-job">${c2.ja}</p>
       <div class="critical-alert-timer">
         <span class="critical-alert-timer-label">残り</span>
         <span class="critical-alert-timer-value">${criticalTimeLeftStr(critical)}</span>

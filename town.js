@@ -650,9 +650,9 @@ function renderFirstCharacterScreen() {
   // 最初の1人を作った)場合はtutorialEnabledがundefinedのままになるが、
   // townHireHint側は「undefined=表示する」扱いにしてあるため、旧来通りの挙動を保つ
   if (state.tutorialEnabled === undefined) {
-    showConfirmModal("チュートリアル(宿屋で仲間を雇いましょう、等の案内)を表示しますか？", [
-      { label: "表示する", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
-      { label: "表示しない", className: "big", onClick: () => { state.tutorialEnabled = false; saveState(); startFirstCharacterPick(); } },
+    showConfirmModal("チュートリアルを表示しますか？", [
+      { label: "はい", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
+      { label: "いいえ", className: "big", onClick: () => { state.tutorialEnabled = false; saveState(); startFirstCharacterPick(); } },
     ]);
   } else {
     startFirstCharacterPick();

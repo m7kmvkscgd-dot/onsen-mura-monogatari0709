@@ -108,8 +108,7 @@
   }
   .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
   .critical-alert-portrait img { width: 100%; height: 100%; object-fit: contain; background: #353a44; border-radius: 8px; }
-  .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0; }
-  .critical-alert-job { text-align: center; font-size: 0.7rem; color: #c7bda3; margin: 0 0 0.4rem; }
+  .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0 0 0.4rem; }
   .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.35rem; margin: 0 0 0.35rem; }
   .critical-alert-timer-label { font-size: 0.7rem; color: #e08e84; font-weight: 600; }
   .critical-alert-timer-value { font-size: 1.75rem; font-weight: 800; color: var(--danger); text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
