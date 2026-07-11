@@ -1141,6 +1141,8 @@ function performAttack(actor, target, log) {
 let lastEnemyKillActor = null;
 // 直近のapplyDamageToTargetで会心が発動したか(index.html側で被弾演出の揺れの強さを決めるのに使う)
 let lastHitWasCrit = false;
+// 直近のapplyDamageToTargetで狩人の鷹の追撃が発動したか(battle.js側で追撃演出を出すかどうかの判定に使う)
+let lastHawkFollowupHappened = false;
 // 「傷口狙い」系の受動効果が参照する、対象が何らかの状態異常を負っているかどうかの判定。
 // 毒/炎上/スタン/沈黙に加え、能力低下(捕縛・崩しなどのstatMods、mult<1のもの)も対象に含める
 function hasStatusAilment(target) {
@@ -1193,6 +1195,7 @@ function anyOtherAllyGuarding(entity) {
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
   logSuffix = logSuffix || "";
+  lastHawkFollowupHappened = false;
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
   if (actor && actor.instanceId !== undefined && target.__allies) {
     const hawkOwner = target.__allies.find((c) => c.hawkGuardTargetId === target.id && c.hawkTurnsLeft > 0);
@@ -1298,11 +1301,16 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       }
     });
   }
-  // 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の攻撃対象に鷹も追撃する。actor=nullで再帰呼び出しする
-  // ことで(爆弾の生ダメージ処理と同じ手法)会心・パッシブ等の副作用は乗せず、出血付与だけ別途判定する
+  // 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の攻撃対象(通常攻撃・技問わず、applyDamageToTargetを
+  // 通る全ての攻撃が対象)に鷹も追撃する。actor=nullで再帰呼び出しすることで(爆弾の生ダメージ処理と
+  // 同じ手法)会心・パッシブ等の副作用は乗せず、出血付与だけ別途判定する。ただしこの再帰呼び出しは
+  // 自分自身(lastHitWasCrit/lastHawkFollowupHappened)を上書きしてしまうため、呼び出し前後で退避/復元する
   if (actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0) {
+    const critFlagBeforeHawk = lastHitWasCrit;
     const hawkDmg = Math.max(1, Math.round(withVariance(effectiveStat(actor, "atk") * HAWK_FOLLOWUP_ATK_MULT * mitigation(effectiveStat(target, "def"), 18), 0.15)));
     applyDamageToTarget(target, hawkDmg, log, `${actor.label}の鷹`, null);
+    lastHitWasCrit = critFlagBeforeHawk;
+    lastHawkFollowupHappened = true;
     if (target.hp > 0 && Math.random() < HAWK_FOLLOWUP_BLEED_CHANCE) applyBleed(target, resolveValue({ valueMin: 1, valueMax: 3 }, 2));
   }
   return dmg;

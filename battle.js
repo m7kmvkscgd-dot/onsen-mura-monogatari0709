@@ -449,6 +449,14 @@ function runTreeSkill(actor, skill) {
     finishPlayerAction();
     return;
   }
+  if (action.kind === "summonHawk") {
+    const result = useTreeSkill(actor, actor, skill, blog);
+    if (result && result.failed) { renderActionButtons(actor); return; }
+    playSfx("hawk_summon");
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
   if (action.kind === "heal") {
     if (action.aoe) {
       playSfx("heal");
@@ -509,6 +517,7 @@ function runTreeSkill(actor, skill) {
     else if (r) playSfx("evade");
     renderBattleScreen();
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
+    if (r && r.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
     triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
   });
 }
@@ -668,6 +677,7 @@ function renderActionButtons(actor) {
         else playSfx("evade");
         renderBattleScreen();
         if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+        if (result.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
         triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
       });
     };
@@ -755,6 +765,7 @@ function renderActionButtons(actor) {
             else if (result && !result.failed) playSfx("evade");
             renderBattleScreen();
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
+            if (result && result.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
           });
         };
@@ -779,7 +790,7 @@ function renderActionButtons(actor) {
       if (actor.hawkTurnsLeft > 0) {
         const hawkGuardBtn = document.createElement("button");
         hawkGuardBtn.className = "big";
-        hawkGuardBtn.textContent = `味方を守れ(MP${HAWK_GUARD_MP_COST})`;
+        hawkGuardBtn.textContent = "味方を守れ" + (HAWK_GUARD_MP_COST > 0 ? `(MP${HAWK_GUARD_MP_COST})` : "");
         if (actor.mp < HAWK_GUARD_MP_COST) hawkGuardBtn.disabled = true;
         hawkGuardBtn.onclick = () => { renderAllyTargets(actor, "hawkGuard"); };
         attachSkillLongPressTooltip(hawkGuardBtn, "味方を守れ", "指定した味方(自分を含む)への次の攻撃を、鷹が代わりに受けて消滅する");

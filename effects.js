@@ -52,6 +52,8 @@ const CLASS_ATTACK_VFX = {
   onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
   hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
   gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+  // 狩人「鷹を呼ぶ」の追撃専用エントリ。侍の通常斬撃素材を流用しつつ、サイズだけ半分以下(454→200)に縮小する
+  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 200 } },
 };
 // 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
 // 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
@@ -81,6 +83,29 @@ function playAttackVfx(targetId, actor, kind) {
     }
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
+}
+// 狩人「鷹を呼ぶ」の追撃演出: 🦅の絵文字が狩人の位置から対象へ高速で飛んでいき、着弾で侍の通常攻撃と
+// 同じ斬撃エフェクト+SEを鳴らす(見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
+const HAWK_PROJECTILE_MS = 220;
+function playHawkAttackVfx(hunterActor, targetId) {
+  const finish = () => {
+    playAttackVfx(targetId, { classId: "hawk" }, "normal");
+    playSfx(attackSfxFor("samurai"));
+  };
+  const fromEl = findVisibleCard(hunterActor.id);
+  const toEl = findVisibleCard(targetId);
+  if (!fromEl || !toEl) { finish(); return; }
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+  const bird = document.createElement("div");
+  bird.className = "hawk-projectile";
+  bird.textContent = "🦅";
+  document.body.appendChild(bird);
+  const anim = bird.animate([
+    { transform: `translate(${fromRect.left + fromRect.width / 2}px, ${fromRect.top + fromRect.height / 2}px) scale(0.8)`, opacity: 1 },
+    { transform: `translate(${toRect.left + toRect.width / 2}px, ${toRect.top + toRect.height / 2}px) scale(1.15)`, opacity: 1 },
+  ], { duration: HAWK_PROJECTILE_MS, easing: "ease-in", fill: "forwards" });
+  anim.onfinish = () => { bird.remove(); finish(); };
 }
 // 会心専用の演出。通常攻撃の処理そのものは一切変更せず、会心が発生した時だけ追加で呼ぶ。
 // 「ヒットストップ」は本物の処理停止ではなく、通常の斬撃エフェクト/シェイクが鳴った直後に
