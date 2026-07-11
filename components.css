@@ -89,6 +89,7 @@
   .skill-tree-inline-detail { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surface-2); }
   .skill-tree-inline-detail h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.85rem; }
   .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
+  .skill-tree-inline-detail p.skill-tree-hidden-desc { color: var(--text-muted); font-style: italic; }
   .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
   .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
   .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }

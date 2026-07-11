@@ -115,10 +115,14 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
       content.querySelectorAll(".skill-tree-inline-detail").forEach((d) => { d.style.display = "none"; d.innerHTML = ""; });
       if (alreadyOpenForThis) return;
       const isThisPending = lv === pendingLevel;
+      const chosenSide = character.skills && character.skills[lv];
+      // 「未取得」のスキル(選択待ちのレベルは両側とも例外的に見せる。選択済みのレベルは選ばなかった
+      // 方の枝、まだ到達していないレベルは両方が対象)は、名前は見せたまま効果の説明だけ隠す
+      const isAcquired = isThisPending || chosenSide === side;
       detail.dataset.side = side;
       detail.innerHTML = `
         <h4>Lv${lv}・【${side === "left" ? "左" : "右"}】${skill.name}</h4>
-        <p>${skill.desc}</p>
+        ${isAcquired ? `<p>${skill.desc}</p>` : `<p class="skill-tree-hidden-desc">まだ習得していないため、効果は確認できません。</p>`}
         ${isThisPending ? `<button class="big primary skill-confirm-btn">このスキルに決める</button>` : ""}
       `;
       detail.style.display = "block";
