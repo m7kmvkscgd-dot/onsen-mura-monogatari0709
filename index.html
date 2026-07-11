@@ -996,35 +996,37 @@
     background: linear-gradient(180deg, rgba(46,37,26,0.97) 0%, rgba(46,37,26,0.96) 45%, rgba(22,17,12,0.97) 100%);
     border: 1.5px solid var(--accent); border-radius: var(--radius-lg);
     box-shadow: 0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
-    padding: 0.95rem 1rem; margin: 0.7rem 1rem;
-    animation: criticalAlertIn 0.18s ease-out;
+    padding: 0.8rem 1rem; margin: 0.55rem 1rem;
+    animation: criticalAlertIn 0.15s ease-out;
   }
-  @keyframes criticalAlertIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes criticalAlertIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
   .critical-alert.critical-alert-closing { animation: criticalAlertOut 0.15s ease-in forwards; pointer-events: none; }
-  @keyframes criticalAlertOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
+  @keyframes criticalAlertOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
   /* 選択中は背景を暗くして「重大イベント」であることを示す。閉じれば自動的に消える(bodyクラス連動) */
   body.critical-alert-active::before {
     content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
     background: rgba(0,0,0,0.23); opacity: 0; animation: pathDimIn 0.15s ease forwards;
   }
+  /* 「読む画面」ではなく「2秒で理解できる画面」を目指し、情報量を最小限(タイトル/キャラ/名前・職業/
+     残り時間/場所のみ)に絞り、上下の余白も詰めてコンパクトにしてある */
   .critical-alert-title {
-    text-align: center; font-size: 1.02rem; font-weight: 800; color: #efe2c2;
-    letter-spacing: 0.06em; margin: 0 0 0.7rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    text-align: center; font-size: 1.28rem; font-weight: 800; color: #efe2c2;
+    letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   }
-  .critical-alert-portrait { width: 92px; height: 92px; margin: 0 auto 0.6rem; }
+  .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
   .critical-alert-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px; }
   .critical-alert-portrait .stress-overlay { border-radius: 8px; }
-  .critical-alert-name { text-align: center; font-size: 0.95rem; font-weight: 700; color: #efe2c2; margin: 0 0 0.15rem; }
-  .critical-alert-state { text-align: center; font-size: 0.78rem; color: #c7bda3; margin: 0 0 0.6rem; }
-  .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.4rem; margin: 0 0 0.5rem; }
-  .critical-alert-timer-label { font-size: 0.76rem; color: #e08e84; font-weight: 600; }
-  .critical-alert-timer-value { font-size: 1.5rem; font-weight: 800; color: var(--danger); text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
-  .critical-alert-place { text-align: center; font-size: 0.76rem; color: #c7bda3; margin: 0 0 0.5rem; }
-  .critical-alert-warn { text-align: center; font-size: 0.7rem; color: #a89f8c; margin: 0 0 0.75rem; }
-  .critical-alert-actions { display: flex; flex-direction: column; gap: 0.45rem; }
+  .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0; }
+  .critical-alert-job { text-align: center; font-size: 0.7rem; color: #c7bda3; margin: 0 0 0.4rem; }
+  .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.35rem; margin: 0 0 0.35rem; }
+  .critical-alert-timer-label { font-size: 0.7rem; color: #e08e84; font-weight: 600; }
+  .critical-alert-timer-value { font-size: 1.75rem; font-weight: 800; color: var(--danger); text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  .critical-alert-place { text-align: center; font-size: 0.74rem; color: #c7bda3; margin: 0 0 0.6rem; }
+  .critical-alert-actions { display: flex; flex-direction: column; gap: 0.4rem; }
+  .critical-alert-btn { min-height: 45px; }
   .critical-alert-skip-btn {
-    min-height: 40px; padding: 0.4rem; font-size: 0.82rem; opacity: 0.82;
+    padding: 0.35rem; font-size: 0.82rem; opacity: 0.82;
   }
   /* 進路選択パネル(critical-alertの赤枠とは別の専用デザイン。和風の落ち着いた高級感を出すため
      黒〜濃いグレーの半透明+細い金枠にしている) */
@@ -5619,17 +5621,16 @@ function showCriticalAlert(critical, onResolved) {
         <img src="${c2.image}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
       </div>
-      <p class="critical-alert-name">${critical.name}（${c2.ja}）</p>
-      <p class="critical-alert-state">瀕死で倒れている</p>
+      <p class="critical-alert-name">${critical.name}</p>
+      <p class="critical-alert-job">${c2.ja}</p>
       <div class="critical-alert-timer">
         <span class="critical-alert-timer-label">残り</span>
         <span class="critical-alert-timer-value">${criticalTimeLeftStr(critical)}</span>
       </div>
       <p class="critical-alert-place">${stageLabel} ${critical.criticalFloor}層目</p>
-      <p class="critical-alert-warn">放置すると仲間を失います。</p>
       <div class="critical-alert-actions">
-        <button class="big primary" id="carryBtn">担いで連れて帰る</button>
-        <button class="big critical-alert-skip-btn" id="skipCriticalBtn">今回は見送る</button>
+        <button class="big primary critical-alert-btn" id="carryBtn">担いで連れて帰る</button>
+        <button class="big critical-alert-skip-btn critical-alert-btn" id="skipCriticalBtn">今回は見送る</button>
       </div>
     </div>
   `;
