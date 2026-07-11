@@ -103,6 +103,8 @@ function createCharacter(name, classId, classUpgrades) {
     passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
     transformForm: null, // 忍の「変化の術」で変身中のform("karasu"|"gama"|"hebi"|null)
     formCooldown: 0, // 変身中のform専用スキル(丸呑み/脱皮)の残りクールタイム
+    hawkTurnsLeft: 0, // 狩人「鷹を呼ぶ」: 鷹が出現している残りターン数(0=いない)
+    hawkGuardTargetId: null, // 「味方を守れ」で鷹が庇っている対象のid(いなければnull)
   };
 }
 
@@ -471,6 +473,14 @@ function tickTurnStartEffects(entity, log) {
     });
   }
   tickStatMods(entity);
+  // 狩人「鷹を呼ぶ」: 出現ターン数を自分のターンが来るたびに1減らし、切れたら飛び去る
+  if (entity.hawkTurnsLeft > 0) {
+    entity.hawkTurnsLeft--;
+    if (entity.hawkTurnsLeft <= 0) {
+      entity.hawkGuardTargetId = null;
+      log(`${entity.label}の鷹は飛び去っていった。`);
+    }
+  }
   if (entity.statusImmuneTurns > 0) entity.statusImmuneTurns--;
   if (entity.tauntTurns > 0) entity.tauntTurns--;
   if (entity.passives && entity.passives.onKillStacks > 0) {
@@ -785,6 +795,13 @@ function useTreeSkill(actor, target, skill, log) {
   // 変化の術: MP消費とコンボタグ判定だけここで済ませ、実際にどのformへ変身するかの選択とenterTransform()の
   // 呼び出しはindex.html側のUI(3択の表示)に任せる
   if (action.kind === "transform") return {};
+  if (action.kind === "summonHawk") {
+    if (actor.hawkTurnsLeft > 0) { log(`${actor.label}の鷹は既に出ている！`); return { failed: true }; }
+    actor.hawkTurnsLeft = action.turns;
+    actor.hawkGuardTargetId = null;
+    log(`${actor.label}は鷹を呼び出した！`);
+    return { summonedHawk: true };
+  }
   if (action.kind === "buffSelf" || action.kind === "buffParty") {
     const targets = action.kind === "buffParty" ? target : [actor];
     targets.forEach((t) => {
@@ -1176,6 +1193,16 @@ function anyOtherAllyGuarding(entity) {
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
   logSuffix = logSuffix || "";
+  // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
+  if (actor && actor.instanceId !== undefined && target.__allies) {
+    const hawkOwner = target.__allies.find((c) => c.hawkGuardTargetId === target.id && c.hawkTurnsLeft > 0);
+    if (hawkOwner) {
+      hawkOwner.hawkTurnsLeft = 0;
+      hawkOwner.hawkGuardTargetId = null;
+      log(`${hawkOwner.label}の鷹が${target.label}をかばって消えた！`);
+      return 0;
+    }
+  }
   if (actor && actor.passives && actor.passives.firstAttackBonusMult > 0 && !actor.passives.firstAttackUsed) {
     dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
     actor.passives.firstAttackUsed = true;
@@ -1270,6 +1297,13 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
         if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
       }
     });
+  }
+  // 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の攻撃対象に鷹も追撃する。actor=nullで再帰呼び出しする
+  // ことで(爆弾の生ダメージ処理と同じ手法)会心・パッシブ等の副作用は乗せず、出血付与だけ別途判定する
+  if (actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0) {
+    const hawkDmg = Math.max(1, Math.round(withVariance(effectiveStat(actor, "atk") * HAWK_FOLLOWUP_ATK_MULT * mitigation(effectiveStat(target, "def"), 18), 0.15)));
+    applyDamageToTarget(target, hawkDmg, log, `${actor.label}の鷹`, null);
+    if (target.hp > 0 && Math.random() < HAWK_FOLLOWUP_BLEED_CHANCE) applyBleed(target, resolveValue({ valueMin: 1, valueMax: 3 }, 2));
   }
   return dmg;
 }

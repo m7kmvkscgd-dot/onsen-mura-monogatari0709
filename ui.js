@@ -408,6 +408,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.innerHTML = `
       <img src="${portraitSrc}">
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
+      ${c.hawkTurnsLeft > 0 ? `<span class="hawk-badge" title="鷹(あと${c.hawkTurnsLeft}T)">🦅</span>` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>

@@ -839,8 +839,8 @@ const SKILL_TREES = {
       right: { name: "スタン矢", desc: "敵単体へ70%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     4: {
-      left: { name: "急所狙い", desc: "毒を負わせた敵への会心率+20%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.2 } } },
-      right: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
+      left: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
+      right: { name: "鷹を呼ぶ", desc: "鷹を呼び出す(5ターンの間出現)。出現中は狩人が攻撃した対象に鷹も攻撃力35%で追撃する(75%の確率で出血1〜3を付与)。また出現中は「味方を守れ」(MP3)が使え、指定した味方(自分を含む)への次の攻撃を鷹が代わりに受けて消滅する。5ターン経つと自然に飛び去る。既に出現中は再度呼び出せない", mp: 3, action: { kind: "summonHawk", turns: 5 } },
     },
     5: {
       left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
@@ -995,6 +995,11 @@ const SKILL_TREE_NAMES = {
   priest: { left: "奇跡", right: "神恩" },
 };
 const SUPPLY_CAP_BASE = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる(鞄屋を建てるとsupplyCap()でこれに加算される)
+
+// 狩人スキル「鷹を呼ぶ」関連の数値
+const HAWK_FOLLOWUP_ATK_MULT = 0.35; // 鷹の追撃威力(狩人の攻撃力に対する割合)
+const HAWK_FOLLOWUP_BLEED_CHANCE = 0.75; // 鷹の追撃が出血を付与する確率
+const HAWK_GUARD_MP_COST = 3; // 「味方を守れ」のMP消費
 
 // 職業ごとの武器/防具。各5段階(Lv1/3/5/7/9で解禁、レベルが2上がるごとに上位種が出る)。
 // 上位を買うと下位から乗り換わる(加算ではなく差し替え)。「そのレベルに到達した仲間が1人でもいるか」で解禁判定する。

@@ -25,6 +25,8 @@ function startBattle(enemies, pathDef, encounterText) {
     c.tauntTurns = 0;
     c.statMods = [];
     c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
+    c.hawkTurnsLeft = 0; // 狩人「鷹を呼ぶ」も戦闘をまたいで持ち越さない
+    c.hawkGuardTargetId = null;
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -765,12 +767,24 @@ function renderActionButtons(actor) {
         const btn = document.createElement("button");
         btn.className = "big";
         const cost = skillMpCost(actor, skill.mp);
-        btn.textContent = skill.name + (cost > 0 ? `(MP${cost})` : "");
-        if (cost > 0 && actor.mp < cost) btn.disabled = true;
+        const hawkActive = skill.action && skill.action.kind === "summonHawk" && actor.hawkTurnsLeft > 0;
+        btn.textContent = skill.name + (hawkActive ? `(滞在中あと${actor.hawkTurnsLeft}T)` : (cost > 0 ? `(MP${cost})` : ""));
+        if (hawkActive || (cost > 0 && actor.mp < cost)) btn.disabled = true;
         btn.onclick = () => { runTreeSkill(actor, skill); };
         attachSkillLongPressTooltip(btn, skill.name, skill.desc);
         grid.appendChild(btn);
       });
+
+      // 鷹を呼ぶ(狩人)が出ている間だけ使える「味方を守れ」。指定した味方への次の攻撃を鷹が代わりに受けて消滅する
+      if (actor.hawkTurnsLeft > 0) {
+        const hawkGuardBtn = document.createElement("button");
+        hawkGuardBtn.className = "big";
+        hawkGuardBtn.textContent = `味方を守れ(MP${HAWK_GUARD_MP_COST})`;
+        if (actor.mp < HAWK_GUARD_MP_COST) hawkGuardBtn.disabled = true;
+        hawkGuardBtn.onclick = () => { renderAllyTargets(actor, "hawkGuard"); };
+        attachSkillLongPressTooltip(hawkGuardBtn, "味方を守れ", "指定した味方(自分を含む)への次の攻撃を、鷹が代わりに受けて消滅する");
+        grid.appendChild(hawkGuardBtn);
+      }
     }
 
     // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
@@ -856,6 +870,10 @@ function resolveAllyTarget(actor, kind, target) {
     playSfx("heal");
     const result = useAbility(actor, target, "heal", blog);
     if (result && result.heal) { popupOn(target.id, `+${result.heal}`, "heal"); maybeSpeakHealed(target); }
+  } else if (kind === "hawkGuard") {
+    actor.mp -= HAWK_GUARD_MP_COST;
+    actor.hawkGuardTargetId = target.id;
+    blog(`${actor.label}の鷹が${target.label}を守るために身構えた！`);
   } else {
     state.inventory.potion--;
     playSfx("heal");
