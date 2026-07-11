@@ -988,7 +988,44 @@
     box-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 2px 3px rgba(0,0,0,0.3);
     filter: brightness(1.15);
   }
-  .critical-alert { background: rgba(58,34,34,0.75); border: 1px solid var(--danger); border-radius: var(--radius-md); padding: 0.8rem; margin: 0.7rem 1rem; }
+  /* ============ 瀕死救出アラート: 「和風の高級な告知札」演出 ============
+     赤い確認ダイアログではなく、黒〜濃茶ベース+金の細枠の告知札に変更。表示/非表示ともごく短い
+     scale+opacityの演出のみ(重い演出・常時アニメーションは無し)。ゲームロジック・イベント処理は
+     一切変更せず、既存の#criticalAlert/onResolved/showCarryPicker等の仕組みをそのまま流用している */
+  .critical-alert {
+    background: linear-gradient(180deg, rgba(46,37,26,0.97) 0%, rgba(46,37,26,0.96) 45%, rgba(22,17,12,0.97) 100%);
+    border: 1.5px solid var(--accent); border-radius: var(--radius-lg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+    padding: 0.95rem 1rem; margin: 0.7rem 1rem;
+    animation: criticalAlertIn 0.18s ease-out;
+  }
+  @keyframes criticalAlertIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  .critical-alert.critical-alert-closing { animation: criticalAlertOut 0.15s ease-in forwards; pointer-events: none; }
+  @keyframes criticalAlertOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
+  /* 選択中は背景を暗くして「重大イベント」であることを示す。閉じれば自動的に消える(bodyクラス連動) */
+  body.critical-alert-active::before {
+    content: ""; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100%; z-index: 2; pointer-events: none;
+    background: rgba(0,0,0,0.23); opacity: 0; animation: pathDimIn 0.15s ease forwards;
+  }
+  .critical-alert-title {
+    text-align: center; font-size: 1.02rem; font-weight: 800; color: #efe2c2;
+    letter-spacing: 0.06em; margin: 0 0 0.7rem; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  .critical-alert-portrait { width: 92px; height: 92px; margin: 0 auto 0.6rem; }
+  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px; }
+  .critical-alert-portrait .stress-overlay { border-radius: 8px; }
+  .critical-alert-name { text-align: center; font-size: 0.95rem; font-weight: 700; color: #efe2c2; margin: 0 0 0.15rem; }
+  .critical-alert-state { text-align: center; font-size: 0.78rem; color: #c7bda3; margin: 0 0 0.6rem; }
+  .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.4rem; margin: 0 0 0.5rem; }
+  .critical-alert-timer-label { font-size: 0.76rem; color: #e08e84; font-weight: 600; }
+  .critical-alert-timer-value { font-size: 1.5rem; font-weight: 800; color: var(--danger); text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  .critical-alert-place { text-align: center; font-size: 0.76rem; color: #c7bda3; margin: 0 0 0.5rem; }
+  .critical-alert-warn { text-align: center; font-size: 0.7rem; color: #a89f8c; margin: 0 0 0.75rem; }
+  .critical-alert-actions { display: flex; flex-direction: column; gap: 0.45rem; }
+  .critical-alert-skip-btn {
+    min-height: 40px; padding: 0.4rem; font-size: 0.82rem; opacity: 0.82;
+  }
   /* 進路選択パネル(critical-alertの赤枠とは別の専用デザイン。和風の落ち着いた高級感を出すため
      黒〜濃いグレーの半透明+細い金枠にしている) */
   .path-choice-panel {
@@ -2654,14 +2691,17 @@ function statusLabel(c) {
       const carrier = getRosterChar(c.carriedBy);
       return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
     }
-    const minutesLeft = Math.max(0, (c.criticalExpireMinutes || 0) - absoluteGameMinutes());
-    const totalHoursLeft = Math.floor(minutesLeft / 60);
-    const daysLeft = Math.floor(totalHoursLeft / 24);
-    const hoursLeft = totalHoursLeft % 24;
-    const timeLeftStr = hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
-    return `${c.criticalStage === "coast" ? "海岸" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${timeLeftStr}で救出しないとロスト)`;
+    return `${c.criticalStage === "coast" ? "海岸" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${criticalTimeLeftStr(c)}で救出しないとロスト)`;
   }
   return "ロスト(消滅した)";
+}
+// 瀕死キャラのロストまでの残り時間を「◯日◯時間」形式にする(statusLabel/瀕死救出アラート共通)
+function criticalTimeLeftStr(c) {
+  const minutesLeft = Math.max(0, (c.criticalExpireMinutes || 0) - absoluteGameMinutes());
+  const totalHoursLeft = Math.floor(minutesLeft / 60);
+  const daysLeft = Math.floor(totalHoursLeft / 24);
+  const hoursLeft = totalHoursLeft % 24;
+  return hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
 }
 
 function statusTagClass(c) {
@@ -5564,35 +5604,59 @@ function showCriticalAlert(critical, onResolved) {
   // 出続けてしまうバグがあった)。道具ボタンはこれまで通り使用可(既存の中断復元の仕組みを維持)
   document.getElementById("advanceBtn").disabled = true;
   document.getElementById("retreatBtn").disabled = true;
+  document.body.classList.add("critical-alert-active");
   const c2 = CLASSES[critical.classId];
   const div = document.getElementById("criticalAlert");
   const overlaySrc = stressOverlaySrc(critical.fatigue);
   // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
   // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
   document.getElementById("dungeonLog").style.display = "none";
+  const stageLabel = critical.criticalStage === "coast" ? "海岸" : "深淵の森";
   div.innerHTML = `
     <div class="critical-alert">
-      <div class="stress-wrap" style="width:64px;margin:0 auto 0.5rem;">
-        <img src="${c2.image}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:top;border-radius:6px;">
+      <p class="critical-alert-title">仲間が倒れている</p>
+      <div class="critical-alert-portrait stress-wrap">
+        <img src="${c2.image}">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
       </div>
-      <p style="text-align:center;"><strong>${critical.name}が瀕死で倒れている<br>救助しますか？</strong></p>
-      <p>${statusLabel(critical)}</p>
-      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-        <button class="big primary" id="carryBtn" style="flex:1;">はい</button>
-        <button class="big" id="skipCriticalBtn" style="flex:1;">いいえ</button>
+      <p class="critical-alert-name">${critical.name}（${c2.ja}）</p>
+      <p class="critical-alert-state">瀕死で倒れている</p>
+      <div class="critical-alert-timer">
+        <span class="critical-alert-timer-label">残り</span>
+        <span class="critical-alert-timer-value">${criticalTimeLeftStr(critical)}</span>
+      </div>
+      <p class="critical-alert-place">${stageLabel} ${critical.criticalFloor}層目</p>
+      <p class="critical-alert-warn">放置すると仲間を失います。</p>
+      <div class="critical-alert-actions">
+        <button class="big primary" id="carryBtn">担いで連れて帰る</button>
+        <button class="big critical-alert-skip-btn" id="skipCriticalBtn">今回は見送る</button>
       </div>
     </div>
   `;
+  // 閉じる/画面遷移する直前にごく短いscale+opacityの退場演出を挟んでから次へ進む(0.15秒、テンポは維持)
+  function closeWithAnim(next) {
+    const box = div.querySelector(".critical-alert");
+    if (box) box.classList.add("critical-alert-closing");
+    setTimeout(next, 150);
+  }
   document.getElementById("carryBtn").onclick = () => {
-    showCarryPicker(critical, onResolved);
+    // 担げる仲間が1人もいない場合はshowCarryPicker側がalert()を出して現在のアラートをそのまま
+    // 残す仕様なので、その場合だけは退場演出を挟まずに現在の表示を維持する
+    if (aliveField().filter((c) => !c.carryingId).length === 0) {
+      showCarryPicker(critical, onResolved);
+      return;
+    }
+    closeWithAnim(() => showCarryPicker(critical, onResolved));
   };
   document.getElementById("skipCriticalBtn").onclick = () => {
-    dlog(`${critical.name}をその場に残した。`);
-    div.innerHTML = "";
-    document.getElementById("dungeonLog").style.display = "";
-    activeCriticalAlert = null;
-    onResolved();
+    closeWithAnim(() => {
+      dlog(`${critical.name}をその場に残した。`);
+      div.innerHTML = "";
+      document.getElementById("dungeonLog").style.display = "";
+      document.body.classList.remove("critical-alert-active");
+      activeCriticalAlert = null;
+      onResolved();
+    });
   };
 }
 
@@ -5637,6 +5701,7 @@ function showCarryPicker(critical, onResolved) {
       setTimeout(() => {
         activeCriticalAlert = null;
         div.innerHTML = "";
+        document.body.classList.remove("critical-alert-active");
         renderDungeon();
         onResolved();
       }, 2000);
