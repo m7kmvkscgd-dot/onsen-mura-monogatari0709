@@ -1641,10 +1641,4 @@ document.getElementById("shopBackBtn").onclick = () => { renderTown(); };
 document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 初期化 ============
-// 名簿が空(初回起動、または旧セーブなら通常あり得ない)の場合だけ、最初の1人選び画面から始める
-if (state.roster.length === 0) {
-  showScreen("screen-first-character");
-  renderFirstCharacterScreen();
-} else {
-  renderTown();
-}
+// ゲームの入口は常にタイトル画面(title.js)。ここでの自動遷移は廃止した。

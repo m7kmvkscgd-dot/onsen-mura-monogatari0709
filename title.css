@@ -1,0 +1,149 @@
+  /* ============ title.css: タイトル画面・設定・スタッフ画面 ============ */
+
+  #screen-title { position: relative; overflow: hidden; }
+  #screen-title, #screen-settings, #screen-staff {
+    font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS Mincho", serif;
+  }
+
+  .title-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; transform: scale(1.03);
+  }
+  .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards; }
+
+  /* 全体をごくわずかに上下させる、演出上の「タイトルの呼吸」。ロゴ自体は背景に焼き込まれた一枚絵の
+     ため単体では動かせないが、画像全体に±3px程度の極小な上下移動を与えることで近い効果を狙う */
+  .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards, titleBgBob 7s ease-in-out 0.6s infinite; }
+
+  @keyframes titleFadeUp {
+    from { opacity: 0; transform: scale(1.03) translateY(0); }
+    to { opacity: 1; transform: scale(1.0) translateY(0); }
+  }
+  @keyframes titleBgBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* 淡い夕焼けのゆらぎ(太陽の位置あたりに、非常にゆっくり明滅する光暈) */
+  #screen-title::after {
+    content: ''; position: fixed; z-index: 1; pointer-events: none;
+    left: 50%; top: 34%; width: 46%; padding-bottom: 46%; transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,214,140,0.22) 0%, rgba(255,180,110,0.08) 45%, transparent 70%);
+    animation: titleShimmer 8s ease-in-out infinite;
+  }
+  @keyframes titleShimmer {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .title-fx-layer { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+
+  .title-petal {
+    position: absolute; top: -5%;
+    background: radial-gradient(circle at 30% 30%, #ffd9e6, #f6a8c4 70%);
+    border-radius: 60% 40% 65% 35% / 55% 45% 55% 45%;
+    animation-name: titlePetalFall; animation-timing-function: linear; animation-iteration-count: infinite;
+  }
+  @keyframes titlePetalFall {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(28px, 118vh) rotate(340deg); }
+  }
+
+  .title-steam {
+    position: absolute; bottom: 18%; width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.28), rgba(255,255,255,0) 70%);
+    filter: blur(2px);
+    animation-name: titleSteamRise; animation-timing-function: ease-out; animation-iteration-count: infinite;
+    animation-duration: 6.5s;
+  }
+  @keyframes titleSteamRise {
+    0% { transform: translateY(0) scale(0.7); opacity: 0; }
+    20% { opacity: 0.55; }
+    100% { transform: translateY(-90px) scale(1.5); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .title-bg.title-seq-in { animation: titleFadeUp 0.5s ease-out 0s forwards; }
+    #screen-title::after, .title-petal, .title-steam { animation: none; display: none; }
+  }
+
+  /* ============ メニュー ============ */
+  .title-menu {
+    position: fixed; z-index: 3; left: 50%; transform: translateX(-50%);
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    width: 100%; max-width: 480px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 0 24px;
+  }
+  .title-menu-btn {
+    opacity: 0; transform: translateY(10px);
+  }
+  .title-menu.title-seq-in .title-menu-btn { animation: titleBtnIn 0.3s ease-out forwards; }
+  .title-menu.title-seq-in .title-menu-btn:nth-child(1) { animation-delay: 0.3s; }
+  .title-menu.title-seq-in .title-menu-btn:nth-child(2) { animation-delay: 0.38s; }
+  .title-menu.title-seq-in .title-menu-btn:nth-child(3) { animation-delay: 0.46s; }
+  .title-menu.title-seq-in .title-menu-btn:nth-child(4) { animation-delay: 0.54s; }
+  @keyframes titleBtnIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .title-menu-btn {
+    width: min(280px, 100%); height: 64px; border-radius: 18px;
+    border: 1px solid rgba(215,182,111,0.55);
+    background: linear-gradient(180deg, #2a2420 0%, #1c1712 55%, #120d0a 100%);
+    color: #fff; font-size: 22px; font-weight: 600; letter-spacing: 0.12em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: transform 0.1s ease-out, filter 0.1s ease-out, box-shadow 0.4s ease-out;
+    cursor: pointer;
+  }
+  .title-menu-btn:active { transform: translateY(2px); filter: brightness(0.9); }
+  .title-menu-btn:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: not-allowed; }
+  .title-menu-btn .title-menu-icon { width: 18px; height: 18px; color: var(--dw-gold); visibility: hidden; flex-shrink: 0; }
+  .title-menu-btn.primary .title-menu-icon { visibility: visible; }
+  .title-menu-btn.primary {
+    border-color: rgba(215,182,111,0.9);
+    animation: titlePrimaryGlow 3.2s ease-in-out infinite;
+  }
+  @keyframes titlePrimaryGlow {
+    0%, 100% { box-shadow: 0 6px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 10px rgba(215,182,111,0.25); }
+    50% { box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 22px rgba(215,182,111,0.6); }
+  }
+
+  .title-footer {
+    position: fixed; z-index: 3; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    text-align: center; font-size: 11px; letter-spacing: 0.05em; color: rgba(255,255,255,0.55);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    opacity: 0;
+  }
+  .title-footer.title-seq-in { animation: titleFooterIn 0.3s ease-out 0.62s forwards; }
+  @keyframes titleFooterIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ============ 設定・スタッフ画面(タイトルと同じ背景を暗くぼかして流用) ============ */
+  .title-sub-bg {
+    position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center;
+    filter: blur(3px) brightness(0.45); transform: scale(1.05);
+  }
+  .title-sub-panel {
+    position: relative; z-index: 1; margin: auto; width: min(360px, 86%);
+    background: var(--dw-card-bg); border: 1px solid var(--dw-card-border); border-radius: var(--radius-lg);
+    box-shadow: var(--dw-card-shadow); padding: 24px 20px; text-align: center;
+  }
+  .title-sub-panel h1 { font-size: 20px; color: var(--dw-title-color); margin: 0 0 18px; font-weight: 700; }
+  .title-setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--dw-body-color); font-size: 15px;
+  }
+  .title-toggle-btn {
+    min-width: 64px; height: 32px; border-radius: var(--radius-pill); border: 1px solid var(--dw-card-border);
+    background: rgba(0,0,0,0.3); color: var(--dw-caption-color); font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+    transition: background var(--dw-t-btn) ease-out, color var(--dw-t-btn) ease-out;
+  }
+  .title-toggle-btn.is-on { background: var(--dw-gold); color: #2a2015; border-color: var(--dw-gold); }
+  .title-staff-list { padding: 8px 0 18px; color: var(--dw-body-color); }
+  .title-staff-list p { margin: 0 0 6px; font-size: 15px; }
+  .title-staff-list .title-staff-role { font-size: 12px; color: var(--dw-caption-color); }
+  .title-sub-back-btn { width: 100%; margin-top: 6px; }

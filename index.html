@@ -14,13 +14,69 @@
 <link rel="stylesheet" href="dungeon.css">
 <link rel="stylesheet" href="battle.css">
 <link rel="stylesheet" href="camp.css">
+<link rel="stylesheet" href="title.css">
 <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
 <div class="wrap">
 
+  <!-- タイトル画面(常にここから起動する) -->
+  <div class="screen active" id="screen-title">
+    <div class="title-bg" id="titleBg" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-fx-layer" id="titleFxLayer" aria-hidden="true"></div>
+    <div class="title-menu" id="titleMenu">
+      <button class="title-menu-btn" id="titleStartBtn">
+        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
+        <span>旅を始める</span>
+      </button>
+      <button class="title-menu-btn" id="titleContinueBtn">
+        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
+        <span>続きから</span>
+      </button>
+      <button class="title-menu-btn" id="titleSettingsBtn">
+        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
+        <span>設定</span>
+      </button>
+      <button class="title-menu-btn" id="titleStaffBtn">
+        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
+        <span>スタッフ</span>
+      </button>
+    </div>
+    <div class="title-footer">Ver 1.0　© 温泉村物語</div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="screen" id="screen-settings">
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-sub-panel">
+      <h1>設定</h1>
+      <div class="title-setting-row">
+        <span>サウンド</span>
+        <button class="title-toggle-btn" id="settingsSoundToggle"></button>
+      </div>
+      <div class="title-setting-row">
+        <span>チュートリアル表示</span>
+        <button class="title-toggle-btn" id="settingsTutorialToggle"></button>
+      </div>
+      <button class="big title-sub-back-btn" id="settingsBackBtn">戻る</button>
+    </div>
+  </div>
+
+  <!-- スタッフ -->
+  <div class="screen" id="screen-staff">
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.jpg')"></div>
+    <div class="title-sub-panel">
+      <h1>スタッフ</h1>
+      <div class="title-staff-list">
+        <p>温泉村物語</p>
+        <p class="title-staff-role">企画・開発協力: Claude Code</p>
+      </div>
+      <button class="big title-sub-back-btn" id="staffBackBtn">戻る</button>
+    </div>
+  </div>
+
   <!-- 最初の1人選び(ゲーム開始時、名簿が空の間だけ表示) -->
-  <div class="screen active" id="screen-first-character">
+  <div class="screen" id="screen-first-character">
     <div class="hero" id="firstCharacterHero" style="background-image:url('assets/bg/tavern.jpg')">
       <h1>職業を選んでください</h1>
     </div>
@@ -663,5 +719,6 @@
 <script src="dungeon.js"></script>
 <script src="camp.js"></script>
 <script src="town.js"></script>
+<script src="title.js"></script>
 </body>
 </html>
