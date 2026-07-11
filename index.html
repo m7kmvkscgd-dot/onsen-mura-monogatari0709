@@ -5596,11 +5596,11 @@ function showCriticalAlert(critical, onResolved) {
         <img src="${c2.image}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:top;border-radius:6px;">
         ${overlaySrc ? `<img class="stress-overlay" src="${overlaySrc}">` : ""}
       </div>
-      <p style="text-align:center;"><strong>${critical.name}(${c2.ja})が瀕死のまま倒れている...</strong></p>
+      <p style="text-align:center;"><strong>${critical.name}が瀕死で倒れている<br>救助しますか？</strong></p>
       <p>${statusLabel(critical)}</p>
       <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-        <button class="big primary" id="carryBtn" style="flex:1;">担いで連れて帰る</button>
-        <button class="big" id="skipCriticalBtn" style="flex:1;">一旦見送る</button>
+        <button class="big primary" id="carryBtn" style="flex:1;">はい</button>
+        <button class="big" id="skipCriticalBtn" style="flex:1;">いいえ</button>
       </div>
     </div>
   `;
