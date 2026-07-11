@@ -836,7 +836,9 @@ function renderPartySelect() {
   renderDwHeader("partySelect", "パーティ編成", () => { renderTown(); });
   pruneActiveParty();
   renderSupplies();
-  document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  // 一時的におみくじタブの入口を非表示にしている(中身のロジックは変更していないので、
+  // 元に戻す時はこの行を (state.shrineLevel || 0) > 0 ? "" : "none" に戻すだけでよい)
+  document.getElementById("partySelectOmikujiTabBtn").style.display = "none";
   showPartySelectTab("main");
   renderOmikujiTab();
   const list = document.getElementById("partySelectList");
