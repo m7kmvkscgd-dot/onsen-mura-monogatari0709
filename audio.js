@@ -38,17 +38,14 @@ function playBattleBgm() {
 const bgmAudio = document.getElementById("bgmAudio");
 const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
-const onsenBgmAudio = document.getElementById("onsenBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
-const ONSEN_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
 bgmAudio.volume = BGM_BASE_VOLUME;
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
-onsenBgmAudio.volume = ONSEN_BGM_VOLUME;
 ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
 let audioUnlocked = false;
 let muted = false;
@@ -252,35 +249,6 @@ function stopCampBgm(onDone) {
   fadeStep();
   // 探索中はbgmAudio(戦闘専用BGM)を鳴らさない設計に変更したため、以前ここにあった
   // 「野営明けに冒険中BGMを再開する」処理は不要になった(虫の声アンビエントの継続はrenderDungeon側で行う)
-}
-
-// 温泉(入浴選択画面)専用BGM。lodging/campとは違い村のBGM(bgmAudio)を止めずに重ねて鳴らす
-// (ユーザー指示: 村の音楽は消さず、これと一緒に流す)。売店(screen-onsen-shop)へ移動する時、
-// または町へ戻る時にstopOnsenBgm()で止める
-const ONSEN_BGM_FADE_MS = 500;
-function playOnsenBgm() {
-  // renderOnsen()は入浴のたびに再描画されるが、既に鳴っている場合は頭出しし直さない
-  // (キャラを何人か続けて入浴させても曲が途切れず流れ続けるようにするため)
-  if (!onsenBgmAudio.paused) return;
-  onsenBgmAudio.currentTime = 0;
-  onsenBgmAudio.volume = ONSEN_BGM_VOLUME;
-  if (audioUnlocked) onsenBgmAudio.play().catch(() => {});
-}
-function stopOnsenBgm() {
-  if (onsenBgmAudio.paused) return;
-  const startVol = onsenBgmAudio.volume;
-  const startTime = performance.now();
-  function fadeStep() {
-    const t = Math.min(1, (performance.now() - startTime) / ONSEN_BGM_FADE_MS);
-    onsenBgmAudio.volume = startVol * (1 - t);
-    if (t < 1) {
-      requestAnimationFrame(fadeStep);
-    } else {
-      onsenBgmAudio.pause();
-      onsenBgmAudio.volume = ONSEN_BGM_VOLUME;
-    }
-  }
-  fadeStep();
 }
 
 // ============ 効果音(SE): Web Audio API低遅延方式 ============

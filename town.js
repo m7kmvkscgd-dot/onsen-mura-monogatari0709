@@ -1045,7 +1045,6 @@ document.getElementById("departConfirmNoBtn").onclick = () => {
 // ============ 温泉 ============
 function renderOnsen() {
   playTownAreaBgm();
-  playOnsenBgm(); // 村のBGM(playTownAreaBgm)は止めず、温泉専用BGMを重ねて鳴らす
   updateSceneBackgrounds();
   renderDwHeader("onsen", "温泉", () => { renderTown(); });
   document.getElementById("onsenGold").textContent = state.gold + "G";
@@ -1084,8 +1083,8 @@ function renderOnsen() {
     list.appendChild(row);
   });
 }
-document.getElementById("onsenBackBtn").onclick = () => { stopOnsenBgm(); renderTown(); };
-document.getElementById("onsenBackBtnTop").onclick = () => { stopOnsenBgm(); renderTown(); };
+document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
+document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 温泉の売店(温泉卵) ============
 const ONSEN_EGG_DAILY_STOCK = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
@@ -1124,7 +1123,7 @@ document.getElementById("buyOnsenEggBtn").onclick = () => {
   playSfx("coin");
   renderOnsenShop();
 };
-document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); stopOnsenBgm(); renderOnsenShop(); showScreen("screen-onsen-shop"); };
+document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); renderOnsenShop(); showScreen("screen-onsen-shop"); };
 document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
