@@ -387,19 +387,11 @@ function statusIconsFor(entity) {
 // 見出しを必ず添えることで、状態異常ではなくバフ(温泉に入って得た良い効果)だと分かるようにしている
 const STATUS_TOOLTIP_FADE_MS = 100;
 let statusTooltipAnim = null;
-function showStatusTooltip(el) {
-  let title, desc, iconHtml, category;
-  if (el.classList.contains("onsen-buff-tag")) {
-    const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
-    if (!buff) return;
-    title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
-  } else {
-    const info = STATUS_TOOLTIPS[el.dataset.status];
-    if (!info) return;
-    title = info.title; desc = info.desc; iconHtml = ICONS[el.dataset.status] || ""; category = null;
-  }
+// title/desc/iconHtml/categoryを直接指定してツールチップを出す共通処理(位置計算・フェードインを担う)。
+// showStatusTooltip(状態異常/温泉効果アイコン)とshowSkillTooltip(戦闘中の技ボタン長押し)の両方から使う
+function showTooltipContent(el, title, desc, iconHtml, category) {
   const tip = document.getElementById("statusTooltip");
-  tip.innerHTML = `${category ? `<div class="status-tooltip-category">${category}</div>` : ""}<div class="status-tooltip-title">${iconHtml} ${title}</div><div>${desc}</div>`;
+  tip.innerHTML = `${category ? `<div class="status-tooltip-category">${category}</div>` : ""}<div class="status-tooltip-title">${iconHtml ? iconHtml + " " : ""}${title}</div><div>${desc}</div>`;
   tip.style.display = "block";
   const rect = el.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
@@ -413,6 +405,19 @@ function showStatusTooltip(el) {
   if (statusTooltipAnim) statusTooltipAnim.cancel();
   tip.style.opacity = "0";
   statusTooltipAnim = tip.animate([{ opacity: 0 }, { opacity: 1 }], { duration: STATUS_TOOLTIP_FADE_MS, fill: "forwards" });
+}
+function showStatusTooltip(el) {
+  let title, desc, iconHtml, category;
+  if (el.classList.contains("onsen-buff-tag")) {
+    const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
+    if (!buff) return;
+    title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
+  } else {
+    const info = STATUS_TOOLTIPS[el.dataset.status];
+    if (!info) return;
+    title = info.title; desc = info.desc; iconHtml = ICONS[el.dataset.status] || ""; category = null;
+  }
+  showTooltipContent(el, title, desc, iconHtml, category);
 }
 function hideStatusTooltip() {
   if (statusTooltipAnim) { statusTooltipAnim.cancel(); statusTooltipAnim = null; }
@@ -449,6 +454,44 @@ document.addEventListener("touchend", (e) => {
     statusTooltipShownFor = null;
   }
 }, { passive: true });
+
+// ============ 戦闘中の技ボタン長押しで効果説明を出す ============
+// 状態異常アイコン等と違い、これらのボタンは「タップ=技を使う」という本来の役割があるため
+// 同じタップ判定は使えない。長押し(BATTLE_SKILL_LONGPRESS_MS)を検知した時だけツールチップを出し、
+// その直後に発生するclickイベントをキャプチャ段階で握りつぶして技が誤発動しないようにする
+const BATTLE_SKILL_LONGPRESS_MS = 450;
+function showSkillTooltip(el, title, desc) {
+  if (!desc) return;
+  showTooltipContent(el, title, desc, "", "技の効果");
+}
+function attachSkillLongPressTooltip(btn, title, desc) {
+  if (!desc) return;
+  let timer = null;
+  let longPressed = false;
+  const release = () => {
+    clearTimeout(timer);
+    timer = null;
+    if (longPressed) hideStatusTooltip(); // 長押し中に指を離したら(=プレビューを見終わったら)ツールチップを閉じる
+  };
+  btn.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    longPressed = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      longPressed = true;
+      showSkillTooltip(btn, title, desc);
+    }, BATTLE_SKILL_LONGPRESS_MS);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((evt) => btn.addEventListener(evt, release));
+  // capture:trueでボタン自身のonclick(技を使う本来の処理)より先に割り込み、長押し直後のclickだけ握りつぶす
+  btn.addEventListener("click", (e) => {
+    if (longPressed) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      longPressed = false;
+    }
+  }, { capture: true });
+}
 
 function playTransformEffect(onDone) {
   playSfx("transform");

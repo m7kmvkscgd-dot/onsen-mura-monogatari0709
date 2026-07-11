@@ -677,6 +677,7 @@ function renderActionButtons(actor) {
           renderBattleScreen();
           finishPlayerAction();
         };
+        attachSkillLongPressTooltip(guardBtn, "かばう", ABILITY_DESC.guard);
         grid.appendChild(guardBtn);
       }
       if (formDef.formSkill) {
@@ -686,6 +687,7 @@ function renderActionButtons(actor) {
         skillBtn.textContent = formDef.formSkill.name + (onCooldown ? `(あと${actor.formCooldown}T)` : "");
         skillBtn.disabled = onCooldown;
         skillBtn.onclick = () => { runFormSkill(actor); };
+        attachSkillLongPressTooltip(skillBtn, formDef.formSkill.name, formDef.formSkill.desc);
         grid.appendChild(skillBtn);
       }
     } else {
@@ -746,6 +748,7 @@ function renderActionButtons(actor) {
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
           });
         };
+        attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
         grid.appendChild(abBtn);
       });
 
@@ -757,6 +760,7 @@ function renderActionButtons(actor) {
         btn.textContent = skill.name + (cost > 0 ? `(MP${cost})` : "");
         if (cost > 0 && actor.mp < cost) btn.disabled = true;
         btn.onclick = () => { runTreeSkill(actor, skill); };
+        attachSkillLongPressTooltip(btn, skill.name, skill.desc);
         grid.appendChild(btn);
       });
     }

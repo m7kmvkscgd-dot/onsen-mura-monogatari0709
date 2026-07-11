@@ -160,6 +160,9 @@
     /* コマンドボタンの立体感: 通常時は下端に軽い段差影を付けて浮かせ、押下時は沈んで少し明るくなる */
     box-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 4px 6px rgba(0,0,0,0.3);
     transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+    /* 技ボタンの長押し(効果説明ツールチップ)がiOS Safariの標準の長押しコールアウト/選択と
+       競合しないようにする(attachSkillLongPressTooltip参照) */
+    touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   }
   .action-grid button:active {
     transform: translateY(2px);
