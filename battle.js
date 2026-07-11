@@ -187,8 +187,10 @@ function processNext() {
     // 自分のターンでなくなったので、前のターンの行動ボタンが残って誤タップできてしまわないよう消す
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
-    const poisonDmg = tickTurnStartEffects(actor, blog);
-    if (poisonDmg > 0) popupOn(actor.instanceId, `-${poisonDmg}`, "dmg");
+    const dot = tickTurnStartEffects(actor, blog);
+    if (dot.total > 0) popupOn(actor.instanceId, `-${dot.total}`, "dmg");
+    if (dot.poison > 0) popupOn(actor.instanceId, `🦠-${dot.poison}`, "poison");
+    if (dot.bleed > 0) popupOn(actor.instanceId, `🩸-${dot.bleed}`, "bleed");
     if (actor.hp <= 0) {
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
@@ -266,9 +268,11 @@ function processNext() {
     battle.actingId = actor.id;
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
-    const poisonDmg = tickTurnStartEffects(actor, blog);
-    if (poisonDmg > 0) {
-      popupOn(actor.id, `-${poisonDmg}`, "dmg");
+    const dot = tickTurnStartEffects(actor, blog);
+    if (dot.total > 0) {
+      popupOn(actor.id, `-${dot.total}`, "dmg");
+      if (dot.poison > 0) popupOn(actor.id, `🦠-${dot.poison}`, "poison");
+      if (dot.bleed > 0) popupOn(actor.id, `🩸-${dot.bleed}`, "bleed");
       handleFieldDeaths();
       renderBattleScreen();
       if (actor.hp <= 0 || actor.status !== "active") {

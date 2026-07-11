@@ -445,7 +445,10 @@ function applySilence(entity, turns) {
 // 自分のターンの一番最初に呼ぶ共通処理(毒/炎上のダメージ+継続回復+バフ/デバフの残りターン消化)。ダメージ量を返す
 function tickTurnStartEffects(entity, log) {
   if (entity.stunResistTurns > 0) entity.stunResistTurns--;
-  const dmg = tickPoison(entity, log) + tickBurn(entity, log) + tickBleed(entity, log);
+  const poisonDmg = tickPoison(entity, log);
+  const burnDmg = tickBurn(entity, log);
+  const bleedDmg = tickBleed(entity, log);
+  const dmg = poisonDmg + burnDmg + bleedDmg;
   // 温泉バフ「湯治」: 自分のターンの最初に毎回HPの2%を回復する
   if (entity.hp > 0 && entity.onsenBuffKey === "touji") {
     const heal = Math.max(1, Math.round(entity.maxHp * 0.02));
@@ -469,7 +472,7 @@ function tickTurnStartEffects(entity, log) {
     entity.passives.onKillStacksTurns--;
     if (entity.passives.onKillStacksTurns <= 0) entity.passives.onKillStacks = 0;
   }
-  return dmg;
+  return { total: dmg, poison: poisonDmg, burn: burnDmg, bleed: bleedDmg };
 }
 
 // 装備購入後、既存の該当職業メンバー全員のequipBonusを再計算する

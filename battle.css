@@ -65,6 +65,9 @@
   .dmg-pop.heal { color: #8fe0a0; }
   /* スタンで行動不能になった瞬間だけの素朴な浮き出し表示(会心のような派手な演出はしない) */
   .dmg-pop.stun { color: #e0d27a; font-size: 1rem; }
+  /* 毒/出血のターン経過ダメージも、それぞれの色(毒=緑, 出血=赤)で素朴に浮き出させる */
+  .dmg-pop.poison { color: #7bc96b; font-size: 1rem; }
+  .dmg-pop.bleed { color: #d9564f; font-size: 1rem; }
   /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
      気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
   .dmg-pop.crit {
