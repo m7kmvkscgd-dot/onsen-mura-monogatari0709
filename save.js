@@ -142,6 +142,23 @@ function loadState() {
       }
       const nowAbsoluteMinutes = ((loaded.dayCount || 1) - 1) * 1440 + (loaded.clockMinutes || 0);
       (loaded.roster || []).forEach((c) => normalizeCharacter(c, loaded.classUpgrades, nowAbsoluteMinutes));
+      // 【重大バグ修正】__idSeqが保存されていなかったことに起因し、既に同じidを持つキャラが
+      // 2人以上roster内に紛れ込んでいるセーブがあり得る(詳細はnextId()/syncIdSeqWithRoster()の
+      // コメント参照)。後から現れた方にだけ新しい一意なidを振り直して衝突を解消してから、
+      // 以後の採番がこの名簿の最大連番+1から続くように同期する
+      {
+        const seenIds = new Set();
+        let maxSeq = 0;
+        (loaded.roster || []).forEach((c) => {
+          const m = /^c(\d+)$/.exec(c.id || "");
+          if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+        });
+        (loaded.roster || []).forEach((c) => {
+          if (seenIds.has(c.id)) c.id = "c" + (++maxSeq);
+          seenIds.add(c.id);
+        });
+        syncIdSeqWithRoster(loaded.roster);
+      }
       return loaded;
     }
   } catch (e) {}

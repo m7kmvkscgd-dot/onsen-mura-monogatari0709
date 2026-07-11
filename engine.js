@@ -5,6 +5,19 @@ let __enemySeq = 1;
 function nextId() {
   return "c" + __idSeq++;
 }
+// 【重大バグ修正】__idSeqはstateに保存されず、ページを読み込むたびに1から再スタートしていた。
+// そのため一度セーブ&リロードした後に新しい仲間を作ると、既に名簿にいるキャラ(例: 最初に
+// 作ったc1)と同じidが再び採番されてしまい、getRosterChar()がidの一致で最初に見つけた方を
+// 返す都合上「別のキャラのステータスが開く」等、id参照全般が壊れるバグを引き起こしていた。
+// ロード直後にこれを呼び、既存roster内の最大の連番+1から採番を再開させることで衝突を防ぐ
+function syncIdSeqWithRoster(roster) {
+  let maxSeq = 0;
+  (roster || []).forEach((c) => {
+    const m = /^c(\d+)$/.exec(c.id || "");
+    if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+  });
+  __idSeq = Math.max(__idSeq, maxSeq + 1);
+}
 
 // 魔力0の物理職(盗賊/忍者など)も自分の得意技を使えるよう、MPには最低ライン(10)を必ず持たせる
 function maxMpFor(mag) {
