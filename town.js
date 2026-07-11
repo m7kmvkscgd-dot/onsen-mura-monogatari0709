@@ -226,7 +226,7 @@ function isClassUnlocked(classId) {
 }
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
-document.getElementById("toOnsenBtn").onclick = () => { playSfx("select"); renderOnsen(); showScreen("screen-onsen"); };
+document.getElementById("toOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("toDungeonBtn").onclick = () => {
   playSfx("select");
   renderPartySelect();
