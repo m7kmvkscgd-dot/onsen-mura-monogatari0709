@@ -68,6 +68,21 @@
   /* 毒/出血のターン経過ダメージも、それぞれの色(毒=緑, 出血=赤)で素朴に浮き出させる */
   .dmg-pop.poison { color: #7bc96b; font-size: 1rem; }
   .dmg-pop.bleed { color: #d9564f; font-size: 1rem; }
+  /* 炎上も同様に素朴な浮き出し(橙)。木霊等の植物系だけは弱点を突いた瞬間なので、ひと回り大きく
+     揺れを付けて目立たせる(会心ほど派手にはしない) */
+  .dmg-pop.burn { color: #e08a3c; font-size: 1rem; }
+  .dmg-pop.burn-plant {
+    color: #ff7a1a; font-size: 1.45rem; font-weight: 900;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95), 0 0 10px rgba(255,122,26,0.8);
+    animation: burnPlantFloat 1.3s ease-out forwards;
+  }
+  @keyframes burnPlantFloat {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7) rotate(0deg); }
+    15% { opacity: 1; transform: translate(-50%, -6px) scale(1.25) rotate(-4deg); }
+    30% { transform: translate(-50%, -10px) scale(1) rotate(4deg); }
+    45% { transform: translate(-50%, -14px) scale(1.1) rotate(-2deg); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1) rotate(0deg); }
+  }
   /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
      気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
   .dmg-pop.crit {

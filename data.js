@@ -455,7 +455,7 @@ const ENEMIES = {
     onHitInflict: { type: "poison", chance: 0.5, value: 3 } }, // 攻撃力を落とす代わりに、通常攻撃でも高確率で毒を注入する
   oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で絡め取り、高確率で行動を封じる
-  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12,
+  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 12, isPlant: true,
     bigAttack: { mult: 0.9, debuff: { type: "atkDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 精気を吸い、力を奪う
   kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 16, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 相撲さながらに組み伏せ、構えを崩す
@@ -561,7 +561,7 @@ const ENEMIES = {
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 貝殻を閉じて噛みつく。鋭い殻の縁が傷を残す
   hama_tako: { id: "hama_tako", ja: "浜タコ", image: "assets/enemies/hama_tako.png", stage: "coast", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足を絡めて動きを封じる
-  kaisou_douji: { id: "kaisou_douji", ja: "海藻童子", image: "assets/enemies/kaisou_douji.png", stage: "coast", hp: 14, atk: 5, def: 2, spd: 9, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12,
+  kaisou_douji: { id: "kaisou_douji", ja: "海藻童子", image: "assets/enemies/kaisou_douji.png", stage: "coast", hp: 14, atk: 5, def: 2, spd: 9, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 12, isPlant: true,
     bigAttack: { mult: 1.1 } }, // しなやかな体で攻め立てる
   harifugu: { id: "harifugu", ja: "ハリフグ", image: "assets/enemies/harifugu.png", stage: "coast", hp: 15, atk: 6, def: 2, spd: 5, goldMin: 8, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 1.5 } }, // 膨らんで針だらけの体で突進
@@ -582,7 +582,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.1, debuff: { type: "bleed", chance: 0.45, value: 2 } } }, // 三叉槍の刺突が深い傷を残す
   shell_slime: { id: "shell_slime", ja: "シェルスライム", image: "assets/enemies/shell_slime.png", stage: "coast", hp: 32, atk: 10, def: 8, spd: 4, goldMin: 19, goldMax: 29, xp: 25, minFloor: 9, maxFloor: 29,
     bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 体当たりの粘液が防具を溶かす
-  kaisou_no_sei: { id: "kaisou_no_sei", ja: "海藻の精", image: "assets/enemies/kaisou_no_sei.png", stage: "coast", hp: 26, atk: 11, def: 4, spd: 7, goldMin: 18, goldMax: 28, xp: 24, minFloor: 9, maxFloor: 29,
+  kaisou_no_sei: { id: "kaisou_no_sei", ja: "海藻の精", image: "assets/enemies/kaisou_no_sei.png", stage: "coast", hp: 26, atk: 11, def: 4, spd: 7, goldMin: 18, goldMax: 28, xp: 24, minFloor: 9, maxFloor: 29, isPlant: true,
     onHitInflict: { type: "poison", chance: 0.35, value: 2 } }, // 触れた相手からじわじわ体力を奪う
   same: { id: "same", ja: "鮫", image: "assets/enemies/same.png", stage: "coast", hp: 28, atk: 13, def: 4, spd: 13, goldMin: 21, goldMax: 32, xp: 27, minFloor: 9, maxFloor: 29,
     bigAttack: { mult: 1.3, debuff: { type: "bleed", chance: 0.6, value: 2 } } }, // 群れの頂点、鋭い歯で嚙みちぎる

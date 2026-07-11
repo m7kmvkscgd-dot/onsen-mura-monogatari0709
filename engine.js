@@ -420,9 +420,11 @@ function revertTransform(character) {
 }
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
-  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT));
+  // 木霊・海藻童子・海藻の精など明らかな植物系の敵は、炎に弱く炎上ダメージが2倍になる
+  const plantMult = entity.isPlant ? 2 : 1;
+  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * plantMult));
   entity.hp = Math.max(0, entity.hp - dmg);
-  log(`${entity.label}は炎上で${dmg}ダメージ！`);
+  log(`${entity.label}は炎上で${dmg}ダメージ！${entity.isPlant ? "(植物は炎に弱い！)" : ""}`);
   entity.burnTurns--;
   return dmg;
 }
