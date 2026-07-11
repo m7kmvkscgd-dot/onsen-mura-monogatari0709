@@ -22,6 +22,14 @@ function playExplorationAreaBgm() {
 // 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)
 function playBattleBgm() {
   if (currentStage === "coast") {
+    // 前回の戦闘のstopBattleBgm()フェードアウト(3秒)が完了しないうちに次の戦闘へ突入すると、
+    // currentBgmKeyがまだ"coast_battle"のままのため、playBgm()の「同じキーなら何もしない」
+    // 早期returnに引っかかり、フェード中の再生位置・音量のまま鳴り続けてしまっていた
+    // (=次の戦闘なのに前回の途中から再生される不具合)。currentBgmKeyをここで一旦nullにし、
+    // 進行中のフェードも無効化することで、playBgm()に「新しい曲」として頭出し処理を通させる
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.coast_battle = 0;
     playBgm("coast_battle");
     return;
   }
@@ -46,6 +54,12 @@ let currentBgmKey = null;
 // ただしダンジョンの曲だけは、新しい冒険を始めるたびにenterDungeon()でこの値を0に戻し、
 // 前回の続きからではなく必ず最初から再生されるようにしている
 const bgmPositions = {};
+// stopBattleBgm()のフェード処理を無効化するためのトークン。フェード開始のたびに増やし、
+// fadeStep側は自分が始めた時のトークン値と現在値を比較する。currentBgmKeyの一致だけでは、
+// 「同じキー(coast_battle)が新しい戦闘で再び頭出しされた」場合と「まだ同じフェードが続いている」
+// 場合を区別できない(文字列としては同じキーのため)。playBattleBgm()が次の戦闘で頭出しする際に
+// この値を進めることで、進行中の古いフェードを確実に止める
+let battleBgmFadeToken = 0;
 
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -105,12 +119,14 @@ function stopBattleBgm() {
   const wasCoastBattle = key === "coast_battle";
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
+  const myFadeToken = ++battleBgmFadeToken;
   function fadeStep() {
     // フェード中に(町に戻る等で)別のBGMキーへ既に切り替わっていたら、この古いフェード処理は
     // 中断する。ここでチェックせずbgmAudio.pause()まで進んでしまうと、後から始まった曲(町BGM等)を
     // 巻き込んで無音にしてしまうという不具合があった(森全滅後に町BGMが鳴らない/海岸全滅後に
-    // 探索用BGMが町で鳴り続ける、という2つの報告は両方ともこれが原因)
-    if (currentBgmKey !== key) return;
+    // 探索用BGMが町で鳴り続ける、という2つの報告は両方ともこれが原因)。
+    // battleBgmFadeTokenの不一致は、同じキーのまま次の戦闘が頭出しされたケースを検出する
+    if (currentBgmKey !== key || battleBgmFadeToken !== myFadeToken) return;
     const t = Math.min(1, (performance.now() - startTime) / BATTLE_BGM_FADE_OUT_MS);
     bgmAudio.volume = startVol * (1 - t);
     if (t < 1) {
