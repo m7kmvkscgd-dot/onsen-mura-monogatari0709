@@ -840,11 +840,11 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
-      right: { name: "鷹を呼ぶ", desc: "鷹を呼び出す(8ターンの間出現)。出現中は狩人が攻撃(通常攻撃・技問わず)した対象に鷹も攻撃力35%で追撃する(75%の確率で出血1〜3を付与)。また出現中は「味方を守れ」(MP消費なし)が使え、指定した味方(自分を含む)への次の攻撃を鷹が代わりに受けて消滅する。8ターン経つと自然に飛び去る。既に出現中は再度呼び出せない", mp: 2, action: { kind: "summonHawk", turns: 8 } },
+      right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 2, action: { kind: "summonHawk", turns: 8 } },
     },
     5: {
       left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
-      right: { name: "弱点看破", desc: "炎上している敵へのダメージ+20%", mp: 0, passive: { woundBonus: { mult: 1.2, ailment: "burn" } } },
+      right: { name: "追い討ち", desc: "出血中の敵を通常攻撃すると、相手に出血スタックを3付与する", mp: 0, passive: { bleedFollowupOnHit: true } },
     },
     6: {
       left: { name: "狙撃術", desc: "HPが90%以上の敵への会心率+15%", mp: 0, passive: { executeCritBonus: { belowPct: 0.9, addRate: 0.15, cmp: "gte" } } },

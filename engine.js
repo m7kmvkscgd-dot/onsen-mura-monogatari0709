@@ -607,6 +607,7 @@ function initPassives() {
     allyGuardDmgMult: 1, // 自分以外の仲間がかばっている間、自分の与ダメージ倍率(援護薙ぎ・援護砲撃など)
     allyGuardDmgTakenMult: 1, // 自分以外の仲間がかばっている間、自分の被ダメージ倍率(護りの薙刀など)
     guardPartyAtkBuff: 0, // 自分のかばうが成功した瞬間、味方全体に3ターンの攻撃力+この値を配る(鼓舞の盾)
+    bleedFollowupOnHit: false, // 出血中の敵への通常攻撃が命中した時、出血スタックを3追加する(追い討ち)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -672,6 +673,7 @@ function applySkillChoice(character, skill, level) {
     if (add.allyGuardDmgMult) p.allyGuardDmgMult *= add.allyGuardDmgMult;
     if (add.allyGuardDmgTakenMult) p.allyGuardDmgTakenMult *= add.allyGuardDmgTakenMult;
     if (add.guardPartyAtkBuff) p.guardPartyAtkBuff += add.guardPartyAtkBuff;
+    if (add.bleedFollowupOnHit) p.bleedFollowupOnHit = true;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -857,7 +859,8 @@ function useTreeSkill(actor, target, skill, log) {
     const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
     const hpBeforeHit = t.hp;
-    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
+    // 鷹を呼ぶの追撃は全体攻撃(action.aoe)には乗せない(全ての敵に鷹の追撃が入ると強すぎるため)
+    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor, undefined, undefined, action.aoe);
     const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
     // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
     // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
@@ -1121,7 +1124,8 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
       crits.push(false);
       return;
     }
-    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
+    // 鷹を呼ぶの追撃は全体攻撃には乗せない(全ての敵に鷹の追撃が入ると強すぎるため)
+    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor, undefined, undefined, true);
     hits.push(true);
     dmgs.push(dmg);
     crits.push(lastHitWasCrit); // 対象ごとに個別記録(AOEの各ヒットで会心の有無が異なりうるため)
@@ -1131,9 +1135,13 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
 }
 
 function performAttack(actor, target, log) {
+  // 出血中の対象かどうかは攻撃前(=この攻撃自身の効果が乗る前)の状態で判定する
+  const wasBleeding = (target.bleed || 0) > 0;
   const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
   // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
   if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
+  // 狩人「追い討ち」: 出血中の敵への通常攻撃が命中すると、出血スタックを3追加する
+  if (result.hit && wasBleeding && actor.passives && actor.passives.bleedFollowupOnHit && target.hp > 0) applyBleed(target, 3);
   return result;
 }
 
@@ -1193,7 +1201,7 @@ function anyOtherAllyGuarding(entity) {
 }
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, suppressHawkFollowup) {
   logSuffix = logSuffix || "";
   lastHawkFollowupHappened = false;
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
@@ -1305,7 +1313,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 通る全ての攻撃が対象)に鷹も追撃する。actor=nullで再帰呼び出しすることで(爆弾の生ダメージ処理と
   // 同じ手法)会心・パッシブ等の副作用は乗せず、出血付与だけ別途判定する。ただしこの再帰呼び出しは
   // 自分自身(lastHitWasCrit/lastHawkFollowupHappened)を上書きしてしまうため、呼び出し前後で退避/復元する
-  if (actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0) {
+  if (actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0 && !suppressHawkFollowup) {
     const critFlagBeforeHawk = lastHitWasCrit;
     const hawkDmg = Math.max(1, Math.round(withVariance(effectiveStat(actor, "atk") * HAWK_FOLLOWUP_ATK_MULT * mitigation(effectiveStat(target, "def"), 18), 0.15)));
     applyDamageToTarget(target, hawkDmg, log, `${actor.label}の鷹`, null);

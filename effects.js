@@ -84,28 +84,43 @@ function playAttackVfx(targetId, actor, kind) {
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
 }
-// 狩人「鷹を呼ぶ」の追撃演出: 🦅の絵文字が狩人の位置から対象へ高速で飛んでいき、着弾で侍の通常攻撃と
-// 同じ斬撃エフェクト+SEを鳴らす(見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
-const HAWK_PROJECTILE_MS = 220;
+// 狩人「鷹を呼ぶ」の追撃演出: 🦅の絵文字が狩人の位置から対象へ飛んでいき、着弾で侍の通常攻撃と同じ
+// 斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで元の位置に戻って消える。
+// (見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
+const HAWK_PROJECTILE_MS = 275; // ユーザー指示で速度0.8倍(220ms→220/0.8=275ms)
+const HAWK_HITSTOP_MS = 80; // 着弾後、Uターンを始めるまでの一呼吸
 function playHawkAttackVfx(hunterActor, targetId) {
-  const finish = () => {
+  const strike = () => {
     playAttackVfx(targetId, { classId: "hawk" }, "normal");
     playSfx(attackSfxFor("samurai"));
   };
   const fromEl = findVisibleCard(hunterActor.id);
   const toEl = findVisibleCard(targetId);
-  if (!fromEl || !toEl) { finish(); return; }
+  if (!fromEl || !toEl) { strike(); return; }
   const fromRect = fromEl.getBoundingClientRect();
   const toRect = toEl.getBoundingClientRect();
+  const fromX = fromRect.left + fromRect.width / 2;
+  const fromY = fromRect.top + fromRect.height / 2;
+  const toX = toRect.left + toRect.width / 2;
+  const toY = toRect.top + toRect.height / 2;
   const bird = document.createElement("div");
   bird.className = "hawk-projectile";
   bird.textContent = "🦅";
   document.body.appendChild(bird);
-  const anim = bird.animate([
-    { transform: `translate(${fromRect.left + fromRect.width / 2}px, ${fromRect.top + fromRect.height / 2}px) scale(0.8)`, opacity: 1 },
-    { transform: `translate(${toRect.left + toRect.width / 2}px, ${toRect.top + toRect.height / 2}px) scale(1.15)`, opacity: 1 },
+  const outbound = bird.animate([
+    { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 1 },
+    { transform: `translate(${toX}px, ${toY}px) scale(1.15)`, opacity: 1 },
   ], { duration: HAWK_PROJECTILE_MS, easing: "ease-in", fill: "forwards" });
-  anim.onfinish = () => { bird.remove(); finish(); };
+  outbound.onfinish = () => {
+    strike(); // 着弾の瞬間に攻撃が発生する
+    setTimeout(() => {
+      const inbound = bird.animate([
+        { transform: `translate(${toX}px, ${toY}px) scale(1.15)`, opacity: 1 },
+        { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 0 },
+      ], { duration: HAWK_PROJECTILE_MS, easing: "ease-out", fill: "forwards" });
+      inbound.onfinish = () => bird.remove();
+    }, HAWK_HITSTOP_MS);
+  };
 }
 // 会心専用の演出。通常攻撃の処理そのものは一切変更せず、会心が発生した時だけ追加で呼ぶ。
 // 「ヒットストップ」は本物の処理停止ではなく、通常の斬撃エフェクト/シェイクが鳴った直後に

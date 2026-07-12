@@ -450,11 +450,12 @@ function runTreeSkill(actor, skill) {
     return;
   }
   if (action.kind === "summonHawk") {
+    // 担ぐ・変身解除と同じく、召喚自体はターンを消費しない(呼び出した後そのまま別の行動を選べる)
     const result = useTreeSkill(actor, actor, skill, blog);
     if (result && result.failed) { renderActionButtons(actor); return; }
     playSfx("hawk_summon");
     renderBattleScreen();
-    finishPlayerAction();
+    renderActionButtons(actor);
     return;
   }
   if (action.kind === "heal") {
