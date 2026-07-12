@@ -147,6 +147,14 @@ function loadState() {
       if (loaded.bestiaryLastViewedCount == null) loaded.bestiaryLastViewedCount = 0;
       if (loaded.onsenKeeperLinePeriod === undefined) loaded.onsenKeeperLinePeriod = null; // 旧セーブ用の初期値(次回温泉を開いた時に新しく選ばれる)
       if (loaded.onsenKeeperLineIndex == null) loaded.onsenKeeperLineIndex = 0;
+      if (loaded.tavernKeeperLinePeriod === undefined) loaded.tavernKeeperLinePeriod = null;
+      if (loaded.tavernKeeperLineIndex == null) loaded.tavernKeeperLineIndex = 0;
+      // 旧セーブは「既に見た」扱いにする(いきなり大量のNEWバッジが降ってこないように)。
+      // これらのフラグは新規解禁時だけfalseからスタートする(state.jsのdefaultState参照)
+      if (loaded.seenShrineTab == null) loaded.seenShrineTab = true;
+      if (loaded.seenOmikujiTab == null) loaded.seenOmikujiTab = true;
+      if (loaded.seenCampingKitSupply == null) loaded.seenCampingKitSupply = true;
+      if (loaded.seenBombSupply == null) loaded.seenBombSupply = true;
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)

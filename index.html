@@ -156,10 +156,10 @@
       <div class="btn-col">
         <button class="big" id="toTavernBtn"><span class="btn-icon"><img src="assets/icons/town_yadoya.png" alt=""></span>旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toShopBtn" style="display:none;"><span class="btn-icon"><img src="assets/icons/town_kajiya.png" alt=""></span>鍛冶屋</button>
-        <button class="big" id="toOnsenBtn"><span class="btn-icon"><img src="assets/icons/town_onsen.png" alt=""></span>温泉</button>
+        <button class="big" id="toOnsenBtn"><span class="btn-icon"><img src="assets/icons/town_onsen.png" alt=""></span>温泉<span class="new-badge" id="onsenTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toExtensionBtn"><span class="btn-icon"><img src="assets/icons/town_kenchiku.png" alt=""></span>建築<span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big" id="toMagistrateBtn" style="display:none;"><span class="btn-icon"><img src="assets/icons/town_bugyosho.png" alt=""></span>奉行所</button>
-        <button class="big primary" id="toDungeonBtn"><span class="btn-icon"><img src="assets/icons/town_shuppatsu.png" alt=""></span>出発</button>
+        <button class="big primary" id="toDungeonBtn"><span class="btn-icon"><img src="assets/icons/town_shuppatsu.png" alt=""></span>出発<span class="new-badge" id="dungeonTownNewBadge" style="display:none;">NEW</span></button>
       </div>
     </div>
   </div>
@@ -173,6 +173,10 @@
         <div class="dw-header-right"><span class="dw-header-gold" id="tavernHeaderGold"></span><span class="dw-header-time" id="tavernHeaderTime"></span></div>
       </div>
       <h1>宿屋</h1>
+      <div class="onsen-keeper-wrap" id="tavernKeeperWrap">
+        <div class="onsen-keeper-bubble" id="tavernKeeperBubble"></div>
+        <img class="onsen-keeper-img" src="assets/tavern_keeper.png" alt="">
+      </div>
     </div>
     <div class="body-pad">
       <button class="big" id="tavernBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
@@ -208,7 +212,7 @@
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
 
       <div id="partySelectTabBar" style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:0.8rem;">
-        <button class="omikuji-chip-btn" id="partySelectOmikujiTabBtn" style="display:none;">⛩️おみくじ</button>
+        <button class="omikuji-chip-btn" id="partySelectOmikujiTabBtn" style="display:none;">⛩️おみくじ<span class="new-badge" id="omikujiTabNewBadge" style="display:none;">NEW</span></button>
         <button class="omikuji-chip-btn" id="partySelectBestiaryTabBtn">📖図鑑<span class="new-badge" id="bestiaryNewBadge" style="display:none;">NEW</span></button>
       </div>
 
@@ -238,7 +242,7 @@
         <div class="card">
           <div class="shop-item">
             <div>
-              <div><strong>野営具</strong> <span id="campingKitOwned">0</span>個</div>
+              <div><strong>野営具</strong> <span id="campingKitOwned">0</span>個<span class="new-badge" id="campingKitNewBadge" style="display:none;">NEW</span></div>
               <div class="desc">簡易宿泊キット。夜を越すことができる</div>
             </div>
             <button class="big" id="buyCampingKitBtn">購入</button>
@@ -249,7 +253,7 @@
         <div class="card" style="margin-top:0.6rem;">
           <div class="shop-item">
             <div>
-              <div><strong>爆弾</strong> <span id="bombOwned">0</span>個</div>
+              <div><strong>爆弾</strong> <span id="bombOwned">0</span>個<span class="new-badge" id="bombNewBadge" style="display:none;">NEW</span></div>
               <div class="desc">敵全体にダメージ</div>
             </div>
             <button class="big" id="buyBombBtn">購入</button>
@@ -390,7 +394,7 @@
       <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;flex-wrap:wrap;">
         <button class="big" id="onsenBackBtnTop" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">町に戻る</button>
         <button class="big" id="toOnsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
-        <button class="big" id="toOnsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
+        <button class="big" id="toOnsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社<span class="new-badge" id="onsenShrineTabNewBadge" style="display:none;">NEW</span></button>
       </div>
       <p class="gold" id="onsenGold">0G</p>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">温泉でストレスを癒します。入浴中のキャラは2時間の間、出発できません。</p>

@@ -20,6 +20,15 @@ function hasAnyNewBuilding() {
   ];
   return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0) && !state.seenUnlockedBuildings[key]);
 }
+// 建物を建てただけで終わらず、その先の新しい導線(温泉の神社タブ、出発準備画面の野営具/爆弾)まで
+// ちゃんとたどり着けるよう、覗き見用のチェックを町のボタンにも出す(state は書き換えない)
+function hasAnyNewOnsenFeature() {
+  return (state.shrineLevel || 0) > 0 && !state.seenShrineTab;
+}
+function hasAnyNewSupplyFeature() {
+  return ((state.travelPrepShopLevel || 0) > 0 && !state.seenCampingKitSupply)
+    || ((state.gunpowderStoreLevel || 0) > 0 && !state.seenBombSupply);
+}
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
@@ -36,6 +45,8 @@ function renderTown() {
   document.getElementById("toShopBtn").style.display = state.shopLevel ? "" : "none";
   document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
   document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
+  document.getElementById("onsenTownNewBadge").style.display = hasAnyNewOnsenFeature() ? "" : "none";
+  document.getElementById("dungeonTownNewBadge").style.display = hasAnyNewSupplyFeature() ? "" : "none";
   playTownAreaBgm();
   updateSceneBackgrounds();
   showScreen("screen-town");
@@ -521,6 +532,8 @@ function renderTavern() {
   pruneActiveParty();
   renderDwHeader("tavern", "宿屋", () => { renderTown(); });
   document.getElementById("tavernGold").textContent = state.gold + "G";
+  updateKeeperLine("tavernKeeperLinePeriod", "tavernKeeperLineIndex", TAVERN_KEEPER_LINES, "tavernKeeperBubble");
+  showKeeperCharacter("tavernKeeperWrap");
   renderRosterList();
   renderClassGrid();
   document.getElementById("createCharBtn").disabled = state.gold < HIRE_COST || state.roster.length >= rosterCapacity();
@@ -830,7 +843,13 @@ function showPartySelectTab(tab) {
   document.getElementById("partySelectOmikujiTabBtn").className = "omikuji-chip-btn" + (tab === "omikuji" ? " active" : "");
   document.getElementById("partySelectBestiaryTabBtn").className = "omikuji-chip-btn" + (tab === "bestiary" ? " active" : "");
 }
-document.getElementById("partySelectOmikujiTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("omikuji"); renderOmikujiTab(); };
+document.getElementById("partySelectOmikujiTabBtn").onclick = () => {
+  playSfx("select");
+  state.seenOmikujiTab = true;
+  document.getElementById("omikujiTabNewBadge").style.display = "none";
+  showPartySelectTab("omikuji");
+  renderOmikujiTab();
+};
 document.getElementById("partySelectBestiaryTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("bestiary"); renderBestiaryTab(); };
 document.getElementById("partySelectBackBtnFromBestiary").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 
@@ -923,7 +942,10 @@ function renderPartySelect() {
   pruneActiveParty();
   renderSupplies();
   document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
-  document.getElementById("bestiaryNewBadge").style.display = bestiaryHasNew() ? "" : "none";
+  document.getElementById("omikujiTabNewBadge").style.display = (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
+  const bestiaryUnlocked = (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
+  document.getElementById("partySelectBestiaryTabBtn").style.display = bestiaryUnlocked ? "" : "none";
+  document.getElementById("bestiaryNewBadge").style.display = bestiaryUnlocked && bestiaryHasNew() ? "" : "none";
   showPartySelectTab("main");
   renderOmikujiTab();
   const list = document.getElementById("partySelectList");
@@ -996,6 +1018,9 @@ function renderSupplies() {
     document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
     document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
     document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
+    // 旅支度屋を建てて初めてこの画面(支度タブ)を見た時だけNEWを出し、見た瞬間に記録して消す
+    document.getElementById("campingKitNewBadge").style.display = !state.seenCampingKitSupply ? "" : "none";
+    if (!state.seenCampingKitSupply) { state.seenCampingKitSupply = true; saveState(); }
   }
   // 爆弾は火薬庫を建築するまで出発画面にラインナップされない(支援物資の共有枠を消費する)
   document.getElementById("bombSection").style.display = state.gunpowderStoreLevel ? "" : "none";
@@ -1003,6 +1028,8 @@ function renderSupplies() {
     document.getElementById("bombOwned").textContent = state.inventory.bomb || 0;
     document.getElementById("buyBombBtn").textContent = `購入(${ITEMS.bomb.price}G)`;
     document.getElementById("buyBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.bomb.price;
+    document.getElementById("bombNewBadge").style.display = !state.seenBombSupply ? "" : "none";
+    if (!state.seenBombSupply) { state.seenBombSupply = true; saveState(); }
   }
   renderOwnedSupplyIcons();
 }
@@ -1227,36 +1254,44 @@ document.getElementById("departConfirmNoBtn").onclick = () => {
   document.getElementById("departConfirmOverlay").style.display = "none";
 };
 
-// ============ 温泉 ============
-// 湯守りキャラを表示し、約3秒後にふわっとフェードアウトさせる(画面を開き直すたびに最初から再生)
-let onsenKeeperFadeTimer = null;
-function showOnsenKeeper() {
-  const wrap = document.getElementById("onsenKeeperWrap");
-  clearTimeout(onsenKeeperFadeTimer);
+// ============ 施設の案内キャラクター(温泉の湯守り・宿屋の女将など共通) ============
+// 表示し、約3秒後にふわっとフェードアウトさせる(画面を開き直すたびに最初から再生)。
+// wrapIdごとにフェードタイマーを個別管理する(温泉と宿屋で同時に動いても干渉しないように)
+const keeperFadeTimers = {};
+function showKeeperCharacter(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  clearTimeout(keeperFadeTimers[wrapId]);
   wrap.getAnimations().forEach((a) => a.cancel());
   wrap.style.display = "flex";
   wrap.style.opacity = "1";
-  onsenKeeperFadeTimer = setTimeout(() => {
+  keeperFadeTimers[wrapId] = setTimeout(() => {
     const anim = wrap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 800, easing: "ease", fill: "forwards" });
     anim.onfinish = () => { anim.cancel(); wrap.style.opacity = "0"; wrap.style.display = "none"; };
   }, 3000);
 }
+// セリフは開くたびではなく1日おき(2日で1区切り)に更新する。同じ区切りの間は何度画面を開いても
+// 同じセリフのまま(区切りが変わった時だけ新しくランダムに選び直す)。stateのフィールド名を
+// periodKey/indexKeyで渡すことで温泉・宿屋どちらの案内キャラにも共通して使える
+function updateKeeperLine(periodKey, indexKey, lines, bubbleId) {
+  const period = Math.floor(((state.dayCount || 1) - 1) / 2);
+  if (state[periodKey] !== period) {
+    state[periodKey] = period;
+    state[indexKey] = Math.floor(Math.random() * lines.length);
+    saveState();
+  }
+  document.getElementById(bubbleId).textContent = lines[state[indexKey]];
+}
+
+// ============ 温泉 ============
 function renderOnsen() {
   playTownAreaBgm();
   updateSceneBackgrounds();
   renderDwHeader("onsen", "温泉", () => { renderTown(); });
-  // 湯守りキャラのセリフは開くたびではなく1日おき(2日で1区切り)に更新する。同じ区切りの間は
-  // 何度画面を開いても同じセリフのまま(区切りが変わった時だけ新しくランダムに選び直す)
-  const onsenKeeperPeriod = Math.floor(((state.dayCount || 1) - 1) / 2);
-  if (state.onsenKeeperLinePeriod !== onsenKeeperPeriod) {
-    state.onsenKeeperLinePeriod = onsenKeeperPeriod;
-    state.onsenKeeperLineIndex = Math.floor(Math.random() * ONSEN_KEEPER_LINES.length);
-    saveState();
-  }
-  document.getElementById("onsenKeeperBubble").textContent = ONSEN_KEEPER_LINES[state.onsenKeeperLineIndex];
-  showOnsenKeeper();
+  updateKeeperLine("onsenKeeperLinePeriod", "onsenKeeperLineIndex", ONSEN_KEEPER_LINES, "onsenKeeperBubble");
+  showKeeperCharacter("onsenKeeperWrap");
   document.getElementById("onsenGold").textContent = state.gold + "G";
   document.getElementById("toOnsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  document.getElementById("onsenShrineTabNewBadge").style.display = (state.shrineLevel || 0) > 0 && !state.seenShrineTab ? "" : "none";
   const list = document.getElementById("onsenList");
   list.innerHTML = "";
   const bathable = state.roster.filter((c) => c.status === "active");
@@ -1415,6 +1450,8 @@ document.getElementById("shrineOfferBtn").onclick = () => {
 };
 document.getElementById("toOnsenShrineBtn").onclick = () => {
   playSfx("select");
+  state.seenShrineTab = true;
+  document.getElementById("onsenShrineTabNewBadge").style.display = "none";
   document.getElementById("shrineDrawResult").style.display = "none";
   if (!state.shrineFirstVisitRewardGiven) {
     state.shrineFirstVisitRewardGiven = true;

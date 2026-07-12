@@ -57,6 +57,14 @@ function defaultState() {
     seenUnlockedClasses: {}, // { classId: true } 雇用可能になった職業を一度でも宿屋の職業一覧で見たか。NEWバッジの表示制御用
     onsenKeeperLinePeriod: null, // 温泉の湯守りキャラのセリフが最後に選ばれた「2日区切りの周期番号」(1日おき更新、renderOnsen参照)
     onsenKeeperLineIndex: 0, // 上記周期の間、ずっと表示し続けるONSEN_KEEPER_LINESのインデックス
+    tavernKeeperLinePeriod: null, // 宿屋の女将キャラの同種のフィールド(renderTavern参照)
+    tavernKeeperLineIndex: 0,
+    // 建物が解禁した「新しい導線」をちゃんと見つけられるようにするNEWバッジ用フラグ群。
+    // 見た瞬間に消える(showXxxやrenderXxxの中でtrueにする)方式で、seenUnlockedBuildingsと同じ考え方
+    seenShrineTab: false, // 温泉の⛩️神社タブ(お守り奉納)を開いたか
+    seenOmikujiTab: false, // 出発準備画面の⛩️おみくじタブを開いたか
+    seenCampingKitSupply: false, // 旅支度屋解禁後、出発準備画面(支度タブ=野営具の購入欄)を見たか
+    seenBombSupply: false, // 火薬庫解禁後、出発準備画面(支度タブ=爆弾の購入欄)を見たか
   };
 }
 
@@ -75,6 +83,8 @@ const DOJO_MAX_LEVEL = 2;
 const DOJO_UNLOCK_HOUSE_LEVEL = 3; // 家レベルがこの値に達するまで道場は建築できない
 const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
 
+// 図鑑: 出発準備画面のタブとして使えるようになる(建物ではなく家レベルのみで解禁)
+const BESTIARY_UNLOCK_HOUSE_LEVEL = 2;
 // 奉行所: 依頼を受けられるようになる
 const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 10;
