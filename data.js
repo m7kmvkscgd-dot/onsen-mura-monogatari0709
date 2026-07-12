@@ -664,7 +664,7 @@ const ENEMY_BESTIARY_TEXT = {
   onibi: { desc: "宙を漂う怪しい炎の妖怪。", bigAttackDesc: "誰か1人が庇っても防ぎきれない燃え広がる炎で、パーティ全体を焼く。" },
   kamaitachi: { desc: "鋭い刃のような風を操る妖怪。一閃で鎧ごと切り裂く。", bigAttackDesc: "かまいたちの一閃が鎧ごと切り裂き、防御力を下げる。" },
   // ---- 森・序盤の中ボス級(奉行所の依頼専用) ----
-  oo_inoshishi: { desc: "猪の中でもひときわ巨大な個体。奉行所の討伐依頼で相まみえる中ボス。", bigAttackDesc: "渾身の突進。かばう仲間でもぎりぎり耐えられるかという凄まじい一撃。" },
+  oo_inoshishi: { desc: "猪の中でもひときわ巨大な個体。毛皮は分厚く牙は鋭く、奉行所に討伐依頼が入るほどの猛々しさを持つ。", bigAttackDesc: "渾身の突進。かばう仲間でもぎりぎり耐えられるかという凄まじい一撃。" },
   q_arakuma: { desc: "森の主と呼ばれる巨大な熊。緊急の討伐依頼で現れる。", bigAttackDesc: "爪の一薙ぎが鎧を弾き飛ばし、防御力を下げる。" },
   q_daija: { desc: "川を塞ぐほどの大きさの蛇。牙に猛毒を宿す。緊急の討伐依頼で現れる。", bigAttackDesc: "強烈な一撃を放つ。牙に噛まれると高確率で毒を負う。" },
   q_oni: { desc: "山に棲む鬼。緊急の討伐依頼で現れる。", bigAttackDesc: "棍棒の一撃は防御ごと打ち砕く強烈な一打。" },
@@ -689,19 +689,19 @@ const ENEMY_BESTIARY_TEXT = {
   wanyudo: { desc: "燃え盛る車輪の姿をした妖怪。猛スピードで転がってくる。" },
   gaikotsu_musha: { desc: "朽ちてなお武具を纏う骸骨の武者。" },
   orochi: { desc: "山を覆うほどの巨体を持つ大蛇。" },
-  gashadokuro: { desc: "無数の骨が集まってできた巨大な怪物。中ボス級の強敵。" },
-  kyubi_no_kitsune: { desc: "九本の尾を持つ古の妖狐。強大な妖力を操る中ボス級の強敵。" },
+  gashadokuro: { desc: "無数の骨が集まってできた巨大な怪物。夜な夜な軋む音を響かせ、近づく者を震え上がらせる。" },
+  kyubi_no_kitsune: { desc: "九本の尾を持つ古の妖狐。強大な妖力を自在に操り、並の術者では太刀打ちできない。" },
   // ---- 森・終盤(最後の1体は最終ボス) ----
   shuten_doji: { desc: "酒を好み、都を騒がせたという鬼の頭領。" },
   ibaraki_doji: { desc: "酒呑童子の腹心として知られる、屈強な鬼。" },
-  dai_tengu: { desc: "天狗の中でも最強格とされる存在。神通力を操る。" },
+  dai_tengu: { desc: "他の天狗を束ねるほどの神通力を操る存在。" },
   yamata_no_orochi: { desc: "八つの頭と尾を持つ伝説の大蛇。" },
   tamamo_no_mae: { desc: "絶世の美女に化けた、九尾の狐の化身。" },
   giou: { desc: "深き山に君臨するという、謎めいた王。" },
   kyubi_shin: { desc: "正体を現した、九尾の狐の真の姿。" },
   gashadokuro_shin: { desc: "無数の怨念を宿した、がしゃどくろの真の姿。" },
   yomi_no_onryo: { desc: "黄泉の国から現世に漏れ出た、強い恨みを持つ霊。" },
-  kishin_rasetsuo: { desc: "深淵の森の最奥に君臨する、鬼神にして羅刹の王。最強格の強敵。" },
+  kishin_rasetsuo: { desc: "深淵の森の最奥に君臨する、鬼神にして羅刹の王。その一撃は山をも砕くという。" },
   // ---- 森・大群系(小さく、数が多いのが特徴) ----
   nurari_koumori: { desc: "小さな群れで飛び回るコウモリの妖怪。毒を持つ牙で噛みつく。" },
   chochin_obake: { desc: "提灯に目鼻がついた小さな妖怪。群れで漂う。" },
@@ -742,7 +742,7 @@ const ENEMY_BESTIARY_TEXT = {
   oo_dako_2: { desc: "さらに巨大化した大ダコ。", bigAttackDesc: "岩場に潜む巨躯が締め上げ、防御力を下げる。" },
   same_bito: { desc: "鮫の姿をした獰猛な戦士。短剣と牙で切り裂く。", bigAttackDesc: "短剣と牙で連続して切り裂く。" },
   shinkai_no_bourei: { desc: "深海から漂う怨念の亡霊。呪いの力で継続的に蝕む。" },
-  oo_kani_ou: { desc: "この地を支配する巨大な蟹の王。中ボス級の強敵。", bigAttackDesc: "巨大な鋏で鎧ごと粉砕する強烈な一撃。" },
+  oo_kani_ou: { desc: "この地を支配する巨大な蟹の王。鋼のように硬い甲羅と、鎧ごと砕く鋏を持つ。", bigAttackDesc: "巨大な鋏で鎧ごと粉砕する強烈な一撃。" },
   // ---- 海岸・終盤(最後の1体は最終ボス) ----
   kaima_daiou: { desc: "海の魔を統べる大王。", bigAttackDesc: "大槍を薙ぎ払い、庇う相手ごと巻き込む。" },
   youen_na_isoonna: { desc: "妖艶な姿で敵を誘い込む磯女の上位個体。", bigAttackDesc: "魅了の歌で敵を弱らせ、攻撃力を下げる。" },
@@ -753,7 +753,7 @@ const ENEMY_BESTIARY_TEXT = {
   same_no_bujin: { desc: "鎧を纏った鮫の戦士。槍と牙で敵を貫く。", bigAttackDesc: "槍と牙で敵を貫く連続攻撃。" },
   umi_no_souryo: { desc: "海に沈んだ僧侶の怨念。呪詛の法術を操る。", bigAttackDesc: "呪詛の法術で敵の力を弱める。" },
   uzushio_no_onryou: { desc: "渦潮に宿る怨霊。渡る者を引きずり込む。", bigAttackDesc: "渦潮に引き寄せ、庇う間もなくパーティ全体を飲み込む。" },
-  kaiyoujo_ou: { desc: "この地の全てを支配する妖怪の女王。最強格の強敵。", bigAttackDesc: "強力な呪術で敵を蝕む一撃。" },
+  kaiyoujo_ou: { desc: "この地の全てを支配する妖怪の女王。その呪術の前では、並みの武具など意味を成さない。", bigAttackDesc: "強力な呪術で敵を蝕む一撃。" },
 };
 function bestiaryTextFor(enemyId) {
   const t = ENEMY_BESTIARY_TEXT[enemyId] || {};
