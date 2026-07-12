@@ -520,7 +520,7 @@
 
       <div class="facility-block" id="facilityBlock-teaHouse">
         <h2 class="facility-toggle" style="margin-top:12px;">🍡茶屋<span class="new-badge" id="teaHouseNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
+        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">深淵の森15層の進路選択に必ず現れるようになり、一休みや買い物ができる</p>
         <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.6rem;"></button>
       </div>
 
@@ -587,6 +587,50 @@
         <button class="big" id="dungeonToolsBtn">道具</button>
         <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- 茶屋(深淵の森15層で立ち寄れる休憩所。茶屋を建築済みの時だけ、その階へ行く進路選択に必ず選択肢として現れる) -->
+  <div class="screen" id="screen-teahouse">
+    <div class="hero has-dw-header" id="teaHouseHero">
+      <div class="dw-header">
+        <button class="dw-header-back" id="teaHouseHeaderBack"></button>
+        <div class="dw-header-title" id="teaHouseHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="teaHouseHeaderGold"></span><span class="dw-header-time" id="teaHouseHeaderTime"></span></div>
+      </div>
+      <h1>茶屋</h1>
+    </div>
+    <div class="body-pad">
+      <div id="teaHouseClosedNotice" class="card" style="display:none;text-align:center;">
+        <div class="roster-name">営業時間外で閉店中だ</div>
+      </div>
+      <div id="teaHouseOpenContent">
+        <div class="card">
+          <div class="roster-name">一休み</div>
+          <div class="roster-sub" style="margin-top:0.3rem;">HPとMPをそれぞれ40%回復する(利用料<span id="teaHouseRestCostText"></span>G)</div>
+          <button class="big primary" id="teaHouseRestBtn" style="margin-top:0.6rem;"></button>
+        </div>
+        <h2 style="margin-top:1rem;">買い物</h2>
+        <div class="card">
+          <div class="shop-item">
+            <div>
+              <div><strong>回復薬</strong> <span id="teaHousePotionOwned">0</span>個</div>
+              <div class="desc" id="teaHousePotionDesc"></div>
+            </div>
+            <button class="big" id="teaHouseBuyPotionBtn"></button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:0.6rem;">
+          <div class="shop-item">
+            <div>
+              <div><strong>煙玉</strong> <span id="teaHouseSmokeBombOwned">0</span>個</div>
+              <div class="desc" id="teaHouseSmokeBombDesc"></div>
+            </div>
+            <button class="big" id="teaHouseBuySmokeBombBtn"></button>
+          </div>
+        </div>
+      </div>
+      <button class="big" id="teaHouseBackBtn" style="margin-top:1rem;">森に戻る</button>
     </div>
   </div>
 
@@ -790,6 +834,17 @@
       <h2>夜が明けた</h2>
       <div id="campRestSummaryList"></div>
       <button class="big primary" id="campRestNextBtn">次へ</button>
+    </div>
+  </div>
+
+  <!-- 茶屋の「一休み」演出: 場所を移動しないため、宿泊/野営と違いbg画像のクロスフェードは無く暗転+キャプションのみ -->
+  <div id="teahouseRestTransition" class="lodging-transition" style="display:none;">
+    <div class="lodging-transition-black" id="teahouseRestBlack"></div>
+    <div class="lodging-transition-caption" id="teahouseRestCaption"></div>
+    <div id="teahouseRestSummary" class="camp-rest-summary" style="display:none;">
+      <h2>一休みした</h2>
+      <div id="teahouseRestSummaryList"></div>
+      <button class="big primary" id="teahouseRestNextBtn">次へ</button>
     </div>
   </div>
 

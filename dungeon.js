@@ -341,7 +341,7 @@ function healPartyOnFloorMove() {
 }
 // 1階層分の移動処理(進む/帰還どちらも共通)。retreatBtn(里に戻る最初の一押し)からも
 // advanceBtn(2回目以降の帰還)からも同じロジックで1階層動けるようにするための共通関数
-function moveOneFloor(pathBias) {
+function moveOneFloor(pathBias, enterTeahouse) {
   // 福禄寿の御守: 探索で「進む」(帰還中の「帰還」ボタンも含む、同じボタンのため)を押すたびに全員を少し回復
   if (hasOmamori("fukurokuju")) {
     fieldParty.forEach((c) => { if (c.status === "active") c.hp = Math.min(c.maxHp, c.hp + 2); });
@@ -376,11 +376,12 @@ function moveOneFloor(pathBias) {
 
   const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   renderDungeon();
+  const arrive = enterTeahouse ? enterTeahouseFromDungeon : () => resolveFloorArrival(pathBias);
   if (criticalHereList.length > 0) {
-    queueCriticalAlerts(criticalHereList, () => resolveFloorArrival(pathBias));
+    queueCriticalAlerts(criticalHereList, arrive);
     return;
   }
-  resolveFloorArrival(pathBias);
+  arrive();
 }
 // 受注中の依頼があり、かつその対象フロアに到達した場合は通常の抽選より優先して確定でその群れと戦闘になる。
 // 一度そこから逃げた(chasing:true)依頼は、以後どのフロアでも(進む/帰還どちらでも)一定確率で
@@ -426,21 +427,39 @@ function updateQuestTargetBadge() {
   badge.style.visibility = "visible";
   badge.textContent = `🎯 ${enemyDef.ja}討伐: ${distanceText}`;
 }
+// 茶屋(建築済みの時、深淵の森15層に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
+// その階へ向かう時は毎回この判定が通るため、行きと帰りに二回立ち寄ることもできる)
+function teahouseOfferedForFloor(floor) {
+  return currentStage === "forest" && (state.teaHouseLevel || 0) > 0 && floor === TEA_HOUSE_FLOOR;
+}
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
     return;
   }
-  // 帰還中(retreating)は安全なルートを通って歩いて帰る演出のため、道の分岐は出さない
+  const targetFloor = retreating ? currentFloor - 1 : currentFloor + 1;
+  // 帰還中(retreating)は安全なルートを通って歩いて帰る演出のため、道の分岐は出さない。
+  // ただし茶屋の階だけは例外で、立ち寄るかどうかの2択を出す
   if (retreating) {
+    if (teahouseOfferedForFloor(targetFloor)) {
+      showTeahouseOffer(
+        () => playDungeonMoveTransition(() => moveOneFloor(null, true)),
+        () => playDungeonMoveTransition(() => moveOneFloor(null))
+      );
+      return;
+    }
     playDungeonMoveTransition(() => moveOneFloor(null));
     return;
   }
   showPathChoice((pathBias) => {
+    if (pathBias === TEAHOUSE_PATH_KEY) {
+      playDungeonMoveTransition(() => moveOneFloor(null, true));
+      return;
+    }
     const chosen = currentPathDefs()[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
-  });
+  }, teahouseOfferedForFloor(targetFloor));
 };
 
 // スレイ・ザ・スパイア風の「進む前に道を選ぶ」システム。選んだ道ごとに戦闘/財宝/静寂の出現率を
@@ -527,7 +546,8 @@ function weightedPickPathKey(weights) {
 // 唯一の代替行動として「道具」(野営具/温泉卵)だけをこのパネル内で完結させて使えるようにする。
 // 温泉卵を使った場合は再抽選せず同じ選択肢に戻し(picked配列を使い回す)、野営具を使った場合は
 // そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
-function showPathChoice(onChosen) {
+const TEAHOUSE_PATH_KEY = "__teahouse__"; // 通常の進路キーとは別枠の特別な選択肢(茶屋)を表す番人値
+function showPathChoice(onChosen, offerTeahouse) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
@@ -535,6 +555,8 @@ function showPathChoice(onChosen) {
   const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
   const picked = [];
   for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
+  // 茶屋(建築済み+対象階)は通常の抽選プールとは別に、確定で追加の選択肢として必ず加える
+  if (offerTeahouse) picked.push(TEAHOUSE_PATH_KEY);
   document.body.classList.add("path-choice-active");
   // 進路選択が出ている間は下部の行動ボタン(進む/里に戻る/回復薬/道具等)を完全に無効化し、
   // 選択肢のカードか、このパネル内の道具ボタン以外から抜けられないようにする
@@ -557,14 +579,16 @@ function showPathChoice(onChosen) {
         <p class="path-choice-title">進路選択</p>
         <div class="path-choice-cards path-tags-stack">
           ${picked.map((key, idx) => {
-            const p = currentPathDefs()[key];
+            const isTeahouse = key === TEAHOUSE_PATH_KEY;
+            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : currentPathDefs()[key];
+            const desc = isTeahouse ? "一休みできる茶屋が見える" : (flavor[key] || "");
             return `
               ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
               <button class="path-card path-tag" data-idx="${idx}" style="--i:${idx}">
                 <span class="path-card-icon">${p.icon}</span>
                 <span class="path-tag-text">
                   <span class="path-card-label">${p.label}</span>
-                  <span class="path-card-desc">${flavor[key] || ""}</span>
+                  <span class="path-card-desc">${desc}</span>
                 </span>
               </button>
             `;
@@ -590,6 +614,60 @@ function showPathChoice(onChosen) {
   }
 
   renderCards();
+}
+
+// 帰還中に茶屋の階へ差し掛かった時専用の2択(茶屋に立ち寄る/素通りする)。帰還中は通常の進路選択
+// (道の分岐)自体を出さない仕様のため、showPathChoiceの重み付き抽選プールは使わず固定2択にしてある
+function showTeahouseOffer(onEnter, onSkip) {
+  const div = document.getElementById("criticalAlert");
+  document.getElementById("dungeonLog").style.display = "none";
+  document.body.classList.add("path-choice-active");
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
+  function close() {
+    document.body.classList.remove("path-choice-active");
+    div.innerHTML = "";
+    document.getElementById("dungeonLog").style.display = "";
+  }
+  div.innerHTML = `
+    <div class="path-choice-panel path-tags-panel">
+      <p class="path-choice-title">帰り道</p>
+      <div class="path-choice-cards path-tags-stack">
+        <button class="path-card path-tag" data-idx="0" style="--i:0">
+          <span class="path-card-icon">🍡</span>
+          <span class="path-tag-text">
+            <span class="path-card-label">茶屋</span>
+            <span class="path-card-desc">一休みできる茶屋が見える</span>
+          </span>
+        </button>
+        <span class="path-tag-rope" aria-hidden="true"></span>
+        <button class="path-card path-tag" data-idx="1" style="--i:1">
+          <span class="path-card-icon">🚶</span>
+          <span class="path-tag-text">
+            <span class="path-card-label">素通りする</span>
+            <span class="path-card-desc">そのまま帰り道を進む</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  `;
+  const stack = div.querySelector(".path-tags-stack");
+  const btns = Array.from(div.querySelectorAll(".path-tag"));
+  const handlers = [onEnter, onSkip];
+  btns.forEach((btn, idx) => {
+    btn.onclick = () => {
+      if (stack.classList.contains("path-tags-locked")) return;
+      stack.classList.add("path-tags-locked");
+      btns.forEach((el) => el.classList.add(el === btn ? "path-tag-selected" : "path-tag-fading"));
+      setTimeout(() => { close(); handlers[idx](); }, 170);
+    };
+  });
+}
+
+// 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く
+function enterTeahouseFromDungeon() {
+  teahouseVisitStock = { potion: 0, smokeBomb: 0 };
+  renderTeahouse();
+  showScreen("screen-teahouse");
 }
 
 // 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
@@ -818,5 +896,143 @@ function showTreasurePopup(amount, extraImageSrc) {
 function checkStrandedOnCurrentFloor() {
   const criticalList = fieldParty.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   if (criticalList.length > 0) queueCriticalAlerts(criticalList, () => {});
+}
+
+// ============ 茶屋 ============
+// 深淵の森15層に建築後は確定で立ち寄れる休憩所。「一休み」でHP/MPを回復、「買い物」で
+// 回復薬/煙玉を購入できる(在庫は来訪ごとにリセットする、セーブはしないその場限りの状態)。
+// 夜・早朝の時間帯は営業時間外として利用できない
+let teahouseVisitStock = { potion: 0, smokeBomb: 0 };
+function teahouseIsOpen() {
+  return state.timeOfDay !== "night" && state.timeOfDay !== "dawn";
+}
+function pickTeahouseRestMessage() {
+  return TEAHOUSE_REST_MESSAGES[Math.floor(Math.random() * TEAHOUSE_REST_MESSAGES.length)];
+}
+function teahouseSupplyTotal() {
+  return (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+}
+function renderTeahouse() {
+  updateSceneBackgrounds();
+  renderDwHeader("teaHouse", "茶屋", () => { showScreen("screen-dungeon"); renderDungeon(); });
+  const open = teahouseIsOpen();
+  document.getElementById("teaHouseClosedNotice").style.display = open ? "none" : "";
+  document.getElementById("teaHouseOpenContent").style.display = open ? "" : "none";
+  if (!open) return;
+
+  document.getElementById("teaHouseRestCostText").textContent = TEAHOUSE_REST_COST;
+  const restBtn = document.getElementById("teaHouseRestBtn");
+  restBtn.textContent = `一休みする(${TEAHOUSE_REST_COST}G)`;
+  restBtn.disabled = state.gold < TEAHOUSE_REST_COST;
+
+  document.getElementById("teaHousePotionOwned").textContent = state.inventory.potion || 0;
+  document.getElementById("teaHousePotionDesc").textContent = `${ITEMS.potion.desc}(${ITEMS.potion.price}G)`;
+  document.getElementById("teaHouseSmokeBombOwned").textContent = state.inventory.smokeBomb || 0;
+  document.getElementById("teaHouseSmokeBombDesc").textContent = `${ITEMS.smokeBomb.desc}(${ITEMS.smokeBomb.price}G)`;
+
+  const potionBtn = document.getElementById("teaHouseBuyPotionBtn");
+  const potionRemaining = Math.max(0, TEAHOUSE_POTION_STOCK - teahouseVisitStock.potion);
+  if (potionRemaining <= 0) {
+    potionBtn.textContent = "今回は売り切れ";
+    potionBtn.disabled = true;
+  } else {
+    potionBtn.textContent = `購入 残り${potionRemaining}個`;
+    potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || state.gold < ITEMS.potion.price;
+  }
+  const smokeBtn = document.getElementById("teaHouseBuySmokeBombBtn");
+  const smokeRemaining = Math.max(0, TEAHOUSE_SMOKEBOMB_STOCK - teahouseVisitStock.smokeBomb);
+  if (smokeRemaining <= 0) {
+    smokeBtn.textContent = "今回は売り切れ";
+    smokeBtn.disabled = true;
+  } else {
+    smokeBtn.textContent = `購入 残り${smokeRemaining}個`;
+    smokeBtn.disabled = teahouseSupplyTotal() >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
+  }
+}
+document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
+  if (teahouseVisitStock.potion >= TEAHOUSE_POTION_STOCK) { alert("回復薬は今回もう売り切れです"); return; }
+  if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.potion.price;
+  state.inventory.potion = (state.inventory.potion || 0) + 1;
+  teahouseVisitStock.potion++;
+  saveState();
+  playSfx("coin");
+  renderTeahouse();
+};
+document.getElementById("teaHouseBuySmokeBombBtn").onclick = () => {
+  if (teahouseVisitStock.smokeBomb >= TEAHOUSE_SMOKEBOMB_STOCK) { alert("煙玉は今回もう売り切れです"); return; }
+  if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.smokeBomb.price;
+  state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
+  teahouseVisitStock.smokeBomb++;
+  saveState();
+  playSfx("coin");
+  renderTeahouse();
+};
+document.getElementById("teaHouseRestBtn").onclick = () => {
+  if (!teahouseIsOpen() || state.gold < TEAHOUSE_REST_COST) return;
+  state.gold -= TEAHOUSE_REST_COST;
+  saveState();
+  playSfx("select");
+  playTeahouseRestTransition(() => {
+    const beforeSnapshot = fieldParty.filter((c) => c.status === "active").map((c) => {
+      // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、確実に
+      // 回復アニメーションが出るよう回復前の値を明示的に記録しておく(finishCampingと同じ対処)
+      c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+      c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+      return { id: c.id, fatigueBefore: c.fatigue || 0 };
+    });
+    fieldParty.forEach((c) => { if (c.status === "active") useTeahouseRest(c); });
+    advanceExplorationClock(TEAHOUSE_REST_CLOCK_MINUTES);
+    tickCriticalExpiry(state.roster, absoluteGameMinutes());
+    checkQuestDeadline();
+    saveState();
+    showRestSummary("teahouseRestSummary", "teahouseRestSummaryList", "teahouseRestNextBtn", beforeSnapshot, () => {
+      revealTeahouseRest(() => { renderTeahouse(); });
+    }, false);
+  });
+};
+document.getElementById("teaHouseBackBtn").onclick = () => { showScreen("screen-dungeon"); renderDungeon(); };
+
+// 一休みの演出: 宿泊/野営と違い場所を移動しないため、bg画像のクロスフェードは無く暗転+キャプションのみ
+let teahouseRestTransitionActive = false;
+function playTeahouseRestTransition(onBlack) {
+  if (teahouseRestTransitionActive) return;
+  teahouseRestTransitionActive = true;
+  let blackDone = false;
+  function reachBlack() {
+    if (blackDone) return;
+    blackDone = true;
+    clearTimeout(safetyTimer);
+    caption.textContent = pickTeahouseRestMessage();
+    caption.style.animation = "lodgingCaptionFade 3900ms ease forwards";
+    setTimeout(onBlack, 3900);
+  }
+  const safetyTimer = setTimeout(reachBlack, 30000);
+  const overlay = document.getElementById("teahouseRestTransition");
+  const blackEl = document.getElementById("teahouseRestBlack");
+  const caption = document.getElementById("teahouseRestCaption");
+  blackEl.style.opacity = "0";
+  caption.textContent = "";
+  overlay.style.display = "block";
+  void overlay.offsetWidth;
+  fadeOpacity(blackEl, 0, 1, 1200, reachBlack);
+}
+function revealTeahouseRest(onDone) {
+  let revealDone = false;
+  function finish() {
+    if (revealDone) return;
+    revealDone = true;
+    clearTimeout(safetyTimer);
+    overlay.style.display = "none";
+    teahouseRestTransitionActive = false;
+    onDone();
+  }
+  const safetyTimer = setTimeout(finish, 30000);
+  const overlay = document.getElementById("teahouseRestTransition");
+  const blackEl = document.getElementById("teahouseRestBlack");
+  setTimeout(() => { fadeOpacity(blackEl, 1, 0, 1000, finish); }, 200);
 }
 

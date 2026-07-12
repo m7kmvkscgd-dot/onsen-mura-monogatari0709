@@ -220,6 +220,12 @@ function useLodging(character) {
   character.fatigue = Math.max(0, (character.fatigue || 0) - LODGE_FATIGUE_RELIEF);
 }
 
+// 茶屋の「一休み」: HP/MPを割合回復する(ストレスには影響しない)
+function useTeahouseRest(character) {
+  character.hp = Math.min(character.maxHp, character.hp + Math.round(character.maxHp * TEAHOUSE_REST_HP_RATIO));
+  character.mp = Math.min(character.maxMp, character.mp + Math.round(character.maxMp * TEAHOUSE_REST_MP_RATIO));
+}
+
 // ストレスの段階(0=平常, 1=40〜59, 2=60〜79, 3=80〜99, 4=100=発狂)
 function stressTier(fatigue) {
   const f = fatigue || 0;

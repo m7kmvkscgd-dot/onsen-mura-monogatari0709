@@ -6,6 +6,7 @@ const BG_SETS = {
   coast: { dawn: "assets/bg/coast_dawn.jpg", asa: "assets/bg/coast_asa.jpg", day: "assets/bg/coast_day.jpg", dusk: "assets/bg/coast_dusk.jpg", night: "assets/bg/coast_night.jpg" },
   onsen: { day: "assets/bg/onsen.jpg", night: "assets/bg/onsen_night.jpg" },
   departure: { dawn: "assets/bg/departure_gate_dawn.jpg", asa: "assets/bg/departure_gate_asa.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
+  teaHouse: { dawn: "assets/bg/teahouse_dawn.jpg", asa: "assets/bg/teahouse_asa.jpg", day: "assets/bg/teahouse_day.jpg", dusk: "assets/bg/teahouse_dusk.jpg", night: "assets/bg/teahouse_night.jpg" },
 };
 // 探索/戦闘の背景・野営背景は森/海岸のどちらのステージ中かで出し分ける
 function currentAreaBgSet() { return currentStage === "coast" ? BG_SETS.coast : BG_SETS.dungeon; }
@@ -64,6 +65,7 @@ function updateSceneBackgrounds() {
   // 奉行所だけこの一覧から漏れており、専用の絵が無いため常に真っ黒(背景未設定)のまま表示されていた不具合を修正。
   // 他の「町の施設だが専用の絵が無い」画面(道具屋/増築/リザルト)と同じくtownの絵を流用する
   document.getElementById("magistrateHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
+  document.getElementById("teaHouseHero").style.backgroundImage = `url('${BG_SETS.teaHouse[tod]}')`;
 }
 // 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
@@ -279,7 +281,7 @@ function fadeOpacity(el, from, to, durationMs, callback) {
   };
 }
 
-function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext) {
+function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, showStress = true) {
   const panel = document.getElementById(panelId);
   const list = document.getElementById(listId);
   list.innerHTML = beforeSnapshot.map(({ id, fatigueBefore }) => {
@@ -294,7 +296,7 @@ function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext) {
           <div class="camp-rest-stat-label">HP</div>
           ${hpBarHtml(c)}
           ${c.maxMp > 0 ? `<div class="camp-rest-stat-label" style="margin-top:0.25rem;">MP</div>${mpBarHtml(c)}` : ""}
-          <div class="camp-rest-stress">ストレス -${fatigueDelta}</div>
+          ${showStress ? `<div class="camp-rest-stress">ストレス -${fatigueDelta}</div>` : ""}
         </div>
       </div>
     `;

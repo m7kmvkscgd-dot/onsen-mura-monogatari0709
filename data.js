@@ -667,6 +667,15 @@ const CAMP_MP_RELIEF = 0.45;
 const CAMP_STRESS_RELIEF = 20;
 // 野営中に選べる3行動のうち「慰める」のストレス軽減量
 const CAMP_COMFORT_STRESS_RELIEF = 10;
+// 茶屋(深淵の森15層、茶屋を建築済みの時だけ進路選択に必ず現れる休憩所)
+const TEA_HOUSE_FLOOR = 15;
+const TEAHOUSE_REST_COST = 30; // 一休みの利用料(G)
+const TEAHOUSE_REST_HP_RATIO = 0.4;
+const TEAHOUSE_REST_MP_RATIO = 0.4;
+const TEAHOUSE_REST_CLOCK_MINUTES = 60; // 一休みで進む時間(1時間)
+const TEAHOUSE_POTION_STOCK = 4; // 1回の来訪で買える回復薬の在庫数
+const TEAHOUSE_SMOKEBOMB_STOCK = 1; // 1回の来訪で買える煙玉の在庫数
+const TEAHOUSE_REST_MESSAGES = ["団子を食べて休憩した", "ちょっと一休みした", "お茶を飲んで休憩", "ちょっと疲れが取れた"];
 // 野営中「武器の手入れ」を選んだキャラの攻撃力バフ(戦闘回数でカウントし、ターンではなく戦闘をまたいで持続する)
 const CAMP_WEAPON_CARE_ATK_MULT = 1.1;
 const CAMP_WEAPON_CARE_BATTLES = 3;
