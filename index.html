@@ -438,7 +438,10 @@
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">魂のかけらを奉納して祈願すると、特別なお守りを授かれます。お守りはパーティ全体に効果があり、同時に<span id="shrineEquipMaxText"></span>個まで着けられます。</p>
       <div class="card">
         <div class="roster-name">奉納祈願</div>
-        <div class="roster-sub" style="margin-top:0.3rem;">魂のかけら <span id="shrineSoulShardCount">0</span>個 所持中</div>
+        <div class="shrine-soulshard-row" style="margin-top:0.4rem;">
+          <img src="assets/items/soul_shard.png" class="shrine-soulshard-icon" alt="魂のかけら">
+          <span class="shrine-soulshard-text">所持している魂のかけら：<span id="shrineSoulShardCount" class="gold">0</span>個</span>
+        </div>
         <button class="big primary" id="shrineOfferBtn" style="margin-top:0.6rem;">奉納する(魂のかけら3個)</button>
         <div id="shrineDrawResult" class="card" style="display:none;margin-top:0.7rem;background:var(--panel-2);"></div>
       </div>

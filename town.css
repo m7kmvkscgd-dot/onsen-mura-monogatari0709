@@ -465,3 +465,14 @@
     75% { opacity: 1; }
     100% { opacity: 0; }
   }
+  /* 神社: 奉納祈願カードの所持数表示。イラスト+文言で「今何個持っているか」が一目でわかるように */
+  .shrine-soulshard-row {
+    display: flex; align-items: center; gap: 0.55rem;
+  }
+  .shrine-soulshard-icon {
+    width: 34px; height: 34px; object-fit: contain; flex-shrink: 0;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+  }
+  .shrine-soulshard-text {
+    font-size: 0.85rem; color: var(--dw-body-color, #ead8ab);
+  }
