@@ -105,9 +105,29 @@ function playHawkAttackVfx(hunterActor, targetId) {
     playAttackVfx(targetId, { classId: "hawk" }, "normal");
     playSfx(attackSfxFor("samurai"));
   };
+  // 飛翔中(往路〜復路)は、飛んでいる本体と紛らわしいため狩人ポートレートの鷹バッジを一時的に隠す。
+  // hawkFlightActiveフラグはrenderPartyBar側の表示条件にも効くので、飛翔中にrenderBattleScreen()が
+  // 挟まってポートレートDOMが作り直されても(直接のstyle操作は失われても)バッジは隠れたままになる
+  hunterActor.hawkFlightActive = true;
+  const setBadgeHidden = (hidden) => {
+    const card = findVisibleCard(hunterActor.id);
+    const badge = card && card.querySelector(".hawk-badge");
+    if (badge) badge.style.display = hidden ? "none" : "";
+  };
+  const endFlight = () => {
+    hunterActor.hawkFlightActive = false;
+    setBadgeHidden(false);
+    // 飛翔中に(敵ターン等で)renderBattleScreen()が挟まっていた場合、その時点ではまだ
+    // hawkFlightActive=trueでバッジ自体が描画されていない。style操作だけでは戻せないため、
+    // 念のため味方バーを再描画してバッジの有無を現在の状態に合わせ直す
+    if (battle && document.getElementById("battlePartyBar")) {
+      renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
+    }
+  };
+  setBadgeHidden(true);
   const fromEl = findVisibleCard(hunterActor.id);
   const toEl = findVisibleCard(targetId);
-  if (!fromEl || !toEl) { strike(); return; }
+  if (!fromEl || !toEl) { strike(); endFlight(); return; }
   const fromRect = fromEl.getBoundingClientRect();
   const toRect = toEl.getBoundingClientRect();
   const fromX = fromRect.left + fromRect.width / 2;
@@ -129,7 +149,7 @@ function playHawkAttackVfx(hunterActor, targetId) {
         { transform: `translate(${toX}px, ${toY}px) scale(1.15)`, opacity: 1 },
         { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 0 },
       ], { duration: HAWK_PROJECTILE_MS, easing: "ease-out", fill: "forwards" });
-      inbound.onfinish = () => bird.remove();
+      inbound.onfinish = () => { bird.remove(); endFlight(); };
     }, HAWK_HITSTOP_MS);
   };
 }
