@@ -931,8 +931,30 @@ function renderBestiaryDetail() {
     ${weaknessLine ? `<div class="weakness-line">弱点：${weaknessLine}</div>` : ""}
   `;
 }
-document.getElementById("bestiaryDetailPrevBtn").onclick = () => { playSfx("select"); bestiaryDetailIndex--; renderBestiaryDetail(); };
-document.getElementById("bestiaryDetailNextBtn").onclick = () => { playSfx("select"); bestiaryDetailIndex++; renderBestiaryDetail(); };
+// 左右送りは未遭遇(？？？)のページを飛ばし、遭遇済みの敵だけを順番にめくれるようにする。
+// タップして直接開いた場合(未遭遇でも開ける)はそのまま表示するが、そこから左右に送ると
+// 次に遭遇済みの敵が見つかるまでスキップする。誰も遭遇していない場合は無限ループを避けて動かさない
+function findNextSeenBestiaryIndex(fromIndex, direction) {
+  const orderedIds = bestiaryOrderedIds();
+  const seenIds = state.seenEnemyIds || [];
+  if (seenIds.length === 0) return fromIndex;
+  let idx = fromIndex;
+  for (let i = 0; i < orderedIds.length; i++) {
+    idx = (idx + direction + orderedIds.length) % orderedIds.length;
+    if (seenIds.includes(orderedIds[idx])) return idx;
+  }
+  return fromIndex;
+}
+document.getElementById("bestiaryDetailPrevBtn").onclick = () => {
+  playSfx("select");
+  bestiaryDetailIndex = findNextSeenBestiaryIndex(bestiaryDetailIndex, -1);
+  renderBestiaryDetail();
+};
+document.getElementById("bestiaryDetailNextBtn").onclick = () => {
+  playSfx("select");
+  bestiaryDetailIndex = findNextSeenBestiaryIndex(bestiaryDetailIndex, 1);
+  renderBestiaryDetail();
+};
 document.getElementById("bestiaryDetailCloseBtn").onclick = () => { playSfx("select"); document.getElementById("bestiaryDetailOverlay").style.display = "none"; };
 
 function renderPartySelect() {
