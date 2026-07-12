@@ -11,7 +11,9 @@
      配置を変える(他の画面はbottom基準のまま) */
   #onsenShopKeeperWrap { bottom: auto; top: 64px; }
   .onsen-keeper-img {
-    width: 150px; height: auto; display: block;
+    /* widthではなくheightを揃える(各素材の縦横比がバラバラなため、widthを揃えると
+     キャラクター自体の見た目の大きさが画面ごとに違って見えてしまっていた) */
+    height: 190px; width: auto; max-width: 170px; display: block;
     filter: drop-shadow(0 8px 18px rgba(0,0,0,0.55));
     animation: onsenKeeperIn 320ms ease-out;
   }
