@@ -1333,7 +1333,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
         if (oh.type === "poison") applyPoison(target, (oh.value || 3) + izanamiBoost);
-        if (oh.type === "bleed") applyBleed(target, (oh.value || 2) + izanamiBoost);
+        if (oh.type === "bleed") applyBleed(target, resolveValue(oh, 2) + izanamiBoost);
         if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
         if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);

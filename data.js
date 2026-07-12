@@ -832,7 +832,7 @@ const SKILL_TREES = {
   hunter: {
     2: {
       left: { name: "狙撃", desc: "敵単体へ170%ダメージ、3ターンの間その敵の被ダメージ+10%(パーティ全員に有効)", mp: 3, action: { kind: "damage", mult: 1.7, inflict: { type: "dmgTakenUp", chance: 1.0, value: 0.1, turns: 3 } } },
-      right: { name: "毒矢", desc: "敵単体へ110%ダメージ、確実に毒状態にする(蓄積5)", mp: 3, action: { kind: "damage", mult: 1.1, inflict: { type: "poison", chance: 1.0, value: 5 } } },
+      right: { name: "急所への一撃", desc: "通常攻撃で25%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.25, valueMin: 1, valueMax: 3 } } },
     },
     3: {
       left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, comboTag: "rapidFire", action: { kind: "damage", mult: 1.5, hits: 2 } },
