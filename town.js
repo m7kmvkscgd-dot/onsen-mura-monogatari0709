@@ -928,9 +928,9 @@ function renderBestiaryDetail() {
   const text = bestiaryTextFor(id);
   const weaknessLine = bestiaryWeaknessLine(id);
   body.innerHTML = `
-    <div>${text.desc}</div>
-    <div style="margin-top:0.5rem;">大技は: ${text.bigAttackDesc}</div>
-    ${weaknessLine ? `<div class="weakness-line">弱点：${weaknessLine}</div>` : ""}
+    <div class="bestiary-block">${text.desc}</div>
+    <div class="bestiary-block"><span class="bestiary-block-label">大技：</span>${text.bigAttackDesc}</div>
+    ${weaknessLine ? `<div class="bestiary-block weakness-line"><span class="bestiary-block-label">弱点：</span>${weaknessLine}</div>` : ""}
   `;
 }
 // 左右送りは未遭遇(？？？)のページを飛ばし、遭遇済みの敵だけを順番にめくれるようにする。

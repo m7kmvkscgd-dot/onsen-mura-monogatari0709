@@ -342,7 +342,7 @@
     position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
     background: rgba(10,8,6,0.65); padding: 1rem;
   }
-  .bestiary-detail-panel { position: relative; width: 100%; max-width: 360px; max-height: 88vh; overflow-y: auto; }
+  .bestiary-detail-panel { position: relative; width: 100%; max-width: 380px; max-height: 88vh; overflow-y: auto; }
   .bestiary-detail-close {
     position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: none;
     background: rgba(20,24,27,0.7); color: var(--text); font-size: 1.1rem; line-height: 1; cursor: pointer;
@@ -355,8 +355,15 @@
     border-radius: var(--radius-lg); border: 2px solid var(--dw-card-border); background: #1c2026;
   }
   .bestiary-detail-name { font-size: 1.2rem; font-weight: 800; color: var(--dw-title-color); text-align: center; margin-bottom: 0.5rem; }
-  .bestiary-detail-body { font-size: 0.82rem; color: var(--dw-body-color); line-height: 1.7; text-align: center; }
-  .bestiary-detail-body .weakness-line { color: #9fd8ff; margin-top: 0.5rem; }
+  /* 「2秒で読める図鑑」: 概要/大技/弱点を意味のブロック単位で縦に並べ(gapで余白確保、
+     margin collapseに頼らない)、文字量に対して十分な幅・行間を確保して不自然な折り返しを減らす */
+  .bestiary-detail-body {
+    font-size: 0.9rem; color: var(--dw-body-color); line-height: 1.75; text-align: center;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .bestiary-detail-body .bestiary-block { margin: 0; }
+  .bestiary-detail-body .bestiary-block-label { font-weight: 700; color: var(--dw-title-color); }
+  .bestiary-detail-body .weakness-line { color: #9fd8ff; }
   .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
   /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能だけ最初から展開しておき、
      未解放は見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
