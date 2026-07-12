@@ -728,7 +728,7 @@ function renderFirstCharacterScreen() {
   // townHireHint側は「undefined=表示する」扱いにしてあるため、旧来通りの挙動を保つ
   if (state.tutorialEnabled === undefined) {
     showConfirmModal("チュートリアルを表示しますか？", [
-      { label: "はい", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
+      { label: "はい(推奨)", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
       { label: "いいえ", className: "big", onClick: () => { state.tutorialEnabled = false; saveState(); startFirstCharacterPick(); } },
     ]);
   } else {
@@ -1382,7 +1382,7 @@ function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
 // (setFacilityLockedStateが付与する.lockedクラスで判定し、どんな効果かを完全に隠す)
 document.querySelectorAll(".facility-toggle").forEach((el) => {
   el.onclick = () => {
-    if (el.classList.contains("locked")) return;
+    if (el.classList.contains("locked") || el.classList.contains("always-open")) return;
     el.classList.toggle("open");
   };
 });
@@ -1424,10 +1424,19 @@ function groupFacilityBlocks(houseLevel) {
     const block = document.getElementById("facilityBlock-" + def.key);
     if (!block) return;
     const lv = state[def.levelField] || 0;
+    const toggle = block.querySelector(".facility-toggle");
     // 建築済み/建築可能はどちらも同じ「建築可能」グループにまとめて表示する(建築済みの項目だけを
     // 別グループへ隔離しない、というユーザー指示)。家レベルが足りていない施設だけ未解放グループへ
-    if (lv > 0 || houseLevel >= def.unlock) { availEl.appendChild(block); availCount++; }
-    else { lockedEl.appendChild(block); lockedCount++; }
+    if (lv > 0 || houseLevel >= def.unlock) {
+      availEl.appendChild(block);
+      availCount++;
+      // 建築可能グループの施設はタップ開閉をやめ、常に説明文を表示する
+      if (toggle) { toggle.classList.add("open", "always-open"); }
+    } else {
+      lockedEl.appendChild(block);
+      lockedCount++;
+      if (toggle) toggle.classList.remove("always-open");
+    }
   });
   document.getElementById("facilityGroupAvailableCount").textContent = `(${availCount})`;
   document.getElementById("facilityGroupLockedCount").textContent = `(${lockedCount})`;
