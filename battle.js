@@ -518,7 +518,7 @@ function runTreeSkill(actor, skill) {
     else if (r) playSfx("evade");
     renderBattleScreen();
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
-    if (r && r.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
+    if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId); // 技が外れても鷹は独立して追撃する
     triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
   });
 }
@@ -678,7 +678,7 @@ function renderActionButtons(actor) {
         else playSfx("evade");
         renderBattleScreen();
         if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
-        if (result.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
+        if (lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する
         triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
       });
     };
@@ -766,7 +766,7 @@ function renderActionButtons(actor) {
             else if (result && !result.failed) playSfx("evade");
             renderBattleScreen();
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
-            if (result && result.hit && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId);
+            if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, target.instanceId); // アビリティが外れても鷹は独立して追撃する
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
           });
         };

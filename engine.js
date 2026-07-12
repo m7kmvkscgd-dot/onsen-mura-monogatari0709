@@ -846,6 +846,7 @@ function useTreeSkill(actor, target, skill, log) {
   const results = targets.map((t) => {
     if (!action.guaranteedHit && !rollHit(actor, t, skillRange)) {
       log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
+      if (!action.aoe) maybeHawkFollowup(actor, t, log); // 技が外れても鷹は独立して追撃する(全体攻撃は除く)
       return { hit: false, dmg: 0, crit: false };
     }
     const hits = action.hits || 1;
@@ -859,8 +860,7 @@ function useTreeSkill(actor, target, skill, log) {
     const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
     if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
     const hpBeforeHit = t.hp;
-    // 鷹を呼ぶの追撃は全体攻撃(action.aoe)には乗せない(全ての敵に鷹の追撃が入ると強すぎるため)
-    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor, undefined, undefined, action.aoe);
+    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
     const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
     // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
     // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
@@ -893,6 +893,7 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
     }
     const shotDown = maybeShootDown(actor, t);
+    if (!action.aoe) maybeHawkFollowup(actor, t, log); // 全体攻撃には乗せない(全ての敵に追撃が入ると強すぎるため)
     return { hit: true, dmg, shotDown, crit };
   });
   return { dmgs: results };
@@ -1102,11 +1103,13 @@ function rollHit(actor, target, rangeType) {
 function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType) {
   if (!rollHit(actor, target, rangeType)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
+    maybeHawkFollowup(actor, target, log); // 本体の攻撃が外れても鷹は独立して追撃する
     return { hit: false, dmg: null, crit: false };
   }
   const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate);
   const crit = lastHitWasCrit; // このヒット固有の会心判定(直後にshotDown等の別処理でlastHitWasCritが上書きされる前に確保する)
   const shotDown = maybeShootDown(actor, target);
+  maybeHawkFollowup(actor, target, log);
   return { hit: true, dmg, shotDown, crit };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
@@ -1124,8 +1127,7 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
       crits.push(false);
       return;
     }
-    // 鷹を呼ぶの追撃は全体攻撃には乗せない(全ての敵に鷹の追撃が入ると強すぎるため)
-    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor, undefined, undefined, true);
+    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
     hits.push(true);
     dmgs.push(dmg);
     crits.push(lastHitWasCrit); // 対象ごとに個別記録(AOEの各ヒットで会心の有無が異なりうるため)
@@ -1201,9 +1203,8 @@ function anyOtherAllyGuarding(entity) {
 }
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, suppressHawkFollowup) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
   logSuffix = logSuffix || "";
-  lastHawkFollowupHappened = false;
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
   if (actor && actor.instanceId !== undefined && target.__allies) {
     const hawkOwner = target.__allies.find((c) => c.hawkGuardTargetId === target.id && c.hawkTurnsLeft > 0);
@@ -1309,19 +1310,22 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       }
     });
   }
-  // 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の攻撃対象(通常攻撃・技問わず、applyDamageToTargetを
-  // 通る全ての攻撃が対象)に鷹も追撃する。actor=nullで再帰呼び出しすることで(爆弾の生ダメージ処理と
-  // 同じ手法)会心・パッシブ等の副作用は乗せず、出血付与だけ別途判定する。ただしこの再帰呼び出しは
-  // 自分自身(lastHitWasCrit/lastHawkFollowupHappened)を上書きしてしまうため、呼び出し前後で退避/復元する
-  if (actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0 && !suppressHawkFollowup) {
-    const critFlagBeforeHawk = lastHitWasCrit;
-    const hawkDmg = Math.max(1, Math.round(withVariance(effectiveStat(actor, "atk") * HAWK_FOLLOWUP_ATK_MULT * mitigation(effectiveStat(target, "def"), 18), 0.15)));
-    applyDamageToTarget(target, hawkDmg, log, `${actor.label}の鷹`, null);
-    lastHitWasCrit = critFlagBeforeHawk;
-    lastHawkFollowupHappened = true;
-    if (target.hp > 0 && Math.random() < HAWK_FOLLOWUP_BLEED_CHANCE) applyBleed(target, resolveValue({ valueMin: 1, valueMax: 3 }, 2));
-  }
   return dmg;
+}
+// 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の単体攻撃(通常攻撃・単体アビリティ・単体スキル)に
+// 鷹も追撃する。命中/回避のどちらでも呼ぶ想定(外れても鷹は独立して追撃する)。全体攻撃からは呼ばない
+// (全ての敵に鷹の追撃が入ると強すぎるため、呼び出し元でaction.aoe等を見て呼び分ける)。
+// actor=nullで再帰呼び出しすることで(爆弾の生ダメージ処理と同じ手法)会心・パッシブ等の副作用は
+// 乗せず、出血付与だけ別途判定する。この再帰呼び出しがlastHitWasCritを上書きするため退避/復元する
+function maybeHawkFollowup(actor, target, log) {
+  lastHawkFollowupHappened = false;
+  if (!(actor && actor.classId === "hunter" && actor.hawkTurnsLeft > 0 && target.hp > 0)) return;
+  const critFlagBeforeHawk = lastHitWasCrit;
+  const hawkDmg = Math.max(1, Math.round(withVariance(effectiveStat(actor, "atk") * HAWK_FOLLOWUP_ATK_MULT * mitigation(effectiveStat(target, "def"), 18), 0.15)));
+  applyDamageToTarget(target, hawkDmg, log, `${actor.label}の鷹`, null);
+  lastHitWasCrit = critFlagBeforeHawk;
+  lastHawkFollowupHappened = true;
+  if (target.hp > 0 && Math.random() < HAWK_FOLLOWUP_BLEED_CHANCE) applyBleed(target, resolveValue({ valueMin: 1, valueMax: 3 }, 2));
 }
 
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
