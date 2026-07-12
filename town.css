@@ -360,6 +360,9 @@
   .bestiary-detail-body {
     font-size: 0.9rem; color: var(--dw-body-color); line-height: 1.75; text-align: center;
     display: flex; flex-direction: column; gap: 14px;
+    /* 単語やことばの活用の途中(「切り/裂く」「防御/力」「大き/く」等)で改行されるのを防ぐ。
+       句読点等の区切りでのみ改行を許し、それでも収まらない場合だけoverflow-wrapで強制改行する */
+    word-break: keep-all; overflow-wrap: break-word;
   }
   .bestiary-detail-body .bestiary-block { margin: 0; }
   .bestiary-detail-body .bestiary-block-label { font-weight: 700; color: var(--dw-title-color); }
