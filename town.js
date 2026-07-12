@@ -1707,7 +1707,7 @@ function equipRowHtml(classId, slot, slotLabel) {
   const goldOk = state.gold >= next.price;
   const disabled = !levelOk || !goldOk;
   const reason = !levelOk ? `Lv${next.level}到達で解禁` : (!goldOk ? "お金が足りません" : "");
-  const mpNote = slot === "armor" ? `、MP上限+${ARMOR_MP_BONUS_PER_TIER[ownedTier] || 0}` : "";
+  const mpNote = slot === "armor" ? "、MP上限+2" : "";
   return `
     <div class="equip-row">
       <div class="equip-row-info">
