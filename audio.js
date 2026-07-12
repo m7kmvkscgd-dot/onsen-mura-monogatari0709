@@ -14,15 +14,28 @@ const BGM_TRACKS = {
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
-  boss_battle: "assets/bgm/boss_battle_bgm.mp3", // 中ボス・ボス戦専用(森・海岸共通、時間帯問わず)
+  boss_battle: "assets/bgm/boss_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
+  mid_boss_battle: "assets/bgm/mid_boss_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
 };
+// 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
+// 最終ボス(kishin_rasetsuo/kaiyoujo_ou)や序盤緊急依頼ボス(isBoss:trueだがこのSetには含めない)は
+// 従来通りboss_battleのまま
+const MID_BOSS_BGM_IDS = new Set(["gashadokuro", "kyubi_no_kitsune", "oo_kani_ou"]);
 // 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸はcoast/coast_nightの2曲)。戦闘終了時にstopBattleBgm()からも呼ばれる
 function playExplorationAreaBgm() {
   if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
 }
 // 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)。
-// 中ボス・ボス戦(battle.enemies内にisBossが1体でもいる場合)は森・海岸問わずboss_battleを優先する
+// 中ボス(battle.enemies内にMID_BOSS_BGM_IDSの敵が1体でもいる場合)はmid_boss_battle、
+// それ以外のボス(最終ボス・序盤緊急依頼ボス、isBoss:true)はboss_battleを、森・海岸問わず優先する
 function playBattleBgm() {
+  if (battle && battle.enemies && battle.enemies.some((e) => MID_BOSS_BGM_IDS.has(e.id))) {
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.mid_boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い)
+    playBgm("mid_boss_battle");
+    return;
+  }
   if (battle && battle.enemies && battle.enemies.some((e) => e.isBoss)) {
     battleBgmFadeToken++;
     currentBgmKey = null;
@@ -168,11 +181,11 @@ function playBgm(key) {
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
 const BATTLE_BGM_FADE_OUT_MS = 3000;
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle") return;
   const key = currentBgmKey;
-  // ボス戦(boss_battle)は森・海岸共通の1トラックのため、戦闘終了時にどちらへ戻すかは
+  // ボス戦(boss_battle/mid_boss_battle)は森・海岸共通の1トラックのため、戦闘終了時にどちらへ戻すかは
   // 現在のステージ(currentStage)で判定する(coast_battleは元々このキー自体で確定していた)
-  const wasCoastBattle = key === "coast_battle" || (key === "boss_battle" && currentStage === "coast");
+  const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle") && currentStage === "coast");
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;
