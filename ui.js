@@ -322,7 +322,7 @@ const ICONS = {
   bigAttackPending: '⚡',
   guarding: '🛡',
   carrying: '🎒',
-  flying: '🪽',
+  flying: '<img src="assets/icons/status_flying.png" alt="" style="display:inline-block;width:22px;height:22px;vertical-align:middle;">',
   questTarget: '🎯',
   // 施設・行動(町画面等)
   lodge: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2 8 8 3l6 5" stroke-linecap="round"/><path d="M3.3 7.2V13h9.4V7.2"/><path d="M6.3 13v-4h3.4v4"/></svg>',
