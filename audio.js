@@ -14,13 +14,22 @@ const BGM_TRACKS = {
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
+  boss_battle: "assets/bgm/boss_battle_bgm.mp3", // 中ボス・ボス戦専用(森・海岸共通、時間帯問わず)
 };
 // 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸はcoast/coast_nightの2曲)。戦闘終了時にstopBattleBgm()からも呼ばれる
 function playExplorationAreaBgm() {
   if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
 }
-// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)
+// 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)。
+// 中ボス・ボス戦(battle.enemies内にisBossが1体でもいる場合)は森・海岸問わずboss_battleを優先する
 function playBattleBgm() {
+  if (battle && battle.enemies && battle.enemies.some((e) => e.isBoss)) {
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い)
+    playBgm("boss_battle");
+    return;
+  }
   if (currentStage === "coast") {
     // 前回の戦闘のstopBattleBgm()フェードアウト(3秒)が完了しないうちに次の戦闘へ突入すると、
     // currentBgmKeyがまだ"coast_battle"のままのため、playBgm()の「同じキーなら何もしない」
@@ -159,9 +168,11 @@ function playBgm(key) {
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
 const BATTLE_BGM_FADE_OUT_MS = 3000;
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle") return;
   const key = currentBgmKey;
-  const wasCoastBattle = key === "coast_battle";
+  // ボス戦(boss_battle)は森・海岸共通の1トラックのため、戦闘終了時にどちらへ戻すかは
+  // 現在のステージ(currentStage)で判定する(coast_battleは元々このキー自体で確定していた)
+  const wasCoastBattle = key === "coast_battle" || (key === "boss_battle" && currentStage === "coast");
   const startVol = bgmAudio.volume;
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;
