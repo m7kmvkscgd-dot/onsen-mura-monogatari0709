@@ -7,6 +7,15 @@
     border-radius: var(--radius-pill); padding: 0.4rem 1.5rem;
     text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
   }
+  /* 探索中も町・宿屋などと同じく時刻が常に見えるようにする小さいバッジ(茶屋の営業時間判断等に使う)。
+     階層バッジ(固定176px高さの枠に収まる設計)の縦スペースを一切消費しないよう、
+     新しい行を作らず同じピルの中に横並びで添える(#dungeonTimeBadgeのID指定で.floor-badge spanの
+     汎用スタイルより優先させる) */
+  #dungeonTimeBadge {
+    display: inline-block; margin-left: 0.6rem; font-size: 0.68rem; font-weight: 700;
+    color: var(--dw-caption-color); background: none; border: none; box-shadow: none;
+    padding: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.8); vertical-align: middle;
+  }
   /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ。
      依頼が無い時はdisplay:noneではなくvisibility:hiddenにして、常に同じ高さを確保しておく
      (display:noneで出し入れすると、下のログ欄が依頼の有無によって上下にずれてしまっていたため) */

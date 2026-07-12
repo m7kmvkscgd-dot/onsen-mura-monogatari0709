@@ -72,6 +72,7 @@ function visibleFieldParty() {
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
+  document.getElementById("dungeonTimeBadge").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   updateQuestTargetBadge();
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("dungeonLog").style.display = "";
