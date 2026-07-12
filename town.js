@@ -1232,7 +1232,15 @@ function renderOnsen() {
   playTownAreaBgm();
   updateSceneBackgrounds();
   renderDwHeader("onsen", "温泉", () => { renderTown(); });
-  document.getElementById("onsenKeeperBubble").textContent = ONSEN_KEEPER_LINES[Math.floor(Math.random() * ONSEN_KEEPER_LINES.length)];
+  // 湯守りキャラのセリフは開くたびではなく1日おき(2日で1区切り)に更新する。同じ区切りの間は
+  // 何度画面を開いても同じセリフのまま(区切りが変わった時だけ新しくランダムに選び直す)
+  const onsenKeeperPeriod = Math.floor(((state.dayCount || 1) - 1) / 2);
+  if (state.onsenKeeperLinePeriod !== onsenKeeperPeriod) {
+    state.onsenKeeperLinePeriod = onsenKeeperPeriod;
+    state.onsenKeeperLineIndex = Math.floor(Math.random() * ONSEN_KEEPER_LINES.length);
+    saveState();
+  }
+  document.getElementById("onsenKeeperBubble").textContent = ONSEN_KEEPER_LINES[state.onsenKeeperLineIndex];
   document.getElementById("onsenGold").textContent = state.gold + "G";
   document.getElementById("toOnsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   const list = document.getElementById("onsenList");

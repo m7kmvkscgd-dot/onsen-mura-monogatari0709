@@ -145,6 +145,8 @@ function loadState() {
       if (loaded.shrineFirstVisitRewardGiven == null) loaded.shrineFirstVisitRewardGiven = false; // 旧セーブ用の初期値(初回訪問特典は未受け取り扱い)
       if (!loaded.seenEnemyIds) loaded.seenEnemyIds = []; // 旧セーブ用の初期値(図鑑は真っ新な状態から始まる。過去の遭遇履歴は記録されていないため復元不可)
       if (loaded.bestiaryLastViewedCount == null) loaded.bestiaryLastViewedCount = 0;
+      if (loaded.onsenKeeperLinePeriod === undefined) loaded.onsenKeeperLinePeriod = null; // 旧セーブ用の初期値(次回温泉を開いた時に新しく選ばれる)
+      if (loaded.onsenKeeperLineIndex == null) loaded.onsenKeeperLineIndex = 0;
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)

@@ -55,6 +55,8 @@ function defaultState() {
     omikujiFirstStrikePending: false, // 小吉: 次の遠征の最初の戦闘だけ先制確定にする(1戦闘使ったら消費)
     seenUnlockedBuildings: {}, // { stateKey: true } 建築可能(houseLevel到達済み・未建築)になった施設を一度でも増築画面で見たか。NEWバッジの表示制御用
     seenUnlockedClasses: {}, // { classId: true } 雇用可能になった職業を一度でも宿屋の職業一覧で見たか。NEWバッジの表示制御用
+    onsenKeeperLinePeriod: null, // 温泉の湯守りキャラのセリフが最後に選ばれた「2日区切りの周期番号」(1日おき更新、renderOnsen参照)
+    onsenKeeperLineIndex: 0, // 上記周期の間、ずっと表示し続けるONSEN_KEEPER_LINESのインデックス
   };
 }
 
