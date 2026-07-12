@@ -7,13 +7,12 @@
     display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
     pointer-events: none;
   }
-  /* 売店画面はタイトルのすぐ下にカードが来て縦のゆとりが少ないため、ヒーロー上部(タイトル直下)に
-     配置を変える(他の画面はbottom基準のまま) */
-  #onsenShopKeeperWrap { bottom: auto; top: 64px; }
   .onsen-keeper-img {
     /* widthではなくheightを揃える(各素材の縦横比がバラバラなため、widthを揃えると
-     キャラクター自体の見た目の大きさが画面ごとに違って見えてしまっていた) */
-    height: 190px; width: auto; max-width: 170px; display: block;
+     キャラクター自体の見た目の大きさが画面ごとに違って見えてしまっていた)。
+     元の190pxから75%に縮小(142.5px)し、3画面とも同じbottom基準の位置に統一した
+     (売店だけタイトル直下に配置していたが、縮小した今は他と同じ位置で購入カードと重ならない) */
+    height: 142.5px; width: auto; max-width: 128px; display: block;
     filter: drop-shadow(0 8px 18px rgba(0,0,0,0.55));
     animation: onsenKeeperIn 320ms ease-out;
   }
