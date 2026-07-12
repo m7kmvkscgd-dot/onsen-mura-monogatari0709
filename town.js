@@ -1565,12 +1565,23 @@ const FACILITY_DISPLAY = {
   beeFarmLevel: { icon: "🐝", name: "養蜂場" },
   ferryLevel: { icon: "⛴️", name: "渡し船" },
 };
-// アイコンがフェードイン→少し間を置いてから結果パネルが現れる、の2段構え。タップで即座にパネルへ進める
+// アイコン(または職業解放時は全身立ち絵)がフェードイン→少し間を置いてから結果パネルが現れる、の2段構え。
+// タップで即座にパネルへ進める。imageSrcを渡すとアイコンの絵文字ではなく立ち絵画像を表示する
 let buildCompleteRevealed = false;
-function showBuildCompleteOverlay(icon, title, name, effectLines) {
+function showBuildCompleteOverlay(icon, title, name, effectLines, imageSrc) {
   const overlay = document.getElementById("buildCompleteOverlay");
   const panel = document.getElementById("buildCompletePanel");
-  document.getElementById("buildCompleteIcon").textContent = icon;
+  const iconEl = document.getElementById("buildCompleteIcon");
+  const imgEl = document.getElementById("buildCompleteCharImg");
+  if (imageSrc) {
+    imgEl.src = imageSrc;
+    imgEl.style.display = "";
+    iconEl.style.display = "none";
+  } else {
+    iconEl.textContent = icon;
+    iconEl.style.display = "";
+    imgEl.style.display = "none";
+  }
   document.getElementById("buildCompleteTitle").textContent = title;
   document.getElementById("buildCompleteName").textContent = name;
   document.getElementById("buildCompleteEffect").innerHTML = effectLines.filter(Boolean).map((l) => `<div>${l}</div>`).join("");
@@ -1611,7 +1622,7 @@ function showBuildCompleteForUpgrade(stateKey, newLevel, deltaLines) {
 // 職業解放のお知らせ(からくり屋敷/火薬庫/神社/道場初回建築の代わりに出す)
 function showClassUnlockCelebration(classId) {
   const c = CLASSES[classId];
-  showBuildCompleteOverlay("🎉", "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"]);
+  showBuildCompleteOverlay(null, "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"], c.image);
 }
 function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   const built = (state[stateKey] || 0) >= 1;
