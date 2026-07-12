@@ -612,4 +612,42 @@ document.getElementById("dungeonLog").onclick = () => {
   showLogHistory(dungeonLogLines);
 };
 
+// ============ 背景の覗き見(.heroを0.5秒長押しでUIを消し、背景イラストをよく見せる) ============
+// 戦闘/探索用のattachSkillLongPressTooltip(effects.js)と同じPointer Eventsパターンを踏襲。
+// ボタン/リンク/inputの上から始めた長押しは無視し(本来のタップ操作を妨げない)、
+// 発動後はbody.bg-peekを付けるだけで、実際にどの要素を隠すかはCSS側(.hero > *と.body-pad)に任せる
+const BG_PEEK_LONGPRESS_MS = 500;
+function initBackgroundPeek() {
+  let bgPeekActive = false;
+  let timer = null;
+  const clear = () => { clearTimeout(timer); timer = null; };
+  const activate = () => {
+    bgPeekActive = true;
+    timer = null;
+    document.body.classList.add("bg-peek");
+    playSfx("select");
+  };
+  const deactivate = () => {
+    bgPeekActive = false;
+    document.body.classList.remove("bg-peek");
+    playSfx("select");
+  };
+  document.querySelectorAll(".hero").forEach((hero) => {
+    hero.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (e.target.closest("button, a, input")) return;
+      clear();
+      timer = setTimeout(activate, BG_PEEK_LONGPRESS_MS);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach((evt) => hero.addEventListener(evt, clear));
+  });
+  // 覗き見中は、画面のどこを再タップしても(ボタンの上でも)そのタップ自体は握りつぶして元に戻すだけにする
+  document.addEventListener("pointerdown", (e) => {
+    if (!bgPeekActive) return;
+    deactivate();
+    e.stopPropagation();
+  }, { capture: true });
+}
+initBackgroundPeek();
+
 // 戦闘中に「逃げた」(fleeState==="fled")キャラは、生きていても以後この戦闘には参加しない

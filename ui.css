@@ -12,7 +12,12 @@
   }
   /* パーティ編成画面(出発直前)は門イラストの背景をそのまま見せたいため、共通の暗いグラデーションを外す */
   #partySelectHero::before { background: none; }
-  .hero > * { position: relative; z-index: 1; }
+  .hero > * { position: relative; z-index: 1; transition: opacity 0.25s ease; }
+  /* 背景の覗き見(initBackgroundPeek、ui.js参照): .heroを0.5秒長押しすると付くbody.bg-peekで、
+     ヒーロー直下のUI要素(見出し/共通ヘッダー/バッジ/案内キャラ等)と.body-padを一斉に消す。
+     .hero-bg-innerは背景画像そのものを担うレイヤー(出発演出用)なので対象から除外する */
+  body.bg-peek .hero > *:not(.hero-bg-inner) { opacity: 0; pointer-events: none; }
+  body.bg-peek .body-pad { opacity: 0; pointer-events: none; }
   /* パーティ編成画面の出発演出で背景だけをscale/translateさせるための内側レイヤー(dungeon-bg-innerと
      同じ考え方)。.heroの中央寄せtransformを上書きしないよう、画像と.hero::beforeの暗いグラデーションより
      さらに奥(z-index:-1)に配置する */

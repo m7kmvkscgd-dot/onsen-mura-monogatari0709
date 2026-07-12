@@ -8,7 +8,7 @@
   .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
-  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; }
+  .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; transition: opacity 0.25s ease; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
      .btn-icon自体のルールは維持し、画像アイコン用に.btn-icon imgだけ追加する) */
