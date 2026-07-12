@@ -418,6 +418,12 @@ function tickBleed(entity, log) {
 function clearDotEffects(characters) {
   characters.forEach((c) => { c.poison = 0; c.burnTurns = 0; c.bleed = 0; });
 }
+// 狩人「鷹を呼ぶ」も戦闘をまたいで持ち越さない。startBattle()側では次の戦闘の頭でリセットしていたが、
+// 戦闘終了(探索画面に戻る)時点ではリセットしていなかったため、鷹の残りターンが残ったまま
+// 探索中の味方バーにもバッジが表示され続けてしまっていた不具合の修正
+function clearHawkState(characters) {
+  characters.forEach((c) => { c.hawkTurnsLeft = 0; c.hawkGuardTargetId = null; c.hawkFlightActive = false; });
+}
 
 // 忍の「変化の術」: カラス/ガマ/ヘビいずれかへの変身。ステータスは変身前(装備込み)の値にform倍率を
 // 掛けた新しい値へ直接置き換える(一時バフのstatModsとは別枠。乗算バフ等は変身後の値にさらに乗る)。

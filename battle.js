@@ -1114,6 +1114,7 @@ function victory() {
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${currentStageName()}に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
+    clearHawkState(fieldParty);
     fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     showScreen("screen-dungeon");
     renderDungeon();
@@ -1140,6 +1141,7 @@ function escapeBattle() {
   pendingAllyPick = null;
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
+  clearHawkState(fieldParty);
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
@@ -1160,6 +1162,7 @@ function defeat() {
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除(通常はhandleFieldDeaths側で既に解除済みのはずの保険)
+  clearHawkState(fieldParty);
   clearOmikujiExpeditionEffect();
   blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;

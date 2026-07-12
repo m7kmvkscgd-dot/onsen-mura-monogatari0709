@@ -137,6 +137,7 @@ function useSmokeBomb(actor) {
   playSfx("smoke_bomb");
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
+  clearHawkState(fieldParty);
   renderBattleScreen();
   playSmokeBombEffect(() => {
     battle = null;
