@@ -1083,7 +1083,7 @@ const SKILL_TREES = {
     },
     3: {
       left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計150%ダメージ)", mp: 3, comboTag: "rapidFire", action: { kind: "damage", mult: 1.5, hits: 2 } },
-      right: { name: "スタン矢", desc: "敵単体へ70%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     4: {
       left: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
