@@ -840,7 +840,7 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
-      right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 2, action: { kind: "summonHawk", turns: 8 } },
+      right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 3, action: { kind: "summonHawk", turns: 8 } },
     },
     5: {
       left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
