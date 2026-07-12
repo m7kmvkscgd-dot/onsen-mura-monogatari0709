@@ -54,6 +54,21 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (!c.statMods) c.statMods = [];
   if (!c.skills) c.skills = {};
   if (!c.unlockedSkills) c.unlockedSkills = [];
+  // 旧セーブ(applySkillChoiceがunlockedSkillsにdescを含めずに保存していたバグの影響を受けたセーブ)は
+  // 技ボタン長押しの効果説明が空欄になり、ツールチップ自体が出なくなる(attachSkillLongPressTooltipの
+  // if(!desc)returnで無言スキップされる)。SKILL_TREESから同じ職業・同じ名前の技を探してdescを補完する
+  if (c.unlockedSkills.length && SKILL_TREES[c.classId]) {
+    const tree = SKILL_TREES[c.classId];
+    c.unlockedSkills.forEach((s) => {
+      if (s.desc) return;
+      Object.keys(tree).forEach((lvl) => {
+        ["left", "right"].forEach((side) => {
+          const def = tree[lvl][side];
+          if (def && def.action && def.name === s.name) s.desc = def.desc;
+        });
+      });
+    });
+  }
   // initPassives()の初期値に、旧セーブに残っている値があればそれで上書きする形でマージする
   // (単純に足りないキーを足すだけだと、新しく追加したフィールドが未定義のままになりバグるため)
   c.passives = Object.assign(initPassives(), c.passives || {});

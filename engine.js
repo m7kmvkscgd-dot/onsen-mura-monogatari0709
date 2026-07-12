@@ -677,7 +677,7 @@ function applySkillChoice(character, skill, level) {
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
-    character.unlockedSkills.push({ id: skill.id, name: skill.name, mp: skill.mp, action: skill.action, comboTag: skill.comboTag });
+    character.unlockedSkills.push({ id: skill.id, name: skill.name, desc: skill.desc, mp: skill.mp, action: skill.action, comboTag: skill.comboTag });
   }
 }
 
