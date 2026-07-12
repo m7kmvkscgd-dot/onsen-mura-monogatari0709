@@ -872,7 +872,7 @@ function renderBestiaryTab() {
         <img src="${e.image}" style="${seen ? "" : "filter:grayscale(1) brightness(0.15);"}">
         <div class="roster-info">
           <div class="roster-name">${seen ? e.ja : "？？？"}${e.isBoss ? ` <span class="status-tag active">強敵</span>` : ""}</div>
-          <div class="roster-sub">${seen ? "タップで詳細を見る" : "まだ遭遇していません"}</div>
+          <div class="roster-sub">${seen ? bestiaryTextFor(id).desc : "まだ遭遇していません"}</div>
         </div>
       `;
       row.onclick = () => showBestiaryDetail(orderedIds.indexOf(id));
