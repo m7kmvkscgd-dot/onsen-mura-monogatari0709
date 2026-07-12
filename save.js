@@ -135,6 +135,7 @@ function loadState() {
       if (loaded.shopLevel == null) loaded.shopLevel = 1;
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.inventory && loaded.inventory.soulShard == null) loaded.inventory.soulShard = 0; // 旧セーブ用の初期値(魂のかけら未所持)
+      if (loaded.inventory && loaded.inventory.omamori == null) loaded.inventory.omamori = 0; // 旧セーブ用の初期値(お守り未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)

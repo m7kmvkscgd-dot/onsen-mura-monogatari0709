@@ -1146,6 +1146,7 @@ function renderOnsen() {
   updateSceneBackgrounds();
   renderDwHeader("onsen", "温泉", () => { renderTown(); });
   document.getElementById("onsenGold").textContent = state.gold + "G";
+  document.getElementById("toOnsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   const list = document.getElementById("onsenList");
   list.innerHTML = "";
   const bathable = state.roster.filter((c) => c.status === "active");
@@ -1233,6 +1234,27 @@ document.getElementById("buyOnsenEggBtn").onclick = () => {
 document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); renderOnsenShop(); showScreen("screen-onsen-shop"); };
 document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
+
+// ============ 温泉の神社(奉納祈願) ============
+function renderOnsenShrine() {
+  playTownAreaBgm();
+  updateSceneBackgrounds();
+  document.getElementById("shrineSoulShardCount").textContent = state.inventory.soulShard || 0;
+  document.getElementById("shrineOmamoriCount").textContent = state.inventory.omamori || 0;
+  const offerBtn = document.getElementById("shrineOfferBtn");
+  offerBtn.disabled = (state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST;
+}
+document.getElementById("shrineOfferBtn").onclick = () => {
+  if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { alert("魂のかけらが足りません"); return; }
+  state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
+  state.inventory.omamori = (state.inventory.omamori || 0) + 1;
+  saveState();
+  playSfx("skill_confirm");
+  renderOnsenShrine();
+};
+document.getElementById("toOnsenShrineBtn").onclick = () => { playSfx("select"); renderOnsenShrine(); showScreen("screen-onsen-shrine"); };
+document.getElementById("onsenShrineBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
+document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
 // ============ 増築 ============
 // 新しく建築可能(houseLevelは足りたがまだ未建築)になった施設に「NEW」バッジを出す。

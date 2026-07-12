@@ -996,6 +996,9 @@ const SKILL_TREE_NAMES = {
 };
 const SUPPLY_CAP_BASE = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる(鞄屋を建てるとsupplyCap()でこれに加算される)
 
+// 神社の奉納祈願: 魂のかけらをこの個数納めると特別なお守りを1個授かる
+const SHRINE_OFFER_SOUL_SHARD_COST = 3;
+
 // 狩人スキル「鷹を呼ぶ」関連の数値
 const HAWK_FOLLOWUP_ATK_MULT = 0.35; // 鷹の追撃威力(狩人の攻撃力に対する割合)
 const HAWK_FOLLOWUP_BLEED_CHANCE = 1.0; // 鷹の追撃が出血を付与する確率(ユーザー指示で100%に変更)

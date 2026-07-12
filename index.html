@@ -371,9 +371,10 @@
       <h1>温泉</h1>
     </div>
     <div class="body-pad">
-      <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;">
+      <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;flex-wrap:wrap;">
         <button class="big" id="onsenBackBtnTop" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">町に戻る</button>
         <button class="big" id="toOnsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
+        <button class="big" id="toOnsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
       </div>
       <p class="gold" id="onsenGold">0G</p>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">温泉でストレスを癒します。入浴中のキャラは2時間の間、出発できません。</p>
@@ -400,6 +401,25 @@
         </div>
       </div>
       <button class="big" id="onsenShopBackBtn" style="margin-top:1rem;">温泉に戻る</button>
+    </div>
+  </div>
+
+  <!-- 温泉の神社(奉納祈願: 魂のかけらを納めるとお守りがもらえる) -->
+  <div class="screen" id="screen-onsen-shrine">
+    <div class="hero" id="onsenShrineHero">
+      <h1>神社</h1>
+    </div>
+    <div class="body-pad">
+      <button class="big" id="onsenShrineBackBtnTop" style="margin-bottom:0.8rem;">温泉に戻る</button>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">魂のかけらを奉納して祈願すると、特別なお守りを授かれます。</p>
+      <div class="card">
+        <div class="roster-name">奉納祈願</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">魂のかけら <span id="shrineSoulShardCount">0</span>個 所持中</div>
+        <div class="roster-sub" style="margin-top:0.2rem;">特別なお守り <span id="shrineOmamoriCount">0</span>個 所持中</div>
+        <div class="desc" style="margin-top:0.4rem;">魂のかけらを3個奉納すると、特別なお守りを1個授かります。</div>
+        <button class="big primary" id="shrineOfferBtn" style="margin-top:0.6rem;">奉納する(魂のかけら3個)</button>
+      </div>
+      <button class="big" id="onsenShrineBackBtn" style="margin-top:1rem;">温泉に戻る</button>
     </div>
   </div>
 
