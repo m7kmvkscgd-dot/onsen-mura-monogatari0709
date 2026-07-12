@@ -821,14 +821,62 @@ document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); };
 const LODGE_COST = 10; // 宿屋に宿泊する際の宿代(キャラ1人あたり)
 
 // ============ パーティ編成(出発直前) ============
-// 出発準備画面のタブ切り替え(支度/おみくじ)。神社が未建築の間はおみくじタブ自体を表示しない。
-// 支度タブへの切り替えボタンは廃止したため、おみくじ画面の「戻る」がshowPartySelectTab("main")を呼ぶ
+// 出発準備画面のタブ切り替え(支度/おみくじ/図鑑)。神社が未建築の間はおみくじタブ自体を表示しない。
+// 支度タブへの切り替えボタンは廃止したため、おみくじ/図鑑画面の「戻る」がshowPartySelectTab("main")を呼ぶ
 function showPartySelectTab(tab) {
-  document.getElementById("partySelectMainTab").style.display = tab === "omikuji" ? "none" : "";
+  document.getElementById("partySelectMainTab").style.display = tab === "main" ? "" : "none";
   document.getElementById("partySelectOmikujiTab").style.display = tab === "omikuji" ? "" : "none";
+  document.getElementById("partySelectBestiaryTab").style.display = tab === "bestiary" ? "" : "none";
   document.getElementById("partySelectOmikujiTabBtn").className = "omikuji-chip-btn" + (tab === "omikuji" ? " active" : "");
+  document.getElementById("partySelectBestiaryTabBtn").className = "omikuji-chip-btn" + (tab === "bestiary" ? " active" : "");
 }
 document.getElementById("partySelectOmikujiTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("omikuji"); renderOmikujiTab(); };
+document.getElementById("partySelectBestiaryTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("bestiary"); renderBestiaryTab(); };
+document.getElementById("partySelectBackBtnFromBestiary").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
+
+// 図鑑: 遭遇済みの敵を一覧表示する。倒す必要はなく、戦闘に出現した時点で記録される(markEnemiesSeen)
+function renderBestiaryTab() {
+  // 図鑑タブを開いた時点でNEWバッジを消す(次に新しい敵と遭遇するまで再表示しない)
+  state.bestiaryLastViewedCount = (state.seenEnemyIds || []).length;
+  saveState();
+  document.getElementById("bestiaryNewBadge").style.display = "none";
+
+  const allIds = Object.keys(ENEMIES);
+  const seenCount = (state.seenEnemyIds || []).length;
+  document.getElementById("bestiaryCompleteRate").textContent = `${Math.floor((seenCount / allIds.length) * 100)}%`;
+  document.getElementById("bestiaryCompleteCount").textContent = `${seenCount} / ${allIds.length}体`;
+
+  const list = document.getElementById("bestiaryList");
+  list.innerHTML = "";
+  [{ stage: "forest", label: "深淵の森" }, { stage: "coast", label: "海岸" }].forEach((group) => {
+    const ids = allIds
+      .filter((id) => (ENEMIES[id].stage || "forest") === group.stage)
+      .sort((a, b) => ENEMIES[a].minFloor - ENEMIES[b].minFloor);
+    if (ids.length === 0) return;
+    const h = document.createElement("h2");
+    h.style.marginTop = "1rem";
+    h.textContent = group.label;
+    list.appendChild(h);
+    ids.forEach((id) => {
+      const e = ENEMIES[id];
+      const seen = (state.seenEnemyIds || []).includes(id);
+      const text = bestiaryTextFor(id);
+      const weakness = seen ? bestiaryWeaknessText(e) : null;
+      const row = document.createElement("div");
+      row.className = "roster-row";
+      row.innerHTML = `
+        <img src="${e.image}" style="${seen ? "" : "filter:grayscale(1) brightness(0.15);"}">
+        <div class="roster-info">
+          <div class="roster-name">${seen ? e.ja : "？？？"}${e.isBoss ? ` <span class="status-tag active">強敵</span>` : ""}</div>
+          <div class="roster-sub">${seen ? text.desc : "まだ遭遇していません"}</div>
+          ${seen && weakness ? `<div class="roster-sub" style="color:#9fd8ff;margin-top:0.2rem;">弱点: ${weakness}</div>` : ""}
+          ${seen ? `<div class="roster-sub" style="margin-top:0.2rem;">大技: ${text.bigAttackDesc}</div>` : ""}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  });
+}
 
 function renderPartySelect() {
   playTownAreaBgm();
@@ -837,6 +885,7 @@ function renderPartySelect() {
   pruneActiveParty();
   renderSupplies();
   document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  document.getElementById("bestiaryNewBadge").style.display = bestiaryHasNew() ? "" : "none";
   showPartySelectTab("main");
   renderOmikujiTab();
   const list = document.getElementById("partySelectList");

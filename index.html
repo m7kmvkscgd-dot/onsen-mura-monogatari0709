@@ -207,8 +207,9 @@
     <div class="body-pad">
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
 
-      <div id="partySelectTabBar" style="display:flex;justify-content:flex-end;margin-bottom:0.8rem;">
+      <div id="partySelectTabBar" style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:0.8rem;">
         <button class="omikuji-chip-btn" id="partySelectOmikujiTabBtn" style="display:none;">⛩️おみくじ</button>
+        <button class="omikuji-chip-btn" id="partySelectBestiaryTabBtn">📖図鑑<span class="new-badge" id="bestiaryNewBadge" style="display:none;">NEW</span></button>
       </div>
 
       <div id="partySelectMainTab">
@@ -282,6 +283,17 @@
         </div>
         <button class="big primary" id="omikujiDrawBtn" style="margin-top:0.8rem;">おみくじを引く</button>
         <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">戻る</button>
+      </div>
+
+      <div id="partySelectBestiaryTab" style="display:none;">
+        <h2>📖図鑑</h2>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">戦闘で出会った敵が記録されます。倒す必要はありません。</p>
+        <div class="card" style="margin-bottom:0.8rem;">
+          <div class="roster-name">コンプリート率 <span id="bestiaryCompleteRate"></span></div>
+          <div class="roster-sub" style="margin-top:0.2rem;" id="bestiaryCompleteCount"></div>
+        </div>
+        <div id="bestiaryList"></div>
+        <button class="big" id="partySelectBackBtnFromBestiary" style="margin-top:0.5rem;">戻る</button>
       </div>
     </div>
   </div>

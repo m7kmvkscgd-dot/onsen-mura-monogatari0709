@@ -10,6 +10,8 @@ function defaultState() {
     omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
     omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
     shrineFirstVisitRewardGiven: false, // 神社を初めて訪れた時のサービス(魂のかけら3個)を渡し済みか
+    seenEnemyIds: [], // 図鑑: 遭遇済みの敵id一覧(重複しない、倒す必要はなく戦闘で出会った時点で記録)
+    bestiaryLastViewedCount: 0, // 最後に図鑑タブを開いた時点のseenEnemyIds.length。増えていればNEWバッジを出す
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -144,6 +146,16 @@ function consumeSmokeBomb() {
   if (hasOmamori("shinatsuhiko") && Math.random() < 0.35) return;
   state.inventory.smokeBomb--;
 }
+// ============ 図鑑 ============
+// 戦闘に出現した敵を記録する(倒す必要はなく、出会った時点で登録される)
+function markEnemiesSeen(enemyList) {
+  let changed = false;
+  enemyList.forEach((e) => {
+    if (!state.seenEnemyIds.includes(e.id)) { state.seenEnemyIds.push(e.id); changed = true; }
+  });
+  if (changed) saveState();
+}
+function bestiaryHasNew() { return (state.seenEnemyIds || []).length > (state.bestiaryLastViewedCount || 0); }
 // ============ 時間帯(早朝→朝→昼→夕→夜の5段階サイクル) ============
 // 町・宿屋・深淵の森・海岸は5段階それぞれの絵を持つが、温泉は昼/夜2種類の絵しか無いため
 // 早朝→朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)

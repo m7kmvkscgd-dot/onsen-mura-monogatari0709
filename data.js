@@ -645,6 +645,127 @@ const ENEMIES = {
     onHitInflict: { type: "burn", chance: 0.25, turnsMin: 2, turnsMax: 3 } }, // 海岸の全てを支配する妖怪、強力な呪術で敵を滅ぼす
 };
 
+// 図鑑用のテキスト(生態の説明+大技の内容)。ENEMIES本体(ステータス・戦闘用の数値)とは意図的に
+// 分離してある(こちらは純粋な表示用データで、書き間違えても戦闘バランスには一切影響しない)。
+// 弱点(isFlying/isPlant)は既存のフラグから自動算出するため、ここには持たせていない。
+// bigAttackDescが無い(=ENEMIES側にbigAttackの明示設定が無く、汎用フォールバックに乗る)敵は
+// 図鑑側で共通の代替文を表示する(BESTIARY_GENERIC_BIG_ATTACK_DESC参照)
+const BESTIARY_GENERIC_BIG_ATTACK_DESC = "パーティ全体を巻き込む強烈な一撃。時折、様々な状態異常を伴うこともある。";
+const ENEMY_BESTIARY_TEXT = {
+  // ---- 森・序盤 ----
+  yaken: { desc: "群れで人里に近づく獰猛な野犬。", bigAttackDesc: "群れで足に食らいつき、動きを鈍らせる。" },
+  inoshishi: { desc: "森を駆け回る荒々しい猪。突進の勢いはすさまじい。", bigAttackDesc: "猪突猛進、ただ単純な強打を放つ。" },
+  dokuhebi: { desc: "鋭い牙に猛毒を宿す蛇。通常攻撃でも高確率で毒を注入してくる。", bigAttackDesc: "牙に猛毒を仕込み、噛みついた相手を確実に毒状態にする。" },
+  oogumo: { desc: "太い糸を吐く大きな蜘蛛。獲物を絡め取って動きを封じる。", bigAttackDesc: "粘着質の糸で獲物を絡め取り、高確率で行動を封じる。" },
+  kodama: { desc: "森の精霊。木々に宿り、侵入者から精気を吸い取る。", bigAttackDesc: "精気を吸い、力を奪って攻撃力を下げる。" },
+  kappa: { desc: "川辺に棲む妖怪。相撲を好み、力比べで組み伏せてくる。", bigAttackDesc: "相撲さながらに組み伏せ、構えを崩して防御力を下げる。" },
+  hitotsume_kozo: { desc: "額に大きな一つ目を持つ小さな妖怪。不気味な視線で竦ませる。", bigAttackDesc: "不気味な一つ目で睨みつけ、竦んで動きが鈍る。" },
+  bake_danuki: { desc: "人を化かす狸。幻術で惑わせてくる。", bigAttackDesc: "幻術で惑わし、技を封じてくる。" },
+  onibi: { desc: "宙を漂う怪しい炎の妖怪。", bigAttackDesc: "誰か1人が庇っても防ぎきれない燃え広がる炎で、パーティ全体を焼く。" },
+  kamaitachi: { desc: "鋭い刃のような風を操る妖怪。一閃で鎧ごと切り裂く。", bigAttackDesc: "かまいたちの一閃が鎧ごと切り裂き、防御力を下げる。" },
+  // ---- 森・序盤の中ボス級(奉行所の依頼専用) ----
+  oo_inoshishi: { desc: "猪の中でもひときわ巨大な個体。奉行所の討伐依頼で相まみえる中ボス。", bigAttackDesc: "渾身の突進。かばう仲間でもぎりぎり耐えられるかという凄まじい一撃。" },
+  q_arakuma: { desc: "森の主と呼ばれる巨大な熊。緊急の討伐依頼で現れる。", bigAttackDesc: "爪の一薙ぎが鎧を弾き飛ばし、防御力を下げる。" },
+  q_daija: { desc: "川を塞ぐほどの大きさの蛇。牙に猛毒を宿す。緊急の討伐依頼で現れる。", bigAttackDesc: "強烈な一撃を放つ。牙に噛まれると高確率で毒を負う。" },
+  q_oni: { desc: "山に棲む鬼。緊急の討伐依頼で現れる。", bigAttackDesc: "棍棒の一撃は防御ごと打ち砕く強烈な一打。" },
+  q_gashadokuro: { desc: "夜な夜な鳴くという骨の怪。緊急の討伐依頼で現れる。", bigAttackDesc: "骨の震えが響き渡り、高確率で敵をスタンさせる。" },
+  // ---- 森・中盤 ----
+  ochimusha: { desc: "戦に敗れ、成仏できずに彷徨う武者の霊。" },
+  kamaitachi2: { desc: "序盤の個体よりも研ぎ澄まされた、より鋭い風を操るかまいたち。" },
+  youko: { desc: "人を化かす妖艶な狐。長い年月を経て妖力を得た。" },
+  rokurokubi: { desc: "首が伸びる妖怪。不意をついて距離を詰めてくる。" },
+  yukionna: { desc: "雪山に現れる白い女の妖怪。冷気で近づく者を凍えさせる。" },
+  yamauba: { desc: "山奥に棲む老婆の妖怪。怪力で襲いかかる。" },
+  tsuchigumo: { desc: "地中に潜む大蜘蛛の妖怪。不意打ちを得意とする。" },
+  onryo: { desc: "強い恨みを残したまま彷徨う霊。攻撃的で力も強い。" },
+  oomukade: { desc: "山を這う巨大な百足。硬い甲殻で身を守る。" },
+  kasha: { desc: "亡骸を奪い去るという、炎をまとった妖怪の車。" },
+  // ---- 森・後半(2体は中ボス級) ----
+  oni: { desc: "赤黒い肌と角を持つ、力自慢の鬼。" },
+  karasu_tengu: { desc: "翼を持つ烏の姿の天狗。空を飛び回る。" },
+  yamauba2: { desc: "さらに年月を経て凶暴化した山姥。" },
+  gyuki: { desc: "牛の頭を持つ巨大な鬼。並外れた膂力を誇る。" },
+  nue: { desc: "猿・虎・蛇が混ざったような姿の怪物。空を飛び回る。" },
+  wanyudo: { desc: "燃え盛る車輪の姿をした妖怪。猛スピードで転がってくる。" },
+  gaikotsu_musha: { desc: "朽ちてなお武具を纏う骸骨の武者。" },
+  orochi: { desc: "山を覆うほどの巨体を持つ大蛇。" },
+  gashadokuro: { desc: "無数の骨が集まってできた巨大な怪物。中ボス級の強敵。" },
+  kyubi_no_kitsune: { desc: "九本の尾を持つ古の妖狐。強大な妖力を操る中ボス級の強敵。" },
+  // ---- 森・終盤(最後の1体は最終ボス) ----
+  shuten_doji: { desc: "酒を好み、都を騒がせたという鬼の頭領。" },
+  ibaraki_doji: { desc: "酒呑童子の腹心として知られる、屈強な鬼。" },
+  dai_tengu: { desc: "天狗の中でも最強格とされる存在。神通力を操る。" },
+  yamata_no_orochi: { desc: "八つの頭と尾を持つ伝説の大蛇。" },
+  tamamo_no_mae: { desc: "絶世の美女に化けた、九尾の狐の化身。" },
+  giou: { desc: "深き山に君臨するという、謎めいた王。" },
+  kyubi_shin: { desc: "正体を現した、九尾の狐の真の姿。" },
+  gashadokuro_shin: { desc: "無数の怨念を宿した、がしゃどくろの真の姿。" },
+  yomi_no_onryo: { desc: "黄泉の国から現世に漏れ出た、強い恨みを持つ霊。" },
+  kishin_rasetsuo: { desc: "深淵の森の最奥に君臨する、鬼神にして羅刹の王。最強格の強敵。" },
+  // ---- 森・大群系(小さく、数が多いのが特徴) ----
+  nurari_koumori: { desc: "小さな群れで飛び回るコウモリの妖怪。毒を持つ牙で噛みつく。" },
+  chochin_obake: { desc: "提灯に目鼻がついた小さな妖怪。群れで漂う。" },
+  kawappa: { desc: "河童の子供のような小さな妖怪。群れで現れる。" },
+  chibi_oni: { desc: "まだ幼い小鬼。数の多さで挑んでくる。" },
+  karakasa: { desc: "古い傘の妖怪。ぴょんぴょん跳ねて襲いかかる。" },
+  kogitsune: { desc: "すばしっこい子狐の妖怪。群れで駆け回る。" },
+  warashibe_ningyo: { desc: "藁でできた人形の妖怪。呪いを宿し群れで動く。" },
+  medama_kozou: { desc: "大きな目玉を持つ小僧の妖怪。" },
+  // ---- 海岸・序盤 ----
+  iso_gani: { desc: "磯辺に潜む蟹の妖怪。大きなハサミで挟みかかる。", bigAttackDesc: "大きなハサミで挟み込み、攻撃力を下げる。" },
+  yadokari: { desc: "貝殻を背負った妖怪。殻を盾に体当たりする。", bigAttackDesc: "貝殻を盾にした体当たり。" },
+  isozakana: { desc: "群れで泳ぐ小さな魚の妖怪。鋭い歯で通常攻撃でも必ず出血を負わせる。", bigAttackDesc: "跳びかかりながらの体当たり。デバフは伴わない。" },
+  kurage_bou: { desc: "クラゲの姿をした妖怪。触手で痺れさせる。", bigAttackDesc: "触手でびりびりと痺れさせ、スタンさせる。" },
+  kaiyose: { desc: "波間を漂う貝の妖怪。殻を閉じて噛みつく。", bigAttackDesc: "貝殻を閉じて強く噛みつく。" },
+  hama_tako: { desc: "浜に上がってきたタコの妖怪。足を絡めてくる。", bigAttackDesc: "足を絡めて動きを封じる。" },
+  kaisou_douji: { desc: "海藻をまとった童子の妖怪。", bigAttackDesc: "しなやかな体で連続して攻め立てる。" },
+  harifugu: { desc: "膨れて針だらけになるフグの妖怪。", bigAttackDesc: "大きく膨らみ、針だらけの体で突進する。" },
+  umineko: { desc: "海辺を飛び回るカモメの妖怪。", bigAttackDesc: "高速で急降下し、くちばしでつつく。" },
+  // ---- 海岸・中盤 ----
+  kaizoku_gaikotsu: { desc: "海に沈んだ海賊の成れの果て。錆びた刀を振るう。", bigAttackDesc: "錆びた刀の一閃が傷を刻む。" },
+  iso_inu: { desc: "磯を駆け回る犬の妖怪。鋭い牙で何度も噛みつき、通常攻撃でも出血を負わせる。" },
+  oo_dako_1: { desc: "岩場に潜む大きなタコの妖怪。", bigAttackDesc: "足で締め上げ、体勢を崩して防御力を下げる。" },
+  iwa_gani: { desc: "岩のように硬い甲羅を持つ蟹の妖怪。", bigAttackDesc: "岩の隙間から大きなハサミで挟み込む。" },
+  gyojin: { desc: "半魚人の姿をした妖怪。三叉槍を操る。", bigAttackDesc: "三叉槍の刺突が深い傷を残す。" },
+  shell_slime: { desc: "貝殻をまとったスライム状の妖怪。", bigAttackDesc: "体当たりの粘液が防具を溶かし、防御力を下げる。" },
+  kaisou_no_sei: { desc: "海藻に宿る精霊。触れた相手からじわじわ体力を奪う。" },
+  same: { desc: "海の頂点に立つ鮫の妖怪。", bigAttackDesc: "群れの頂点、鋭い歯で嚙みちぎる。" },
+  iso_onna_1: { desc: "磯辺に現れる女の妖怪。長い髪で絡めとる。", bigAttackDesc: "伸びる髪で絡めとり、動きを封じる。" },
+  oo_kai: { desc: "巨大な貝の妖怪。", bigAttackDesc: "貝殻を強く閉じて押しつぶす。" },
+  // ---- 海岸・後半(1体は中ボス級) ----
+  umibouzu: { desc: "海に現れる黒い巨体の妖怪。", bigAttackDesc: "水しぶきが誰か1人の盾では防ぎきれず、パーティ全体を飲み込む。" },
+  iso_onna_2: { desc: "積年の怨念を宿した、より強力な磯女。", bigAttackDesc: "伸びる髪で絡めとり、強く動きを封じる。" },
+  iwagaki_ou: { desc: "長年生きた岩ガキの化身。硬い殻で身を守る。", bigAttackDesc: "硬い殻を活かした強烈な体当たり。" },
+  umihebi: { desc: "海に潜む大蛇。鋭い牙に毒を仕込む。" },
+  umigumo: { desc: "海中に糸を張る蜘蛛の妖怪。", bigAttackDesc: "糸で動きを完全に封じる。" },
+  ryuuguu_no_shisha: { desc: "竜宮城からの使いとされる妖怪。素早い三叉槍を操る。", bigAttackDesc: "素早い三叉槍の突きが深い傷を刻む。" },
+  oo_dako_2: { desc: "さらに巨大化した大ダコ。", bigAttackDesc: "岩場に潜む巨躯が締め上げ、防御力を下げる。" },
+  same_bito: { desc: "鮫の姿をした獰猛な戦士。短剣と牙で切り裂く。", bigAttackDesc: "短剣と牙で連続して切り裂く。" },
+  shinkai_no_bourei: { desc: "深海から漂う怨念の亡霊。呪いの力で継続的に蝕む。" },
+  oo_kani_ou: { desc: "海岸を支配する巨大な蟹の王。中ボス級の強敵。", bigAttackDesc: "巨大な鋏で鎧ごと粉砕する強烈な一撃。" },
+  // ---- 海岸・終盤(最後の1体は最終ボス) ----
+  kaima_daiou: { desc: "海の魔を統べる大王。", bigAttackDesc: "大槍を薙ぎ払い、庇う相手ごと巻き込む。" },
+  youen_na_isoonna: { desc: "妖艶な姿で敵を誘い込む磯女の上位個体。", bigAttackDesc: "魅了の歌で敵を弱らせ、攻撃力を下げる。" },
+  kyokai_no_oodako: { desc: "海を支配するほど巨大化したタコの妖怪。", bigAttackDesc: "八本の足で完全に絡め取り、スタンさせる。" },
+  oni_harifugu: { desc: "鬼のように巨大化したハリフグ。針に毒を宿す。", bigAttackDesc: "無数の針を飛ばし、毒をばら撒く。" },
+  oo_kani_shougun: { desc: "海岸を支配する巨蟹の将。", bigAttackDesc: "巨大な鋏で敵を叩き潰し、防御力を下げる。" },
+  kairyuu_ou: { desc: "海を統べる龍の王。潮と雷撃を操る。", bigAttackDesc: "潮とともに雷撃を放ち、スタンさせる。" },
+  same_no_bujin: { desc: "鎧を纏った鮫の戦士。槍と牙で敵を貫く。", bigAttackDesc: "槍と牙で敵を貫く連続攻撃。" },
+  umi_no_souryo: { desc: "海に沈んだ僧侶の怨念。呪詛の法術を操る。", bigAttackDesc: "呪詛の法術で敵の力を弱める。" },
+  uzushio_no_onryou: { desc: "渦潮に宿る怨霊。渡る者を引きずり込む。", bigAttackDesc: "渦潮に引き寄せ、庇う間もなくパーティ全体を飲み込む。" },
+  kaiyoujo_ou: { desc: "海岸の全てを支配する妖怪の女王。最強格の強敵。", bigAttackDesc: "強力な呪術で敵を蝕む一撃。" },
+};
+function bestiaryTextFor(enemyId) {
+  const t = ENEMY_BESTIARY_TEXT[enemyId] || {};
+  return { desc: t.desc || "", bigAttackDesc: t.bigAttackDesc || BESTIARY_GENERIC_BIG_ATTACK_DESC };
+}
+function bestiaryWeaknessText(enemyDef) {
+  const parts = [];
+  if (enemyDef.isFlying) parts.push("飛行しており近接攻撃は当てにくいが、狩人・砲術士の遠距離攻撃なら当てやすく、命中すると撃ち落としてスタンさせることがある。");
+  if (enemyDef.isPlant) parts.push("植物系のため、炎上のダメージが通常の2倍になる。");
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
 const ITEMS = {
   potion: { id: "potion", ja: "回復薬", price: 5, desc: "HPを少し回復する", image: "assets/items/potion.png" },
