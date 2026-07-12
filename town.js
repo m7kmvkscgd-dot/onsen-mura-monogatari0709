@@ -1350,6 +1350,8 @@ function resetOnsenEggStockIfNewDay() {
 }
 function renderOnsenShop() {
   resetOnsenEggStockIfNewDay();
+  updateKeeperLine("onsenShopKeeperLinePeriod", "onsenShopKeeperLineIndex", ONSEN_SHOP_KEEPER_LINES, "onsenShopKeeperBubble");
+  showKeeperCharacter("onsenShopKeeperWrap");
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);

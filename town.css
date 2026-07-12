@@ -7,6 +7,9 @@
     display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
     pointer-events: none;
   }
+  /* 売店画面はタイトルのすぐ下にカードが来て縦のゆとりが少ないため、ヒーロー上部(タイトル直下)に
+     配置を変える(他の画面はbottom基準のまま) */
+  #onsenShopKeeperWrap { bottom: auto; top: 64px; }
   .onsen-keeper-img {
     width: 150px; height: auto; display: block;
     filter: drop-shadow(0 8px 18px rgba(0,0,0,0.55));

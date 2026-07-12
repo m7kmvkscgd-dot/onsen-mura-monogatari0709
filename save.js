@@ -149,6 +149,8 @@ function loadState() {
       if (loaded.onsenKeeperLineIndex == null) loaded.onsenKeeperLineIndex = 0;
       if (loaded.tavernKeeperLinePeriod === undefined) loaded.tavernKeeperLinePeriod = null;
       if (loaded.tavernKeeperLineIndex == null) loaded.tavernKeeperLineIndex = 0;
+      if (loaded.onsenShopKeeperLinePeriod === undefined) loaded.onsenShopKeeperLinePeriod = null;
+      if (loaded.onsenShopKeeperLineIndex == null) loaded.onsenShopKeeperLineIndex = 0;
       // 旧セーブは「既に見た」扱いにする(いきなり大量のNEWバッジが降ってこないように)。
       // これらのフラグは新規解禁時だけfalseからスタートする(state.jsのdefaultState参照)
       if (loaded.seenShrineTab == null) loaded.seenShrineTab = true;
