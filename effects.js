@@ -85,9 +85,9 @@ function playAttackVfx(targetId, actor, kind) {
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
 }
-// 狩人「鷹を呼ぶ」の追撃演出: 🦅の絵文字が狩人の位置から対象へ飛んでいき、着弾で侍の通常攻撃と同じ
-// 斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで元の位置に戻って消える。
-// (見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
+// 狩人「鷹を呼ぶ」の追撃演出: 鷹のイラスト(assets/vfx/hawk.png)が狩人の位置から対象へ飛んでいき、
+// 着弾で侍の通常攻撃と同じ斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで
+// 元の位置に戻って消える。(見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
 const HAWK_PROJECTILE_MS = 306; // ユーザー指示で速度0.8倍(220ms→275ms)からさらに10%減速(275/0.9=305.5→306ms)
 const HAWK_HITSTOP_MS = 80; // 着弾後、Uターンを始めるまでの一呼吸
 function playHawkAttackVfx(hunterActor, targetId) {
@@ -114,9 +114,9 @@ function playHawkAttackVfx(hunterActor, targetId) {
   const fromY = fromRect.top + fromRect.height / 2;
   const toX = toRect.left + toRect.width / 2;
   const toY = toRect.top + toRect.height / 2;
-  const bird = document.createElement("div");
+  const bird = document.createElement("img");
   bird.className = "hawk-projectile";
-  bird.textContent = "🦅";
+  bird.src = "assets/vfx/hawk.png";
   document.body.appendChild(bird);
   const outbound = bird.animate([
     { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 1 },

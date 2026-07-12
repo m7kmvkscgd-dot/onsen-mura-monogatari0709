@@ -149,11 +149,11 @@
     max-width: none; height: auto; pointer-events: none; z-index: 25;
     filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
   }
-  /* 狩人「鷹を呼ぶ」の追撃演出: 狩人の位置から対象へ飛んでいく🦅絵文字(document.bodyに直接追加され、
+  /* 狩人「鷹を呼ぶ」の追撃演出: 狩人の位置から対象へ飛んでいく鷹のイラスト(document.bodyに直接追加され、
      element.animate()でtransform:translateを直接動かす。position:fixedなのでgetBoundingClientRectの
-     viewport座標をそのまま使える) */
+     viewport座標をそのまま使える)。旧🦅絵文字(font-size:33px相当)より20%大きい幅48pxに設定 */
   .hawk-projectile {
-    position: fixed; top: 0; left: 0; font-size: 33px; line-height: 1; z-index: 30;
+    position: fixed; top: 0; left: 0; width: 48px; height: auto; z-index: 30;
     pointer-events: none; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
   }
   .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
