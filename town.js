@@ -1228,6 +1228,19 @@ document.getElementById("departConfirmNoBtn").onclick = () => {
 };
 
 // ============ 温泉 ============
+// 湯守りキャラを表示し、約3秒後にふわっとフェードアウトさせる(画面を開き直すたびに最初から再生)
+let onsenKeeperFadeTimer = null;
+function showOnsenKeeper() {
+  const wrap = document.getElementById("onsenKeeperWrap");
+  clearTimeout(onsenKeeperFadeTimer);
+  wrap.getAnimations().forEach((a) => a.cancel());
+  wrap.style.display = "flex";
+  wrap.style.opacity = "1";
+  onsenKeeperFadeTimer = setTimeout(() => {
+    const anim = wrap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 800, easing: "ease", fill: "forwards" });
+    anim.onfinish = () => { anim.cancel(); wrap.style.opacity = "0"; wrap.style.display = "none"; };
+  }, 3000);
+}
 function renderOnsen() {
   playTownAreaBgm();
   updateSceneBackgrounds();
@@ -1241,6 +1254,7 @@ function renderOnsen() {
     saveState();
   }
   document.getElementById("onsenKeeperBubble").textContent = ONSEN_KEEPER_LINES[state.onsenKeeperLineIndex];
+  showOnsenKeeper();
   document.getElementById("onsenGold").textContent = state.gold + "G";
   document.getElementById("toOnsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   const list = document.getElementById("onsenList");
