@@ -591,11 +591,22 @@ function renderStatusScreen(charId, onBack) {
   `).join("");
 
   // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
-  // レベルアップの楽しみを持たせる(選ばなかった方の枝は「二度と来ない」ので対象外、あくまで未来の枠のみ)
+  // レベルアップの楽しみを持たせる(選ばなかった方の枝は「二度と来ない」ので対象外、あくまで未来の枠のみ)。
+  // スキルツリー(Lv2〜)とは別枠で、職業が最初から持つLv1のクラスアビリティ(会心の一撃/かばう等)も
+  // 「習得済み」として一覧の先頭に載せる(スキルツリー選択とは無関係に全員が最初から使える技のため)
   const skillListEl = document.getElementById("statSkillList");
+  const innateRows = (c2.abilities || []).map((ability) => `
+    <div class="skill-entry" data-level="1">
+      <div class="skill-entry-head">
+        <strong>Lv.1 ${ABILITY_LABEL[ability] || ability}</strong>
+        <span class="skill-entry-side">初期</span>
+      </div>
+      <p class="skill-entry-desc">${ABILITY_DESC[ability] || ""}</p>
+    </div>
+  `).join("");
   const tree = SKILL_TREES[c.classId] || {};
   const allLevels = Object.keys(tree).map(Number).sort((a, b) => a - b);
-  const skillRows = allLevels.map((lv) => {
+  const skillRows = innateRows + allLevels.map((lv) => {
     const side = c.skills && c.skills[lv];
     if (side) {
       const skill = tree[lv][side];
