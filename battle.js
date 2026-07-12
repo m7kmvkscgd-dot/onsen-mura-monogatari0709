@@ -1048,7 +1048,7 @@ function victory() {
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
-    if (e.id === "onibi") soulShardCount++; // 鬼火は100%の確率で魂のかけらをドロップする(討伐数ぶん)
+    if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
