@@ -106,7 +106,7 @@ function renderExtinguishConfirm(actor) {
   grid.appendChild(noBtn);
 }
 function useExtinguish(actor) {
-  state.inventory.smokeBomb--;
+  consumeSmokeBomb();
   playSfx("heal");
   fieldParty.forEach((c) => { c.burnTurns = 0; });
   blog(`${actor.label}は煙玉を投げ、仲間の炎を消し止めた！`);
@@ -131,7 +131,7 @@ function useSmokeBomb(actor) {
   markQuestChasingIfFled();
   stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
-  state.inventory.smokeBomb--;
+  consumeSmokeBomb();
   saveState();
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");

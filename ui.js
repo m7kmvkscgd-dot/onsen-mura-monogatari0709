@@ -64,9 +64,6 @@ function updateSceneBackgrounds() {
   // 奉行所だけこの一覧から漏れており、専用の絵が無いため常に真っ黒(背景未設定)のまま表示されていた不具合を修正。
   // 他の「町の施設だが専用の絵が無い」画面(道具屋/増築/リザルト)と同じくtownの絵を流用する
   document.getElementById("magistrateHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
-  // 神社も専用の絵が無いためtownの絵を流用する(温泉の売店の絵は「売店」の看板が写り込んでいて
-  // 神社の画面に使うと文字が合わないため、あえて流用しなかった)
-  document.getElementById("onsenShrineHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
 }
 // 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える

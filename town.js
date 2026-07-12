@@ -1235,24 +1235,79 @@ document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); r
 document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
-// ============ 温泉の神社(奉納祈願) ============
+// ============ 温泉の神社(奉納祈願: お守りガチャ+装備) ============
 function renderOnsenShrine() {
   playTownAreaBgm();
-  updateSceneBackgrounds();
   document.getElementById("shrineSoulShardCount").textContent = state.inventory.soulShard || 0;
-  document.getElementById("shrineOmamoriCount").textContent = state.inventory.omamori || 0;
+  document.getElementById("shrineEquipMaxText").textContent = OMAMORI_EQUIP_MAX;
+  document.getElementById("shrineEquipMaxText2").textContent = OMAMORI_EQUIP_MAX;
+  document.getElementById("shrineEquippedCount").textContent = state.omamoriEquipped.length;
+
   const offerBtn = document.getElementById("shrineOfferBtn");
-  offerBtn.disabled = (state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST;
+  const allOwned = state.omamoriOwned.length >= OMAMORI_LIST.length;
+  if (allOwned) {
+    offerBtn.textContent = "全てのお守りを授かりました";
+    offerBtn.disabled = true;
+  } else {
+    offerBtn.textContent = `奉納する(魂のかけら${SHRINE_OFFER_SOUL_SHARD_COST}個)`;
+    offerBtn.disabled = (state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST;
+  }
+
+  const list = document.getElementById("shrineOmamoriList");
+  list.innerHTML = "";
+  [1, 2, 3, 4].forEach((tier) => {
+    OMAMORI_LIST.filter((o) => o.tier === tier).forEach((o) => {
+      const owned = state.omamoriOwned.includes(o.id);
+      const equipped = state.omamoriEquipped.includes(o.id);
+      const row = document.createElement("div");
+      row.className = "roster-row";
+      row.innerHTML = `
+        <img src="${OMAMORI_TIER_IMAGE[o.tier]}" style="${owned ? "" : "filter:grayscale(1) brightness(0.35);"}">
+        <div class="roster-info">
+          <div class="roster-name">${owned ? o.name : "？？？"} <span class="status-tag ${equipped ? "active" : ""}">Tier${o.tier}</span></div>
+          <div class="roster-sub">${owned ? o.desc : "まだ授かっていません"}</div>
+        </div>
+        <button class="big" ${owned ? "" : "disabled"}>${equipped ? "外す" : "装備する"}</button>
+      `;
+      if (owned) {
+        row.querySelector("button").onclick = () => {
+          if (equipped) {
+            state.omamoriEquipped = state.omamoriEquipped.filter((id) => id !== o.id);
+          } else {
+            if (state.omamoriEquipped.length >= OMAMORI_EQUIP_MAX) { alert(`お守りは同時に${OMAMORI_EQUIP_MAX}個までしか装備できません`); return; }
+            state.omamoriEquipped.push(o.id);
+          }
+          saveState();
+          playSfx("select");
+          renderOnsenShrine();
+        };
+      }
+      list.appendChild(row);
+    });
+  });
 }
 document.getElementById("shrineOfferBtn").onclick = () => {
   if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { alert("魂のかけらが足りません"); return; }
+  const drawn = drawOmamori(state.omamoriOwned);
+  if (!drawn) { alert("すでに全てのお守りを授かっています"); return; }
   state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
-  state.inventory.omamori = (state.inventory.omamori || 0) + 1;
+  state.omamoriOwned.push(drawn.id);
   saveState();
   playSfx("skill_confirm");
+  const resultEl = document.getElementById("shrineDrawResult");
+  resultEl.style.display = "block";
+  resultEl.innerHTML = `
+    <div class="roster-name">${drawn.name} を授かった!<span class="status-tag active">Tier${drawn.tier}</span></div>
+    <div class="roster-sub" style="margin-top:0.3rem;">${drawn.desc}</div>
+  `;
   renderOnsenShrine();
 };
-document.getElementById("toOnsenShrineBtn").onclick = () => { playSfx("select"); renderOnsenShrine(); showScreen("screen-onsen-shrine"); };
+document.getElementById("toOnsenShrineBtn").onclick = () => {
+  playSfx("select");
+  document.getElementById("shrineDrawResult").style.display = "none";
+  renderOnsenShrine();
+  showScreen("screen-onsen-shrine");
+};
 document.getElementById("onsenShrineBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 

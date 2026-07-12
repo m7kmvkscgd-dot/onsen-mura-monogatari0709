@@ -996,8 +996,56 @@ const SKILL_TREE_NAMES = {
 };
 const SUPPLY_CAP_BASE = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる(鞄屋を建てるとsupplyCap()でこれに加算される)
 
-// 神社の奉納祈願: 魂のかけらをこの個数納めると特別なお守りを1個授かる
+// 神社の奉納祈願: 魂のかけらをこの個数納めるとお守りガチャを1回引ける
 const SHRINE_OFFER_SOUL_SHARD_COST = 3;
+// お守りは全20種、tier1〜4。パーティ全体に効くパッシブで、所持数に関わらず最大OMAMORI_EQUIP_MAX個まで同時装備できる。
+// 奉納祈願は「まだ持っていないお守りだけ」から重み付き抽選する(重複しない)。
+// 重みはtier単位(OMAMORI_TIER_WEIGHTS)をそのtierに属する未所持アイテム数で均等割りして使う
+const OMAMORI_EQUIP_MAX = 3;
+const OMAMORI_TIER_WEIGHTS = { 1: 50, 2: 30, 3: 10, 4: 5 };
+const OMAMORI_TIER_IMAGE = { 1: "assets/items/omamori_t1.png", 2: "assets/items/omamori_t2.png", 3: "assets/items/omamori_t3.png", 4: "assets/items/omamori_t4.png" };
+const OMAMORI_LIST = [
+  // ---- tier1 ----
+  { id: "ebisu", name: "恵比寿神の御守", tier: 1, desc: "勝利時10%でボーナスゴールド+30%", effect: { type: "battleWinGoldBonusChance", chance: 0.10, mult: 1.30 } },
+  { id: "okuninushi", name: "大国主命の御守", tier: 1, desc: "戦闘終了後12%でストレスを5回復", effect: { type: "battleEndStressReliefChance", chance: 0.12, amount: 5 } },
+  { id: "fukurokuju", name: "福禄寿の御守", tier: 1, desc: "探索で「進む」を押すたびに、全員のHPを2回復", effect: { type: "onAdvanceHealAll", amount: 2 } },
+  // ---- tier2 ----
+  { id: "inari", name: "稲荷大神の御守", tier: 2, desc: "敵の攻撃を回避する確率が常時+5%", effect: { type: "evasionAddFlat", value: 0.05 } },
+  { id: "benzaiten", name: "弁財天の御守", tier: 2, desc: "撃破時、低確率でその戦闘のゴールドが2倍になる", effect: { type: "battleWinGoldDoubleChance", chance: 0.10 } },
+  { id: "konohanasakuya", name: "木花咲耶姫の御守", tier: 2, desc: "回復薬を使っても20%の確率で消費しない", effect: { type: "potionNoConsumeChance", chance: 0.20 } },
+  { id: "shinatsuhiko", name: "志那都比古神の御守", tier: 2, desc: "煙玉を使っても35%の確率で消費しない", effect: { type: "smokeBombNoConsumeChance", chance: 0.35 } },
+  // ---- tier3 ----
+  { id: "takemikazuchi", name: "建御雷神の御守", tier: 3, desc: "戦闘中、最初の通常攻撃が命中した時に確定でスタンを付与する", effect: { type: "firstNormalAttackHitStun", turns: 1 } },
+  { id: "tsukuyomi", name: "月読命の御守", tier: 3, desc: "夜の戦闘は開始時60%で先制する", effect: { type: "nightFirstStrikeChance", chance: 0.60 } },
+  { id: "takemikazuchi2", name: "武甕槌命の御守", tier: 3, desc: "戦闘中、最初の通常攻撃が確定で会心になる", effect: { type: "firstNormalAttackGuaranteedCrit" } },
+  // ---- tier4 ----
+  { id: "amaterasu", name: "天照大神の御守", tier: 4, desc: "毎回戦闘終了後に、全員のHPを10%回復", effect: { type: "battleEndHealAllPct", pct: 0.10 } },
+  { id: "yatagarasu", name: "八咫烏の御守", tier: 4, desc: "通常攻撃・技の命中率が常時+12%", effect: { type: "accuracyAddFlat", value: 0.12 } },
+  { id: "izanagi", name: "伊邪那岐命の御守", tier: 4, desc: "戦闘中最初に受けた状態異常を打ち消す", effect: { type: "firstAilmentReceivedBlocked" } },
+  { id: "izanami", name: "伊邪那美命の御守", tier: 4, desc: "戦闘中最初に与える状態異常が+2される", effect: { type: "firstAilmentInflictedBonus", value: 2 } },
+  { id: "susanoo", name: "須佐之男命の御守", tier: 4, desc: "戦闘中、最初に戦闘不能級の一撃を受けた時、誰かがHP1で耐える(パーティ共有、確定)", effect: { type: "firstLethalHitSurviveAt1Shared" } },
+  { id: "hachiman", name: "八幡神の御守", tier: 4, desc: "戦闘中最初に使う技のMP消費が0", effect: { type: "firstSkillFreeMp" } },
+  { id: "sarutahiko", name: "猿田彦神の御守", tier: 4, desc: "戦闘開始時確定で、1ターンだけ味方全体の攻撃力+25%・素早さ+25%", effect: { type: "battleStartPartyBuff", stats: [{ stat: "atk", mult: 1.25 }, { stat: "spd", mult: 1.25 }], turns: 1 } },
+  { id: "omononushi", name: "大物主神の御守", tier: 4, desc: "ボスを倒すと必ず魂のかけらを落とす", effect: { type: "bossKillGuaranteedShard" } },
+  { id: "yatanokagami", name: "八咫鏡の御守", tier: 4, desc: "戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する", effect: { type: "firstBigAttackReflect", pct: 0.50 } },
+  { id: "amenominakanushi", name: "天之御中主神の御守", tier: 4, desc: "毎戦闘終了後にMP1回復", effect: { type: "battleEndRestoreMp", amount: 1 } },
+];
+function omamoriById(id) { return OMAMORI_LIST.find((o) => o.id === id); }
+// 未所持のお守りだけからtier重み付きで1つ抽選する(全て所持済みならnullを返す)
+function drawOmamori(ownedIds) {
+  const unowned = OMAMORI_LIST.filter((o) => !ownedIds.includes(o.id));
+  if (unowned.length === 0) return null;
+  const tierCounts = {};
+  unowned.forEach((o) => { tierCounts[o.tier] = (tierCounts[o.tier] || 0) + 1; });
+  const weighted = unowned.map((o) => ({ o, w: OMAMORI_TIER_WEIGHTS[o.tier] / tierCounts[o.tier] }));
+  const total = weighted.reduce((sum, x) => sum + x.w, 0);
+  let roll = Math.random() * total;
+  for (const x of weighted) {
+    roll -= x.w;
+    if (roll < 0) return x.o;
+  }
+  return weighted[weighted.length - 1].o;
+}
 
 // 狩人スキル「鷹を呼ぶ」関連の数値
 const HAWK_FOLLOWUP_ATK_MULT = 0.35; // 鷹の追撃威力(狩人の攻撃力に対する割合)

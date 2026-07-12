@@ -158,7 +158,7 @@ function pickDungeonAllyTarget(promptText, onPicked) {
 document.getElementById("dungeonPotionBtn").onclick = () => {
   if ((state.inventory.potion || 0) <= 0) return;
   pickDungeonAllyTarget(`誰に回復薬(残り${state.inventory.potion})を使いますか？`, (c) => {
-    state.inventory.potion--;
+    consumePotion();
     usePotion(c, dlog);
     playSfx("heal");
     maybeSpeakHealed(c);
@@ -342,6 +342,10 @@ function healPartyOnFloorMove() {
 // 1階層分の移動処理(進む/帰還どちらも共通)。retreatBtn(里に戻る最初の一押し)からも
 // advanceBtn(2回目以降の帰還)からも同じロジックで1階層動けるようにするための共通関数
 function moveOneFloor(pathBias) {
+  // 福禄寿の御守: 探索で「進む」(帰還中の「帰還」ボタンも含む、同じボタンのため)を押すたびに全員を少し回復
+  if (hasOmamori("fukurokuju")) {
+    fieldParty.forEach((c) => { if (c.status === "active") c.hp = Math.min(c.maxHp, c.hp + 2); });
+  }
   if (retreating) {
     currentFloor--;
     healPartyOnFloorMove();

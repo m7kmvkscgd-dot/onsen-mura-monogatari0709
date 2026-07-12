@@ -6,7 +6,9 @@ function defaultState() {
     gold: 170,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, omamori: 0 },
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0 },
+    omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
+    omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
@@ -129,6 +131,18 @@ function formatGameDate(dayCount) {
 }
 
 let state = loadState();
+// ============ お守り共通ヘルパー ============
+function hasOmamori(id) { return state.omamoriEquipped.includes(id); }
+// 木花咲耶姫の御守: 回復薬を使っても20%の確率で消費しない
+function consumePotion() {
+  if (hasOmamori("konohanasakuya") && Math.random() < 0.20) return;
+  state.inventory.potion--;
+}
+// 志那都比古神の御守: 煙玉を使っても35%の確率で消費しない
+function consumeSmokeBomb() {
+  if (hasOmamori("shinatsuhiko") && Math.random() < 0.35) return;
+  state.inventory.smokeBomb--;
+}
 // ============ 時間帯(早朝→朝→昼→夕→夜の5段階サイクル) ============
 // 町・宿屋・深淵の森・海岸は5段階それぞれの絵を持つが、温泉は昼/夜2種類の絵しか無いため
 // 早朝→朝→昼側、夕→夜側に寄せて表示する(dayLikeOf参照)
