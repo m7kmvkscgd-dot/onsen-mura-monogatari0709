@@ -612,11 +612,11 @@ document.getElementById("dungeonLog").onclick = () => {
   showLogHistory(dungeonLogLines);
 };
 
-// ============ 背景の覗き見(.heroを0.5秒長押しでUIを消し、背景イラストをよく見せる) ============
+// ============ 背景の覗き見(.heroを0.25秒長押しでUIを消し、背景イラストをよく見せる) ============
 // 戦闘/探索用のattachSkillLongPressTooltip(effects.js)と同じPointer Eventsパターンを踏襲。
 // ボタン/リンク/inputの上から始めた長押しは無視し(本来のタップ操作を妨げない)、
 // 発動後はbody.bg-peekを付けるだけで、実際にどの要素を隠すかはCSS側(.hero > *と.body-pad)に任せる
-const BG_PEEK_LONGPRESS_MS = 500;
+const BG_PEEK_LONGPRESS_MS = 250; // ユーザー指示で従来の半分(500ms→250ms)
 function initBackgroundPeek() {
   let bgPeekActive = false;
   let timer = null;
