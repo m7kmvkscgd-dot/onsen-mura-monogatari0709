@@ -9,6 +9,7 @@ function defaultState() {
     inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0 },
     omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
     omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
+    shrineFirstVisitRewardGiven: false, // 神社を初めて訪れた時のサービス(魂のかけら3個)を渡し済みか
     classUpgrades: {}, // { classId: { weapon: bool, armor: bool } }
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午

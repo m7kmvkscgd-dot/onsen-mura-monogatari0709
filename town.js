@@ -1288,7 +1288,8 @@ function renderOnsenShrine() {
 }
 document.getElementById("shrineOfferBtn").onclick = () => {
   if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { alert("魂のかけらが足りません"); return; }
-  const drawn = drawOmamori(state.omamoriOwned);
+  // 神社で初めて引くお守りは確定で福禄寿の御守にする(まだ1つも授かっていない=これが最初の1回)
+  const drawn = state.omamoriOwned.length === 0 ? omamoriById("fukurokuju") : drawOmamori(state.omamoriOwned);
   if (!drawn) { alert("すでに全てのお守りを授かっています"); return; }
   state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
   state.omamoriOwned.push(drawn.id);
@@ -1305,6 +1306,12 @@ document.getElementById("shrineOfferBtn").onclick = () => {
 document.getElementById("toOnsenShrineBtn").onclick = () => {
   playSfx("select");
   document.getElementById("shrineDrawResult").style.display = "none";
+  if (!state.shrineFirstVisitRewardGiven) {
+    state.shrineFirstVisitRewardGiven = true;
+    state.inventory.soulShard = (state.inventory.soulShard || 0) + SHRINE_FIRST_VISIT_SOUL_SHARD_GIFT;
+    saveState();
+    alert(`神社を訪れた記念に、魂のかけらを${SHRINE_FIRST_VISIT_SOUL_SHARD_GIFT}個授かった！`);
+  }
   renderOnsenShrine();
   showScreen("screen-onsen-shrine");
 };
