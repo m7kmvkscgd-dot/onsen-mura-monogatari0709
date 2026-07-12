@@ -598,11 +598,11 @@ function withVariance(value, pct) {
 function rollBasicAttack(atk, def) {
   return Math.max(1, Math.round(withVariance(atk * mitigation(def, 18), 0.15)));
 }
-// 魔法の防御貫通は、序盤の低防御力の敵(だいたい防御力6以下、floor1-8相当)に対しては防御力を
+// 魔法の防御貫通は、序盤の低防御力の敵(だいたい防御力3以下、floor1-8相当)に対しては防御力を
 // MAGIC_MIN_EFFECTIVE_DEFとして扱い、必要以上に貫通しすぎないようにする(=序盤の陰陽師が
 // 他職と比べて突出して強くなりすぎる問題への対処)。中盤(floor9〜、防御力9相当)以降の敵は
 // 元々この値を上回るため、この下限は一切効かず、中〜終盤のダメージ計算は完全に従来通り
-const MAGIC_MIN_EFFECTIVE_DEF = 7;
+const MAGIC_MIN_EFFECTIVE_DEF = 4;
 function rollMagicAttack(mag, def) {
   return Math.max(1, Math.round(withVariance(mag * 1.8 * mitigation(Math.max(def, MAGIC_MIN_EFFECTIVE_DEF), 8), 0.12)));
 }
