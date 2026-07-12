@@ -742,18 +742,18 @@ const ENEMY_BESTIARY_TEXT = {
   oo_dako_2: { desc: "さらに巨大化した大ダコ。", bigAttackDesc: "岩場に潜む巨躯が締め上げ、防御力を下げる。" },
   same_bito: { desc: "鮫の姿をした獰猛な戦士。短剣と牙で切り裂く。", bigAttackDesc: "短剣と牙で連続して切り裂く。" },
   shinkai_no_bourei: { desc: "深海から漂う怨念の亡霊。呪いの力で継続的に蝕む。" },
-  oo_kani_ou: { desc: "海岸を支配する巨大な蟹の王。中ボス級の強敵。", bigAttackDesc: "巨大な鋏で鎧ごと粉砕する強烈な一撃。" },
+  oo_kani_ou: { desc: "この地を支配する巨大な蟹の王。中ボス級の強敵。", bigAttackDesc: "巨大な鋏で鎧ごと粉砕する強烈な一撃。" },
   // ---- 海岸・終盤(最後の1体は最終ボス) ----
   kaima_daiou: { desc: "海の魔を統べる大王。", bigAttackDesc: "大槍を薙ぎ払い、庇う相手ごと巻き込む。" },
   youen_na_isoonna: { desc: "妖艶な姿で敵を誘い込む磯女の上位個体。", bigAttackDesc: "魅了の歌で敵を弱らせ、攻撃力を下げる。" },
   kyokai_no_oodako: { desc: "海を支配するほど巨大化したタコの妖怪。", bigAttackDesc: "八本の足で完全に絡め取り、スタンさせる。" },
   oni_harifugu: { desc: "鬼のように巨大化したハリフグ。針に毒を宿す。", bigAttackDesc: "無数の針を飛ばし、毒をばら撒く。" },
-  oo_kani_shougun: { desc: "海岸を支配する巨蟹の将。", bigAttackDesc: "巨大な鋏で敵を叩き潰し、防御力を下げる。" },
+  oo_kani_shougun: { desc: "この地を治める巨蟹の将。", bigAttackDesc: "巨大な鋏で敵を叩き潰し、防御力を下げる。" },
   kairyuu_ou: { desc: "海を統べる龍の王。潮と雷撃を操る。", bigAttackDesc: "潮とともに雷撃を放ち、スタンさせる。" },
   same_no_bujin: { desc: "鎧を纏った鮫の戦士。槍と牙で敵を貫く。", bigAttackDesc: "槍と牙で敵を貫く連続攻撃。" },
   umi_no_souryo: { desc: "海に沈んだ僧侶の怨念。呪詛の法術を操る。", bigAttackDesc: "呪詛の法術で敵の力を弱める。" },
   uzushio_no_onryou: { desc: "渦潮に宿る怨霊。渡る者を引きずり込む。", bigAttackDesc: "渦潮に引き寄せ、庇う間もなくパーティ全体を飲み込む。" },
-  kaiyoujo_ou: { desc: "海岸の全てを支配する妖怪の女王。最強格の強敵。", bigAttackDesc: "強力な呪術で敵を蝕む一撃。" },
+  kaiyoujo_ou: { desc: "この地の全てを支配する妖怪の女王。最強格の強敵。", bigAttackDesc: "強力な呪術で敵を蝕む一撃。" },
 };
 function bestiaryTextFor(enemyId) {
   const t = ENEMY_BESTIARY_TEXT[enemyId] || {};

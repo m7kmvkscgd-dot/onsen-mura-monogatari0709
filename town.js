@@ -875,8 +875,10 @@ function renderBestiaryTab() {
 
   const list = document.getElementById("bestiaryList");
   list.innerHTML = "";
-  [{ stage: "forest", label: "深淵の森" }, { stage: "coast", label: "海岸" }].forEach((group) => {
-    const ids = orderedIds.filter((id) => (ENEMIES[id].stage || "forest") === group.stage);
+  // 海岸ステージの存在自体がネタバレになるため、森・海岸で見出しを分けず「深淵の森」1本の
+  // 見出しの下に全敵をまとめて表示する(海岸という単語は図鑑に一切出さない)
+  [{ ids: orderedIds, label: "深淵の森" }].forEach((group) => {
+    const ids = group.ids;
     if (ids.length === 0) return;
     const h = document.createElement("h2");
     h.style.marginTop = "1rem";
@@ -920,7 +922,7 @@ function renderBestiaryDetail() {
   document.getElementById("bestiaryDetailName").textContent = seen ? e.ja : "？？？";
   const body = document.getElementById("bestiaryDetailBody");
   if (!seen) {
-    body.innerHTML = `<div class="locked-line">まだ遭遇していません。深淵の森・海岸で出会うと記録されます。</div>`;
+    body.innerHTML = `<div class="locked-line">まだ遭遇していません。深淵の森で出会うと記録されます。</div>`;
     return;
   }
   const text = bestiaryTextFor(id);
