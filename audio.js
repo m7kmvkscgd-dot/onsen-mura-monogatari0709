@@ -114,7 +114,7 @@ function unlockAudio() {
 // 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
 const COAST_BGM_VOLUME_MULT = 1.7;
 // 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、ユーザー指示で音量を8割にする
-const TOWN_DAY_BGM_VOLUME_MULT = 0.8;
+const TOWN_DAY_BGM_VOLUME_MULT = 0.64; // 旧0.8からさらに現状比80%(0.8*0.8)に下げてほしいとの指示
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
