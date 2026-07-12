@@ -869,7 +869,7 @@ function renderBestiaryTab() {
       const row = document.createElement("div");
       row.className = "roster-row";
       row.innerHTML = `
-        <img src="${e.image}" style="${seen ? "" : "filter:grayscale(1) brightness(0.15);"}">
+        <img src="${e.image}" style="${seen ? "" : "filter:grayscale(1) brightness(0.03);"}">
         <div class="roster-info">
           <div class="roster-name">${seen ? e.ja : "？？？"}${e.isBoss ? ` <span class="status-tag active">強敵</span>` : ""}</div>
           <div class="roster-sub">${seen ? bestiaryTextFor(id).desc : "まだ遭遇していません"}</div>
@@ -896,7 +896,7 @@ function renderBestiaryDetail() {
   const e = ENEMIES[id];
   const seen = (state.seenEnemyIds || []).includes(id);
   const img = document.getElementById("bestiaryDetailImg");
-  img.style.filter = seen ? "" : "grayscale(1) brightness(0.2)";
+  img.style.filter = seen ? "" : "grayscale(1) brightness(0.03)";
   img.src = e.image;
   document.getElementById("bestiaryDetailName").textContent = seen ? e.ja : "？？？";
   const body = document.getElementById("bestiaryDetailBody");
