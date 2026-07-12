@@ -222,10 +222,13 @@
      イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
   .treasure-popup {
     position: fixed; top: 110px; left: 50%; transform: translate(-50%, 0) translateZ(0);
-    z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center;
+    z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center; gap: 14px;
   }
+  /* 魂のかけら等、ゴールドより縦長の追加ドロップ画像も並べて出せるよう、幅ではなく縦横とも
+     上限(max-width/max-height)で収める方式にした(縦長画像が下のログ欄まで溢れるのを防ぐ)。
+     アスペクト比はwidth:auto/height:autoで維持されるため、ゴールドの見た目は従来とほぼ変わらない */
   .treasure-popup img {
-    width: 110px; max-width: 32vw; height: auto;
+    width: auto; height: auto; max-width: min(110px, 32vw); max-height: 115px;
     filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
     animation: treasurePop 1.8s ease forwards;
   }

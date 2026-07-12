@@ -24,6 +24,12 @@ function preloadDungeonImages() {
   Object.values(BG_SETS.dungeon).forEach((url) => { const img = new Image(); img.src = url; });
   Object.values(BG_SETS.coast).forEach((url) => { const img = new Image(); img.src = url; });
 }
+// 鬼火の「魂のかけら」ドロップ演出(showTreasurePopup)は最大1.8秒しか表示されないため、
+// 初回遭遇時に画像が未読み込みだと表示されないまま消えてしまう。他の先読みと同様、暇な時に読み込んでおく
+function preloadDropIcons() {
+  const img = new Image();
+  img.src = "assets/items/soul_shard.png";
+}
 function scheduleIdlePreload(fn) {
   if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 5000 });
   else setTimeout(fn, 2000);
@@ -31,10 +37,12 @@ function scheduleIdlePreload(fn) {
 if (document.readyState === "complete") {
   scheduleIdlePreload(preloadTavernImages);
   scheduleIdlePreload(preloadDungeonImages);
+  scheduleIdlePreload(preloadDropIcons);
 } else {
   window.addEventListener("load", () => {
     scheduleIdlePreload(preloadTavernImages);
     scheduleIdlePreload(preloadDungeonImages);
+    scheduleIdlePreload(preloadDropIcons);
   });
 }
 function dayLikeOf(tod) {

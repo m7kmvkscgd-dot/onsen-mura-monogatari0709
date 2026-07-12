@@ -785,14 +785,28 @@ function treasureTierImage(amount) {
   return "tairyo";
 }
 let treasurePopupTimer = null;
-function showTreasurePopup(amount) {
+// extraImageSrc: ゴールドと同時に表示したい追加アイテムのイラスト(鬼火の魂のかけら等)のsrc。
+// 省略時は従来通りゴールドのイラスト1枚だけを表示する。amount<=0の時はゴールド側の絵を隠し、
+// extraImageSrcだけを表示できる(ゴールドが0でも100%ドロップするアイテムがあるケース向け)
+function showTreasurePopup(amount, extraImageSrc) {
   const popup = document.getElementById("treasurePopup");
   const img = document.getElementById("treasurePopupImg");
-  img.src = `assets/gold/${treasureTierImage(amount)}.png`;
+  const extraImg = document.getElementById("treasurePopupExtraImg");
+  img.style.display = amount > 0 ? "" : "none";
+  if (amount > 0) img.src = `assets/gold/${treasureTierImage(amount)}.png`;
+  if (extraImageSrc) {
+    extraImg.src = extraImageSrc;
+    extraImg.style.display = "";
+  } else {
+    extraImg.style.display = "none";
+  }
   popup.style.display = "flex";
-  img.style.animation = "none";
-  void img.offsetWidth; // 再生中に連続で発見した時もアニメーションを最初から再生し直すためのリフロー強制
-  img.style.animation = "";
+  [img, extraImg].forEach((el) => {
+    if (el.style.display === "none") return;
+    el.style.animation = "none";
+    void el.offsetWidth; // 再生中に連続で発見した時もアニメーションを最初から再生し直すためのリフロー強制
+    el.style.animation = "";
+  });
   clearTimeout(treasurePopupTimer);
   treasurePopupTimer = setTimeout(() => { popup.style.display = "none"; }, 1800);
 }

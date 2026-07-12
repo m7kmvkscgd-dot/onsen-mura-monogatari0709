@@ -134,6 +134,7 @@ function loadState() {
       // 建築済み(1)扱いにする。新規セーブはdefaultState()通り0(未建築)から始まる
       if (loaded.shopLevel == null) loaded.shopLevel = 1;
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
+      if (loaded.inventory && loaded.inventory.soulShard == null) loaded.inventory.soulShard = 0; // 旧セーブ用の初期値(魂のかけら未所持)
       if (loaded.onsenEggDailyCount == null) loaded.onsenEggDailyCount = 0; // 旧セーブ用の初期値
       if (loaded.onsenEggDailyDate == null) loaded.onsenEggDailyDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       if (loaded.omikujiDrawnDate == null) loaded.omikujiDrawnDate = 0; // 旧セーブ用の初期値(おみくじ未使用)

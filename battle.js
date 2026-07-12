@@ -971,9 +971,11 @@ function victory() {
     }
     maybeTriggerEmergencyQuest();
   }
+  let soulShardCount = 0;
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
+    if (e.id === "onibi") soulShardCount++; // 鬼火は100%の確率で魂のかけらをドロップする(討伐数ぶん)
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
       grantXp(c, e.xp, blog);
@@ -998,11 +1000,16 @@ function victory() {
   state.gold += totalGold;
   advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
-  if (totalGold > 0) {
-    playSfx("coin");
+  if (soulShardCount > 0) {
+    state.inventory.soulShard = (state.inventory.soulShard || 0) + soulShardCount;
+    blog(`鬼火の魂のかけらを${soulShardCount}個手に入れた。`);
+  }
+  if (totalGold > 0 || soulShardCount > 0) {
+    if (totalGold > 0) playSfx("coin");
     // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
-    // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)
-    showTreasurePopup(Math.round(totalGold / battle.enemies.length));
+    // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)。
+    // 魂のかけらを入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
+    showTreasurePopup(Math.round(totalGold / battle.enemies.length), soulShardCount > 0 ? "assets/items/soul_shard.png" : null);
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
