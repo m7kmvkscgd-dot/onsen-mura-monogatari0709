@@ -44,7 +44,8 @@ function computeEquipBonus(classId, classUpgrades) {
   if (eq && owned.armor > 0) {
     const t = eq.armor[owned.armor - 1];
     bonus[t.statKey] += t.bonus;
-    bonus.mp += owned.armor * 2; // 防具を1段階買うごとにMP上限+2(5段階買うと最大+10)
+    // 防具の各段階のMP増分を合計する(1・2・1・2・1の交互パターン、ARMOR_MP_BONUS_PER_TIER参照)
+    for (let i = 0; i < owned.armor; i++) bonus.mp += ARMOR_MP_BONUS_PER_TIER[i] || 0;
   }
   return bonus;
 }
