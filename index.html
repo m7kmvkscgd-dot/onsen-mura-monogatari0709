@@ -866,6 +866,17 @@
     <img id="treasurePopupExtraImg" src="" alt="" style="display:none;">
   </div>
 
+  <!-- 建築/増築の完了演出(職業解放を伴わない場合のみ)。画面(増築画面)を問わず表示できるよう.screenの外に置く -->
+  <div class="build-complete-overlay" id="buildCompleteOverlay" style="display:none;">
+    <div class="build-complete-icon" id="buildCompleteIcon"></div>
+    <div class="build-complete-panel card" id="buildCompletePanel" style="display:none;">
+      <div class="build-complete-title" id="buildCompleteTitle"></div>
+      <div class="build-complete-name" id="buildCompleteName"></div>
+      <div class="build-complete-effect" id="buildCompleteEffect"></div>
+      <button class="big primary" id="buildCompleteCloseBtn">閉じる</button>
+    </div>
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>

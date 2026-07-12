@@ -273,6 +273,38 @@
      (未解放グループだけ従来通りタップで開閉/隠す。groupFacilityBlocks参照) */
   .facility-toggle.always-open { cursor: default; }
   .facility-toggle.always-open .facility-caret { display: none; }
+  /* ============ 建築/増築の完了演出 ============
+     職業解放を伴わない建築・強化のみに使う控えめな演出(職業解放時は既存のクラス解放演出を優先し、
+     これは出さない)。金色の目立つ演出ではなく、木目・紙のカードで落ち着いた見た目にする。
+     アイコン→(約0.25秒フェード+拡大)→少し間を置いてから結果パネルが現れる、の2段構え。
+     タップでアイコン演出をスキップしてすぐパネルを出せる(showBuildCompleteOverlay参照) */
+  .build-complete-overlay {
+    position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.2rem;
+    background: rgba(10,8,6,0.45);
+  }
+  .build-complete-icon {
+    font-size: 4.5rem; line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
+    opacity: 0; transform: scale(0.6);
+  }
+  .build-complete-overlay.icon-in .build-complete-icon { animation: buildCompleteIconIn 250ms ease-out forwards; }
+  @keyframes buildCompleteIconIn {
+    0% { opacity: 0; transform: scale(0.6); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .build-complete-panel {
+    width: 86%; max-width: 340px; text-align: center; margin-bottom: 0;
+    animation: buildCompletePanelIn 220ms ease-out forwards;
+  }
+  @keyframes buildCompletePanelIn {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .build-complete-title { font-size: 0.95rem; font-weight: 700; color: var(--dw-caption-color); letter-spacing: 0.06em; }
+  .build-complete-name { font-size: 1.25rem; font-weight: 800; color: var(--dw-title-color); margin-top: 0.3rem; }
+  .build-complete-effect { font-size: 0.82rem; color: var(--dw-body-color); margin-top: 0.7rem; line-height: 1.6; }
+  .build-complete-effect div + div { margin-top: 0.15rem; }
+  #buildCompleteCloseBtn { margin-top: 1rem; width: 100%; }
   /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能だけ最初から展開しておき、
      未解放は見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
   .facility-group-heading { cursor: pointer; display: flex; align-items: center; color: var(--dw-caption-color); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }

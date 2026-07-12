@@ -1544,6 +1544,75 @@ function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLeve
   if (badgeId) markBuildingNewBadge(stateKey, badgeId, unlocked, built);
   setFacilityLockedState(stateKey.replace(/Level$/, ""), !built && !unlocked);
 }
+// ============ 建築/増築の完了演出 ============
+// 職業解放を伴う建築(からくり屋敷/火薬庫/神社/道場の初回建築)は、通常の建築演出の代わりに
+// 新しい職業が雇えるお知らせを出す(二重に演出しない、というユーザー指示)
+const FACILITY_DISPLAY = {
+  houseLevel: { icon: "🏠", name: "家" },
+  magistrateLevel: { icon: "🏯", name: "奉行所" },
+  shopLevel: { icon: "⚒️", name: "鍛冶屋" },
+  travelPrepShopLevel: { icon: "🏕️", name: "旅支度屋" },
+  dojoLevel: { icon: "🥋", name: "道場" },
+  karakuriLevel: { icon: "🎎", name: "からくり屋敷" },
+  bagShopLevel: { icon: "🧳", name: "鞄屋" },
+  watchtowerLevel: { icon: "🏹", name: "見張り台" },
+  henHouseLevel: { icon: "🐓", name: "鶏小屋" },
+  shrineLevel: { icon: "⛩️", name: "神社" },
+  hotSpringKeeperLevel: { icon: "♨️", name: "湯守屋" },
+  gunpowderStoreLevel: { icon: "💣", name: "火薬庫" },
+  teaHouseLevel: { icon: "🍡", name: "茶屋" },
+  stableLevel: { icon: "🐎", name: "馬屋" },
+  beeFarmLevel: { icon: "🐝", name: "養蜂場" },
+  ferryLevel: { icon: "⛴️", name: "渡し船" },
+};
+// アイコンがフェードイン→少し間を置いてから結果パネルが現れる、の2段構え。タップで即座にパネルへ進める
+let buildCompleteRevealed = false;
+function showBuildCompleteOverlay(icon, title, name, effectLines) {
+  const overlay = document.getElementById("buildCompleteOverlay");
+  const panel = document.getElementById("buildCompletePanel");
+  document.getElementById("buildCompleteIcon").textContent = icon;
+  document.getElementById("buildCompleteTitle").textContent = title;
+  document.getElementById("buildCompleteName").textContent = name;
+  document.getElementById("buildCompleteEffect").innerHTML = effectLines.filter(Boolean).map((l) => `<div>${l}</div>`).join("");
+  panel.style.display = "none";
+  overlay.style.display = "flex";
+  overlay.classList.remove("icon-in");
+  void overlay.offsetWidth; // フェードインアニメーションを毎回最初から再生させるための強制リフロー
+  overlay.classList.add("icon-in");
+  playSfx("extension_build");
+  buildCompleteRevealed = false;
+  function reveal() {
+    if (buildCompleteRevealed) return;
+    buildCompleteRevealed = true;
+    clearTimeout(revealTimer);
+    panel.style.display = "block";
+  }
+  const revealTimer = setTimeout(reveal, 1300);
+  overlay.onclick = () => { if (!buildCompleteRevealed) reveal(); };
+  document.getElementById("buildCompleteCloseBtn").onclick = (e) => {
+    e.stopPropagation();
+    overlay.style.display = "none";
+  };
+}
+// 新規建築完了(職業解放を伴わない場合のみ呼ばれる)。施設一覧の説明文をそのまま効果表示に流用する
+function showBuildCompleteForNewFacility(stateKey) {
+  const info = FACILITY_DISPLAY[stateKey];
+  if (!info) return;
+  const block = document.getElementById("facilityBlock-" + stateKey.replace(/Level$/, ""));
+  const desc = block ? block.querySelector(".facility-desc").textContent : "";
+  showBuildCompleteOverlay(info.icon, "建築完了！", `${info.name} 完成`, [desc]);
+}
+// 施設強化完了(家・道場の2段階目)。今回増えた効果の差分だけを表示する
+function showBuildCompleteForUpgrade(stateKey, newLevel, deltaLines) {
+  const info = FACILITY_DISPLAY[stateKey];
+  if (!info) return;
+  showBuildCompleteOverlay(info.icon, "施設を強化しました！", `${info.name} Lv.${newLevel}`, deltaLines);
+}
+// 職業解放のお知らせ(からくり屋敷/火薬庫/神社/道場初回建築の代わりに出す)
+function showClassUnlockCelebration(classId) {
+  const c = CLASSES[classId];
+  showBuildCompleteOverlay("🎉", "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"]);
+}
 function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   const built = (state[stateKey] || 0) >= 1;
   const houseLevel = state.houseLevel || 1;
@@ -1551,19 +1620,22 @@ function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   state.gold -= cost;
   state[stateKey] = 1;
   saveState();
-  playSfx("extension_build");
   renderExtension();
+  const unlockedClassId = Object.keys(CLASS_UNLOCK_BUILDING).find((cid) => CLASS_UNLOCK_BUILDING[cid] === stateKey);
+  if (unlockedClassId) showClassUnlockCelebration(unlockedClassId);
+  else showBuildCompleteForNewFacility(stateKey);
 }
 document.getElementById("extensionUpgradeBtn").onclick = () => {
   const level = state.houseLevel || 1;
   if (level >= HOUSE_MAX_LEVEL) return;
   const cost = houseUpgradeCost(level);
   if (state.gold < cost) return;
+  const capBefore = rosterCapacity();
   state.gold -= cost;
   state.houseLevel = level + 1;
   saveState();
-  playSfx("extension_build");
   renderExtension();
+  showBuildCompleteForUpgrade("houseLevel", state.houseLevel, [`仲間上限 ${capBefore}→${rosterCapacity()}人`]);
 };
 document.getElementById("dojoBuildBtn").onclick = () => {
   const dojoLevel = state.dojoLevel || 0;
@@ -1574,8 +1646,9 @@ document.getElementById("dojoBuildBtn").onclick = () => {
   state.gold -= cost;
   state.dojoLevel = dojoLevel + 1;
   saveState();
-  playSfx("extension_build");
   renderExtension();
+  if (dojoLevel === 0) showClassUnlockCelebration("naginata"); // 道場の初回建築は薙刀士の解放を伴う
+  else showBuildCompleteForUpgrade("dojoLevel", state.dojoLevel, [`分け前 ${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%→${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel + 1] * 100)}%`]);
 };
 document.getElementById("magistrateBuildBtn").onclick = () => buildSimpleBuilding("magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST);
 document.getElementById("shopBuildBtn").onclick = () => buildSimpleBuilding("shopLevel", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST);
