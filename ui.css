@@ -136,6 +136,10 @@
   .mpbar-track { position: relative; background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }
+  /* 温泉の入浴ボタンは「入る(20G)」→「入浴中」のようにラベルの文字数が変わるが、ボタン自体は
+     コンテンツ幅で伸縮するため、隣のroster-info(flex:1)が押し広げられてストレスバーが
+     伸びたように見えてしまう不具合があった。ボタン幅を固定してroster-info側の幅を安定させる */
+  #onsenList button.big { width: 108px; flex-shrink: 0; }
   /* リザルト画面の経験値バー: 今回の冒険より前からの分(xpbar-fill)と、今回新たに得た分(xpbar-gain、明るい色で強調)の2色重ね */
   .xpbar-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.35rem; position: relative; }
   .xpbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: #4a6f8f; }
