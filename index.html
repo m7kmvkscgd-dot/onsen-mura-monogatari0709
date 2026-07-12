@@ -725,6 +725,18 @@
     </div>
   </div>
 
+  <!-- 探索/戦闘ログの全履歴を振り返る画面。ログのテキストボックスを(文字送り中でない時に)
+       タップすると開く。過去に流れた行を全てさかのぼって読み返せる -->
+  <div id="logHistoryOverlay" class="log-history-overlay" style="display:none;">
+    <div class="log-history-panel">
+      <div class="log-history-header">
+        <span>ログ履歴</span>
+        <button class="log-history-close" id="logHistoryCloseBtn">✕</button>
+      </div>
+      <div class="log-history-content" id="logHistoryContent"></div>
+    </div>
+  </div>
+
   <!-- 吹き出しセリフ専用の全画面固定レイヤー。.party-bar内に置くとスタッキングコンテキストの都合で
        探索画面の文字より奥に埋もれてしまうため、画面最前面の独立レイヤーに実測位置で配置する -->
   <div id="speechBubbleLayer"></div>

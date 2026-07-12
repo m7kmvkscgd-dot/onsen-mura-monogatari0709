@@ -204,6 +204,38 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     display: none; animation: logArrowBob 1.3s ease-in-out infinite;
   }
+  /* ===== ログ履歴の振り返り画面: #dungeonLog/#battleLogをタップ(文字送り中でない時)すると開く、
+     その戦闘/探索で流れた全行を読み返せる下からせり出すパネル。ボックス本体と同じ和風意匠を流用 ===== */
+  .log-history-overlay {
+    position: fixed; inset: 0; z-index: 150; display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(10,8,6,0.6);
+  }
+  .log-history-panel {
+    width: 100%; max-width: 480px; max-height: 78vh; max-height: 78dvh;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, rgba(46,37,26,0.97) 0%, rgba(24,24,24,0.97) 100%);
+    border: 2px solid #4b3728; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: inset 0 0 0 2px #d9c49a, 0 -8px 20px rgba(0,0,0,0.45);
+    animation: logHistorySlideUp 0.18s ease-out;
+  }
+  @keyframes logHistorySlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .log-history-header {
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    padding: 0.7rem 1rem; border-bottom: 1px solid rgba(217,196,154,0.3);
+    color: #ead8ab; font-weight: 700; font-size: 0.95rem;
+  }
+  .log-history-close {
+    background: none; border: none; color: #ead8ab; font-size: 1.1rem;
+    padding: 0.2rem 0.6rem; line-height: 1; cursor: pointer;
+  }
+  .log-history-content {
+    overflow-y: auto; padding: 0.8rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .log-history-content p {
+    margin: 0; color: #fff; font-size: 0.78rem; line-height: 1.5;
+    text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
+  }
   /* 吹き出しセリフ専用の全画面固定レイヤー。party-bar内蔵ではなく画面最前面の独立レイヤーに
      実測位置(JSでleft/topを設定)で配置することで、探索画面の文字などに埋もれないようにする */
   #speechBubbleLayer { position: fixed; inset: 0; z-index: 70; pointer-events: none; transform: translateZ(0); }

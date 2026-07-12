@@ -568,7 +568,38 @@ function blog(msg) {
   battleLogLines.push(msg);
   appendTypewriterLog("battleLog", "battleLogArrow", msg);
 }
-document.getElementById("battleLog").onclick = () => { [...activeLogFinishers].forEach((fn) => fn()); };
-document.getElementById("dungeonLog").onclick = () => { [...activeLogFinishers].forEach((fn) => fn()); };
+// ログ全履歴の振り返り画面。#dungeonLog/#battleLogは表示領域の都合で直近数行しかDOMに残らないが、
+// battleLogLines/dungeonLogLines自体は戦闘/遠征が始まってから今までの全行を(枝刈りせず)保持しているため、
+// それをそのまま流し込むだけで実装できる
+function showLogHistory(lines) {
+  const content = document.getElementById("logHistoryContent");
+  content.innerHTML = "";
+  lines.forEach((msg) => {
+    const p = document.createElement("p");
+    p.textContent = msg;
+    content.appendChild(p);
+  });
+  document.getElementById("logHistoryOverlay").style.display = "flex";
+  content.scrollTop = content.scrollHeight; // 開いた時点で最新行が見える位置にしておく
+}
+function hideLogHistory() {
+  document.getElementById("logHistoryOverlay").style.display = "none";
+}
+document.getElementById("logHistoryCloseBtn").onclick = hideLogHistory;
+// パネル自体のタップは閉じない(スクロール操作を邪魔しない)よう、背景(オーバーレイ自身)への
+// タップだけを閉じる条件にする
+document.getElementById("logHistoryOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "logHistoryOverlay") hideLogHistory();
+});
+// テキストボックスのタップは、文字送り中なら従来通りその場でスキップ、文字送り中でなければ
+// 全履歴の振り返り画面を開く(2つの役割を同じタップ操作に自然に振り分ける)
+document.getElementById("battleLog").onclick = () => {
+  if (activeLogFinishers.size > 0) { [...activeLogFinishers].forEach((fn) => fn()); return; }
+  showLogHistory(battleLogLines);
+};
+document.getElementById("dungeonLog").onclick = () => {
+  if (activeLogFinishers.size > 0) { [...activeLogFinishers].forEach((fn) => fn()); return; }
+  showLogHistory(dungeonLogLines);
+};
 
 // 戦闘中に「逃げた」(fleeState==="fled")キャラは、生きていても以後この戦闘には参加しない
