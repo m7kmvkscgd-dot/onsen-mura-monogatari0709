@@ -111,8 +111,8 @@ function renderBattleScreen() {
       <div class="enemy-name">${e.label}</div>
       <div style="position:relative;">
         <img src="${e.image}" alt="${e.label}">
-        ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">${ICONS.flying}</span>` : ""}
-        ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">${ICONS.questTarget}</span>` : ""}
+        ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>` : ""}
+        ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>` : ""}
         ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       </div>
       <div class="hp-with-warning">
