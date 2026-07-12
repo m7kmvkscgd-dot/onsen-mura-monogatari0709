@@ -52,8 +52,9 @@ const CLASS_ATTACK_VFX = {
   onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
   hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
   gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
-  // 狩人「鷹を呼ぶ」の追撃専用エントリ。侍の通常斬撃素材を流用しつつ、サイズだけ半分以下(454→200)に縮小する
-  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 200 } },
+  // 狩人「鷹を呼ぶ」の追撃専用エントリ。侍の通常斬撃素材を流用しつつ、サイズだけ半分以下(454→200)に
+  // 縮小した後、ユーザー指示でさらに1.5倍(200→300)に拡大した
+  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 300 } },
 };
 // 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
 // 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
@@ -87,10 +88,20 @@ function playAttackVfx(targetId, actor, kind) {
 // 狩人「鷹を呼ぶ」の追撃演出: 🦅の絵文字が狩人の位置から対象へ飛んでいき、着弾で侍の通常攻撃と同じ
 // 斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで元の位置に戻って消える。
 // (見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
-const HAWK_PROJECTILE_MS = 275; // ユーザー指示で速度0.8倍(220ms→220/0.8=275ms)
+const HAWK_PROJECTILE_MS = 306; // ユーザー指示で速度0.8倍(220ms→275ms)からさらに10%減速(275/0.9=305.5→306ms)
 const HAWK_HITSTOP_MS = 80; // 着弾後、Uターンを始めるまでの一呼吸
 function playHawkAttackVfx(hunterActor, targetId) {
   const strike = () => {
+    // 通常の被ダメージ揺れを対象に発生させる。着弾はrenderBattleScreen()から数百ms遅れて
+    // 非同期に起きる(既に次のターンに進んでいる可能性がある)ため、再描画は挟まずカード要素へ
+    // 直接shakeClassFor相当のクラスを付け外しする(popupOn自体はentity側の状態記録のみ)
+    popupOn(targetId, "", "dmg", "normal");
+    const card = findVisibleCard(targetId);
+    if (card) {
+      const shakeClasses = shakeClassFor(findVfxEntity(targetId)).trim().split(" ").filter(Boolean);
+      card.classList.add(...shakeClasses);
+      setTimeout(() => card.classList.remove(...shakeClasses), 400);
+    }
     playAttackVfx(targetId, { classId: "hawk" }, "normal");
     playSfx(attackSfxFor("samurai"));
   };
