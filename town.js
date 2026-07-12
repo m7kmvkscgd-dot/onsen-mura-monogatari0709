@@ -1697,6 +1697,11 @@ function equipRowHtml(classId, slot, slotLabel) {
     return `<div class="equip-row"><div class="equip-row-info"><strong>${slotIcon}${slotLabel}: ${ownedName}</strong> <span class="desc">最大強化済み</span></div></div>`;
   }
   const next = tiers[ownedTier];
+  // 装備は上位を買うと下位から加算ではなく差し替えになるため(computeEquipBonus参照)、
+  // next.bonusをそのまま表示すると「実際に増える量」より大きく見えてしまう(2回目以降の購入で常に発生)。
+  // 現在所持ぶんのbonusとの差分を実際の増分として表示する
+  const currentBonus = ownedTier > 0 ? tiers[ownedTier - 1].bonus : 0;
+  const gain = next.bonus - currentBonus;
   const statLabel = next.statKey === "mag" ? "魔力" : next.statKey === "def" ? "防御力" : "攻撃力";
   const levelOk = classHasReachedLevel(state.roster, classId, next.level);
   const goldOk = state.gold >= next.price;
@@ -1707,7 +1712,7 @@ function equipRowHtml(classId, slot, slotLabel) {
     <div class="equip-row">
       <div class="equip-row-info">
         <strong>${slotIcon}${slotLabel}: ${ownedName} → ${next.name}</strong>
-        <span class="desc">${statLabel}+${next.bonus}${mpNote} ${!levelOk ? `/ ${reason}` : ""}</span>
+        <span class="desc">${statLabel}+${gain}${mpNote} ${!levelOk ? `/ ${reason}` : ""}</span>
       </div>
       <button class="big" data-class="${classId}" data-slot="${slot}" ${disabled ? "disabled" : ""}>${next.price}G</button>
     </div>
