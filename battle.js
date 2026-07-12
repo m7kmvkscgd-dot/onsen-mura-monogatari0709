@@ -247,9 +247,12 @@ function processNext() {
       return;
     }
     setTimeout(() => {
-      // 大技サイクル: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、を繰り返す
+      // 大技サイクル: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、を繰り返す。
+      // 毒弱点②(ENEMY_WEAKNESS)を持つ敵は、毒状態の間は予告も発動もできず通常攻撃のみになる
+      // (サイクルのカウント自体は進め続け、毒が切れれば続きから再開する)
       const cyclePos = (actor.bigAttackCounter || 0) % BIG_ATTACK_CYCLE_LENGTH;
-      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1) {
+      const poisonBlocksBigAttack = (actor.poison || 0) > 0 && !!enemyWeaknessType(actor, "poison") && enemyWeaknessType(actor, "poison").tier === 2;
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = false;
         actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
         blog(`${actor.label}が大技を放った！`);
@@ -293,7 +296,7 @@ function processNext() {
         }, 500);
         return;
       }
-      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2) {
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = true;
         blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
         triggerWarningFlash();

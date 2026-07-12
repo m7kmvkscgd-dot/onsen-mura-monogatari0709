@@ -311,6 +311,29 @@
   .build-complete-effect { font-size: 0.82rem; color: var(--dw-body-color); margin-top: 0.7rem; line-height: 1.6; }
   .build-complete-effect div + div { margin-top: 0.15rem; }
   #buildCompleteCloseBtn { margin-top: 1rem; width: 100%; }
+  /* ============ 図鑑のモンスター詳細モーダル ============
+     最初の職業選びカルーセル(.first-char-*)と同じ「左右矢印+ドット無し送り」の操作感を流用し、
+     .first-char-arrowはそのまま再利用する(丸ボタンの見た目に画面依存のCSSが無いため) */
+  .bestiary-detail-overlay {
+    position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+    background: rgba(10,8,6,0.65); padding: 1rem;
+  }
+  .bestiary-detail-panel { position: relative; width: 100%; max-width: 360px; max-height: 88vh; overflow-y: auto; }
+  .bestiary-detail-close {
+    position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: rgba(20,24,27,0.7); color: var(--text); font-size: 1.1rem; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 1;
+  }
+  .bestiary-detail-close:active { transform: scale(0.9); }
+  .bestiary-detail-photo-wrap { position: relative; width: 100%; max-width: 220px; margin: 0.4rem auto 0.8rem; }
+  .bestiary-detail-photo {
+    display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain;
+    border-radius: var(--radius-lg); border: 2px solid var(--dw-card-border); background: #1c2026;
+  }
+  .bestiary-detail-name { font-size: 1.2rem; font-weight: 800; color: var(--dw-title-color); text-align: center; margin-bottom: 0.5rem; }
+  .bestiary-detail-body { font-size: 0.82rem; color: var(--dw-body-color); line-height: 1.7; text-align: center; }
+  .bestiary-detail-body .weakness-line { color: #9fd8ff; margin-top: 0.5rem; }
+  .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
   /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能だけ最初から展開しておき、
      未解放は見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
   .facility-group-heading { cursor: pointer; display: flex; align-items: center; color: var(--dw-caption-color); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }

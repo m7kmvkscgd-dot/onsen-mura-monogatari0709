@@ -284,6 +284,11 @@ function effectiveStat(entity, key) {
   if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
   // 出血中は常時攻撃力-10%(敵/味方どちらにも適用)
   if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
+  // 出血弱点②(ENEMY_WEAKNESS)を持つ敵は、出血中さらに防御力-30%が乗る
+  if (key === "def" && (entity.bleed || 0) > 0) {
+    const w = enemyWeaknessType(entity, "bleed");
+    if (w && w.tier === 2) result = Math.max(1, Math.round(result * 0.7));
+  }
   // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
   if (entity.statMods && entity.statMods.length) {
     let mult = 1;
@@ -354,18 +359,30 @@ function blockedByOmamoriIzanagi(entity) {
   g.used = true;
   return true;
 }
+// 図鑑の弱点システム(ENEMY_WEAKNESS、data.js)用ヘルパー。指定した種類(bleed/poison/burn)の
+// 弱点を持つ敵ならその定義を、持たなければnullを返す
+function enemyWeaknessType(entity, type) {
+  const w = ENEMY_WEAKNESS[entity.id];
+  return w && w.type === type ? w : null;
+}
+const SPIRIT_WEAKNESS_DMG_MULT = 1.5; // 霊力弱点(ENEMY_WEAKNESS type:"spirit")を持つ敵の被ダメージ倍率
 const POISON_MAX_STACKS = 6; // OP化を防ぐための毒蓄積の上限
 // 毒を付与する。重ね掛けは加算ではなく現在値との大きい方に上書きする(無限に積み上がらないように)
 function applyPoison(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;
   entity.poison = Math.min(POISON_MAX_STACKS, Math.max(entity.poison || 0, stacks));
+  // 毒弱点②: 詠唱・予告中(大技の構え)に毒を受けると、その大技は中断される
+  const w = enemyWeaknessType(entity, "poison");
+  if (w && w.tier === 2 && entity.bigAttackPending) entity.bigAttackPending = false;
 }
-// 毒: 自分のターンが来るたびに蓄積値分のダメージを受け、蓄積値が1減る(ダーケストダンジョン方式)
+// 毒: 自分のターンが来るたびに蓄積値分のダメージを受け、蓄積値が1減る(ダーケストダンジョン方式)。
+// 毒弱点(bleed/burnと同じくENEMY_WEAKNESS)を持つ敵はダメージ2倍(tier1/2共通)
 function tickPoison(entity, log) {
   if (!entity.poison || entity.poison <= 0) return 0;
-  const dmg = Math.min(entity.hp, entity.poison);
-  entity.hp = Math.max(0, entity.hp - entity.poison);
+  const weak = !!enemyWeaknessType(entity, "poison");
+  const dmg = Math.min(entity.hp, Math.round(entity.poison * (weak ? 2 : 1)));
+  entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は毒で${dmg}ダメージ！`);
   entity.poison = Math.max(0, entity.poison - 1);
   return dmg;
@@ -386,10 +403,12 @@ function applyBleed(entity, stacks) {
   if (blockedByOmamoriIzanagi(entity)) return;
   entity.bleed = Math.min(BLEED_MAX_STACKS, (entity.bleed || 0) + stacks);
 }
+// 出血弱点を持つ敵はダメージ2倍(tier1/2共通)。防御力低下(tier2)はeffectiveStat側で別途処理する
 function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
-  const dmg = Math.min(entity.hp, entity.bleed);
-  entity.hp = Math.max(0, entity.hp - entity.bleed);
+  const weak = !!enemyWeaknessType(entity, "bleed");
+  const dmg = Math.min(entity.hp, Math.round(entity.bleed * (weak ? 2 : 1)));
+  entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は出血で${dmg}ダメージ！`);
   entity.bleed = Math.max(0, entity.bleed - 1);
   return dmg;
@@ -440,14 +459,15 @@ function revertTransform(character) {
   character.formCooldown = 0;
   character.__preTransform = null;
 }
+// 炎上弱点を持つ敵はダメージ2倍(tier1/2共通)。tier2は「炎上が自然に消えない」ため、
+// 弱点を持たない/tier1の場合だけturnsを減らす(tier2は0にならず燃え続ける)
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
-  // 木霊・海藻童子・海藻の精など明らかな植物系の敵は、炎に弱く炎上ダメージが2倍になる
-  const plantMult = entity.isPlant ? 2 : 1;
-  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * plantMult));
+  const w = enemyWeaknessType(entity, "burn");
+  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * (w ? 2 : 1)));
   entity.hp = Math.max(0, entity.hp - dmg);
-  log(`${entity.label}は炎上で${dmg}ダメージ！${entity.isPlant ? "(植物は炎に弱い！)" : ""}`);
-  entity.burnTurns--;
+  log(`${entity.label}は炎上で${dmg}ダメージ！${w ? "(炎上は弱点！)" : ""}`);
+  if (!(w && w.tier === 2)) entity.burnTurns--;
   return dmg;
 }
 function applyStun(entity, turns) {
@@ -1249,6 +1269,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
     actor.passives.firstAttackUsed = true;
   }
+  // 霊力弱点(ENEMY_WEAKNESS type:"spirit"): 実体を持たない敵は、通常攻撃・技問わず全ての被ダメージが1.5倍になる
+  if (enemyWeaknessType(target, "spirit")) dmg = Math.round(dmg * SPIRIT_WEAKNESS_DMG_MULT);
   // 常時発動の低HP追撃系の受動効果(暗殺術など): 対象のHPが閾値以下なら全ての攻撃にダメージ加算がかかる
   if (actor && actor.passives && actor.passives.executeBonus) {
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;

@@ -834,24 +834,30 @@ document.getElementById("partySelectOmikujiTabBtn").onclick = () => { playSfx("s
 document.getElementById("partySelectBestiaryTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("bestiary"); renderBestiaryTab(); };
 document.getElementById("partySelectBackBtnFromBestiary").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 
-// 図鑑: 遭遇済みの敵を一覧表示する。倒す必要はなく、戦闘に出現した時点で記録される(markEnemiesSeen)
+// 図鑑: 遭遇済みの敵を一覧表示する。倒す必要はなく、戦闘に出現した時点で記録される(markEnemiesSeen)。
+// 一覧は名前+サムネイルだけの簡易表示にし、タップするとモーダルで詳細(立ち絵+説明+大技+弱点)を
+// 左右送りで1体ずつ見られるようにする(showBestiaryDetail参照)
+function bestiaryOrderedIds() {
+  const allIds = Object.keys(ENEMIES);
+  const forest = allIds.filter((id) => (ENEMIES[id].stage || "forest") === "forest").sort((a, b) => ENEMIES[a].minFloor - ENEMIES[b].minFloor);
+  const coast = allIds.filter((id) => ENEMIES[id].stage === "coast").sort((a, b) => ENEMIES[a].minFloor - ENEMIES[b].minFloor);
+  return forest.concat(coast);
+}
 function renderBestiaryTab() {
   // 図鑑タブを開いた時点でNEWバッジを消す(次に新しい敵と遭遇するまで再表示しない)
   state.bestiaryLastViewedCount = (state.seenEnemyIds || []).length;
   saveState();
   document.getElementById("bestiaryNewBadge").style.display = "none";
 
-  const allIds = Object.keys(ENEMIES);
+  const orderedIds = bestiaryOrderedIds();
   const seenCount = (state.seenEnemyIds || []).length;
-  document.getElementById("bestiaryCompleteRate").textContent = `${Math.floor((seenCount / allIds.length) * 100)}%`;
-  document.getElementById("bestiaryCompleteCount").textContent = `${seenCount} / ${allIds.length}体`;
+  document.getElementById("bestiaryCompleteRate").textContent = `${Math.floor((seenCount / orderedIds.length) * 100)}%`;
+  document.getElementById("bestiaryCompleteCount").textContent = `${seenCount} / ${orderedIds.length}体`;
 
   const list = document.getElementById("bestiaryList");
   list.innerHTML = "";
   [{ stage: "forest", label: "深淵の森" }, { stage: "coast", label: "海岸" }].forEach((group) => {
-    const ids = allIds
-      .filter((id) => (ENEMIES[id].stage || "forest") === group.stage)
-      .sort((a, b) => ENEMIES[a].minFloor - ENEMIES[b].minFloor);
+    const ids = orderedIds.filter((id) => (ENEMIES[id].stage || "forest") === group.stage);
     if (ids.length === 0) return;
     const h = document.createElement("h2");
     h.style.marginTop = "1rem";
@@ -860,23 +866,55 @@ function renderBestiaryTab() {
     ids.forEach((id) => {
       const e = ENEMIES[id];
       const seen = (state.seenEnemyIds || []).includes(id);
-      const text = bestiaryTextFor(id);
-      const weakness = seen ? bestiaryWeaknessText(e) : null;
       const row = document.createElement("div");
       row.className = "roster-row";
       row.innerHTML = `
         <img src="${e.image}" style="${seen ? "" : "filter:grayscale(1) brightness(0.15);"}">
         <div class="roster-info">
           <div class="roster-name">${seen ? e.ja : "？？？"}${e.isBoss ? ` <span class="status-tag active">強敵</span>` : ""}</div>
-          <div class="roster-sub">${seen ? text.desc : "まだ遭遇していません"}</div>
-          ${seen && weakness ? `<div class="roster-sub" style="color:#9fd8ff;margin-top:0.2rem;">弱点: ${weakness}</div>` : ""}
-          ${seen ? `<div class="roster-sub" style="margin-top:0.2rem;">大技: ${text.bigAttackDesc}</div>` : ""}
+          <div class="roster-sub">${seen ? "タップで詳細を見る" : "まだ遭遇していません"}</div>
         </div>
       `;
+      row.onclick = () => showBestiaryDetail(orderedIds.indexOf(id));
       list.appendChild(row);
     });
   });
 }
+
+// ============ 図鑑モンスター詳細モーダル(左右送り) ============
+let bestiaryDetailIndex = 0;
+function showBestiaryDetail(index) {
+  bestiaryDetailIndex = index;
+  renderBestiaryDetail();
+  document.getElementById("bestiaryDetailOverlay").style.display = "flex";
+}
+function renderBestiaryDetail() {
+  const orderedIds = bestiaryOrderedIds();
+  if (bestiaryDetailIndex < 0) bestiaryDetailIndex = orderedIds.length - 1;
+  if (bestiaryDetailIndex >= orderedIds.length) bestiaryDetailIndex = 0;
+  const id = orderedIds[bestiaryDetailIndex];
+  const e = ENEMIES[id];
+  const seen = (state.seenEnemyIds || []).includes(id);
+  const img = document.getElementById("bestiaryDetailImg");
+  img.style.filter = seen ? "" : "grayscale(1) brightness(0.2)";
+  img.src = e.image;
+  document.getElementById("bestiaryDetailName").textContent = seen ? e.ja : "？？？";
+  const body = document.getElementById("bestiaryDetailBody");
+  if (!seen) {
+    body.innerHTML = `<div class="locked-line">まだ遭遇していません。深淵の森・海岸で出会うと記録されます。</div>`;
+    return;
+  }
+  const text = bestiaryTextFor(id);
+  const weaknessLine = bestiaryWeaknessLine(id);
+  body.innerHTML = `
+    <div>${text.desc}</div>
+    <div style="margin-top:0.5rem;">大技は: ${text.bigAttackDesc}</div>
+    ${weaknessLine ? `<div class="weakness-line">弱点：${weaknessLine}</div>` : ""}
+  `;
+}
+document.getElementById("bestiaryDetailPrevBtn").onclick = () => { playSfx("select"); bestiaryDetailIndex--; renderBestiaryDetail(); };
+document.getElementById("bestiaryDetailNextBtn").onclick = () => { playSfx("select"); bestiaryDetailIndex++; renderBestiaryDetail(); };
+document.getElementById("bestiaryDetailCloseBtn").onclick = () => { playSfx("select"); document.getElementById("bestiaryDetailOverlay").style.display = "none"; };
 
 function renderPartySelect() {
   playTownAreaBgm();

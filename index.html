@@ -878,6 +878,20 @@
     </div>
   </div>
 
+  <!-- 図鑑のモンスター詳細モーダル(左右送りで1体ずつ見られる) -->
+  <div class="bestiary-detail-overlay" id="bestiaryDetailOverlay" style="display:none;">
+    <div class="bestiary-detail-panel card">
+      <button class="bestiary-detail-close" id="bestiaryDetailCloseBtn">×</button>
+      <div class="bestiary-detail-photo-wrap">
+        <button class="first-char-arrow left" id="bestiaryDetailPrevBtn">‹</button>
+        <img class="bestiary-detail-photo" id="bestiaryDetailImg" src="" alt="">
+        <button class="first-char-arrow right" id="bestiaryDetailNextBtn">›</button>
+      </div>
+      <div class="bestiary-detail-name" id="bestiaryDetailName"></div>
+      <div class="bestiary-detail-body" id="bestiaryDetailBody"></div>
+    </div>
+  </div>
+
 </div>
 
 <audio id="bgmAudio" src="assets/bgm/town_bgm.mp3" loop></audio>

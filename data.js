@@ -463,7 +463,7 @@ const ENEMIES = {
     bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
   bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 4, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
-  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12, isFlying: true,
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 12,
     // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
     // 必ず全体を巻き込む(ignoreGuardian)。その代わり単体特化の大技より威力は抑えめ、通常攻撃も
     // 全体攻撃力を20%落とした代わりに、通常攻撃自体にも延焼(30%)を持たせてある
@@ -521,7 +521,7 @@ const ENEMIES = {
   dai_tengu: { id: "dai_tengu", ja: "大天狗", image: "assets/enemies/dai_tengu.png", hp: 85, atk: 27, def: 12, spd: 15, goldMin: 41, goldMax: 59, xp: 76, minFloor: 38, maxFloor: 999 },
   yamata_no_orochi: { id: "yamata_no_orochi", ja: "八岐大蛇", image: "assets/enemies/yamata_no_orochi.png", hp: 110, atk: 29, def: 14, spd: 8, goldMin: 45, goldMax: 64, xp: 82, minFloor: 38, maxFloor: 999 },
   tamamo_no_mae: { id: "tamamo_no_mae", ja: "玉藻前", image: "assets/enemies/tamamo_no_mae.png", hp: 82, atk: 28, def: 11, spd: 12, goldMin: 42, goldMax: 60, xp: 77, minFloor: 38, maxFloor: 999 },
-  giou: { id: "giou", ja: "巍王", image: "assets/enemies/giou.png", hp: 100, atk: 27, def: 15, spd: 11, goldMin: 44, goldMax: 62, xp: 80, minFloor: 38, maxFloor: 999 },
+  giou: { id: "giou", ja: "鵺王", image: "assets/enemies/giou.png", hp: 100, atk: 27, def: 15, spd: 11, goldMin: 44, goldMax: 62, xp: 80, minFloor: 38, maxFloor: 999 },
   kyubi_shin: { id: "kyubi_shin", ja: "九尾の狐(真)", image: "assets/enemies/kyubi_shin.png", hp: 95, atk: 30, def: 12, spd: 13, goldMin: 46, goldMax: 65, xp: 85, minFloor: 38, maxFloor: 999 },
   gashadokuro_shin: { id: "gashadokuro_shin", ja: "がしゃどくろ(真)", image: "assets/enemies/gashadokuro_shin.png", hp: 120, atk: 28, def: 16, spd: 8, goldMin: 47, goldMax: 66, xp: 86, minFloor: 38, maxFloor: 999 },
   yomi_no_onryo: { id: "yomi_no_onryo", ja: "黄泉の怨霊", image: "assets/enemies/yomi_no_onryo.png", hp: 88, atk: 32, def: 10, spd: 11, goldMin: 48, goldMax: 68, xp: 88, minFloor: 38, maxFloor: 999 },
@@ -759,11 +759,128 @@ function bestiaryTextFor(enemyId) {
   const t = ENEMY_BESTIARY_TEXT[enemyId] || {};
   return { desc: t.desc || "", bigAttackDesc: t.bigAttackDesc || BESTIARY_GENERIC_BIG_ATTACK_DESC };
 }
-function bestiaryWeaknessText(enemyDef) {
-  const parts = [];
-  if (enemyDef.isFlying) parts.push("飛行しており近接攻撃は当てにくいが、狩人・砲術士の遠距離攻撃なら当てやすく、命中すると撃ち落としてスタンさせることがある。");
-  if (enemyDef.isPlant) parts.push("植物系のため、炎上のダメージが通常の2倍になる。");
-  return parts.length > 0 ? parts.join(" ") : null;
+// 図鑑の弱点表示。5種類: bleed(出血🩸,獣・動物系)/poison(毒☠️,人型系)/burn(炎上🔥,植物・木系)/
+// flying(🪽,固定文言、遠距離攻撃で撃ち落とすと1ターンスタン)/spirit(霊力☯️,実体を持たない系、被ダメージ1.5倍固定・段階なし)。
+// bleed/poison/burnはtier1/2があり、tier2は追加の効果を持つ(下記WEAKNESS_TIER_EFFECT参照)。
+// 図鑑にはtierの数字自体は出さず、絵文字+個別のflavorテキストのみ表示する
+const WEAKNESS_ICON = { bleed: "🩸", poison: "☠️", burn: "🔥", flying: "🪽", spirit: "☯️" };
+const WEAKNESS_TIER_EFFECT = {
+  bleed: { 1: "出血ダメージ2倍", 2: "出血ダメージ2倍、出血中は防御力30%低下" },
+  poison: { 1: "毒ダメージ2倍", 2: "毒ダメージ2倍、毒状態になると大技が使用不能(詠唱・予告中は中断される)" },
+  burn: { 1: "炎上ダメージ2倍", 2: "炎上ダメージ2倍、炎上が自然に消えない" },
+};
+const FLYING_WEAKNESS_TEXT = "遠距離攻撃で撃ち落とすと1ターンスタンする";
+const ENEMY_WEAKNESS = {
+  // ---- 森・序盤 ----
+  yaken: { type: "bleed", tier: 2, flavor: "深手を負うと獰猛さを失い、防御が大きく低下する。" },
+  inoshishi: { type: "bleed", tier: 2, flavor: "傷を負うと勢いが鈍り、防御が大きく低下する。" },
+  dokuhebi: { type: "bleed", tier: 1, flavor: "傷口から体力を失いやすい。" },
+  oogumo: { type: "burn", tier: 1, flavor: "巣や糸は炎に弱く、激しく燃え広がる。" },
+  kodama: { type: "burn", tier: 2, flavor: "依代である木が燃えると、その力を維持できない。" },
+  kappa: { type: "poison", tier: 1, flavor: "人に近い身体を持つため、毒がよく効く。" },
+  hitotsume_kozo: { type: "poison", tier: 2, flavor: "妖力は体調に左右されやすく、毒で術が乱れる。" },
+  bake_danuki: { type: "bleed", tier: 1, flavor: "傷を負うと化ける力が不安定になる。" },
+  onibi: { type: "spirit", flavor: "霊力に非常に弱い。" },
+  kamaitachi: { type: "bleed", tier: 2, flavor: "傷を負うと俊敏さを失い、防御が大きく低下する。" },
+  // ---- 森・序盤の中ボス級 ----
+  oo_inoshishi: { type: "bleed", tier: 2, flavor: "傷を負うと勢いが鈍り、防御が大きく低下する。" },
+  q_arakuma: { type: "bleed", tier: 2, flavor: "深手を負うと獰猛さを失い、防御が大きく低下する。" },
+  q_daija: { type: "bleed", tier: 1, flavor: "傷口から体力を失いやすい。" },
+  q_oni: { type: "poison", tier: 1, flavor: "巨体でも毒の侵食には抗えない。" },
+  q_gashadokuro: { type: "spirit", flavor: "骨だけの体は霊力に強く侵される。" },
+  // ---- 森・中盤 ----
+  ochimusha: { type: "poison", tier: 2, flavor: "生前と同じ肉体を宿しているため、毒で怨念が乱れる。" },
+  kamaitachi2: { type: "bleed", tier: 2, flavor: "傷を負うと素早さを失い、防御が大きく低下する。" },
+  youko: { type: "bleed", tier: 1, flavor: "傷を負うと幻術への集中が乱れやすい。" },
+  rokurokubi: { type: "poison", tier: 2, flavor: "妖力は体調に左右されやすく、毒で術が乱れる。" },
+  yukionna: { type: "burn", tier: 2, flavor: "冷気の妖力は炎に弱く、燃え続ける炎を嫌う。" },
+  yamauba: { type: "poison", tier: 2, flavor: "老いた身体は毒に侵されると妖力を維持できない。" },
+  tsuchigumo: { type: "burn", tier: 1, flavor: "巨大な巣は炎で簡単に焼き払われる。" },
+  onryo: { type: "spirit", flavor: "実体を持たず、霊力に強く侵される。" },
+  oomukade: { type: "burn", tier: 1, flavor: "硬い甲殻を持つが、炎には弱い。" },
+  kasha: { type: "spirit", flavor: "妖火をまとう体は、霊力には抗えない。" },
+  // ---- 森・後半 ----
+  oni: { type: "poison", tier: 1, flavor: "巨体でも毒の侵食には抗えない。" },
+  karasu_tengu: { type: "flying" },
+  yamauba2: { type: "poison", tier: 2, flavor: "老いた身体は毒に侵されると妖力が乱れる。" },
+  gyuki: { type: "bleed", tier: 2, flavor: "深い傷を負うと巨体を支えられず、防御が大きく低下する。" },
+  nue: { type: "flying" },
+  wanyudo: { type: "burn", tier: 1, flavor: "燃え盛る炎は逆に制御を乱し、力を暴走させる。" },
+  gaikotsu_musha: { type: "spirit", flavor: "肉体を持たず、霊力に強く侵される。" },
+  orochi: { type: "bleed", tier: 1, flavor: "傷口から体力を失いやすい。" },
+  gashadokuro: { type: "spirit", flavor: "無数の骨が集う体は、霊力に強く侵される。" },
+  kyubi_no_kitsune: { type: "bleed", tier: 2, flavor: "傷を負うと妖力への集中が乱れ、防御が大きく低下する。" },
+  // ---- 森・終盤 ----
+  shuten_doji: { type: "poison", tier: 1, flavor: "豪胆な鬼でも、毒は確実に身体を蝕む。" },
+  ibaraki_doji: { type: "poison", tier: 1, flavor: "強靭な肉体も毒の侵食には抗えない。" },
+  dai_tengu: { type: "poison", tier: 2, flavor: "強大な妖術ほど毒の影響を受けやすい。" },
+  yamata_no_orochi: { type: "bleed", tier: 1, flavor: "巨大な身体ほど傷口から力を失いやすい。" },
+  tamamo_no_mae: { type: "bleed", tier: 2, flavor: "傷を負うと妖力への集中が乱れ、防御が大きく低下する。" },
+  giou: { type: "bleed", tier: 2, flavor: "巨体ゆえに深手を負うと動きが鈍り、防御が大きく低下する。" },
+  kyubi_shin: { type: "bleed", tier: 2, flavor: "傷を負うと妖力への集中が乱れ、防御が大きく低下する。" },
+  gashadokuro_shin: { type: "spirit", flavor: "骨だけで構成された巨体は、霊力に強く侵される。" },
+  yomi_no_onryo: { type: "spirit", flavor: "肉体を持たず、霊力に強く侵される。" },
+  kishin_rasetsuo: { type: "spirit", flavor: "鬼神の肉体も、霊力の前では無力に近い。" },
+  // ---- 森・大群系 ----
+  nurari_koumori: { type: "flying" },
+  chochin_obake: { type: "burn", tier: 1, flavor: "提灯の紙と竹は炎に弱い。" },
+  kawappa: { type: "poison", tier: 1, flavor: "子供の河童はまだ毒への耐性が乏しい。" },
+  chibi_oni: { type: "poison", tier: 1, flavor: "幼い鬼はまだ毒への耐性が弱い。" },
+  karakasa: { type: "burn", tier: 1, flavor: "古い傘の紙と骨は炎に弱い。" },
+  kogitsune: { type: "bleed", tier: 1, flavor: "幼い狐は傷を負うと動きが乱れやすい。" },
+  warashibe_ningyo: { type: "burn", tier: 1, flavor: "藁でできた体は炎に非常に弱い。" },
+  medama_kozou: { type: "poison", tier: 1, flavor: "小さな体は毒の影響を受けやすい。" },
+  // ---- 海岸・序盤 ----
+  iso_gani: { type: "bleed", tier: 2, flavor: "殻に傷が入ると、防御が大きく低下する。" },
+  yadokari: { type: "bleed", tier: 1, flavor: "殻から出た柔らかい体は傷つきやすい。" },
+  isozakana: { type: "bleed", tier: 1, flavor: "小さな体は傷を負うと弱りやすい。" },
+  kurage_bou: { type: "bleed", tier: 1, flavor: "傷つくと体液を失い、力が抜ける。" },
+  kaiyose: { type: "bleed", tier: 1, flavor: "殻の隙間から傷を負いやすい。" },
+  hama_tako: { type: "bleed", tier: 1, flavor: "柔らかい体は傷に弱い。" },
+  kaisou_douji: { type: "burn", tier: 1, flavor: "海藻の体は乾くと燃えやすい。" },
+  harifugu: { type: "bleed", tier: 1, flavor: "針の下の柔らかい体は傷に弱い。" },
+  umineko: { type: "flying" },
+  // ---- 海岸・中盤 ----
+  kaizoku_gaikotsu: { type: "spirit", flavor: "白骨の体は、霊力に強く侵される。" },
+  iso_inu: { type: "bleed", tier: 2, flavor: "傷を負うと獰猛さを失い、防御が大きく低下する。" },
+  oo_dako_1: { type: "bleed", tier: 1, flavor: "柔らかい体は傷に弱い。" },
+  iwa_gani: { type: "bleed", tier: 2, flavor: "岩のような殻も、傷が入れば防御が大きく低下する。" },
+  gyojin: { type: "poison", tier: 1, flavor: "人に近い体を持つため、毒がよく効く。" },
+  shell_slime: { type: "spirit", flavor: "液状の体は、霊力に強く侵される。" },
+  kaisou_no_sei: { type: "burn", tier: 2, flavor: "依代の海藻が燃えると、その力を維持できない。" },
+  same: { type: "bleed", tier: 2, flavor: "手負いになると狩りの精度を欠き、防御が大きく低下する。" },
+  iso_onna_1: { type: "poison", tier: 2, flavor: "妖力は体調に左右されやすく、毒で術が乱れる。" },
+  oo_kai: { type: "bleed", tier: 2, flavor: "殻を閉じる力も、傷を負えば大きく落ちる。" },
+  // ---- 海岸・後半 ----
+  umibouzu: { type: "spirit", flavor: "得体の知れない体は、霊力に強く侵される。" },
+  iso_onna_2: { type: "poison", tier: 2, flavor: "積年の妖力は毒で大きく乱れる。" },
+  iwagaki_ou: { type: "bleed", tier: 2, flavor: "長年の殻も、傷が入れば防御が大きく低下する。" },
+  umihebi: { type: "bleed", tier: 1, flavor: "傷口から体力を失いやすい。" },
+  umigumo: { type: "burn", tier: 1, flavor: "糸は炎に弱く、激しく燃え広がる。" },
+  ryuuguu_no_shisha: { type: "poison", tier: 2, flavor: "妖力は毒に大きく乱される。" },
+  oo_dako_2: { type: "bleed", tier: 1, flavor: "柔らかい体は傷に弱い。" },
+  same_bito: { type: "poison", tier: 2, flavor: "人に近い体ほど、毒の影響を強く受ける。" },
+  shinkai_no_bourei: { type: "spirit", flavor: "実体を持たず、霊力に強く侵される。" },
+  oo_kani_ou: { type: "bleed", tier: 2, flavor: "巨大な鋏も、傷が入れば防御が大きく低下する。" },
+  // ---- 海岸・終盤 ----
+  kaima_daiou: { type: "poison", tier: 1, flavor: "王としての誇りも、毒には抗えない。" },
+  youen_na_isoonna: { type: "poison", tier: 2, flavor: "妖艶な力ほど、毒に乱されやすい。" },
+  kyokai_no_oodako: { type: "bleed", tier: 1, flavor: "巨躯でも柔らかい体は傷に弱い。" },
+  oni_harifugu: { type: "bleed", tier: 1, flavor: "針の下の体は傷に弱い。" },
+  oo_kani_shougun: { type: "bleed", tier: 2, flavor: "将としての威厳も、傷を負えば防御が大きく低下する。" },
+  kairyuu_ou: { type: "bleed", tier: 1, flavor: "巨躯の龍でも、傷口から力を失う。" },
+  same_no_bujin: { type: "poison", tier: 2, flavor: "人に近い体を持つ武人ほど、毒がよく効く。" },
+  umi_no_souryo: { type: "poison", tier: 2, flavor: "人としての肉体は、毒の影響を色濃く受ける。" },
+  uzushio_no_onryou: { type: "spirit", flavor: "実体を持たず、霊力に強く侵される。" },
+  kaiyoujo_ou: { type: "poison", tier: 2, flavor: "女王としての誇り高き妖力も、毒には抗えない。" },
+};
+function enemyWeakness(enemyId) { return ENEMY_WEAKNESS[enemyId] || null; }
+// 図鑑の1行の弱点表示テキスト(絵文字込み)を組み立てる。無ければnull
+function bestiaryWeaknessLine(enemyId) {
+  const w = ENEMY_WEAKNESS[enemyId];
+  if (!w) return null;
+  if (w.type === "flying") return `${WEAKNESS_ICON.flying}${FLYING_WEAKNESS_TEXT}`;
+  return `${WEAKNESS_ICON[w.type]}${w.flavor}`;
 }
 
 // 支援物資: 道具屋ではなく出発画面(パーティ編成)で購入する消耗品。合計SUPPLY_CAP個までしか持てない
