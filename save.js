@@ -41,7 +41,11 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   delete c.criticalExpireHalfDay;
   if (c.carryingId === undefined) c.carryingId = null;
   if (c.carriedBy === undefined) c.carriedBy = null;
-  if (!c.personality) c.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  // 性格構成を変更した際(例: 「豪快」を廃止し「怖がり」に置き換え)、旧セーブに残っている
+  // 今のPERSONALITIESに存在しない性格は、DIALOGUE_LINES/PEACE_DIALOGUES/OMIKUJI_LINESの
+  // どのルックアップにも一致せず「セリフが何も出ない」不具合の原因になるため、現行の性格一覧に
+  // 含まれていなければ(未設定の場合と同様に)ランダムな新しい性格へ再割り当てして自己修復する
+  if (!c.personality || !PERSONALITIES.includes(c.personality)) c.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
   if (c.poison == null) c.poison = 0;
   if (c.burnTurns == null) c.burnTurns = 0;
   if (c.bleed == null) c.bleed = 0;
