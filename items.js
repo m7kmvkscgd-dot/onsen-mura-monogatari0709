@@ -136,7 +136,6 @@ function useSmokeBomb(actor) {
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
-  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   renderBattleScreen();

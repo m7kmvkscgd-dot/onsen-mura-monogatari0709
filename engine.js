@@ -456,9 +456,10 @@ function enterTransform(character, formKey) {
   character.isFlying = !!form.isFlying;
   character.formCooldown = 0;
 }
-// 変身解除: 任意解除・戦闘不能相当のダメージ・戦闘/野営/帰還終了、いずれの経路からも呼ばれる共通処理。
-// 変身中に得ていたデバフは解除後にも一切引き継がず、HPは変身前の値(このダメージで変身中に0になった
-// 場合でも、瀕死にはせず変身前のHPのまま)に戻す
+// 変身解除: 任意解除・戦闘不能相当のダメージ・野営開始、いずれの経路からも呼ばれる共通処理。
+// 戦闘終了(勝利/逃走/全滅)では自動解除しない仕様(ユーザー指示により撤廃)なので、戦闘をまたいで
+// 変身状態のまま探索を続けられる。変身中に得ていたデバフは解除後にも一切引き継がず、HPは変身前の値
+// (このダメージで変身中に0になった場合でも、瀕死にはせず変身前のHPのまま)に戻す
 function revertTransform(character) {
   if (!character.transformForm || !character.__preTransform) return;
   const pre = character.__preTransform;

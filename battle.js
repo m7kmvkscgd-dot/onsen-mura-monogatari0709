@@ -1022,7 +1022,6 @@ function victory() {
   playSfx("victory");
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
-  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   // 奉行所の緊急依頼(荒熊等)の討伐判定は受注制の討伐依頼とは別枠のまま維持
@@ -1150,7 +1149,6 @@ function escapeBattle() {
   pendingEnemyPick = null;
   pendingAllyPick = null;
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
-  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   fieldParty.forEach((c) => {
@@ -1172,7 +1170,6 @@ function defeat() {
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
-  revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除(通常はhandleFieldDeaths側で既に解除済みのはずの保険)
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   clearOmikujiExpeditionEffect();

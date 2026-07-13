@@ -3,6 +3,12 @@
 let currentFloor = 0;
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸)。町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効
 function currentStageName() { return currentStage === "coast" ? "海岸" : "深淵の森"; }
+// ステージごとの最高到達階層を更新する。前進(moveOneFloor)とenterDungeon(1層目突入)からのみ呼び、
+// 帰還中の後退では呼ばない(currentFloorが減る側なので自然にMath.maxで無視される想定だが、念のため明示)
+function recordMaxFloorReached() {
+  state.maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
+  if (currentFloor > (state.maxFloorReached[currentStage] || 0)) state.maxFloorReached[currentStage] = currentFloor;
+}
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
@@ -42,6 +48,7 @@ function clearOmikujiExpeditionEffect() {
 function enterDungeon() {
   currentFloor = 1;
   retreating = false;
+  recordMaxFloorReached();
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
@@ -371,6 +378,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
   } else {
     advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
     currentFloor++;
+    recordMaxFloorReached();
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
     maybeSpeakOnFloorAdvance();

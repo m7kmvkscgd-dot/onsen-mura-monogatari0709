@@ -266,8 +266,14 @@
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">タップで出発パーティに入れる(最大4人)</p>
       <div id="partySelectList"></div>
       <hr class="dw-divider">
-      <button class="big primary" id="departForestBtn">深淵の森へ出発する</button>
-      <button class="big primary" id="departCoastBtn" style="margin-top:0.5rem;">海岸へ出発する</button>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <button class="big primary" id="departForestBtn" style="flex:1;">深淵の森へ出発する</button>
+        <span id="forestMaxFloorLabel" style="font-size:12px;color:var(--dw-caption-color);white-space:nowrap;"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+        <button class="big primary" id="departCoastBtn" style="flex:1;">海岸へ出発する</button>
+        <span id="coastMaxFloorLabel" style="font-size:12px;color:var(--dw-caption-color);white-space:nowrap;"></span>
+      </div>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
       </div>
 

@@ -983,6 +983,9 @@ function renderPartySelect() {
   const bestiaryUnlocked = (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
   document.getElementById("partySelectBestiaryTabBtn").style.display = bestiaryUnlocked ? "" : "none";
   document.getElementById("bestiaryNewBadge").style.display = bestiaryUnlocked && bestiaryHasNew() ? "" : "none";
+  const maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
+  document.getElementById("forestMaxFloorLabel").textContent = maxFloorReached.forest > 0 ? `最高${maxFloorReached.forest}層` : "";
+  document.getElementById("coastMaxFloorLabel").textContent = maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "";
   showPartySelectTab("main");
   renderOmikujiTab();
   const list = document.getElementById("partySelectList");

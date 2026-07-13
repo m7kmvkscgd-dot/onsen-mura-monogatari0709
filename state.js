@@ -67,6 +67,7 @@ function defaultState() {
     seenOmikujiTab: false, // 出発準備画面の⛩️おみくじタブを開いたか
     seenCampingKitSupply: false, // 旅支度屋解禁後、出発準備画面(支度タブ=野営具の購入欄)を見たか
     seenBombSupply: false, // 火薬庫解禁後、出発準備画面(支度タブ=爆弾の購入欄)を見たか
+    maxFloorReached: { forest: 0, coast: 0 }, // ステージごとの最高到達階層(出発準備画面のボタン横に表示)。moveOneFloor()の前進時にのみ更新する
   };
 }
 
