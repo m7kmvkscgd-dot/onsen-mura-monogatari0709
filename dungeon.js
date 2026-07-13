@@ -894,11 +894,13 @@ function pickTwoRandomElements(list) {
 function maybeTriggerPeaceDialogue() {
   if (!peaceDialogueConditionsMet()) return;
   const active = fieldParty.filter((c) => c.status === "active");
-  const [charA, charB] = pickTwoRandomElements(active);
-  const candidates = peaceDialoguesForPair(charA.personality, charB.personality);
+  // この2人の並び順に意味は無い(pickTwoRandomElementsは単にランダムに2人選ぶだけ)。
+  // 実際にどちらが先に喋るかはplayPairedDialogueExchange側でentry.pAとの一致で決め直す
+  const [member1, member2] = pickTwoRandomElements(active);
+  const candidates = peaceDialoguesForPair(member1.personality, member2.personality);
   if (candidates.length === 0) return;
   const entry = candidates[Math.floor(Math.random() * candidates.length)];
-  if (playPairedDialogueExchange(charA, charB, entry, "peace")) peaceDialogueShown = true;
+  if (playPairedDialogueExchange(member1, member2, entry, "peace")) peaceDialogueShown = true;
 }
 
 // 財宝発見時、量に応じて4段階(ごくわずか/少量/中量/大量)のイラストを画面中央に一瞬表示する

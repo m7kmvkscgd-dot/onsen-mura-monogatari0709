@@ -372,17 +372,22 @@ function speakExplicitLine(speaker, text, category, ignoreMutex) {
   renderVfxFor(speaker.id);
   return true;
 }
-// A→固定の間→Bの順で喋らせる2人掛け合い共通処理。Aの発言は通常どおりミューテックスを尊重し
-// (他の誰かが喋っている最中なら不発になる)、Bの発言は「Aとの自然な会話」としてミューテックスを
-// 無視して重ねて表示する(ユーザー指示: Aの吹き出し表示中にBが続けて喋ることで実際の会話に見せる)。
-// entryは{pA, pB, lineA, lineB}形式(PEACE_DIALOGUESの1エントリ)を想定し、charA/charBの実際の
-// 性格とpA/pBを突き合わせてどちらがlineA/lineBを言うか決める。Aが発言できた場合にtrueを返す
-const PAIRED_DIALOGUE_GAP_MS = 1500; // Aが喋ってからBが喋るまでの固定の間(ユーザー指示で1.5秒固定)
-function playPairedDialogueExchange(charA, charB, entry, category) {
-  const aLine = entry.pA === charA.personality ? entry.lineA : entry.lineB;
-  const bLine = entry.pA === charA.personality ? entry.lineB : entry.lineA;
-  if (!speakExplicitLine(charA, aLine, category)) return false;
-  setTimeout(() => { speakExplicitLine(charB, bLine, category, true); }, PAIRED_DIALOGUE_GAP_MS);
+// lineA→固定の間→lineBの順で喋らせる2人掛け合い共通処理。entryの{pA, pB, lineA, lineB}は
+// 「pAの性格を持つ側がlineA(問いかけ)を先に、pBの性格を持つ側がlineB(返答)を後に言う」という
+// 順序が固定の会話文なので、呼び出し側から渡される2人(member1/member2)の並び順には依存せず、
+// 必ずpAと性格が一致する方をlineAの話者(先に喋る)、もう一方をlineBの話者(後に喋る)に固定する。
+// (以前はmember1を無条件で先に喋らせていたため、member1の性格がpB側と一致した時に
+// 返答(lineB)が問いかけ(lineA)より先に表示される逆転が起きていた不具合の修正)
+// 先に喋る側の発言は通常どおりミューテックスを尊重し(他の誰かが喋っている最中なら不発になる)、
+// 後に喋る側は「相手との自然な会話」としてミューテックスを無視して重ねて表示する
+// (ユーザー指示: 先の吹き出し表示中に後の側が続けて喋ることで実際の会話に見せる)。
+// 先に喋る側が発言できた場合にtrueを返す
+const PAIRED_DIALOGUE_GAP_MS = 2000; // 先の発言から後の発言までの固定の間(ユーザー指示で2秒固定)
+function playPairedDialogueExchange(member1, member2, entry, category) {
+  const speaksFirst = entry.pA === member1.personality ? member1 : member2;
+  const speaksSecond = speaksFirst === member1 ? member2 : member1;
+  if (!speakExplicitLine(speaksFirst, entry.lineA, category)) return false;
+  setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, PAIRED_DIALOGUE_GAP_MS);
   return true;
 }
 
