@@ -207,7 +207,7 @@
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
      地味な一覧だった) */
   .first-char-carousel { display: flex; flex-direction: column; align-items: center; }
-  .first-char-photo-wrap { position: relative; width: 100%; max-width: 300px; margin: 0 auto 0.7rem; }
+  .first-char-photo-wrap { position: relative; width: 100%; max-width: 220px; margin: 0 auto 0.7rem; }
   .first-char-photo {
     display: block; width: 100%; aspect-ratio: 4 / 3.3; object-fit: cover; object-position: top;
     border-radius: var(--radius-lg); border: 2px solid var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,0.55);

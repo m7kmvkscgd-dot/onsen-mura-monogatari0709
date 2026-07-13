@@ -1775,7 +1775,9 @@ function showBuildCompleteForUpgrade(stateKey, newLevel, deltaLines) {
 // 職業解放のお知らせ(からくり屋敷/火薬庫/神社/道場初回建築の代わりに出す)
 function showClassUnlockCelebration(classId) {
   const c = CLASSES[classId];
-  showBuildCompleteOverlay(null, "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"], c.image);
+  // CLASSES[classId].imageは胸から上のバストアップ立ち絵なので、足元まで写る全身透過絵
+  // (CLASS_STATUS_PORTRAIT、本来はステータス詳細画面専用)をこの演出だけ使い回す
+  showBuildCompleteOverlay(null, "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"], CLASS_STATUS_PORTRAIT[classId]);
 }
 function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
   const built = (state[stateKey] || 0) >= 1;
