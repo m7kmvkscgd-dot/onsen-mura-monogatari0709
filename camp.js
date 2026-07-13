@@ -242,8 +242,7 @@ function finishCamping() {
     });
     fieldParty.forEach((c) => { if (c.status === "active") { useCampRest(c); clearOnsenBuff(c); } });
     // 平和な掛け合いは通常「1回の遠征につき1回まで」だが、野営を挟んだ場合はユーザー指示により
-    // 例外的にリセットし、この後もう一度条件(1戦目勝利済み・HP/ストレス等)を満たせば再度発生できるようにする。
-    // peaceFirstBattleWon/peaceBattleCountはリセットしない(「1戦目に勝利済み」自体は野営を挟んでも変わらないため)
+    // 例外的にリセットし、この後もう一度条件(HP/ストレス等)を満たせば再度発生できるようにする。
     peaceDialogueShown = false;
     saveState();
     showCampRestSummary(beforeSnapshot, () => {
