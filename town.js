@@ -1273,10 +1273,20 @@ function showDepartConfirm(stage) {
     const c = getRosterChar(id);
     if (!c) return;
     const c2 = CLASSES[c.classId];
+    const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+    const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const row = document.createElement("div");
     row.className = "card";
     row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
-    row.innerHTML = `<img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;"><span>${c.name}(${c2.ja} Lv${c.level})</span>`;
+    row.innerHTML = `
+      <img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})</div>
+        <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
+        ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
+        <div style="font-size:13px;color:var(--dw-caption-color);margin-top:0.15rem;">HP ${c.hp}/${c.maxHp}${c.maxMp > 0 ? `　MP ${c.mp}/${c.maxMp}` : ""}　ストレス ${c.fatigue || 0}</div>
+      </div>
+    `;
     list.appendChild(row);
   });
   document.getElementById("departConfirmOverlay").style.display = "block";
