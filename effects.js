@@ -85,6 +85,21 @@ function playAttackVfx(targetId, actor, kind) {
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
 }
+// かばう反撃(会心の返し)の演出。ダメージ計算自体はengine.js側で敵の攻撃と同時に処理されているが、
+// 見た目上は「敵の攻撃を受ける→一呼吸置いてから槍士が実際に反撃する」という2段構えに分けたいという
+// ユーザー指示のため、呼び出し元(battle.js)で敵の攻撃演出を出した直後にこの関数を呼び、
+// GUARD_COUNTER_DELAY_MS(0.5秒)待ってから槍士側の攻撃VFX/SE/ダメージ揺れをまとめて再生する。
+// onDoneは演出が一通り終わった後に呼ぶ(呼び出し元で次のターンへ進める処理を渡す)
+const GUARD_COUNTER_DELAY_MS = 500;
+function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
+  setTimeout(() => {
+    popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
+    playSfx(attackSfxFor(spearman.classId));
+    renderBattleScreen();
+    playAttackVfx(enemy.instanceId, spearman, "normal");
+    setTimeout(onDone, 500);
+  }, GUARD_COUNTER_DELAY_MS);
+}
 // 狩人「鷹を呼ぶ」の追撃演出: 鷹のイラスト(assets/vfx/hawk.png)が狩人の位置から対象へ飛んでいき、
 // 着弾で侍の通常攻撃と同じ斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで
 // 元の位置に戻って消える。(見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)

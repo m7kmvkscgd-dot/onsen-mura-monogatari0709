@@ -291,10 +291,14 @@ function processNext() {
         alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
         handleFieldDeaths();
         renderBattleScreen();
-        setTimeout(() => {
-          battle.orderIndex++;
-          processNext();
-        }, 500);
+        const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
+        const bigCounterResult = results.find((r) => r.guardCounterDmg);
+        if (bigCounterResult) {
+          // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+          playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
+        } else {
+          setTimeout(advanceTurnAfterBig, 500);
+        }
         return;
       }
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
@@ -316,10 +320,13 @@ function processNext() {
       }
       handleFieldDeaths();
       renderBattleScreen();
-      setTimeout(() => {
-        battle.orderIndex++;
-        processNext();
-      }, 500);
+      const advanceTurn = () => { battle.orderIndex++; processNext(); };
+      if (result && result.guardCounterDmg) {
+        // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+        playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
+      } else {
+        setTimeout(advanceTurn, 500);
+      }
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }

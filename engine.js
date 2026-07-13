@@ -1505,12 +1505,15 @@ function onEvadeSuccess(target) {
 }
 // かばうが敵の攻撃を防いだ瞬間に発動する槍士のスキルツリー効果(会心の返し/居合の構え/心眼)。
 // enemyAttack/enemyBigAttackどちらの「target.guarding」消費ブロックからも同じ処理を呼べるよう共通化した
+// 戻り値: 会心の返し(guardCounter)が実際に発動した場合はそのダメージ量、発動しなければnull。
+// 呼び出し元(battle.js)がこの値を見て、敵の攻撃演出の少し後に反撃の演出を差し込めるようにするため
 function handleGuardSynergyPassives(target, enemy, log) {
-  if (!target.passives || target.hp <= 0) return;
+  if (!target.passives || target.hp <= 0) return null;
   if (target.passives.guardCritCounter) target.guaranteedCritNext = true;
   if (target.passives.guardMpRefund) target.mp = Math.min(target.maxMp, target.mp + 1);
+  let counterDmg = null;
   if (target.passives.guardCounter && enemy.hp > 0) {
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
+    counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     log(`${target.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
   }
@@ -1520,6 +1523,7 @@ function handleGuardSynergyPassives(target, enemy, log) {
     target.__allies.forEach((c) => { if (c.status === "active") applyStatMod(c, "atk", 1 + target.passives.guardPartyAtkBuff, 3); });
     log(`${target.label}の気迫が味方を鼓舞した！`);
   }
+  return counterDmg;
 }
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
@@ -1547,7 +1551,7 @@ function enemyAttack(enemy, targets, log) {
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
-  if (suffix === "(かばう)") handleGuardSynergyPassives(target, enemy, log);
+  const guardCounterDmg = suffix === "(かばう)" ? handleGuardSynergyPassives(target, enemy, log) : null;
   // 瀕死になった一撃は、既にHPが減っていて実際のダメージ量(dmg)が小さくても、
   // 気絶するという出来事自体が最大級のストレスになるはずなので、その場合はratio=1.0扱いで計算する
   const wentDown = target.hp <= 0;
@@ -1563,7 +1567,7 @@ function enemyAttack(enemy, targets, log) {
       resolveDebuffEffect(target, enemy.onHitInflict.type, enemy.onHitInflict, log);
     }
   }
-  return { target, dmg, hit: true };
+  return { target, dmg, hit: true, guardCounterDmg };
 }
 
 // paramsにturnsMin/turnsMaxがあれば範囲内でランダムなターン数を、無ければ固定のturns(既定3)を返す
@@ -1631,7 +1635,7 @@ function enemyBigAttack(enemy, targets, log) {
       suffix = "(かばう)";
     }
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
-    if (suffix === "(かばう)") handleGuardSynergyPassives(target, enemy, log);
+    const guardCounterDmg = suffix === "(かばう)" ? handleGuardSynergyPassives(target, enemy, log) : null;
     const wentDown = target.hp <= 0;
     target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
     // 命中した対象ごとに独立してデバフ判定する(戦闘不能になった相手には付けない)
@@ -1643,7 +1647,7 @@ function enemyBigAttack(enemy, targets, log) {
         resolveDebuffEffect(target, debuffType, {}, log);
       }
     }
-    return { target, dmg, hit: true };
+    return { target, dmg, hit: true, guardCounterDmg };
   });
 }
 
