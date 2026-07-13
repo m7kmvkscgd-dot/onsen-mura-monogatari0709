@@ -425,8 +425,8 @@ function maybeSpeakOnCrit(actor, wasCrit) {
   }, 500);
 }
 // 槍士「かばう」使用時の一言(assets/dialogues/dialogue_guard.txt、単独発言型)。
-// 30%の確率で、かばったキャラ本人が自分の性格の持ちセリフを1つ発言する
-const GUARD_DIALOGUE_CHANCE = 0.3;
+// 20%の確率で、かばったキャラ本人が自分の性格の持ちセリフを1つ発言する
+const GUARD_DIALOGUE_CHANCE = 0.2;
 function maybeSpeakOnGuard(actor) {
   if (Math.random() >= GUARD_DIALOGUE_CHANCE) return;
   const lines = soloDialogueLines("guard", actor.personality);
