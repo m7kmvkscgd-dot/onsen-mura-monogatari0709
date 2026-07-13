@@ -172,7 +172,8 @@ const OMIKUJI_LINES = {
 // 吹き出しセリフの発生確率。selfSkillHit/allySkillHit、selfPinch/allyPinchは同じイベントの
 // 抽選(どちらが発言するか)に使うので同じ値を共有する
 const DIALOGUE_CHANCE = {
-  critHit: 0.70, // 会心発生時のみ発動(以前は攻撃成功時に一律30%だったが、会心限定+70%に置き換えた)。発動時は自分/仲間のどちらが発言するか50%ずつ抽選
+  // 会心発生時のセリフ(旧critHit)はDIALOGUE_LINESベースから廃止し、assets/dialogues/dialogue_crit.txt +
+  // effects.js側の専用定数(CRIT_DIALOGUE_TRIGGER_CHANCE等)に置き換え済み
   normalKill: 0.25,
   allyDefeated: 0.75,
   selfHealed: 0.20,

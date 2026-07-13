@@ -391,16 +391,37 @@ function playPairedDialogueExchange(member1, member2, entry, category) {
   return true;
 }
 
-// 会心発生時の吹き出し判定(70%)。以前は攻撃成功時に一律の確率で発言していたが、
-// ユーザー指示で「会心が発生した時だけ」に置き換えた(通常攻撃/技どちらの会心でも共通)。
-// 命中させた本人か、ランダムな他の仲間のどちらかが発言する
+// 会心発生時の吹き出し判定(assets/dialogues/dialogue_crit.txt、通常攻撃/技どちらの会心でも共通)。
+// 発生条件: パーティ全員のストレスが60%以下の時のみ。会心が起きるたびCRIT_DIALOGUE_TRIGGER_CHANCE(50%)で
+// 発生の有無を抽選し、発生した場合は必ず会心を出した本人(A)がまずかけ声を発する。そこからさらに
+// CRIT_DIALOGUE_ALLY_JOIN_CHANCE(30%)でランダムな他の仲間(B)が2秒後に反応を続ける(残り70%はAのみで完結)。
+// A/Bのセリフは「特定の2人の組み合わせで固定の会話」ではなく、Aは自分の性格の持ちかけ声、Bは自分の性格の
+// 持ち反応をそれぞれ独立にランダム抽選する(soloPersonalityLines、dialogues.js参照)。
+// playPairedDialogueExchangeへは、抽選済みの2文をその場で組み立てた疑似エントリとして渡すことで、
+// 既存の「A→2秒→B、Bはミューテックス無視」という表示ロジックをそのまま流用する
+const CRIT_DIALOGUE_TRIGGER_CHANCE = 0.5;
+const CRIT_DIALOGUE_ALLY_JOIN_CHANCE = 0.3;
+const CRIT_DIALOGUE_STRESS_THRESHOLD = 60;
 function maybeSpeakOnCrit(actor, wasCrit) {
   if (!wasCrit) return;
-  if (Math.random() >= DIALOGUE_CHANCE.critHit) return;
+  const allBelowStressThreshold = fieldParty.every((c) => c.status !== "active" || (c.fatigue || 0) <= CRIT_DIALOGUE_STRESS_THRESHOLD);
+  if (!allBelowStressThreshold) return;
+  if (Math.random() >= CRIT_DIALOGUE_TRIGGER_CHANCE) return;
   setTimeout(() => {
+    const kiaiLines = soloPersonalityLines("crit", actor.personality, "A");
+    if (!kiaiLines.length) return; // 未読み込み/該当性格の持ちセリフが無い場合は何も言わない
+    const kiaiLine = kiaiLines[Math.floor(Math.random() * kiaiLines.length)];
     const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
-    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allySkillHit");
-    else trySpeak(actor, "selfSkillHit");
+    if (others.length > 0 && Math.random() < CRIT_DIALOGUE_ALLY_JOIN_CHANCE) {
+      const ally = others[Math.floor(Math.random() * others.length)];
+      const reactionLines = soloPersonalityLines("crit", ally.personality, "B");
+      if (reactionLines.length > 0) {
+        const reactionLine = reactionLines[Math.floor(Math.random() * reactionLines.length)];
+        playPairedDialogueExchange(actor, ally, { pA: actor.personality, pB: ally.personality, lineA: kiaiLine, lineB: reactionLine }, "crit");
+        return;
+      }
+    }
+    speakExplicitLine(actor, kiaiLine, "crit");
   }, 500);
 }
 // 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する

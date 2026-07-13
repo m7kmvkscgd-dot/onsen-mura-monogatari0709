@@ -21,6 +21,7 @@
 
 const PAIRED_DIALOGUE_FILES = {
   peace: "assets/dialogues/dialogue_peace.txt", // 戦闘後の平和な掛け合い
+  crit: "assets/dialogues/dialogue_crit.txt", // 会心ヒット時のかけ声+仲間の反応
   // 今後追加予定: camp: "assets/dialogues/dialogue_camp.txt"(野営会話)、
   // bossPre: "assets/dialogues/dialogue_boss_pre.txt"(ボス前会話)、
   // homecoming: "assets/dialogues/dialogue_homecoming.txt"(帰還時会話)、
@@ -89,4 +90,18 @@ function pairedDialoguesForPair(categoryKey, p1, p2) {
   const store = pairedDialogueStore[categoryKey];
   if (!store) return [];
   return store.byPairKey[dialoguePairKey(p1, p2)] || [];
+}
+
+// PAIR形式のファイルだが、peaceのような「特定の2人の組み合わせで固定の1つの会話」ではなく、
+// A側・B側それぞれが実質「その性格の持ちセリフ」でしかない場合に使う(例: dialogue_crit.txt=
+// 会心ヒットのかけ声(A)+仲間の反応(B)。かけ声はA本人の性格だけで決まり、反応も相手の性格だけで決まる、
+// というデータになっている)。組み合わせの相手を問わず、指定した性格がその役割(A側/B側)に
+// 登場する全エントリからslot("A"→lineA、"B"→lineB)の文言だけを集めて返す(重複除去あり)
+function soloPersonalityLines(categoryKey, personality, slot) {
+  const store = pairedDialogueStore[categoryKey];
+  if (!store) return [];
+  const key = slot === "A" ? "pA" : "pB";
+  const lineKey = slot === "A" ? "lineA" : "lineB";
+  const lines = store.list.filter((e) => e[key] === personality).map((e) => e[lineKey]);
+  return [...new Set(lines)];
 }
