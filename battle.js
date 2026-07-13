@@ -431,9 +431,8 @@ function handleFieldDeaths() {
   saveState();
 }
 
-// 変化の術は「戦闘が終わるまで」しか持続しない仕様のため、勝利/逃走(煙玉含む)/全滅どの経路でも
-// 戦闘終了の瞬間に強制的に解除する。野営開始時にも同様に呼ぶ(renderTown()側は既存のpruneActiveParty
-// 等と同じ「保険」の位置づけとして呼ばない=ここで確実に処理できているはずのため)
+// 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
+// 現在この関数を呼ぶのは野営開始時のみ(camp.js)。
 function revertAllTransforms() {
   fieldParty.forEach((c) => {
     if (c.transformForm) {
