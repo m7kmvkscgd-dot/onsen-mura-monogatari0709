@@ -801,7 +801,9 @@ function renderFirstCharacterCard() {
         onClick: () => {
           const name = randomFemaleName();
           const c = createCharacter(name, classId, state.classUpgrades);
-          c.personality = FIRST_CHARACTER_PERSONALITY[classId];
+          // 職業ごとの性格固定(旧FIRST_CHARACTER_PERSONALITY)はユーザー指示でいったん廃止し、
+          // 宿屋で雇う仲間と同じくpickNonDuplicatePersonality()でランダムに割り当てる
+          c.personality = pickNonDuplicatePersonality();
           state.roster.push(c);
           state.activePartyIds = [c.id];
           saveState();
