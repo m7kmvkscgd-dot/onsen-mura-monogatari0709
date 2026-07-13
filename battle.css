@@ -176,6 +176,11 @@
     14% { box-shadow: 0 0 22px rgba(201,93,84,0.95); }
     42% { box-shadow: 0 0 17px rgba(201,93,84,0.8); }
   }
+  /* 敵の毒/出血/炎上/スタン等のデバフアイコンは、HPバーの横の別行ではなく敵イラストに重ねて
+     表示する(ユーザー指示)。イラスト下部に中央寄せで並べ、image自身のdrop-shadowと同じ
+     視認性を確保するため各アイコン側のfilter(components.css .status-icon)はそのまま活かす */
+  .enemy-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }
+  .enemy-debuff-icons:empty { display: none; }
   /* HPバーの右横に出す💢アイコン(大技構え中の対象敵だけ)。心拍と合わせて軽く拍動させる */
   .hp-with-warning { display: flex; align-items: center; gap: 4px; }
   .hp-with-warning .hpbar-track { flex: 1; }

@@ -146,12 +146,12 @@ function renderBattleScreen() {
         ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>` : ""}
         ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>` : ""}
         ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
+        <div class="enemy-debuff-icons">${statusIconsFor(e)}</div>
       </div>
       <div class="hp-with-warning">
         ${hpBarHtml(e)}
         ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending">💢</span>` : ""}
       </div>
-      <div class="status-icon-row">${statusIconsFor(e)}</div>
     `;
     if (targetable) {
       card.onclick = () => {
