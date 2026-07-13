@@ -1427,7 +1427,7 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack);
   }
   if (abilityType === "magicAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.6)), log, ABILITY_RANGE_TYPE.magicAttackAll);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.66)), log, ABILITY_RANGE_TYPE.magicAttackAll);
   }
   if (abilityType === "physicalAttackAll") {
     return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
