@@ -358,18 +358,12 @@ function processNext() {
     // 逃走準備(fleeState==="preparing")の解決はnextRound()側でラウンドの節目にまとめて行うため、
     // ここでは何もしない(このactorがここに来る時点で既に"fled"になっているか、まだ"preparing"のまま
     // 通常通り行動選択に進む=このラウンド中はまだ逃げていないことになる)
-    // 発狂中の吹き出し(このキャラの手番が来るたび50%、行動できるかどうかとは独立の判定)。
-    // 発狂だけは複数人が同時に喋ることを許すため、通常のミューテックスとは別枠のcategoryを使う
+    // 発狂中の吹き出し(このキャラの手番が来るたび50%)。発狂だけは複数人が同時に喋ることを
+    // 許すため、通常のミューテックスとは別枠のcategoryを使う。ユーザー指示により「発狂中は
+    // 行動不能になることがある」仕様は廃止したため、ここではセリフ判定のみ行い、以降は
+    // 通常通り行動選択に進む(ステータスの弱体化自体はfatigueMalusで別途かかっている)
     if (stressTier(actor.fatigue) >= 4 && Math.random() < DIALOGUE_CHANCE.breakdownPerTurn) {
       trySpeak(actor, "breakdown");
-    }
-    // 発狂(ストレス100)は完全に行動不能ではなく、50%の確率で動けない(残り50%は行動できる、ただし
-    // ステータス自体はfatigueMalusのtier4減衰(-100%)がそのままかかる)
-    if (stressTier(actor.fatigue) >= 4 && Math.random() < 0.5) {
-      blog(`${actor.label}は発狂して動けない！`);
-      battle.orderIndex++;
-      setTimeout(processNext, 500);
-      return;
     }
     if (actor.reloading) {
       actor.reloading = false;

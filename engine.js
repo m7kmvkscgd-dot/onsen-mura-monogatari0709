@@ -255,14 +255,17 @@ function statusPortraitSrc(c) {
   return characterPortraitSrc(c);
 }
 
-// ストレスによる攻撃力/防御力/素早さ/魔力の低下率。段階が上がるごとに重くなり、
-// 80〜99で半減、100(発狂)は数値上も0(=そもそも行動不能として別途扱う)
+// ストレスによる攻撃力/防御力/素早さ/魔力の低下率。stressTier(立ち絵の切り替え用、40/60/80/100の
+// 4段階)とは独立した、ユーザー指定の6段階刻み(10%ごとに+5%ずつ悪化、100%だけ突出して重い)。
+// 旧仕様にあった「発狂中は50%の確率で行動不能になる」は廃止し、常に(弱体化した状態で)行動できる
 function fatigueMalus(fatigue) {
-  const tier = stressTier(fatigue);
-  if (tier >= 4) return 1;
-  if (tier === 3) return 0.5;
-  if (tier === 2) return 0.3;
-  if (tier === 1) return 0.15;
+  const f = fatigue || 0;
+  if (f >= 100) return 0.40;
+  if (f >= 90) return 0.30;
+  if (f >= 80) return 0.25;
+  if (f >= 70) return 0.20;
+  if (f >= 60) return 0.15;
+  if (f >= 50) return 0.10;
   return 0;
 }
 

@@ -103,7 +103,7 @@ function renderDwHeader(prefix, title, onBack) {
 function statusLabel(c) {
   if (c.status === "active") {
     const base = `Lv.${c.level} ${CLASSES[c.classId].ja}`;
-    if (stressTier(c.fatigue) >= 4) return `${base}(発狂中・行動不能)`;
+    if (stressTier(c.fatigue) >= 4) return `${base}(発狂中)`;
     return base;
   }
   if (c.status === "critical") {
