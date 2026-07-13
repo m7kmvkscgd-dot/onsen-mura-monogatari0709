@@ -416,12 +416,15 @@ function renderPartyBar(elId, combatants, actingCharId) {
     // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
-      <img src="${portraitSrc}">
+      <div class="party-portrait-wrap">
+        <img src="${portraitSrc}">
+        <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
+      </div>
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
-      <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}${statusIconsFor(c)}</div>
+      <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>
     `;

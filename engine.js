@@ -78,6 +78,7 @@ function createCharacter(name, classId, classUpgrades) {
     equipBonus,
     fatigue: 0, // 0〜100。潜り続けるほど溜まり、戦闘力を下げる(町では抜けない。温泉で回復)
     guarding: false,
+    guardProtectCount: 0, // かばう構え中に身代わりになった回数。2に達したら強制的に構えを解除する
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
     status: "active", // active | critical | lost
@@ -426,6 +427,10 @@ function clearDotEffects(characters) {
 // 探索中の味方バーにもバッジが表示され続けてしまっていた不具合の修正
 function clearHawkState(characters) {
   characters.forEach((c) => { c.hawkTurnsLeft = 0; c.hawkGuardTargetId = null; c.hawkFlightActive = false; });
+}
+// かばうの構えも戦闘をまたいで持ち越さない(勝利/逃走/全滅、いずれの戦闘終了経路でも解除する)
+function clearGuardState(characters) {
+  characters.forEach((c) => { c.guarding = false; c.guardProtectCount = 0; });
 }
 
 // 忍の「変化の術」: カラス/ガマ/ヘビいずれかへの変身。ステータスは変身前(装備込み)の値にform倍率を
@@ -1423,6 +1428,7 @@ function useAbility(actor, target, abilityType, log) {
   }
   if (abilityType === "guard") {
     actor.guarding = true;
+    actor.guardProtectCount = 0;
     log(`${actor.label}は身を守る構え！`);
     return { guard: true };
   }
@@ -1488,6 +1494,9 @@ const GUARD_REDIRECT_CHANCE = 0.95;
 // 判定は身代わりの都度行うため、理論上は連続して複数人をかばい続けることもできる(65%→42%→27%...と
 // 尻すぼみに確率が下がっていく)
 const GUARD_CONTINUE_CHANCE = 0.65;
+// 構えの継続確率が65%で残っていても、次の自分のターンが来るまでに守れるのは最大2人まで
+// (3人目は守らせない)。2人目を守った時点で強制的に構えを解除する
+const GUARD_MAX_PROTECT_COUNT = 2;
 function findGuardTarget(alive) {
   const taunter = alive.find((t) => t.tauntTurns > 0);
   if (taunter) return taunter;
@@ -1550,7 +1559,8 @@ function enemyAttack(enemy, targets, log) {
   if (target.guarding) {
     rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
     if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
-    if (Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除
+    target.guardProtectCount = (target.guardProtectCount || 0) + 1;
+    if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除。ただし2人守ったら強制解除
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
@@ -1634,7 +1644,8 @@ function enemyBigAttack(enemy, targets, log) {
     if (target.guarding) {
       rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
       if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
-      if (Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除
+      target.guardProtectCount = (target.guardProtectCount || 0) + 1;
+      if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除。ただし2人守ったら強制解除
       suffix = "(かばう)";
     }
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);

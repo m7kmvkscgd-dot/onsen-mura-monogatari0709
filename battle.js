@@ -331,6 +331,9 @@ function processNext() {
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
     battle.actingId = actor.id;
+    // 自分のターンが回ってきたら、かばうの構え(と身代わり回数のカウント)は無条件でリセットする
+    actor.guarding = false;
+    actor.guardProtectCount = 0;
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
     const dot = tickTurnStartEffects(actor, blog);
@@ -1121,6 +1124,7 @@ function victory() {
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
     clearHawkState(fieldParty);
+    clearGuardState(fieldParty);
     fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     showScreen("screen-dungeon");
     renderDungeon();
@@ -1148,6 +1152,7 @@ function escapeBattle() {
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除
   clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
@@ -1169,6 +1174,7 @@ function defeat() {
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   revertAllTransforms(); // 変化の術は戦闘が終わったら強制解除(通常はhandleFieldDeaths側で既に解除済みのはずの保険)
   clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
   blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);

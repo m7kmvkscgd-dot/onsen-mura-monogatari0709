@@ -116,6 +116,10 @@
   }
   .party-member img:not(.carried-badge):not(.hawk-badge) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
+  /* 状態異常アイコンを立ち絵に重ねて表示するためのラッパー(敵カードの.enemy-debuff-iconsと同じ方式) */
+  .party-portrait-wrap { position: relative; }
+  .ally-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }
+  .ally-debuff-icons:empty { display: none; }
   /* 高さを少し太くし、黒い縁+上側だけ薄いハイライトを加えて立体感/高級感を出す
      (::afterのハイライト帯はfill/trail要素より後のスタッキングで自動的に最前面に来る) */
   .hpbar-track { background: #3a3a3a; border-radius: var(--radius-pill); height: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
