@@ -530,9 +530,17 @@ function maybeSpeakOnFloorAdvance() {
     }
   }
 }
-// entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す
+// entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す。
+// __shakeUntilの猶予(400ms)は揺れ本体のCSSアニメーション(144〜216ms)より長いため、アニメーション自体は
+// もう終わっているのにまだ「揺れ中判定」の期間が残っていることがある。この期間中にコマンドボタン押下等で
+// renderBattleScreen()が再実行されると、.enemy-card/.party-memberはinnerHTML総取っ替えで新しいDOM要素に
+// 作り直されるため、同じshakeクラスが付いた新要素にCSSアニメーションが最初から再生され、
+// 「コマンドを押すたびにイラストがちかちかする」ように見える不具合があった。1回の被弾(=__shakeUntilの値)
+// につき最初の描画だけクラスを付与し、以降の再描画では付けないようにして再生を1回きりにする
 function shakeClassFor(entity) {
   if (!entity.__shakeUntil || entity.__shakeUntil <= Date.now()) return "";
+  if (entity.__shakeRenderedFor === entity.__shakeUntil) return "";
+  entity.__shakeRenderedFor = entity.__shakeUntil;
   const intensityClass = entity.__shakeIntensity === "strong" ? "hit-shake-strong" : "hit-shake-normal";
   return ` hit-shake hit-flash ${intensityClass}`;
 }

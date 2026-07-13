@@ -1297,8 +1297,14 @@ function showDepartConfirm(stage) {
 document.getElementById("departForestBtn").onclick = () => showDepartConfirm("forest");
 document.getElementById("departCoastBtn").onclick = () => showDepartConfirm("coast");
 document.getElementById("departConfirmYesBtn").onclick = () => {
+  // 出発演出の途中(モーダルが閉じてからボタンが実際にdisabledになるまでの間)に連打すると
+  // startDeparture()が二重に走り、同じDOM要素(演出オーバーレイ等)を取り合って
+  // ボタンが二度と有効化されないまま固まって見える不具合があったための連打防止ガード
+  if (pendingDepartureStage == null) return;
+  const stage = pendingDepartureStage;
+  pendingDepartureStage = null;
   document.getElementById("departConfirmOverlay").style.display = "none";
-  startDeparture(pendingDepartureStage);
+  startDeparture(stage);
 };
 document.getElementById("departConfirmNoBtn").onclick = () => {
   document.getElementById("departConfirmOverlay").style.display = "none";
