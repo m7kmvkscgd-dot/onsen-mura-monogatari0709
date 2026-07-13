@@ -305,15 +305,28 @@ function renderVfxFor(targetId) {
       bubble.dataset.speechId = targetId;
       bubble.dataset.speechAt = String(speechAtSnapshot);
       layer.appendChild(bubble);
-      const fadeAnim = bubble.animate(
-        [
-          { opacity: 0, offset: 0 },
-          { opacity: 1, offset: 0.12 },
-          { opacity: 1, offset: 0.85 },
-          { opacity: 0, offset: 1 },
-        ],
-        { duration: SPEECH_BUBBLE_DURATION_MS, easing: "linear", fill: "forwards" }
-      );
+      // 会心の気合いセリフ(A側)など「力の込もった発言」は、他の吹き出しと同じふわっとしたフェードではなく、
+      // 一瞬で飛び出して弾む「ドンッ」という勢いのある登場にする(ダメージ演出と体感速度を揃える狙い)。
+      // .speech-bubbleのベース transform(中心寄せ+GPUレイヤー昇格)はWAAPIのtransformキーフレームで
+      // 丸ごと上書きされてしまうため、scaleを付け足す形で毎回同じ文字列を明示している
+      const isForceful = !!entity.__speechForceful && entity.__speechForcefulAt === speechAtSnapshot;
+      const bubbleBaseTransform = "translate(-50%, calc(-100% - 5px)) translateZ(0)";
+      const enterKeyframes = isForceful
+        ? [
+            { opacity: 0, transform: `${bubbleBaseTransform} scale(0.4)`, offset: 0 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1.22)`, offset: 0.05 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(0.92)`, offset: 0.09 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1)`, offset: 0.14 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1)`, offset: 0.85 },
+            { opacity: 0, transform: `${bubbleBaseTransform} scale(1)`, offset: 1 },
+          ]
+        : [
+            { opacity: 0, offset: 0 },
+            { opacity: 1, offset: 0.12 },
+            { opacity: 1, offset: 0.85 },
+            { opacity: 0, offset: 1 },
+          ];
+      const fadeAnim = bubble.animate(enterKeyframes, { duration: SPEECH_BUBBLE_DURATION_MS, easing: "linear", fill: "forwards" });
       const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - speechAtSnapshot);
       setTimeout(() => { fadeAnim.cancel(); bubble.remove(); }, Math.max(0, remaining));
     }
@@ -378,12 +391,17 @@ function trySpeak(speaker, category) {
 // ignoreMutex=trueの時だけ、既に誰か発言中でもミューテックス(anyoneSpeaking)を無視して表示する
 // (2人の掛け合いで、Aの吹き出し表示中にBが続けて喋る自然な会話テンポを作るために使う)。
 // 今後の野営会話/ボス前会話/帰還時会話/温泉会話も、この関数を使い回して実装できる
-function speakExplicitLine(speaker, text, category, ignoreMutex) {
+function speakExplicitLine(speaker, text, category, ignoreMutex, forceful) {
   if (!speaker || speaker.status !== "active") return false;
   if (!ignoreMutex && anyoneSpeaking()) return false;
   speaker.__speechText = text;
   speaker.__speechAt = Date.now();
   speaker.__speechCategory = category;
+  // trySpeak()は変更しない方針のため__speechForcefulを一切セットしない。trySpeak()経由の発言で
+  // 古いforcefulフラグが誤って使い回されないよう、フラグ自体に対応する__speechAtを一緒に記録し、
+  // renderVfxFor側は両者が完全一致した時だけ「力の込もった登場」を採用する
+  speaker.__speechForceful = !!forceful;
+  speaker.__speechForcefulAt = speaker.__speechAt;
   renderVfxFor(speaker.id);
   return true;
 }
@@ -403,10 +421,10 @@ function speakExplicitLine(speaker, text, category, ignoreMutex) {
 // 頻繁に起こるカテゴリは従来どおり他の発言を尊重させたいので既定のfalseのまま)
 // 先に喋る側が発言できた場合にtrueを返す
 const PAIRED_DIALOGUE_GAP_MS = 2000; // 先の発言から後の発言までの固定の間(ユーザー指示で2秒固定)
-function playPairedDialogueExchange(member1, member2, entry, category, ignoreMutexForFirst) {
+function playPairedDialogueExchange(member1, member2, entry, category, ignoreMutexForFirst, forcefulFirst) {
   const speaksFirst = entry.pA === member1.personality ? member1 : member2;
   const speaksSecond = speaksFirst === member1 ? member2 : member1;
-  if (!speakExplicitLine(speaksFirst, entry.lineA, category, ignoreMutexForFirst)) return false;
+  if (!speakExplicitLine(speaksFirst, entry.lineA, category, ignoreMutexForFirst, forcefulFirst)) return false;
   setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, PAIRED_DIALOGUE_GAP_MS);
   return true;
 }
@@ -427,6 +445,8 @@ function maybeSpeakOnCrit(actor, wasCrit) {
   const allBelowStressThreshold = fieldParty.every((c) => c.status !== "active" || (c.fatigue || 0) <= CRIT_DIALOGUE_STRESS_THRESHOLD);
   if (!allBelowStressThreshold) return;
   if (Math.random() >= CRIT_DIALOGUE_TRIGGER_CHANCE) return;
+  // Aの気合いセリフは、playCritEffects()のダメージ演出(CRIT_HITSTOP_MS後にまとめて畳み掛ける)と
+  // 同じタイミングで出す(以前は500ms遅れで表示され、ダメージ演出より体感で遅く感じられていた)
   setTimeout(() => {
     const kiaiLines = soloPersonalityLines("crit", actor.personality, "A");
     if (!kiaiLines.length) return; // 未読み込み/該当性格の持ちセリフが無い場合は何も言わない
@@ -437,12 +457,13 @@ function maybeSpeakOnCrit(actor, wasCrit) {
       const reactionLines = soloPersonalityLines("crit", ally.personality, "B");
       if (reactionLines.length > 0) {
         const reactionLine = reactionLines[Math.floor(Math.random() * reactionLines.length)];
-        playPairedDialogueExchange(actor, ally, { pA: actor.personality, pB: ally.personality, lineA: kiaiLine, lineB: reactionLine }, "crit");
+        // Aの気合い(lineA)だけ「力の込もった登場」にする。Bの相槌(lineB)は従来通りのふわっとしたフェード
+        playPairedDialogueExchange(actor, ally, { pA: actor.personality, pB: ally.personality, lineA: kiaiLine, lineB: reactionLine }, "crit", false, true);
         return;
       }
     }
-    speakExplicitLine(actor, kiaiLine, "crit");
-  }, 500);
+    speakExplicitLine(actor, kiaiLine, "crit", false, true);
+  }, CRIT_HITSTOP_MS);
 }
 // 槍士「かばう」使用時の一言(assets/dialogues/dialogue_guard.txt、単独発言型)。
 // 20%の確率で、かばったキャラ本人が自分の性格の持ちセリフを1つ発言する
