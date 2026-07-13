@@ -1351,16 +1351,28 @@ const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn
 // 受注制(同時に1件まで)。受注すると、深淵の森でtargetFloorに到達した時にcount体の群れが確定出現し、
 // 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
 const QUEST_DEFS = {
-  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 3 },
-  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "大猪の討伐", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！", rewardGold: 70 },
-  dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2 },
-  oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1 },
-  kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。", targetFloor: 4, count: 2 },
-  kappa: { emoji: "🐢", requester: "漁師・浜吉", title: "川辺の怪", text: "川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。", targetFloor: 5, count: 1 },
-  hitotsume_kozo: { emoji: "👁", requester: "寺子屋師匠・文左衛門", title: "夜道の怪影", text: "子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。", targetFloor: 6, count: 2 },
-  bake_danuki: { emoji: "🦝", requester: "旅商人・喜兵衛", title: "消えない山道", text: "山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。", targetFloor: 7, count: 1 },
-  onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。", targetFloor: 6, count: 3 },
-  kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2 },
+  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 3, tier: 1 },
+  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "大猪の討伐", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！", rewardGold: 70, tier: 1 },
+  dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2, tier: 1 },
+  oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1, tier: 1 },
+  kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。", targetFloor: 4, count: 2, tier: 1 },
+  kappa: { emoji: "🐢", requester: "漁師・浜吉", title: "川辺の怪", text: "川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。", targetFloor: 5, count: 1, tier: 1 },
+  hitotsume_kozo: { emoji: "👁", requester: "寺子屋師匠・文左衛門", title: "夜道の怪影", text: "子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。", targetFloor: 6, count: 2, tier: 1 },
+  bake_danuki: { emoji: "🦝", requester: "旅商人・喜兵衛", title: "消えない山道", text: "山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。", targetFloor: 7, count: 1, tier: 1 },
+  onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。", targetFloor: 6, count: 3, tier: 1 },
+  kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2, tier: 1 },
+  // ★2(中盤floor9-29の10種)。報酬はquestGoldReward()の式(targetFloor×QUEST_GOLD_PER_FLOOR×QUEST_REWARD_MULT)
+  // にそのまま乗るため、★1より深いtargetFloorを設定するだけで自動的に報酬・契約金も高くなる
+  ochimusha: { emoji: "🥷", requester: "旅籠「松風屋」主人・徳兵衛", title: "彷徨う鎧武者", text: "日が暮れるたび、あの鎧武者が街道に現れるんです…。旅人も寄り付かず、このままじゃ店を畳むしかありません。村の者も皆おびえております。どうか、あいつを止めてください。", targetFloor: 12, count: 2, tier: 2 },
+  kamaitachi2: { emoji: "🦦", requester: "薪拾い・権次", title: "風より速き影", text: "山へ入るたび、身体中が切り傷だらけになるんです。姿は見えねぇのに風だけが吹き抜ける…。もう年寄りには敵いません。村の暮らしも立ちゆきません。頼みます。", targetFloor: 14, count: 1, tier: 2 },
+  youko: { emoji: "🦊", requester: "庄屋・甚兵衛", title: "化け狐の誘い", text: "村の若い衆が狐火に誘われ、夜な夜な山へ消えてしまうのです。笑って帰る者もおれば、戻らぬ者もおります…。これ以上犠牲者は出したくありませぬ。どうか助けてくだされ。", targetFloor: 16, count: 1, tier: 2 },
+  rokurokubi: { emoji: "👺", requester: "呉服屋・お絹", title: "夜道に伸びる首", text: "娘が店番を終えて帰るのも命懸けです…。首の長い女が追いかけてくると皆が震えております。このままでは夜の商売もできません。安心して夜道を歩ける町に戻してください。", targetFloor: 15, count: 2, tier: 2 },
+  yukionna: { emoji: "❄️", requester: "猟師・熊蔵", title: "凍てつく山の怪", text: "山はわしらの命綱なんです。それなのに仲間が次々と凍りついて帰ってくる…。獲物も獲れず、村の蓄えも尽きそうです。どうか、あの雪女を討ってください。", targetFloor: 18, count: 1, tier: 2 },
+  yamauba: { emoji: "👵", requester: "木こり・辰吉", title: "山に潜む老婆", text: "『助けておくれ』って婆さんの声が聞こえるんです。でも近寄った者は誰一人帰っちゃこねぇ…。木こりも皆、山へ入るのを怖がっています。どうか退治してください。", targetFloor: 20, count: 1, tier: 2 },
+  tsuchigumo: { emoji: "🕷", requester: "炭焼き・留吉", title: "糸に絡む悲鳴", text: "仲間を助けに行きたいんです。でも森中が蜘蛛の糸だらけで、一歩も進めねぇ…。助けを呼ぶ声が今も聞こえるんです。どうか、あいつを退治してください。", targetFloor: 17, count: 1, tier: 2 },
+  onryo: { emoji: "👻", requester: "安養寺 住職・玄海", title: "消えぬ怨み", text: "読経を重ねても、あの怨念だけは静まりませぬ…。寺に訪れる者も怯え、夜は誰も近寄らなくなりました。どうか、この迷える魂を救ってください。", targetFloor: 19, count: 2, tier: 2 },
+  oomukade: { emoji: "🐛", requester: "飛脚・新八", title: "地を這う災厄", text: "この道が通れねぇと、荷も手紙も届けられません。仲間も毒にやられちまいました…。商人も旅人も皆困っています。どうか、街道を取り戻してください！", targetFloor: 22, count: 1, tier: 2 },
+  kasha: { emoji: "🔥", requester: "墓守・源蔵", title: "燃え走る怪車", text: "弔いの最中にまで火車が現れ、亡き人をさらっていくんです…。死んだ者くらい安らかに眠らせてやりたい。このままでは供養もできません。どうか力を貸してください。", targetFloor: 24, count: 1, tier: 2 },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
 // 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある

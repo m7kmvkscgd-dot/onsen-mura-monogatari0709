@@ -20,8 +20,9 @@ function defaultState() {
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
     magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
-    magistrateAvailableQuests: [], // 本日張り出されている依頼のid一覧(最大QUEST_BOARD_SIZE件)。受注制のため進捗は持たない
-    magistrateQuestLastShown: {}, // { questId: dayCount } 直近で張り出された日。QUEST_COOLDOWN_DAYS日は再抽選対象から外す
+    magistrateAvailableQuests: { 1: [], 2: [] }, // ティア別(★1/★2)に本日張り出されている依頼のid一覧(各最大QUEST_BOARD_SIZE件)。受注制のため進捗は持たない
+    magistrateQuestTab: 1, // 奉行所画面で選択中のティアタブ(1 or 2)
+    magistrateQuestLastShown: {}, // { questId: dayCount } 直近で張り出された日。QUEST_COOLDOWN_DAYS日は再抽選対象から外す(ティア問わず1つの辞書で共有、idが重複しないため問題ない)
     acceptedQuest: null, // 受注中の依頼。{enemyId, targetFloor, count}。同時に1件までしか受けられない
     emergencyQuest: null, // 緊急依頼(序盤ボス級の指名討伐)。進行中は{enemyId, kills, claimed}、無い時はnull
     magistrateNormalClears: 0, // 通常の討伐依頼を受け取った累計件数(EMERGENCY_QUEST_CLEAR_THRESHOLD件で緊急依頼が1件発生し、消費されて0に戻る)

@@ -1843,24 +1843,35 @@ document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); }
 // 1件目は確定、2件目/3件目はそれぞれ抽選(外れたらそこで打ち切り、3件目だけ出るような逆転はしない)。
 // 一度張り出された依頼はQUEST_COOLDOWN_DAYS日の間、再抽選の候補から外れる
 function refreshMagistrateQuestsIfNeeded() {
-  if (state.magistrateQuestDate === state.dayCount && state.magistrateAvailableQuests && state.magistrateAvailableQuests.length > 0) return;
-  const keepKey = state.acceptedQuest ? state.acceptedQuest.questKey : null;
-  const lastShown = state.magistrateQuestLastShown || {};
-  const pool = Object.keys(QUEST_DEFS).filter((id) => {
-    if (id === keepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
-    const shownDay = lastShown[id];
-    return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
-  });
-  const picked = keepKey ? [keepKey] : [];
-  const slotChances = [1.0, QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE];
-  for (let i = picked.length; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
-    const chance = slotChances[i] != null ? slotChances[i] : 1.0;
-    if (Math.random() >= chance) break;
-    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  // ★2依頼追加前のセーブ(配列形式)がまだ残っている場合の保険。save.jsのloadState()側で
+  // 通常は既に{1:[],2:[]}へ変換済みのはずだが、念のためここでも自己修復する
+  if (!state.magistrateAvailableQuests || Array.isArray(state.magistrateAvailableQuests)) {
+    state.magistrateAvailableQuests = { 1: [], 2: [] };
+    state.magistrateQuestDate = 0;
   }
-  picked.forEach((id) => { if (id !== keepKey) lastShown[id] = state.dayCount; });
+  if (state.magistrateQuestDate === state.dayCount && state.magistrateAvailableQuests[1].length > 0 && state.magistrateAvailableQuests[2].length > 0) return;
+  const keepKey = state.acceptedQuest ? state.acceptedQuest.questKey : null;
+  const keepTier = keepKey ? (QUEST_DEFS[keepKey] || {}).tier : null;
+  const lastShown = state.magistrateQuestLastShown || {};
+  const slotChances = [1.0, QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE];
+  [1, 2].forEach((tier) => {
+    const tierKeepKey = keepTier === tier ? keepKey : null;
+    const pool = Object.keys(QUEST_DEFS).filter((id) => {
+      if (QUEST_DEFS[id].tier !== tier) return false;
+      if (id === tierKeepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
+      const shownDay = lastShown[id];
+      return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
+    });
+    const picked = tierKeepKey ? [tierKeepKey] : [];
+    for (let i = picked.length; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
+      const chance = slotChances[i] != null ? slotChances[i] : 1.0;
+      if (Math.random() >= chance) break;
+      picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    picked.forEach((id) => { if (id !== tierKeepKey) lastShown[id] = state.dayCount; });
+    state.magistrateAvailableQuests[tier] = picked;
+  });
   state.magistrateQuestLastShown = lastShown;
-  state.magistrateAvailableQuests = picked;
   state.magistrateQuestDate = state.dayCount;
 }
 // 依頼の期限切れ判定。tickCriticalExpiryと同じく、実時間(絶対分数)ベースで期限を過ぎていないか
@@ -1966,7 +1977,10 @@ function renderMagistrateScreen() {
     row.appendChild(eBtn);
     list.appendChild(row);
   }
-  state.magistrateAvailableQuests.forEach((id) => {
+  const activeTab = state.magistrateQuestTab === 2 ? 2 : 1;
+  document.getElementById("magistrateTab1Btn").className = "omikuji-chip-btn" + (activeTab === 1 ? " active" : "");
+  document.getElementById("magistrateTab2Btn").className = "omikuji-chip-btn" + (activeTab === 2 ? " active" : "");
+  state.magistrateAvailableQuests[activeTab].forEach((id) => {
     const def = QUEST_DEFS[id];
     const isAccepted = state.acceptedQuest && state.acceptedQuest.questKey === id;
     const fee = questContractFee(def);
@@ -2052,6 +2066,8 @@ function claimEmergencyQuest() {
 }
 document.getElementById("magistrateBackBtnTop").onclick = () => { renderTown(); };
 document.getElementById("magistrateBackBtn").onclick = () => { renderTown(); };
+document.getElementById("magistrateTab1Btn").onclick = () => { playSfx("select"); state.magistrateQuestTab = 1; renderMagistrateScreen(); };
+document.getElementById("magistrateTab2Btn").onclick = () => { playSfx("select"); state.magistrateQuestTab = 2; renderMagistrateScreen(); };
 
 // ゲームオーバー画面の「最初から」: セーブを消してページごと再読み込みし、完全に初期状態からやり直す
 document.getElementById("gameoverRestartBtn").onclick = () => {

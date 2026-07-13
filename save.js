@@ -111,7 +111,13 @@ function loadState() {
       if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
       if (loaded.magistrateQuestDate == null) loaded.magistrateQuestDate = 0; // 旧セーブ用の初期値(依頼未生成)
-      if (loaded.magistrateAvailableQuests == null) loaded.magistrateAvailableQuests = []; // 旧セーブ用の初期値(受注制への移行に伴い名称変更)
+      // ★2依頼の追加でmagistrateAvailableQuestsが配列からティア別({1:[],2:[]})の形に変わったため、
+      // 旧セーブ(配列のまま)は空の新形式へ作り直し、magistrateQuestDateも0に戻して次回訪問時に両ティア再抽選させる
+      if (loaded.magistrateAvailableQuests == null || Array.isArray(loaded.magistrateAvailableQuests)) {
+        loaded.magistrateAvailableQuests = { 1: [], 2: [] };
+        loaded.magistrateQuestDate = 0;
+      }
+      if (loaded.magistrateQuestTab == null) loaded.magistrateQuestTab = 1; // 旧セーブ用の初期値
       if (loaded.magistrateQuestLastShown == null) loaded.magistrateQuestLastShown = {}; // 旧セーブ用の初期値
       if (loaded.acceptedQuest === undefined) loaded.acceptedQuest = null; // 旧セーブ用の初期値
       delete loaded.magistrateQuests; // 旧: 進捗を持つ配列だったが受注制への移行で不要に
