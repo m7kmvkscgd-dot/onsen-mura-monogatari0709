@@ -10,6 +10,16 @@ let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId 
 let advQuestCompleted = null; // 今回の冒険で奉行所の依頼を達成した場合{title, gold, xp}(リザルト画面用、enterDungeon()でリセット)
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 
+// ============ 戦闘後の平和な掛け合い: 探索1回ごとにリセットする状態(他の探索限定の変数と同じくstateには保存しない) ============
+let peaceBattleCount = 0; // 今回の探索で開始した戦闘の数(battle.js startBattle()でインクリメント)
+let peaceFirstBattleWon = false; // 1戦目が勝利で終わったか(battle.js victory()でセット)
+let peaceDialogueShown = false; // 今回の探索で既に平和な掛け合いを表示したか
+function resetPeaceDialogueState() {
+  peaceBattleCount = 0;
+  peaceFirstBattleWon = false;
+  peaceDialogueShown = false;
+}
+
 function applyOmikujiExpeditionStart() {
   fieldParty.forEach((c) => {
     if (c.passives) c.passives.sharedSurviveFatal = null;
@@ -41,6 +51,7 @@ function enterDungeon() {
   advXpGained = {};
   advLevelBefore = {};
   advQuestCompleted = null;
+  resetPeaceDialogueState();
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
   // dungeonLogLines(配列)を空にするだけでは前回の遠征のログ行がDOMに残ったままになる
@@ -312,6 +323,7 @@ function finishRetreat() {
   deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearOmikujiExpeditionEffect();
+  resetPeaceDialogueState();
   dlog("里に戻った。");
   // 破綻寸前パーティ救済クエスト(薬草摘み): 薬草を持ったまま無事に里へ戻れたら達成
   if (state.rescueQuestAccepted && state.rescueQuestItemObtained) {
@@ -857,7 +869,36 @@ function rollEncounter(pathBias) {
   } else {
     dlog("静かな通路だ。何も起こらなかった。");
     renderDungeon();
+    // 「すすむ」で敵と遭遇しなかった時だけ、平和な掛け合いの発生条件をチェックする(帰還中の「帰還」ボタンは対象外)
+    if (!retreating) maybeTriggerPeaceDialogue();
   }
+}
+
+// ============ 戦闘後の平和な掛け合い(トリガー判定) ============
+// 発生条件: 今回の探索で1戦目に勝利済み・まだ表示していない・パーティ全員がHP40%以上かつ
+// ストレス40%以下、を全て満たす時。呼び出し元(rollEncounter)側で「すすむ」で敵と遭遇しなかった
+// 場合に限定して呼んでいるため、ここでは条件チェックとキャラ選び・掛け合い抽選だけを行う
+function peaceDialogueConditionsMet() {
+  if (!peaceFirstBattleWon || peaceDialogueShown) return false;
+  const active = fieldParty.filter((c) => c.status === "active");
+  if (active.length < 2) return false;
+  return active.every((c) => c.maxHp > 0 && c.hp / c.maxHp >= 0.4 && (c.fatigue || 0) <= 40);
+}
+// 配列からランダムに異なる2要素を選ぶ(パーティ人数2〜4人のいずれでも動作する)
+function pickTwoRandomElements(list) {
+  const pool = [...list];
+  const first = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+  const second = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+  return [first, second];
+}
+function maybeTriggerPeaceDialogue() {
+  if (!peaceDialogueConditionsMet()) return;
+  const active = fieldParty.filter((c) => c.status === "active");
+  const [charA, charB] = pickTwoRandomElements(active);
+  const candidates = peaceDialoguesForPair(charA.personality, charB.personality);
+  if (candidates.length === 0) return;
+  const entry = candidates[Math.floor(Math.random() * candidates.length)];
+  if (playPairedDialogueExchange(charA, charB, entry, "peace")) peaceDialogueShown = true;
 }
 
 // 財宝発見時、量に応じて4段階(ごくわずか/少量/中量/大量)のイラストを画面中央に一瞬表示する

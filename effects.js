@@ -354,6 +354,38 @@ function trySpeak(speaker, category) {
   renderVfxFor(speaker.id);
   return true;
 }
+
+// ============ 新カテゴリの掛け合い会話システム(戦闘後の平和な掛け合い、他) ============
+// trySpeak()はDIALOGUE_LINES[category][personality]からランダムに1つ選ぶ仕組みのため、
+// PEACE_DIALOGUESのような「性格ペアごとに決まった1文」を明示的に喋らせる用途にはそのまま使えない。
+// trySpeak()自体は変更せず、内部の「表示を確定させる」部分(__speechText/__speechAt/__speechCategoryの
+// セット+renderVfxFor呼び出し)だけを、テキストを直接渡せる形で複製した薄いラッパー。
+// ignoreMutex=trueの時だけ、既に誰か発言中でもミューテックス(anyoneSpeaking)を無視して表示する
+// (2人の掛け合いで、Aの吹き出し表示中にBが続けて喋る自然な会話テンポを作るために使う)。
+// 今後の野営会話/ボス前会話/帰還時会話/温泉会話も、この関数を使い回して実装できる
+function speakExplicitLine(speaker, text, category, ignoreMutex) {
+  if (!speaker || speaker.status !== "active") return false;
+  if (!ignoreMutex && anyoneSpeaking()) return false;
+  speaker.__speechText = text;
+  speaker.__speechAt = Date.now();
+  speaker.__speechCategory = category;
+  renderVfxFor(speaker.id);
+  return true;
+}
+// A→固定の間→Bの順で喋らせる2人掛け合い共通処理。Aの発言は通常どおりミューテックスを尊重し
+// (他の誰かが喋っている最中なら不発になる)、Bの発言は「Aとの自然な会話」としてミューテックスを
+// 無視して重ねて表示する(ユーザー指示: Aの吹き出し表示中にBが続けて喋ることで実際の会話に見せる)。
+// entryは{pA, pB, lineA, lineB}形式(PEACE_DIALOGUESの1エントリ)を想定し、charA/charBの実際の
+// 性格とpA/pBを突き合わせてどちらがlineA/lineBを言うか決める。Aが発言できた場合にtrueを返す
+const PAIRED_DIALOGUE_GAP_MS = 1500; // Aが喋ってからBが喋るまでの固定の間(ユーザー指示で1.5秒固定)
+function playPairedDialogueExchange(charA, charB, entry, category) {
+  const aLine = entry.pA === charA.personality ? entry.lineA : entry.lineB;
+  const bLine = entry.pA === charA.personality ? entry.lineB : entry.lineA;
+  if (!speakExplicitLine(charA, aLine, category)) return false;
+  setTimeout(() => { speakExplicitLine(charB, bLine, category, true); }, PAIRED_DIALOGUE_GAP_MS);
+  return true;
+}
+
 // 会心発生時の吹き出し判定(70%)。以前は攻撃成功時に一律の確率で発言していたが、
 // ユーザー指示で「会心が発生した時だけ」に置き換えた(通常攻撃/技どちらの会心でも共通)。
 // 命中させた本人か、ランダムな他の仲間のどちらかが発言する
