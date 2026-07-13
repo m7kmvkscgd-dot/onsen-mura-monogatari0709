@@ -712,7 +712,7 @@ const CAMP_WEAPON_CARE_BATTLES = 3;
 const SKILL_TREES = {
   samurai: {
     2: {
-      left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+35%", mp: 0, passive: { firstAttackBonusMult: 0.35 } },
+      left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+40%", mp: 0, passive: { firstAttackBonusMult: 0.40 } },
       right: { name: "見切り", desc: "HPが50%以下の時、回避率+25%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, evasionAdd: 0.25 } } },
     },
     3: {
