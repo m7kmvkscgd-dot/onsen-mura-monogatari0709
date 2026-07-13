@@ -424,6 +424,15 @@ function maybeSpeakOnCrit(actor, wasCrit) {
     speakExplicitLine(actor, kiaiLine, "crit");
   }, 500);
 }
+// 槍士「かばう」使用時の一言(assets/dialogues/dialogue_guard.txt、単独発言型)。
+// 30%の確率で、かばったキャラ本人が自分の性格の持ちセリフを1つ発言する
+const GUARD_DIALOGUE_CHANCE = 0.3;
+function maybeSpeakOnGuard(actor) {
+  if (Math.random() >= GUARD_DIALOGUE_CHANCE) return;
+  const lines = soloDialogueLines("guard", actor.personality);
+  if (!lines.length) return;
+  speakExplicitLine(actor, lines[Math.floor(Math.random() * lines.length)], "guard");
+}
 // 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する
 function maybeSpeakHealed(target) {
   if (Math.random() >= DIALOGUE_CHANCE.selfHealed) return;

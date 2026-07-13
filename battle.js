@@ -796,6 +796,7 @@ function renderActionButtons(actor) {
           if (ability === "guard") {
             playSfx("guard");
             useAbility(actor, actor, "guard", blog);
+            maybeSpeakOnGuard(actor);
             renderBattleScreen();
             finishPlayerAction();
             return;

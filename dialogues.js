@@ -105,3 +105,52 @@ function soloPersonalityLines(categoryKey, personality, slot) {
   const lines = store.list.filter((e) => e[key] === personality).map((e) => e[lineKey]);
   return [...new Set(lines)];
 }
+
+// ============ 単独発言型のセリフ(ペア形式ではなく、性格ごとに1行だけ喋るカテゴリ用) ============
+// 例: かばう(槍士がかばうボタンを押した時の一言)。今後の「通常セリフ」(戦闘開始/瀕死/撃破時など、
+// 旧DIALOGUE_LINESが担っていた単独発言の各種イベント)もこの仕組みに乗せられる。
+// テキスト形式(「・」で始まらない行が性格名の見出し、以降の「・」始まりの行がその性格のセリフ、
+// 空行や見出し行の切り替わりで次の性格へ):
+//   優しい
+//   ・大丈夫だよ！
+//   ・任せて！
+//
+//   熱血
+//   ・私が壁になる！！
+//   ...
+const SOLO_DIALOGUE_FILES = {
+  guard: "assets/dialogues/dialogue_guard.txt", // 槍士「かばう」使用時の一言
+};
+const soloDialogueStore = {}; // categoryKey -> { 性格: [セリフ, ...] }
+
+function parseSoloDialogueText(raw) {
+  const lines = raw.split(/\r?\n/);
+  const result = {};
+  let currentPersonality = null;
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    if (line.startsWith("・")) {
+      if (!currentPersonality) return; // 性格見出しより前に出てきた「・」行は無視(壊れたデータ対策)
+      (result[currentPersonality] = result[currentPersonality] || []).push(line.slice(1).trim());
+    } else {
+      currentPersonality = line;
+    }
+  });
+  return result;
+}
+
+function loadSoloDialogueFile(categoryKey, path) {
+  fetch(path)
+    .then((res) => res.text())
+    .then((text) => { soloDialogueStore[categoryKey] = parseSoloDialogueText(text); })
+    .catch(() => {}); // 読み込み失敗時はそのカテゴリのセリフが出ないだけで、ゲーム全体は止めない
+}
+Object.keys(SOLO_DIALOGUE_FILES).forEach((key) => loadSoloDialogueFile(key, SOLO_DIALOGUE_FILES[key]));
+
+// 指定カテゴリ・性格に一致するセリフ候補を返す。未読み込み/該当性格が無い場合は空配列
+function soloDialogueLines(categoryKey, personality) {
+  const store = soloDialogueStore[categoryKey];
+  if (!store) return [];
+  return store[personality] || [];
+}
