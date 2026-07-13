@@ -1237,7 +1237,7 @@ function startDeparture(stage) {
     overlay.style.display = "block";
     // 揺れ/ズームの歩行アニメーションはすぐ始めるが、暗転フェードアウトの開始だけ0.8秒遅らせる
     // (ユーザー指示で、ズームだけ先に見せてから暗転に入るよう間を空けた)
-    const walkAnim = heroInner.animate(buildWalkKeyframes(), { duration: DEPARTURE_WALK_MS, easing: "ease-in-out", fill: "forwards" });
+    const walkAnim = heroInner.animate(buildWalkKeyframes(DEPARTURE_WALK_MS), { duration: DEPARTURE_WALK_MS, easing: "ease-in-out", fill: "forwards" });
     setTimeout(() => {
       const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DEPARTURE_FADEOUT_MS, easing: "ease", fill: "forwards" });
       fadeOut.onfinish = () => {

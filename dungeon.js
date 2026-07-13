@@ -240,10 +240,14 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
 // イベント抽選/画面遷移など、既存のゲームロジックそのまま)を実行してからフェードインする
 const MOVE_ANIM_MS = 750; // ユーザー指示で従来(500ms)の1.5倍に
 const MOVE_FADE_MS = 600;
-function buildWalkKeyframes() {
+// 帰還中(retreating)に「帰還」ボタンを連打する時だけ、この倍率で移動演出全体を高速化する
+// (歩き演出→暗転→フェードインという演出の流れ自体は探索時と共通のまま、時間だけ縮める)。
+// 探索時の演出(通常のplayDungeonMoveTransition呼び出し)には一切影響しない
+const RETREAT_MOVE_SPEED_MULTIPLIER = 3;
+function buildWalkKeyframes(animMs) {
   const totalScale = 0.08; // scale(1.00) -> scale(1.08)
   const totalY = -10; // translateY(0px) -> translateY(-10px)
-  const jitterEndOffset = MOVE_ANIM_MS > 0 ? Math.min(1, 150 / MOVE_ANIM_MS) : 0; // 揺れは最初の約0.15秒だけ
+  const jitterEndOffset = animMs > 0 ? Math.min(1, 150 / animMs) : 0; // 揺れは最初の約0.15秒だけ
   const jitterSteps = 4;
   const frames = [{ transform: "translate(0px, 0px) scale(1)", offset: 0 }];
   for (let i = 1; i <= jitterSteps; i++) {
@@ -257,7 +261,12 @@ function buildWalkKeyframes() {
   frames.push({ transform: `translate(0px, ${totalY}px) scale(${1 + totalScale})`, offset: 1 });
   return frames;
 }
-function playDungeonMoveTransition(actualLogic) {
+// speedMultiplier: 省略時は1(探索時と同じ通常速度)。帰還の連打時はRETREAT_MOVE_SPEED_MULTIPLIERを渡すことで
+// 歩き演出/暗転/フェードインの時間だけを短縮する(ゲームロジック=actualLogicの中身は一切変えない)
+function playDungeonMoveTransition(actualLogic, speedMultiplier) {
+  const speed = speedMultiplier || 1;
+  const animMs = MOVE_ANIM_MS / speed;
+  const fadeMs = MOVE_FADE_MS / speed;
   const bg = document.getElementById("dungeonBgInner"); // 中央寄せを担う親(#dungeonBg)ではなく画像だけの内側レイヤーを動かす
   const overlay = document.getElementById("moveTransitionBlack");
   const advanceBtnEl = document.getElementById("advanceBtn");
@@ -265,20 +274,20 @@ function playDungeonMoveTransition(actualLogic) {
   advanceBtnEl.disabled = true;
   retreatBtnEl.disabled = true;
   playSfx("footstep");
-  const moveAnim = bg.animate(buildWalkKeyframes(), { duration: MOVE_ANIM_MS, easing: "ease-in-out", fill: "forwards" });
+  const moveAnim = bg.animate(buildWalkKeyframes(animMs), { duration: animMs, easing: "ease-in-out", fill: "forwards" });
   let proceeded = false;
   function proceedToFade() {
     if (proceeded) return;
     proceeded = true;
     overlay.style.display = "block";
-    const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOVE_FADE_MS, easing: "ease", fill: "forwards" });
+    const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fadeMs, easing: "ease", fill: "forwards" });
     fadeOut.onfinish = () => {
       fadeOut.cancel();
       overlay.style.opacity = "1";
       moveAnim.cancel();
       bg.style.transform = ""; // 暗転しきったところで背景の変形をリセット(新しい背景はactualLogic内のrenderDungeon等が反映する)
       actualLogic();
-      const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: MOVE_FADE_MS, easing: "ease", fill: "forwards" });
+      const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeMs, easing: "ease", fill: "forwards" });
       fadeIn.onfinish = () => {
         fadeIn.cancel();
         overlay.style.opacity = "0";
@@ -289,7 +298,7 @@ function playDungeonMoveTransition(actualLogic) {
     };
   }
   moveAnim.onfinish = proceedToFade;
-  setTimeout(proceedToFade, MOVE_ANIM_MS + 200); // 安全策: onfinishが発火しない場合でも止まらないように
+  setTimeout(proceedToFade, animMs + 200); // 安全策: onfinishが発火しない場合でも止まらないように
 }
 
 // 「里に戻る」を押した最初の一押しから、すぐに1階層分下る(以前はモード切り替えのみで、
@@ -462,14 +471,16 @@ document.getElementById("advanceBtn").onclick = () => {
   // 帰還中(retreating)は安全なルートを通って歩いて帰る演出のため、道の分岐は出さない。
   // ただし茶屋の階だけは例外で、立ち寄るかどうかの2択を出す
   if (retreating) {
+    // 帰還中の「帰還」ボタン連打はここに来る(ボタン連打のテンポ改善のため演出だけ高速化、
+    // 階層移動/敵出現判定などのゲームロジックはmoveOneFloor側で従来通り)
     if (teahouseOfferedForFloor(targetFloor)) {
       showTeahouseOffer(
-        () => playDungeonMoveTransition(() => moveOneFloor(null, true)),
-        () => playDungeonMoveTransition(() => moveOneFloor(null))
+        () => playDungeonMoveTransition(() => moveOneFloor(null, true), RETREAT_MOVE_SPEED_MULTIPLIER),
+        () => playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER)
       );
       return;
     }
-    playDungeonMoveTransition(() => moveOneFloor(null));
+    playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER);
     return;
   }
   showPathChoice((pathBias) => {
