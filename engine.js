@@ -1480,6 +1480,11 @@ function useOnsenEgg(target, log) {
 // かばう(guarding)の身代わり成功率。100%だと絶対に守り切れてしまうため95%に抑えてあり、
 // 5%は守り切れず別の味方が狙われる。挑発(tauntTurns)はタンク側の強制引きつけなので100%のまま変えない
 const GUARD_REDIRECT_CHANCE = 0.95;
+// かばうは元々「1回身代わりになったら構えが解除される」1発仕様だったが、ユーザー指示により、
+// 身代わりになるたびにこの確率で構えが解除されず継続する(=続けてもう1人分かばえる)ようにした。
+// 判定は身代わりの都度行うため、理論上は連続して複数人をかばい続けることもできる(65%→42%→27%...と
+// 尻すぼみに確率が下がっていく)
+const GUARD_CONTINUE_CHANCE = 0.65;
 function findGuardTarget(alive) {
   const taunter = alive.find((t) => t.tauntTurns > 0);
   if (taunter) return taunter;
@@ -1538,7 +1543,7 @@ function enemyAttack(enemy, targets, log) {
   if (target.guarding) {
     rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
     if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
-    target.guarding = false;
+    if (Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
@@ -1622,7 +1627,7 @@ function enemyBigAttack(enemy, targets, log) {
     if (target.guarding) {
       rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
       if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
-      target.guarding = false;
+      if (Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除
       suffix = "(かばう)";
     }
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
