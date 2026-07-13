@@ -900,7 +900,9 @@ function maybeTriggerPeaceDialogue() {
   const candidates = pairedDialoguesForPair("peace", member1.personality, member2.personality);
   if (candidates.length === 0) return;
   const entry = candidates[Math.floor(Math.random() * candidates.length)];
-  if (playPairedDialogueExchange(member1, member2, entry, "peace")) peaceDialogueShown = true;
+  // ignoreMutexForFirst=true: 発生条件が厳しい特別なイベントなので、直前のアンビエントセリフ
+  // (警戒/ストレス愚痴等)とたまたま重なって黙って不発になることがないよう優先して発言させる
+  if (playPairedDialogueExchange(member1, member2, entry, "peace", true)) peaceDialogueShown = true;
 }
 
 // 財宝発見時、量に応じて4段階(ごくわずか/少量/中量/大量)のイラストを画面中央に一瞬表示する

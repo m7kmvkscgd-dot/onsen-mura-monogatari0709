@@ -393,15 +393,20 @@ function speakExplicitLine(speaker, text, category, ignoreMutex) {
 // 必ずpAと性格が一致する方をlineAの話者(先に喋る)、もう一方をlineBの話者(後に喋る)に固定する。
 // (以前はmember1を無条件で先に喋らせていたため、member1の性格がpB側と一致した時に
 // 返答(lineB)が問いかけ(lineA)より先に表示される逆転が起きていた不具合の修正)
-// 先に喋る側の発言は通常どおりミューテックスを尊重し(他の誰かが喋っている最中なら不発になる)、
+// 先に喋る側の発言は既定ではミューテックスを尊重し(他の誰かが喋っている最中なら不発になる)、
 // 後に喋る側は「相手との自然な会話」としてミューテックスを無視して重ねて表示する
 // (ユーザー指示: 先の吹き出し表示中に後の側が続けて喋ることで実際の会話に見せる)。
+// ignoreMutexForFirst=trueの時は、先に喋る側もミューテックスを無視する。
+// (戦闘後の平和な掛け合いは「1回の遠征につき1回まで」等の厳しい発生条件を満たした特別な瞬間なので、
+// 直前のmaybeSpeakOnFloorAdvance()の警戒/ストレス愚痴のようなアンビエントセリフとたまたま重なって
+// 黙って不発になってしまうと勿体ない。peaceカテゴリのみtrueを渡して優先させる。critのような
+// 頻繁に起こるカテゴリは従来どおり他の発言を尊重させたいので既定のfalseのまま)
 // 先に喋る側が発言できた場合にtrueを返す
 const PAIRED_DIALOGUE_GAP_MS = 2000; // 先の発言から後の発言までの固定の間(ユーザー指示で2秒固定)
-function playPairedDialogueExchange(member1, member2, entry, category) {
+function playPairedDialogueExchange(member1, member2, entry, category, ignoreMutexForFirst) {
   const speaksFirst = entry.pA === member1.personality ? member1 : member2;
   const speaksSecond = speaksFirst === member1 ? member2 : member1;
-  if (!speakExplicitLine(speaksFirst, entry.lineA, category)) return false;
+  if (!speakExplicitLine(speaksFirst, entry.lineA, category, ignoreMutexForFirst)) return false;
   setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, PAIRED_DIALOGUE_GAP_MS);
   return true;
 }
