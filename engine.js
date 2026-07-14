@@ -1406,7 +1406,12 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     target.hp = Math.max(0, target.hp - dmg);
     log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
   }
-  if (actor && target.hp > 0 && target.passives && target.passives.counterChance > 0 && Math.random() < target.passives.counterChance) {
+  // かばう中(logSuffix==="(かばう)")かつ「会心の返し」(guardCounter、100%確定反撃)持ちの場合は、
+  // ここでの汎用「迎撃」(counterChance、被弾時の確率反撃)を重ねて発動させない。
+  // 会心の返しはhandleGuardSynergyPassives側で別途0.5秒後の専用演出込みで確実に反撃するため、
+  // 両方の受動を選んでいると同じ1回の被弾に対して敵へ二重に反撃ダメージが入ってしまっていた
+  const guardCounterWillHandleIt = logSuffix === "(かばう)" && target.passives && target.passives.guardCounter;
+  if (actor && target.hp > 0 && target.passives && target.passives.counterChance > 0 && !guardCounterWillHandleIt && Math.random() < target.passives.counterChance) {
     const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * (target.passives.counterMult || 1) - effectiveStat(actor, "def") * 0.5));
     actor.hp = Math.max(0, actor.hp - counterDmg);
     log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！`);
