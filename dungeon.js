@@ -566,6 +566,34 @@ function updateQuestTargetBadge() {
 function teahouseOfferedForFloor(floor) {
   return currentStage === "forest" && (state.teaHouseLevel || 0) > 0 && floor === TEA_HOUSE_FLOOR;
 }
+// 開発者モード: 探索画面のフロア表示(◯層目)を5回連打すると、飛びたい階層を直接指定してジャンプできる。
+// 町の所持金チート(townTimeLabel連打)と同じDEV_TAP_REQUIRED/DEV_TAP_WINDOW_MS(town.js)を流用し、
+// 実際に指定階へ渡るのはmoveOneFloor等の歩行演出を一切通さずcurrentFloorを直接書き換えるだけ
+// (茶屋のような特定階のテストを毎回歩いて確認する手間を省くための開発用機能)
+let devFloorTapCount = 0;
+let devFloorTapLastAt = 0;
+function handleDevFloorBadgeTap() {
+  const now = Date.now();
+  devFloorTapCount = (now - devFloorTapLastAt <= DEV_TAP_WINDOW_MS) ? devFloorTapCount + 1 : 1;
+  devFloorTapLastAt = now;
+  if (devFloorTapCount >= DEV_TAP_REQUIRED) {
+    devFloorTapCount = 0;
+    const input = prompt(`ジャンプする階層を入力してください(現在:${currentFloor}層目)`);
+    if (input === null) return;
+    const target = parseInt(input, 10);
+    if (!Number.isFinite(target) || target < 1) { alert("正しい階層数を入力してください"); return; }
+    currentFloor = target;
+    retreating = false;
+    recordMaxFloorReached();
+    saveState();
+    renderDungeon();
+  }
+}
+document.getElementById("floorBadge").addEventListener("touchend", (e) => {
+  e.preventDefault();
+  handleDevFloorBadgeTap();
+}, { passive: false });
+document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
@@ -707,9 +735,12 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
     const count = pickPathChoiceCount();
     const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
     picked = [];
-    for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
-    // 茶屋(建築済み+対象階)は通常の抽選プールとは別に、確定で追加の選択肢として必ず加える
-    if (offerTeahouse) picked.push(TEAHOUSE_PATH_KEY);
+    // 茶屋は通常の抽選プールとは別枠で確定で1枠に加えるが、他の階と同じ1〜3択の分布(pickPathChoiceCount)
+    // からはみ出させない(以前は常に+1して2〜4択になり、実質「必ず3択」に偏って見えていた)。
+    // 茶屋の分を差し引いた残りの枠数だけ通常の道を抽選し、茶屋は常に先頭に来るようunshiftする
+    const normalPickCount = offerTeahouse ? Math.max(0, count - 1) : count;
+    for (let i = 0; i < normalPickCount; i++) picked.push(weightedPickPathKey(weights));
+    if (offerTeahouse) picked.unshift(TEAHOUSE_PATH_KEY);
   }
   document.body.classList.add("path-choice-active");
   // 進路選択が出ている間は下部の行動ボタン(進む/里に戻る/回復薬/道具等)を完全に無効化し、
@@ -739,7 +770,8 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
             const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : (flavor[key] || "");
             return `
               ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
-              <button class="path-card path-tag" data-idx="${idx}" style="--i:${idx}">
+              <button class="path-card path-tag${isTeahouse ? " path-tag-teahouse" : ""}" data-idx="${idx}" style="--i:${idx}">
+                ${isTeahouse ? '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span>' : ""}
                 <span class="path-card-icon">${p.icon}</span>
                 <span class="path-tag-text">
                   <span class="path-card-label">${p.label}</span>
