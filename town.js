@@ -329,7 +329,9 @@ function renderRosterList() {
     const hasPendingSkill = pendingLevels.length > 0;
     const levelUpFrom = hasPendingSkill ? Math.min(...pendingLevels) - 1 : null;
     const row = document.createElement("div");
-    row.className = "roster-row" + (lodgeSelected ? " selected" : "");
+    // 瀕死/ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
+    // 同じ.disabledクラス(半透明)でグレーアウト表示する
+    row.className = "roster-row" + (lodgeSelected ? " selected" : "") + (c.status !== "active" ? " disabled" : "");
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
