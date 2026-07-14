@@ -569,15 +569,25 @@ document.getElementById("advanceBtn").onclick = () => {
     playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER);
     return;
   }
+  const offerTeahouse = teahouseOfferedForFloor(targetFloor);
+  // 受注中の依頼の対象階へ確定で到達する時は、道の分岐を選んでも結果(討伐対象との戦闘)が変わらないため
+  // 選択肢自体を単一の「目標接近！」に差し替える(茶屋の階と重なる稀なケースは既存の茶屋2択を優先し、
+  // このフラグは立てない)
+  const q = state.acceptedQuest;
+  const questApproach = !offerTeahouse && q && currentStage === "forest" && targetFloor === q.targetFloor;
   showPathChoice((pathBias) => {
     if (pathBias === TEAHOUSE_PATH_KEY) {
       playDungeonMoveTransition(() => moveOneFloor(null, true));
       return;
     }
+    if (pathBias === QUEST_APPROACH_KEY) {
+      playDungeonMoveTransition(() => moveOneFloor(null));
+      return;
+    }
     const chosen = currentPathDefs()[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
-  }, teahouseOfferedForFloor(targetFloor));
+  }, offerTeahouse, questApproach);
 };
 
 // スレイ・ザ・スパイア風の「進む前に道を選ぶ」システム。選んだ道ごとに戦闘/財宝/静寂の出現率を
@@ -665,16 +675,24 @@ function weightedPickPathKey(weights) {
 // 温泉卵を使った場合は再抽選せず同じ選択肢に戻し(picked配列を使い回す)、野営具を使った場合は
 // そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
 const TEAHOUSE_PATH_KEY = "__teahouse__"; // 通常の進路キーとは別枠の特別な選択肢(茶屋)を表す番人値
-function showPathChoice(onChosen, offerTeahouse) {
+const QUEST_APPROACH_KEY = "__quest_approach__"; // 討伐対象の階に確定で到達する時専用の番人値(道の選択自体が無意味になるため単一選択肢にする)
+function showPathChoice(onChosen, offerTeahouse, questApproach) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
-  const count = pickPathChoiceCount();
-  const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
-  const picked = [];
-  for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
-  // 茶屋(建築済み+対象階)は通常の抽選プールとは別に、確定で追加の選択肢として必ず加える
-  if (offerTeahouse) picked.push(TEAHOUSE_PATH_KEY);
+  let picked;
+  if (questApproach) {
+    // 受注中の依頼の対象階へ進む時は、道の分岐(battle/gold率の傾き)がどれを選んでも確定でその群れと
+    // 戦闘になり選択が無意味になるため、通常の抽選は行わず「目標接近！」の単一選択肢だけを出す
+    picked = [QUEST_APPROACH_KEY];
+  } else {
+    const count = pickPathChoiceCount();
+    const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
+    picked = [];
+    for (let i = 0; i < count; i++) picked.push(weightedPickPathKey(weights));
+    // 茶屋(建築済み+対象階)は通常の抽選プールとは別に、確定で追加の選択肢として必ず加える
+    if (offerTeahouse) picked.push(TEAHOUSE_PATH_KEY);
+  }
   document.body.classList.add("path-choice-active");
   // 進路選択が出ている間は下部の行動ボタン(進む/里に戻る/回復薬/道具等)を完全に無効化し、
   // 選択肢のカードか、このパネル内の道具ボタン以外から抜けられないようにする
@@ -694,12 +712,13 @@ function showPathChoice(onChosen, offerTeahouse) {
     const flavor = currentPathFlavor();
     div.innerHTML = `
       <div class="path-choice-panel path-tags-panel">
-        <p class="path-choice-title">進路選択</p>
+        <p class="path-choice-title">${questApproach ? "🎯 目標接近！" : "進路選択"}</p>
         <div class="path-choice-cards path-tags-stack">
           ${picked.map((key, idx) => {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
-            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : currentPathDefs()[key];
-            const desc = isTeahouse ? "一休みできる茶屋が見える" : (flavor[key] || "");
+            const isQuestApproach = key === QUEST_APPROACH_KEY;
+            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : currentPathDefs()[key];
+            const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : (flavor[key] || "");
             return `
               ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
               <button class="path-card path-tag" data-idx="${idx}" style="--i:${idx}">
