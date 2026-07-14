@@ -800,9 +800,10 @@ function showTeahouseOffer(onEnter, onSkip) {
   });
 }
 
-// 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く
+// 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く。
+// 商品在庫は来訪のたびにリセットするのではなく日付単位で持続する(resetTeahouseStockIfNewDay、
+// renderTeahouse側で呼ぶ)ため、ここでは何もリセットしない
 function enterTeahouseFromDungeon() {
-  teahouseVisitStock = { potion: 0, smokeBomb: 0 };
   renderTeahouse();
   showScreen("screen-teahouse");
 }
@@ -1079,11 +1080,20 @@ function checkStrandedOnCurrentFloor() {
 
 // ============ 茶屋 ============
 // 深淵の森15層に建築後は確定で立ち寄れる休憩所。「一休み」でHP/MPを回復、「買い物」で
-// 回復薬/煙玉を購入できる(在庫は来訪ごとにリセットする、セーブはしないその場限りの状態)。
-// 夜・早朝の時間帯は営業時間外として利用できない
-let teahouseVisitStock = { potion: 0, smokeBomb: 0 };
+// 回復薬/煙玉/お茶菓子を購入できる。夜・早朝の時間帯は営業時間外として利用できない。
+// 商品在庫は来訪のたびにではなく「日付(dayCount)」単位でリセットする(state.teaHouseStockCounts、
+// resetTeahouseStockIfNewDay参照)。そのため同じ遠征中に行き帰りで2回立ち寄っても、行きで
+// 売り切れた商品は帰りでもまだ売り切れのまま(翌日の営業再開まで補充されない)
 function teahouseIsOpen() {
   return state.timeOfDay !== "night" && state.timeOfDay !== "dawn";
+}
+// 日付が変わっていたら在庫カウントを全商品分リセットする(onsenEggの resetOnsenEggStockIfNewDay と同じ考え方)
+function resetTeahouseStockIfNewDay() {
+  if (state.teaHouseStockDate !== state.dayCount) {
+    state.teaHouseStockCounts = {};
+    state.teaHouseStockDate = state.dayCount;
+    saveState();
+  }
 }
 function pickTeahouseRestMessage() {
   return TEAHOUSE_REST_MESSAGES[Math.floor(Math.random() * TEAHOUSE_REST_MESSAGES.length)];
@@ -1096,6 +1106,7 @@ function renderTeahouse() {
   renderDwHeader("teaHouse", "茶屋", () => { showScreen("screen-dungeon"); renderDungeon(); });
   updateKeeperLine("teaHouseKeeperLinePeriod", "teaHouseKeeperLineIndex", TEAHOUSE_KEEPER_LINES, "teaHouseKeeperBubble");
   showKeeperCharacter("teaHouseKeeperWrap");
+  resetTeahouseStockIfNewDay();
   const open = teahouseIsOpen();
   document.getElementById("teaHouseClosedNotice").style.display = open ? "none" : "";
   document.getElementById("teaHouseOpenContent").style.display = open ? "" : "none";
@@ -1112,18 +1123,18 @@ function renderTeahouse() {
   document.getElementById("teaHouseSmokeBombDesc").textContent = `${ITEMS.smokeBomb.desc}(${ITEMS.smokeBomb.price}G)`;
 
   const potionBtn = document.getElementById("teaHouseBuyPotionBtn");
-  const potionRemaining = Math.max(0, TEAHOUSE_POTION_STOCK - teahouseVisitStock.potion);
+  const potionRemaining = Math.max(0, TEAHOUSE_POTION_STOCK - (state.teaHouseStockCounts.potion || 0));
   if (potionRemaining <= 0) {
-    potionBtn.textContent = "今回は売り切れ";
+    potionBtn.textContent = "本日売り切れ";
     potionBtn.disabled = true;
   } else {
     potionBtn.textContent = `購入 残り${potionRemaining}個`;
     potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || state.gold < ITEMS.potion.price;
   }
   const smokeBtn = document.getElementById("teaHouseBuySmokeBombBtn");
-  const smokeRemaining = Math.max(0, TEAHOUSE_SMOKEBOMB_STOCK - teahouseVisitStock.smokeBomb);
+  const smokeRemaining = Math.max(0, TEAHOUSE_SMOKEBOMB_STOCK - (state.teaHouseStockCounts.smokeBomb || 0));
   if (smokeRemaining <= 0) {
-    smokeBtn.textContent = "今回は売り切れ";
+    smokeBtn.textContent = "本日売り切れ";
     smokeBtn.disabled = true;
   } else {
     smokeBtn.textContent = `購入 残り${smokeRemaining}個`;
@@ -1131,8 +1142,8 @@ function renderTeahouse() {
   }
   renderTeahouseSnackList();
 }
-// お茶菓子一覧: 支援物資と違い在庫を持たず、押すとその場で仲間を1人選んで即座に食べさせる
-// (teahousePendingSnackId経由でpickTeahouseAllyTarget()のピッカーへ繋ぐ)
+// お茶菓子一覧: 1商品につき1日1個までの在庫制(state.teaHouseStockCounts、TEAHOUSE_SNACK_STOCK)。
+// 押すとその場で仲間を1人選んで即座に食べさせる(pickTeahouseAllyTarget()のピッカーへ繋ぐ)
 function renderTeahouseSnackList() {
   const list = document.getElementById("teaHouseSnackList");
   list.innerHTML = TEAHOUSE_SNACKS.map((s) => `
@@ -1143,18 +1154,27 @@ function renderTeahouseSnackList() {
           <div><strong>${s.ja}</strong></div>
           <div class="desc">${s.flavor}<br>${TEAHOUSE_SNACK_COMMON_DESC}</div>
         </div>
-        <button class="big" data-snack-id="${s.id}">購入(${s.price}G)</button>
+        <button class="big" data-snack-id="${s.id}"></button>
       </div>
     </div>
   `).join("");
   TEAHOUSE_SNACKS.forEach((s) => {
     const btn = list.querySelector(`button[data-snack-id="${s.id}"]`);
+    const remaining = Math.max(0, TEAHOUSE_SNACK_STOCK - (state.teaHouseStockCounts[s.id] || 0));
+    if (remaining <= 0) {
+      btn.textContent = "本日売り切れ";
+      btn.disabled = true;
+      return;
+    }
+    btn.textContent = `購入(${s.price}G)`;
     btn.disabled = state.gold < s.price;
     btn.onclick = () => {
+      if ((state.teaHouseStockCounts[s.id] || 0) >= TEAHOUSE_SNACK_STOCK) { alert(`${s.ja}は本日もう売り切れです`); return; }
       if (state.gold < s.price) { alert("お金が足りません"); return; }
       pickTeahouseAllyTarget(`誰に${s.ja}を食べさせますか？`, (target) => {
         state.gold -= s.price;
         useTeahouseSnack(s, target, dlog);
+        state.teaHouseStockCounts[s.id] = (state.teaHouseStockCounts[s.id] || 0) + 1;
         saveState();
         playSfx("heal");
         maybeSpeakHealed(target);
@@ -1187,23 +1207,23 @@ function pickTeahouseAllyTarget(promptText, onPicked) {
   };
 }
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
-  if (teahouseVisitStock.potion >= TEAHOUSE_POTION_STOCK) { alert("回復薬は今回もう売り切れです"); return; }
+  if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { alert("回復薬は本日もう売り切れです"); return; }
   if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
-  teahouseVisitStock.potion++;
+  state.teaHouseStockCounts.potion = (state.teaHouseStockCounts.potion || 0) + 1;
   saveState();
   playSfx("coin");
   renderTeahouse();
 };
 document.getElementById("teaHouseBuySmokeBombBtn").onclick = () => {
-  if (teahouseVisitStock.smokeBomb >= TEAHOUSE_SMOKEBOMB_STOCK) { alert("煙玉は今回もう売り切れです"); return; }
+  if ((state.teaHouseStockCounts.smokeBomb || 0) >= TEAHOUSE_SMOKEBOMB_STOCK) { alert("煙玉は本日もう売り切れです"); return; }
   if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
   state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
-  teahouseVisitStock.smokeBomb++;
+  state.teaHouseStockCounts.smokeBomb = (state.teaHouseStockCounts.smokeBomb || 0) + 1;
   saveState();
   playSfx("coin");
   renderTeahouse();

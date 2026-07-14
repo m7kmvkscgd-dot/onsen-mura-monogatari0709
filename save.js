@@ -175,6 +175,8 @@ function loadState() {
       if (loaded.onsenShopKeeperLineIndex == null) loaded.onsenShopKeeperLineIndex = 0;
       if (loaded.teaHouseKeeperLinePeriod === undefined) loaded.teaHouseKeeperLinePeriod = null;
       if (loaded.teaHouseKeeperLineIndex == null) loaded.teaHouseKeeperLineIndex = 0;
+      if (loaded.teaHouseStockDate == null) loaded.teaHouseStockDate = loaded.dayCount || 1;
+      if (loaded.teaHouseStockCounts == null) loaded.teaHouseStockCounts = {};
       // 旧セーブは「既に見た」扱いにする(いきなり大量のNEWバッジが降ってこないように)。
       // これらのフラグは新規解禁時だけfalseからスタートする(state.jsのdefaultState参照)
       if (loaded.seenShrineTab == null) loaded.seenShrineTab = true;

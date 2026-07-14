@@ -63,6 +63,8 @@ function defaultState() {
     onsenShopKeeperLineIndex: 0,
     teaHouseKeeperLinePeriod: null, // 茶屋の案内キャラの同種のフィールド(renderTeahouse参照)
     teaHouseKeeperLineIndex: 0,
+    teaHouseStockDate: 1, // 茶屋の商品在庫が最後にリセットされた日(dayCount)。日付が変わると全商品の在庫が補充される
+    teaHouseStockCounts: {}, // { itemId: 本日すでに購入した数 } 回復薬/煙玉/お茶菓子8種、共通のカウンタ(resetTeahouseStockIfNewDay参照)
     // 建物が解禁した「新しい導線」をちゃんと見つけられるようにするNEWバッジ用フラグ群。
     // 見た瞬間に消える(showXxxやrenderXxxの中でtrueにする)方式で、seenUnlockedBuildingsと同じ考え方
     seenShrineTab: false, // 温泉の⛩️神社タブ(お守り奉納)を開いたか
