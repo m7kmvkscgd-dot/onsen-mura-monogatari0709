@@ -88,6 +88,11 @@ const FIRST_CHARACTER_PERSONALITY = {
 // 性格: キャラ作成時にランダムで1つ割り当てる(ステータス画面で文字表示、絵文字は使わない)。
 // 戦闘中/探索中にまれに表示される吹き出しセリフの、性格ごとの言い回しの違いに使う
 const PERSONALITIES = ["優しい", "熱血", "冷静", "生意気", "のんびり", "真面目", "世話好き", "お調子者", "無口", "怖がり"];
+// 「世話好き」はユーザー指示で一時的に選択プールから除外(セリフ等のデータ自体はDIALOGUE_LINES等に
+// 残したままなので、この配列に戻すだけでいつでも復活できる)。新規キャラの性格抽選は必ずこちらを使う。
+// 既に世話好きを持つ既存キャラの検証(PERSONALITIES.includes、save.js)は元のPERSONALITIES側で
+// 行うため、勝手に別の性格へ再割り当てされることはない
+const ACTIVE_PERSONALITIES = PERSONALITIES.filter((p) => p !== "世話好き");
 
 // 吹き出しセリフの本文。キー(カテゴリ)ごとに性格→セリフ配列。
 // selfSkillHit/allySkillHit、selfPinch/allyPinch は同じ発生イベントを、発言者が当事者か
@@ -1467,7 +1472,7 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
-    PERSONALITIES, DIALOGUE_LINES, DIALOGUE_CHANCE, DANGER_FLOOR_LEVEL_MULT, SPEECH_BUBBLE_DURATION_MS,
+    PERSONALITIES, ACTIVE_PERSONALITIES, DIALOGUE_LINES, DIALOGUE_CHANCE, DANGER_FLOOR_LEVEL_MULT, SPEECH_BUBBLE_DURATION_MS,
     FATIGUE_PER_FLOOR, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_COST_PER_LEVEL, ONSEN_LOCK_MINUTES, LODGE_FATIGUE_RELIEF, MAX_LEVEL, ENEMY_ATK_MULT, ENEMY_HP_MULT, ENEMY_SWARM_ATK_MULT,
     ENEMY_SCALE, ENEMY_DEF_SCALE, SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, STUN_RESIST_TURNS, STUN_RESIST_MULT,

@@ -44,8 +44,11 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   // 性格構成を変更した際(例: 「豪快」を廃止し「怖がり」に置き換え)、旧セーブに残っている
   // 今のPERSONALITIESに存在しない性格は、DIALOGUE_LINES/PEACE_DIALOGUES/OMIKUJI_LINESの
   // どのルックアップにも一致せず「セリフが何も出ない」不具合の原因になるため、現行の性格一覧に
-  // 含まれていなければ(未設定の場合と同様に)ランダムな新しい性格へ再割り当てして自己修復する
-  if (!c.personality || !PERSONALITIES.includes(c.personality)) c.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  // 含まれていなければ(未設定の場合と同様に)ランダムな新しい性格へ再割り当てして自己修復する。
+  // 検証はPERSONALITIES(全10種、世話好きも含む)で行い、既に世話好きを持つキャラを
+  // 巻き込んで再割り当てしないようにする。再割り当て自体の抽選先はACTIVE_PERSONALITIES
+  // (世話好きを除いた現役プール)を使う
+  if (!c.personality || !PERSONALITIES.includes(c.personality)) c.personality = ACTIVE_PERSONALITIES[Math.floor(Math.random() * ACTIVE_PERSONALITIES.length)];
   if (c.poison == null) c.poison = 0;
   if (c.burnTurns == null) c.burnTurns = 0;
   if (c.bleed == null) c.bleed = 0;

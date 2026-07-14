@@ -63,7 +63,7 @@ function createCharacter(name, classId, classUpgrades) {
     name,
     classId,
     label: name,
-    personality: PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)], // 吹き出しセリフの言い回しに使う
+    personality: ACTIVE_PERSONALITIES[Math.floor(Math.random() * ACTIVE_PERSONALITIES.length)], // 吹き出しセリフの言い回しに使う
     level: 1,
     xp: 0,
     maxHp: c.hp,

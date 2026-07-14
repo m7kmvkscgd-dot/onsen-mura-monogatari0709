@@ -805,13 +805,13 @@ function renderFirstCharacterCard() {
 }
 
 const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
-// 最初に仲間にする10人(最初の1人+宿屋で雇う9人)は性格が誰とも被らないようにする。
-// PERSONALITIESはちょうど全10種あるため10人分でぴったり使い切る(11人目以降は完全ランダムに戻る)
+// 最初に仲間にする人数分は性格が誰とも被らないようにする。ACTIVE_PERSONALITIES(現在9種、
+// 「世話好き」を除外中)を使い切ったら(10人目以降)完全ランダムに戻る
 function pickNonDuplicatePersonality() {
-  if (state.roster.length >= 10) return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  if (state.roster.length >= ACTIVE_PERSONALITIES.length) return ACTIVE_PERSONALITIES[Math.floor(Math.random() * ACTIVE_PERSONALITIES.length)];
   const used = new Set(state.roster.map((c) => c.personality));
-  const available = PERSONALITIES.filter((p) => !used.has(p));
-  if (available.length === 0) return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+  const available = ACTIVE_PERSONALITIES.filter((p) => !used.has(p));
+  if (available.length === 0) return ACTIVE_PERSONALITIES[Math.floor(Math.random() * ACTIVE_PERSONALITIES.length)];
   return available[Math.floor(Math.random() * available.length)];
 }
 document.getElementById("createCharBtn").onclick = () => {
