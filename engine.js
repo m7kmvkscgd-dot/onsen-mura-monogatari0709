@@ -218,6 +218,28 @@ function clearOnsenBuff(character) {
   character.onsenBuffKey = null;
 }
 
+// 滝行許可証: そのキャラが選んだスキル(character.skills)を全て取り消し、レベル2〜現在レベルの
+// 選択を全てやり直せるようにする。devSetCharacterLevel(town.js)と同じ「Lv1の素の値まで戻してから
+// levelUp()を現在レベル分だけ再生する」方式で、スキル由来のステータス増分(hpMult等)を含まない
+// クリーンな状態に巻き戻す。passivesもinitPassives()で完全に作り直す(蓄積した加算/配列を個別に
+// 取り消すのは値の組み合わせによっては不可能なため、素の状態から再構築する方が確実)
+function resetAllSkills(character) {
+  const targetLevel = character.level;
+  const c = CLASSES[character.classId];
+  character.level = 1;
+  character.maxHp = c.hp; character.atk = c.atk; character.def = c.def; character.spd = c.spd; character.mag = c.mag;
+  character.passives = initPassives();
+  character.skills = {};
+  for (let i = 1; i < targetLevel; i++) levelUp(character, () => {});
+  character.hp = character.maxHp;
+  character.mp = character.maxMp;
+  character.xp = 0;
+  // 既にこのキャラの選択待ちとして積まれている分は重複しないよう先に取り除いてから、
+  // レベル2〜現在レベルの全レベル分を選択待ちとして積み直す
+  state.pendingSkillChoices = state.pendingSkillChoices.filter((e) => e.characterId !== character.id);
+  for (let lv = 2; lv <= targetLevel; lv++) state.pendingSkillChoices.push({ characterId: character.id, level: lv });
+}
+
 // 石長比売の御守で戦闘開始時に加算した最大HP+5%分を、戦闘終了時(勝利/逃走/全滅どれでも)に差し引く
 function clearOmamoriIwanagaBonus(characters) {
   characters.forEach((c) => {

@@ -382,6 +382,7 @@
         <h2 style="margin:0 0 0.3rem;">習得スキル</h2>
         <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.6rem;">タップで効果を表示</p>
         <div id="statSkillList"></div>
+        <button class="status-takigyo-btn" id="statusTakigyoBtn">🌊 滝行でスキルをリセット(<span id="statusTakigyoCount">0</span>個所持)</button>
       </div>
 
       <button class="big primary" id="statusViewSkillTreeBtn" style="margin-bottom:0.6rem;">⛩️ 成長の道</button>
@@ -458,6 +459,15 @@
             <div class="desc">HPをほんの少し回復。ターンを消費しない(自分専用)</div>
           </div>
           <button class="big" id="buyOnsenEggBtn">購入</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>滝行許可証</strong> <span id="takigyoOwned">0</span>個</div>
+            <div class="desc">全てのスキルを忘れて<br>1から取り直しできる</div>
+          </div>
+          <button class="big" id="buyTakigyoBtn">購入(500G)</button>
         </div>
       </div>
       <button class="big" id="onsenShopBackBtn" style="margin-top:1rem;">温泉に戻る</button>

@@ -744,6 +744,31 @@ function renderStatusScreen(charId, onBack) {
   document.getElementById("statusViewSkillTreeBtn").onclick = () => {
     viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
   };
+  const takigyoCount = state.inventory.takigyo || 0;
+  document.getElementById("statusTakigyoCount").textContent = takigyoCount;
+  const takigyoBtn = document.getElementById("statusTakigyoBtn");
+  takigyoBtn.disabled = takigyoCount <= 0;
+  takigyoBtn.onclick = () => {
+    if ((state.inventory.takigyo || 0) <= 0) return;
+    showConfirmModal(
+      `${c.name}の習得済みスキルを全て忘れ、レベル${c.level}まで1から選び直します。よろしいですか？`,
+      [
+        {
+          label: "はい",
+          className: "big danger",
+          onClick: () => {
+            resetAllSkills(c);
+            state.inventory.takigyo--;
+            saveState();
+            playSfx("select");
+            renderStatusScreen(charId);
+          },
+        },
+        { label: "いいえ", className: "big" },
+      ],
+      "var(--dw-info)"
+    );
+  };
   // 名前の変更: ボタンでインラインの入力欄を開閉する(showConfirmModalはボタン選択のみでテキスト入力に
   // 対応していないため、この画面専用の簡易フォームにした)。空欄や既存名と同じ場合は何もしない
   const renameRow = document.getElementById("statusRenameRow");
@@ -1580,6 +1605,7 @@ function renderOnsenShop() {
   showKeeperCharacter("onsenShopKeeperWrap");
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
+  document.getElementById("takigyoOwned").textContent = state.inventory.takigyo || 0;
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
@@ -1590,6 +1616,8 @@ function renderOnsenShop() {
     buyBtn.textContent = `購入(${ITEMS.onsenEgg.price}G) 残り${remaining}個`;
     buyBtn.disabled = total >= supplyCap() || state.gold < ITEMS.onsenEgg.price;
   }
+  const takigyoBtn = document.getElementById("buyTakigyoBtn");
+  takigyoBtn.disabled = state.gold < ITEMS.takigyo.price;
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
@@ -1600,6 +1628,14 @@ document.getElementById("buyOnsenEggBtn").onclick = () => {
   state.gold -= ITEMS.onsenEgg.price;
   state.inventory.onsenEgg = (state.inventory.onsenEgg || 0) + 1;
   state.onsenEggDailyCount = (state.onsenEggDailyCount || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderOnsenShop();
+};
+document.getElementById("buyTakigyoBtn").onclick = () => {
+  if (state.gold < ITEMS.takigyo.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.takigyo.price;
+  state.inventory.takigyo = (state.inventory.takigyo || 0) + 1;
   saveState();
   playSfx("coin");
   renderOnsenShop();

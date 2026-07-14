@@ -164,6 +164,14 @@
     transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
   }
   .status-rename-btn:active { transform: scale(.97); filter: brightness(1.3); }
+  .status-takigyo-btn {
+    display: block; width: 100%; margin-top: 0.8rem; padding: 0.5rem 0.7rem; min-height: auto;
+    background: transparent; border: 1px solid var(--dw-info); color: var(--dw-info);
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .status-takigyo-btn:active { transform: scale(.97); filter: brightness(1.3); }
+  .status-takigyo-btn:disabled { opacity: 0.4; cursor: default; }
   .roster-name { font-weight: 700; font-size: 0.88rem; }
   .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }

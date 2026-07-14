@@ -6,7 +6,7 @@ function defaultState() {
     gold: 170,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0 }, // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0 }, // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)、takigyo=滝行許可証(スキルリセット)
     omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
     omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
     shrineFirstVisitRewardGiven: false, // 神社を初めて訪れた時のサービス(魂のかけら3個)を渡し済みか

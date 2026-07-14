@@ -682,6 +682,7 @@ const ITEMS = {
   onsenEgg: { id: "onsenEgg", ja: "温泉卵", price: 5, desc: "HPをほんの少し回復。ターンを消費しない(自分専用)", image: "assets/items/onsen_egg.png" },
   bomb: { id: "bomb", ja: "爆弾", price: 30, desc: "敵全体にダメージ", emoji: "💣" }, // 画像は未用意。imageが無い場合は絵文字で代用する
   kotaifuda: { id: "kotaifuda", ja: "助っ人の札", price: 100, desc: "出発時に5人目(交代要員)を編成できる。出発時に1枚消費", emoji: "📜" },
+  takigyo: { id: "takigyo", ja: "滝行許可証", price: 500, desc: "全てのスキルを忘れて\n1から取り直しできる", emoji: "📜" },
 };
 // 火薬庫で購入できる爆弾: 敵全体に防御無視の固定ダメージ(猪の実HP約62の6割=約37を基準に設定)
 const BOMB_FLAT_DAMAGE = 37;
