@@ -653,7 +653,7 @@ const PATH_DEFS = {
 };
 // 海岸ステージ版の進路(キーは共通、アイコン/ラベルだけ海のテーマに差し替え。battle/gold等の数値は森と完全に同じ)
 const COAST_PATH_DEFS = {
-  rindou: { icon: "🏝️", label: "砂浜", battle: 0.60, gold: 0.20 },
+  rindou: { icon: "🏝️", label: "砂浜", battle: 0.55, gold: 0.20 }, // 林道と合わせて戦闘遭遇率を60%→55%に
   kemono: { icon: "🪨", label: "岩場", battle: 0.75, gold: 0.15 },
   kurai: { icon: "🌊", label: "波打ち際", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
   shizuka: { icon: "🐚", label: "静かな砂浜", battle: 0.15, gold: 0.25 },
