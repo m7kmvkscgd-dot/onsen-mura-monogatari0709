@@ -216,6 +216,17 @@
         <button class="omikuji-chip-btn" id="partySelectBestiaryTabBtn">📖図鑑<span class="new-badge" id="bestiaryNewBadge" style="display:none;">NEW</span></button>
       </div>
 
+      <!-- おみくじ結果: 画面遷移せず、タブを押すとその場でこのカードが更新されるだけ(テンポ重視)。
+           下の支援物資/出発メンバー選択/出発ボタンはそのまま続けて操作できる -->
+      <div class="card" id="omikujiResultCard" style="display:none;">
+        <div id="omikujiResultTier" style="font-size:1.8rem;font-weight:800;color:var(--accent);"></div>
+        <div id="omikujiResultEffect" style="font-size:1rem;color:var(--text);margin-top:0.4rem;line-height:1.5;"></div>
+        <div id="omikujiResultLineRow" style="display:flex; align-items:center; gap:0.6rem; margin-top:0.8rem;">
+          <img id="omikujiResultSpeakerImg" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:var(--radius-xs);flex-shrink:0;display:none;">
+          <div id="omikujiResultLine" style="font-size:0.95rem;color:var(--text);font-style:italic;line-height:1.5;"></div>
+        </div>
+      </div>
+
       <div id="partySelectMainTab">
       <h2>支援物資 <span id="suppliesCount"></span></h2>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">合計で最大<span id="suppliesCapLabel"></span>個まで持っていけます。</p>
@@ -275,20 +286,6 @@
         <span id="coastMaxFloorLabel" style="font-size:12px;color:var(--dw-caption-color);white-space:nowrap;"></span>
       </div>
       <button class="big" id="partySelectBackBtn" style="margin-top:0.5rem;">町に戻る</button>
-      </div>
-
-      <div id="partySelectOmikujiTab" style="display:none;">
-        <h2>⛩️おみくじ</h2>
-        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">1日1回引けます。結果は次の遠征にだけ効きます。</p>
-        <div class="card" id="omikujiResultCard" style="display:none;">
-          <div id="omikujiResultTier" style="font-size:1.8rem;font-weight:800;color:var(--accent);"></div>
-          <div id="omikujiResultEffect" style="font-size:1rem;color:var(--text);margin-top:0.4rem;line-height:1.5;"></div>
-          <div id="omikujiResultLineRow" style="display:flex; align-items:center; gap:0.6rem; margin-top:0.8rem;">
-            <img id="omikujiResultSpeakerImg" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:var(--radius-xs);flex-shrink:0;display:none;">
-            <div id="omikujiResultLine" style="font-size:0.95rem;color:var(--text);font-style:italic;line-height:1.5;"></div>
-          </div>
-        </div>
-        <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">戻る</button>
       </div>
 
       <div id="partySelectBestiaryTab" style="display:none;">
