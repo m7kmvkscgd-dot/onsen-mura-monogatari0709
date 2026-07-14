@@ -1287,10 +1287,10 @@ const FLEE_STRESS_PENALTY = 5;
 const FATIGUE_MAX = 100;
 
 // 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復する。
-// 料金はレベル1で20G、以降レベルごとに8Gずつ上がる。入浴すると2時間はパーティ編成に組み込めなくなる(宿泊は引き続き可能)
+// 料金はレベル1で20G、以降レベルごとに7Gずつ上がる。入浴すると2時間はパーティ編成に組み込めなくなる(宿泊は引き続き可能)
 const ONSEN_FATIGUE_RELIEF = 50;
 const ONSEN_FLAT_COST = 20;
-const ONSEN_COST_PER_LEVEL = 8;
+const ONSEN_COST_PER_LEVEL = 7;
 const ONSEN_LOCK_MINUTES = 120; // 2時間 = 120分
 // 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
 const LODGE_FATIGUE_RELIEF = 10;
@@ -1448,13 +1448,19 @@ const TRANSFORM_FORMS = {
   gama: {
     ja: "ガマ", emoji: "🐸", image: "assets/transform/gama.png",
     hpMult: 1.3, atkMult: 0.7, defMult: 1, spdMult: 0.7,
-    formSkill: { key: "marunomi", name: "丸呑み", desc: "ボス・中ボス以外の敵単体を2ターンの間丸呑みにして行動不能にする(クールタイム6ターン)", cooldown: 6, swallowTurns: 2 },
+    formSkills: [
+      { key: "marunomi", name: "丸呑み", desc: "ボス・中ボス以外の敵単体を2ターンの間丸呑みにして行動不能にする(クールタイム6ターン)", cooldown: 6, swallowTurns: 2 },
+      { key: "hakidasu", name: "吐き出す", desc: "丸呑みにした相手を吐き出し、丸呑みを解除する(クールタイムなし)", cooldown: 0 },
+    ],
   },
   hebi: {
     ja: "ヘビ", emoji: "🐍", image: "assets/transform/hebi.png",
     hpMult: 1, atkMult: 1.1, defMult: 1.1, spdMult: 0.9,
     onHitPoison: 3,
-    formSkill: { key: "datsupi", name: "脱皮", desc: "HPを50%回復し、状態異常を全て取り除く(クールタイム6ターン)", cooldown: 6, healPct: 0.5 },
+    formSkills: [
+      { key: "datsupi", name: "脱皮", desc: "HPを50%回復し、状態異常を全て取り除く(クールタイム6ターン)", cooldown: 6, healPct: 0.5 },
+      { key: "dokueki", name: "毒液散布", desc: "敵全体に最大HPの25%のダメージと毒2〜4を付与する(クールタイム2ターン)", cooldown: 2, dmgPct: 0.25, poisonMin: 2, poisonMax: 4 },
+    ],
   },
 };
 // 変身中は普段の性格セリフの代わりに、formごとの鳴き声を喋る

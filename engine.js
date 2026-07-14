@@ -103,7 +103,7 @@ function createCharacter(name, classId, classUpgrades) {
     unlockedSkills: [], // 選んだ能動スキル(action持ち)のリスト。戦闘中の行動選択に追加される
     passives: initPassives(), // スキルツリーの永続受動効果をまとめて保持するオブジェクト
     transformForm: null, // 忍の「変化の術」で変身中のform("karasu"|"gama"|"hebi"|null)
-    formCooldown: 0, // 変身中のform専用スキル(丸呑み/脱皮)の残りクールタイム
+    formCooldowns: {}, // 変身中のform専用スキル(丸呑み/脱皮/毒液散布等)ごとの残りクールタイム。キーはformSkillsのkey
     hawkTurnsLeft: 0, // 狩人「鷹を呼ぶ」: 鷹が出現している残りターン数(0=いない)
     hawkGuardTargetId: null, // 「味方を守れ」で鷹が庇っている対象のid(いなければnull)
   };
@@ -454,7 +454,7 @@ function enterTransform(character, formKey) {
   character.poison = 0; character.bleed = 0; character.burnTurns = 0;
   character.stunTurns = 0; character.silenceTurns = 0; character.statMods = [];
   character.isFlying = !!form.isFlying;
-  character.formCooldown = 0;
+  character.formCooldowns = {};
 }
 // 変身解除: 任意解除・戦闘不能相当のダメージ・野営開始、いずれの経路からも呼ばれる共通処理。
 // 戦闘終了(勝利/逃走/全滅)では自動解除しない仕様(ユーザー指示により撤廃)なので、戦闘をまたいで
@@ -471,7 +471,7 @@ function revertTransform(character) {
   character.stunTurns = 0; character.silenceTurns = 0; character.statMods = [];
   character.isFlying = false;
   character.transformForm = null;
-  character.formCooldown = 0;
+  character.formCooldowns = {};
   character.__preTransform = null;
 }
 // 炎上弱点を持つ敵はダメージ2倍(tier1/2共通)。tier2は「炎上が自然に消えない」ため、
@@ -917,37 +917,52 @@ function useTreeSkill(actor, target, skill, log) {
       const hawkTargetMiss = !action.aoe ? maybeHawkFollowup(actor, t, log) : null;
       return { hit: false, dmg: 0, crit: false, hawkTargetId: hawkTargetMiss ? hawkTargetMiss.instanceId : null };
     }
+    // 「連突き」「二連射」のようなhits>1の技は、以前は合計ダメージを1回のapplyDamageToTargetに
+    // まとめていたため見た目上は1回しか殴っていないように見えていた(ユーザー指摘により修正)。
+    // 今はヒットごとに個別にapplyDamageToTargetを呼び、hitsList配列で1振りずつの結果を返す。
+    // これにより呼び出し元(battle.js)がヒットごとに別々の攻撃モーション/ダメージポップアップ/
+    // 鷹の追撃(狩人が鷹を出している間は1振りごとに鷹も追撃する)を再生できる
     const hits = action.hits || 1;
     const atkStat = action.useMag ? effectiveStat(actor, "mag") : effectiveStat(actor, "atk");
     const defPierce = action.defPierce || 0;
     const def = effectiveStat(t, "def") * (1 - defPierce);
-    let rawTotal = 0;
+    const hitsList = [];
+    const hawkTargetIds = [];
+    let totalDmg = 0;
+    let anyCrit = false;
     for (let i = 0; i < hits; i++) {
-      rawTotal += Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
-    }
-    const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
-    if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawTotal = Math.round(rawTotal * action.executeBonus.mult);
-    const hpBeforeHit = t.hp;
-    const dmg = applyDamageToTarget(t, rawTotal, log, actor.label, actor);
-    const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
-    // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
-    // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
-    // 巻き込んで連鎖処刑する狙い撃ちに変更した)。会心判定やonHitInflict等は敵を倒した本体の
-    // 一撃だけのものなので、貫通側では再判定せず素の数値のまま流し込む(defensiveな
-    // damageTakenMultiplierだけは対象自身の効果として尊重する)。
-    // t.__enemyAllies はstartBattle()で敵全員に配られる、その戦闘の敵配列への自己参照
-    if (action.overkillPierce && t.hp <= 0) {
-      const overkill = dmg - hpBeforeHit;
-      if (overkill > 0 && t.__enemyAllies) {
-        const others = t.__enemyAllies.filter((e) => e !== t && e.hp > 0);
-        if (others.length > 0) {
-          const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
-          const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
-          splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
-          log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
-          if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
+      if (t.hp <= 0) break; // 既に倒している相手には残りの振りを空撃ちしない
+      let rawHit = Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
+      const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
+      if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawHit = Math.round(rawHit * action.executeBonus.mult);
+      const hpBeforeHit = t.hp;
+      const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor);
+      const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
+      if (crit) anyCrit = true;
+      totalDmg += dmg;
+      // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
+      // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
+      // 巻き込んで連鎖処刑する狙い撃ちに変更した)。会心判定やonHitInflict等は敵を倒した本体の
+      // 一撃だけのものなので、貫通側では再判定せず素の数値のまま流し込む(defensiveな
+      // damageTakenMultiplierだけは対象自身の効果として尊重する)。
+      // t.__enemyAllies はstartBattle()で敵全員に配られる、その戦闘の敵配列への自己参照
+      if (action.overkillPierce && t.hp <= 0) {
+        const overkill = dmg - hpBeforeHit;
+        if (overkill > 0 && t.__enemyAllies) {
+          const others = t.__enemyAllies.filter((e) => e !== t && e.hp > 0);
+          if (others.length > 0) {
+            const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
+            const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
+            splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
+            log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
+            if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
+          }
         }
       }
+      // 全体攻撃には乗せない(全ての敵に追撃が入ると強すぎるため)。対象を倒していれば鷹は別の敵をランダムに狙う
+      const hawkTarget = !action.aoe ? maybeHawkFollowup(actor, t, log) : null;
+      hitsList.push({ dmg, crit });
+      if (hawkTarget) hawkTargetIds.push(hawkTarget.instanceId);
     }
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
       const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
@@ -962,9 +977,7 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
     }
     const shotDown = maybeShootDown(actor, t);
-    // 全体攻撃には乗せない(全ての敵に追撃が入ると強すぎるため)。対象を倒していれば鷹は別の敵をランダムに狙う
-    const hawkTarget = !action.aoe ? maybeHawkFollowup(actor, t, log) : null;
-    return { hit: true, dmg, shotDown, crit, hawkTargetId: hawkTarget ? hawkTarget.instanceId : null };
+    return { hit: true, dmg: totalDmg, shotDown, crit: anyCrit, hawkTargetId: hawkTargetIds[0] || null, hits: hitsList, hawkTargetIds };
   });
   return { dmgs: results };
 }

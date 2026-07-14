@@ -382,8 +382,13 @@ function processNext() {
       blog(`${actor.label}は沈黙していて技が使えない！`);
       actor.silenceTurns--;
     }
-    // 変身中のform専用スキル(丸呑み/脱皮)のクールタイムは、この変身キャラ自身の手番が来るたびに1減る
-    if (actor.formCooldown > 0) actor.formCooldown--;
+    // 変身中のform専用スキル(丸呑み/脱皮/毒液散布等)のクールタイムは、この変身キャラ自身の
+    // 手番が来るたびにスキルごとに1減る
+    if (actor.formCooldowns) {
+      Object.keys(actor.formCooldowns).forEach((key) => {
+        if (actor.formCooldowns[key] > 0) actor.formCooldowns[key]--;
+      });
+    }
     renderActionButtons(actor);
   }
 }
@@ -575,6 +580,25 @@ function runTreeSkill(actor, skill) {
     playSfx(attackSfxFor(actor.classId));
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
+    if (r && r.hit && r.hits && r.hits.length > 1) {
+      // 連突き/二連射のような多段ヒット技: 1振りごとに間を置いて別々の攻撃モーション/ポップアップ/
+      // 鷹の追撃を再生する(合計ダメージを1回にまとめて見せていた旧仕様をユーザー指摘で修正)
+      renderBattleScreen();
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
+      const STAGGER_MS = 260;
+      r.hits.forEach((hitInfo, i) => {
+        setTimeout(() => {
+          popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
+          if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
+          playAttackVfx(target.instanceId, actor, "skill");
+          if (r.hawkTargetIds && r.hawkTargetIds[i]) playHawkAttackVfx(actor, r.hawkTargetIds[i]);
+        }, i * STAGGER_MS);
+      });
+      setTimeout(() => {
+        triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction());
+      }, r.hits.length * STAGGER_MS);
+      return;
+    }
     if (r && r.hit) {
       popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
       if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
@@ -641,11 +665,13 @@ function renderTransformFormPicker(actor) {
   backBtn.onclick = () => renderActionButtons(actor);
   grid.appendChild(backBtn);
 }
-// ガマの「丸呑み」/ヘビの「脱皮」。どちらも専用クールタイム(MPではない)で管理する
-function runFormSkill(actor) {
+// ガマの「丸呑み」「吐き出す」/ヘビの「脱皮」「毒液散布」。いずれも専用クールタイム(MPではない、
+// actor.formCooldowns[skillKey]で個別管理)で管理する
+function runFormSkill(actor, skillKey) {
   const formKey = actor.transformForm;
   const form = TRANSFORM_FORMS[formKey];
-  if (formKey === "gama") {
+  const skill = form.formSkills.find((s) => s.key === skillKey);
+  if (skillKey === "marunomi") {
     const targets = targetableEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
     if (targets.length === 0) { alert("丸呑みにできる敵がいません"); return; }
     battleSubMenuActive = true;
@@ -657,8 +683,8 @@ function runFormSkill(actor) {
       btn.textContent = t.label;
       btn.onclick = () => {
         playSfx("select");
-        t.swallowedTurns = form.formSkill.swallowTurns;
-        actor.formCooldown = form.formSkill.cooldown;
+        t.swallowedTurns = skill.swallowTurns;
+        actor.formCooldowns[skillKey] = skill.cooldown;
         blog(`${actor.name}は${t.label}を丸呑みにした！`);
         renderBattleScreen();
         finishPlayerAction();
@@ -672,14 +698,61 @@ function runFormSkill(actor) {
     grid.appendChild(backBtn);
     return;
   }
-  if (formKey === "hebi") {
+  // ガマが行動不能で詰むのを防ぐための解除コマンド。丸呑み中の敵を1体選んで即座に解放する
+  // (クールタイムなし、ターンは消費する)
+  if (skillKey === "hakidasu") {
+    const swallowed = battle.enemies.filter((e) => e.swallowedTurns > 0);
+    if (swallowed.length === 0) { alert("丸呑みにしている相手がいません"); return; }
+    if (swallowed.length === 1) {
+      swallowed[0].swallowedTurns = 0;
+      blog(`${actor.name}は${swallowed[0].label}を吐き出した！`);
+      renderBattleScreen();
+      finishPlayerAction();
+      return;
+    }
+    battleSubMenuActive = true;
+    const grid = document.getElementById("actionGrid");
+    grid.innerHTML = "";
+    swallowed.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      btn.textContent = t.label;
+      btn.onclick = () => {
+        t.swallowedTurns = 0;
+        blog(`${actor.name}は${t.label}を吐き出した！`);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.className = "big";
+    backBtn.textContent = "戻る";
+    backBtn.onclick = () => renderActionButtons(actor);
+    grid.appendChild(backBtn);
+    return;
+  }
+  if (skillKey === "datsupi") {
     playSfx("heal");
-    const heal = Math.round(actor.maxHp * form.formSkill.healPct);
+    const heal = Math.round(actor.maxHp * skill.healPct);
     actor.hp = Math.min(actor.maxHp, actor.hp + heal);
     actor.poison = 0; actor.bleed = 0; actor.burnTurns = 0; actor.stunTurns = 0; actor.silenceTurns = 0;
-    actor.formCooldown = form.formSkill.cooldown;
+    actor.formCooldowns[skillKey] = skill.cooldown;
     popupOn(actor.id, `+${heal}`, "heal");
     blog(`${actor.name}は脱皮してHPを${heal}回復し、状態異常を治した！`);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  if (skillKey === "dokueki") {
+    playSfx(attackSfxFor(actor.classId));
+    actor.formCooldowns[skillKey] = skill.cooldown;
+    blog(`${actor.name}は毒液を撒き散らした！`);
+    targetableEnemies().forEach((e) => {
+      const dmg = applyDamageToTarget(e, Math.max(1, Math.round(e.maxHp * skill.dmgPct)), blog, actor.label, null);
+      popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+      applyPoison(e, resolveValue({ valueMin: skill.poisonMin, valueMax: skill.poisonMax }, skill.poisonMin));
+    });
     renderBattleScreen();
     finishPlayerAction();
     return;
@@ -711,6 +784,22 @@ function renderCarryTargets(actor, targets) {
     };
     grid.appendChild(btn);
   });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 技(スキル)サブメニュー: 職業の基本アビリティ+スキルツリーの能動スキル+味方を守れの合計が
+// 3つ以上あるクラスは、通常攻撃の右の「技」ボタンからこのサブメニューを開いて選ぶ形にまとめる。
+// buttonsは既にrenderActionButtons側でクリック処理まで組み立て済みの要素をそのまま流用する
+// (作り直さず、DOM上の挿し先を変えるだけ)
+function renderSkillSubMenu(actor, buttons) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  buttons.forEach((btn) => grid.appendChild(btn));
   const backBtn = document.createElement("button");
   backBtn.className = "big";
   backBtn.textContent = "戻る";
@@ -775,17 +864,25 @@ function renderActionButtons(actor) {
         attachSkillLongPressTooltip(guardBtn, "かばう", ABILITY_DESC.guard);
         grid.appendChild(guardBtn);
       }
-      if (formDef.formSkill) {
+      (formDef.formSkills || []).forEach((skill) => {
+        // 「吐き出す」は丸呑み中の相手がいる時だけ意味があるため、いなければボタン自体を出さない
+        if (skill.key === "hakidasu" && !battle.enemies.some((e) => e.swallowedTurns > 0)) return;
         const skillBtn = document.createElement("button");
         skillBtn.className = "big";
-        const onCooldown = actor.formCooldown > 0;
-        skillBtn.textContent = formDef.formSkill.name + (onCooldown ? `(あと${actor.formCooldown}T)` : "");
+        const cooldownLeft = (actor.formCooldowns && actor.formCooldowns[skill.key]) || 0;
+        const onCooldown = cooldownLeft > 0;
+        skillBtn.textContent = skill.name + (onCooldown ? `(あと${cooldownLeft}T)` : "");
         skillBtn.disabled = onCooldown;
-        skillBtn.onclick = () => { runFormSkill(actor); };
-        attachSkillLongPressTooltip(skillBtn, formDef.formSkill.name, formDef.formSkill.desc);
+        skillBtn.onclick = () => { runFormSkill(actor, skill.key); };
+        attachSkillLongPressTooltip(skillBtn, skill.name, skill.desc);
         grid.appendChild(skillBtn);
-      }
+      });
     } else {
+      // スキル(職業の基本アビリティ+スキルツリーで選んだ能動スキル+味方を守れ)は、まず
+      // skillButtonsに集めておき、合計3つ以上になるクラスだけ通常攻撃の右の「技」ボタンに
+      // まとめてサブメニュー化する(action-gridの行数が増えすぎて下のボタンが画面外に
+      // 切れる問題への対策)。2つ以下ならこれまで通り並べて直接表示する
+      const skillButtons = [];
       // 沈黙中は技(会心の一撃・呪符ノ術など)が使えず、通常攻撃のみになる
       (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
         const abBtn = document.createElement("button");
@@ -846,7 +943,7 @@ function renderActionButtons(actor) {
           });
         };
         attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
-        grid.appendChild(abBtn);
+        skillButtons.push(abBtn);
       });
 
       // スキルツリーで選んだ能動スキル(沈黙中は使えない)
@@ -861,7 +958,7 @@ function renderActionButtons(actor) {
         if (hawkActive || (cost > 0 && actor.mp < cost && !hachimanFree)) btn.disabled = true;
         btn.onclick = () => { runTreeSkill(actor, skill); };
         attachSkillLongPressTooltip(btn, skill.name, skill.desc);
-        grid.appendChild(btn);
+        skillButtons.push(btn);
       });
 
       // 鷹を呼ぶ(狩人)が出ている間だけ使える「味方を守れ」。指定した味方への次の攻撃を鷹が代わりに受けて消滅する
@@ -872,7 +969,17 @@ function renderActionButtons(actor) {
         if (actor.mp < HAWK_GUARD_MP_COST) hawkGuardBtn.disabled = true;
         hawkGuardBtn.onclick = () => { renderAllyTargets(actor, "hawkGuard"); };
         attachSkillLongPressTooltip(hawkGuardBtn, "味方を守れ", "指定した味方(自分を含む)への次の攻撃を、鷹が代わりに受けて消滅する");
-        grid.appendChild(hawkGuardBtn);
+        skillButtons.push(hawkGuardBtn);
+      }
+
+      if (skillButtons.length >= 3) {
+        const skillMenuBtn = document.createElement("button");
+        skillMenuBtn.className = "big";
+        skillMenuBtn.textContent = "技";
+        skillMenuBtn.onclick = () => renderSkillSubMenu(actor, skillButtons);
+        grid.appendChild(skillMenuBtn);
+      } else {
+        skillButtons.forEach((btn) => grid.appendChild(btn));
       }
     }
 

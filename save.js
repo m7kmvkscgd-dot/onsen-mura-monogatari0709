@@ -94,6 +94,10 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   delete c.lodgingCooldownUntil;
   delete c.corpseFloor;
   delete c.corpseExpireStep;
+  // 変化の術のform専用スキルを単一クールタイム(formCooldown)からスキルごとのクールタイム
+  // (formCooldowns、キーはformSkillsのkey)に変更したための旧セーブ互換処理
+  if (!c.formCooldowns) c.formCooldowns = {};
+  delete c.formCooldown;
   return c;
 }
 
