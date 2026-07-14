@@ -94,10 +94,12 @@ function activateOnsenReliefBars(container) {
   });
 }
 
-// ============ 開発者モード(町の時刻表示を7回連続タップで起動) ============
+// ============ 開発者モード(町の時刻表示を5回連続タップで即発動) ============
+// 以前はパネルを開いて所持金/レベルを個別入力する方式だったが、ユーザー指示により廃止。
+// 今はタップした瞬間に無条件で「所持金9999・名簿全員Lv10」を即適用するだけのワンショットな仕様
 let devTapCount = 0;
 let devTapLastAt = 0;
-const DEV_TAP_REQUIRED = 7;
+const DEV_TAP_REQUIRED = 5;
 const DEV_TAP_WINDOW_MS = 600; // タップ間隔がこれを超えたらカウントをリセットする
 function handleDevTimeLabelTap() {
   const now = Date.now();
@@ -105,11 +107,11 @@ function handleDevTimeLabelTap() {
   devTapLastAt = now;
   if (devTapCount >= DEV_TAP_REQUIRED) {
     devTapCount = 0;
-    openDevMode();
+    triggerDevCheat();
   }
 }
 // タップ専用: ページ全体のダブルタップズーム対策(350ms以内の連続タップのtouchendをpreventDefaultする処理)が
-// このボタン上でも働き、素早く連続タップすると合成されるclickイベントごと消えてしまい7回タップが
+// このボタン上でも働き、素早く連続タップすると合成されるclickイベントごと消えてしまい連続タップが
 // カウントできなくなっていたため、このボタンだけtouchend自体をカウント源にして回避する
 // (このボタンのtouchendは常にpreventDefaultし、その後に合成されるclickと二重カウントしないようにする)
 document.getElementById("townTimeLabel").addEventListener("touchend", (e) => {
@@ -117,35 +119,12 @@ document.getElementById("townTimeLabel").addEventListener("touchend", (e) => {
   handleDevTimeLabelTap();
 }, { passive: false });
 document.getElementById("townTimeLabel").addEventListener("click", handleDevTimeLabelTap);
-function openDevMode() {
-  document.getElementById("devGoldInput").value = state.gold;
-  renderDevRosterList();
-  document.getElementById("devModeOverlay").style.display = "block";
-}
-function renderDevRosterList() {
-  const list = document.getElementById("devRosterList");
-  list.innerHTML = "";
-  state.roster.forEach((c) => {
-    const row = document.createElement("div");
-    row.className = "card";
-    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:0.5rem;";
-    const label = document.createElement("span");
-    label.textContent = `${c.label}(${CLASSES[c.classId].ja} Lv${c.level})`;
-    label.style.cssText = "flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
-    const input = document.createElement("input");
-    input.type = "number"; input.min = 1; input.max = MAX_LEVEL; input.value = c.level;
-    input.style.cssText = "width:55px; text-align:right; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem;";
-    const btn = document.createElement("button");
-    btn.className = "big"; btn.style.cssText = "width:auto; padding:0.4rem 0.6rem;";
-    btn.textContent = "設定";
-    btn.onclick = () => {
-      devSetCharacterLevel(c, parseInt(input.value, 10) || 1);
-      saveState();
-      renderDevRosterList();
-    };
-    row.appendChild(label); row.appendChild(input); row.appendChild(btn);
-    list.appendChild(row);
-  });
+function triggerDevCheat() {
+  state.gold = 9999;
+  state.roster.forEach((c) => devSetCharacterLevel(c, MAX_LEVEL));
+  saveState();
+  renderTown();
+  alert("開発者モード: 所持金9999G・名簿全員Lv10にしました。");
 }
 // レベルを直接指定する(levelUpは1段ずつしか上げられないため、一度基礎値まで戻してから
 // 目的のレベルまでlevelUpを繰り返し適用することで、成長式を通した正しいステータスを再現する)
@@ -172,17 +151,6 @@ function devSetCharacterLevel(character, targetLevel) {
   }
   queueSkillChoices(leveledUp);
 }
-document.getElementById("devGoldSetBtn").onclick = () => {
-  const v = parseInt(document.getElementById("devGoldInput").value, 10);
-  state.gold = isNaN(v) ? state.gold : Math.max(0, v);
-  saveState();
-  document.getElementById("devGoldInput").value = state.gold;
-  document.getElementById("townGold").textContent = state.gold + "G";
-};
-document.getElementById("devModeCloseBtn").onclick = () => {
-  document.getElementById("devModeOverlay").style.display = "none";
-  renderTown();
-};
 
 // ============ 時間を進める(⌛️) ============
 // 町の時計の横から、30分刻み・最長12時間まで時間を早送りできる。1時間ごとに1秒かけて進め、

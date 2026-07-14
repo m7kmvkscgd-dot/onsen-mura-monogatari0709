@@ -781,20 +781,6 @@
   </div>
 
   <!-- 開発者モード: 町の時刻表示を7回連続タップすると開く隠しデバッグ画面。ゴールド/仲間のレベルを直接書き換えられる -->
-  <div id="devModeOverlay" style="display:none; position:fixed; inset:0; z-index:90; background:rgba(10,12,14,0.94); overflow-y:auto;">
-    <div style="max-width:480px; margin:0 auto; padding:1.2rem 1rem 2rem;">
-      <h3 style="color:var(--accent); text-align:center; margin-bottom:1rem;">🛠開発者モード</h3>
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem;">
-          <span>所持金</span>
-          <input type="number" id="devGoldInput" style="width:110px; text-align:right; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem;">
-          <button class="big" id="devGoldSetBtn" style="width:auto; padding:0.4rem 0.8rem;">設定</button>
-        </div>
-      </div>
-      <div id="devRosterList"></div>
-      <button class="big" id="devModeCloseBtn" style="width:100%; margin-top:1rem;">閉じる</button>
-    </div>
-  </div>
 
   <!-- 「進む」「里に戻る」で1階層分歩く時の暗転オーバーレイ -->
   <div id="moveTransitionBlack" class="move-transition-black" style="display:none;"></div>
