@@ -1295,7 +1295,7 @@ function markQuestChasingIfFled() {
 }
 function escapeBattle() {
   markQuestChasingIfFled();
-  stopBattleBgm();
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   blog("残った仲間全員が戦闘から逃げ延びた。");
   battle = null;
   pendingEnemyPick = null;

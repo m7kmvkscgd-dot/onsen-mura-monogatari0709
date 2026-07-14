@@ -180,6 +180,17 @@ function playBgm(key) {
 // 毎回の戦闘開始時に必ず曲の頭から鳴らしたいので、フェード完了時に再生位置を0にリセットしてから
 // currentBgmKeyをnullに戻す(nullにしないとplayBattleBgm()の「同キーなら何もしない」判定で無音のまま止まる)
 const BATTLE_BGM_FADE_OUT_MS = 3000;
+// 中ボス/ボス級の討伐依頼から逃げた(=state.acceptedQuest.chasingが立った)直後は、
+// 追いかけてくる設定である以上また同じ相手と再戦することになるため、逃走のたびに
+// ボス曲がフェードアウト→探索曲に戻る→再遭遇でまたボス曲頭出し、を繰り返すのがうるさいという
+// ユーザー指摘を受け、討伐するまではボス曲を止めずに流し続けるようにした
+// (escapeBattle/useSmokeBombのどちらの離脱経路からもmarkQuestChasingIfFled()の直後に呼ぶ)
+function isBossBgmActive() {
+  return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle";
+}
+function shouldKeepBossBgmOnFlee() {
+  return !!(state.acceptedQuest && state.acceptedQuest.chasing && isBossBgmActive());
+}
 function stopBattleBgm() {
   if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle") return;
   const key = currentBgmKey;

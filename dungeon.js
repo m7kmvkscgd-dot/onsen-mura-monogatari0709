@@ -124,7 +124,9 @@ function renderDungeon() {
   // BGM(森:dungeon系/海岸:coast/coast_battle)はこれとは別チャンネル(bgmAudio)で、startBattleでのみ切り替わり、
   // stopBattleBgmで探索用に戻る。どちらのチャンネルも戦闘中に止めない
   playAmbientBgm();
-  if (currentStage === "coast") playExplorationAreaBgm();
+  // 中ボス/ボスから逃げて追いかけられている間はボス曲を鳴らし続けたいため、その間は
+  // 探索用BGMへ上書きし直さない(isBossBgmActive、shouldKeepBossBgmOnFleeと同じ仕組み)
+  if (currentStage === "coast" && !isBossBgmActive()) playExplorationAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);

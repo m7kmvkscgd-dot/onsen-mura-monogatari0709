@@ -134,7 +134,7 @@ function playSmokeBombEffect(onDone) {
 // 忍の変化の術: 発動/解除どちらの瞬間も同じ煙エフェクト(既存の煙玉演出を流用)+専用SEを鳴らす
 function useSmokeBomb(actor) {
   markQuestChasingIfFled();
-  stopBattleBgm();
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   consumeSmokeBomb();
   saveState();
