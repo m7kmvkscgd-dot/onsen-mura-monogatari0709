@@ -642,7 +642,7 @@ document.getElementById("advanceBtn").onclick = () => {
 // 各道のbattle/gold率、ambushChance(暗い道の奇襲)、goldMult(暗い道の獲得金増)は
 // キーごとに1本化し、出現の重み(NORMAL_PATH_WEIGHTS/ONE_CHOICE_PATH_WEIGHTS)とは分離してある
 const PATH_DEFS = {
-  rindou: { icon: "🌲", label: "林道", battle: 0.60, gold: 0.20 },
+  rindou: { icon: "🌲", label: "林道", battle: 0.55, gold: 0.20 }, // ユーザー指示で戦闘遭遇率を60%→55%に(森の「林道」限定、海岸の「砂浜」は据え置き)
   kemono: { icon: "🐾", label: "獣道", battle: 0.75, gold: 0.15 },
   kurai: { icon: "🌑", label: "暗い道", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
   shizuka: { icon: "🍃", label: "静かな道", battle: 0.15, gold: 0.25 },
