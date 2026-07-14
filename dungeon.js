@@ -1017,6 +1017,8 @@ function rollEncounter(pathBias) {
     saveState();
     dlog("神隠しの道を抜けると、魂のかけらが3つ落ちていた。");
     renderDungeon();
+    playKamikakushiEffect();
+    playSfx("omikuji_daikichi");
     showTreasurePopup(0, "assets/items/soul_shard.png");
     if (!retreating) maybeTriggerPeaceDialogue();
     return;
@@ -1086,6 +1088,39 @@ function maybeTriggerPeaceDialogue() {
   if (playPairedDialogueExchange(member1, member2, entry, "peace", true)) peaceDialogueShown = true;
 }
 
+// 神隠しの道を抜けた時だけの特別演出: 画面全体を紫〜白の幻想的な光でフラッシュさせ、
+// 光の粒(パーティクル)を画面各所からふわっと浮かび上がらせる。通常の財宝発見演出
+// (showTreasurePopup)より一段大掛かりにして「特別な道だった」感を出す。DOM要素は
+// #treasure-popupのような常設要素ではなく、演出のたびにbodyへ動的追加→setTimeoutで除去する
+// (crit演出のsetTimeout+remove方式と同じ考え方)
+function playKamikakushiEffect() {
+  const flash = document.createElement("div");
+  flash.className = "kamikakushi-flash-overlay";
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1150);
+
+  const layer = document.createElement("div");
+  layer.className = "kamikakushi-particle-layer";
+  document.body.appendChild(layer);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const PARTICLE_COUNT = 22;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = document.createElement("div");
+    p.className = "kamikakushi-particle";
+    const size = 4 + Math.random() * 7;
+    p.style.width = `${size}px`;
+    p.style.height = `${size}px`;
+    p.style.left = `${Math.random() * vw}px`;
+    p.style.top = `${vh * 0.4 + Math.random() * vh * 0.5}px`;
+    p.style.setProperty("--kk-dur", `${(1.2 + Math.random() * 1.0).toFixed(2)}s`);
+    p.style.setProperty("--kk-x", `${((Math.random() * 2 - 1) * 60).toFixed(1)}px`);
+    p.style.setProperty("--kk-y", `${-(120 + Math.random() * 160).toFixed(1)}px`);
+    p.style.animationDelay = `${(Math.random() * 0.4).toFixed(2)}s`;
+    layer.appendChild(p);
+  }
+  setTimeout(() => layer.remove(), 2000);
+}
 // 財宝発見時、量に応じて4段階(ごくわずか/少量/中量/大量)のイラストを画面中央に一瞬表示する
 function treasureTierImage(amount) {
   if (amount <= 5) return "gokuwazuka";
