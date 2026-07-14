@@ -1228,6 +1228,15 @@ function renderSupplies() {
   document.getElementById("suppliesGold").textContent = state.gold + "G";
   document.getElementById("suppliesCount").textContent = `(${total}/${supplyCap()})`;
   document.getElementById("suppliesCapLabel").textContent = supplyCap();
+  // 鶏小屋の卵ポーチ: 支援物資の上限には含まれない別枠のため、混同されないよう専用の1行で
+  // 小さく表示する(鶏小屋未建築の間は行ごと非表示)
+  const eggPouchInfo = document.getElementById("henHouseEggPouchInfo");
+  const eggPouchCap = henHouseEggPouchCapacity();
+  eggPouchInfo.style.display = eggPouchCap > 0 ? "" : "none";
+  if (eggPouchCap > 0) {
+    document.getElementById("henHouseEggPouchCountLabel").textContent = state.inventory.onsenEggPouch || 0;
+    document.getElementById("henHouseEggPouchCapLabel").textContent = eggPouchCap;
+  }
   document.getElementById("potionOwned").textContent = state.inventory.potion || 0;
   document.getElementById("smokeBombOwned").textContent = state.inventory.smokeBomb || 0;
   document.getElementById("buyPotionSupplyBtn").textContent = `購入(${ITEMS.potion.price}G)`;
@@ -1927,6 +1936,9 @@ function renderExtension() {
   if (henHouseLocked) {
     henHouseBtn.textContent = `家レベル${HEN_HOUSE_UNLOCK_HOUSE_LEVEL}で解禁されます`;
     henHouseBtn.disabled = true;
+  } else if (henHouseLevel >= HEN_HOUSE_MAX_LEVEL) {
+    henHouseBtn.textContent = "これ以上は増築できません(上限)";
+    henHouseBtn.disabled = true;
   } else if (henHouseLevel === 0) {
     henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) 卵ポーチ+1`;
     henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
@@ -2108,6 +2120,7 @@ document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuildin
 document.getElementById("stableBuildBtn").onclick = () => buildSimpleBuilding("stableLevel", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST);
 document.getElementById("henHouseBuildBtn").onclick = () => {
   const henHouseLevel = state.henHouseLevel || 0;
+  if (henHouseLevel >= HEN_HOUSE_MAX_LEVEL) return;
   if (henHouseLevel === 0 && (state.houseLevel || 1) < HEN_HOUSE_UNLOCK_HOUSE_LEVEL) return;
   if (state.gold < HEN_HOUSE_COST) return;
   state.gold -= HEN_HOUSE_COST;

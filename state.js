@@ -135,9 +135,11 @@ const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
 // 鶏小屋: 道場と同じ多段階建築(上限なし)。建てると「卵ポーチ」という支援物資の上限とは別枠の
 // 専用ポーチが手に入り、毎日無料で温泉卵が1個(ポーチの容量まで)補充される。各段階(初回建築・増築とも)
-// 200Gで、1段階につきポーチの容量が+1される(=henHouseLevelがそのまま容量)
+// 200Gで、1段階につきポーチの容量が+1される(=henHouseLevelがそのまま容量)。増築は1回まで
+// (=最大レベル2、ポーチ容量は最大2個)というユーザー指示によりHEN_HOUSE_MAX_LEVELで上限を設けている
 const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
 const HEN_HOUSE_COST = 200;
+const HEN_HOUSE_MAX_LEVEL = 2;
 // 茶屋: 効果は未定(建物のみ、未実装)
 const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
 const TEA_HOUSE_COST = 250;
