@@ -1143,7 +1143,7 @@ function drawOmikuji() {
   state.omikujiLastLine = line;
   state.omikujiLastSpeakerId = speaker ? speaker.id : null;
   saveState();
-  playSfx("select");
+  playSfx(tierKey === "daikichi" ? "omikuji_daikichi" : "omikuji_normal");
   renderOmikujiTab();
 }
 function pickRandomActiveRosterChar() {
