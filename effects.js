@@ -453,7 +453,7 @@ function playPairedDialogueExchange(member1, member2, entry, category, ignoreMut
 // playPairedDialogueExchangeへは、抽選済みの2文をその場で組み立てた疑似エントリとして渡すことで、
 // 既存の「A→2秒→B、Bはミューテックス無視」という表示ロジックをそのまま流用する
 const CRIT_DIALOGUE_TRIGGER_CHANCE = 0.75;
-const CRIT_DIALOGUE_ALLY_JOIN_CHANCE = 0.3;
+const CRIT_DIALOGUE_ALLY_JOIN_CHANCE = 0.4;
 const CRIT_DIALOGUE_STRESS_THRESHOLD = 60;
 function maybeSpeakOnCrit(actor, wasCrit) {
   if (!wasCrit) return;

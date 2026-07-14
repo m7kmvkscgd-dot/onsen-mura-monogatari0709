@@ -531,9 +531,14 @@ function renderStatusScreen(charId, onBack) {
   statusScreenOnBack = onBack || statusScreenOnBack || defaultStatusOnBack;
   const c = getRosterChar(charId);
   const c2 = CLASSES[c.classId];
+  // ふりがな付きの表示名。以前は専用の<h1>(#statusName)に表示していたが、共通ヘッダー導入時に
+  // .hero.has-dw-header h1{display:none}で隠れる対象になってしまい、ふりがなごと見えなくなっていた
+  // (キャラの名前自体は表示されるが、意図していたふりがな注記が失われる形の回帰バグだった)。
+  // 共通ヘッダーのタイトル側にふりがな込みの文字列を渡すことで復活させる
   const reading = NAME_READINGS[c.name];
-  document.getElementById("statusName").textContent = reading ? `${c.name}(${reading})` : c.name;
-  renderDwHeader("status", c.name, statusScreenOnBack);
+  const displayName = reading ? `${c.name}(${reading})` : c.name;
+  document.getElementById("statusName").textContent = displayName;
+  renderDwHeader("status", displayName, statusScreenOnBack);
   document.getElementById("statusImg").src = statusPortraitSrc(c);
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statPersonality").textContent = c.personality || "-";

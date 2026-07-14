@@ -927,8 +927,15 @@ function useTreeSkill(actor, target, skill, log) {
   // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
   const targets = action.aoe ? target : [target];
   const skillRange = skillRangeType(actor, skill);
+  // hitChance: 通常のrollHit(相手の回避率で変動)を使わず、固定の命中率で判定したい技用
+  // (痺れ矢・豪雨など、命中率とスタン率を独立した数値としてユーザーが明示指定したい場合に使う)
+  const rolledHit = (t) => {
+    if (action.guaranteedHit) return true;
+    if (action.hitChance != null) return Math.random() < action.hitChance;
+    return rollHit(actor, t, skillRange);
+  };
   const results = targets.map((t) => {
-    if (!action.guaranteedHit && !rollHit(actor, t, skillRange)) {
+    if (!rolledHit(t)) {
       log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
       // 技が外れても鷹は独立して追撃する(全体攻撃は除く)
       const hawkTargetMiss = !action.aoe ? maybeHawkFollowup(actor, t, log) : null;

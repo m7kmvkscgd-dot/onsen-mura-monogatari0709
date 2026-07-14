@@ -880,7 +880,7 @@ const SKILL_TREES = {
       right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、90%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.90, turns: 1 } } },
     },
     4: {
-      left: { name: "傷口狙い", desc: "状態異常(毒・炎上・スタン・沈黙・能力低下等)を負っている敵へのダメージ+25%", mp: 0, passive: { woundBonus: { mult: 1.25 } } },
+      left: { name: "貫き矢", desc: "敵単体へ130%ダメージ。敵を倒した場合、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 2, action: { kind: "damage", mult: 1.3, overkillPierce: true } },
       right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 3, action: { kind: "summonHawk", turns: 8 } },
     },
     5: {
@@ -901,7 +901,7 @@ const SKILL_TREES = {
     },
     9: {
       left: { name: "弱者狩り", desc: "攻撃力が下がっている敵への会心率+30%", mp: 0, passive: { debuffCritBonus: { stat: "atk", addRate: 0.3 } } },
-      right: { name: "貫き矢", desc: "敵単体へ130%ダメージ。敵を倒した場合、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 2, action: { kind: "damage", mult: 1.3, overkillPierce: true } },
+      right: { name: "痺れ矢・豪雨", desc: "敵全体に矢の雨を降らせる。命中率95%、命中した敵は90%の確率でスタン", mp: 5, action: { kind: "damage", aoe: true, mult: 0, hitChance: 0.95, inflict: { type: "stun", chance: 0.90, turns: 1 } } },
     },
     10: {
       left: { name: "流星射ち", desc: "敵単体へ290%ダメージ", mp: 7, action: { kind: "damage", mult: 2.9 } },
@@ -1359,7 +1359,7 @@ const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn
 // 受注制(同時に1件まで)。受注すると、深淵の森でtargetFloorに到達した時にcount体の群れが確定出現し、
 // 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
 const QUEST_DEFS = {
-  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 3, tier: 1 },
+  yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 2, tier: 1, rewardGold: 30 },
   inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "大猪の討伐", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！", rewardGold: 70, tier: 1 },
   dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2, tier: 1 },
   oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1, tier: 1 },
