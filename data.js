@@ -762,7 +762,7 @@ const SKILL_TREES = {
       right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
     },
     3: {
-      left: { name: "変化の術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 5, action: { kind: "transform" } },
+      left: { name: "変化の術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 4, action: { kind: "transform" } },
       right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, rangeType: "ranged", action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     4: {
