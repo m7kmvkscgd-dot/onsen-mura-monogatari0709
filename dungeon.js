@@ -722,6 +722,7 @@ function weightedPickPathKey(weights) {
 // そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
 const TEAHOUSE_PATH_KEY = "__teahouse__"; // 通常の進路キーとは別枠の特別な選択肢(茶屋)を表す番人値
 const QUEST_APPROACH_KEY = "__quest_approach__"; // 討伐対象の階に確定で到達する時専用の番人値(道の選択自体が無意味になるため単一選択肢にする)
+const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
 function showPathChoice(onChosen, offerTeahouse, questApproach) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
@@ -766,12 +767,19 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
           ${picked.map((key, idx) => {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
             const isQuestApproach = key === QUEST_APPROACH_KEY;
+            const isKamikakushi = key === "kamikakushi";
             const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : currentPathDefs()[key];
             const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : (flavor[key] || "");
+            let extraClass = "";
+            if (isTeahouse) extraClass = " path-tag-teahouse";
+            else if (isKamikakushi) extraClass = " path-tag-kamikakushi path-tag-revealing";
+            let sparkles = "";
+            if (isTeahouse) sparkles = '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span>';
+            else if (isKamikakushi) sparkles = '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span><span class="path-tag-sparkle s4">✨</span>';
             return `
               ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
-              <button class="path-card path-tag${isTeahouse ? " path-tag-teahouse" : ""}" data-idx="${idx}" style="--i:${idx}">
-                ${isTeahouse ? '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span>' : ""}
+              <button class="path-card path-tag${extraClass}" data-idx="${idx}" style="--i:${idx}">
+                ${sparkles}
                 <span class="path-card-icon">${p.icon}</span>
                 <span class="path-tag-text">
                   <span class="path-card-label">${p.label}</span>
@@ -786,8 +794,16 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
     const stack = div.querySelector(".path-tags-stack");
     picked.forEach((key, idx) => {
       const btn = div.querySelector(`button[data-idx="${idx}"]`);
+      const isKamikakushi = key === "kamikakushi";
+      // 神隠しの道は「顕現」演出(光の帯が横切る)が終わるまで誤タップ防止のため選べないようにする。
+      // ネイティブのdisabled属性は使わない(ブラウザ既定の減光スタイルが演出の見た目を邪魔するため)。
+      // 代わりにクラスの有無だけで判定し、演出用CSSアニメーションと選択可否を同期させる
+      if (isKamikakushi) {
+        setTimeout(() => { btn.classList.remove("path-tag-revealing"); }, KAMIKAKUSHI_REVEAL_MS);
+      }
       btn.onclick = () => {
         if (stack.classList.contains("path-tags-locked")) return;
+        if (isKamikakushi && btn.classList.contains("path-tag-revealing")) return;
         stack.classList.add("path-tags-locked");
         stack.querySelectorAll(".path-tag").forEach((el) => {
           el.classList.add(el === btn ? "path-tag-selected" : "path-tag-fading");

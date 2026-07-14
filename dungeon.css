@@ -247,6 +247,7 @@
   .path-tag-sparkle.s1 { top: -6px; left: 10%; animation-delay: 0s; }
   .path-tag-sparkle.s2 { top: 50%; right: -8px; animation-delay: 0.5s; }
   .path-tag-sparkle.s3 { bottom: -6px; left: 45%; animation-delay: 1s; }
+  .path-tag-sparkle.s4 { top: 30%; left: -8px; animation-delay: 0.3s; }
   @keyframes pathTagSparkleFloat {
     0%, 100% { opacity: 0; transform: scale(0.6) translateY(2px); }
     50% { opacity: 1; transform: scale(1) translateY(-2px); }
@@ -254,6 +255,37 @@
   @media (prefers-reduced-motion: reduce) {
     .path-tag.path-tag-teahouse { animation: none; box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 14px 2px rgba(215,182,111,0.55); }
     .path-tag-sparkle { animation: none; opacity: 0.9; }
+  }
+  /* 神隠しの道の選択肢。茶屋(金)とは違う紫〜白の幻想的な光にして、抜けた後に出る演出
+     (.kamikakushi-flash-overlay等)と色味を揃えている。選べるようになるまでの「顕現」演出
+     (path-tag-revealing、KAMIKAKUSHI_REVEAL_MS)の間は光の帯が横切るアニメーションを見せ、
+     JS側でその間クリックを無効化することで誤タップを防ぐ */
+  .path-tag.path-tag-kamikakushi {
+    position: relative; overflow: hidden;
+    border-color: #b98cf0;
+    background: linear-gradient(180deg, rgba(66,40,92,0.95) 0%, rgba(52,28,78,0.94) 45%, rgba(30,14,48,0.96) 100%);
+    animation: kamikakushiTagGlow 2.2s ease-in-out infinite;
+  }
+  @keyframes kamikakushiTagGlow {
+    0%, 100% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 10px 1px rgba(190,140,240,0.4); }
+    50% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 22px 5px rgba(190,140,240,0.85); }
+  }
+  .path-tag-kamikakushi .path-tag-sparkle { filter: drop-shadow(0 0 3px rgba(220,186,255,0.95)); }
+  .path-tag.path-tag-kamikakushi.path-tag-revealing { cursor: default; }
+  .path-tag.path-tag-kamikakushi.path-tag-revealing::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.7) 48%, rgba(220,180,255,0.6) 54%, transparent 70%);
+    background-size: 250% 100%;
+    animation: kamikakushiRevealSweep 0.9s ease-in-out;
+  }
+  @keyframes kamikakushiRevealSweep {
+    0% { background-position: 150% 0; opacity: 0; }
+    15% { opacity: 1; }
+    100% { background-position: -50% 0; opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .path-tag.path-tag-kamikakushi { animation: none; box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 14px 2px rgba(190,140,240,0.6); }
+    .path-tag.path-tag-kamikakushi.path-tag-revealing::after { animation: none; opacity: 0; }
   }
   /* 財宝発見時のポップアップ(戦闘画面で敵が表示される高さに合わせ、ゴールドの量に応じた
      イラストだけを一瞬表示する。文字ラベルは含まないイラストを使う) */
