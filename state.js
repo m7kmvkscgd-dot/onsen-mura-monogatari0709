@@ -24,10 +24,7 @@ function defaultState() {
     magistrateQuestTab: 1, // 奉行所画面で選択中のティアタブ(1 or 2)
     magistrateQuestLastShown: {}, // { questId: dayCount } 直近で張り出された日。QUEST_COOLDOWN_DAYS日は再抽選対象から外す(ティア問わず1つの辞書で共有、idが重複しないため問題ない)
     acceptedQuest: null, // 受注中の依頼。{enemyId, targetFloor, count}。同時に1件までしか受けられない
-    emergencyQuest: null, // 緊急依頼(序盤ボス級の指名討伐)。進行中は{enemyId, kills, claimed}、無い時はnull
-    magistrateNormalClears: 0, // 通常の討伐依頼を受け取った累計件数(EMERGENCY_QUEST_CLEAR_THRESHOLD件で緊急依頼が1件発生し、消費されて0に戻る)
-    emergencyQuestEverAppeared: false, // 一番最初の緊急依頼は必ず荒熊にするためのフラグ(発生済みならfalse→trueにし、以降はランダム)
-    defeatedOoInoshishi: false, // 大猪(猪の依頼の中ボス)を一度でも倒したか。緊急依頼の解禁条件の1つ(一度trueになったらそのまま)
+    defeatedOoInoshishi: false, // 大猪(猪の依頼の中ボス)を一度でも倒したか。ボス級指名討伐(荒熊等)が奉行所に張り出される解禁条件(一度trueになったらそのまま)
     rescueQuestAccepted: false, // 破綻寸前パーティ救済クエスト(薬草摘み)を受注中かどうか
     rescueQuestItemObtained: false, // 森の対象階層で薬草を入手済みかどうか(受注中のみ意味を持つ)
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる

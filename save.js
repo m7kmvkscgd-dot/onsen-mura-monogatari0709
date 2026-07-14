@@ -125,9 +125,11 @@ function loadState() {
       if (loaded.magistrateQuestLastShown == null) loaded.magistrateQuestLastShown = {}; // 旧セーブ用の初期値
       if (loaded.acceptedQuest === undefined) loaded.acceptedQuest = null; // 旧セーブ用の初期値
       delete loaded.magistrateQuests; // 旧: 進捗を持つ配列だったが受注制への移行で不要に
-      if (loaded.emergencyQuest === undefined) loaded.emergencyQuest = null; // 旧セーブ用の初期値(緊急依頼未発生)
-      if (loaded.magistrateNormalClears == null) loaded.magistrateNormalClears = 0; // 旧セーブ用の初期値
-      if (loaded.emergencyQuestEverAppeared == null) loaded.emergencyQuestEverAppeared = false; // 旧セーブ用の初期値
+      // 旧「緊急依頼」(自動発生システム)は、ボス級指名討伐(荒熊等)を通常の受注制クエストに
+      // 統一したことで廃止。進行中だった緊急依頼が残っていても消える(消滅した扱い)
+      delete loaded.emergencyQuest;
+      delete loaded.magistrateNormalClears;
+      delete loaded.emergencyQuestEverAppeared;
       if (loaded.defeatedOoInoshishi == null) loaded.defeatedOoInoshishi = false; // 旧セーブ用の初期値
       if (loaded.rescueQuestAccepted == null) loaded.rescueQuestAccepted = false; // 旧セーブ用の初期値(破綻寸前救済クエスト未受注)
       if (loaded.rescueQuestItemObtained == null) loaded.rescueQuestItemObtained = false; // 旧セーブ用の初期値

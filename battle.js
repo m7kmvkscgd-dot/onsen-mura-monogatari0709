@@ -1183,15 +1183,9 @@ function victory() {
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
-  // 奉行所の緊急依頼(荒熊等)の討伐判定は受注制の討伐依頼とは別枠のまま維持
-  if (state.magistrateLevel > 0 && state.emergencyQuest && !state.emergencyQuest.claimed) {
-    battle.enemies.forEach((e) => {
-      if (state.emergencyQuest.enemyId === e.id) state.emergencyQuest.kills = 1;
-    });
-  }
   // 奉行所の討伐依頼(受注制): この戦闘がbattle.questKey(tryForceQuestEncounterで確定出現させた
   // 対象)ならその場で達成とし、報酬はリザルト画面(renderResultScreen)にまとめて表示する。
-  // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりに緊急依頼解禁フラグを立てる
+  // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりにボス級指名討伐の解禁フラグを立てる
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     const qDef = QUEST_DEFS[battle.questKey];
     const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
@@ -1204,12 +1198,7 @@ function victory() {
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
     state.acceptedQuest = null;
-    if (battle.questKey === "inoshishi") {
-      state.defeatedOoInoshishi = true;
-    } else {
-      state.magistrateNormalClears = (state.magistrateNormalClears || 0) + 1;
-    }
-    maybeTriggerEmergencyQuest();
+    if (battle.questKey === "inoshishi") state.defeatedOoInoshishi = true;
   }
   let soulShardCount = 0;
   battle.enemies.forEach((e) => {

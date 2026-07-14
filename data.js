@@ -265,16 +265,16 @@ const ENEMIES = {
   // 一撃になるよう逆算した(かばう成功で被ダメ0.4倍、槍士の実効防御力想定でHPの8割前後を削る計算)。
   // 大技は「構え中(bigAttackPending)にスタンを入れると完全に潰せる」という既存仕組みを
   // プレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
-  oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 42, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
+  oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 63, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 8.0 } },
-  q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 26, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
+  q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 39, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
-  q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
+  q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.2 },
     onHitInflict: { type: "poison", chance: 0.4, value: 4 } }, // 川を塞ぐ大蛇、牙に猛毒を宿す
-  q_oni: { id: "q_oni", ja: "鬼", image: "assets/enemies/q_oni.png", hp: 27, atk: 9, def: 5, spd: 4, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
+  q_oni: { id: "q_oni", ja: "鬼", image: "assets/enemies/q_oni.png", hp: 27, atk: 9, def: 5, spd: 4, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.4 } }, // 山に棲む鬼、棍棒の一撃は防御ごと打ち砕く
-  q_gashadokuro: { id: "q_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/q_gashadokuro.png", hp: 24, atk: 8, def: 5, spd: 8, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true,
+  q_gashadokuro: { id: "q_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/q_gashadokuro.png", hp: 24, atk: 8, def: 5, spd: 8, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 夜鳴きの怪、骨の震えが敵の足をすくませる
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
@@ -1364,6 +1364,13 @@ const QUEST_DEFS = {
   bake_danuki: { emoji: "🦝", requester: "旅商人・喜兵衛", title: "消えない山道", text: "山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。", targetFloor: 7, count: 1, tier: 1 },
   onibi: { emoji: "🔥", requester: "墓守・源次", title: "夜に漂う青い火", text: "夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。", targetFloor: 6, count: 3, tier: 1 },
   kamaitachi: { emoji: "🦦", requester: "木こり・新八", title: "風が人を斬る", text: "山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。", targetFloor: 8, count: 2, tier: 1 },
+  // ボス級の指名討伐4種。大猪(inoshishi)を一度でも討伐していないと奉行所の張り出しに出てこない
+  // (requiresOoInoshishi、refreshMagistrateQuestsIfNeeded参照)。旧・自動発生する「緊急依頼」システムを
+  // 廃止し、他の依頼と全く同じ受注制(受注→targetFloorで確定出現→討伐→リザルトで報酬)に統一した
+  q_arakuma: { emoji: "🐻", requester: "街道番・源蔵", title: "緊急依頼『森の主』", text: "山へ向かった者が誰一人戻ってきません。現場には巨大な爪痕と足跡だけが残されていました。あれは普通の熊ではありません。どうか森の主を討ち倒してください。", targetFloor: 7, count: 1, chaseText: "荒熊が追いかけてきた！", rewardGold: 150, tier: 1, requiresOoInoshishi: true },
+  q_daija: { emoji: "🐍", requester: "庄屋・善兵衛", title: "緊急依頼『川を塞ぐ影』", text: "川へ近づいた者が次々と姿を消しています。生き残った者は巨大な蛇を見たと震えています。村へ現れる前に討伐してください。奉行所より緊急依頼です。", targetFloor: 8, count: 1, chaseText: "大蛇が追いかけてきた！", rewardGold: 150, tier: 1, requiresOoInoshishi: true },
+  q_oni: { emoji: "👹", requester: "山番・五郎", title: "緊急依頼『山に棲む怪物』", text: "山小屋が跡形もなく壊されていました。人の仕業とは思えない力です。このままでは村まで被害が及びます。どうか討伐をお願いします。", targetFloor: 9, count: 1, chaseText: "鬼が追いかけてきた！", rewardGold: 150, tier: 1, requiresOoInoshishi: true },
+  q_gashadokuro: { emoji: "💀", requester: "墓守・源次", title: "緊急依頼『夜鳴きの怪』", text: "夜になると山奥から骨の軋む音が聞こえます。音を追った者は誰一人帰ってきません。正体は誰にも分かりません。どうかこの怪異を止めてください。", targetFloor: 10, count: 1, chaseText: "がしゃどくろが追いかけてきた！", rewardGold: 150, tier: 1, requiresOoInoshishi: true },
   // ★2(中盤floor9-29の10種)。報酬はquestGoldReward()の式(targetFloor×QUEST_GOLD_PER_FLOOR×QUEST_REWARD_MULT)
   // にそのまま乗るため、★1より深いtargetFloorを設定するだけで自動的に報酬・契約金も高くなる
   ochimusha: { emoji: "🥷", requester: "旅籠「松風屋」主人・徳兵衛", title: "彷徨う鎧武者", text: "日が暮れるたび、あの鎧武者が街道に現れるんです…。旅人も寄り付かず、このままじゃ店を畳むしかありません。村の者も皆おびえております。どうか、あいつを止めてください。", targetFloor: 12, count: 2, tier: 2 },
@@ -1406,22 +1413,6 @@ const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(瀕死・ロストを除
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
 const CHASE_ENCOUNTER_CHANCE = 0.6;
 
-// 奉行所: 緊急依頼(序盤のボス級、questOnly:trueの専用個体を名指しで討伐する特別枠)。
-// 通常の討伐依頼(QUEST_DEFS)とは別枠で、同時に1件だけ発生する。解禁条件は2段階:
-// ①大猪(猪の依頼で出てくる中ボス、QUEST_DEFS.inoshishi.spawnId)を1度は討伐済みであること(一生モノの
-//   フラグ、state.defeatedOoInoshishi)②その上で、大猪以外の通常討伐依頼をEMERGENCY_QUEST_CLEAR_THRESHOLD件
-// クリアするたびに1件発生する(indexHtml側のmaybeTriggerEmergencyQuest参照)。
-// 一番最初に発生する緊急依頼は必ず荒熊(q_arakuma)、以降はランダム
-const EMERGENCY_QUEST_DEFS = {
-  q_arakuma: { emoji: "🐻", requester: "街道番・源蔵", title: "緊急依頼『森の主』", text: "山へ向かった者が誰一人戻ってきません。現場には巨大な爪痕と足跡だけが残されていました。あれは普通の熊ではありません。どうか森の主を討ち倒してください。" },
-  q_daija: { emoji: "🐍", requester: "庄屋・善兵衛", title: "緊急依頼『川を塞ぐ影』", text: "川へ近づいた者が次々と姿を消しています。生き残った者は巨大な蛇を見たと震えています。村へ現れる前に討伐してください。奉行所より緊急依頼です。" },
-  q_oni: { emoji: "👹", requester: "山番・五郎", title: "緊急依頼『山に棲む怪物』", text: "山小屋が跡形もなく壊されていました。人の仕業とは思えない力です。このままでは村まで被害が及びます。どうか討伐をお願いします。" },
-  q_gashadokuro: { emoji: "💀", requester: "墓守・源次", title: "緊急依頼『夜鳴きの怪』", text: "夜になると山奥から骨の軋む音が聞こえます。音を追った者は誰一人帰ってきません。正体は誰にも分かりません。どうかこの怪異を止めてください。" },
-};
-const EMERGENCY_QUEST_CLEAR_THRESHOLD = 3; // 通常の討伐依頼をこの件数クリアするたびに緊急依頼が1件発生する
-const EMERGENCY_QUEST_ENCOUNTER_CHANCE = 0.25; // 発生中、戦闘の遭遇のたびに指名の的が代わりに出てくる確率
-const EMERGENCY_QUEST_REWARD_GOLD = 150;
-const EMERGENCY_QUEST_REWARD_XP = 80;
 
 // 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。
 // キーはstatusIconsFor()等がdata-status属性に埋め込む識別子。今後アイコンが増えた場合は

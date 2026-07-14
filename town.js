@@ -1842,6 +1842,7 @@ function refreshMagistrateQuestsIfNeeded() {
     const tierKeepKey = keepTier === tier ? keepKey : null;
     const pool = Object.keys(QUEST_DEFS).filter((id) => {
       if (QUEST_DEFS[id].tier !== tier) return false;
+      if (QUEST_DEFS[id].requiresOoInoshishi && !state.defeatedOoInoshishi) return false; // ボス級指名討伐は大猪を一度倒すまで張り出されない
       if (id === tierKeepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
       const shownDay = lastShown[id];
       return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
@@ -1869,19 +1870,6 @@ function checkQuestDeadline() {
   saveState();
   showConfirmModal(`依頼「${def ? def.title : ""}」は期限までに完了できませんでした…間に合いませんでした。`, [{ label: "OK", className: "big" }]);
 }
-// 緊急依頼(序盤ボス級の指名討伐)。モンハン風に、通常の討伐依頼をEMERGENCY_QUEST_CLEAR_THRESHOLD件
-// クリア(報酬受け取り)するたびに1件発生する。既に進行中(未達成)の緊急依頼がある間は増発しない。
-// 一番最初に発生する緊急依頼は必ず荒熊、以降はランダムに選ぶ
-function maybeTriggerEmergencyQuest() {
-  if (state.emergencyQuest && !state.emergencyQuest.claimed) return;
-  if (!state.defeatedOoInoshishi) return; // 大猪を一度も倒していない間は解禁されない
-  if (state.magistrateNormalClears < EMERGENCY_QUEST_CLEAR_THRESHOLD) return;
-  state.magistrateNormalClears -= EMERGENCY_QUEST_CLEAR_THRESHOLD;
-  const ids = Object.keys(EMERGENCY_QUEST_DEFS);
-  const id = state.emergencyQuestEverAppeared ? ids[Math.floor(Math.random() * ids.length)] : "q_arakuma";
-  state.emergencyQuest = { enemyId: id, kills: 0, claimed: false };
-  state.emergencyQuestEverAppeared = true;
-}
 // 破綻寸前パーティ救済クエスト(薬草摘み)の張り出し条件。既に受注中なら現在の所持金/人数に
 // 関わらず表示し続ける(受注後に持ち直しても、進行中のクエストを取り上げたりはしない)
 function rescueQuestAvailable() {
@@ -1901,7 +1889,6 @@ function renderMagistrateScreen() {
   updateSceneBackgrounds();
   renderDwHeader("magistrate", "奉行所", () => { renderTown(); });
   refreshMagistrateQuestsIfNeeded();
-  maybeTriggerEmergencyQuest(); // 前回の受け取り時点でしきい値に達していた場合の保険
   saveState();
   const list = document.getElementById("magistrateQuestList");
   list.innerHTML = "";
@@ -1928,37 +1915,6 @@ function renderMagistrateScreen() {
       rBtn.onclick = () => acceptRescueQuest();
     }
     row.appendChild(rBtn);
-    list.appendChild(row);
-  }
-  if (state.emergencyQuest) {
-    const eq = state.emergencyQuest;
-    const eDef = EMERGENCY_QUEST_DEFS[eq.enemyId];
-    const eDone = eq.kills >= 1;
-    const row = document.createElement("div");
-    row.className = "card";
-    row.style.border = "1px solid var(--danger)";
-    row.innerHTML = `
-      <div class="roster-name" style="color:#f0d43a;">${eDef.emoji}${eDef.title}</div>
-      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0;">依頼者: ${eDef.requester}</p>
-      <p style="font-size:0.8rem;margin:0 0 0.5rem;">${eDef.text}</p>
-      <p style="font-size:0.8rem;">討伐状況: ${eDone ? "討伐済み" : "未討伐"}</p>
-    `;
-    const eBtn = document.createElement("button");
-    eBtn.style.marginTop = "0.5rem";
-    if (eq.claimed) {
-      eBtn.className = "big";
-      eBtn.textContent = "報酬受け取り済み";
-      eBtn.disabled = true;
-    } else if (!eDone) {
-      eBtn.className = "big";
-      eBtn.textContent = "討伐を進めよう";
-      eBtn.disabled = true;
-    } else {
-      eBtn.className = "big primary";
-      eBtn.textContent = `報酬を受け取る(${EMERGENCY_QUEST_REWARD_GOLD}G / XP${EMERGENCY_QUEST_REWARD_XP})`;
-      eBtn.onclick = () => claimEmergencyQuest();
-    }
-    row.appendChild(eBtn);
     list.appendChild(row);
   }
   const activeTab = state.magistrateQuestTab === 2 ? 2 : 1;
@@ -2030,22 +1986,6 @@ function acceptQuest(enemyId) {
 function abandonQuest() {
   state.acceptedQuest = null;
   saveState();
-  renderMagistrateScreen();
-}
-function claimEmergencyQuest() {
-  const eq = state.emergencyQuest;
-  if (!eq || eq.claimed || eq.kills < 1) return;
-  eq.claimed = true;
-  state.gold += EMERGENCY_QUEST_REWARD_GOLD;
-  const leveledUp = [];
-  state.roster.filter((c) => c.status === "active").forEach((c) => {
-    const beforeLevel = c.level;
-    grantXp(c, EMERGENCY_QUEST_REWARD_XP, () => {});
-    for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
-  });
-  queueSkillChoices(leveledUp);
-  saveState();
-  playSfx("coin");
   renderMagistrateScreen();
 }
 document.getElementById("magistrateBackBtnTop").onclick = () => { renderTown(); };

@@ -942,15 +942,7 @@ function rollEncounter(pathBias) {
   const goldChance = retreating ? baseGold / 5 : baseGold;
   const roll = Math.random();
   if (roll < battleChance) {
-    // 緊急依頼が発生中(未討伐)なら、序盤の森(floor1-12)限定で一定確率でその的が代わりに現れる
-    const eq = state.emergencyQuest;
-    let enemies;
-    if (eq && !eq.claimed && eq.kills < 1 && !retreating && currentStage === "forest" && currentFloor <= 12 && Math.random() < EMERGENCY_QUEST_ENCOUNTER_CHANCE) {
-      enemies = [instantiateEnemyById(eq.enemyId)];
-    } else {
-      enemies = pickEncounterForFloor(currentFloor, currentStage);
-    }
-    startBattle(enemies, bias);
+    startBattle(pickEncounterForFloor(currentFloor, currentStage), bias);
   } else if (roll < battleChance + goldChance) {
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という
     // 旧仕様の問題を解消するため、下限も階層に応じて伸びるようにしてある)。
