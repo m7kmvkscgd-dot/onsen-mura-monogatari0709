@@ -1640,7 +1640,7 @@ function renderOnsenShrine() {
       row.innerHTML = `
         <img src="${OMAMORI_TIER_IMAGE[o.tier]}" style="${owned ? "" : "filter:grayscale(1) brightness(0.35);"}">
         <div class="roster-info">
-          <div class="roster-name">${owned ? o.name : "？？？"} <span class="status-tag ${equipped ? "active" : ""}">${omamoriRarityLabel(o.tier)}</span></div>
+          <div class="roster-name">${owned ? `${o.name}(${o.reading})` : "？？？"} <span class="status-tag ${equipped ? "active" : ""}">${omamoriRarityLabel(o.tier)}</span></div>
           <div class="roster-sub">${owned ? o.desc : "まだ授かっていません"}</div>
         </div>
         <button class="big" ${owned ? "" : "disabled"}>${equipped ? "外す" : "装備する"}</button>
@@ -1674,7 +1674,7 @@ document.getElementById("shrineOfferBtn").onclick = () => {
   const resultEl = document.getElementById("shrineDrawResult");
   resultEl.style.display = "block";
   resultEl.innerHTML = `
-    <div class="roster-name">${drawn.name} を授かった!<span class="status-tag active">${omamoriRarityLabel(drawn.tier)}</span></div>
+    <div class="roster-name">${drawn.name}(${drawn.reading}) を授かった!<span class="status-tag active">${omamoriRarityLabel(drawn.tier)}</span></div>
     <div class="roster-sub" style="margin-top:0.3rem;">${drawn.desc}</div>
   `;
   renderOnsenShrine();

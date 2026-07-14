@@ -218,6 +218,17 @@ function clearOnsenBuff(character) {
   character.onsenBuffKey = null;
 }
 
+// 石長比売の御守で戦闘開始時に加算した最大HP+5%分を、戦闘終了時(勝利/逃走/全滅どれでも)に差し引く
+function clearOmamoriIwanagaBonus(characters) {
+  characters.forEach((c) => {
+    if (c.omamoriIwanagaHpBonusAmount) {
+      c.maxHp = Math.max(1, c.maxHp - c.omamoriIwanagaHpBonusAmount);
+      c.hp = Math.min(c.maxHp, Math.max(0, c.hp - c.omamoriIwanagaHpBonusAmount));
+      c.omamoriIwanagaHpBonusAmount = 0;
+    }
+  });
+}
+
 // 宿屋に宿泊し、HP/MPを全回復+ストレスを少量回復する(宿泊自体は冒険可否に影響しない)
 function useLodging(character) {
   character.hp = character.maxHp;
@@ -493,6 +504,11 @@ function applyStun(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;
   entity.stunTurns = Math.max(entity.stunTurns || 0, turns);
+  // 不動明王の御守: 味方がスタンした時、その間だけ防御力が2倍になる(敵には効かない。
+  // instanceIdを持つのは敵のみなので、それが無い=味方で判定する)
+  if (entity.instanceId === undefined && hasOmamori("fudo")) {
+    applyStatMod(entity, "def", 2.0, entity.stunTurns);
+  }
   // スタンした相手には一定ターン、スタン抵抗(resistedChance側で参照)を大幅に付与する。
   // 連続でスタンし続けられる「スタンロック」を防ぐための措置(通常のstatusResistMultとは別枠)
   entity.stunResistTurns = Math.max(entity.stunResistTurns || 0, STUN_RESIST_TURNS);
@@ -1387,6 +1403,12 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     log(`${target.label}は${actorLabel}の攻撃を完全に無効化した！`);
     return 0;
   }
+  // 毘沙門天の御守: 戦闘開始時にランダムな味方一人へ配られるバリア(1回だけ攻撃を完全無効化)
+  if (target.passives && target.passives.omamoriBishamonPending) {
+    target.passives.omamoriBishamonPending = false;
+    log(`${target.label}は毘沙門天の御守の加護で攻撃を完全に無効化した！`);
+    return 0;
+  }
   const lethal = target.hp - dmg <= 0;
   // おみくじ「大吉」: パーティ全員で共有する1回だけの致命傷耐え(同じオブジェクト参照を
   // 全員のpassivesに配っておくことで、誰が最初に致命傷を受けても消費は1回だけになる)
@@ -1527,7 +1549,8 @@ function applyOnsenHealBonus(target, heal) {
 }
 
 function usePotion(target, log) {
-  const ratio = POTION_HEAL_RATIO + (state.beeFarmLevel || 0) * BEE_FARM_POTION_BONUS_PER_LEVEL;
+  let ratio = POTION_HEAL_RATIO + (state.beeFarmLevel || 0) * BEE_FARM_POTION_BONUS_PER_LEVEL;
+  if (hasOmamori("kannon")) ratio *= 1.30; // 観音菩薩の御守: 回復薬の回復量+30%
   const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は回復薬で${heal}回復！`);
@@ -1537,7 +1560,9 @@ function usePotion(target, log) {
 // 温泉卵: 回復薬と違い自分専用(呼び出し側でtarget=行動者本人を渡す前提)。ターンを消費しない点は
 // index.html側(ボタンのonclickでfinishPlayerActionを呼ばない)で担保している
 function useOnsenEgg(target, log) {
-  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ONSEN_EGG_HEAL_RATIO));
+  let ratio = ONSEN_EGG_HEAL_RATIO;
+  if (hasOmamori("toyouke")) ratio *= 1.20; // 豊受大神の御守: 温泉たまごの回復量+20%
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は温泉卵で${heal}回復！`);
   return heal;

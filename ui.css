@@ -126,7 +126,7 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.carried-badge):not(.hawk-badge) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 助っ人の札で編成した5人目(交代要員)。戦闘に参加していないことが一目でわかるよう控えめに暗くする */
   .party-member.reserve { opacity: 0.55; }
@@ -139,6 +139,20 @@
   }
   /* 状態異常アイコンを立ち絵に重ねて表示するためのラッパー(敵カードの.enemy-debuff-iconsと同じ方式) */
   .party-portrait-wrap { position: relative; }
+  /* 毘沙門天の御守: バリアを張っている味方のイラストをぐるっと囲む発光(ユーザー提供素材)。
+     素材の中心が不透明な白いため、ポートレートより一回り大きいサイズでz-index:-1(背面)に
+     敷くことで、はみ出た縁の部分だけが光の輪として周囲に見える(以前は.party-member imgの
+     汎用ルールに幅/背景色を上書きされて正方形の灰色ボックスに見えてしまっていた不具合を修正済み) */
+  .bishamon-barrier-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 175%; height: 175%; object-fit: contain; pointer-events: none;
+    z-index: -1;
+    animation: bishamonBarrierPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes bishamonBarrierPulse {
+    0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  }
   .ally-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }
   .ally-debuff-icons:empty { display: none; }
   /* 高さを少し太くし、黒い縁+上側だけ薄いハイライトを加えて立体感/高級感を出す

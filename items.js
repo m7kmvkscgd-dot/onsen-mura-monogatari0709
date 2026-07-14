@@ -143,6 +143,7 @@ function useSmokeBomb(actor) {
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
   renderBattleScreen();
   playSmokeBombEffect(() => {
     battle = null;

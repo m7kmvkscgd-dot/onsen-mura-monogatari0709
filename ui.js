@@ -420,6 +420,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.innerHTML = `
       <div class="party-portrait-wrap">
         <img src="${portraitSrc}">
+        ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
       </div>
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}

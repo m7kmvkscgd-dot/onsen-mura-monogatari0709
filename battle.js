@@ -42,6 +42,7 @@ function startBattle(enemies, pathDef, encounterText) {
       c.passives.omamoriIzanagiPending = null;
       c.passives.omamoriIzanamiPending = null;
       c.passives.omamoriSharedSurviveFatal = null;
+      c.passives.omamoriBishamonPending = false; // 前回誰かに配られた分が残らないよう、毎戦闘リセットしてから配り直す
     }
   });
   battleLogLines = [];
@@ -62,6 +63,26 @@ function startBattle(enemies, pathDef, encounterText) {
   }
   if (hasOmamori("inari")) fieldParty.forEach((c) => applyStatMod(c, "evasionAdd", 0.05, 999));
   if (hasOmamori("yatagarasu")) fieldParty.forEach((c) => applyStatMod(c, "accuracyAdd", 0.12, 999));
+  // 毘沙門天の御守: 戦闘開始時、生存中の味方からランダムに1人選び、次の攻撃を完全無効化するバリアを張る
+  if (hasOmamori("bishamonten")) {
+    const alive = fieldParty.filter((c) => c.status === "active");
+    if (alive.length > 0) {
+      const chosen = alive[Math.floor(Math.random() * alive.length)];
+      if (chosen.passives) chosen.passives.omamoriBishamonPending = true;
+      blog(`毘沙門天の御守の加護で、${chosen.label}に無敵の加護が宿った！`);
+    }
+  }
+  // 石長比売の御守: 最大HP+5%(ぽかぽかの温泉バフと同じ「実際のHPの器を増やす」方式。戦闘終了時に必ず差し引く)
+  if (hasOmamori("iwanagahime")) {
+    fieldParty.forEach((c) => {
+      if (c.status === "active" && !c.omamoriIwanagaHpBonusAmount) {
+        const bonus = Math.max(1, Math.round(c.maxHp * 0.05));
+        c.maxHp += bonus;
+        c.hp += bonus;
+        c.omamoriIwanagaHpBonusAmount = bonus;
+      }
+    });
+  }
   showScreen("screen-battle");
   playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。森は夜だけ専用曲、海岸はcoast_battle)
   blog(encounterText || (enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`));
@@ -1277,6 +1298,7 @@ function victory() {
     battle = null;
     clearHawkState(fieldParty);
     clearGuardState(fieldParty);
+    clearOmamoriIwanagaBonus(fieldParty);
     fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     showScreen("screen-dungeon");
     renderDungeon();
@@ -1304,6 +1326,7 @@ function escapeBattle() {
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
@@ -1325,6 +1348,7 @@ function defeat() {
   clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
   blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
