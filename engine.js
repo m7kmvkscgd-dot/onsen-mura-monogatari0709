@@ -1566,8 +1566,10 @@ function handleGuardSynergyPassives(target, enemy, log) {
   let counterDmg = null;
   if (target.passives.guardCounter && enemy.hp > 0) {
     counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
-    enemy.hp = Math.max(0, enemy.hp - counterDmg);
-    log(`${target.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
+    // ここではenemy.hpを減らさない・ログも出さない。反撃の演出(playGuardCounterVisual、0.5秒後)と
+    // 完全に同時になるよう、実際のHP減算とログ出力は演出発火のタイミングまで遅延させる
+    // (以前はここで即座に減らしていたため、敵の攻撃演出の直後のrenderBattleScreen()で
+    // 反撃エフェクトより先にHPバーだけ減って見えるズレがあった)
   }
   // かばうが成功した瞬間、味方全体に3ターンの攻撃力バフを配る(鼓舞の盾)。__alliesはstartBattle()で
   // 全プレイヤーキャラに配られる自パーティ全体への参照

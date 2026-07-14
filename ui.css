@@ -110,6 +110,15 @@
     0%, 100% { transform: translateY(-10px) translateZ(0); }
     50% { transform: translateY(-13px) translateZ(0); }
   }
+  /* かばう反撃の瞬間だけ再生する一回きりのバウンス(playGuardCounterVisual参照)。
+     .acting(手番中ずっとループするふわふわ浮遊)とは別の、素早く跳ねて着地する攻撃モーション */
+  .party-member.counter-bounce { animation: guardCounterBounce 0.4s ease-out; }
+  @keyframes guardCounterBounce {
+    0% { transform: translateY(0) translateZ(0); }
+    35% { transform: translateY(-16px) translateZ(0); }
+    65% { transform: translateY(-4px) translateZ(0); }
+    100% { transform: translateY(0) translateZ(0); }
+  }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member.targetable { cursor: pointer; border-color: rgba(76,175,111,0.75); box-shadow: 0 0 10px rgba(76,175,111,0.5); animation: targetPulseAlly 1.1s ease-in-out infinite; }
   .party-member.targetable:active { transform: scale(0.94) translateZ(0); }

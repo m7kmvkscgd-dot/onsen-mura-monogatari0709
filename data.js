@@ -271,7 +271,7 @@ const ENEMIES = {
   // 大技は「構え中(bigAttackPending)にスタンを入れると完全に潰せる」という既存仕組みを
   // プレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
   oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 63, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 8.0 } },
+    bigAttack: { mult: 6.0 } },
   q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 39, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,

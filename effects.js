@@ -91,12 +91,25 @@ function playAttackVfx(targetId, actor, kind) {
 // GUARD_COUNTER_DELAY_MS(0.5秒)待ってから槍士側の攻撃VFX/SE/ダメージ揺れをまとめて再生する。
 // onDoneは演出が一通り終わった後に呼ぶ(呼び出し元で次のターンへ進める処理を渡す)
 const GUARD_COUNTER_DELAY_MS = 500;
+// かばう反撃の瞬間、槍士のポートレートを一瞬「ぴょこん」と跳ねさせて攻撃している感を出す
+// (自分の手番中ずっと浮遊し続ける.party-member.actingとは別枠の、一回きりのバウンス演出)
+const GUARD_COUNTER_BOUNCE_MS = 400;
 function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
   setTimeout(() => {
+    // 実際のHP減算とログ出力はここで初めて行う(engine.js側のhandleGuardSynergyPassivesでは
+    // ダメージ量の計算のみ行い、反撃が発生した事実は伝えていない)。これによりHPバーの減少・
+    // ログ・ダメージポップアップ・攻撃VFXが全て同じタイミングで発生するようになる
+    enemy.hp = Math.max(0, enemy.hp - counterDmg);
+    blog(`${spearman.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
     popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
     playSfx(attackSfxFor(spearman.classId));
     renderBattleScreen();
     playAttackVfx(enemy.instanceId, spearman, "normal");
+    const card = findVisibleCard(spearman.id);
+    if (card) {
+      card.classList.add("counter-bounce");
+      setTimeout(() => card.classList.remove("counter-bounce"), GUARD_COUNTER_BOUNCE_MS);
+    }
     setTimeout(onDone, 500);
   }, GUARD_COUNTER_DELAY_MS);
 }
