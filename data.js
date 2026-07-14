@@ -710,6 +710,40 @@ const TEAHOUSE_REST_CLOCK_MINUTES = 60; // 一休みで進む時間(1時間)
 const TEAHOUSE_POTION_STOCK = 4; // 1回の来訪で買える回復薬の在庫数
 const TEAHOUSE_SMOKEBOMB_STOCK = 1; // 1回の来訪で買える煙玉の在庫数
 const TEAHOUSE_REST_MESSAGES = ["団子を食べて休憩した", "ちょっと一休みした", "お茶を飲んで休憩", "ちょっと疲れが取れた"];
+// 茶屋の菓子ラインナップ。支援物資(回復薬・煙玉)と違い持ち歩けず、購入した瞬間その場で選んだ
+// 1人にHP/MPを回復させる消費型の商品(useTeahouseSnack、engine.js参照)。descは各菓子の風味文に
+// 共通文(TEAHOUSE_SNACK_COMMON_DESC)を改行で結合してrenderTeahouse側で表示する
+const TEAHOUSE_SNACK_COMMON_DESC = "HPとMPをちょっと回復。";
+const TEAHOUSE_SNACKS = [
+  { id: "amadango", ja: "甘団子", price: 9, hpPct: 0.15, mpPct: 0.15, flavor: "素朴な甘さが心をほぐす団子。", image: "assets/items/snack_amadango.png" },
+  { id: "sanshokudango", ja: "三色団子", price: 5, hpPct: 0.15, mpPct: 0.13, flavor: "春を感じる彩り豊かな団子。", image: "assets/items/snack_sanshokudango.png" },
+  { id: "sakuramochi", ja: "桜餅", price: 10, hpPct: 0.20, mpPct: 0.15, flavor: "桜の香りが気持ちを和らげる。", image: "assets/items/snack_sakuramochi.png" },
+  { id: "kusamochi", ja: "草餅", price: 8, hpPct: 0.15, mpPct: 0.10, flavor: "よもぎの香りが疲れを癒やす。", image: "assets/items/snack_kusamochi.png" },
+  { id: "matcha", ja: "抹茶", price: 8, hpPct: 0.05, mpPct: 0.20, flavor: "ほろ苦い一服で心を落ち着ける。", image: "assets/items/snack_matcha.png" },
+  { id: "yakiguri", ja: "焼き栗", price: 8, hpPct: 0.08, mpPct: 0.16, flavor: "ほくほくとした甘みが元気をくれる。", image: "assets/items/snack_yakiguri.png" },
+  { id: "hoshigaki", ja: "干し柿", price: 12, hpPct: 0.20, mpPct: 0.13, flavor: "じっくり熟した自然の甘味。", image: "assets/items/snack_hoshigaki.png" },
+  { id: "konpeito", ja: "金平糖", price: 15, hpPct: 0.20, mpPct: 0.20, flavor: "ひと粒で気分が晴れる甘い菓子。", image: "assets/items/snack_konpeito.png" },
+];
+function teahouseSnackById(id) { return TEAHOUSE_SNACKS.find((s) => s.id === id); }
+// 茶屋の案内キャラクター。温泉・宿屋・売店と同じく1日おきにランダムな一言を喋る(renderTeahouse参照)
+const TEAHOUSE_KEEPER_LINES = [
+  "いらっしゃい。お茶でもどうぞ。",
+  "団子、焼きたてですよ。",
+  "少し座って休んでいってください。",
+  "旅の途中は、甘い物が効きますよ。",
+  "お団子、たくさん召し上がれ。",
+  "ここでひと息つくと、また歩けますよ。",
+  "抹茶、渋みが良い塩梅なんです。",
+  "無理せず、ゆっくりしていってくださいね。",
+  "遠くから歩いてきたんですね。お疲れさま。",
+  "この栗、今朝焼いたばかりなんですよ。",
+  "甘い物は、心にも効くんです。",
+  "また旅の話、聞かせてくださいね。",
+  "干し柿、よく熟していて甘いですよ。",
+  "金平糖、一粒でほっとしますよ。",
+  "お茶が入りましたよ。どうぞ。",
+  "森の中は大変でしょう。少し休んで。",
+];
 // 野営中「武器の手入れ」を選んだキャラの攻撃力バフ(戦闘回数でカウントし、ターンではなく戦闘をまたいで持続する)
 const CAMP_WEAPON_CARE_ATK_MULT = 1.1;
 const CAMP_WEAPON_CARE_BATTLES = 3;

@@ -182,9 +182,12 @@
   /* 入浴中が終わった後、次の遠征まで持ち越すバフ名表示。湯上がりのぽかぽかした雰囲気を出すため暖色系の配色にしてある */
   .status-tag.onsen-buffed { background: linear-gradient(135deg, #4a2a1f, #6b3a1f); color: #ffbe7a; border: 1px solid #d98a3d; }
   .shop-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
-  .shop-item > div:first-child { flex: 1; min-width: 0; }
+  .shop-item > div { flex: 1; min-width: 0; }
   .shop-item button { flex-shrink: 0; }
   .shop-item .desc { font-size: 0.72rem; color: var(--text-muted); }
+  /* アイテムアイコン(茶屋の商品一覧、renderTeahouse参照)。widthではなくheightを揃える
+     (owned-supply-iconsと同じ理由: 素材の縦横比がバラバラでもアイコンの見た目サイズを統一するため) */
+  .shop-item-icon { height: 46px; width: 46px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); border-radius: var(--radius-xs); }
   .equip-class-card {
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);

@@ -61,6 +61,8 @@ function defaultState() {
     tavernKeeperLineIndex: 0,
     onsenShopKeeperLinePeriod: null, // 温泉の売店の店番キャラの同種のフィールド(renderOnsenShop参照)
     onsenShopKeeperLineIndex: 0,
+    teaHouseKeeperLinePeriod: null, // 茶屋の案内キャラの同種のフィールド(renderTeahouse参照)
+    teaHouseKeeperLineIndex: 0,
     // 建物が解禁した「新しい導線」をちゃんと見つけられるようにするNEWバッジ用フラグ群。
     // 見た瞬間に消える(showXxxやrenderXxxの中でtrueにする)方式で、seenUnlockedBuildingsと同じ考え方
     seenShrineTab: false, // 温泉の⛩️神社タブ(お守り奉納)を開いたか

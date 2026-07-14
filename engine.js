@@ -263,6 +263,15 @@ function useTeahouseRest(character) {
   character.hp = Math.min(character.maxHp, character.hp + Math.round(character.maxHp * TEAHOUSE_REST_HP_RATIO));
   character.mp = Math.min(character.maxMp, character.mp + Math.round(character.maxMp * TEAHOUSE_REST_MP_RATIO));
 }
+// 茶屋の菓子: 買った瞬間その場で選んだ1人に食べさせ、HP/MPを菓子ごとの割合だけ回復する
+// (回復薬と違い在庫として持ち歩かない、その場限りの消費)
+function useTeahouseSnack(snack, target, log) {
+  const healHp = Math.round(target.maxHp * snack.hpPct);
+  const healMp = target.maxMp > 0 ? Math.round(target.maxMp * snack.mpPct) : 0;
+  target.hp = Math.min(target.maxHp, target.hp + healHp);
+  target.mp = Math.min(target.maxMp, target.mp + healMp);
+  log(`${target.label}は${snack.ja}を食べてHP${healHp}・MP${healMp}回復！`);
+}
 
 // ストレスの段階(0=平常, 1=40〜59, 2=60〜79, 3=80〜99, 4=100=発狂)
 function stressTier(fatigue) {

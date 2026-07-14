@@ -1094,6 +1094,8 @@ function teahouseSupplyTotal() {
 function renderTeahouse() {
   updateSceneBackgrounds();
   renderDwHeader("teaHouse", "茶屋", () => { showScreen("screen-dungeon"); renderDungeon(); });
+  updateKeeperLine("teaHouseKeeperLinePeriod", "teaHouseKeeperLineIndex", TEAHOUSE_KEEPER_LINES, "teaHouseKeeperBubble");
+  showKeeperCharacter("teaHouseKeeperWrap");
   const open = teahouseIsOpen();
   document.getElementById("teaHouseClosedNotice").style.display = open ? "none" : "";
   document.getElementById("teaHouseOpenContent").style.display = open ? "" : "none";
@@ -1127,6 +1129,62 @@ function renderTeahouse() {
     smokeBtn.textContent = `購入 残り${smokeRemaining}個`;
     smokeBtn.disabled = teahouseSupplyTotal() >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
   }
+  renderTeahouseSnackList();
+}
+// お茶菓子一覧: 支援物資と違い在庫を持たず、押すとその場で仲間を1人選んで即座に食べさせる
+// (teahousePendingSnackId経由でpickTeahouseAllyTarget()のピッカーへ繋ぐ)
+function renderTeahouseSnackList() {
+  const list = document.getElementById("teaHouseSnackList");
+  list.innerHTML = TEAHOUSE_SNACKS.map((s) => `
+    <div class="card" style="margin-top:0.6rem;">
+      <div class="shop-item">
+        <img class="shop-item-icon" src="${s.image}" alt="">
+        <div>
+          <div><strong>${s.ja}</strong></div>
+          <div class="desc">${s.flavor}<br>${TEAHOUSE_SNACK_COMMON_DESC}</div>
+        </div>
+        <button class="big" data-snack-id="${s.id}">購入(${s.price}G)</button>
+      </div>
+    </div>
+  `).join("");
+  TEAHOUSE_SNACKS.forEach((s) => {
+    const btn = list.querySelector(`button[data-snack-id="${s.id}"]`);
+    btn.disabled = state.gold < s.price;
+    btn.onclick = () => {
+      if (state.gold < s.price) { alert("お金が足りません"); return; }
+      pickTeahouseAllyTarget(`誰に${s.ja}を食べさせますか？`, (target) => {
+        state.gold -= s.price;
+        useTeahouseSnack(s, target, dlog);
+        saveState();
+        playSfx("heal");
+        maybeSpeakHealed(target);
+        renderTeahouse();
+      });
+    };
+  });
+}
+// 茶屋専用の対象選択(誰に食べさせるか)。dungeon.jsのpickDungeonAllyTargetと同じ考え方だが、
+// 茶屋は独立した画面(screen-dungeonの下部ボタン列を持たない)のため専用のピッカー要素を使う
+function pickTeahouseAllyTarget(promptText, onPicked) {
+  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
+  const picker = document.getElementById("teaHouseTargetPicker");
+  picker.style.display = "flex";
+  picker.innerHTML = `
+    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>${promptText}</strong></p>
+    ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+    <button class="big" id="cancelTeahouseTargetBtn">やめる</button>
+  `;
+  targets.forEach((c) => {
+    picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      picker.style.display = "none";
+      picker.innerHTML = "";
+      onPicked(c);
+    };
+  });
+  document.getElementById("cancelTeahouseTargetBtn").onclick = () => {
+    picker.style.display = "none";
+    picker.innerHTML = "";
+  };
 }
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
   if (teahouseVisitStock.potion >= TEAHOUSE_POTION_STOCK) { alert("回復薬は今回もう売り切れです"); return; }
@@ -1174,6 +1232,7 @@ document.getElementById("teaHouseRestBtn").onclick = () => {
   });
 };
 document.getElementById("teaHouseBackBtn").onclick = () => { showScreen("screen-dungeon"); renderDungeon(); };
+document.getElementById("teaHouseBackBtnTop").onclick = () => { showScreen("screen-dungeon"); renderDungeon(); };
 
 // 一休みの演出: 宿泊/野営と違い場所を移動しないため、bg画像のクロスフェードは無く暗転+キャプションのみ
 let teahouseRestTransitionActive = false;

@@ -684,8 +684,13 @@
         <div class="dw-header-right"><span class="dw-header-gold" id="teaHouseHeaderGold"></span><span class="dw-header-time" id="teaHouseHeaderTime"></span></div>
       </div>
       <h1>茶屋</h1>
+      <div class="onsen-keeper-wrap" id="teaHouseKeeperWrap">
+        <div class="onsen-keeper-bubble" id="teaHouseKeeperBubble"></div>
+        <img class="onsen-keeper-img" src="assets/teahouse_keeper.png" alt="">
+      </div>
     </div>
     <div class="body-pad">
+      <button class="big" id="teaHouseBackBtnTop" style="margin-bottom:0.8rem;">森に戻る</button>
       <div id="teaHouseClosedNotice" class="card" style="display:none;text-align:center;">
         <div class="roster-name">営業時間外で閉店中だ</div>
       </div>
@@ -698,6 +703,7 @@
         <h2 style="margin-top:1rem;">買い物</h2>
         <div class="card">
           <div class="shop-item">
+            <img class="shop-item-icon" src="assets/items/potion.png" alt="">
             <div>
               <div><strong>回復薬</strong> <span id="teaHousePotionOwned">0</span>個</div>
               <div class="desc" id="teaHousePotionDesc"></div>
@@ -707,6 +713,7 @@
         </div>
         <div class="card" style="margin-top:0.6rem;">
           <div class="shop-item">
+            <img class="shop-item-icon" src="assets/items/smoke_bomb.png" alt="">
             <div>
               <div><strong>煙玉</strong> <span id="teaHouseSmokeBombOwned">0</span>個</div>
               <div class="desc" id="teaHouseSmokeBombDesc"></div>
@@ -714,6 +721,10 @@
             <button class="big" id="teaHouseBuySmokeBombBtn"></button>
           </div>
         </div>
+        <h2 style="margin-top:1rem;">お茶菓子</h2>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">買うとその場で仲間1人に食べさせられます。持ち歩くことはできません。</p>
+        <div id="teaHouseSnackList"></div>
+        <div id="teaHouseTargetPicker" style="display:none;flex-wrap:wrap;gap:0.6rem;margin-top:0.6rem;"></div>
       </div>
       <button class="big" id="teaHouseBackBtn" style="margin-top:1rem;">森に戻る</button>
     </div>
