@@ -219,6 +219,20 @@
   .path-tags-triple .path-tag .path-card-icon { font-size: 1.25rem; }
   .path-tags-triple .path-tag .path-card-label { font-size: 0.68rem; }
   .path-tags-triple .path-tag .path-card-desc { font-size: 0.54rem; }
+  /* 1択の時は、以前は2列分の全幅+2択と同じ高さ(108px)でカードだけ不自然に大きく見えていた。
+     2択・3択のカード感覚に近づけるため、幅は2択の1枚ぶん程度(165px)に留め、高さも
+     2択(108px)と3択(62px)の中間くらいまで縮める */
+  /* display:flexではなくgridを使う理由: 旧来の.path-card(このカードのDOMには.path-tagと
+     同時に付いている)が flex:0 1 128px を持っており、display:flexのコンテナ内だとその
+     flex-basis:128pxがwidth指定より優先されてしまい、165pxを指定しても効かなかった。
+     gridならflex-basisは無関係になり、意図通りのカード幅になる(3択のgrid化と同じ理由) */
+  .path-choice-cards.path-tags-stack.path-tags-single {
+    display: grid; grid-template-columns: 165px; justify-content: center; max-width: none;
+  }
+  .path-tags-single .path-tag { width: 165px; min-height: 78px; padding: 0.55rem 0.5rem; gap: 0.3rem; }
+  .path-tags-single .path-tag .path-card-icon { font-size: 1.6rem; }
+  .path-tags-single .path-tag .path-card-label { font-size: 0.78rem; }
+  .path-tags-single .path-tag .path-card-desc { font-size: 0.6rem; }
   /* ③木札本体: 焦げ茶の枠+上だけ薄く明るく/下だけ薄く暗いグラデーション+内側ハイライトで
      「木札の質感」を表現する(木目テクスチャ画像は不使用)。背景に溶けないよう90〜95%の
      不透明度にし、常時アニメーションは持たせない(静止が基本)。2列グリッド化に伴い、
