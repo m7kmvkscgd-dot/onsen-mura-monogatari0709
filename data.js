@@ -1297,7 +1297,7 @@ const FATIGUE_MAX = 100;
 // 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復する。
 // 料金はレベル1で20G、以降レベルごとに7Gずつ上がる。入浴すると2時間はパーティ編成に組み込めなくなる(宿泊は引き続き可能)
 const ONSEN_FATIGUE_RELIEF = 50;
-const ONSEN_FLAT_COST = 20;
+const ONSEN_FLAT_COST = 15;
 const ONSEN_COST_PER_LEVEL = 7;
 const ONSEN_LOCK_MINUTES = 120; // 2時間 = 120分
 // 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
