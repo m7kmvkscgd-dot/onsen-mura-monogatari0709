@@ -231,6 +231,11 @@ function processNext() {
     const dot = tickTurnStartEffects(actor, blog);
     if (dot.total > 0) popupOn(actor.instanceId, `-${dot.total}`, "dmg");
     popupDotStack(actor.instanceId, dot, actor.isPlant ? "burn-plant" : "burn");
+    // 毒/出血/炎上が同時に何種類も出ている時、ポップアップが順番に表示し終わる前に
+    // 敵の攻撃モーションが始まってしまうと忙しなく見えるため、実際に表示される種類数だけ
+    // 行動開始を後ろ倒しにする(表示が無ければ従来通りの600ms、種類が増えるほど長く待つ)
+    const dotTypeCount = [dot.poison, dot.bleed, dot.burn].filter((v) => v > 0).length;
+    const enemyActionDelay = dotTypeCount > 0 ? dotTypeCount * DOT_POPUP_STAGGER_MS : 600;
     if (actor.hp <= 0) {
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
@@ -338,7 +343,7 @@ function processNext() {
         }
       };
       offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
-    }, 600);
+    }, enemyActionDelay);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
     battle.actingId = actor.id;
