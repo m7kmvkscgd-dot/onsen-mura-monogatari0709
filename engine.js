@@ -1535,7 +1535,8 @@ function usePotion(target, log) {
 // 温泉卵: 回復薬と違い自分専用(呼び出し側でtarget=行動者本人を渡す前提)。ターンを消費しない点は
 // index.html側(ボタンのonclickでfinishPlayerActionを呼ばない)で担保している
 function useOnsenEgg(target, log) {
-  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ONSEN_EGG_HEAL_RATIO));
+  const ratio = ONSEN_EGG_HEAL_RATIO + ((state.henHouseLevel || 0) > 0 ? HEN_HOUSE_EGG_HEAL_BONUS : 0);
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は温泉卵で${heal}回復！`);
   return heal;

@@ -101,7 +101,7 @@ const SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const SHOP_COST = 10;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;
-const TRAVEL_PREP_SHOP_COST = 100;
+const TRAVEL_PREP_SHOP_COST = 30;
 // 鞄屋: 支援物資の所持上限が1増える(唯一、実際に効果があるレベル1の施設)
 const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const BAG_SHOP_LEVEL1_COST = 75;
@@ -114,7 +114,7 @@ const WATCHTOWER_COST = 200;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
-// 鶏小屋: 効果は未定(建物のみ、未実装)
+// 鶏小屋: 建築すると温泉卵の1日の在庫が+1、回復量が+3%される(実際に効果があるレベル1の施設)
 const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
 const HEN_HOUSE_COST = 200;
 // 茶屋: 効果は未定(建物のみ、未実装)
@@ -135,7 +135,7 @@ const BEE_FARM_COST = 300;
 // 神社: 建築すると僧侶が雇えるようになり、出発画面でおみくじを引けるようになる。温泉から入れる
 // お守りガチャ(魂のかけらを捧げるとお守りがもらえる)もここで解禁される
 const SHRINE_UNLOCK_HOUSE_LEVEL = 4;
-const SHRINE_COST = 200;
+const SHRINE_COST = 30;
 // 渡し船: 効果は未定(建物のみ、未実装)
 const FERRY_UNLOCK_HOUSE_LEVEL = 7;
 const FERRY_COST = 250;

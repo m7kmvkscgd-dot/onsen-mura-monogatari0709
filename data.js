@@ -689,6 +689,7 @@ const POTION_HEAL_RATIO = 0.38;
 // 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
 // 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
 const ONSEN_EGG_HEAL_RATIO = 0.25;
+const HEN_HOUSE_EGG_HEAL_BONUS = 0.03; // 鶏小屋を建てると温泉卵の回復量+3%(state.henHouseLevel > 0で有効)
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 助っ人の札も野営具と同じく別枠、最大1枚まで(出発時に5人目の枠を1回分だけ解禁する特別アイテム)

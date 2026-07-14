@@ -1558,7 +1558,11 @@ document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
 document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 温泉の売店(温泉卵) ============
-const ONSEN_EGG_DAILY_STOCK = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
+const ONSEN_EGG_DAILY_STOCK_BASE = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
+// 鶏小屋を建てると1日の在庫が+1される
+function onsenEggDailyStock() {
+  return ONSEN_EGG_DAILY_STOCK_BASE + ((state.henHouseLevel || 0) > 0 ? 1 : 0);
+}
 // dayCountが前回リセット時と変わっていたら、本日の販売数をリセットする(翌朝の仕入れ直し)
 function resetOnsenEggStockIfNewDay() {
   if (state.onsenEggDailyDate !== state.dayCount) {
@@ -1573,7 +1577,7 @@ function renderOnsenShop() {
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
-  const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
+  const remaining = Math.max(0, onsenEggDailyStock() - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
   if (remaining <= 0) {
     buyBtn.textContent = "本日売り切れ";
@@ -1585,7 +1589,7 @@ function renderOnsenShop() {
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
-  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
+  if ((state.onsenEggDailyCount || 0) >= onsenEggDailyStock()) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
