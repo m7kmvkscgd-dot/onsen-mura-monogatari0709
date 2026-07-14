@@ -947,13 +947,22 @@ function useTreeSkill(actor, target, skill, log) {
     const hawkTargetIds = [];
     let totalDmg = 0;
     let anyCrit = false;
+    // 単体対象の多段ヒット技(連突き/二連射)は、以前は各振りのログ行(ダメージ・鷹の追撃等)を
+    // その場ですぐblogへ流していたため、VFXは振りごとに間を置いて再生されるのに文字ログだけ
+    // 先に全部まとめて出てしまい「テキストが二連撃に見えない」というユーザー指摘があった。
+    // 単体多段ヒットの時だけログを振りごとにhitLogLinesへ溜め、battle.js側でVFXと同じ
+    // タイミングで1振りずつblogへ流すようにする(範囲技の乱舞はbattle.js側が個別ヒット演出に
+    // 対応していないため、ログを溜めても流す場所が無く消えてしまう。従来通り即時ログのまま維持する)
+    const deferHitLog = !action.aoe && hits > 1;
     for (let i = 0; i < hits; i++) {
       if (t.hp <= 0) break; // 既に倒している相手には残りの振りを空撃ちしない
       let rawHit = Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
       const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
       if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawHit = Math.round(rawHit * action.executeBonus.mult);
       const hpBeforeHit = t.hp;
-      const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor);
+      const hitLogLines = [];
+      const hitLog = deferHitLog ? (msg) => hitLogLines.push(msg) : log;
+      const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor);
       const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
       if (crit) anyCrit = true;
       totalDmg += dmg;
@@ -971,14 +980,14 @@ function useTreeSkill(actor, target, skill, log) {
             const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
             const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
             splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
-            log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
+            hitLog(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
             if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
           }
         }
       }
       // 全体攻撃には乗せない(全ての敵に追撃が入ると強すぎるため)。対象を倒していれば鷹は別の敵をランダムに狙う
-      const hawkTarget = !action.aoe ? maybeHawkFollowup(actor, t, log) : null;
-      hitsList.push({ dmg, crit });
+      const hawkTarget = !action.aoe ? maybeHawkFollowup(actor, t, hitLog) : null;
+      hitsList.push({ dmg, crit, logLines: hitLogLines });
       if (hawkTarget) hawkTargetIds.push(hawkTarget.instanceId);
     }
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {

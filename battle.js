@@ -628,6 +628,10 @@ function runTreeSkill(actor, skill) {
       const STAGGER_MS = 260;
       r.hits.forEach((hitInfo, i) => {
         setTimeout(() => {
+          // ダメージ行(と貫通/鷹追撃の行があればそれも)を、このヒットのVFXと同時に流す。
+          // 以前はuseTreeSkill内で全振り分のログが即座にまとめて出てしまい、エフェクトだけが
+          // 遅れて2回再生される見た目とテキストの表示タイミングがズレていた
+          (hitInfo.logLines || []).forEach((line) => blog(line));
           popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
           if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
           playAttackVfx(target.instanceId, actor, "skill");
