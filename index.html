@@ -187,11 +187,13 @@
       <div id="rosterList"></div>
       <button class="big primary" id="lodgeConfirmBtn" style="margin-top:0.5rem;width:100%;">宿泊する</button>
 
-      <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
-      <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
-      <div class="class-grid" id="classGrid"></div>
-      <p id="classDescArea" style="font-size:13px;color:var(--dw-caption-color);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
-      <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(50G)</button>
+      <div id="tavernHireTutorialTarget">
+        <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
+        <input type="text" id="newCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
+        <div class="class-grid" id="classGrid"></div>
+        <p id="classDescArea" style="font-size:13px;color:var(--dw-caption-color);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
+        <button class="big primary" id="createCharBtn" style="margin-top:0.5rem;">仲間にする(50G)</button>
+      </div>
 
       <button class="big" id="tavernBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
@@ -319,6 +321,22 @@
       <div id="departConfirmList"></div>
       <button class="big primary" id="departConfirmYesBtn" style="width:100%;margin-top:1rem;">出発する</button>
       <button class="big" id="departConfirmNoBtn" style="width:100%;margin-top:0.5rem;">やめる</button>
+    </div>
+  </div>
+
+  <!-- チュートリアル演出(初回のみ): 画面を少し暗くし、対象要素だけ通常表示+小さな吹き出しで誘導する。
+       黒帯/赤矢印/派手な点滅/揺れは使わない共通部品(showTutorialGuide、town.js参照) -->
+  <div id="tutorialDim" style="display:none;"></div>
+  <div id="tutorialBubble" style="display:none;"><p id="tutorialBubbleText"></p></div>
+
+  <!-- 出発直前のゲームコンセプト説明(初回のみ) -->
+  <div id="conceptIntroOverlay" style="display:none; position:fixed; inset:0; z-index:95; background:rgba(10,12,14,0.94); overflow-y:auto;">
+    <div class="concept-intro-panel">
+      <p>このゲームは、一度の冒険で最後まで進むゲームではありません。</p>
+      <p>危険を感じたら引き返し、仲間を育て、村を発展させながら少しずつ先へ進みましょう。</p>
+      <p>無理をすれば仲間を失います。慎重に進めば、必ず道は開けます。</p>
+      <p>撤退は敗北ではありません。生きて帰ることも、大切な戦略です。</p>
+      <button class="big primary" id="conceptIntroStartBtn" style="width:100%;margin-top:1.4rem;">探索へ</button>
     </div>
   </div>
 

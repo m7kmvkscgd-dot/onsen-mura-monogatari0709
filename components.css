@@ -193,3 +193,51 @@
     box-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 2px 3px rgba(0,0,0,0.3);
     filter: brightness(1.15);
   }
+  /* ============ チュートリアル演出(初回のみ): 画面を少し暗くし、対象要素だけ通常表示(+必要なら
+     ゆっくり発光)+小さな吹き出しで誘導する。黒帯/赤矢印/派手な点滅/揺れは使わない
+     (showTutorialGuide/hideTutorialGuide、town.js参照) ============ */
+  /* opacityのフェードはCSS transitionではなくJS側(element.animate())で行う(このプロジェクトでの
+     既知の問題: transition+rAFの組み合わせは割り込みに弱く信頼できないため)。ここではdisplay/位置のみ規定する */
+  #tutorialDim {
+    position: fixed; inset: 0; z-index: 240; background: rgba(8,9,10,0.6);
+  }
+  .tutorial-highlight-target, .tutorial-glow-target { position: relative; z-index: 241; }
+  .tutorial-glow-target { border-radius: var(--radius-lg); animation: tutorialGlowPulse 2.6s ease-in-out infinite; }
+  @keyframes tutorialGlowPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(215,182,111,0); }
+    50% { box-shadow: 0 0 20px 6px rgba(215,182,111,0.55); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tutorial-glow-target { animation: none; box-shadow: 0 0 14px 4px rgba(215,182,111,0.4); }
+  }
+  /* width: max-contentを明示しないと、position:fixedでtop/leftを未指定のまま(=位置計算前に
+     サイズを測る瞬間)shrink-to-fitの挙動が環境によって不安定になり、幅が極端に狭く測定されて
+     文章が縦に折り返され続け高さが数百pxになる不具合があった(positionTutorialBubble参照) */
+  #tutorialBubble {
+    position: fixed; z-index: 242; width: max-content; max-width: 260px;
+    background: var(--dw-card-bg); border: 1px solid var(--dw-gold); border-radius: var(--radius-md);
+    box-shadow: var(--dw-card-shadow);
+    padding: 0.65rem 0.85rem;
+  }
+  #tutorialBubble p { margin: 0; font-size: 0.85rem; line-height: 1.6; color: var(--dw-body-color); }
+  /* 対象を指し示す小さな三角の「しっぽ」。#townHireHintと同じ2枚重ね(外側=金縁、内側=カード地色)で
+     境界線があるように見せる。上向き/下向きはJS側(positionTutorialBubble)がbubbleの実際の配置に
+     応じてtail-up/tail-downクラスを切り替える */
+  #tutorialBubble::after {
+    content: ''; position: absolute; left: calc(var(--tail-left, 24px) - 1px);
+    width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent;
+  }
+  #tutorialBubble::before {
+    content: ''; position: absolute; left: var(--tail-left, 24px);
+    width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent;
+  }
+  #tutorialBubble.tail-up::after { top: -8px; border-bottom: 8px solid var(--dw-gold); }
+  #tutorialBubble.tail-up::before { top: -7px; border-bottom: 7px solid var(--dw-card-bg); }
+  #tutorialBubble.tail-down::after { bottom: -8px; border-top: 8px solid var(--dw-gold); }
+  #tutorialBubble.tail-down::before { bottom: -7px; border-top: 7px solid var(--dw-card-bg); }
+  /* 出発直前のゲームコンセプト説明(初回のみ)。中央揃えではなく読みやすい左揃えレイアウトにする */
+  .concept-intro-panel { max-width: 480px; margin: 0 auto; padding: 2.4rem 1.4rem 2.2rem; }
+  .concept-intro-panel p {
+    font-size: 0.95rem; line-height: 1.9; color: var(--dw-body-color);
+    text-align: left; margin: 0 0 1.1rem;
+  }
