@@ -961,6 +961,8 @@ function rollEncounter(pathBias) {
     dlog(`${g}Gの財宝を見つけた！`);
     renderDungeon();
     showTreasurePopup(g);
+    // 財宝発見時も(戦闘に遭遇していなければ)平和な掛け合いの対象にする(帰還中の「帰還」ボタンは対象外)
+    if (!retreating) maybeTriggerPeaceDialogue();
   } else {
     dlog("静かな通路だ。何も起こらなかった。");
     renderDungeon();

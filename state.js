@@ -79,7 +79,7 @@ function houseUpgradeCost(level) {
 function rosterCapacity() {
   return Math.min(10, (state.houseLevel || 1) + 1);
 }
-const DOJO_LEVEL1_COST = 50; // 道場レベル1の建築費用
+const DOJO_LEVEL1_COST = 10; // 道場レベル1の建築費用
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
 const DOJO_MAX_LEVEL = 2;
 const DOJO_UNLOCK_HOUSE_LEVEL = 3; // 家レベルがこの値に達するまで道場は建築できない
@@ -122,7 +122,7 @@ const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 5;
 const GUNPOWDER_STORE_COST = 200;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
-const KARAKURI_COST = 50;
+const KARAKURI_COST = 10;
 // 養蜂場: 効果は未定(建物のみ、未実装)
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
 const BEE_FARM_COST = 300;
