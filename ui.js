@@ -89,12 +89,21 @@ document.addEventListener("touchstart", (e) => {
   const t = e.touches && e.touches[0];
   if (t) { touchStartX = t.clientX; touchStartY = t.clientY; }
 }, { passive: true });
+// 探索パートだけでズームが再発していた原因: 「進む」を押すと歩き演出→暗転→フェードインの間
+// (playDungeonMoveTransition、合計で通常時1.5〜2秒前後)advanceBtn/retreatBtnがdisabledになるが、
+// この間は見た目の反応が無いため焦った利用者が同じボタンを何度も連打しがちで、その間隔は
+// 150msの窓より大きいことがほとんどだった(戦闘のコマンド確定待ちは0.5秒と短く、この状況が起きにくい)。
+// disabled中のボタンはそもそも絶対にclickが発火しない(=連打を許しても失われる正規の操作が無い)ため、
+// disabled要素への連打だけは窓を大きく取っても安全。それ以外(通常の連打でテンポよく進めたい操作)は
+// 150msのまま変えない
+const DISABLED_ELEMENT_ZOOM_WINDOW_MS = 3000;
 document.addEventListener("touchend", (e) => {
   const t = e.changedTouches && e.changedTouches[0];
   const moved = t ? Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY) : 0;
   if (moved >= TAP_MOVE_THRESHOLD_PX) return; // スクロール/スワイプの指離しはタップ扱いしない
   const now = Date.now();
-  if (e.target === lastTouchEndTarget && now - lastTouchEndAt <= DOUBLE_TAP_ZOOM_WINDOW_MS) e.preventDefault();
+  const windowMs = (e.target && e.target.disabled) ? DISABLED_ELEMENT_ZOOM_WINDOW_MS : DOUBLE_TAP_ZOOM_WINDOW_MS;
+  if (e.target === lastTouchEndTarget && now - lastTouchEndAt <= windowMs) e.preventDefault();
   lastTouchEndAt = now;
   lastTouchEndTarget = e.target;
 }, { passive: false });
