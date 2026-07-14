@@ -9,7 +9,13 @@ function recordMaxFloorReached() {
   state.maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
   if (currentFloor > (state.maxFloorReached[currentStage] || 0)) state.maxFloorReached[currentStage] = currentFloor;
 }
-let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列
+let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列(戦闘に出る最大4人。5人目は下記reserveFieldMember)
+// 「助っ人の札」を使って5人編成で出発した時の5人目(交代要員)。戦闘には参加せず、
+// 探索中はいつでも自由にfieldPartyの誰かと交代でき、戦闘中は①行動中のキャラが自分のターンを
+// 消費して手動で交代する、②誰かが瀕死になった瞬間に「交代しますか？」のポップアップで交代する、の2経路がある。
+// 瀕死のキャラがこの枠に入ることもあるが、その場合も「歩けない」ため戦闘終了後は通常通り担いで
+// 救出する必要がある(この枠にいるだけでは救出したことにならない)
+let reserveFieldMember = null;
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
 let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId -> level)。リザルト画面でレベルアップを分かりやすく表示するための比較用
@@ -49,8 +55,17 @@ function enterDungeon() {
   recordMaxFloorReached();
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
+  // 「助っ人の札」で5人選んでいた場合、5人目(最後に選んだ人)は交代要員として控えに回り、
+  // 出発時に札を1枚消費する(4人以下で出発した場合は消費しない)
+  if (fieldParty.length >= 5) {
+    reserveFieldMember = fieldParty.pop();
+    state.inventory.kotaifuda = Math.max(0, (state.inventory.kotaifuda || 0) - 1);
+  } else {
+    reserveFieldMember = null;
+  }
   fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
   fieldParty.forEach((c) => applyOnsenHpBuffOnDeparture(c)); // 温泉バフ「ぽかぽか」(最大HP+7%)をこの遠征分だけ加算する
+  if (reserveFieldMember) applyOnsenHpBuffOnDeparture(reserveFieldMember);
   applyOmikujiExpeditionStart();
   advGoldEarned = 0;
   advXpGained = {};
@@ -82,8 +97,12 @@ function dlog(msg) {
 }
 
 // ストレス段階に応じた落書き風オーバーレイ画像(無ければnull)
+// 交代要員(reserveFieldMember)は、健在(status:"active")の間だけ一覧の末尾に表示する
+// (交代候補として見えている必要があるため)。瀕死のまま控えに入っている間は、他の瀕死の
+// fieldPartyメンバーと同じく非表示にする(担がれるまでは姿を見せない、という既存仕様を踏襲)
 function visibleFieldParty() {
-  return fieldParty.filter((c) => c.status !== "critical" || c.carriedBy);
+  const pool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
+  return pool.filter((c) => c.status !== "critical" || c.carriedBy);
 }
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
@@ -135,15 +154,68 @@ function renderDungeon() {
     healBtn.textContent = `治癒の術(MP${healCost})`;
     healBtn.disabled = !dungeonPriests.some((c) => c.mp >= healCost);
   }
+  // 交代: 控え(reserveFieldMember)が健在(瀕死でない)の時だけ表示。探索中はいつでも無償で交代できる
+  const swapBtn = document.getElementById("dungeonSwapBtn");
+  swapBtn.style.display = reserveFieldMember && reserveFieldMember.status === "active" ? "" : "none";
   positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 }
+
+// fieldPartyの誰か(activeMember)と控え(reserveFieldMember)を入れ替える共通処理。
+// 探索中のボタン/戦闘中の手動交代/瀕死時の自動交代提案、いずれもこれを使う。
+// ログの出し方(dlog/blog)は呼び出し元ごとに違うため引数で受け取る
+function swapReserveMember(activeMember, log) {
+  const idx = fieldParty.indexOf(activeMember);
+  if (idx === -1 || !reserveFieldMember) return null;
+  const incoming = reserveFieldMember;
+  fieldParty[idx] = incoming;
+  reserveFieldMember = activeMember;
+  if (log) log(`${incoming.name}が${activeMember.name}と交代した。`);
+  return incoming;
+}
+// 探索中(戦闘外): 交代要員がいる間はいつでも自由に、ターン等の概念なしに交代できる。
+// 誰かを担いでいる最中のキャラは交代候補から除外する(担いでいる相手の行き場が無くなるため)
+document.getElementById("dungeonSwapBtn").onclick = () => {
+  if (!reserveFieldMember || reserveFieldMember.status !== "active") return;
+  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.carryingId);
+  if (targets.length === 0) { alert("交代できる仲間がいません(全員ふさがっています)"); return; }
+  pendingAllyPick = (t) => {
+    pendingAllyPick = null;
+    closeDungeonTargetPicker();
+    swapReserveMember(t, dlog);
+    saveState();
+    renderDungeon();
+  };
+  renderDungeon();
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
+  const picker = document.getElementById("dungeonTargetPicker");
+  picker.style.display = "flex";
+  picker.innerHTML = `
+    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>誰と${reserveFieldMember.name}を交代させますか？</strong></p>
+    ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+    <button class="big" id="cancelDungeonTargetBtn">やめる</button>
+  `;
+  targets.forEach((c) => {
+    picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      pendingAllyPick = null;
+      closeDungeonTargetPicker();
+      swapReserveMember(c, dlog);
+      saveState();
+      renderDungeon();
+    };
+  });
+  document.getElementById("cancelDungeonTargetBtn").onclick = () => {
+    pendingAllyPick = null;
+    closeDungeonTargetPicker();
+  };
+  positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
+};
 
 // 探索中(戦闘外)に回復薬/治癒の術の対象を選ぶ共通ヘルパー。戦闘中と同様、上の味方イラストを
 // 直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)し、下のテキストボタンからも選べる。
 // 選択肢は#criticalAlert(画面上部)ではなく味方バーの下の.bottom-actionsに出す。上部に出すと
 // 選択肢が増えた時に味方イラストへ重なってタップを奪ってしまう(実際に発生したバグ)ため、
 // 戦闘画面の対象選択(味方バーの下に出る)と同じ位置関係に揃えてある
-const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonToolsBtn"];
+const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonToolsBtn", "dungeonSwapBtn"];
 function closeDungeonTargetPicker() {
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "none";
@@ -969,7 +1041,10 @@ function showTreasurePopup(amount, extraImageSrc) {
 }
 
 function checkStrandedOnCurrentFloor() {
-  const criticalList = fieldParty.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
+  // 戦闘中に「控えと交代」した瀕死の仲間はfieldPartyから控え(reserveFieldMember)へ移っているため、
+  // ここでも合わせて確認しないと担ぐ/見送るの選択肢が二度と出なくなってしまう
+  const pool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
+  const criticalList = pool.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   if (criticalList.length > 0) queueCriticalAlerts(criticalList, () => {});
 }
 

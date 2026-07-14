@@ -240,6 +240,10 @@ function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
 
+// 「助っ人の札」を1枚以上持っていれば、出発パーティの上限が4人→5人になる(5人目は交代要員扱い)
+function maxActivePartySize() {
+  return (state.inventory.kotaifuda || 0) > 0 ? 5 : 4;
+}
 // 瀕死/ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
 // 居座り続けないよう、activePartyIdsから現在isAvailable()でなくなった者を取り除く
 function pruneActiveParty() {
@@ -250,7 +254,7 @@ function pruneActiveParty() {
     if (!c || !isAvailable(c, now) || seen.has(id)) return false;
     seen.add(id);
     return true;
-  }).slice(0, 4); // 何らかの原因で4人を超えて紛れ込んだ場合の保険(重複除去+上限強制)
+  }).slice(0, maxActivePartySize()); // 何らかの原因で上限を超えて紛れ込んだ場合の保険(重複除去+上限強制)
 }
 
 // おみくじの効果を、遠征開始のタイミングでfieldPartyに実際に反映する。

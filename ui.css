@@ -119,6 +119,15 @@
   }
   .party-member img:not(.carried-badge):not(.hawk-badge) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
+  /* 助っ人の札で編成した5人目(交代要員)。戦闘に参加していないことが一目でわかるよう控えめに暗くする */
+  .party-member.reserve { opacity: 0.55; }
+  .reserve-badge {
+    position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+    font-size: 0.62rem; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(90,90,90,0.9); border-radius: var(--radius-pill); padding: 0.1rem 0.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    z-index: 6;
+  }
   /* 状態異常アイコンを立ち絵に重ねて表示するためのラッパー(敵カードの.enemy-debuff-iconsと同じ方式) */
   .party-portrait-wrap { position: relative; }
   .ally-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }

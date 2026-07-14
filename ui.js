@@ -400,10 +400,12 @@ function renderPartyBar(elId, combatants, actingCharId) {
   // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
     const dead = c.hp <= 0 || c.status !== "active";
+    // 助っ人の札で編成した5人目(交代要員)。控えの間は回復薬/治癒の術の対象にできない
+    const isReserve = typeof reserveFieldMember !== "undefined" && c === reserveFieldMember;
     // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
-    const targetable = !!pendingAllyPick && !dead && !c.transformForm;
+    const targetable = !!pendingAllyPick && !dead && !c.transformForm && !isReserve;
     const div = document.createElement("div");
-    div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + (targetable ? " targetable" : "") + shakeClassFor(c);
+    div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + (targetable ? " targetable" : "") + (isReserve ? " reserve" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     // 担がれている本人は今回の遠征の名簿(fieldParty/combatants)に居るとは限らない(別の冒険で瀕死のまま
@@ -423,6 +425,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
+      ${isReserve ? '<span class="reserve-badge">控え</span>' : ""}
       ${hpBarHtml(c)}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}

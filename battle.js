@@ -129,7 +129,10 @@ function renderBattleScreen() {
   if (!battle) return;
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
-  renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
+  // 控え(reserveFieldMember)は健在(瀕死でない)間だけ末尾に表示する(瀕死のまま控えに入っている間は
+  // 他の瀕死のfieldPartyメンバーと同様、担がれるまで姿を見せない)
+  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled").concat(reserveFieldMember && reserveFieldMember.status === "active" ? [reserveFieldMember] : []);
+  renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
   // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
@@ -293,16 +296,19 @@ function processNext() {
           });
         }
         alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
-        handleFieldDeaths();
+        const newlyCriticalBig = handleFieldDeaths();
         renderBattleScreen();
         const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
-        const bigCounterResult = results.find((r) => r.guardCounterDmg);
-        if (bigCounterResult) {
-          // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-          playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
-        } else {
-          setTimeout(advanceTurnAfterBig, 500);
-        }
+        const continueAfterBig = () => {
+          const bigCounterResult = results.find((r) => r.guardCounterDmg);
+          if (bigCounterResult) {
+            // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+            playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
+          } else {
+            setTimeout(advanceTurnAfterBig, 500);
+          }
+        };
+        offerReserveSwapIfNeeded(newlyCriticalBig, continueAfterBig);
         return;
       }
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
@@ -322,15 +328,18 @@ function processNext() {
       } else if (result) {
         playSfx("evade");
       }
-      handleFieldDeaths();
+      const newlyCritical = handleFieldDeaths();
       renderBattleScreen();
       const advanceTurn = () => { battle.orderIndex++; processNext(); };
-      if (result && result.guardCounterDmg) {
-        // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-        playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
-      } else {
-        setTimeout(advanceTurn, 500);
-      }
+      const continueAfterAttack = () => {
+        if (result && result.guardCounterDmg) {
+          // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+          playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
+        } else {
+          setTimeout(advanceTurn, 500);
+        }
+      };
+      offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
@@ -346,10 +355,12 @@ function processNext() {
       if (dot.poison > 0) popupOn(actor.id, `🦠-${dot.poison}`, "poison");
       if (dot.bleed > 0) popupOn(actor.id, `🩸-${dot.bleed}`, "bleed");
       if (dot.burn > 0) popupOn(actor.id, `🔥-${dot.burn}`, "burn");
-      handleFieldDeaths();
+      const newlyCriticalDot = handleFieldDeaths();
       renderBattleScreen();
       if (actor.hp <= 0 || actor.status !== "active") {
-        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        offerReserveSwapIfNeeded(newlyCriticalDot, () => {
+          setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        });
         return;
       }
     }
@@ -398,9 +409,13 @@ function processNext() {
   }
 }
 
+// 戻り値: このタイミングで新たに瀕死になった(fieldParty本人が力尽きた)キャラの配列。
+// 呼び出し元(processNext等)がこれを見て、控えとの交代ポップアップを出すかどうか判断する
+// (担がれていた側が巻き添えで瀕死になったケースは対象外、あくまで直接倒れた本人のみ)
 function handleFieldDeaths() {
   // 以前は確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ1つ手前のフロアで
   // 救助できる特例があったが、ユーザー指示で廃止。敵がいたフロアにそのまま取り残す通常仕様に統一する
+  const newlyCritical = [];
   fieldParty.forEach((c) => {
     // 変身中に致命傷級のダメージを受けても瀕死にはならず、変身が強制解除されて人間の姿(変身前のHP)に
     // 戻るだけで済む(「変身が身代わりになる」仕様)
@@ -423,6 +438,7 @@ function handleFieldDeaths() {
       c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
       markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
       blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
+      newlyCritical.push(c);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
         if (ally.id !== c.id && ally.status === "active") {
@@ -438,6 +454,25 @@ function handleFieldDeaths() {
   });
   pruneActiveParty();
   saveState();
+  return newlyCritical;
+}
+
+// 瀕死になった直後、控え(reserveFieldMember)がいれば「交代しますか？」のポップアップを出す。
+// 「はい」なら瀕死のキャラを控え枠に下げ、控えだったキャラをその場に迎える(ターン進行はonDoneで続ける)。
+// 「いいえ」、または控えがいない/既に控えが瀕死等で交代できない場合は即座にonDoneを呼んで通常通り進む
+function offerReserveSwapIfNeeded(newlyCritical, onDone) {
+  const candidate = newlyCritical.find((c) => c.status === "critical");
+  if (!candidate || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
+  showConfirmModal(`控えの${reserveFieldMember.name}と交代しますか？`, [
+    {
+      label: "はい", className: "big primary", onClick: () => {
+        swapReserveMember(candidate, blog);
+        renderBattleScreen();
+        onDone();
+      },
+    },
+    { label: "いいえ", className: "big", onClick: onDone },
+  ]);
 }
 
 // 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
@@ -988,14 +1023,29 @@ function renderActionButtons(actor) {
       }
     }
 
-    // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示
-    const carryTargets = fieldParty.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
+    // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示。
+    // 控え枠(reserveFieldMember)に瀕死のまま入っているキャラもここに含める(「交代」で控えに下がっても
+    // 歩けないのは変わらないため、担いで救出する必要がある)
+    const carryPool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
+    const carryTargets = carryPool.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
     if (carryTargets.length > 0) {
       const carryBtn = document.createElement("button");
       carryBtn.className = "big";
       carryBtn.textContent = "担ぐ";
       carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
       grid.appendChild(carryBtn);
+    }
+    // 交代: 控えが健在(瀕死でない)の時だけ表示。行動中のキャラの手番を消費して控えと入れ替わる
+    if (reserveFieldMember && reserveFieldMember.status === "active") {
+      const swapBtn = document.createElement("button");
+      swapBtn.className = "big";
+      swapBtn.textContent = "交代";
+      swapBtn.onclick = () => {
+        swapReserveMember(actor, blog);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(swapBtn);
     }
   }
 
@@ -1119,9 +1169,11 @@ function finishPlayerAction() {
 }
 
 function afterPlayerAction() {
-  handleFieldDeaths();
-  battle.orderIndex++;
-  processNext();
+  const newlyCritical = handleFieldDeaths();
+  offerReserveSwapIfNeeded(newlyCritical, () => {
+    battle.orderIndex++;
+    processNext();
+  });
 }
 
 function victory() {

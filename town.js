@@ -973,10 +973,12 @@ function renderPartySelect() {
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
+    // 5人目(助っ人の札を使った時の最後の1枠)は交代要員として控えに回るため、その旨を分かるようにする
+    const isReserveSlot = inParty && state.activePartyIds.length >= 5 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
         <div class="roster-sub">${statusLabel(c)}</div>
@@ -988,7 +990,8 @@ function renderPartySelect() {
       if (inParty) {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
       } else {
-        if (state.activePartyIds.length >= 4) { alert("パーティは最大4人までです"); return; }
+        const cap = maxActivePartySize();
+        if (state.activePartyIds.length >= cap) { alert(`パーティは最大${cap}人までです`); return; }
         state.activePartyIds.push(c.id);
       }
       saveState();
@@ -1041,6 +1044,17 @@ function renderSupplies() {
     document.getElementById("bombNewBadge").style.display = !state.seenBombSupply ? "" : "none";
     if (!state.seenBombSupply) { state.seenBombSupply = true; saveState(); }
   }
+  // 助っ人の札(5人目の交代要員枠)は野営具と同じく旅支度屋を建築するまでラインナップされない
+  document.getElementById("kotaifudaSection").style.display = state.travelPrepShopLevel ? "" : "none";
+  if (state.travelPrepShopLevel) {
+    document.getElementById("kotaifudaOwned").textContent = state.inventory.kotaifuda || 0;
+    document.getElementById("buyKotaifudaBtn").textContent = `購入(${ITEMS.kotaifuda.price}G)`;
+    document.getElementById("buyKotaifudaBtn").disabled = (state.inventory.kotaifuda || 0) >= KOTAIFUDA_CAP || state.gold < ITEMS.kotaifuda.price;
+    document.getElementById("kotaifudaNewBadge").style.display = !state.seenKotaifudaSupply ? "" : "none";
+    if (!state.seenKotaifudaSupply) { state.seenKotaifudaSupply = true; saveState(); }
+  }
+  const maxHint = document.getElementById("partySelectMaxHint");
+  if (maxHint) maxHint.textContent = `タップで出発パーティに入れる(最大${maxActivePartySize()}人)`;
   renderOwnedSupplyIcons();
 }
 // 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
@@ -1059,6 +1073,7 @@ function renderOwnedSupplyIcons() {
   addIcons(ITEMS.smokeBomb, state.inventory.smokeBomb || 0);
   addIcons(ITEMS.onsenEgg, state.inventory.onsenEgg || 0);
   addIcons(ITEMS.bomb, state.inventory.bomb || 0);
+  addIcons(ITEMS.kotaifuda, state.inventory.kotaifuda || 0);
   wrap.innerHTML = html;
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
@@ -1099,6 +1114,16 @@ document.getElementById("buyBombBtn").onclick = () => {
   saveState();
   playSfx("coin");
   renderSupplies();
+};
+document.getElementById("buyKotaifudaBtn").onclick = () => {
+  if ((state.inventory.kotaifuda || 0) >= KOTAIFUDA_CAP) { alert(`助っ人の札は最大${KOTAIFUDA_CAP}枚までしか持てません`); return; }
+  if (state.gold < ITEMS.kotaifuda.price) { alert("お金が足りません"); return; }
+  state.gold -= ITEMS.kotaifuda.price;
+  state.inventory.kotaifuda = (state.inventory.kotaifuda || 0) + 1;
+  saveState();
+  playSfx("coin");
+  renderSupplies();
+  renderPartySelect(); // 最大人数のヒント表示(パーティ編成欄)も即座に更新する
 };
 
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
@@ -1222,19 +1247,22 @@ function showDepartConfirm(stage) {
   pendingDepartureStage = stage;
   const list = document.getElementById("departConfirmList");
   list.innerHTML = "";
-  state.activePartyIds.forEach((id) => {
+  state.activePartyIds.forEach((id, idx) => {
     const c = getRosterChar(id);
     if (!c) return;
     const c2 = CLASSES[c.classId];
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+    // 5人目(最後に選んだ人)は交代要員として控えに回る(swapReserveMember/enterDungeon参照)ため、
+    // 確認画面でもそれとわかるタグを付けておく
+    const isReserve = state.activePartyIds.length >= 5 && idx === state.activePartyIds.length - 1;
     const row = document.createElement("div");
     row.className = "card";
     row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
-        <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})</div>
+        <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})${isReserve ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
         <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
         <div style="font-size:13px;color:var(--dw-caption-color);margin-top:0.15rem;">HP ${c.hp}/${c.maxHp}${c.maxMp > 0 ? `　MP ${c.mp}/${c.maxMp}` : ""}　ストレス ${c.fatigue || 0}</div>
