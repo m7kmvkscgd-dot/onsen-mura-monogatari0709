@@ -978,6 +978,7 @@ document.getElementById("createCharBtn").onclick = () => {
   const name = nameInput.value.trim() || randomFemaleName();
   if (state.roster.length >= rosterCapacity()) { alert(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
   if (state.gold < HIRE_COST) { alert(`お金が足りません(${HIRE_COST}G必要)`); return; }
+  hideTutorialGuide(); // STEP1の案内が出ていれば、職業カードを個別に選ばず直接雇っても消える(初期選択済みの職業のまま雇うケースもあるため)
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
   c.personality = pickNonDuplicatePersonality();
