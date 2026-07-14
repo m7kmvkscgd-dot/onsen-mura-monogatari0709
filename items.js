@@ -44,10 +44,10 @@ function renderItemMenu(actor) {
   // (finishPlayerActionを呼ばず、行動選択メニューに戻すだけ)
   const eggBtn = document.createElement("button");
   eggBtn.className = "big";
-  eggBtn.textContent = `温泉卵(${state.inventory.onsenEgg || 0})`;
-  eggBtn.disabled = (state.inventory.onsenEgg || 0) <= 0;
+  eggBtn.textContent = `温泉卵(${totalOnsenEggCount()})`;
+  eggBtn.disabled = totalOnsenEggCount() <= 0;
   eggBtn.onclick = () => {
-    state.inventory.onsenEgg--;
+    consumeOnsenEggFromInventory();
     playSfx("heal");
     const heal = useOnsenEgg(actor, blog);
     popupOn(actor.id, `+${heal}`, "heal");

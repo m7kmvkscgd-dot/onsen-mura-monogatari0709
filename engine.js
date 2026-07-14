@@ -190,7 +190,8 @@ function collectReadyOnsenReliefs(roster, absoluteMinutes) {
   const ready = roster.filter((c) => c.onsenPendingRelief && c.onsenLockUntilMinutes != null && absoluteMinutes >= c.onsenLockUntilMinutes);
   return ready.map((c) => {
     const before = c.fatigue || 0;
-    const after = Math.max(0, before - ONSEN_FATIGUE_RELIEF);
+    const relief = (state.hotSpringKeeperLevel || 0) > 0 ? HOT_SPRING_KEEPER_FATIGUE_RELIEF : ONSEN_FATIGUE_RELIEF;
+    const after = Math.max(0, before - relief);
     c.fatigue = after;
     c.onsenPendingRelief = false;
     return { id: c.id, name: c.name, classId: c.classId, before, after };
@@ -1526,7 +1527,8 @@ function applyOnsenHealBonus(target, heal) {
 }
 
 function usePotion(target, log) {
-  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * POTION_HEAL_RATIO));
+  const ratio = POTION_HEAL_RATIO + (state.beeFarmLevel || 0) * BEE_FARM_POTION_BONUS_PER_LEVEL;
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は回復薬で${heal}回復！`);
   return heal;
@@ -1535,11 +1537,25 @@ function usePotion(target, log) {
 // 温泉卵: 回復薬と違い自分専用(呼び出し側でtarget=行動者本人を渡す前提)。ターンを消費しない点は
 // index.html側(ボタンのonclickでfinishPlayerActionを呼ばない)で担保している
 function useOnsenEgg(target, log) {
-  const ratio = ONSEN_EGG_HEAL_RATIO + ((state.henHouseLevel || 0) > 0 ? HEN_HOUSE_EGG_HEAL_BONUS : 0);
-  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
+  const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ONSEN_EGG_HEAL_RATIO));
   target.hp = Math.min(target.maxHp, target.hp + heal);
   log(`${target.label}は温泉卵で${heal}回復！`);
   return heal;
+}
+// 鶏小屋の「卵ポーチ」: 支援物資の上限(supplyCap)に含まれない専用の温泉卵ストック。
+// henHouseLevelがそのままポーチの容量になる(1段階につき+1)
+function henHouseEggPouchCapacity() {
+  return state.henHouseLevel || 0;
+}
+// 購入済みの温泉卵(inventory.onsenEgg、supplyCapに含まれる)とポーチの温泉卵(onsenEggPouch、
+// 含まれない)を合算した「実際に使える温泉卵の総数」。UIの残数表示・使用可否判定に使う
+function totalOnsenEggCount() {
+  return (state.inventory.onsenEgg || 0) + (state.inventory.onsenEggPouch || 0);
+}
+// 温泉卵を1個消費する。無料のポーチ分から先に減らし、無くなったら購入済みの分を減らす
+function consumeOnsenEggFromInventory() {
+  if ((state.inventory.onsenEggPouch || 0) > 0) state.inventory.onsenEggPouch--;
+  else state.inventory.onsenEgg = Math.max(0, (state.inventory.onsenEgg || 0) - 1);
 }
 
 // かばう(guarding)の身代わり成功率。100%だと絶対に守り切れてしまうため95%に抑えてあり、

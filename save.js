@@ -154,6 +154,8 @@ function loadState() {
       if (loaded.shopLevel == null) loaded.shopLevel = 1;
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.inventory && loaded.inventory.soulShard == null) loaded.inventory.soulShard = 0; // 旧セーブ用の初期値(魂のかけら未所持)
+      if (loaded.inventory && loaded.inventory.onsenEggPouch == null) loaded.inventory.onsenEggPouch = 0; // 旧セーブ用の初期値(鶏小屋の卵ポーチ未所持)
+      if (loaded.henHouseEggPouchDate == null) loaded.henHouseEggPouchDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       delete loaded.inventory?.omamori; // 旧仕様(単純カウンタ)の名残。新仕様はomamoriOwned/omamoriEquippedで管理する
       if (!loaded.omamoriOwned) loaded.omamoriOwned = []; // 旧セーブ用の初期値(お守り未所持)
       if (!loaded.omamoriEquipped) loaded.omamoriEquipped = [];

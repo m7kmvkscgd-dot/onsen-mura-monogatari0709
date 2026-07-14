@@ -6,7 +6,7 @@ function defaultState() {
     gold: 170,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0 },
+    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0 }, // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)
     omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
     omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
     shrineFirstVisitRewardGiven: false, // 神社を初めて訪れた時のサービス(魂のかけら3個)を渡し済みか
@@ -45,6 +45,7 @@ function defaultState() {
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
     onsenEggDailyCount: 0, // 温泉の売店で本日買った温泉卵の数(1日2個まで、翌朝リセット)
     onsenEggDailyDate: 1, // 上記カウントが対応しているdayCount(値が変わったらリセットする)
+    henHouseEggPouchDate: 1, // 卵ポーチに最後に無料補充したdayCount(値が変わったら+1補充する)
     omikujiDrawnDate: 0, // 最後におみくじを引いたdayCount(0=未使用。1日1回、dayCountが変わるとまた引ける)
     omikujiLastTier: null, // 最後に引いたおみくじの結果(daikichi/chukichi/kichi/shokichi/kyou)。表示用
     omikujiLastLine: "", // 最後に引いた時に仲間が喋った一言(表示用)
@@ -114,13 +115,15 @@ const WATCHTOWER_COST = 200;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
-// 鶏小屋: 建築すると温泉卵の1日の在庫が+1、回復量が+3%される(実際に効果があるレベル1の施設)
+// 鶏小屋: 道場と同じ多段階建築(上限なし)。建てると「卵ポーチ」という支援物資の上限とは別枠の
+// 専用ポーチが手に入り、毎日無料で温泉卵が1個(ポーチの容量まで)補充される。各段階(初回建築・増築とも)
+// 200Gで、1段階につきポーチの容量が+1される(=henHouseLevelがそのまま容量)
 const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
 const HEN_HOUSE_COST = 200;
 // 茶屋: 効果は未定(建物のみ、未実装)
 const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
 const TEA_HOUSE_COST = 250;
-// 湯守屋: 効果は未定(建物のみ、未実装)
+// 湯守屋: 建築すると温泉のストレス回復量が50→70に上がる(実際に効果があるレベル1の施設)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 4;
 const HOT_SPRING_KEEPER_COST = 200;
 // 火薬庫: 建築すると砲術士が雇えるようになり、出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
@@ -129,9 +132,10 @@ const GUNPOWDER_STORE_COST = 200;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
 const KARAKURI_COST = 10;
-// 養蜂場: 効果は未定(建物のみ、未実装)
+// 養蜂場: 道場と同じ多段階建築。1段階につき回復薬の回復量+2%(最大5段階で+10%)、各段階とも100G
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
-const BEE_FARM_COST = 300;
+const BEE_FARM_COST = 100;
+const BEE_FARM_MAX_LEVEL = 5;
 // 神社: 建築すると僧侶が雇えるようになり、出発画面でおみくじを引けるようになる。温泉から入れる
 // お守りガチャ(魂のかけらを捧げるとお守りがもらえる)もここで解禁される
 const SHRINE_UNLOCK_HOUSE_LEVEL = 4;

@@ -144,7 +144,7 @@ function renderDungeon() {
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
   // 道具: 野営具/温泉卵をまとめて選ぶメニュー。どちらも0個の時だけ無効化する
-  document.getElementById("dungeonToolsBtn").disabled = (state.inventory.campingKit || 0) <= 0 && (state.inventory.onsenEgg || 0) <= 0;
+  document.getElementById("dungeonToolsBtn").disabled = (state.inventory.campingKit || 0) <= 0 && totalOnsenEggCount() <= 0;
   // 治癒の術: 僧侶がパーティにいる時だけボタンを表示し、MPが足りない時は無効化する
   const dungeonPriests = fieldParty.filter((c) => c.status === "active" && c.classId === "priest");
   const healCost = abilityMpCost("heal");
@@ -288,7 +288,7 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
   const campCount = state.inventory.campingKit || 0;
-  const eggCount = state.inventory.onsenEgg || 0;
+  const eggCount = totalOnsenEggCount();
   // 野営具は旅支度屋を建てるまでボタン自体を出さない(未所持でも灰色ボタンとして見えると、
   // 建物を建てる前からアイテムの存在を知ってしまう=ネタバレになるため)
   picker.innerHTML = `
@@ -306,8 +306,8 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
   }
   document.getElementById("toolsEggBtn").onclick = () => {
     if (eggCount <= 0) return;
-    pickDungeonAllyTarget(`誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？`, (target) => {
-      state.inventory.onsenEgg--;
+    pickDungeonAllyTarget(`誰が温泉卵(残り${totalOnsenEggCount()})を使いますか？`, (target) => {
+      consumeOnsenEggFromInventory();
       playSfx("heal");
       useOnsenEgg(target, dlog);
       saveState();

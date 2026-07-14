@@ -154,6 +154,7 @@ function showConceptIntro(onDone) {
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
+  refillHenHouseEggPouchIfNewDay();
   saveState();
   if (checkGameOver()) return;
   document.getElementById("townGold").textContent = state.gold + "G";
@@ -1558,17 +1559,20 @@ document.getElementById("onsenBackBtn").onclick = () => { renderTown(); };
 document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 温泉の売店(温泉卵) ============
-const ONSEN_EGG_DAILY_STOCK_BASE = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
-// 鶏小屋を建てると1日の在庫が+1される
-function onsenEggDailyStock() {
-  return ONSEN_EGG_DAILY_STOCK_BASE + ((state.henHouseLevel || 0) > 0 ? 1 : 0);
-}
+const ONSEN_EGG_DAILY_STOCK = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
 // dayCountが前回リセット時と変わっていたら、本日の販売数をリセットする(翌朝の仕入れ直し)
 function resetOnsenEggStockIfNewDay() {
   if (state.onsenEggDailyDate !== state.dayCount) {
     state.onsenEggDailyCount = 0;
     state.onsenEggDailyDate = state.dayCount;
   }
+}
+// 鶏小屋の卵ポーチ: dayCountが前回補充時と変わっていたら無料で温泉卵を1個(ポーチ容量まで)補充する
+function refillHenHouseEggPouchIfNewDay() {
+  if (state.henHouseEggPouchDate === state.dayCount) return;
+  state.henHouseEggPouchDate = state.dayCount;
+  const cap = henHouseEggPouchCapacity();
+  if (cap > 0) state.inventory.onsenEggPouch = Math.min(cap, (state.inventory.onsenEggPouch || 0) + 1);
 }
 function renderOnsenShop() {
   resetOnsenEggStockIfNewDay();
@@ -1577,7 +1581,7 @@ function renderOnsenShop() {
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
-  const remaining = Math.max(0, onsenEggDailyStock() - (state.onsenEggDailyCount || 0));
+  const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
   if (remaining <= 0) {
     buyBtn.textContent = "本日売り切れ";
@@ -1589,7 +1593,7 @@ function renderOnsenShop() {
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
-  if ((state.onsenEggDailyCount || 0) >= onsenEggDailyStock()) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
+  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
@@ -1837,22 +1841,56 @@ function renderExtension() {
   renderSimpleBuilding("shopLevel", "shopBuildBtn", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST, level, "shopNewBadge");
   renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
   renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level, "bagShopNewBadge");
-  renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge");
-  renderSimpleBuilding("henHouseLevel", "henHouseBuildBtn", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST, level, "henHouseNewBadge");
+  renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge", true);
   renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level, "shrineNewBadge");
   renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level, "gunpowderStoreNewBadge");
   renderSimpleBuilding("karakuriLevel", "karakuriBuildBtn", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST, level, "karakuriNewBadge");
   renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level, "hotSpringKeeperNewBadge");
   renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level, "teaHouseNewBadge");
-  renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level, "stableNewBadge");
-  renderSimpleBuilding("beeFarmLevel", "beeFarmBuildBtn", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST, level, "beeFarmNewBadge");
-  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level, "ferryNewBadge");
+  renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level, "stableNewBadge", true);
+  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level, "ferryNewBadge", true);
+  // 鶏小屋/養蜂場は道場と同じ多段階建築(段階ごとに効果が伸びる)なので、renderSimpleBuildingでは表現できず個別に描画する
+  const henHouseLevel = state.henHouseLevel || 0;
+  const henHouseBtn = document.getElementById("henHouseBuildBtn");
+  const henHouseLocked = henHouseLevel === 0 && level < HEN_HOUSE_UNLOCK_HOUSE_LEVEL;
+  if (henHouseLocked) {
+    henHouseBtn.textContent = `家レベル${HEN_HOUSE_UNLOCK_HOUSE_LEVEL}で解禁されます`;
+    henHouseBtn.disabled = true;
+  } else if (henHouseLevel === 0) {
+    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) 卵ポーチ+1`;
+    henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
+  } else {
+    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) 卵ポーチ${henHouseLevel}→${henHouseLevel + 1}`;
+    henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
+  }
+  markBuildingNewBadge("henHouseLevel", "henHouseNewBadge", level >= HEN_HOUSE_UNLOCK_HOUSE_LEVEL, henHouseLevel >= 1);
+  setFacilityLockedState("henHouse", henHouseLocked);
+  const beeFarmLevel = state.beeFarmLevel || 0;
+  const beeFarmBtn = document.getElementById("beeFarmBuildBtn");
+  const beeFarmLocked = beeFarmLevel === 0 && level < BEE_FARM_UNLOCK_HOUSE_LEVEL;
+  if (beeFarmLocked) {
+    beeFarmBtn.textContent = `家レベル${BEE_FARM_UNLOCK_HOUSE_LEVEL}で解禁されます`;
+    beeFarmBtn.disabled = true;
+  } else if (beeFarmLevel >= BEE_FARM_MAX_LEVEL) {
+    beeFarmBtn.textContent = "これ以上は増築できません(上限)";
+    beeFarmBtn.disabled = true;
+  } else if (beeFarmLevel === 0) {
+    beeFarmBtn.textContent = `建築する(${BEE_FARM_COST}G) 回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100)}%`;
+    beeFarmBtn.disabled = state.gold < BEE_FARM_COST;
+  } else {
+    beeFarmBtn.textContent = `増築する(${BEE_FARM_COST}G) 回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * beeFarmLevel)}%→+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * (beeFarmLevel + 1))}%`;
+    beeFarmBtn.disabled = state.gold < BEE_FARM_COST;
+  }
+  markBuildingNewBadge("beeFarmLevel", "beeFarmNewBadge", level >= BEE_FARM_UNLOCK_HOUSE_LEVEL, beeFarmLevel >= 1);
+  setFacilityLockedState("beeFarm", beeFarmLocked);
   groupFacilityBlocks(level);
   saveState();
 }
 // 奉行所/鞄屋/見張り台/馬屋は全て「家レベルで解禁→1回建築したら終わり(レベル1のみ)」という
 // 同じ形の建物なので、表示更新の共通処理をまとめている
-function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLevel, badgeId) {
+// underConstruction: trueの施設は解禁済みでも購入ボタンを常に無効化し「工事中」表示にする
+// (まだ効果を実装していない建物を、それと分かる形で一旦購入不可にしておくためのフラグ)
+function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLevel, badgeId, underConstruction) {
   const built = (state[stateKey] || 0) >= 1;
   const btn = document.getElementById(btnId);
   const unlocked = houseLevel >= unlockHouseLevel;
@@ -1861,6 +1899,9 @@ function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLeve
     btn.disabled = true;
   } else if (built) {
     btn.textContent = "建築済み";
+    btn.disabled = true;
+  } else if (underConstruction) {
+    btn.textContent = "工事中のため購入できません";
     btn.disabled = true;
   } else {
     btn.textContent = `建築する(${cost}G)`;
@@ -1994,10 +2035,31 @@ document.getElementById("travelPrepShopBuildBtn").onclick = () => buildSimpleBui
 document.getElementById("bagShopBuildBtn").onclick = () => buildSimpleBuilding("bagShopLevel", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST);
 document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuilding("watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST);
 document.getElementById("stableBuildBtn").onclick = () => buildSimpleBuilding("stableLevel", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST);
-document.getElementById("henHouseBuildBtn").onclick = () => buildSimpleBuilding("henHouseLevel", HEN_HOUSE_UNLOCK_HOUSE_LEVEL, HEN_HOUSE_COST);
+document.getElementById("henHouseBuildBtn").onclick = () => {
+  const henHouseLevel = state.henHouseLevel || 0;
+  if (henHouseLevel === 0 && (state.houseLevel || 1) < HEN_HOUSE_UNLOCK_HOUSE_LEVEL) return;
+  if (state.gold < HEN_HOUSE_COST) return;
+  state.gold -= HEN_HOUSE_COST;
+  state.henHouseLevel = henHouseLevel + 1;
+  saveState();
+  renderExtension();
+  if (henHouseLevel === 0) showBuildCompleteForNewFacility("henHouseLevel");
+  else showBuildCompleteForUpgrade("henHouseLevel", state.henHouseLevel, [`卵ポーチ容量 ${henHouseLevel}→${henHouseLevel + 1}`]);
+};
 document.getElementById("teaHouseBuildBtn").onclick = () => buildSimpleBuilding("teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST);
 document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBuilding("hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST);
-document.getElementById("beeFarmBuildBtn").onclick = () => buildSimpleBuilding("beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL, BEE_FARM_COST);
+document.getElementById("beeFarmBuildBtn").onclick = () => {
+  const beeFarmLevel = state.beeFarmLevel || 0;
+  if (beeFarmLevel >= BEE_FARM_MAX_LEVEL) return;
+  if (beeFarmLevel === 0 && (state.houseLevel || 1) < BEE_FARM_UNLOCK_HOUSE_LEVEL) return;
+  if (state.gold < BEE_FARM_COST) return;
+  state.gold -= BEE_FARM_COST;
+  state.beeFarmLevel = beeFarmLevel + 1;
+  saveState();
+  renderExtension();
+  if (beeFarmLevel === 0) showBuildCompleteForNewFacility("beeFarmLevel");
+  else showBuildCompleteForUpgrade("beeFarmLevel", state.beeFarmLevel, [`回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * beeFarmLevel)}%→+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * (beeFarmLevel + 1))}%`]);
+};
 document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
 document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
 document.getElementById("karakuriBuildBtn").onclick = () => buildSimpleBuilding("karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST);

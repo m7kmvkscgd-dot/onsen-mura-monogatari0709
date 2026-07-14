@@ -686,10 +686,10 @@ const ITEMS = {
 // 火薬庫で購入できる爆弾: 敵全体に防御無視の固定ダメージ(猪の実HP約62の6割=約37を基準に設定)
 const BOMB_FLAT_DAMAGE = 37;
 const POTION_HEAL_RATIO = 0.38;
+const BEE_FARM_POTION_BONUS_PER_LEVEL = 0.02; // 養蜂場は1段階につき回復薬の回復量+2%(最大5段階で+10%)
 // 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
 // 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
 const ONSEN_EGG_HEAL_RATIO = 0.25;
-const HEN_HOUSE_EGG_HEAL_BONUS = 0.03; // 鶏小屋を建てると温泉卵の回復量+3%(state.henHouseLevel > 0で有効)
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 助っ人の札も野営具と同じく別枠、最大1枚まで(出発時に5人目の枠を1回分だけ解禁する特別アイテム)
@@ -1298,6 +1298,7 @@ const FATIGUE_MAX = 100;
 // 温泉: 宿屋では抜けなくなった疲労度を回復するための有料施設。1回で半分(50)回復する。
 // 料金はレベル1で20G、以降レベルごとに7Gずつ上がる。入浴すると2時間はパーティ編成に組み込めなくなる(宿泊は引き続き可能)
 const ONSEN_FATIGUE_RELIEF = 50;
+const HOT_SPRING_KEEPER_FATIGUE_RELIEF = 70; // 湯守屋を建てると回復量が50→70に上がる
 const ONSEN_FLAT_COST = 15;
 const ONSEN_COST_PER_LEVEL = 7;
 const ONSEN_LOCK_MINUTES = 120; // 2時間 = 120分
