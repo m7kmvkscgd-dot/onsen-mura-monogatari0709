@@ -108,6 +108,16 @@ function renderDungeon() {
   document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
   document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
   document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
+  // 進む/里に戻るのdisabledは、進路選択(showPathChoice)や瀕死アラート(showCriticalAlert)、
+  // 移動演出(playDungeonMoveTransition)など複数箇所が個別にtrue/falseを設定する分散管理になっており、
+  // 稀にdisabled=trueのまま解除されずに残ってしまうと次の遠征に持ち越されて「進む/里に戻るが
+  // 押せなくなる」不具合になる(押せるのは道具だけ、という報告と一致)。renderDungeon()は
+  // 探索画面に戻るたびに必ず呼ばれる場所のため、瀕死アラート表示中でない限りここで強制的に
+  // 解除し、どんな経路で壊れても次の描画で自己修復するようにする
+  if (!activeCriticalAlert) {
+    document.getElementById("advanceBtn").disabled = false;
+    document.getElementById("retreatBtn").disabled = false;
+  }
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
   // 道具: 野営具/温泉卵をまとめて選ぶメニュー。どちらも0個の時だけ無効化する
