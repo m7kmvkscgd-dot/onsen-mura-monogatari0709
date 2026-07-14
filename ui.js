@@ -76,7 +76,23 @@ let lastTouchEndTarget = null;
 // (iOS Safari自体のダブルタップズーム判定は300ms前後とされる)、ネイティブのズームがすり抜けて
 // 再発していた。同じ要素への連打はそもそも正当な用途がまず無いため、400msまで広げても問題ない
 const DOUBLE_TAP_ZOOM_WINDOW_MS = 400;
+// 400msに広げたことで新たに踏んだ地雷: touchendはタップだけでなく「スクロール/スワイプの指離し」でも
+// 発火する。スクロールで下の方の要素(茶屋のお茶菓子ボタン等、画面下部にあるほど起きやすい)を
+// 表示させて指を離した瞬間のtouchendがその要素を「1回目のタップ」として記録してしまい、直後に
+// 本当にタップした2回目(=最初の実質的なタップ)が400ms以内・同じ要素だと誤ってpreventDefaultされ、
+// ボタンがまるで無反応であるかのように見える不具合があった。touchstartの座標と比較し、
+// 一定距離以上動いていたら(=スクロール/スワイプ)タップとして扱わず、lastTouchEndTarget/Atも
+// 更新しない(次の本当のタップの判定を汚染しないようにする)
+let touchStartX = 0, touchStartY = 0;
+const TAP_MOVE_THRESHOLD_PX = 10;
+document.addEventListener("touchstart", (e) => {
+  const t = e.touches && e.touches[0];
+  if (t) { touchStartX = t.clientX; touchStartY = t.clientY; }
+}, { passive: true });
 document.addEventListener("touchend", (e) => {
+  const t = e.changedTouches && e.changedTouches[0];
+  const moved = t ? Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY) : 0;
+  if (moved >= TAP_MOVE_THRESHOLD_PX) return; // スクロール/スワイプの指離しはタップ扱いしない
   const now = Date.now();
   if (e.target === lastTouchEndTarget && now - lastTouchEndAt <= DOUBLE_TAP_ZOOM_WINDOW_MS) e.preventDefault();
   lastTouchEndAt = now;
