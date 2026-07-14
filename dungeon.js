@@ -761,9 +761,9 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
   function renderCards() {
     const flavor = currentPathFlavor();
     div.innerHTML = `
-      <div class="path-choice-panel path-tags-panel">
+      <div class="path-choice-panel path-tags-panel${picked.length === 3 ? " path-tags-triple" : ""}">
         <p class="path-choice-title">${questApproach ? "🎯 目標接近！" : "進路選択"}</p>
-        <div class="path-choice-cards path-tags-stack">
+        <div class="path-choice-cards path-tags-stack${picked.length === 3 ? " path-tags-triple" : ""}">
           ${picked.map((key, idx) => {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
             const isQuestApproach = key === QUEST_APPROACH_KEY;
