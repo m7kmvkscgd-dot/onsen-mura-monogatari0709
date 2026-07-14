@@ -153,6 +153,11 @@
     font-size: 0.6rem; font-weight: 800; line-height: 1; color: #fff;
     filter: none;
   }
+  /* スタック数バッジの文字色を状態異常の種類ごとに色分け(ユーザー指摘: 白文字だと背景次第で
+     見えにくい場面があったため、出血=赤・毒=緑・炎上=橙で一目で見分けられるようにした) */
+  .status-icon[data-status="bleed"] .status-icon-value { color: #ff6b6b; }
+  .status-icon[data-status="poison"] .status-icon-value { color: #7ee081; }
+  .status-icon[data-status="burn"] .status-icon-value { color: #ffa94d; }
   /* スタンだけ「行動不能になった瞬間」がわかりにくいという指摘があったため、常設バッジ自体に
      ごく控えめな明滅を付けて他の状態異常より少し目立たせる(毒・出血はやりすぎないようそのまま) */
   .status-icon[data-status="stun"] { animation: stunIconPulse 1.4s ease-in-out infinite; }
