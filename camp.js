@@ -199,6 +199,7 @@ function renderCampScreen() {
     state.inventory.potion = Math.min(supplyCap(), (state.inventory.potion || 0) + 1);
     clog(`${actor.name}は回復薬を調合した。`);
     playSfx("coin");
+    showTreasurePopup(0, "assets/items/potion.png"); // ゴールド拾得時と同じ中央ポップアップ演出を流用(amount:0でゴールド絵は隠し、回復薬アイコンだけ出す)
     campActionQueue.shift();
     saveState();
     renderCampScreen();
