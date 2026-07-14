@@ -1881,12 +1881,17 @@ function refreshMagistrateQuestsIfNeeded() {
   const keepKey = state.acceptedQuest ? state.acceptedQuest.questKey : null;
   const keepTier = keepKey ? (QUEST_DEFS[keepKey] || {}).tier : null;
   const lastShown = state.magistrateQuestLastShown || {};
+  // 奉行所を解禁して★1に一度も依頼が張り出されたことが無い(=これが初回の抽選)間は、まだ深く
+  // 潜っていない新規プレイヤーでも無理なく受けられるよう、目標階層5階までの依頼に限定する
+  // (2回目以降の通常のローテーションでは通常通り★1全体から抽選する)
+  const isFirstMagistrateTier1Draw = !Object.keys(lastShown).some((id) => QUEST_DEFS[id] && QUEST_DEFS[id].tier === 1);
   const slotChances = [1.0, QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE];
   [1, 2].forEach((tier) => {
     const tierKeepKey = keepTier === tier ? keepKey : null;
     const pool = Object.keys(QUEST_DEFS).filter((id) => {
       if (QUEST_DEFS[id].tier !== tier) return false;
       if (QUEST_DEFS[id].requiresOoInoshishi && !state.defeatedOoInoshishi) return false; // ボス級指名討伐は大猪を一度倒すまで張り出されない
+      if (tier === 1 && isFirstMagistrateTier1Draw && QUEST_DEFS[id].targetFloor > 5) return false;
       if (id === tierKeepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
       const shownDay = lastShown[id];
       return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
