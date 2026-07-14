@@ -75,12 +75,32 @@ function showTutorialGuide(targetEl, message, glow) {
   requestAnimationFrame(() => {
     if (myToken !== tutorialGuideAnimToken) return; // その間にhideされていたら何もしない
     targetEl.scrollIntoView({ block: "center" });
+    updateTutorialDimBands(targetEl);
     positionTutorialBubble(targetEl);
     tutorialDimAnim = dim.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: "ease", fill: "forwards" });
     tutorialBubbleAnim = bubble.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300, easing: "ease", fill: "forwards" });
     tutorialDimAnim.onfinish = () => { if (myToken === tutorialGuideAnimToken) { tutorialDimAnim.cancel(); tutorialDimAnim = null; dim.style.opacity = "1"; } };
     tutorialBubbleAnim.onfinish = () => { if (myToken === tutorialGuideAnimToken) { tutorialBubbleAnim.cancel(); tutorialBubbleAnim = null; bubble.style.opacity = "1"; bubble.style.transform = "translateY(0)"; } };
   });
+}
+// 対象要素の実際の位置(getBoundingClientRect)を見て、対象の矩形を四方から囲む4枚の帯(上下左右)の
+// top/left/width/height(すべてビューポート座標、#tutorialDim自体がinset:0のposition:fixedのため
+// bandのposition:absoluteはそのままビューポート座標に一致する)を計算する。対象の矩形そのものには
+// 帯が一切存在しないため、対象は常に元の明るさ・常にクリック可能なまま残る(z-indexで対象を暗幕の
+// 上に乗せようとする旧方式が.body-padのスタッキングコンテキストに阻まれて機能しなかった問題の対策)
+function updateTutorialDimBands(targetEl) {
+  const rect = targetEl.getBoundingClientRect();
+  const PAD = 6;
+  const x = Math.max(0, rect.left - PAD);
+  const y = Math.max(0, rect.top - PAD);
+  const w = rect.width + PAD * 2;
+  const h = rect.height + PAD * 2;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  document.getElementById("tutorialDimTop").style.cssText = `top:0; left:0; width:${vw}px; height:${y}px;`;
+  document.getElementById("tutorialDimBottom").style.cssText = `top:${y + h}px; left:0; width:${vw}px; height:${Math.max(0, vh - (y + h))}px;`;
+  document.getElementById("tutorialDimLeft").style.cssText = `top:${y}px; left:0; width:${x}px; height:${h}px;`;
+  document.getElementById("tutorialDimRight").style.cssText = `top:${y}px; left:${x + w}px; width:${Math.max(0, vw - (x + w))}px; height:${h}px;`;
 }
 // 対象要素の実際の位置(getBoundingClientRect)を見て、吹き出しを対象のすぐ下(入らなければ上)に
 // 中央寄せで配置する。画面端では左右方向だけクランプし、しっぽ(::before/::after)は
@@ -141,6 +161,15 @@ function maybeShowDepartTutorial() {
   state.tutDepartHintShown = true;
   saveState();
   showTutorialGuide(document.getElementById("toDungeonBtn"), "探索へ出発しよう。", true);
+}
+// STEP2.5: 出発準備画面を初めて開いた時、出発前に支援物資(回復薬など)を購入できることを一度だけ案内する。
+// 支援物資を買うか、出発を確定した瞬間に消える(hideTutorialGuideの呼び出し箇所を参照)
+function maybeShowSupplyTutorial() {
+  if (state.tutorialEnabled === false) return;
+  if (state.tutSupplyHintShown) return;
+  state.tutSupplyHintShown = true;
+  saveState();
+  showTutorialGuide(document.getElementById("partySelectSupplyTutorialTarget"), "出発の前に、ここで道具(回復薬など)を購入できます。", false);
 }
 // STEP3: 出発を確定した直後、探索が始まる前に一度だけゲームコンセプトを説明する
 function showConceptIntro(onDone) {
@@ -1128,6 +1157,7 @@ function renderPartySelect() {
   renderDwHeader("partySelect", "パーティ編成", () => { renderTown(); });
   pruneActiveParty();
   renderSupplies();
+  maybeShowSupplyTutorial();
   document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   document.getElementById("omikujiTabNewBadge").style.display = (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
   const bestiaryUnlocked = (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
@@ -1281,6 +1311,7 @@ function confirmSellSupplyItem(itemId) {
   ]);
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
+  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
@@ -1291,6 +1322,7 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buySmokeBombBtn").onclick = () => {
+  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
@@ -1448,6 +1480,7 @@ function showDepartConfirm(stage) {
     alert("パーティを1人以上選んでください");
     return;
   }
+  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、出発を確定する前に消す
   pendingDepartureStage = stage;
   const list = document.getElementById("departConfirmList");
   list.innerHTML = "";

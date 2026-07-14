@@ -74,6 +74,7 @@ function defaultState() {
     tutHireHintShown: false,
     tutDepartHintShown: false,
     tutConceptShown: false,
+    tutSupplyHintShown: false, // STEP2.5: 出発準備画面を初めて開いた時、支援物資を出発前に買えることを一度だけ案内する
   };
 }
 

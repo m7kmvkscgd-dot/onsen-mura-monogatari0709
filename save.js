@@ -197,6 +197,7 @@ function loadState() {
       if (loaded.tutHireHintShown == null) loaded.tutHireHintShown = true;
       if (loaded.tutDepartHintShown == null) loaded.tutDepartHintShown = true;
       if (loaded.tutConceptShown == null) loaded.tutConceptShown = true;
+      if (loaded.tutSupplyHintShown == null) loaded.tutSupplyHintShown = true;
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;

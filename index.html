@@ -230,6 +230,7 @@
       </div>
 
       <div id="partySelectMainTab">
+      <div id="partySelectSupplyTutorialTarget">
       <h2>支援物資 <span id="suppliesCount"></span></h2>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">合計で最大<span id="suppliesCapLabel"></span>個まで持っていけます。</p>
       <p class="gold" id="suppliesGold">0G</p>
@@ -249,6 +250,7 @@
           </div>
           <button class="big" id="buySmokeBombBtn">購入</button>
         </div>
+      </div>
       </div>
       <div id="campingKitSection">
         <p style="font-size:13px;color:var(--dw-caption-color);margin:0.8rem 0 0.5rem;">野営具は最大<span id="campingKitCapLabel"></span>つまで持てます。</p>
@@ -326,7 +328,12 @@
 
   <!-- チュートリアル演出(初回のみ): 画面を少し暗くし、対象要素だけ通常表示+小さな吹き出しで誘導する。
        黒帯/赤矢印/派手な点滅/揺れは使わない共通部品(showTutorialGuide、town.js参照) -->
-  <div id="tutorialDim" style="display:none;"></div>
+  <div id="tutorialDim" style="display:none;">
+    <div class="tutorial-dim-band" id="tutorialDimTop"></div>
+    <div class="tutorial-dim-band" id="tutorialDimBottom"></div>
+    <div class="tutorial-dim-band" id="tutorialDimLeft"></div>
+    <div class="tutorial-dim-band" id="tutorialDimRight"></div>
+  </div>
   <div id="tutorialBubble" style="display:none;"><p id="tutorialBubbleText"></p></div>
 
   <!-- 出発直前のゲームコンセプト説明(初回のみ) -->

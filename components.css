@@ -198,14 +198,18 @@
      (showTutorialGuide/hideTutorialGuide、town.js参照) ============ */
   /* opacityのフェードはCSS transitionではなくJS側(element.animate())で行う(このプロジェクトでの
      既知の問題: transition+rAFの組み合わせは割り込みに弱く信頼できないため)。ここではdisplay/位置のみ規定する */
-  /* pointer-events:noneが必須: このdimは.wrap直下の兄弟要素だが、案内対象(#tavernHireTutorialTarget等)は
-     .body-padの中(position:relative;z-index:1のスタッキングコンテキスト内)にネストされているため、
-     対象側にどれだけ高いz-indexを設定してもその祖先のコンテキストの外へは出られずdimの下に埋もれてしまい、
-     結果としてdimが対象も含め画面全体のクリックを吸い取ってしまう(チュートリアル画面から一切操作できなくなる
-     致命的な不具合があった)。dimはあくまで暗くする視覚効果だけに徹し、クリックは常に本来の要素へ通す */
+  /* 暗転は1枚の全画面divではなく、対象の矩形を四方から囲む4枚の帯(tutorial-dim-band、town.jsの
+     updateTutorialDimBands()がgetBoundingClientRectを見てtop/left/width/heightを都度計算)で表現する。
+     単純な全画面divに「対象だけ明るく見せる」ためz-indexで対象を上に乗せようとすると、対象は.body-pad
+     (position:relative;z-index:1で独自のスタッキングコンテキストを作る)の中にネストされているため、
+     対象側にどれだけ高いz-indexを設定してもその祖先の外へは出られずdimの下に埋もれてしまい、対象も含め
+     画面全体が同じ濃さで暗く見える上にクリックも吸い取ってしまう不具合があった(実際に踏んだ)。
+     4本の帯方式なら対象の矩形そのものに暗幕が存在しないため、スタッキングコンテキストに関係なく
+     対象は常に元の明るさのまま・常にクリック可能になる。pointer-events:noneは保険として残す */
   #tutorialDim {
-    position: fixed; inset: 0; z-index: 240; background: rgba(8,9,10,0.6); pointer-events: none;
+    position: fixed; inset: 0; z-index: 240; pointer-events: none;
   }
+  .tutorial-dim-band { position: absolute; background: rgba(8,9,10,0.6); }
   .tutorial-highlight-target, .tutorial-glow-target { position: relative; z-index: 241; }
   .tutorial-glow-target { border-radius: var(--radius-lg); animation: tutorialGlowPulse 2.6s ease-in-out infinite; }
   @keyframes tutorialGlowPulse {
