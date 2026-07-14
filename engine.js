@@ -33,6 +33,9 @@ function baseMaxMpFor(classId) {
 // classUpgrades: { weapon: tierIndex(0=未購入), armor: tierIndex(0=未購入) } — 職業単位の恒久装備。
 // 上位ティアを買うと下位ティアから乗り換わる(加算ではなく差し替え)。個別のキャラごとの装備管理は無く、
 // 「その職業への投資」として全メンバー(既存+以後仲間にする人)に一律で乗る(MVPとしての単純化)。
+// 防具を1段階買うごとのMP上限の伸び方。1→2→1→2→1と交互に増える(累計: 1,3,4,6,7)。
+// 添字0(未購入)は0のまま
+const ARMOR_MP_BONUS = [0, 1, 3, 4, 6, 7];
 function computeEquipBonus(classId, classUpgrades) {
   const bonus = { atk: 0, def: 0, mag: 0, mp: 0 };
   const eq = EQUIPMENT[classId];
@@ -44,7 +47,7 @@ function computeEquipBonus(classId, classUpgrades) {
   if (eq && owned.armor > 0) {
     const t = eq.armor[owned.armor - 1];
     bonus[t.statKey] += t.bonus;
-    bonus.mp += owned.armor * 2; // 防具を1段階買うごとにMP上限+2(5段階買うと最大+10)
+    bonus.mp += ARMOR_MP_BONUS[owned.armor] || 0;
   }
   return bonus;
 }
