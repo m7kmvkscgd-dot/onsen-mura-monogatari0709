@@ -941,6 +941,16 @@ function deliverCarriedAllies() {
 
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
 function rollEncounter(pathBias) {
+  // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを3つ手に入れる特別な道(戦闘/財宝抽選はしない)
+  if (pathBias === "kamikakushi") {
+    state.inventory.soulShard = (state.inventory.soulShard || 0) + 3;
+    saveState();
+    dlog("神隠しの道を抜けると、魂のかけらが3つ落ちていた。");
+    renderDungeon();
+    showTreasurePopup(0, "assets/items/soul_shard.png");
+    if (!retreating) maybeTriggerPeaceDialogue();
+    return;
+  }
   const bias = !retreating && pathBias ? currentPathDefs()[pathBias] : null;
   const baseBattle = bias ? bias.battle : 0.65;
   const baseGold = bias ? bias.gold : 0.25;
