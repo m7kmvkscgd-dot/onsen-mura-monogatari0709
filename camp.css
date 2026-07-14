@@ -6,16 +6,21 @@
     padding: 2.5rem 1.2rem 2rem; box-sizing: border-box;
   }
   .camp-rest-summary h2 { color: #fff; text-align: center; margin: 0 0 1.2rem; letter-spacing: 0.1em; }
-  .camp-rest-row {
-    display: flex; align-items: center; gap: 0.7rem; width: 100%; max-width: 420px;
-    background: rgba(20,24,27,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md);
-    padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; box-sizing: border-box;
+  /* キャラを縦に並べる1列レイアウトだと、人数が多い時に下の「次へ」ボタンが画面外へ
+     押し出されて押せなくなっていたため、3列グリッドに変更(宿泊/野営/茶屋の3画面で共通利用) */
+  #lodgingRestSummaryList, #campRestSummaryList, #teahouseRestSummaryList {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; width: 100%; max-width: 420px;
   }
-  .camp-rest-row img { width: 44px; height: 44px; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); flex-shrink: 0; }
-  .camp-rest-info { flex: 1; color: #fff; min-width: 0; }
-  .camp-rest-info .nm { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.2rem; }
-  .camp-rest-stat-label { font-size: 0.65rem; color: var(--text-muted); }
-  .camp-rest-stress { font-size: 0.72rem; color: #9fd8ff; margin-top: 0.3rem; }
+  .camp-rest-row {
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.3rem;
+    background: rgba(20,24,27,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md);
+    padding: 0.5rem 0.4rem; box-sizing: border-box;
+  }
+  .camp-rest-row img { width: 52px; height: 52px; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); flex-shrink: 0; }
+  .camp-rest-info { flex: 1; color: #fff; min-width: 0; width: 100%; }
+  .camp-rest-info .nm { font-size: 0.78rem; font-weight: 700; margin-bottom: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .camp-rest-stat-label { font-size: 0.62rem; color: var(--text-muted); }
+  .camp-rest-stress { font-size: 0.66rem; color: #9fd8ff; margin-top: 0.25rem; }
   #campRestNextBtn { margin-top: 0.5rem; width: 100%; max-width: 420px; }
   .camp-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(.bottom-actions/.battle-actionsと同じ仕組み) */

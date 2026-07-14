@@ -577,6 +577,10 @@ function abilityMpCost(abilityType, actor) {
   let cost = ABILITY_MP_COST[abilityType] || 0;
   // 温泉バフ「英気充填」: MP消費-10%
   if (actor && actor.onsenBuffKey === "eikijuten") cost = Math.max(0, Math.round(cost * 0.9));
+  // スキルツリーの固定MP割引(舞の型など)
+  if (actor && actor.passives && actor.passives.abilityMpDiscount && actor.passives.abilityMpDiscount[abilityType]) {
+    cost = Math.max(0, cost - actor.passives.abilityMpDiscount[abilityType]);
+  }
   return cost;
 }
 
@@ -675,6 +679,7 @@ function initPassives() {
     allyGuardDmgTakenMult: 1, // 自分以外の仲間がかばっている間、自分の被ダメージ倍率(護りの薙刀など)
     guardPartyAtkBuff: 0, // 自分のかばうが成功した瞬間、味方全体に3ターンの攻撃力+この値を配る(鼓舞の盾)
     bleedFollowupOnHit: false, // 出血中の敵への通常攻撃が命中した時、出血スタックを3追加する(追い討ち)
+    abilityMpDiscount: {}, // { abilityType: 固定MP割引量 } 職業の基本アビリティ(薙ぎ払い等)のMP消費を固定値で下げる(舞の型など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -741,6 +746,12 @@ function applySkillChoice(character, skill, level) {
     if (add.allyGuardDmgTakenMult) p.allyGuardDmgTakenMult *= add.allyGuardDmgTakenMult;
     if (add.guardPartyAtkBuff) p.guardPartyAtkBuff += add.guardPartyAtkBuff;
     if (add.bleedFollowupOnHit) p.bleedFollowupOnHit = true;
+    if (add.abilityMpDiscount) {
+      p.abilityMpDiscount = p.abilityMpDiscount || {};
+      Object.keys(add.abilityMpDiscount).forEach((k) => {
+        p.abilityMpDiscount[k] = (p.abilityMpDiscount[k] || 0) + add.abilityMpDiscount[k];
+      });
+    }
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -967,7 +978,7 @@ function useTreeSkill(actor, target, skill, log) {
     if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
       const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
       if (action.inflict.type === "poison") applyPoison(t, (action.inflict.value || 3) + izanamiBoost);
-      if (action.inflict.type === "bleed") applyBleed(t, (action.inflict.value || 2) + izanamiBoost);
+      if (action.inflict.type === "bleed") applyBleed(t, resolveValue(action.inflict, 2) + izanamiBoost);
       if (action.inflict.type === "burn") applyBurn(t, action.inflict.turns || 3);
       if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
       if (action.inflict.type === "silence") applySilence(t, action.inflict.turns || 2);

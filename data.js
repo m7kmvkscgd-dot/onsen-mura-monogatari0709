@@ -826,7 +826,7 @@ const SKILL_TREES = {
   },
   naginata: {
     2: {
-      left: { name: "援護薙ぎ", desc: "仲間がかばっている間、与えるダメージ+12%", mp: 0, passive: { allyGuardDmgMult: 1.12 } },
+      left: { name: "舞の型", desc: "薙ぎ払いのMP消費-1", mp: 0, passive: { abilityMpDiscount: { physicalAttackAll: 1 } } },
       right: { name: "足払い", desc: "敵単体へ90%ダメージ、85%の確率でスタン(1ターン)", mp: 2, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     3: {
@@ -834,12 +834,12 @@ const SKILL_TREES = {
       right: { name: "崩し", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     4: {
-      left: { name: "旋風薙ぎ", desc: "敵全体へ100%ダメージ", mp: 4, action: { kind: "damage", aoe: true, mult: 1.0 } },
+      left: { name: "旋風薙ぎ", desc: "敵全体へ100%ダメージ、出血2〜4を付与", mp: 4, action: { kind: "damage", aoe: true, mult: 1.0, inflict: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 4 } } },
       right: { name: "威圧", desc: "通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
       left: { name: "拍子外し", desc: "素早さが下がっている敵への会心率+25%", mp: 0, passive: { debuffCritBonus: { stat: "spd", addRate: 0.25 } } },
-      right: { name: "舞姫", desc: "回避に成功すると、次の自分の1ターンだけ回避率+20%", mp: 0, passive: { onEvadeSelfBuff: { stat: "evasionAdd", mult: 0.2 } } },
+      right: { name: "舞姫", desc: "回避に成功すると、次の自分の1ターンだけ回避率+30%", mp: 0, passive: { onEvadeSelfBuff: { stat: "evasionAdd", mult: 0.3 } } },
     },
     6: {
       left: { name: "乱舞", desc: "敵全体へ2連続攻撃(合計130%ダメージ)", mp: 5, action: { kind: "damage", aoe: true, mult: 1.3, hits: 2 } },
