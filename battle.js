@@ -13,6 +13,9 @@ function startBattle(enemies, pathDef, encounterText) {
   const omikujiGuaranteedCrits = state.omikujiGuaranteedCritsLeft || 0;
   if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits };
+  // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
+  // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
+  lastPartyBarActingId.battlePartyBar = null;
   // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
   // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
   enemies.forEach((e) => { e.__enemyAllies = enemies; });

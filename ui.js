@@ -423,8 +423,16 @@ function mpBarHtml(entity) {
   return `<div class="mpbar-track"><div class="mpbar-fill" style="width:${ratio}%"></div>${healTrailHtml}</div>`;
 }
 
+// elIdごとに「直前の描画で誰がactingCharIdだったか」を覚えておき、renderPartyBar()内でも
+// 実際に手番が切り替わった瞬間(値が変わった時)だけ.acting-enterを付けてスライド演出を1回だけ再生する。
+// renderPartyBar()はinnerHTML=""で毎回DOMを作り直すため、この追跡をしないと技/道具/対象選択などの
+// サブメニューを開くたびに同じキャラのカードが再生成され、そのたびに演出が再生されてしつこくなる
+// (「ぴょんぴょん1」で実際に踏んだ不具合。KAMIKAKUSHI_REVEAL_MSと同じ「フラグで一度きりに絞る」考え方)
+const lastPartyBarActingId = {};
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
+  const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
+  lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
   bar.innerHTML = "";
   // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
@@ -434,7 +442,9 @@ function renderPartyBar(elId, combatants, actingCharId) {
     // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
     const targetable = !!pendingAllyPick && !dead && !c.transformForm && !isReserve;
     const div = document.createElement("div");
-    div.className = "party-member" + (dead ? " dead" : "") + (c.id === actingCharId ? " acting" : "") + (targetable ? " targetable" : "") + (isReserve ? " reserve" : "") + shakeClassFor(c);
+    const isActing = c.id === actingCharId;
+    const actingClass = isActing ? (isFreshTurn ? " acting acting-enter" : " acting") : "";
+    div.className = "party-member" + (dead ? " dead" : "") + actingClass + (targetable ? " targetable" : "") + (isReserve ? " reserve" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     // 担がれている本人は今回の遠征の名簿(fieldParty/combatants)に居るとは限らない(別の冒険で瀕死のまま

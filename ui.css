@@ -97,18 +97,29 @@
      iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
      再描画・位置取得が更新されなくなる不具合の原因になっていた可能性が高いため外した */
   .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: var(--radius-sm); padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
-  /* 行動中のキャラは金枠の発光+ごくわずかな浮遊を重ねて、派手すぎない上品な強調にする */
+  /* 行動中のキャラ表示(商業JRPG基準のブラッシュアップ、2026-07-15)。
+     従来は「常時ふわふわ浮遊+発光パルス」のループだったが、①瞬間移動的で品質が低く見える
+     ②毎ターン何百回も目にするためループ演出はくどい、という指摘を受けて全面的に作り直した。
+     方針: 手番が来た瞬間だけtranslateYで120〜160ms前方へ「スッ」とスライドし、ごく小さい
+     オーバーシュート(2.5px)で「ピタッ」と止まる。到着後は完全に静止(ループ無し)、発光も
+     パルスさせず一定の弱いglowに留める。スライドはrenderPartyBar()側のisFreshTurn判定
+     (lastPartyBarActingId)で「実際に手番が切り替わった瞬間」だけ.acting-enterが付き、
+     同じ手番中の技/道具メニュー等の再描画では再生されない(.actingのみ・静止状態で即描画される) */
   .party-member.acting {
     border-color: var(--accent); background: rgba(201,162,74,0.18);
-    animation: actingGlow 2.4s ease-in-out infinite, actingFloat 2.4s ease-in-out infinite;
+    box-shadow: 0 0 9px rgba(201,162,74,0.5);
+    transform: translateY(-10px) translateZ(0);
   }
-  @keyframes actingGlow {
-    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
-    50% { box-shadow: 0 0 15px rgba(201,162,74,0.75); }
+  .party-member.acting.acting-enter {
+    animation: actingSlideIn 0.15s both;
   }
-  @keyframes actingFloat {
-    0%, 100% { transform: translateY(-10px) translateZ(0); }
-    50% { transform: translateY(-13px) translateZ(0); }
+  @keyframes actingSlideIn {
+    0% { transform: translateY(0) translateZ(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    70% { transform: translateY(-12.5px) translateZ(0); animation-timing-function: ease-out; }
+    100% { transform: translateY(-10px) translateZ(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .party-member.acting.acting-enter { animation: none; }
   }
   /* かばう反撃の瞬間だけ再生する一回きりのバウンス(playGuardCounterVisual参照)。
      .acting(手番中ずっとループするふわふわ浮遊)とは別の、素早く跳ねて着地する攻撃モーション */
