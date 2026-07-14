@@ -669,3 +669,13 @@ npx wrangler pages deploy . --project-name=onsen-mura-monogatari --branch=main -
 **実装方針**: `fieldParty`は常に最大4人(戦闘に出る人数)のまま一切変更せず、5人目は`reserveFieldMember`という別枠の変数で管理することで、既存の膨大な戦闘/探索/野営コード(20箇所以上が`fieldParty`を参照している)への影響を最小限に抑えた。`handleFieldDeaths()`が新たに瀕死になったキャラの配列を返すように変更し、`offerReserveSwapIfNeeded()`が戦闘の4箇所の呼び出し元(敵の通常攻撃/大技/ターン開始時DOT/プレイヤー行動後)すべてで、控えとの交代ポップアップを挟んでからターン進行を続けるよう統一した。`checkStrandedOnCurrentFloor()`等の瀕死チェック処理は`fieldParty`に加え`reserveFieldMember`もスキャンするよう更新し、控え枠にいる瀕死のキャラも取りこぼさず担ぐ/見送るの対象になるようにした。
 
 Playwrightで購入→5人選択→出発→控え人数確認→探索中交代→戦闘中の自動提案ポップアップ→承諾後の担ぐプロンプト到達→手動交代ボタン→ポップアップ「いいえ」時の非交代、一連の流れをすべて検証済み。
+
+## ボス級指名討伐を正式な奉行所クエストに統一+大猪/荒熊HP1.5倍+戦闘表示の大型化(コミットa80157b)
+
+「戦闘中に控えにいる瀕死のキャラを担ぐこともできるようにして」→前回のコミット(助っ人の札)で既に実装済みだったため、Playwrightで再検証のみ実施(`carryTargets`が`reserveFieldMember`も含めてスキャンする実装が正しく動作することを確認)。
+
+「ボス級の敵は毎回イラストでかくして、大猪みたいに」は当初「隠す」の意味かと誤読して質問したが、実際は「(戦闘中のイラストが小さいので)大きくして」という意味だった(「でかくして」の空耳/誤変換)。`battle.css`の`.enemy-card.midboss img { width:112px; height:112px; }`(デフォルトは92px)が大猪(`isMidBoss:true`)にしか適用されておらず、荒熊/大蛇/鬼/がしゃどくろは他の雑魚と同じ小さい表示だったのが原因。4体全てに`isMidBoss:true`を追加して解決した。**教訓**: 曖昧な指示は無理に深読みして凝った解釈をひねり出すより、まず画面のどの要素の話か・現状との差分は何かを具体的に聞く方が早く正確に解決できる。
+
+「大猪のhpを1.5倍にバフして、荒れ熊も1.5倍にして」: `oo_inoshishi`を42→63、`q_arakuma`を26→39に変更(他2体は指示になかったため据え置き)。
+
+「あれクマとかのボス級もきちんと奉行所でクエストとして受注する形にして」: 荒熊/大蛇/鬼/がしゃどくろは元々「奉行所の通常依頼を3件クリアするたびに自動発生し、遭遇時25%で指名の的が代わりに出る」という受け身のシステム(旧・緊急依頼)だったが、これを完全に廃止し、大猪(`inoshishi`)と全く同じ受注制クエスト(`QUEST_DEFS`にtier:1として追加、`requiresOoInoshishi:true`で大猪討伐済みまで張り出し自体を隠す)に統一した。旧システムの状態(`state.emergencyQuest`/`magistrateNormalClears`/`emergencyQuestEverAppeared`)・関数(`maybeTriggerEmergencyQuest`/`claimEmergencyQuest`)・UI(奉行所画面の専用カード)・`rollEncounter()`内の25%抽選分岐は全て削除し、旧セーブに残る`state.emergencyQuest`等もロード時に`delete`する互換処理を入れた。
