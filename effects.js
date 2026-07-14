@@ -60,7 +60,7 @@ function popupOn(targetId, text, cls, intensity) {
 // 通常攻撃のエフェクトは全体的に90%サイズにする(スキル系は据え置き、というユーザー指示への対応)
 const CLASS_ATTACK_VFX = {
   samurai:  { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 454 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 504 } },
-  ninja:    { normal: { prefix: "assets/vfx/slash_magenta_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/impact_ninja_skill_", frames: 4, size: 200 } },
+  ninja:    { normal: { prefix: "assets/vfx/slash_magenta_", frames: 9, size: 320 }, skill: { prefix: "assets/vfx/impact_ninja_skill_", frames: 4, size: 200 } },
   naginata: { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 280 } },
   spearman: { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 198 }, skill: { prefix: "assets/vfx/impact_spear_skill_", frames: 6, size: 220 } },
   priest:   { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 } },
