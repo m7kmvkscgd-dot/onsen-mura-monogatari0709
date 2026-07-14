@@ -1610,10 +1610,10 @@ function consumeOnsenEggFromInventory() {
 const GUARD_REDIRECT_CHANCE = 0.95;
 // かばうは元々「1回身代わりになったら構えが解除される」1発仕様だったが、ユーザー指示により、
 // 身代わりになるたびにこの確率で構えが解除されず継続する(=続けてもう1人分かばえる)ようにした。
-// 判定は身代わりの都度行うため、理論上は連続して複数人をかばい続けることもできる(65%→42%→27%...と
-// 尻すぼみに確率が下がっていく)
-const GUARD_CONTINUE_CHANCE = 0.65;
-// 構えの継続確率が65%で残っていても、次の自分のターンが来るまでに守れるのは最大2人まで
+// 判定は身代わりの都度行うため、理論上は連続して複数人をかばい続けることもできる(50%→25%→12.5%...と
+// 尻すぼみに確率が下がっていく)。当初65%だったが、2回連続で発動しやすすぎるとの指摘で50%にナーフした
+const GUARD_CONTINUE_CHANCE = 0.50;
+// 構えの継続確率が50%で残っていても、次の自分のターンが来るまでに守れるのは最大2人まで
 // (3人目は守らせない)。2人目を守った時点で強制的に構えを解除する
 const GUARD_MAX_PROTECT_COUNT = 2;
 function findGuardTarget(alive) {
@@ -1681,7 +1681,7 @@ function enemyAttack(enemy, targets, log) {
     rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
     if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
     target.guardProtectCount = (target.guardProtectCount || 0) + 1;
-    if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除。ただし2人守ったら強制解除
+    if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 50%で構え継続、50%で解除。ただし2人守ったら強制解除
     suffix = "(かばう)";
   }
   const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
@@ -1766,7 +1766,7 @@ function enemyBigAttack(enemy, targets, log) {
       rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
       if (target.passives && target.passives.extraGuardMitigation !== 1) rawDmg = Math.max(1, Math.round(rawDmg * target.passives.extraGuardMitigation));
       target.guardProtectCount = (target.guardProtectCount || 0) + 1;
-      if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 65%で構え継続、35%で解除。ただし2人守ったら強制解除
+      if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 50%で構え継続、50%で解除。ただし2人守ったら強制解除
       suffix = "(かばう)";
     }
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
