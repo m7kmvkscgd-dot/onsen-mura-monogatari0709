@@ -421,8 +421,8 @@ function speakExplicitLine(speaker, text, category, ignoreMutex, forceful) {
 // 頻繁に起こるカテゴリは従来どおり他の発言を尊重させたいので既定のfalseのまま)
 // 先に喋る側が発言できた場合にtrueを返す
 const PAIRED_DIALOGUE_GAP_MS = 2000; // 先の発言から後の発言までの固定の間(ユーザー指示で2秒固定)
-// 会心セリフ(A→B)だけは、他の掛け合い(平和な掛け合い等)より0.3秒短く畳み掛けるようユーザー指示で調整
-const CRIT_DIALOGUE_GAP_MS = PAIRED_DIALOGUE_GAP_MS - 300;
+// 会心セリフ(A→B)だけは、他の掛け合い(平和な掛け合い等)より短く畳み掛けるようユーザー指示で調整
+const CRIT_DIALOGUE_GAP_MS = 1200;
 function playPairedDialogueExchange(member1, member2, entry, category, ignoreMutexForFirst, forcefulFirst, gapMs) {
   const speaksFirst = entry.pA === member1.personality ? member1 : member2;
   const speaksSecond = speaksFirst === member1 ? member2 : member1;
