@@ -12,7 +12,7 @@ const CLASSES = {
   samurai: { ja: "侍", image: "assets/class_samurai.png", hp: 35, atk: 12, def: 8, spd: 11, mag: 0, accuracy: 0.95, abilities: ["critAttack"] },
   ninja: { ja: "忍", image: "assets/class_ninja.png", hp: 30, atk: 13, def: 7, spd: 16, mag: 0, accuracy: 0.95, abilities: ["powerAttack"] },
   spearman: { ja: "槍士", image: "assets/class_spearman.png", hp: 39, atk: 11, def: 10, spd: 7, mag: 0, accuracy: 0.95, abilities: ["guard"] },
-  naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 33, atk: 12, def: 8, spd: 9, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
+  naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 33, atk: 12, def: 8, spd: 11, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
   hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 27, atk: 11, def: 5, spd: 12, mag: 0, accuracy: 0.99, abilities: ["preciseShot"] },
   gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 29, atk: 16, def: 6, spd: 4, mag: 0, accuracy: 0.95, abilities: ["cannonShot"] },
   onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 5, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
