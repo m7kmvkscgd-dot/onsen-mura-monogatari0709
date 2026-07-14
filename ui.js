@@ -71,7 +71,11 @@ function updateSceneBackgrounds() {
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
 let lastTouchEndAt = 0;
 let lastTouchEndTarget = null;
-const DOUBLE_TAP_ZOOM_WINDOW_MS = 150;
+// 「同じ要素への連打」に限定してある(別要素への連打は巻き込まない)ため、時間側の窓は広めに取っても
+// 安全。150msだと探索画面で「進む」等を焦って連打した時、実際の指のリズムがこの窓を上回ってしまい
+// (iOS Safari自体のダブルタップズーム判定は300ms前後とされる)、ネイティブのズームがすり抜けて
+// 再発していた。同じ要素への連打はそもそも正当な用途がまず無いため、400msまで広げても問題ない
+const DOUBLE_TAP_ZOOM_WINDOW_MS = 400;
 document.addEventListener("touchend", (e) => {
   const now = Date.now();
   if (e.target === lastTouchEndTarget && now - lastTouchEndAt <= DOUBLE_TAP_ZOOM_WINDOW_MS) e.preventDefault();
