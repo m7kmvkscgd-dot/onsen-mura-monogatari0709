@@ -34,11 +34,13 @@ function applyOmikujiExpeditionStart() {
     });
   }
   state.omikujiFirstStrikePending = state.omikujiEffect === "shokichi";
+  state.omikujiGuaranteedCritsLeft = state.omikujiEffect === "kichi" ? 3 : 0;
 }
 // 遠征が終わった(里に帰った/全滅した)タイミングで、次の遠征専用だったおみくじ効果を消費し終える
 function clearOmikujiExpeditionEffect() {
   state.omikujiEffect = null;
   state.omikujiFirstStrikePending = false;
+  state.omikujiGuaranteedCritsLeft = 0;
 }
 
 function enterDungeon() {

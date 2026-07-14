@@ -179,6 +179,7 @@ function loadState() {
       if (loaded.omikujiLastSpeakerId === undefined) loaded.omikujiLastSpeakerId = null;
       if (loaded.omikujiEffect === undefined) loaded.omikujiEffect = null;
       if (loaded.omikujiFirstStrikePending == null) loaded.omikujiFirstStrikePending = false;
+      if (loaded.omikujiGuaranteedCritsLeft == null) loaded.omikujiGuaranteedCritsLeft = 0;
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
       if (loaded.seenUnlockedBuildings == null) loaded.seenUnlockedBuildings = {}; // 旧セーブ用の初期値(NEWバッジ機能実装前は無条件で空扱い)
       if (loaded.seenUnlockedClasses == null) loaded.seenUnlockedClasses = {};

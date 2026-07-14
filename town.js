@@ -856,11 +856,14 @@ function showPartySelectTab(tab) {
   document.getElementById("partySelectOmikujiTabBtn").className = "omikuji-chip-btn" + (tab === "omikuji" ? " active" : "");
   document.getElementById("partySelectBestiaryTabBtn").className = "omikuji-chip-btn" + (tab === "bestiary" ? " active" : "");
 }
+// タブを開いた瞬間に自動でおみくじを引く(テンポ重視、別ボタンでの2段階操作を廃止)。
+// 本日すでに引いていればdrawOmikuji()が無言で早期returnするので、その場合は今日の結果をそのまま表示する
 document.getElementById("partySelectOmikujiTabBtn").onclick = () => {
   playSfx("select");
   state.seenOmikujiTab = true;
   document.getElementById("omikujiTabNewBadge").style.display = "none";
   showPartySelectTab("omikuji");
+  drawOmikuji();
   renderOmikujiTab();
 };
 document.getElementById("partySelectBestiaryTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("bestiary"); renderBestiaryTab(); };
@@ -1135,22 +1138,7 @@ document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnFromOmikuji").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 
-// おみくじの結果ごとの表示ラベル(現在有効な御利益の説明用)
-const OMIKUJI_EFFECT_LABEL = {
-  daikichi: "大吉(瀕死の一撃をパーティ全員で一度だけHP1に耐える)",
-  chukichi: "中吉(不穏な道が一切出ない)",
-  kichi: "吉(神隠しの道の出現率アップ)",
-  shokichi: "小吉(最初の戦闘だけ先制確定)",
-};
 function renderOmikujiTab() {
-  const canDraw = (state.omikujiDrawnDate || 0) !== state.dayCount;
-  const effectCard = document.getElementById("omikujiCurrentEffectCard");
-  if (state.omikujiEffect && OMIKUJI_EFFECT_LABEL[state.omikujiEffect]) {
-    effectCard.style.display = "";
-    document.getElementById("omikujiCurrentEffectText").textContent = OMIKUJI_EFFECT_LABEL[state.omikujiEffect];
-  } else {
-    effectCard.style.display = "none";
-  }
   const resultCard = document.getElementById("omikujiResultCard");
   if (state.omikujiLastTier && (state.omikujiDrawnDate || 0) === state.dayCount) {
     resultCard.style.display = "";
@@ -1169,9 +1157,6 @@ function renderOmikujiTab() {
   } else {
     resultCard.style.display = "none";
   }
-  const btn = document.getElementById("omikujiDrawBtn");
-  btn.textContent = canDraw ? "おみくじを引く" : "本日は引き終わりました";
-  btn.disabled = !canDraw;
 }
 function drawOmikuji() {
   if ((state.omikujiDrawnDate || 0) === state.dayCount) return;
@@ -1200,7 +1185,6 @@ function pickRandomActiveRosterChar() {
   if (alive.length === 0) return null;
   return alive[Math.floor(Math.random() * alive.length)];
 }
-document.getElementById("omikujiDrawBtn").onclick = () => drawOmikuji();
 // 出発時の演出: 専用効果音を再生→パーティ編成画面のタブ(支援物資/パーティ編成)と見出しを
 // すべて隠して門イラストの背景だけを1.5秒見せる→探索中の「進む」と同じ歩行アニメーション
 // (buildWalkKeyframes、背景だけscale/translateY、足音効果音つき)を1.25秒かけて→

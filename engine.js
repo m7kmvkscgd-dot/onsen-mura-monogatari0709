@@ -800,6 +800,12 @@ function rollCritMultiplier(actor, extraCritRate, target) {
     actor.guaranteedCritNext = false;
     return BASE_CRIT_DMG_MULT + p.critDmgAdd;
   }
+  // おみくじ「吉」: 戦闘全体で共有する残り回数(誰の攻撃でも消費する)。味方の攻撃にのみ関わるため、
+  // 敵の攻撃(passivesを持たずこの関数の先頭で既にreturnしている)には影響しない
+  if (typeof battle !== "undefined" && battle && battle.omikujiGuaranteedCritsLeft > 0) {
+    battle.omikujiGuaranteedCritsLeft--;
+    return BASE_CRIT_DMG_MULT + p.critDmgAdd;
+  }
   // 温泉バフ「気分爽快」: 会心率+5%
   const onsenCritBonus = actor.onsenBuffKey === "kibunsoukai" ? 0.05 : 0;
   // 対象のHP割合条件つき会心率ボーナス(剣豪など、弱った敵ほど会心が出やすい系。cmp:"gte"なら逆に高HP時に発動)。

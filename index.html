@@ -280,18 +280,14 @@
       <div id="partySelectOmikujiTab" style="display:none;">
         <h2>⛩️おみくじ</h2>
         <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">1日1回引けます。結果は次の遠征にだけ効きます。</p>
-        <div class="card" id="omikujiCurrentEffectCard" style="display:none;">
-          <div class="roster-sub">現在の御利益: <span id="omikujiCurrentEffectText"></span></div>
-        </div>
         <div class="card" id="omikujiResultCard" style="display:none;">
-          <div class="roster-name" id="omikujiResultTier"></div>
-          <div class="roster-sub" id="omikujiResultEffect" style="margin-top:0.3rem;"></div>
-          <div id="omikujiResultLineRow" style="display:flex; align-items:center; gap:0.6rem; margin-top:0.6rem;">
+          <div id="omikujiResultTier" style="font-size:1.8rem;font-weight:800;color:var(--accent);"></div>
+          <div id="omikujiResultEffect" style="font-size:1rem;color:var(--text);margin-top:0.4rem;line-height:1.5;"></div>
+          <div id="omikujiResultLineRow" style="display:flex; align-items:center; gap:0.6rem; margin-top:0.8rem;">
             <img id="omikujiResultSpeakerImg" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:var(--radius-xs);flex-shrink:0;display:none;">
-            <div class="roster-sub" id="omikujiResultLine" style="font-style:italic;"></div>
+            <div id="omikujiResultLine" style="font-size:0.95rem;color:var(--text);font-style:italic;line-height:1.5;"></div>
           </div>
         </div>
-        <button class="big primary" id="omikujiDrawBtn" style="margin-top:0.8rem;">おみくじを引く</button>
         <button class="big" id="partySelectBackBtnFromOmikuji" style="margin-top:0.5rem;">戻る</button>
       </div>
 

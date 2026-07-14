@@ -44,11 +44,14 @@
     color: var(--dw-title-color); text-shadow: 0 2px 6px rgba(0,0,0,0.8);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .dw-header-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; min-width: 44px; }
-  .dw-header-gold { font-size: 0.82rem; font-weight: var(--fw-number); color: var(--dw-gold); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-  .dw-header-time { font-size: 0.68rem; color: #d9d5c8; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .dw-header-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; min-width: 44px; }
+  .dw-header-gold { font-size: 1.05rem; font-weight: var(--fw-number); color: var(--dw-gold); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .dw-header-time { font-size: 0.85rem; color: #d9d5c8; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
   /* ヘッダー導入後、hero内の旧h1(画面によっては残置)は二重表示を避けるため隠す */
   .hero.has-dw-header h1 { display: none; }
+  /* .heroの上部パディング(1.2rem)がそのままヘッダーの上に隙間として残ってしまっていたのを解消。
+     ヘッダー導入前のh1レイアウト用の余白だったが、h1は上で非表示にしているためヘッダー画面では不要 */
+  .hero.has-dw-header { padding-top: 0; }
   .hero-title-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 0.6rem; }
   .hero-title-row h1 { margin: 0; }
   .time-of-day-label { font-size: 1.3rem; font-weight: var(--fw-number); color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.85); }

@@ -54,6 +54,7 @@ function defaultState() {
     omikujiLastSpeakerId: null, // 上記セリフを喋ったキャラのid(結果画面にポートレートを出すため)
     omikujiEffect: null, // 次の遠征に適用される効果(daikichi/chukichi/kichi/shokichi、kyouはnullのまま)。遠征終了時にクリアする
     omikujiFirstStrikePending: false, // 小吉: 次の遠征の最初の戦闘だけ先制確定にする(1戦闘使ったら消費)
+    omikujiGuaranteedCritsLeft: 0, // 吉: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる(1戦闘使ったら消費)
     seenUnlockedBuildings: {}, // { stateKey: true } 建築可能(houseLevel到達済み・未建築)になった施設を一度でも増築画面で見たか。NEWバッジの表示制御用
     seenUnlockedClasses: {}, // { classId: true } 雇用可能になった職業を一度でも宿屋の職業一覧で見たか。NEWバッジの表示制御用
     onsenKeeperLinePeriod: null, // 温泉の湯守りキャラのセリフが最後に選ばれた「2日区切りの周期番号」(1日おき更新、renderOnsen参照)

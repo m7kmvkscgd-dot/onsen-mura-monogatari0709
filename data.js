@@ -106,7 +106,7 @@ const DIALOGUE_LINES = {};
 const OMIKUJI_TIERS = {
   daikichi: { label: "大吉", weight: 5, effectDesc: "次の遠征中、瀕死の一撃をパーティ全員で一度だけHP1に耐える" },
   chukichi: { label: "中吉", weight: 15, effectDesc: "次の遠征中、不穏な道が一切出ない" },
-  kichi: { label: "吉", weight: 30, effectDesc: "次の遠征中、神隠しの道の出現率が上がる" },
+  kichi: { label: "吉", weight: 30, effectDesc: "次の遠征、最初の戦闘だけ会心が3回連続で発生する" },
   shokichi: { label: "小吉", weight: 35, effectDesc: "次の遠征、最初の戦闘だけ先制確定" },
   kyou: { label: "凶", weight: 15, effectDesc: "特に何も起こらない" },
 };
@@ -1018,14 +1018,14 @@ const SKILL_TREES = {
 // 各職業の左/右スキルツリーの通り名。ツリー内のスキル全体の方向性を一語で表したもので、
 // スキルツリー画面の上部(系譜の見出し)に表示する
 const SKILL_TREE_NAMES = {
-  samurai: { left: "剣豪", right: "明鏡" },
-  ninja: { left: "暗殺", right: "幻影" },
-  spearman: { left: "破軍", right: "守護" },
-  naginata: { left: "戦舞", right: "制圧" },
-  hunter: { left: "狙撃", right: "狩猟" },
-  gunner: { left: "徹甲", right: "爆炎" },
-  onmyoji: { left: "五行", right: "呪詛" },
-  priest: { left: "奇跡", right: "神恩" },
+  samurai: { left: "剣豪の型", right: "明鏡の型" },
+  ninja: { left: "暗殺の型", right: "幻影の型" },
+  spearman: { left: "破軍の型", right: "守護の型" },
+  naginata: { left: "戦舞の型", right: "制圧の型" },
+  hunter: { left: "狙撃の型", right: "狩猟の型" },
+  gunner: { left: "徹甲の型", right: "爆炎の型" },
+  onmyoji: { left: "五行の型", right: "呪詛の型" },
+  priest: { left: "奇跡の型", right: "神恩の型" },
 };
 const SUPPLY_CAP_BASE = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる(鞄屋を建てるとsupplyCap()でこれに加算される)
 
