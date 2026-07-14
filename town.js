@@ -79,6 +79,7 @@ function showOnsenReliefOverlay(entries) {
     </div>
   `).join("");
   document.getElementById("onsenReliefOverlay").style.display = "flex";
+  playSfx("onsen_relief");
   setTimeout(() => activateOnsenReliefBars(list), ONSEN_RELIEF_REVEAL_DELAY_MS);
   document.getElementById("onsenReliefCloseBtn").onclick = () => {
     document.getElementById("onsenReliefOverlay").style.display = "none";
