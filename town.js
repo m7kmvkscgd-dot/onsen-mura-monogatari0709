@@ -1059,23 +1059,47 @@ function renderSupplies() {
   renderOwnedSupplyIcons();
 }
 // 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
-// (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)
+// (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)。
+// タップすると1個売却できる(売値は購入価格の半額、端数切り捨て)
 function renderOwnedSupplyIcons() {
   const wrap = document.getElementById("ownedSupplyIcons");
   let html = "";
   // image(画像)が用意されているものはimg、無いもの(絵文字のみ、爆弾など)はemojiをそのまま文字表示する
-  const addIcons = (item, count) => {
+  const addIcons = (itemId, count) => {
+    const item = ITEMS[itemId];
     for (let i = 0; i < count; i++) {
-      html += item.image ? `<img src="${item.image}" alt="${item.ja}">` : `<span class="supply-icon-emoji" title="${item.ja}">${item.emoji || ""}</span>`;
+      html += item.image
+        ? `<img src="${item.image}" alt="${item.ja}" data-item-id="${itemId}">`
+        : `<span class="supply-icon-emoji" title="${item.ja}" data-item-id="${itemId}">${item.emoji || ""}</span>`;
     }
   };
-  addIcons(ITEMS.campingKit, state.inventory.campingKit || 0);
-  addIcons(ITEMS.potion, state.inventory.potion || 0);
-  addIcons(ITEMS.smokeBomb, state.inventory.smokeBomb || 0);
-  addIcons(ITEMS.onsenEgg, state.inventory.onsenEgg || 0);
-  addIcons(ITEMS.bomb, state.inventory.bomb || 0);
-  addIcons(ITEMS.kotaifuda, state.inventory.kotaifuda || 0);
+  addIcons("campingKit", state.inventory.campingKit || 0);
+  addIcons("potion", state.inventory.potion || 0);
+  addIcons("smokeBomb", state.inventory.smokeBomb || 0);
+  addIcons("onsenEgg", state.inventory.onsenEgg || 0);
+  addIcons("bomb", state.inventory.bomb || 0);
+  addIcons("kotaifuda", state.inventory.kotaifuda || 0);
   wrap.innerHTML = html;
+  wrap.querySelectorAll("[data-item-id]").forEach((el) => {
+    el.onclick = () => confirmSellSupplyItem(el.dataset.itemId);
+  });
+}
+function confirmSellSupplyItem(itemId) {
+  const item = ITEMS[itemId];
+  const sellPrice = Math.floor(item.price / 2);
+  showConfirmModal(`${item.ja}を${sellPrice}Gで売りますか？`, [
+    {
+      label: "売る", className: "big primary", onClick: () => {
+        if ((state.inventory[itemId] || 0) <= 0) return;
+        state.inventory[itemId]--;
+        state.gold += sellPrice;
+        saveState();
+        playSfx("coin");
+        renderSupplies();
+      },
+    },
+    { label: "やめる", className: "big" },
+  ]);
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
   const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);

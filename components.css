@@ -5,8 +5,10 @@
      1行8個までで折り返し、最大量でも2行に収まるようにしてある */
   /* height/align-contentを固定し、1行の時も2行の時も高さを変えない(下のカードがズレないように) */
   .owned-supply-icons { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-width: 296px; height: 68px; margin: 0.3rem 0 0.8rem; }
-  .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
-  .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  /* タップで1個売却できる(confirmSellSupplyItem)。押した感触を軽く出すためactive時に縮める */
+  .owned-supply-icons img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); cursor: pointer; transition: transform 0.1s; }
+  .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); cursor: pointer; transition: transform 0.1s; }
+  .owned-supply-icons img:active, .owned-supply-icons .supply-icon-emoji:active { transform: scale(0.85); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
   .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; transition: opacity 0.25s ease; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
