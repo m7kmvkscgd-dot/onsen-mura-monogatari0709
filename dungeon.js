@@ -591,7 +591,7 @@ const PATH_DEFS = {
   kurai: { icon: "🌑", label: "暗い道", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
   shizuka: { icon: "🍃", label: "静かな道", battle: 0.15, gold: 0.25 },
   komorebi: { icon: "🌿", label: "木漏れ日の道", battle: 0.20, gold: 0.30 },
-  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.70 },
+  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.90 },
   fuon: { icon: "👁️", label: "不穏な道", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "神隠しの道", battle: 0.00, gold: 0.00 },
 };
@@ -602,7 +602,7 @@ const COAST_PATH_DEFS = {
   kurai: { icon: "🌊", label: "波打ち際", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
   shizuka: { icon: "🐚", label: "静かな砂浜", battle: 0.15, gold: 0.25 },
   komorebi: { icon: "🐟", label: "潮溜まり", battle: 0.20, gold: 0.30 },
-  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.70 },
+  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.90 },
   fuon: { icon: "👁️", label: "不穏な砂浜", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "幻の島", battle: 0.00, gold: 0.00 },
 };
