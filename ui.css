@@ -61,7 +61,7 @@
   /* キャラのストレス段階(通常/軽度/重度/パニック)は立ち絵そのものを差し替えて表現する
      (黒もやもやの透過オーバーレイ方式は廃止)。背景は新しい立ち絵の透過部分に合わせた#353a44、
      引き伸ばし/クロップを避けるためobject-fit:containにしている */
-  .roster-row img { width: 44px; height: 44px; flex-shrink: 0; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .roster-row img { width: 60px; height: 60px; flex-shrink: 0; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .roster-info { flex: 1; }
   /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に重ねる(ユーザー指示で従来の1.3倍) */
   .carried-badge {
