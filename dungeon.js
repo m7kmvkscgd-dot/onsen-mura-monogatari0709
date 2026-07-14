@@ -143,8 +143,8 @@ function renderDungeon() {
   }
   document.getElementById("dungeonPotionBtn").textContent = `回復薬(${state.inventory.potion || 0})`;
   document.getElementById("dungeonPotionBtn").disabled = (state.inventory.potion || 0) <= 0;
-  // 道具: 野営具/温泉卵をまとめて選ぶメニュー。どちらも0個の時だけ無効化する
-  document.getElementById("dungeonToolsBtn").disabled = (state.inventory.campingKit || 0) <= 0 && totalOnsenEggCount() <= 0;
+  // 道具: 野営具/温泉卵/茶屋の菓子をまとめて選ぶメニュー。いずれも0個の時だけ無効化する
+  document.getElementById("dungeonToolsBtn").disabled = (state.inventory.campingKit || 0) <= 0 && totalOnsenEggCount() <= 0 && TEAHOUSE_SNACK_IDS.every((id) => (state.inventory[id] || 0) <= 0);
   // 治癒の術: 僧侶がパーティにいる時だけボタンを表示し、MPが足りない時は無効化する
   const dungeonPriests = fieldParty.filter((c) => c.status === "active" && c.classId === "priest");
   const healCost = abilityMpCost("heal");
@@ -281,20 +281,24 @@ document.getElementById("dungeonHealBtn").onclick = () => {
   });
 };
 
-// 探索中の「道具」ボタン: 野営具(野営を始める)/温泉卵(誰か1人がその場で少し回復)をまとめて選ぶメニュー。
-// 回復薬/治癒の術と同じ.bottom-actions→dungeonTargetPickerの仕組みを流用する
+// 探索中の「道具」ボタン: 野営具(野営を始める)/温泉卵/所持中の茶屋の菓子(誰か1人がその場で回復)を
+// まとめて選ぶメニュー。回復薬/治癒の術と同じ.bottom-actions→dungeonTargetPickerの仕組みを流用する
 document.getElementById("dungeonToolsBtn").onclick = () => {
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
   const campCount = state.inventory.campingKit || 0;
   const eggCount = totalOnsenEggCount();
+  // 所持している(=茶屋で買った)菓子だけをボタンとして出す。8種すべてを常に並べると
+  // 持っていない物まで選択肢に見えてしまい煩雑なため
+  const ownedSnackIds = TEAHOUSE_SNACK_IDS.filter((id) => (state.inventory[id] || 0) > 0);
   // 野営具は旅支度屋を建てるまでボタン自体を出さない(未所持でも灰色ボタンとして見えると、
   // 建物を建てる前からアイテムの存在を知ってしまう=ネタバレになるため)
   picker.innerHTML = `
     <p style="width:100%;margin:0;font-size:0.82rem;"><strong>道具を選んでください</strong></p>
     ${state.travelPrepShopLevel ? `<button class="big" id="toolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>野営具(${campCount})</button>` : ""}
     <button class="big" id="toolsEggBtn" ${eggCount <= 0 ? "disabled" : ""}>温泉卵(${eggCount})</button>
+    ${ownedSnackIds.map((id) => `<button class="big" data-tool-snack-id="${id}">${ITEMS[id].ja}(${state.inventory[id]})</button>`).join("")}
     <button class="big" id="cancelDungeonToolsBtn">やめる</button>
   `;
   if (state.travelPrepShopLevel) {
@@ -314,6 +318,20 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
       renderDungeon();
     });
   };
+  ownedSnackIds.forEach((id) => {
+    document.querySelector(`button[data-tool-snack-id="${id}"]`).onclick = () => {
+      if ((state.inventory[id] || 0) <= 0) return;
+      const item = ITEMS[id];
+      pickDungeonAllyTarget(`誰に${item.ja}を食べさせますか？`, (target) => {
+        state.inventory[id]--;
+        playSfx("heal");
+        useTeahouseSnack(item, target, dlog);
+        maybeSpeakHealed(target);
+        saveState();
+        renderDungeon();
+      });
+    };
+  });
   document.getElementById("cancelDungeonToolsBtn").onclick = () => {
     closeDungeonTargetPicker();
   };
@@ -1099,7 +1117,7 @@ function pickTeahouseRestMessage() {
   return TEAHOUSE_REST_MESSAGES[Math.floor(Math.random() * TEAHOUSE_REST_MESSAGES.length)];
 }
 function teahouseSupplyTotal() {
-  return (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  return supplyItemTotal();
 }
 function renderTeahouse() {
   updateSceneBackgrounds();
@@ -1142,69 +1160,50 @@ function renderTeahouse() {
   }
   renderTeahouseSnackList();
 }
-// お茶菓子一覧: 1商品につき1日1個までの在庫制(state.teaHouseStockCounts、TEAHOUSE_SNACK_STOCK)。
-// 押すとその場で仲間を1人選んで即座に食べさせる(pickTeahouseAllyTarget()のピッカーへ繋ぐ)
+// お茶菓子一覧: 回復薬/煙玉と同じ「買うと支援物資として持ち歩ける」方式に統一(1商品につき1日1個までの
+// 在庫制、state.teaHouseStockCounts/TEAHOUSE_SNACK_STOCK)。使うのはここではなく道具メニュー側
+// (探索中の「道具」ボタン、戦闘中の「道具」コマンド)から選んだ時
 function renderTeahouseSnackList() {
   const list = document.getElementById("teaHouseSnackList");
-  list.innerHTML = TEAHOUSE_SNACKS.map((s) => `
+  list.innerHTML = TEAHOUSE_SNACK_IDS.map((id) => {
+    const item = ITEMS[id];
+    return `
     <div class="card" style="margin-top:0.6rem;">
       <div class="shop-item">
-        <img class="shop-item-icon" src="${s.image}" alt="">
+        <img class="shop-item-icon" src="${item.image}" alt="">
         <div>
-          <div><strong>${s.ja}</strong></div>
-          <div class="desc">${s.flavor}<br>${TEAHOUSE_SNACK_COMMON_DESC}</div>
+          <div><strong>${item.ja}</strong> <span id="teaHouseSnackOwned_${id}">0</span>個</div>
+          <div class="desc">${item.desc.replace(/\n/g, "<br>")}</div>
         </div>
-        <button class="big" data-snack-id="${s.id}"></button>
+        <button class="big" data-snack-id="${id}"></button>
       </div>
     </div>
-  `).join("");
-  TEAHOUSE_SNACKS.forEach((s) => {
-    const btn = list.querySelector(`button[data-snack-id="${s.id}"]`);
-    const remaining = Math.max(0, TEAHOUSE_SNACK_STOCK - (state.teaHouseStockCounts[s.id] || 0));
+  `;
+  }).join("");
+  TEAHOUSE_SNACK_IDS.forEach((id) => {
+    const item = ITEMS[id];
+    document.getElementById(`teaHouseSnackOwned_${id}`).textContent = state.inventory[id] || 0;
+    const btn = list.querySelector(`button[data-snack-id="${id}"]`);
+    const remaining = Math.max(0, TEAHOUSE_SNACK_STOCK - (state.teaHouseStockCounts[id] || 0));
     if (remaining <= 0) {
       btn.textContent = "本日売り切れ";
       btn.disabled = true;
       return;
     }
-    btn.textContent = `購入(${s.price}G)`;
-    btn.disabled = state.gold < s.price;
+    btn.textContent = `購入(${item.price}G)`;
+    btn.disabled = supplyItemTotal() >= supplyCap() || state.gold < item.price;
     btn.onclick = () => {
-      if ((state.teaHouseStockCounts[s.id] || 0) >= TEAHOUSE_SNACK_STOCK) { alert(`${s.ja}は本日もう売り切れです`); return; }
-      if (state.gold < s.price) { alert("お金が足りません"); return; }
-      pickTeahouseAllyTarget(`誰に${s.ja}を食べさせますか？`, (target) => {
-        state.gold -= s.price;
-        useTeahouseSnack(s, target, dlog);
-        state.teaHouseStockCounts[s.id] = (state.teaHouseStockCounts[s.id] || 0) + 1;
-        saveState();
-        playSfx("heal");
-        maybeSpeakHealed(target);
-        renderTeahouse();
-      });
+      if ((state.teaHouseStockCounts[id] || 0) >= TEAHOUSE_SNACK_STOCK) { alert(`${item.ja}は本日もう売り切れです`); return; }
+      if (supplyItemTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+      if (state.gold < item.price) { alert("お金が足りません"); return; }
+      state.gold -= item.price;
+      state.inventory[id] = (state.inventory[id] || 0) + 1;
+      state.teaHouseStockCounts[id] = (state.teaHouseStockCounts[id] || 0) + 1;
+      saveState();
+      playSfx("coin");
+      renderTeahouse();
     };
   });
-}
-// 茶屋専用の対象選択(誰に食べさせるか)。dungeon.jsのpickDungeonAllyTargetと同じ考え方だが、
-// 茶屋は独立した画面(screen-dungeonの下部ボタン列を持たない)のため専用のピッカー要素を使う
-function pickTeahouseAllyTarget(promptText, onPicked) {
-  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
-  const picker = document.getElementById("teaHouseTargetPicker");
-  picker.style.display = "flex";
-  picker.innerHTML = `
-    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>${promptText}</strong></p>
-    ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
-    <button class="big" id="cancelTeahouseTargetBtn">やめる</button>
-  `;
-  targets.forEach((c) => {
-    picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
-      picker.style.display = "none";
-      picker.innerHTML = "";
-      onPicked(c);
-    };
-  });
-  document.getElementById("cancelTeahouseTargetBtn").onclick = () => {
-    picker.style.display = "none";
-    picker.innerHTML = "";
-  };
 }
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
   if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { alert("回復薬は本日もう売り切れです"); return; }

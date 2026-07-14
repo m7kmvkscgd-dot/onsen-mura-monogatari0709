@@ -156,6 +156,7 @@ function loadState() {
       if (loaded.inventory && loaded.inventory.soulShard == null) loaded.inventory.soulShard = 0; // 旧セーブ用の初期値(魂のかけら未所持)
       if (loaded.inventory && loaded.inventory.onsenEggPouch == null) loaded.inventory.onsenEggPouch = 0; // 旧セーブ用の初期値(鶏小屋の卵ポーチ未所持)
       if (loaded.inventory && loaded.inventory.takigyo == null) loaded.inventory.takigyo = 0; // 旧セーブ用の初期値(滝行許可証未所持)
+      if (loaded.inventory) TEAHOUSE_SNACK_IDS.forEach((id) => { if (loaded.inventory[id] == null) loaded.inventory[id] = 0; }); // 旧セーブ用の初期値(茶屋の菓子未所持)
       if (loaded.henHouseEggPouchDate == null) loaded.henHouseEggPouchDate = loaded.dayCount || 1; // 旧セーブ用の初期値
       delete loaded.inventory?.omamori; // 旧仕様(単純カウンタ)の名残。新仕様はomamoriOwned/omamoriEquippedで管理する
       if (!loaded.omamoriOwned) loaded.omamoriOwned = []; // 旧セーブ用の初期値(お守り未所持)

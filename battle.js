@@ -1151,6 +1151,14 @@ function resolveAllyTarget(actor, kind, target) {
     actor.mp -= HAWK_GUARD_MP_COST;
     actor.hawkGuardTargetId = target.id;
     blog(`${actor.label}の鷹が${target.label}を守るために身構えた！`);
+  } else if (TEAHOUSE_SNACK_IDS.includes(kind)) {
+    const item = ITEMS[kind];
+    state.inventory[kind] = Math.max(0, (state.inventory[kind] || 0) - 1);
+    playSfx("heal");
+    const heal = useTeahouseSnack(item, target, blog);
+    popupOn(target.id, `+${heal}`, "heal");
+    maybeSpeakHealed(target);
+    saveState();
   } else {
     consumePotion();
     playSfx("heal");

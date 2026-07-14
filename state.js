@@ -6,7 +6,12 @@ function defaultState() {
     gold: 170,
     roster: [],
     activePartyIds: [],
-    inventory: { potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0 }, // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)、takigyo=滝行許可証(スキルリセット)
+    inventory: {
+      potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0,
+      // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)、takigyo=滝行許可証(スキルリセット)
+      // 茶屋の菓子8種(回復薬等と同じ支援物資、TEAHOUSE_SNACK_IDS参照)
+      amadango: 0, sanshokudango: 0, sakuramochi: 0, kusamochi: 0, matcha: 0, yakiguri: 0, hoshigaki: 0, konpeito: 0,
+    },
     omamoriOwned: [], // 所持中のお守りid一覧(重複しない)
     omamoriEquipped: [], // 装備中のお守りid一覧(最大OMAMORI_EQUIP_MAX個、パーティ共有)
     shrineFirstVisitRewardGiven: false, // 神社を初めて訪れた時のサービス(魂のかけら3個)を渡し済みか
@@ -113,6 +118,14 @@ const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const BAG_SHOP_LEVEL1_COST = 75;
 function supplyCap() {
   return SUPPLY_CAP_BASE + (state.bagShopLevel || 0);
+}
+// 支援物資の合計所持数(supplyCap()判定用の共通ヘルパー)。回復薬/煙玉/温泉卵/爆弾+茶屋の菓子8種を合算する。
+// 元々は各呼び出し箇所ごとに同じ式をコピペしていたが、茶屋の菓子を支援物資枠に合流させる際に
+// 数え漏れが起きやすいため1箇所にまとめた
+function supplyItemTotal() {
+  let total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  TEAHOUSE_SNACK_IDS.forEach((id) => { total += state.inventory[id] || 0; });
+  return total;
 }
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
 const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;

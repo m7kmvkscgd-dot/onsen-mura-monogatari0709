@@ -1224,7 +1224,7 @@ function renderPartySelect() {
 
 // 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠
 function renderSupplies() {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   document.getElementById("suppliesGold").textContent = state.gold + "G";
   document.getElementById("suppliesCount").textContent = `(${total}/${supplyCap()})`;
   document.getElementById("suppliesCapLabel").textContent = supplyCap();
@@ -1288,6 +1288,7 @@ function renderOwnedSupplyIcons() {
   addIcons("onsenEgg", state.inventory.onsenEgg || 0);
   addIcons("bomb", state.inventory.bomb || 0);
   addIcons("kotaifuda", state.inventory.kotaifuda || 0);
+  TEAHOUSE_SNACK_IDS.forEach((id) => addIcons(id, state.inventory[id] || 0));
   wrap.innerHTML = html;
   wrap.querySelectorAll("[data-item-id]").forEach((el) => {
     el.onclick = () => confirmSellSupplyItem(el.dataset.itemId);
@@ -1312,7 +1313,7 @@ function confirmSellSupplyItem(itemId) {
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
@@ -1323,7 +1324,7 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
 };
 document.getElementById("buySmokeBombBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
@@ -1342,7 +1343,7 @@ document.getElementById("buyCampingKitBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buyBombBtn").onclick = () => {
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.bomb.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.bomb.price;
@@ -1640,7 +1641,7 @@ function renderOnsenShop() {
   document.getElementById("onsenShopGold").textContent = state.gold + "G";
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   document.getElementById("takigyoOwned").textContent = state.inventory.takigyo || 0;
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
   if (remaining <= 0) {
@@ -1656,7 +1657,7 @@ function renderOnsenShop() {
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
   if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
-  const total = (state.inventory.potion || 0) + (state.inventory.smokeBomb || 0) + (state.inventory.onsenEgg || 0) + (state.inventory.bomb || 0);
+  const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.onsenEgg.price;

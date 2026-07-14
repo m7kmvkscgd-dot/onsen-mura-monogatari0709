@@ -683,7 +683,21 @@ const ITEMS = {
   bomb: { id: "bomb", ja: "爆弾", price: 30, desc: "敵全体にダメージ", emoji: "💣" }, // 画像は未用意。imageが無い場合は絵文字で代用する
   kotaifuda: { id: "kotaifuda", ja: "助っ人の札", price: 100, desc: "出発時に5人目(交代要員)を編成できる。出発時に1枚消費", emoji: "📜" },
   takigyo: { id: "takigyo", ja: "滝行許可証", price: 500, desc: "全てのスキルを忘れて\n1から取り直しできる", emoji: "📜" },
+  // 茶屋のお茶菓子8種。回復薬/煙玉と同じ支援物資として持ち歩き、道具メニューから使う(購入時にその場で
+  // 食べさせる方式は「回復薬と同じように使いたい」という指摘を受けて廃止した)。hpPct/mpPctは
+  // useTeahouseSnack(engine.js)が参照する専用フィールド
+  amadango: { id: "amadango", ja: "甘団子", price: 9, hpPct: 0.20, mpPct: 0.15, desc: "素朴な甘さが心をほぐす団子。\nHPとMPをちょっと回復。", image: "assets/items/snack_amadango.png" },
+  sanshokudango: { id: "sanshokudango", ja: "三色団子", price: 5, hpPct: 0.20, mpPct: 0.13, desc: "春を感じる彩り豊かな団子。\nHPとMPをちょっと回復。", image: "assets/items/snack_sanshokudango.png" },
+  sakuramochi: { id: "sakuramochi", ja: "桜餅", price: 10, hpPct: 0.25, mpPct: 0.15, desc: "桜の香りが気持ちを和らげる。\nHPとMPをちょっと回復。", image: "assets/items/snack_sakuramochi.png" },
+  kusamochi: { id: "kusamochi", ja: "草餅", price: 8, hpPct: 0.20, mpPct: 0.10, desc: "よもぎの香りが疲れを癒やす。\nHPとMPをちょっと回復。", image: "assets/items/snack_kusamochi.png" },
+  matcha: { id: "matcha", ja: "抹茶", price: 8, hpPct: 0.10, mpPct: 0.20, desc: "ほろ苦い一服で心を落ち着ける。\nHPとMPをちょっと回復。", image: "assets/items/snack_matcha.png" },
+  yakiguri: { id: "yakiguri", ja: "焼き栗", price: 8, hpPct: 0.13, mpPct: 0.16, desc: "ほくほくとした甘みが元気をくれる。\nHPとMPをちょっと回復。", image: "assets/items/snack_yakiguri.png" },
+  hoshigaki: { id: "hoshigaki", ja: "干し柿", price: 12, hpPct: 0.25, mpPct: 0.13, desc: "じっくり熟した自然の甘味。\nHPとMPをちょっと回復。", image: "assets/items/snack_hoshigaki.png" },
+  konpeito: { id: "konpeito", ja: "金平糖", price: 15, hpPct: 0.25, mpPct: 0.20, desc: "ひと粒で気分が晴れる甘い菓子。\nHPとMPをちょっと回復。", image: "assets/items/snack_konpeito.png" },
 };
+// 茶屋のお茶菓子のid一覧(ITEMSキーの部分集合)。支援物資合計(supplyItemTotal)・所持アイコン一覧
+// (renderOwnedSupplyIcons)・道具メニュー(dungeonToolsBtn/renderItemMenu)での一括列挙に使う
+const TEAHOUSE_SNACK_IDS = ["amadango", "sanshokudango", "sakuramochi", "kusamochi", "matcha", "yakiguri", "hoshigaki", "konpeito"];
 // 火薬庫で購入できる爆弾: 敵全体に防御無視の固定ダメージ(猪の実HP約62の6割=約37を基準に設定)
 const BOMB_FLAT_DAMAGE = 37;
 const POTION_HEAL_RATIO = 0.38;
@@ -710,22 +724,7 @@ const TEAHOUSE_REST_CLOCK_MINUTES = 60; // 一休みで進む時間(1時間)
 const TEAHOUSE_POTION_STOCK = 4; // 1回の来訪で買える回復薬の在庫数
 const TEAHOUSE_SMOKEBOMB_STOCK = 1; // 1回の来訪で買える煙玉の在庫数
 const TEAHOUSE_REST_MESSAGES = ["団子を食べて休憩した", "ちょっと一休みした", "お茶を飲んで休憩", "ちょっと疲れが取れた"];
-// 茶屋の菓子ラインナップ。支援物資(回復薬・煙玉)と違い持ち歩けず、購入した瞬間その場で選んだ
-// 1人にHP/MPを回復させる消費型の商品(useTeahouseSnack、engine.js参照)。descは各菓子の風味文に
-// 共通文(TEAHOUSE_SNACK_COMMON_DESC)を改行で結合してrenderTeahouse側で表示する
-const TEAHOUSE_SNACK_COMMON_DESC = "HPとMPをちょっと回復。";
 const TEAHOUSE_SNACK_STOCK = 1; // お茶菓子は1商品につき1日1個までしか売っていない(翌日の営業再開まで補充されない)
-const TEAHOUSE_SNACKS = [
-  { id: "amadango", ja: "甘団子", price: 9, hpPct: 0.15, mpPct: 0.15, flavor: "素朴な甘さが心をほぐす団子。", image: "assets/items/snack_amadango.png" },
-  { id: "sanshokudango", ja: "三色団子", price: 5, hpPct: 0.15, mpPct: 0.13, flavor: "春を感じる彩り豊かな団子。", image: "assets/items/snack_sanshokudango.png" },
-  { id: "sakuramochi", ja: "桜餅", price: 10, hpPct: 0.20, mpPct: 0.15, flavor: "桜の香りが気持ちを和らげる。", image: "assets/items/snack_sakuramochi.png" },
-  { id: "kusamochi", ja: "草餅", price: 8, hpPct: 0.15, mpPct: 0.10, flavor: "よもぎの香りが疲れを癒やす。", image: "assets/items/snack_kusamochi.png" },
-  { id: "matcha", ja: "抹茶", price: 8, hpPct: 0.05, mpPct: 0.20, flavor: "ほろ苦い一服で心を落ち着ける。", image: "assets/items/snack_matcha.png" },
-  { id: "yakiguri", ja: "焼き栗", price: 8, hpPct: 0.08, mpPct: 0.16, flavor: "ほくほくとした甘みが元気をくれる。", image: "assets/items/snack_yakiguri.png" },
-  { id: "hoshigaki", ja: "干し柿", price: 12, hpPct: 0.20, mpPct: 0.13, flavor: "じっくり熟した自然の甘味。", image: "assets/items/snack_hoshigaki.png" },
-  { id: "konpeito", ja: "金平糖", price: 15, hpPct: 0.20, mpPct: 0.20, flavor: "ひと粒で気分が晴れる甘い菓子。", image: "assets/items/snack_konpeito.png" },
-];
-function teahouseSnackById(id) { return TEAHOUSE_SNACKS.find((s) => s.id === id); }
 // 茶屋の案内キャラクター。温泉・宿屋・売店と同じく1日おきにランダムな一言を喋る(renderTeahouse参照)
 const TEAHOUSE_KEEPER_LINES = [
   "いらっしゃい。お茶でもどうぞ。",

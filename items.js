@@ -58,6 +58,17 @@ function renderItemMenu(actor) {
   };
   grid.appendChild(eggBtn);
 
+  // 茶屋の菓子: 所持している(=買った)物だけボタンを出す。回復薬と同じくrenderAllyTargets経由で
+  // 対象を選ばせ、resolveAllyTarget側でkind(=菓子のid)を見て専用の回復処理に振り分ける
+  TEAHOUSE_SNACK_IDS.filter((id) => (state.inventory[id] || 0) > 0).forEach((id) => {
+    const item = ITEMS[id];
+    const snackBtn = document.createElement("button");
+    snackBtn.className = "big";
+    snackBtn.textContent = `${item.ja}(${state.inventory[id] || 0})`;
+    snackBtn.onclick = () => { renderAllyTargets(actor, id); };
+    grid.appendChild(snackBtn);
+  });
+
   const backBtn = document.createElement("button");
   backBtn.className = "big";
   backBtn.textContent = "戻る";
