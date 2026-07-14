@@ -342,6 +342,14 @@
         <div class="status-portrait-meta">
           <div class="status-portrait-class" id="statClass"></div>
           <div class="status-portrait-personality" id="statPersonality"></div>
+          <button class="status-rename-btn" id="statusRenameBtn">✏️ 名前を変更</button>
+        </div>
+      </div>
+      <div class="card" id="statusRenameRow" style="display:none; margin-bottom:var(--dw-space-section);">
+        <input type="text" id="statusRenameInput" maxlength="8" placeholder="新しい名前を入力">
+        <div style="display:flex; gap:0.5rem; margin-top:0.6rem;">
+          <button class="big primary" id="statusRenameConfirmBtn" style="flex:1;">決定</button>
+          <button class="big" id="statusRenameCancelBtn" style="flex:1;">やめる</button>
         </div>
       </div>
 

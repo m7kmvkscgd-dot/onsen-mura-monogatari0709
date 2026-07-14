@@ -183,7 +183,7 @@ function loadState() {
       if (loaded.omikujiFirstStrikePending == null) loaded.omikujiFirstStrikePending = false;
       if (loaded.omikujiGuaranteedCritsLeft == null) loaded.omikujiGuaranteedCritsLeft = 0;
       if (loaded.pendingSkillChoices == null) loaded.pendingSkillChoices = []; // 旧セーブ用の初期値(未選択スキル無し)
-      delete loaded.seenUnlockedBuildings; // 施設のNEWバッジは「見たら消える」から「建てるまで消えない」方式に変更し、この既読記録自体が不要になった
+      if (loaded.seenUnlockedBuildings == null) loaded.seenUnlockedBuildings = {}; // 旧セーブ用の初期値(NEWバッジ機能実装前は無条件で空扱い)
       if (loaded.seenUnlockedClasses == null) loaded.seenUnlockedClasses = {};
       if (loaded.maxFloorReached == null) loaded.maxFloorReached = { forest: 0, coast: 0 }; // 旧セーブ用の初期値(この機能追加以前は記録していないため0から)
       delete loaded.worldStep;

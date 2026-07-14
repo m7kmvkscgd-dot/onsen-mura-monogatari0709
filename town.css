@@ -157,6 +157,13 @@
     transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
   }
   .status-dismiss-btn:active { transform: scale(.97); filter: brightness(1.3); }
+  .status-rename-btn {
+    display: inline-block; margin-top: 0.5rem; padding: 0.3rem 0.7rem; min-height: auto;
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .status-rename-btn:active { transform: scale(.97); filter: brightness(1.3); }
   .roster-name { font-weight: 700; font-size: 0.88rem; }
   .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }
