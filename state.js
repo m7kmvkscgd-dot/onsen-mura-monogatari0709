@@ -91,7 +91,7 @@ const BESTIARY_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 10;
 // 鍛冶屋: 建築すると装備の購入ができるようになる
-const SHOP_UNLOCK_HOUSE_LEVEL = 3;
+const SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const SHOP_COST = 10;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;

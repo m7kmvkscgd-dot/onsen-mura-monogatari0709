@@ -140,10 +140,19 @@
   /* 状態異常アイコンのサイズ統一。指定値(24px)そのままだと敵1体あたり56px幅の集団戦カード等で
      アイコン1個が横幅の半分近くを占めてしまい破綻するため、最小サイズのカードでも収まる16pxに
      している(意図的な調整。長押し説明・6pxの横間隔は指定通り) */
-  .status-icon { cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+  .status-icon { position: relative; cursor: help; line-height: 1; display: inline-flex; align-items: center; gap: 0.15em; margin-right: 6px; vertical-align: middle; color: #e8ecea; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
   .status-icon:last-child { margin-right: 0; }
   .status-icon svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
-  .status-icon-value { font-size: 0.68rem; font-weight: 700; }
+  /* 毒/出血/炎上のスタック数は、絵文字にそのまま添えるだけだと小さすぎて見落とされていた
+     (ユーザー指摘)ため、通知バッジのように絵文字の右下に重ねる独立した丸バッジにして目立たせる */
+  .status-icon-value {
+    position: absolute; right: -4px; bottom: -3px;
+    min-width: 12px; height: 12px; padding: 0 2px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 999px; background: rgba(10,10,8,0.85); border: 1px solid rgba(255,255,255,0.55);
+    font-size: 0.6rem; font-weight: 800; line-height: 1; color: #fff;
+    filter: none;
+  }
   /* スタンだけ「行動不能になった瞬間」がわかりにくいという指摘があったため、常設バッジ自体に
      ごく控えめな明滅を付けて他の状態異常より少し目立たせる(毒・出血はやりすぎないようそのまま) */
   .status-icon[data-status="stun"] { animation: stunIconPulse 1.4s ease-in-out infinite; }
