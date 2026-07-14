@@ -17,23 +17,28 @@ function renderItemMenu(actor) {
   smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
   grid.appendChild(smokeBtn);
 
-  const bombBtn = document.createElement("button");
-  bombBtn.className = "big";
-  bombBtn.textContent = `爆弾(${state.inventory.bomb || 0})`;
-  bombBtn.disabled = (state.inventory.bomb || 0) <= 0;
-  bombBtn.onclick = () => {
-    state.inventory.bomb--;
-    playSfx("attack_gunner");
-    blog(`${actor.label}は爆弾を投げつけた！`);
-    targetableEnemies().forEach((e) => {
-      const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
-      popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
-    });
-    saveState();
-    renderBattleScreen();
-    finishPlayerAction();
-  };
-  grid.appendChild(bombBtn);
+  // 爆弾は火薬庫を建てるまでボタン自体を出さない(未所持でも灰色ボタンとして見えてしまうと、
+  // 建物を建てる前からアイテムの存在を知ってしまう=ネタバレになるため、他の未解禁アイテムと
+  // 同じく「ラインナップにすら出さない」方式に統一した)
+  if (state.gunpowderStoreLevel) {
+    const bombBtn = document.createElement("button");
+    bombBtn.className = "big";
+    bombBtn.textContent = `爆弾(${state.inventory.bomb || 0})`;
+    bombBtn.disabled = (state.inventory.bomb || 0) <= 0;
+    bombBtn.onclick = () => {
+      state.inventory.bomb--;
+      playSfx("attack_gunner");
+      blog(`${actor.label}は爆弾を投げつけた！`);
+      targetableEnemies().forEach((e) => {
+        const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
+        popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+      });
+      saveState();
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(bombBtn);
+  }
 
   // 温泉卵: 回復薬と違い自分にしか使えない(対象選択なし)代わりに、使ってもターンを消費しない
   // (finishPlayerActionを呼ばず、行動選択メニューに戻すだけ)

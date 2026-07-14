@@ -287,17 +287,21 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
   picker.style.display = "flex";
   const campCount = state.inventory.campingKit || 0;
   const eggCount = state.inventory.onsenEgg || 0;
+  // 野営具は旅支度屋を建てるまでボタン自体を出さない(未所持でも灰色ボタンとして見えると、
+  // 建物を建てる前からアイテムの存在を知ってしまう=ネタバレになるため)
   picker.innerHTML = `
     <p style="width:100%;margin:0;font-size:0.82rem;"><strong>道具を選んでください</strong></p>
-    <button class="big" id="toolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>野営具(${campCount})</button>
+    ${state.travelPrepShopLevel ? `<button class="big" id="toolsCampBtn" ${campCount <= 0 ? "disabled" : ""}>野営具(${campCount})</button>` : ""}
     <button class="big" id="toolsEggBtn" ${eggCount <= 0 ? "disabled" : ""}>温泉卵(${eggCount})</button>
     <button class="big" id="cancelDungeonToolsBtn">やめる</button>
   `;
-  document.getElementById("toolsCampBtn").onclick = () => {
-    if (campCount <= 0) return;
-    closeDungeonTargetPicker();
-    startCampFromTools();
-  };
+  if (state.travelPrepShopLevel) {
+    document.getElementById("toolsCampBtn").onclick = () => {
+      if (campCount <= 0) return;
+      closeDungeonTargetPicker();
+      startCampFromTools();
+    };
+  }
   document.getElementById("toolsEggBtn").onclick = () => {
     if (eggCount <= 0) return;
     pickDungeonAllyTarget(`誰が温泉卵(残り${state.inventory.onsenEgg || 0})を使いますか？`, (target) => {
