@@ -1,8 +1,9 @@
 // ============ town.js: 町・宿屋・温泉・増築・奉行所・道具屋・パーティ編成・ステータス詳細など町まわりの全画面 ============
 // ============ 町 ============
-// 町画面のボタンに出す「NEWがあるかどうか」の覗き見用チェック。実際にその画面(宿屋/増築)を
-// 開いた時に初めてseenUnlockedClasses/seenUnlockedBuildingsへ記録されるため、ここでは
-// state を書き換えない(読み取るだけ)
+// 町画面のボタンに出す「NEWがあるかどうか」の覗き見用チェック。state を書き換えない(読み取るだけ)。
+// 施設側(hasAnyNewBuilding/markBuildingNewBadge)は「建てるまで消えない」方式(ユーザー指示で
+// 「見た瞬間に消える」方式から変更、必ず気づけるようにするため)。職業側(hasAnyNewClass)は
+// 引き続き「一度その画面を見たら消える」方式のまま(仕様変更の対象外)
 function hasAnyNewClass() {
   return Object.keys(CLASSES).some((classId) => isClassUnlocked(classId) && CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId]);
 }
@@ -18,7 +19,7 @@ function hasAnyNewBuilding() {
     ["beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL], ["ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL],
     ["shopLevel", SHOP_UNLOCK_HOUSE_LEVEL],
   ];
-  return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0) && !state.seenUnlockedBuildings[key]);
+  return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0));
 }
 // 建物を建てただけで終わらず、その先の新しい導線(温泉の神社タブ、出発準備画面の野営具/爆弾)まで
 // ちゃんとたどり着けるよう、覗き見用のチェックを町のボタンにも出す(state は書き換えない)
@@ -1506,13 +1507,11 @@ document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderOnsen()
 
 // ============ 増築 ============
 // 新しく建築可能(houseLevelは足りたがまだ未建築)になった施設に「NEW」バッジを出す。
-// 一度でもこの画面で表示されるとその場でseenUnlockedBuildingsに記録するため、次にこの画面を
-// 開いた時にはもう出ない(「見た瞬間に消える」方式。建てるまで粘り強く出し続ける方式ではない)
+// 実際に建てるまでは何度画面を開いても消えない(「見た瞬間に消える」方式だと、増築画面を
+// 開いただけで他の施設に気を取られている間にバッジが消えてしまい気づきにくい、との指摘で変更)
 function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
   const badge = document.getElementById(badgeId);
-  const isNew = unlocked && !built && !state.seenUnlockedBuildings[stateKey];
-  badge.style.display = isNew ? "" : "none";
-  if (isNew) state.seenUnlockedBuildings[stateKey] = true;
+  badge.style.display = unlocked && !built ? "" : "none";
 }
 // 施設一覧の説明文はタップで開閉する(静的HTMLのまま一度だけイベントを貼る。renderExtension()の
 // たびに貼り直す必要はない)。ただし家レベルが足りず未解放の施設は、タップしても説明を開けない

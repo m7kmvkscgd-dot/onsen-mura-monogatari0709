@@ -118,7 +118,8 @@
   }
   /* 新しく建築可能になった施設/雇えるようになった職業に付ける「NEW」バッジ。レベルアップバッジ(黄色)とは
      意図的に別の色(赤〜オレンジ)にして「まだ見ていない新着」であることを視覚的に区別している。
-     一度画面を表示すると自動的に非表示化される(state.seenUnlockedBuildings/seenUnlockedClassesに記録) */
+     施設は実際に建てるまで消えない(必ず気づけるように)、職業は一度画面を表示すると自動的に
+     非表示化される(state.seenUnlockedClassesに記録)、と2種類で挙動が異なる点に注意 */
   .new-badge {
     display: inline-block; margin-left: 0.3rem; padding: 0.1rem 0.45rem; border-radius: var(--radius-pill);
     background: linear-gradient(90deg, #ff6a4d, #d1503f); color: #fff;
