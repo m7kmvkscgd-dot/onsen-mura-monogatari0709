@@ -22,6 +22,21 @@ function triggerWarningFlash() {
 function dmgShakeIntensity(isSkill) {
   return (isSkill || (typeof lastHitWasCrit !== "undefined" && lastHitWasCrit)) ? "strong" : "normal";
 }
+// ポップアップ(回復/毒/出血/炎上/スタン/会心の数字)が画面に出ている時間。以前は1.5秒だったが
+// 「出てすぐ消えて読めない」というユーザー指摘を受けて延長した(.dmg-popのCSSアニメーション
+// 時間(battle.css)ともセットで変更すること)
+const POPUP_DISPLAY_MS = 2000;
+// ターン開始時の毒/出血/炎上ダメージは、複数が同時に発生すると1個しかないポップアップ枠を
+// 即座に奪い合い、後から発生した種類にすぐ上書きされて前の数字を読む間もなく消えていた。
+// 種類ごとに間隔を空けて1つずつ表示することで、それぞれ読めるようにする
+const DOT_POPUP_STAGGER_MS = 700;
+function popupDotStack(targetId, dot, burnCls) {
+  const entries = [];
+  if (dot.poison > 0) entries.push({ text: `🦠-${dot.poison}`, cls: "poison" });
+  if (dot.bleed > 0) entries.push({ text: `🩸-${dot.bleed}`, cls: "bleed" });
+  if (dot.burn > 0) entries.push({ text: `🔥-${dot.burn}`, cls: burnCls || "burn" });
+  entries.forEach((e, i) => setTimeout(() => popupOn(targetId, e.text, e.cls), i * DOT_POPUP_STAGGER_MS));
+}
 function popupOn(targetId, text, cls, intensity) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
@@ -278,9 +293,9 @@ function renderVfxFor(targetId) {
   if (!el) return;
   const entity = findVfxEntity(targetId);
   if (!entity) return;
-  if (entity.__popupAt && Date.now() - entity.__popupAt < 1500) {
+  if (entity.__popupAt && Date.now() - entity.__popupAt < POPUP_DISPLAY_MS) {
     const existing = el.querySelector(".dmg-pop");
-    // 前の被弾からまだ1.5秒経っていない状態でもう一度被弾すると、__popupAtが更新されるのに
+    // 前の被弾からまだPOPUP_DISPLAY_MS経っていない状態でもう一度被弾すると、__popupAtが更新されるのに
     // 「既にポップアップがある」という判定だけで新しい数字がスキップされ、2発目以降が一切表示されなくなる
     // バグがあった。表示中の数字がどの被弾のものかをdata属性で区別し、最新の被弾なら必ず作り直す
     const alreadyShowingLatest = existing && Number(existing.dataset.popupAt) === entity.__popupAt;
@@ -297,7 +312,7 @@ function renderVfxFor(targetId) {
       // (これをしないと、作り直しのたびにアニメーションが最初から再生され「2回表示された」ように見える)
       pop.style.animationDelay = `-${elapsed}ms`;
       el.appendChild(pop);
-      const remaining = 1500 - elapsed;
+      const remaining = POPUP_DISPLAY_MS - elapsed;
       setTimeout(() => pop.remove(), Math.max(0, remaining));
     }
   }

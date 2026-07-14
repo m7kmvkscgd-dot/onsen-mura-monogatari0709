@@ -230,9 +230,7 @@ function processNext() {
     renderBattleScreen();
     const dot = tickTurnStartEffects(actor, blog);
     if (dot.total > 0) popupOn(actor.instanceId, `-${dot.total}`, "dmg");
-    if (dot.poison > 0) popupOn(actor.instanceId, `🦠-${dot.poison}`, "poison");
-    if (dot.bleed > 0) popupOn(actor.instanceId, `🩸-${dot.bleed}`, "bleed");
-    if (dot.burn > 0) popupOn(actor.instanceId, `🔥-${dot.burn}`, actor.isPlant ? "burn-plant" : "burn");
+    popupDotStack(actor.instanceId, dot, actor.isPlant ? "burn-plant" : "burn");
     if (actor.hp <= 0) {
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
@@ -352,9 +350,7 @@ function processNext() {
     const dot = tickTurnStartEffects(actor, blog);
     if (dot.total > 0) {
       popupOn(actor.id, `-${dot.total}`, "dmg");
-      if (dot.poison > 0) popupOn(actor.id, `🦠-${dot.poison}`, "poison");
-      if (dot.bleed > 0) popupOn(actor.id, `🩸-${dot.bleed}`, "bleed");
-      if (dot.burn > 0) popupOn(actor.id, `🔥-${dot.burn}`, "burn");
+      popupDotStack(actor.id, dot, "burn");
       const newlyCriticalDot = handleFieldDeaths();
       renderBattleScreen();
       if (actor.hp <= 0 || actor.status !== "active") {

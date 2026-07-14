@@ -60,7 +60,7 @@
     position: absolute; left: 50%; top: 25%; transform: translate(-50%, 0);
     font-weight: 800; font-size: 1.15rem; color: #ff4d4d;
     text-shadow: 0 2px 4px rgba(0,0,0,0.95); pointer-events: none;
-    animation: dmgFloat 1.5s ease-out forwards; z-index: 20; white-space: nowrap;
+    animation: dmgFloat 2s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
   /* スタンで行動不能になった瞬間だけの素朴な浮き出し表示(会心のような派手な演出はしない) */
