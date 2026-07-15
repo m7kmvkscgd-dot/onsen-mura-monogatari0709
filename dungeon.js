@@ -1236,7 +1236,7 @@ function renderTeahouse() {
     potionBtn.disabled = true;
   } else {
     potionBtn.textContent = `購入 残り${potionRemaining}個`;
-    potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || (state.inventory.potion || 0) >= POTION_CAP || state.gold < ITEMS.potion.price;
+    potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || (state.inventory.potion || 0) >= TEAHOUSE_POTION_CAP || state.gold < ITEMS.potion.price;
   }
   const smokeBtn = document.getElementById("teaHouseBuySmokeBombBtn");
   const smokeRemaining = Math.max(0, TEAHOUSE_SMOKEBOMB_STOCK - (state.teaHouseStockCounts.smokeBomb || 0));
@@ -1297,7 +1297,7 @@ function renderTeahouseSnackList() {
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
   if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { alert("回復薬は本日もう売り切れです"); return; }
   if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if ((state.inventory.potion || 0) >= POTION_CAP) { alert(`回復薬は最大${POTION_CAP}個までしか持てません`); return; }
+  if ((state.inventory.potion || 0) >= TEAHOUSE_POTION_CAP) { alert(`回復薬は最大${TEAHOUSE_POTION_CAP}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
