@@ -153,8 +153,14 @@ function renderDungeon() {
   // 稀にdisabled=trueのまま解除されずに残ってしまうと次の遠征に持ち越されて「進む/里に戻るが
   // 押せなくなる」不具合になる(押せるのは道具だけ、という報告と一致)。renderDungeon()は
   // 探索画面に戻るたびに必ず呼ばれる場所のため、瀕死アラート表示中でない限りここで強制的に
-  // 解除し、どんな経路で壊れても次の描画で自己修復するようにする
-  if (!activeCriticalAlert) {
+  // 解除し、どんな経路で壊れても次の描画で自己修復するようにする。
+  // ただしオート帰還が進行中(autoRetreatActive)の間は例外: rollEncounter()の「静かな通路」/
+  // 「財宝発見」分岐がtickの途中でrenderDungeon()を呼ぶため、ここで無条件に再有効化してしまうと
+  // オート帰還中でも「帰還」ボタン(退避時のadvanceBtn)がタップ可能になり、押すたびに
+  // stopAutoRetreat()→startAutoRetreat()が連続発火して1tick=1秒のペースを無視した多重進行が
+  // 起きてしまう(「オート帰還中に重複して帰還ボタンが押せる」不具合の原因)。startAutoRetreat()/
+  // stopAutoRetreat()自身が既にdisabledを正しく管理しているため、進行中はここで触れない
+  if (!activeCriticalAlert && !autoRetreatActive) {
     document.getElementById("advanceBtn").disabled = false;
     document.getElementById("retreatBtn").disabled = false;
   }
