@@ -224,10 +224,17 @@
   /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
      地味な一覧だった) */
-  /* この画面だけ、共通の.body-pad(margin-top:34vh)だと小さめの端末で「決めるボタン」まで
-     スクロールしないと届かないとの指摘があったため、上のヒーロー領域を狭めて(22vh)
-     カルーセル全体(写真+名前+説明+技+ボタン)がスクロール無しで収まるようにした */
-  #screen-first-character .body-pad { margin-top: 22vh; }
+  /* この画面だけ、スクロールできること自体が不要(内容量が一定でボタンも1つだけ)なため、
+     町画面(#screen-town .body-pad)と同じ考え方でposition:fixedにしてドキュメントフローから
+     完全に外し、構造的にスクロール自体ができないようにした(以前のmargin-top:22vhは
+     「たまたま収まる」だけで.wrapの高さが伸びればスクロール可能なままだった)。
+     topはvh%(端末のブラウザUI状態で変動し当てにならない)ではなく固定px。
+     旧レイアウト(margin-top:22vh時点でのtop実測146px)から指示通り30px上げた116pxに固定 */
+  #screen-first-character .body-pad {
+    position: fixed; top: 116px; bottom: auto; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; z-index: 1; margin-top: 0;
+    padding: 1rem 1rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
+  }
   .first-char-carousel { display: flex; flex-direction: column; align-items: center; }
   .first-char-photo-wrap { position: relative; width: 100%; max-width: 220px; margin: 0 auto 0.7rem; }
   .first-char-photo {
