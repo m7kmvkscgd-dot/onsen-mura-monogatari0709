@@ -369,7 +369,9 @@ function buildWalkKeyframes(animMs) {
 }
 // speedMultiplier: 省略時は1(探索時と同じ通常速度)。帰還の連打時はRETREAT_MOVE_SPEED_MULTIPLIERを渡すことで
 // 歩き演出/暗転/フェードインの時間だけを短縮する(ゲームロジック=actualLogicの中身は一切変えない)
-function playDungeonMoveTransition(actualLogic, speedMultiplier) {
+// skipFade: 帰還中に繰り返し押す「進む(帰還)」ボタンだけtrueで渡される。ズーム演出はそのまま、
+// 暗転(黒フェード)だけを挟まず即座に次のロジックへ進む(ユーザー指示: 帰還時はズームはそのまま、暗転は無くす)
+function playDungeonMoveTransition(actualLogic, speedMultiplier, skipFade) {
   const speed = speedMultiplier || 1;
   const animMs = MOVE_ANIM_MS / speed;
   const fadeMs = MOVE_FADE_MS / speed;
@@ -382,9 +384,17 @@ function playDungeonMoveTransition(actualLogic, speedMultiplier) {
   playSfx("footstep");
   const moveAnim = bg.animate(buildWalkKeyframes(animMs), { duration: animMs, easing: "ease-in-out", fill: "forwards" });
   let proceeded = false;
-  function proceedToFade() {
+  function proceedToNext() {
     if (proceeded) return;
     proceeded = true;
+    if (skipFade) {
+      moveAnim.cancel();
+      bg.style.transform = ""; // ズームしきったところで背景の変形をリセット(新しい背景はactualLogic内のrenderDungeon等が反映する)
+      actualLogic();
+      advanceBtnEl.disabled = false;
+      retreatBtnEl.disabled = false;
+      return;
+    }
     overlay.style.display = "block";
     const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fadeMs, easing: "ease", fill: "forwards" });
     fadeOut.onfinish = () => {
@@ -403,8 +413,8 @@ function playDungeonMoveTransition(actualLogic, speedMultiplier) {
       };
     };
   }
-  moveAnim.onfinish = proceedToFade;
-  setTimeout(proceedToFade, animMs + 200); // 安全策: onfinishが発火しない場合でも止まらないように
+  moveAnim.onfinish = proceedToNext;
+  setTimeout(proceedToNext, animMs + 200); // 安全策: onfinishが発火しない場合でも止まらないように
 }
 
 // 「里に戻る」を押した最初の一押しから、すぐに1階層分下る(以前はモード切り替えのみで、
@@ -609,12 +619,12 @@ document.getElementById("advanceBtn").onclick = () => {
     // 階層移動/敵出現判定などのゲームロジックはmoveOneFloor側で従来通り)
     if (teahouseOfferedForFloor(targetFloor)) {
       showTeahouseOffer(
-        () => playDungeonMoveTransition(() => moveOneFloor(null, true), RETREAT_MOVE_SPEED_MULTIPLIER),
-        () => playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER)
+        () => playDungeonMoveTransition(() => moveOneFloor(null, true), RETREAT_MOVE_SPEED_MULTIPLIER, true),
+        () => playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER, true)
       );
       return;
     }
-    playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER);
+    playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER, true);
     return;
   }
   const offerTeahouse = teahouseOfferedForFloor(targetFloor);
