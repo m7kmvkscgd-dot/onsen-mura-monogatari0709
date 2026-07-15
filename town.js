@@ -1556,6 +1556,15 @@ function showKeeperCharacter(wrapId) {
     anim.onfinish = () => { anim.cancel(); wrap.style.opacity = "0"; wrap.style.display = "none"; };
   }, 3000);
 }
+// 営業時間外の茶屋など、案内キャラを出したくない場面向け。showKeeperCharacter()と対になる形で
+// 予約済みのフェードタイマー/進行中のアニメーションを止めた上できっちり非表示にする
+function hideKeeperCharacter(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  clearTimeout(keeperFadeTimers[wrapId]);
+  wrap.getAnimations().forEach((a) => a.cancel());
+  wrap.style.opacity = "0";
+  wrap.style.display = "none";
+}
 // セリフは開くたびではなく1日おき(2日で1区切り)に更新する。同じ区切りの間は何度画面を開いても
 // 同じセリフのまま(区切りが変わった時だけ新しくランダムに選び直す)。stateのフィールド名を
 // periodKey/indexKeyで渡すことで温泉・宿屋どちらの案内キャラにも共通して使える

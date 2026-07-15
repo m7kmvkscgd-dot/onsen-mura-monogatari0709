@@ -1211,12 +1211,17 @@ function teahouseSupplyTotal() {
 function renderTeahouse() {
   updateSceneBackgrounds();
   renderDwHeader("teaHouse", "茶屋", () => { showScreen("screen-dungeon"); renderDungeon(); });
-  updateKeeperLine("teaHouseKeeperLinePeriod", "teaHouseKeeperLineIndex", TEAHOUSE_KEEPER_LINES, "teaHouseKeeperBubble");
-  showKeeperCharacter("teaHouseKeeperWrap");
   resetTeahouseStockIfNewDay();
   const open = teahouseIsOpen();
   document.getElementById("teaHouseClosedNotice").style.display = open ? "none" : "";
   document.getElementById("teaHouseOpenContent").style.display = open ? "" : "none";
+  // 営業時間外(夜・早朝)は店員が出勤していない体で、案内キャラも表示しない
+  if (open) {
+    updateKeeperLine("teaHouseKeeperLinePeriod", "teaHouseKeeperLineIndex", TEAHOUSE_KEEPER_LINES, "teaHouseKeeperBubble");
+    showKeeperCharacter("teaHouseKeeperWrap");
+  } else {
+    hideKeeperCharacter("teaHouseKeeperWrap");
+  }
   if (!open) return;
 
   document.getElementById("teaHouseRestCostText").textContent = TEAHOUSE_REST_COST;
