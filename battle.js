@@ -942,6 +942,10 @@ function renderActionButtons(actor) {
         const reveal = (vfxResumeFrame) => {
           if (result.hit) {
             popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+            // 試験導入: 味方が被弾した時と同じ4段階の被弾SE(hitTakenSfxFor)を敵側にも流す。
+            // 攻撃SE(playSfx(attackSfxFor)、t=0)から見て、非会心はNORMAL_ATTACK_HITSTOP_MS後(このreveal自体が
+            // その時点で呼ばれる)、会心はplayCritEffects側の専用SEと重ねて即座に鳴る
+            playSfx(hitTakenSfxFor(result.dmg, target.maxHp));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
             maybeSpeakOnCrit(actor, result.crit);
             maybeSpeakOnKill(actor, target);
