@@ -893,6 +893,13 @@ function renderSkillSubMenu(actor, buttons) {
   grid.appendChild(backBtn);
 }
 
+// 通常攻撃(非会心・命中時のみ)専用のヒットストップ。effects.jsのCRIT_HITSTOP_MS(80ms、会心専用)
+// とは完全に別の定数・別のsetTimeoutで、会心側のコード・演出には一切触れていない。
+// CSSのanimation-delayではなく、着弾リアクション(揺れ・VFX・HPバー反映・次ターンへの進行)一式を
+// 呼び出すタイミングそのものをここで止めるため、「戦闘進行として正しく止まる」本物の一時停止になる。
+// 25〜35msの範囲で調整したい場合はこの1箇所の値だけを変えればよい
+const NORMAL_ATTACK_HITSTOP_MS = 30;
+
 function renderActionButtons(actor) {
   battleSubMenuActive = false;
   battleActionLocked = false;
@@ -915,23 +922,31 @@ function renderActionButtons(actor) {
         const takemikazuchi2Active = hasOmamori("takemikazuchi2") && !battle.omamoriUsed.takemikazuchi2;
         if (takemikazuchi2Active) { actor.guaranteedCritNext = true; battle.omamoriUsed.takemikazuchi2 = true; }
         const result = performAttack(actor, target, blog);
-        if (result.hit) {
-          popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-          if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
-          maybeSpeakOnCrit(actor, result.crit);
-          maybeSpeakOnKill(actor, target);
-          // 建御雷神の御守: 戦闘中、最初の通常攻撃が命中した時に確定でスタンを付与する
-          if (hasOmamori("takemikazuchi") && !battle.omamoriUsed.takemikazuchi) {
-            battle.omamoriUsed.takemikazuchi = true;
-            applyStun(target, 1);
-            blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
-          }
+        // 建御雷神の御守: 戦闘中、最初の通常攻撃が命中した時に確定でスタンを付与する。
+        // これは演出ではなく確定するゲームロジックのため、ヒットストップの遅延を挟まずここで即座に処理する
+        if (result.hit && hasOmamori("takemikazuchi") && !battle.omamoriUsed.takemikazuchi) {
+          battle.omamoriUsed.takemikazuchi = true;
+          applyStun(target, 1);
+          blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
         }
-        else playSfx("evade");
-        renderBattleScreen();
-        if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
-        if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
-        triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction(result.crit));
+        // 着弾リアクション本体(揺れ・VFX・HPバー反映・次ターンへの進行)。通常ヒット(非会心)の時だけ
+        // NORMAL_ATTACK_HITSTOP_MS分の「間」を置いてから発火させ、会心・回避の時は従来通り
+        // 即座に発火する(会心演出=playCritEffects側のタイミング・処理には一切触れていない)
+        const reveal = () => {
+          if (result.hit) {
+            popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+            if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+            maybeSpeakOnCrit(actor, result.crit);
+            maybeSpeakOnKill(actor, target);
+          }
+          else playSfx("evade");
+          renderBattleScreen();
+          if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+          if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
+          triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction(result.crit));
+        };
+        if (result.hit && !result.crit) setTimeout(reveal, NORMAL_ATTACK_HITSTOP_MS);
+        else reveal();
       });
     };
     grid.appendChild(atkBtn);
