@@ -898,7 +898,7 @@ function renderSkillSubMenu(actor, buttons) {
 // CSSのanimation-delayではなく、着弾リアクション(揺れ・HPバー反映・次ターンへの進行)一式を
 // 呼び出すタイミングそのものをここで止めるため、「戦闘進行として正しく止まる」本物の一時停止になる。
 // 25〜35msの範囲で調整したい場合はこの1箇所の値だけを変えればよい
-const NORMAL_ATTACK_HITSTOP_MS = 200;
+const NORMAL_ATTACK_HITSTOP_MS = 40;
 // 斬撃VFX(ATTACK_VFX_FRAME_MS=30ms/フレーム、effects.js)は、命中と同時に1フレーム目だけを
 // 即座に見せ(「斬撃が敵へ到達した瞬間」の合図)、ヒットストップ明けに続きのフレームから再開する。
 // 何フレーム目から再開するかは、ヒットストップの長さぶん既に経過したフレーム数+1として算出するため、
