@@ -159,12 +159,17 @@ function statusTagClass(c) {
   return c.status;
 }
 
-// 所持金がHIRE_COST未満、かつ名簿の全員が稼働不能(瀕死/ロスト)になったら、もう手詰まりなのでゲームオーバーにする。
+// 名簿の全員が稼働不能(瀕死/ロスト)になり、かつ新しく雇う手段も残っていなければ、もう手詰まりなのでゲームオーバーにする。
+// 「新しく雇う手段」は所持金(HIRE_COST以上)だけでなく名簿の空き枠(rosterCapacity())も両方必要。
+// 家レベル1のうちはrosterCapacity()が2人しかないため、その2人とも稼働不能になった時点で所持金が
+// いくらあっても新規雇用の枠自体が無く実質詰みになる(旧実装は所持金しか見ておらずこのケースを見逃していた)。
 // trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
 function checkGameOver() {
   if (state.roster.length === 0) return false;
   const noActive = state.roster.every((c) => c.status !== "active");
-  if (!noActive || state.gold >= HIRE_COST) return false;
+  if (!noActive) return false;
+  const canStillHire = state.gold >= HIRE_COST && state.roster.length < rosterCapacity();
+  if (canStillHire) return false;
   showScreen("screen-gameover");
   return true;
 }
