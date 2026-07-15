@@ -470,6 +470,21 @@ function flashFromBlackOverCurrentScreen() {
     overlay.style.display = "none";
   };
 }
+const AUTO_RETREAT_TIMEOFDAY_FADE_MS = 900; // オート帰還中に時刻が変わった時、背景画像そのものをクロスフェードする時間
+// オート帰還中に時刻が変わった時、暗転を挟まず背景画像同士をクロスフェードする。
+// moveOneFloor()内のrenderDungeon()→updateSceneBackgrounds()が、この関数を呼ぶ時点で既に
+// #dungeonBgInnerの背景を新しい時刻の絵へ瞬時に差し替え済みなので、まずfromEl(#dungeonBgInner)を
+// 一旦「差し替わる前」の絵に戻してから、toEl(#dungeonBgInner2)を新しい絵でフェードインさせる
+// (この2行は同期処理でブラウザの再描画より前に終わるため、瞬時に差し替わった瞬間が見えることはない)。
+// toElにはfromElの現在のズーム倍率(WAAPIで継続中のtransform)をそのままコピーしてから重ねることで、
+// クロスフェード中に拡大率がズレて見えないようにしている
+function crossfadeDungeonBgForTimeOfDay(prevTimeOfDay, callback) {
+  const fromEl = document.getElementById("dungeonBgInner");
+  const toEl = document.getElementById("dungeonBgInner2");
+  fromEl.style.backgroundImage = `url('${currentAreaBgSet()[prevTimeOfDay]}')`;
+  toEl.style.transform = getComputedStyle(fromEl).transform;
+  crossfadeBg(fromEl, toEl, currentAreaBgSet()[state.timeOfDay || "day"], AUTO_RETREAT_TIMEOFDAY_FADE_MS, callback);
+}
 // 帰還開始階層〜0階層まで、リセットせず連続的に拡大するズームを1階層分(1tick=1秒)だけ進める
 function animateAutoRetreatZoomStep() {
   const bg = document.getElementById("dungeonBgInner");
@@ -497,8 +512,9 @@ function performAutoRetreatFloorMove(enterTeahouse) {
     return;
   }
   if (state.timeOfDay !== prevTimeOfDay) {
-    // 時刻変化だけは暗転→明転の後、自動でオート帰還を継続する(他の割り込みと違い停止しない)
-    playAutoRetreatCutFade(() => { if (autoRetreatActive) scheduleNextAutoRetreatTick(); });
+    // 時刻変化は暗転を挟まず、背景画像同士をクロスフェードしてからオート帰還を継続する
+    // (他の割り込みと違い停止しない)
+    crossfadeDungeonBgForTimeOfDay(prevTimeOfDay, () => { if (autoRetreatActive) scheduleNextAutoRetreatTick(); });
     return;
   }
   scheduleNextAutoRetreatTick();
