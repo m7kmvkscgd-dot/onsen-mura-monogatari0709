@@ -1802,7 +1802,7 @@ document.getElementById("shrineOfferBtn").onclick = () => {
   resultEl.style.display = "block";
   resultEl.classList.toggle("omamori-rare-result-card", drawn.tier === 4);
   resultEl.innerHTML = `
-    <div class="roster-name">${drawn.name}(${drawn.reading}) を授かった!<span class="status-tag active">${omamoriRarityLabel(drawn.tier)}</span></div>
+    <div class="roster-name">${drawn.name}(${drawn.reading})を授かった！<br><span class="status-tag active">レア度${"⭐️".repeat(drawn.tier)}</span></div>
     <div class="roster-sub" style="margin-top:0.3rem;">${drawn.desc}</div>
   `;
   if (drawn.tier === 4) playRareOmamoriEffect();
