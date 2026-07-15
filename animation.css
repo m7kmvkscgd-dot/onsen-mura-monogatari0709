@@ -34,35 +34,37 @@
      scale(ポートレート画像のみ、.card-portrait-img)に分担させて再現する。
      方向は「攻撃者から離れる向き」に統一: 敵は下(味方側)から殴られるので上へ、
      味方は上(敵側)から殴られるので下へノックバックする(画面上の配置がそのまま向きの根拠になる
-     ため、個々の攻撃者の位置を計算する必要がない)。振幅はhit-shake-normal/strongの2段階を
-     そのまま踏襲(strongは概ね1.5倍)。所要時間も以前の144ms/216msから大きく変えず
-     (150ms/220ms)、「短く・速く・何百回見ても疲れない」というテンポを維持している */
+     ため、個々の攻撃者の位置を計算する必要がない)。所要時間は以前の144ms/216msから大きく変えず
+     (150ms/220ms)、「短く・速く・何百回見ても疲れない」というテンポを維持している。
+     初回実装(振幅5px/7.5px)は「体感が変わらない」との報告を受け、カード比10%前後まで
+     一気に振幅を引き上げた(11px/16px、約2.2倍)。短時間で大きく動く方が「ジワジワ揺れる」より
+     衝撃として認識されやすいため、時間は変えず振幅だけを強めている */
   @keyframes hitKnockbackEnemyNormal {
     0%   { transform: translateY(0); }
-    16%  { transform: translateY(-5px); }
-    44%  { transform: translateY(1.4px); }
-    70%  { transform: translateY(-0.6px); }
+    16%  { transform: translateY(-11px); }
+    44%  { transform: translateY(3px); }
+    70%  { transform: translateY(-1.3px); }
     100% { transform: translateY(0); }
   }
   @keyframes hitKnockbackEnemyStrong {
     0%   { transform: translateY(0); }
-    14%  { transform: translateY(-7.5px); }
-    40%  { transform: translateY(2px); }
-    68%  { transform: translateY(-1px); }
+    14%  { transform: translateY(-16px); }
+    40%  { transform: translateY(4.2px); }
+    68%  { transform: translateY(-2px); }
     100% { transform: translateY(0); }
   }
   @keyframes hitKnockbackAllyNormal {
     0%   { transform: translateY(0); }
-    16%  { transform: translateY(5px); }
-    44%  { transform: translateY(-1.4px); }
-    70%  { transform: translateY(0.6px); }
+    16%  { transform: translateY(11px); }
+    44%  { transform: translateY(-3px); }
+    70%  { transform: translateY(1.3px); }
     100% { transform: translateY(0); }
   }
   @keyframes hitKnockbackAllyStrong {
     0%   { transform: translateY(0); }
-    14%  { transform: translateY(7.5px); }
-    40%  { transform: translateY(-2px); }
-    68%  { transform: translateY(1px); }
+    14%  { transform: translateY(16px); }
+    40%  { transform: translateY(-4.2px); }
+    68%  { transform: translateY(2px); }
     100% { transform: translateY(0); }
   }
   .enemy-card.hit-shake.hit-flash.hit-shake-normal {
@@ -85,16 +87,16 @@
      敵カード/味方カードで共通の1組のkeyframesを使い回せる */
   @keyframes hitSquashPortraitNormal {
     0%   { transform: scale(1, 1); }
-    12%  { transform: scale(1.09, 0.87); }
-    38%  { transform: scale(0.93, 1.07); }
-    64%  { transform: scale(1.02, 0.985); }
+    12%  { transform: scale(1.2, 0.76); }
+    38%  { transform: scale(0.84, 1.2); }
+    64%  { transform: scale(1.06, 0.94); }
     100% { transform: scale(1, 1); }
   }
   @keyframes hitSquashPortraitStrong {
     0%   { transform: scale(1, 1); }
-    10%  { transform: scale(1.14, 0.82); }
-    34%  { transform: scale(0.90, 1.11); }
-    60%  { transform: scale(1.03, 0.97); }
+    10%  { transform: scale(1.28, 0.68); }
+    34%  { transform: scale(0.78, 1.28); }
+    60%  { transform: scale(1.09, 0.9); }
     100% { transform: scale(1, 1); }
   }
   .hit-shake.hit-flash.hit-shake-normal .card-portrait-img {
