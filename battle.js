@@ -1440,6 +1440,9 @@ function victory() {
 function markQuestChasingIfFled() {
   if (battle && battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     state.acceptedQuest.chasing = true;
+    // 追跡してきて再戦になった時、逃げた時点のダメージを持ち越す(毎回HP全回復で出現していた不具合の修正)。
+    // 対象は複数体の可能性もあるため配列で記録し、tryForceQuestEncounter側で同じ並び順に適用する
+    state.acceptedQuest.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
   }
 }
 function escapeBattle() {

@@ -277,9 +277,9 @@ const ENEMIES = {
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.2 },
     onHitInflict: { type: "poison", chance: 0.4, value: 4 } }, // 川を塞ぐ大蛇、牙に猛毒を宿す
-  q_oni: { id: "q_oni", ja: "鬼", image: "assets/enemies/q_oni.png", hp: 27, atk: 9, def: 5, spd: 4, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
+  q_oni: { id: "q_oni", ja: "鬼", image: "assets/enemies/q_oni.png", hp: 270, atk: 9, def: 5, spd: 4, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.4 } }, // 山に棲む鬼、棍棒の一撃は防御ごと打ち砕く
-  q_gashadokuro: { id: "q_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/q_gashadokuro.png", hp: 24, atk: 8, def: 5, spd: 8, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
+  q_gashadokuro: { id: "q_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/q_gashadokuro.png", hp: 144, atk: 8, def: 5, spd: 8, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 夜鳴きの怪、骨の震えが敵の足をすくませる
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----

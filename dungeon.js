@@ -674,6 +674,11 @@ function tryForceQuestEncounter() {
   if (!isFirstEncounter && !isChaseEncounter) return false;
   const enemies = [];
   for (let i = 0; i < q.count; i++) enemies.push(instantiateEnemyById(q.enemyId));
+  // 追跡による再戦(isChaseEncounter)の場合、前回逃げた時点のHPをそのまま引き継ぐ(markQuestChasingIfFled参照)。
+  // 全回復した状態で出現し直すと「逃げても意味がない」緊張感の代わりに「毎回振り出しに戻る」不公平感になるため
+  if (isChaseEncounter && q.carryHp) {
+    enemies.forEach((e, i) => { if (q.carryHp[i] != null) e.hp = Math.min(q.carryHp[i], e.maxHp); });
+  }
   enemies.forEach((e) => { e.isQuestTarget = true; }); // 敵カードに🎯マークと金色パルス枠を出すための目印
   const def = QUEST_DEFS[q.questKey];
   const encounterText = isChaseEncounter && def.chaseText ? def.chaseText : null;

@@ -14,8 +14,11 @@ const BGM_TRACKS = {
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
-  boss_battle: "assets/bgm/boss_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
-  mid_boss_battle: "assets/bgm/mid_boss_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
+  // ユーザー指示によりボス/中ボス/討伐依頼対象、いずれの戦闘も同じ曲(quest_target_battle_bgm.mp3)に統一。
+  // キー自体は分けたまま(bgmPositions/stopBattleBgmのフェード対象リストなど既存の分岐に影響を出さないため)、
+  // 参照先のファイルパスだけ揃えている
+  boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
+  mid_boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
   quest_target_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用。ただし中ボス/ボスの方が優先度が高い
 };
 // 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
