@@ -628,28 +628,37 @@ function showLodgingRestSummary(beforeSnapshot, onNext) {
 document.getElementById("lodgeConfirmBtn").onclick = () => {
   const targets = state.roster.filter((c) => lodgingSelectedIds.includes(c.id));
   if (targets.length === 0) return;
-  playLodgingTransition(() => {
-    const cost = LODGE_COST * targets.length;
-    state.gold -= cost;
-    // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
-    // キャラの残量バーが今まで一度も描画されたことがなくても確実に回復アニメーションが出るよう、
-    // 宿泊前の値を明示的に記録しておく(野営の回復サマリーと同じ対策)
-    const beforeSnapshot = targets.map((c) => {
-      c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
-      c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-      return { id: c.id, fatigueBefore: c.fatigue || 0 };
-    });
-    targets.forEach((c) => useLodging(c));
-    advanceToNextMorning();
-    lodgingSelectedIds = [];
-    saveState();
-    showLodgingRestSummary(beforeSnapshot, () => {
-      revealLodgingMorning(() => {
-        if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
-        renderTavern();
-      });
-    });
-  });
+  const cost = LODGE_COST * targets.length;
+  showConfirmModal(`宿泊しますか？(${targets.length}人・${cost}G)`, [
+    {
+      label: "はい",
+      className: "big primary",
+      onClick: () => {
+        playLodgingTransition(() => {
+          state.gold -= cost;
+          // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
+          // キャラの残量バーが今まで一度も描画されたことがなくても確実に回復アニメーションが出るよう、
+          // 宿泊前の値を明示的に記録しておく(野営の回復サマリーと同じ対策)
+          const beforeSnapshot = targets.map((c) => {
+            c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+            c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+            return { id: c.id, fatigueBefore: c.fatigue || 0 };
+          });
+          targets.forEach((c) => useLodging(c));
+          advanceToNextMorning();
+          lodgingSelectedIds = [];
+          saveState();
+          showLodgingRestSummary(beforeSnapshot, () => {
+            revealLodgingMorning(() => {
+              if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
+              renderTavern();
+            });
+          });
+        });
+      },
+    },
+    { label: "いいえ", className: "big" },
+  ]);
 };
 
 function renderTavern() {
