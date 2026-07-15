@@ -561,6 +561,22 @@ function pickSingleEnemyTarget(onPicked) {
     };
     grid.appendChild(btn);
   });
+  if (targets.length === 0) {
+    // ガマの丸呑みで狙える敵が1体も残っていない時は「待機」を選べるようにする(ターンをパスするだけ、MP消費なし)
+    const waitBtn = document.createElement("button");
+    waitBtn.className = "big";
+    waitBtn.textContent = "待機";
+    waitBtn.onclick = () => {
+      if (!pendingEnemyPick) return;
+      pendingEnemyPick = null;
+      battleActionLocked = true;
+      const actor = fieldParty.find((c) => c.id === battle.actingId);
+      blog(`${actor ? actor.name : "仲間"}は様子を見た。`);
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(waitBtn);
+  }
   const backBtn = document.createElement("button");
   backBtn.className = "big";
   backBtn.textContent = "戻る";
