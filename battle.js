@@ -532,19 +532,6 @@ function cancelBattleSubMenu() {
 // 対象選択中は上の敵カード画像を直接タップしても選べる(pendingEnemyPick、renderBattleScreen側で処理)
 function pickSingleEnemyTarget(onPicked) {
   const targets = targetableEnemies();
-  // ガマの丸呑みで最後の1体まで飲み込んでいる時など、狙える敵が1体もいない状態で攻撃/技を押すと、
-  // 選択肢が0件の対象選択画面(「戻る」しか押せない)が出てしまい行動不能に見えるバグの修正。
-  // battleActionLockedは呼び出し元(攻撃/技ボタン)が既にtrueにしているため、ここで解除しないと
-  // 「戻る」等の他の操作まで巻き込んで固まってしまう
-  if (targets.length === 0) {
-    battleActionLocked = false;
-    blog("狙える相手がいない！");
-    if (battle && battle.actingId != null) {
-      const actor = fieldParty.find((c) => c.id === battle.actingId);
-      if (actor) { renderBattleScreen(); renderActionButtons(actor); }
-    }
-    return;
-  }
   if (targets.length === 1) { onPicked(targets[0]); return; }
   battleSubMenuActive = true;
   // 対象選択中はまだ何も確定していないため、attack/ability/skillボタン押下時に立てたbattleActionLockedを
@@ -643,14 +630,8 @@ function runTreeSkill(actor, skill) {
   }
   // ダメージ系
   if (action.aoe) {
-    const targetsList = targetableEnemies();
-    // 狙える敵が1体もいない(丸呑み中の相手しかいない等)時は、MP/ターンを消費せず行動選択に戻す
-    if (targetsList.length === 0) {
-      blog("狙える相手がいない！");
-      renderActionButtons(actor);
-      return;
-    }
     playSfx(attackSfxFor(actor.classId));
+    const targetsList = targetableEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
     const shotDownTargets = [];
     const hitTargets = [];
@@ -862,12 +843,6 @@ function runFormSkill(actor, skillKey) {
     return;
   }
   if (skillKey === "dokueki") {
-    // 狙える敵が1体もいない(丸呑み中の相手しかいない等)時は、クールタイム/ターンを消費せず行動選択に戻す
-    if (targetableEnemies().length === 0) {
-      blog("狙える相手がいない！");
-      renderActionButtons(actor);
-      return;
-    }
     playSfx(attackSfxFor(actor.classId));
     actor.formCooldowns[skillKey] = skill.cooldown;
     blog(`${actor.name}は毒液を撒き散らした！`);
@@ -1073,15 +1048,8 @@ function renderActionButtons(actor) {
             return;
           }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-            const targetsList = targetableEnemies();
-            // 狙える敵が1体もいない(丸呑み中の相手しかいない等)時は、MP/ターンを消費せず行動選択に戻す
-            if (targetsList.length === 0) {
-              battleActionLocked = false;
-              blog("狙える相手がいない！");
-              renderActionButtons(actor);
-              return;
-            }
             playSfx(attackSfxFor(actor.classId));
+            const targetsList = targetableEnemies();
             const result = useAbility(actor, targetsList, ability, blog);
             const shotDownTargets = [];
             const hitTargets = [];
