@@ -1970,7 +1970,25 @@ function renderExtension() {
   renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level, "magistrateNewBadge");
   renderSimpleBuilding("shopLevel", "shopBuildBtn", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST, level, "shopNewBadge");
   renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
-  renderSimpleBuilding("bagShopLevel", "bagShopBuildBtn", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST, level, "bagShopNewBadge");
+  const bagShopLevel = state.bagShopLevel || 0;
+  const bagShopBtn = document.getElementById("bagShopBuildBtn");
+  const bagShopLocked = bagShopLevel === 0 && level < BAG_SHOP_UNLOCK_HOUSE_LEVEL;
+  if (bagShopLocked) {
+    bagShopBtn.textContent = `家レベル${BAG_SHOP_UNLOCK_HOUSE_LEVEL}で解禁されます`;
+    bagShopBtn.disabled = true;
+  } else if (bagShopLevel >= BAG_SHOP_MAX_LEVEL) {
+    bagShopBtn.textContent = "これ以上は増築できません(上限)";
+    bagShopBtn.disabled = true;
+  } else if (bagShopLevel === 0) {
+    bagShopBtn.textContent = `建築する(${BAG_SHOP_LEVEL1_COST}G)`;
+    bagShopBtn.disabled = state.gold < BAG_SHOP_LEVEL1_COST;
+  } else {
+    const nextCost = bagShopLevel === 1 ? BAG_SHOP_LEVEL2_COST : BAG_SHOP_LEVEL3_COST;
+    bagShopBtn.textContent = `増築する(${nextCost}G) 所持上限${supplyCap()}→${supplyCap() + 1}個`;
+    bagShopBtn.disabled = state.gold < nextCost;
+  }
+  markBuildingNewBadge("bagShopLevel", "bagShopNewBadge", level >= BAG_SHOP_UNLOCK_HOUSE_LEVEL, bagShopLevel >= 1);
+  setFacilityLockedState("bagShop", bagShopLocked);
   renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge", true);
   renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level, "shrineNewBadge");
   renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level, "gunpowderStoreNewBadge");
@@ -1990,10 +2008,10 @@ function renderExtension() {
     henHouseBtn.textContent = "これ以上は増築できません(上限)";
     henHouseBtn.disabled = true;
   } else if (henHouseLevel === 0) {
-    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) ※効果は準備中`;
+    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) 温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100)}%`;
     henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
   } else {
-    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) ※効果は準備中`;
+    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) 温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * henHouseLevel)}%→+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * (henHouseLevel + 1))}%`;
     henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
   }
   markBuildingNewBadge("henHouseLevel", "henHouseNewBadge", level >= HEN_HOUSE_UNLOCK_HOUSE_LEVEL, henHouseLevel >= 1);
@@ -2165,7 +2183,20 @@ document.getElementById("dojoBuildBtn").onclick = () => {
 document.getElementById("magistrateBuildBtn").onclick = () => buildSimpleBuilding("magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST);
 document.getElementById("shopBuildBtn").onclick = () => buildSimpleBuilding("shopLevel", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST);
 document.getElementById("travelPrepShopBuildBtn").onclick = () => buildSimpleBuilding("travelPrepShopLevel", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST);
-document.getElementById("bagShopBuildBtn").onclick = () => buildSimpleBuilding("bagShopLevel", BAG_SHOP_UNLOCK_HOUSE_LEVEL, BAG_SHOP_LEVEL1_COST);
+document.getElementById("bagShopBuildBtn").onclick = () => {
+  const bagShopLevel = state.bagShopLevel || 0;
+  if (bagShopLevel >= BAG_SHOP_MAX_LEVEL) return;
+  if (bagShopLevel === 0 && (state.houseLevel || 1) < BAG_SHOP_UNLOCK_HOUSE_LEVEL) return;
+  const cost = bagShopLevel === 0 ? BAG_SHOP_LEVEL1_COST : (bagShopLevel === 1 ? BAG_SHOP_LEVEL2_COST : BAG_SHOP_LEVEL3_COST);
+  if (state.gold < cost) return;
+  const capBefore = supplyCap();
+  state.gold -= cost;
+  state.bagShopLevel = bagShopLevel + 1;
+  saveState();
+  renderExtension();
+  if (bagShopLevel === 0) showBuildCompleteForNewFacility("bagShopLevel"); // 初回建築(鞄屋自体はどの職業も解禁しない)
+  else showBuildCompleteForUpgrade("bagShopLevel", state.bagShopLevel, [`所持上限 ${capBefore}→${supplyCap()}個`]);
+};
 document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuilding("watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST);
 document.getElementById("stableBuildBtn").onclick = () => buildSimpleBuilding("stableLevel", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST);
 document.getElementById("henHouseBuildBtn").onclick = () => {
@@ -2178,7 +2209,7 @@ document.getElementById("henHouseBuildBtn").onclick = () => {
   saveState();
   renderExtension();
   if (henHouseLevel === 0) showBuildCompleteForNewFacility("henHouseLevel");
-  else showBuildCompleteForUpgrade("henHouseLevel", state.henHouseLevel, [`卵ポーチ容量 ${henHouseLevel}→${henHouseLevel + 1}`]);
+  else showBuildCompleteForUpgrade("henHouseLevel", state.henHouseLevel, [`温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * henHouseLevel)}%→+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * (henHouseLevel + 1))}%`]);
 };
 document.getElementById("teaHouseBuildBtn").onclick = () => buildSimpleBuilding("teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST);
 document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBuilding("hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST);

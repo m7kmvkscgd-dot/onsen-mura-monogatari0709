@@ -1640,7 +1640,7 @@ function usePotion(target, log) {
 // 温泉卵: 回復薬と違い自分専用(呼び出し側でtarget=行動者本人を渡す前提)。ターンを消費しない点は
 // index.html側(ボタンのonclickでfinishPlayerActionを呼ばない)で担保している
 function useOnsenEgg(target, log) {
-  let ratio = ONSEN_EGG_HEAL_RATIO;
+  let ratio = ONSEN_EGG_HEAL_RATIO + (state.henHouseLevel || 0) * HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL;
   if (hasOmamori("toyouke")) ratio *= 1.20; // 豊受大神の御守: 温泉たまごの回復量+20%
   const heal = applyOnsenHealBonus(target, Math.round(target.maxHp * ratio));
   target.hp = Math.min(target.maxHp, target.hp + heal);

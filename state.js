@@ -113,9 +113,12 @@ const SHOP_COST = 10;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;
 const TRAVEL_PREP_SHOP_COST = 30;
-// 鞄屋: 支援物資の所持上限が1増える(唯一、実際に効果があるレベル1の施設)
+// 鞄屋: 道場と同じ多段階建築。1レベルにつき支援物資の所持上限が1増える(レベル1=75G/レベル2=100G/レベル3=200G)
 const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const BAG_SHOP_LEVEL1_COST = 75;
+const BAG_SHOP_LEVEL2_COST = 100;
+const BAG_SHOP_LEVEL3_COST = 200;
+const BAG_SHOP_MAX_LEVEL = 3;
 function supplyCap() {
   return SUPPLY_CAP_BASE + (state.bagShopLevel || 0);
 }
