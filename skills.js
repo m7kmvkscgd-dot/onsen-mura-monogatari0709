@@ -171,10 +171,9 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
         confirmBtn.onclick = () => {
           confirmBtn.disabled = true; // 演出中の連打で二重に確定してしまわないようにする
           playSkillAcquiredEffect(confirmBtn, skill.name);
-          // 表示時間が短すぎるとの指摘で550ms→1100ms(2倍)に変更。旧550msだと内部演出(750〜1050ms)が
-          // 完了する前に画面遷移してしまい、途中で打ち切られていた。1100msなら全ての演出が
-          // 自然に完了してから遷移するようになる
-          setTimeout(() => resolveSkillChoice(character, lv, side, skill), 1100);
+          // 「習得！」バナー(CSS側のskillAcquiredBannerPop、2.35s)より先に画面が切り替わってしまい
+          // 演出が途中で打ち切られたように見えるとの指摘で、バナーの表示時間ぴったり(2350ms)に合わせた
+          setTimeout(() => resolveSkillChoice(character, lv, side, skill), 2350);
         };
       }
     };
