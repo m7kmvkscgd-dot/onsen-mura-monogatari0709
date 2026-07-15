@@ -147,7 +147,7 @@ const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 4;
 const HOT_SPRING_KEEPER_COST = 200;
 // 火薬庫: 建築すると砲術士が雇えるようになる。旧効果(出発画面で爆弾を購入できる)はユーザー指示で廃止した
 const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 4;
-const GUNPOWDER_STORE_COST = 200;
+const GUNPOWDER_STORE_COST = 30;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
 const KARAKURI_COST = 10;
