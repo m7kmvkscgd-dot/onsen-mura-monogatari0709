@@ -1072,6 +1072,7 @@ const SKILL_TREE_NAMES = {
   priest: { left: "奇跡の型", right: "神恩の型" },
 };
 const SUPPLY_CAP_BASE = 10; // 支援物資(回復薬+煙玉の合計)は一度の遠征で最大10個まで持てる(鞄屋を建てるとsupplyCap()でこれに加算される)
+const POTION_CAP = 3; // 回復薬だけは支援物資の共有枠(supplyCap)とは別に、常に最大3個までしか持てない(所持数の在庫上限)
 
 // 神社の奉納祈願: 魂のかけらをこの個数納めるとお守りガチャを1回引ける
 const SHRINE_OFFER_SOUL_SHARD_COST = 3;

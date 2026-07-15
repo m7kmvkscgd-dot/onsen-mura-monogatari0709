@@ -38,6 +38,13 @@
   /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
      切り替わったことが一目でわかるようにする */
   button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
+  /* 高速帰還モード中(帰還ボタン1.5秒長押しで発動、暗転演出なしで1階層ずつ即座に下り続ける)。
+     金色の脈動する光で「今だけ特別なモード」であることを示す */
+  button.fast-retreat-active { animation: fastRetreatPulse 0.6s ease-in-out infinite; }
+  @keyframes fastRetreatPulse {
+    0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 0 rgba(255,214,110,0); }
+    50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 20px 5px rgba(255,214,110,.9); }
+  }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   .card {
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;

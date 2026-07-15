@@ -405,6 +405,71 @@ function playDungeonMoveTransition(actualLogic, speedMultiplier) {
   setTimeout(proceedToFade, animMs + 200); // 安全策: onfinishが発火しない場合でも止まらないように
 }
 
+// 帰還ボタン(advanceBtnがretreating中に表示する「帰還」ラベル)を1.5秒長押しすると、歩き演出/暗転を
+// 一切挟まずに1階層ずつ即座に下り続ける高速帰還モードに入る。指を離すと即座に解除される
+// (RETREAT_MOVE_SPEED_MULTIPLIERによる「連打で3倍速」よりさらに踏み込んだ、演出を完全に飛ばす操作)
+const FAST_RETREAT_HOLD_MS = 1500;
+const FAST_RETREAT_STEP_MS = 150;
+let fastRetreatHoldTimer = null;
+let fastRetreatInterval = null;
+let fastRetreatActive = false;
+let suppressNextAdvanceClick = false;
+function stopFastRetreat() {
+  if (fastRetreatInterval) { clearInterval(fastRetreatInterval); fastRetreatInterval = null; }
+  if (fastRetreatActive) {
+    fastRetreatActive = false;
+    document.getElementById("advanceBtn").classList.remove("fast-retreat-active");
+  }
+}
+function fastRetreatStep() {
+  if (!retreating) { stopFastRetreat(); return; }
+  const advanceBtnEl = document.getElementById("advanceBtn");
+  // 瀕死アラート等の割り込みでボタンが無効化されている間は自動歩行を止める(モーダルの選択を
+  // プレイヤーの手に委ねるため。同じ判断はrenderDungeon()側の自己修復ロジックとも整合させてある)
+  if (advanceBtnEl.disabled) { stopFastRetreat(); return; }
+  if (!document.getElementById("screen-dungeon").classList.contains("active")) { stopFastRetreat(); return; }
+  const targetFloor = currentFloor - 1;
+  if (teahouseOfferedForFloor(targetFloor)) {
+    stopFastRetreat();
+    showTeahouseOffer(
+      () => playDungeonMoveTransition(() => moveOneFloor(null, true), RETREAT_MOVE_SPEED_MULTIPLIER),
+      () => playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER)
+    );
+    return;
+  }
+  moveOneFloor(null);
+  // moveOneFloor内で戦闘開始/finishRetreat()により画面が切り替わっていたら、そこで自動的に停止する
+  if (!retreating || !document.getElementById("screen-dungeon").classList.contains("active")) stopFastRetreat();
+}
+function startFastRetreat() {
+  if (fastRetreatActive) return;
+  fastRetreatActive = true;
+  suppressNextAdvanceClick = true; // 長押しが発動した後の指離しで合成clickが発火しても、二重に1階層進めないようにする
+  document.getElementById("advanceBtn").classList.add("fast-retreat-active");
+  playSfx("select");
+  fastRetreatStep();
+  fastRetreatInterval = setInterval(fastRetreatStep, FAST_RETREAT_STEP_MS);
+}
+function armFastRetreatHold() {
+  if (!retreating) return;
+  clearTimeout(fastRetreatHoldTimer);
+  fastRetreatHoldTimer = setTimeout(() => { fastRetreatHoldTimer = null; startFastRetreat(); }, FAST_RETREAT_HOLD_MS);
+}
+function disarmFastRetreatHold() {
+  clearTimeout(fastRetreatHoldTimer);
+  fastRetreatHoldTimer = null;
+  stopFastRetreat();
+}
+(() => {
+  const btn = document.getElementById("advanceBtn");
+  btn.addEventListener("touchstart", armFastRetreatHold, { passive: true });
+  btn.addEventListener("touchend", disarmFastRetreatHold);
+  btn.addEventListener("touchcancel", disarmFastRetreatHold);
+  btn.addEventListener("mousedown", armFastRetreatHold);
+  btn.addEventListener("mouseup", disarmFastRetreatHold);
+  btn.addEventListener("mouseleave", disarmFastRetreatHold);
+})();
+
 // 「里に戻る」を押した最初の一押しから、すぐに1階層分下る(以前はモード切り替えのみで、
 // 実際に1階層下るには帰還ボタンをもう一度押す必要があり「押しても階層が下がらない」ように
 // 見えていた)。以後は「帰還」ボタン(advanceBtn)を押すたびに1階層ずつ下って里まで歩いて帰る
@@ -595,6 +660,9 @@ document.getElementById("floorBadge").addEventListener("touchend", (e) => {
 }, { passive: false });
 document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
 document.getElementById("advanceBtn").onclick = () => {
+  // 高速帰還モードの長押しが発動した直後は、指を離した時に発火する合成clickで
+  // さらにもう1階層進んでしまわないよう、この1回だけ無視する
+  if (suppressNextAdvanceClick) { suppressNextAdvanceClick = false; return; }
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
     return;
@@ -642,7 +710,7 @@ document.getElementById("advanceBtn").onclick = () => {
 // 各道のbattle/gold率、ambushChance(暗い道の奇襲)、goldMult(暗い道の獲得金増)は
 // キーごとに1本化し、出現の重み(NORMAL_PATH_WEIGHTS/ONE_CHOICE_PATH_WEIGHTS)とは分離してある
 const PATH_DEFS = {
-  rindou: { icon: "🌲", label: "林道", battle: 0.55, gold: 0.20 }, // ユーザー指示で戦闘遭遇率を60%→55%に(森の「林道」限定、海岸の「砂浜」は据え置き)
+  rindou: { icon: "🌲", label: "林道", battle: 0.60, gold: 0.20 }, // 一度60%→55%に下げたが、ユーザー指示で60%に戻した(海岸の「砂浜」は55%のまま据え置き)
   kemono: { icon: "🐾", label: "獣道", battle: 0.75, gold: 0.15 },
   kurai: { icon: "🌑", label: "暗い道", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
   shizuka: { icon: "🍃", label: "静かな道", battle: 0.15, gold: 0.25 },
@@ -678,18 +746,19 @@ function currentPathFlavor() { return currentStage === "coast" ? COAST_PATH_FLAV
 // 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
 const NORMAL_PATH_WEIGHTS = {
   rindou: 45, kemono: 30, kurai: 7.6, shizuka: 3.52,
-  komorebi: 3.2, hikaru: 3.2, fuon: 2, kamikakushi: 0.24,
+  komorebi: 3.2, hikaru: 3.2, fuon: 2, kamikakushi: 0.48, // ユーザー指示で神隠しの道の重みを2倍(0.24→0.48)
 };
 // 1択専用プール: 静かな道を除外し、不穏な道の重みを引き上げて「避けて通れない恐怖」を演出
 // (不穏な道がこのプール内でちょうど15%のシェアになるよう他の重みから逆算した値)
 const ONE_CHOICE_PATH_WEIGHTS = {
   rindou: 45, kemono: 30, kurai: 7.6,
-  komorebi: 3.2, hikaru: 3.2, kamikakushi: 0.24, fuon: 15.75,
+  komorebi: 3.2, hikaru: 3.2, kamikakushi: 0.48, fuon: 15.75, // 神隠しの道の重みを2倍(0.24→0.48)
 };
-// 1〜3択の出現割合(1択15%/2択70%/3択15%)。1択の時だけONE_CHOICE_PATH_WEIGHTSを使う
+// 1〜2択の出現割合(1択15%/2択85%)。ユーザー指示で3択を廃止し、3択が占めていた15%分は
+// そのまま2択側に回した(旧: 1択15%/2択70%/3択15%)。1択の時だけONE_CHOICE_PATH_WEIGHTSを使う
 function pickPathChoiceCount() {
   const r = Math.random();
-  return r < 0.15 ? 1 : (r < 0.85 ? 2 : 3);
+  return r < 0.15 ? 1 : 2;
 }
 // おみくじの効果を進路の重みに反映する。中吉なら不穏な道を候補から除外し、
 // 吉なら神隠しの道の重みを大きく引き上げる。それ以外はそのまま(元のオブジェクトは書き換えない)
@@ -768,14 +837,17 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
             const isQuestApproach = key === QUEST_APPROACH_KEY;
             const isKamikakushi = key === "kamikakushi";
+            const isHikaru = key === "hikaru";
             const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : currentPathDefs()[key];
             const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : (flavor[key] || "");
             let extraClass = "";
             if (isTeahouse) extraClass = " path-tag-teahouse";
             else if (isKamikakushi) extraClass = " path-tag-kamikakushi path-tag-revealing";
+            else if (isHikaru) extraClass = " path-tag-hikaru";
             let sparkles = "";
             if (isTeahouse) sparkles = '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span>';
             else if (isKamikakushi) sparkles = '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span><span class="path-tag-sparkle s4">✨</span>';
+            else if (isHikaru) sparkles = '<span class="path-tag-sparkle s1">✨</span><span class="path-tag-sparkle s2">✨</span><span class="path-tag-sparkle s3">✨</span>';
             return `
               ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
               <button class="path-card path-tag${extraClass}" data-idx="${idx}" style="--i:${idx}">
@@ -1230,7 +1302,7 @@ function renderTeahouse() {
     potionBtn.disabled = true;
   } else {
     potionBtn.textContent = `購入 残り${potionRemaining}個`;
-    potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || state.gold < ITEMS.potion.price;
+    potionBtn.disabled = teahouseSupplyTotal() >= supplyCap() || (state.inventory.potion || 0) >= POTION_CAP || state.gold < ITEMS.potion.price;
   }
   const smokeBtn = document.getElementById("teaHouseBuySmokeBombBtn");
   const smokeRemaining = Math.max(0, TEAHOUSE_SMOKEBOMB_STOCK - (state.teaHouseStockCounts.smokeBomb || 0));
@@ -1291,6 +1363,7 @@ function renderTeahouseSnackList() {
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
   if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { alert("回復薬は本日もう売り切れです"); return; }
   if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if ((state.inventory.potion || 0) >= POTION_CAP) { alert(`回復薬は最大${POTION_CAP}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;

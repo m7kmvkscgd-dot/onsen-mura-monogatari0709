@@ -1600,10 +1600,10 @@ function useOnsenEgg(target, log) {
   log(`${target.label}は温泉卵で${heal}回復！`);
   return heal;
 }
-// 鶏小屋の「卵ポーチ」: 支援物資の上限(supplyCap)に含まれない専用の温泉卵ストック。
-// henHouseLevelがそのままポーチの容量になる(1段階につき+1)
+// 鶏小屋の効果は一旦完全に廃止(ユーザー指示、後日作り直す予定)。建物自体(建築/増築)は
+// 残したままにするため、容量は常に0を返し卵ポーチの補充・表示を無効化する
 function henHouseEggPouchCapacity() {
-  return state.henHouseLevel || 0;
+  return 0;
 }
 // 購入済みの温泉卵(inventory.onsenEgg、supplyCapに含まれる)とポーチの温泉卵(onsenEggPouch、
 // 含まれない)を合算した「実際に使える温泉卵の総数」。UIの残数表示・使用可否判定に使う

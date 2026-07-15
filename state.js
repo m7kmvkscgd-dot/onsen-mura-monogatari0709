@@ -7,7 +7,7 @@ function defaultState() {
     roster: [],
     activePartyIds: [],
     inventory: {
-      potion: 5, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0,
+      potion: 3, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0,
       // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)、takigyo=滝行許可証(スキルリセット)
       // 茶屋の菓子8種(回復薬等と同じ支援物資、TEAHOUSE_SNACK_IDS参照)
       amadango: 0, sanshokudango: 0, sakuramochi: 0, kusamochi: 0, matcha: 0, yakiguri: 0, hoshigaki: 0, konpeito: 0,
@@ -41,7 +41,7 @@ function defaultState() {
     hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。効果は未定(建物のみ)
     beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
     shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル4で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
-    gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル6で解禁)。砲術士が雇えるようになり、出発画面で爆弾を購入できるようになる
+    gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル4で解禁)。砲術士が雇えるようになる(旧: 出発画面で爆弾を購入できる効果はユーザー指示により廃止)
     karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。家レベル3で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
     ferryLevel: 0, // 増築の1つ、渡し船のレベル(0=未建築、1=建築済み。家レベル7で解禁)。効果は未定(建物のみ)
     shopLevel: 0, // 増築の1つ、鍛冶屋のレベル(0=未建築、1=建築済み。家レベル2で解禁)。他の施設と同じく解禁前は町画面にボタン自体を表示しない。
@@ -133,21 +133,20 @@ const WATCHTOWER_COST = 200;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
-// 鶏小屋: 道場と同じ多段階建築(上限なし)。建てると「卵ポーチ」という支援物資の上限とは別枠の
-// 専用ポーチが手に入り、毎日無料で温泉卵が1個(ポーチの容量まで)補充される。各段階(初回建築・増築とも)
-// 200Gで、1段階につきポーチの容量が+1される(=henHouseLevelがそのまま容量)。増築は1回まで
-// (=最大レベル2、ポーチ容量は最大2個)というユーザー指示によりHEN_HOUSE_MAX_LEVELで上限を設けている
+// 鶏小屋: 道場と同じ多段階建築(建築/増築の枠組みのみ残置)。旧効果(卵ポーチ+毎日の温泉卵無料補充)は
+// ユーザー指示により一旦完全に廃止した(engine.jsのhenHouseEggPouchCapacity()が常に0を返す)。
+// 建物・段階建築のシステム自体は後日別の効果で作り直す前提でそのまま残している
 const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
 const HEN_HOUSE_COST = 200;
 const HEN_HOUSE_MAX_LEVEL = 2;
 // 茶屋: 効果は未定(建物のみ、未実装)
-const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 5;
 const TEA_HOUSE_COST = 250;
 // 湯守屋: 建築すると温泉のストレス回復量が50→70に上がる(実際に効果があるレベル1の施設)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 4;
 const HOT_SPRING_KEEPER_COST = 200;
-// 火薬庫: 建築すると砲術士が雇えるようになり、出発画面で爆弾(敵全体に防御無視ダメージ)を購入できるようになる
-const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 5;
+// 火薬庫: 建築すると砲術士が雇えるようになる。旧効果(出発画面で爆弾を購入できる)はユーザー指示で廃止した
+const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 4;
 const GUNPOWDER_STORE_COST = 200;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;

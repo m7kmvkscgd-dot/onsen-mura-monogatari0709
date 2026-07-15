@@ -26,8 +26,7 @@ function hasAnyNewOnsenFeature() {
   return (state.shrineLevel || 0) > 0 && !state.seenShrineTab;
 }
 function hasAnyNewSupplyFeature() {
-  return ((state.travelPrepShopLevel || 0) > 0 && !state.seenCampingKitSupply)
-    || ((state.gunpowderStoreLevel || 0) > 0 && !state.seenBombSupply);
+  return (state.travelPrepShopLevel || 0) > 0 && !state.seenCampingKitSupply;
 }
 
 // ============ チュートリアル演出(初回のみ): 宿屋の初雇用→町の出発ボタン→出発直前のコンセプト説明 ============
@@ -1030,6 +1029,10 @@ function showPartySelectTab(tab) {
   document.getElementById("partySelectMainTab").style.display = tab === "main" ? "" : "none";
   document.getElementById("partySelectBestiaryTab").style.display = tab === "bestiary" ? "" : "none";
   document.getElementById("partySelectBestiaryTabBtn").className = "omikuji-chip-btn" + (tab === "bestiary" ? " active" : "");
+  // 図鑑タブを開いている間はおみくじタブを隠す(ユーザー指示)。mainタブに戻った時だけ、
+  // 神社建築済みかどうかの本来の条件で再表示する
+  document.getElementById("partySelectOmikujiTabBtn").style.display =
+    tab === "bestiary" ? "none" : ((state.shrineLevel || 0) > 0 ? "" : "none");
 }
 // おみくじはもう別画面に切り替わらない(ユーザー指示によりテンポ重視で撤廃)。ボタンを押すと
 // その場でカードが更新されるだけで、支援物資/出発メンバー選択/出発ボタンはそのまま下に続けて操作できる。
@@ -1240,7 +1243,7 @@ function renderSupplies() {
   document.getElementById("potionOwned").textContent = state.inventory.potion || 0;
   document.getElementById("smokeBombOwned").textContent = state.inventory.smokeBomb || 0;
   document.getElementById("buyPotionSupplyBtn").textContent = `購入(${ITEMS.potion.price}G)`;
-  document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || state.gold < ITEMS.potion.price;
+  document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || (state.inventory.potion || 0) >= POTION_CAP || state.gold < ITEMS.potion.price;
   document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
   document.getElementById("buySmokeBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
   // 野営具は旅支度屋を建築するまで出発画面にラインナップされない
@@ -1254,15 +1257,10 @@ function renderSupplies() {
     document.getElementById("campingKitNewBadge").style.display = !state.seenCampingKitSupply ? "" : "none";
     if (!state.seenCampingKitSupply) { state.seenCampingKitSupply = true; saveState(); }
   }
-  // 爆弾は火薬庫を建築するまで出発画面にラインナップされない(支援物資の共有枠を消費する)
-  document.getElementById("bombSection").style.display = state.gunpowderStoreLevel ? "" : "none";
-  if (state.gunpowderStoreLevel) {
-    document.getElementById("bombOwned").textContent = state.inventory.bomb || 0;
-    document.getElementById("buyBombBtn").textContent = `購入(${ITEMS.bomb.price}G)`;
-    document.getElementById("buyBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.bomb.price;
-    document.getElementById("bombNewBadge").style.display = !state.seenBombSupply ? "" : "none";
-    if (!state.seenBombSupply) { state.seenBombSupply = true; saveState(); }
-  }
+  // 爆弾の購入効果はユーザー指示により廃止した(火薬庫は砲術士解禁のみの建物になった)。
+  // 既存セーブで爆弾を所持している場合に備え、購入UI自体は常に非表示にするだけで
+  // inventory.bomb自体やバトル中の使用(items.js)には手を付けていない
+  document.getElementById("bombSection").style.display = "none";
   // 助っ人の札(5人目の交代要員枠)は野営具と同じく旅支度屋を建築するまでラインナップされない
   document.getElementById("kotaifudaSection").style.display = state.travelPrepShopLevel ? "" : "none";
   if (state.travelPrepShopLevel) {
@@ -1324,6 +1322,7 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if ((state.inventory.potion || 0) >= POTION_CAP) { alert(`回復薬は最大${POTION_CAP}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
@@ -1940,10 +1939,10 @@ function renderExtension() {
     henHouseBtn.textContent = "これ以上は増築できません(上限)";
     henHouseBtn.disabled = true;
   } else if (henHouseLevel === 0) {
-    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) 卵ポーチ+1`;
+    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) ※効果は準備中`;
     henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
   } else {
-    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) 卵ポーチ${henHouseLevel}→${henHouseLevel + 1}`;
+    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) ※効果は準備中`;
     henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
   }
   markBuildingNewBadge("henHouseLevel", "henHouseNewBadge", level >= HEN_HOUSE_UNLOCK_HOUSE_LEVEL, henHouseLevel >= 1);

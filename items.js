@@ -17,10 +17,9 @@ function renderItemMenu(actor) {
   smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
   grid.appendChild(smokeBtn);
 
-  // 爆弾は火薬庫を建てるまでボタン自体を出さない(未所持でも灰色ボタンとして見えてしまうと、
-  // 建物を建てる前からアイテムの存在を知ってしまう=ネタバレになるため、他の未解禁アイテムと
-  // 同じく「ラインナップにすら出さない」方式に統一した)
-  if (state.gunpowderStoreLevel) {
+  // 爆弾の購入効果は廃止済み(火薬庫は砲術士解禁のみの建物)のため新規に入手する手段はないが、
+  // 既存セーブで爆弾を所持している場合は使い切れるよう、所持数がある時だけボタンを出す
+  if ((state.inventory.bomb || 0) > 0) {
     const bombBtn = document.createElement("button");
     bombBtn.className = "big";
     bombBtn.textContent = `爆弾(${state.inventory.bomb || 0})`;
