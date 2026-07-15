@@ -917,7 +917,7 @@ const SKILL_TREES = {
       right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、90%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.90, turns: 1 } } },
     },
     4: {
-      left: { name: "貫き矢", desc: "敵単体へ130%ダメージ。敵を倒した場合、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 2, action: { kind: "damage", mult: 1.3, overkillPierce: true } },
+      left: { name: "貫き矢", desc: "通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 0, passive: { overkillPierce: true } },
       right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 3, action: { kind: "summonHawk", turns: 8 } },
     },
     5: {

@@ -1036,32 +1036,12 @@ function useTreeSkill(actor, target, skill, log) {
       let rawHit = Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
       const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
       if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawHit = Math.round(rawHit * action.executeBonus.mult);
-      const hpBeforeHit = t.hp;
       const hitLogLines = [];
       const hitLog = deferHitLog ? (msg) => hitLogLines.push(msg) : log;
       const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor);
-      const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後の貫き矢/デバフ付与処理はlastHitWasCritに影響しない)
+      const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後のデバフ付与処理はlastHitWasCritに影響しない)
       if (crit) anyCrit = true;
       totalDmg += dmg;
-      // 貫き矢: 対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」別の生存中の敵に
-      // そのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、瀕死の敵を
-      // 巻き込んで連鎖処刑する狙い撃ちに変更した)。会心判定やonHitInflict等は敵を倒した本体の
-      // 一撃だけのものなので、貫通側では再判定せず素の数値のまま流し込む(defensiveな
-      // damageTakenMultiplierだけは対象自身の効果として尊重する)。
-      // t.__enemyAllies はstartBattle()で敵全員に配られる、その戦闘の敵配列への自己参照
-      if (action.overkillPierce && t.hp <= 0) {
-        const overkill = dmg - hpBeforeHit;
-        if (overkill > 0 && t.__enemyAllies) {
-          const others = t.__enemyAllies.filter((e) => e !== t && e.hp > 0);
-          if (others.length > 0) {
-            const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
-            const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
-            splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
-            hitLog(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
-            if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
-          }
-        }
-      }
       // 全体攻撃には乗せない(全ての敵に追撃が入ると強すぎるため)。対象を倒していれば鷹は別の敵をランダムに狙う
       const hawkTarget = !action.aoe ? maybeHawkFollowup(actor, t, hitLog) : null;
       hitsList.push({ dmg, crit, logLines: hitLogLines });
@@ -1322,14 +1302,35 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
   return { hits, dmgs, shotDowns, crits };
 }
 
+// 狩人「貫き矢」パッシブ: 通常攻撃で対象を倒した時、余ったダメージ(overkill分)を「残りHPが一番低い」
+// 別の生存中の敵にそのまま分け与える(ランダムだとフルHPの敵に飛んで無駄になることがあったため、
+// 瀕死の敵を巻き込んで連鎖処刑する狙い撃ちにしてある)。会心判定やonHitInflict等は敵を倒した本体の
+// 一撃だけのものなので、貫通側では再判定せず素の数値のまま流し込む(defensiveなdamageTakenMultiplier
+// だけは対象自身の効果として尊重する)。貫通は最大2体まで、そこから先には連鎖しない(splashTarget自身が
+// 倒れても再帰しない)。target.__enemyAllies はstartBattle()で敵全員に配られる、その戦闘の敵配列への自己参照
+function applyOverkillPierce(target, hpBeforeHit, dmg, log, actor) {
+  if (target.hp > 0) return;
+  const overkill = dmg - hpBeforeHit;
+  if (overkill <= 0 || !target.__enemyAllies) return;
+  const others = target.__enemyAllies.filter((e) => e !== target && e.hp > 0);
+  if (others.length === 0) return;
+  const splashTarget = others.reduce((lowest, e) => (e.hp < lowest.hp ? e : lowest), others[0]);
+  const splashDmg = Math.max(0, Math.round(overkill * damageTakenMultiplier(splashTarget)));
+  splashTarget.hp = Math.max(0, splashTarget.hp - splashDmg);
+  log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
+  if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
+}
 function performAttack(actor, target, log) {
   // 出血中の対象かどうかは攻撃前(=この攻撃自身の効果が乗る前)の状態で判定する
   const wasBleeding = (target.bleed || 0) > 0;
+  const hpBeforeHit = target.hp; // 貫き矢(通常攻撃のオーバーキル貫通)判定用
   const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
   // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
   if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
   // 狩人「追い討ち」: 出血中の敵への通常攻撃が命中すると、出血スタックを3追加する
   if (result.hit && wasBleeding && actor.passives && actor.passives.bleedFollowupOnHit && target.hp > 0) applyBleed(target, 3);
+  // 狩人「貫き矢」: 通常攻撃で敵を倒した時だけ発動する(ダメージ倍率は据え置き、通常攻撃そのものは強化しない)
+  if (result.hit && actor.passives && actor.passives.overkillPierce) applyOverkillPierce(target, hpBeforeHit, result.dmg, log, actor);
   return result;
 }
 
