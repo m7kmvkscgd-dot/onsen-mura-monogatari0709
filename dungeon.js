@@ -425,7 +425,8 @@ function stopAutoRetreat() {
 }
 // 暗転→(黒目の間にafterBlackを実行)→明転、という「区切り」の演出。財宝発見/時刻変化/茶屋/瀕死発見で使う。
 // 通常のplayDungeonMoveTransitionと違い歩行ズームは伴わない(ズームは呼び出し元が別途管理しているため)
-function playAutoRetreatCutFade(afterBlack) {
+// onFullyDone: 省略可。明転まで完全に終わった後に呼ばれる(afterBlackは暗転中に呼ばれる点と区別)
+function playAutoRetreatCutFade(afterBlack, onFullyDone) {
   const overlay = document.getElementById("moveTransitionBlack");
   overlay.style.display = "block";
   const fadeOut = overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: AUTO_RETREAT_CUT_FADE_MS, easing: "ease", fill: "forwards" });
@@ -438,6 +439,7 @@ function playAutoRetreatCutFade(afterBlack) {
       fadeIn.cancel();
       overlay.style.opacity = "0";
       overlay.style.display = "none";
+      if (onFullyDone) onFullyDone();
     };
   };
 }
@@ -544,7 +546,12 @@ document.getElementById("retreatBtn").onclick = () => {
         }
         retreating = true;
         dlog("引き返すことにした。ここから階層を下って里へ戻る。");
-        startAutoRetreat();
+        // 確定した瞬間に一度暗転→明転を挟んでからオート帰還を始める。これが無いと、直前まで
+        // 奥へ向かって拡大していた背景がそのまま帰還のズームにも引き継がれ、里に戻るはずなのに
+        // 画面上はまだ奥へ進んでいるように見えてしまう(向きが変わった区切りを付けるための暗転)
+        document.getElementById("advanceBtn").disabled = true;
+        document.getElementById("retreatBtn").disabled = true;
+        playAutoRetreatCutFade(() => {}, () => { startAutoRetreat(); });
       },
     },
     { label: "いいえ", className: "big" },
@@ -1144,7 +1151,7 @@ function deliverCarriedAllies() {
 }
 
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率・財宝発見率を下げる(固定値)
-const RETREAT_BATTLE_CHANCE = 0.19;
+const RETREAT_BATTLE_CHANCE = 0.18; // ユーザー指示で19%→18%に1%下げた
 const RETREAT_GOLD_CHANCE = 0.10;
 function rollEncounter(pathBias) {
   // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを3つ手に入れる特別な道(戦闘/財宝抽選はしない)
