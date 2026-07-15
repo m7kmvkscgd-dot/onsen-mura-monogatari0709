@@ -196,6 +196,7 @@ function renderBattleScreen() {
         if (!pendingEnemyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
         const picked = pendingEnemyPick;
         pendingEnemyPick = null;
+        battleActionLocked = true; // 対象を選んだ瞬間から解決完了まで、再度ロックする
         picked(e);
       };
     }
@@ -539,6 +540,13 @@ function pickSingleEnemyTarget(onPicked) {
   const targets = targetableEnemies();
   if (targets.length === 1) { onPicked(targets[0]); return; }
   battleSubMenuActive = true;
+  // 対象選択中はまだ何も確定していないため、attack/ability/skillボタン押下時に立てたbattleActionLockedを
+  // 一旦解除し、「戻る」(cancelBattleSubMenu)で確実に行動選択へ戻れるようにする(そのまま
+  // trueだと「戻る」も同じロックで弾かれてしまい、一切反応しなくなるバグがあった)。
+  // 実際に対象を選んだ瞬間(下の各onclick内)でbattleActionLockedを再度trueに戻し、
+  // 解決中(ヒットストップ等の遅延の間)にactionGridの外を誤タップしてキャンセルされる
+  // レースからは引き続き保護する
+  battleActionLocked = false;
   pendingEnemyPick = (t) => { onPicked(t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
@@ -554,6 +562,7 @@ function pickSingleEnemyTarget(onPicked) {
     btn.onclick = () => {
       if (!pendingEnemyPick) return; // 既に別経路(敵カード直接タップ等)で選択済みなら無視する(二重行動防止)
       pendingEnemyPick = null;
+      battleActionLocked = true; // 対象を選んだ瞬間から解決完了まで、再度ロックする
       onPicked(t);
     };
     grid.appendChild(btn);
@@ -1262,8 +1271,11 @@ function resolveAllyTarget(actor, kind, target) {
 // 味方対象の選択中は、上の味方イラストを直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)
 function renderAllyTargets(actor, kind) {
   battleSubMenuActive = true;
+  // pickSingleEnemyTargetと同じ理由: 対象選択中はまだ何も確定していないため、いったんロックを解除して
+  // 「戻る」(cancelBattleSubMenu)が確実に効くようにする。対象を選んだ瞬間に再度trueへ戻す
+  battleActionLocked = false;
   const targets = aliveField().filter((c) => !c.transformForm);
-  pendingAllyPick = (t) => { pendingAllyPick = null; resolveAllyTarget(actor, kind, t); };
+  pendingAllyPick = (t) => { pendingAllyPick = null; battleActionLocked = true; resolveAllyTarget(actor, kind, t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
@@ -1274,6 +1286,7 @@ function renderAllyTargets(actor, kind) {
     btn.onclick = () => {
       if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
       pendingAllyPick = null;
+      battleActionLocked = true; // 対象を選んだ瞬間から解決完了まで、再度ロックする
       resolveAllyTarget(actor, kind, target);
     };
     grid.appendChild(btn);
