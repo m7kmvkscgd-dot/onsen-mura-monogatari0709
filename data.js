@@ -1502,7 +1502,7 @@ const TRANSFORM_FORMS = {
     hpMult: 1, atkMult: 1.1, defMult: 1.1, spdMult: 0.9,
     onHitPoison: 3,
     formSkills: [
-      { key: "datsupi", name: "脱皮", desc: "HPを50%回復し、状態異常を全て取り除く(クールタイム6ターン)", cooldown: 6, healPct: 0.5 },
+      { key: "datsupi", name: "脱皮", desc: "HPを25%回復し、状態異常を全て取り除く(クールタイム6ターン)", cooldown: 6, healPct: 0.25 },
       { key: "dokueki", name: "毒液散布", desc: "敵全体に最大HPの25%のダメージと毒2〜4を付与する(クールタイム2ターン)", cooldown: 2, dmgPct: 0.25, poisonMin: 2, poisonMax: 4 },
     ],
   },
