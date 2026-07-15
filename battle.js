@@ -1333,7 +1333,6 @@ function victory() {
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   // 奉行所の討伐依頼(受注制): この戦闘がbattle.questKey(tryForceQuestEncounterで確定出現させた
   // 対象)ならその場で達成とし、報酬はリザルト画面(renderResultScreen)にまとめて表示する。
-  // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりにボス級指名討伐の解禁フラグを立てる
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     const qDef = QUEST_DEFS[battle.questKey];
     const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
@@ -1347,6 +1346,11 @@ function victory() {
     });
     state.acceptedQuest = null;
     if (battle.questKey === "inoshishi") state.defeatedOoInoshishi = true;
+    // 同じ依頼を1日に何度もクリアして稼げてしまう不具合の修正: 達成回数(大猪の張り出し解禁条件に使う)と
+    // 達成日(同日中の再受注をブロックする、renderMagistrateScreen/acceptQuest参照)を記録する
+    state.magistrateQuestClearCount = (state.magistrateQuestClearCount || 0) + 1;
+    state.magistrateQuestClearedOn = state.magistrateQuestClearedOn || {};
+    state.magistrateQuestClearedOn[battle.questKey] = state.dayCount;
   }
   let soulShardCount = 0;
   battle.enemies.forEach((e) => {

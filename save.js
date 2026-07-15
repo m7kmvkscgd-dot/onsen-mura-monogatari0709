@@ -134,6 +134,8 @@ function loadState() {
       delete loaded.magistrateNormalClears;
       delete loaded.emergencyQuestEverAppeared;
       if (loaded.defeatedOoInoshishi == null) loaded.defeatedOoInoshishi = false; // 旧セーブ用の初期値
+      if (loaded.magistrateQuestClearCount == null) loaded.magistrateQuestClearCount = 0; // 旧セーブ用の初期値
+      if (loaded.magistrateQuestClearedOn == null) loaded.magistrateQuestClearedOn = {}; // 旧セーブ用の初期値
       if (loaded.rescueQuestAccepted == null) loaded.rescueQuestAccepted = false; // 旧セーブ用の初期値(破綻寸前救済クエスト未受注)
       if (loaded.rescueQuestItemObtained == null) loaded.rescueQuestItemObtained = false; // 旧セーブ用の初期値
       if (loaded.travelPrepShopLevel == null) loaded.travelPrepShopLevel = 0; // 旧セーブ用の初期値(旅支度屋未建築)

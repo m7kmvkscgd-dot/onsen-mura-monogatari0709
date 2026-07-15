@@ -2262,6 +2262,7 @@ function refreshMagistrateQuestsIfNeeded() {
     const pool = Object.keys(QUEST_DEFS).filter((id) => {
       if (QUEST_DEFS[id].tier !== tier) return false;
       if (QUEST_DEFS[id].requiresOoInoshishi && !state.defeatedOoInoshishi) return false; // ボス級指名討伐は大猪を一度倒すまで張り出されない
+      if (QUEST_DEFS[id].minQuestClears && (state.magistrateQuestClearCount || 0) < QUEST_DEFS[id].minQuestClears) return false; // 大猪(中ボス)は依頼を規定回数達成するまで張り出されない
       if (tier === 1 && isFirstMagistrateTier1Draw && QUEST_DEFS[id].targetFloor > 5) return false;
       if (id === tierKeepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
       const shownDay = lastShown[id];
@@ -2343,6 +2344,8 @@ function renderMagistrateScreen() {
   state.magistrateAvailableQuests[activeTab].forEach((id) => {
     const def = QUEST_DEFS[id];
     const isAccepted = state.acceptedQuest && state.acceptedQuest.questKey === id;
+    // 同じ依頼を1日に何度もクリアして稼げてしまわないよう、達成日が今日のうちは再受注させない
+    const clearedToday = (state.magistrateQuestClearedOn || {})[id] === state.dayCount;
     const fee = questContractFee(def);
     const row = document.createElement("div");
     row.className = "card";
@@ -2368,6 +2371,10 @@ function renderMagistrateScreen() {
       btn.className = "big";
       btn.textContent = "他の依頼を進行中です";
       btn.disabled = true;
+    } else if (clearedToday) {
+      btn.className = "big";
+      btn.textContent = "本日は達成済みです(翌日また受けられます)";
+      btn.disabled = true;
     } else {
       // 所持金不足の時、以前はボタンをdisabledにして押せなくしていたが、見た目の変化が地味で
       // 「押しても反応しない=壊れている」と誤解される不具合報告があったため、押せる状態のまま残し、
@@ -2391,6 +2398,7 @@ function renderMagistrateScreen() {
 // enemyId(実際にスポーンさせる敵の種族id)を分けて持たせている
 function acceptQuest(enemyId) {
   if (state.acceptedQuest) return;
+  if ((state.magistrateQuestClearedOn || {})[enemyId] === state.dayCount) return; // 同じ依頼を同日中に再受注させない
   const def = QUEST_DEFS[enemyId];
   const fee = questContractFee(def);
   if (state.gold < fee) return;

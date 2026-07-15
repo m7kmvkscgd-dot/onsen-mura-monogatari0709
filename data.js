@@ -1404,7 +1404,8 @@ const BIG_ATTACK_DEBUFF_POOL = ["atkDown", "defDown", "spdDown", "poison", "burn
 // 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
 const QUEST_DEFS = {
   yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 3, count: 2, tier: 1, rewardGold: 30 },
-  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "大猪の討伐", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！", rewardGold: 70, tier: 1 },
+  // 大猪は中ボス級のため、奉行所の依頼を最低3回達成するまで張り出されない(minQuestClears、refreshMagistrateQuestsIfNeeded参照)
+  inoshishi: { emoji: "🐗", requester: "農家・徳兵衛", title: "大猪の討伐", text: "山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。", targetFloor: 5, count: 1, spawnId: "oo_inoshishi", chaseText: "大猪が追いかけてきた！", rewardGold: 70, tier: 1, minQuestClears: 3 },
   dokuhebi: { emoji: "🐍", requester: "水番・お咲", title: "水場に潜む毒", text: "村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。", targetFloor: 5, count: 2, tier: 1 },
   oogumo: { emoji: "🕷", requester: "旅籠主人・宗吉", title: "糸に閉ざされた古道", text: "山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。", targetFloor: 6, count: 1, tier: 1 },
   kodama: { emoji: "🌳", requester: "山守・弥助", title: "森の異変", text: "最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。", targetFloor: 4, count: 2, tier: 1 },
