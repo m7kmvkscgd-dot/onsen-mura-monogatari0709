@@ -681,7 +681,6 @@ const ITEMS = {
   campingKit: { id: "campingKit", ja: "野営具", price: 50, desc: "簡易宿泊キット。夜を越すことができる", image: "assets/items/camping_kit.png" },
   onsenEgg: { id: "onsenEgg", ja: "温泉卵", price: 5, desc: "HPをほんの少し回復。ターンを消費しない(自分専用)", image: "assets/items/onsen_egg.png" },
   bomb: { id: "bomb", ja: "爆弾", price: 30, desc: "敵全体にダメージ", emoji: "💣" }, // 画像は未用意。imageが無い場合は絵文字で代用する
-  kotaifuda: { id: "kotaifuda", ja: "助っ人の札", price: 100, desc: "出発時に5人目(交代要員)を編成できる。出発時に1枚消費", emoji: "📜" },
   takigyo: { id: "takigyo", ja: "滝行許可証", price: 500, desc: "全てのスキルを忘れて\n1から取り直しできる", emoji: "📜" },
   // 茶屋のお茶菓子8種。回復薬/煙玉と同じ支援物資として持ち歩き、道具メニューから使う(購入時にその場で
   // 食べさせる方式は「回復薬と同じように使いたい」という指摘を受けて廃止した)。hpPct/mpPctは
@@ -708,8 +707,6 @@ const ONSEN_EGG_HEAL_RATIO = 0.25;
 const HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL = 0.05; // 鶏小屋は1段階につき温泉卵の回復量+5%(最大2段階で+10%)
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
-// 助っ人の札も野営具と同じく別枠、最大1枚まで(出発時に5人目の枠を1回分だけ解禁する特別アイテム)
-const KOTAIFUDA_CAP = 1;
 // 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復
 const CAMP_HP_RELIEF = 0.6;
 const CAMP_MP_RELIEF = 0.45;
@@ -1523,7 +1520,7 @@ if (typeof module !== "undefined") {
     BASE_ACCURACY, EVASION_SPD_BASELINE, EVASION_SPD_FACTOR, EVASION_MAX, MIN_HIT_CHANCE, STUN_RESIST_TURNS, STUN_RESIST_MULT,
     BIG_ATTACK_CYCLE_LENGTH, BIG_ATTACK_MULT, BIG_ATTACK_DOT_REDUCTION, BIG_ATTACK_EXPOSED_BONUS,
     BIG_ATTACK_DEBUFF_CHANCE, BIG_ATTACK_DEBUFF_POOL, SKILL_TREES,
-    CAMPING_KIT_CAP, KOTAIFUDA_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
+    CAMPING_KIT_CAP, CAMP_HP_RELIEF, CAMP_MP_RELIEF, CAMP_STRESS_RELIEF, CAMP_COMFORT_STRESS_RELIEF,
     CAMP_WEAPON_CARE_ATK_MULT, CAMP_WEAPON_CARE_BATTLES, STATUS_TOOLTIPS,
     TRANSFORM_FORMS, TRANSFORM_ANIMAL_SOUNDS,
     RESCUE_QUEST_DEF, RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,

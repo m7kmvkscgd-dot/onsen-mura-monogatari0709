@@ -139,6 +139,10 @@ function loadState() {
       if (loaded.rescueQuestAccepted == null) loaded.rescueQuestAccepted = false; // 旧セーブ用の初期値(破綻寸前救済クエスト未受注)
       if (loaded.rescueQuestItemObtained == null) loaded.rescueQuestItemObtained = false; // 旧セーブ用の初期値
       if (loaded.travelPrepShopLevel == null) loaded.travelPrepShopLevel = 0; // 旧セーブ用の初期値(旅支度屋未建築)
+      // 「助っ人の札」アイテムは廃止(5人編成システム自体は将来別の解禁方法で使う想定でmaxActivePartySize()等に残置)。
+      // 既存セーブに残っていた所持数/NEWバッジ既読フラグを削除する(もう買えないので残っていても無意味なため)
+      if (loaded.inventory) delete loaded.inventory.kotaifuda;
+      delete loaded.seenKotaifudaSupply;
       if (loaded.bagShopLevel == null) loaded.bagShopLevel = 0; // 旧セーブ用の初期値(鞄屋未建築)
       if (loaded.watchtowerLevel == null) loaded.watchtowerLevel = 0; // 旧セーブ用の初期値(見張り台未建築)
       if (loaded.stableLevel == null) loaded.stableLevel = 0; // 旧セーブ用の初期値(馬小屋未建築)

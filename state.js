@@ -271,9 +271,11 @@ function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
 
-// 「助っ人の札」を1枚以上持っていれば、出発パーティの上限が4人→5人になる(5人目は交代要員扱い)
+// 「助っ人の札」アイテムは廃止したため、出発パーティの上限は常に4人。
+// 5人編成+交代要員(reserveFieldMember)という仕組み自体は将来別の解禁方法で使う想定でそのまま残してあり、
+// このパーティ人数の上限だけを緩めれば(例: 5を返すようにすれば)5人編成システムはすぐに復活できる
 function maxActivePartySize() {
-  return (state.inventory.kotaifuda || 0) > 0 ? 5 : 4;
+  return 4;
 }
 // 瀕死/ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
 // 居座り続けないよう、activePartyIdsから現在isAvailable()でなくなった者を取り除く

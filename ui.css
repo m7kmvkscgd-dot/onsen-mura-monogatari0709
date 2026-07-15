@@ -139,7 +139,7 @@
   }
   .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
-  /* 助っ人の札で編成した5人目(交代要員)。戦闘に参加していないことが一目でわかるよう控えめに暗くする */
+  /* 5人編成した時の5人目(交代要員)。戦闘に参加していないことが一目でわかるよう控えめに暗くする */
   .party-member.reserve { opacity: 0.55; }
   .reserve-badge {
     position: absolute; top: -2px; left: 50%; transform: translateX(-50%);

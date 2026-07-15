@@ -448,7 +448,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
   // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
     const dead = c.hp <= 0 || c.status !== "active";
-    // 助っ人の札で編成した5人目(交代要員)。控えの間は回復薬/治癒の術の対象にできない
+    // 5人編成した時の5人目(交代要員)。控えの間は回復薬/治癒の術の対象にできない
     const isReserve = typeof reserveFieldMember !== "undefined" && c === reserveFieldMember;
     // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
     const targetable = !!pendingAllyPick && !dead && !c.transformForm && !isReserve;

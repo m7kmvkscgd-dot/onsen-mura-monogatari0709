@@ -10,11 +10,13 @@ function recordMaxFloorReached() {
   if (currentFloor > (state.maxFloorReached[currentStage] || 0)) state.maxFloorReached[currentStage] = currentFloor;
 }
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列(戦闘に出る最大4人。5人目は下記reserveFieldMember)
-// 「助っ人の札」を使って5人編成で出発した時の5人目(交代要員)。戦闘には参加せず、
+// 5人編成で出発した時の5人目(交代要員)。戦闘には参加せず、
 // 探索中はいつでも自由にfieldPartyの誰かと交代でき、戦闘中は①行動中のキャラが自分のターンを
 // 消費して手動で交代する、②誰かが瀕死になった瞬間に「交代しますか？」のポップアップで交代する、の2経路がある。
 // 瀕死のキャラがこの枠に入ることもあるが、その場合も「歩けない」ため戦闘終了後は通常通り担いで
-// 救出する必要がある(この枠にいるだけでは救出したことにならない)
+// 救出する必要がある(この枠にいるだけでは救出したことにならない)。
+// 「助っ人の札」アイテムは廃止したため、現状maxActivePartySize()が常に4を返し5人編成には
+// 到達しないが、この仕組み自体は将来別の解禁方法で使う想定でそのまま残してある
 let reserveFieldMember = null;
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
@@ -72,11 +74,10 @@ function enterDungeon() {
   recordMaxFloorReached();
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
-  // 「助っ人の札」で5人選んでいた場合、5人目(最後に選んだ人)は交代要員として控えに回り、
-  // 出発時に札を1枚消費する(4人以下で出発した場合は消費しない)
+  // 5人選んでいた場合、5人目(最後に選んだ人)は交代要員として控えに回る
+  // (現状maxActivePartySize()が常に4を返すため到達しないが、仕組みとして残してある)
   if (fieldParty.length >= 5) {
     reserveFieldMember = fieldParty.pop();
-    state.inventory.kotaifuda = Math.max(0, (state.inventory.kotaifuda || 0) - 1);
   } else {
     reserveFieldMember = null;
   }

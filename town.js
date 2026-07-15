@@ -1195,7 +1195,7 @@ function renderPartySelect() {
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
-    // 5人目(助っ人の札を使った時の最後の1枠)は交代要員として控えに回るため、その旨を分かるようにする
+    // 5人目(5人編成した時の最後の1枠)は交代要員として控えに回るため、その旨を分かるようにする
     const isReserveSlot = inParty && state.activePartyIds.length >= 5 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
@@ -1270,15 +1270,6 @@ function renderSupplies() {
   // 既存セーブで爆弾を所持している場合に備え、購入UI自体は常に非表示にするだけで
   // inventory.bomb自体やバトル中の使用(items.js)には手を付けていない
   document.getElementById("bombSection").style.display = "none";
-  // 助っ人の札(5人目の交代要員枠)は野営具と同じく旅支度屋を建築するまでラインナップされない
-  document.getElementById("kotaifudaSection").style.display = state.travelPrepShopLevel ? "" : "none";
-  if (state.travelPrepShopLevel) {
-    document.getElementById("kotaifudaOwned").textContent = state.inventory.kotaifuda || 0;
-    document.getElementById("buyKotaifudaBtn").textContent = `購入(${ITEMS.kotaifuda.price}G)`;
-    document.getElementById("buyKotaifudaBtn").disabled = (state.inventory.kotaifuda || 0) >= KOTAIFUDA_CAP || state.gold < ITEMS.kotaifuda.price;
-    document.getElementById("kotaifudaNewBadge").style.display = !state.seenKotaifudaSupply ? "" : "none";
-    if (!state.seenKotaifudaSupply) { state.seenKotaifudaSupply = true; saveState(); }
-  }
   const maxHint = document.getElementById("partySelectMaxHint");
   if (maxHint) maxHint.textContent = `タップで出発パーティに入れる(最大${maxActivePartySize()}人)`;
   renderOwnedSupplyIcons();
@@ -1303,7 +1294,6 @@ function renderOwnedSupplyIcons() {
   addIcons("smokeBomb", state.inventory.smokeBomb || 0);
   addIcons("onsenEgg", state.inventory.onsenEgg || 0);
   addIcons("bomb", state.inventory.bomb || 0);
-  addIcons("kotaifuda", state.inventory.kotaifuda || 0);
   TEAHOUSE_SNACK_IDS.forEach((id) => addIcons(id, state.inventory[id] || 0));
   wrap.innerHTML = html;
   wrap.querySelectorAll("[data-item-id]").forEach((el) => {
@@ -1368,17 +1358,6 @@ document.getElementById("buyBombBtn").onclick = () => {
   playSfx("coin");
   renderSupplies();
 };
-document.getElementById("buyKotaifudaBtn").onclick = () => {
-  if ((state.inventory.kotaifuda || 0) >= KOTAIFUDA_CAP) { alert(`助っ人の札は最大${KOTAIFUDA_CAP}枚までしか持てません`); return; }
-  if (state.gold < ITEMS.kotaifuda.price) { alert("お金が足りません"); return; }
-  state.gold -= ITEMS.kotaifuda.price;
-  state.inventory.kotaifuda = (state.inventory.kotaifuda || 0) + 1;
-  saveState();
-  playSfx("coin");
-  renderSupplies();
-  renderPartySelect(); // 最大人数のヒント表示(パーティ編成欄)も即座に更新する
-};
-
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
 
