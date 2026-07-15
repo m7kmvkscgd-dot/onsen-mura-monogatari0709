@@ -37,7 +37,6 @@ function viewSkillTree(characterId, onClose) {
 // 無ければオーバーレイを閉じて名簿を再描画する(「🎓スキル選択」バッジが消える)
 function resolveSkillChoice(character, level, side, skill) {
   applySkillChoice(character, { ...skill, side }, level);
-  playSfx("skill_confirm");
   const idx = state.pendingSkillChoices.findIndex((e) => e.characterId === character.id && e.level === level);
   if (idx !== -1) state.pendingSkillChoices.splice(idx, 1);
   saveState();
@@ -47,6 +46,47 @@ function resolveSkillChoice(character, level, side, skill) {
     document.getElementById("skillChoiceOverlay").style.display = "none";
     renderRosterList();
   }
+}
+// スキル決定時のテンションを上げる演出。決定ボタンの位置から青緑の光の粒を弾き飛ばし、
+// 画面全体を軽くフラッシュさせ、中央に「習得！」バナーを出す(お守りの大当たり演出=
+// playRareOmamoriEffectと同じ構造だが、色と規模はこちらの方が控えめ=毎回起こる演出のため)
+function playSkillAcquiredEffect(anchorEl, skillName) {
+  playSfx("skill_confirm");
+  anchorEl.classList.add("skill-acquired-pop");
+
+  const flash = document.createElement("div");
+  flash.className = "skill-acquired-flash-overlay";
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 750);
+
+  const banner = document.createElement("div");
+  banner.className = "skill-acquired-banner";
+  banner.textContent = `${skillName}を習得！`;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 900);
+
+  const rect = anchorEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+  const layer = document.createElement("div");
+  layer.className = "skill-acquired-particle-layer";
+  document.body.appendChild(layer);
+  const PARTICLE_COUNT = 16;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = document.createElement("div");
+    p.className = "skill-acquired-particle";
+    const size = 3 + Math.random() * 6;
+    p.style.width = `${size}px`;
+    p.style.height = `${size}px`;
+    p.style.left = `${cx}px`;
+    p.style.top = `${cy}px`;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 90;
+    p.style.setProperty("--sa-x", `${(Math.cos(angle) * dist).toFixed(1)}px`);
+    p.style.setProperty("--sa-y", `${(Math.sin(angle) * dist).toFixed(1)}px`);
+    p.style.setProperty("--sa-dur", `${(0.55 + Math.random() * 0.35).toFixed(2)}s`);
+    layer.appendChild(p);
+  }
+  setTimeout(() => layer.remove(), 1050);
 }
 
 function renderSkillTreeContent(character, pendingLevel, onClose) {
@@ -127,7 +167,12 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
       `;
       detail.style.display = "block";
       if (isThisPending) {
-        detail.querySelector(".skill-confirm-btn").onclick = () => resolveSkillChoice(character, lv, side, skill);
+        const confirmBtn = detail.querySelector(".skill-confirm-btn");
+        confirmBtn.onclick = () => {
+          confirmBtn.disabled = true; // 演出中の連打で二重に確定してしまわないようにする
+          playSkillAcquiredEffect(confirmBtn, skill.name);
+          setTimeout(() => resolveSkillChoice(character, lv, side, skill), 550);
+        };
       }
     };
   });

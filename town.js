@@ -1741,6 +1741,47 @@ function renderOnsenShrine() {
     });
   });
 }
+// 星4(最高レア)のお守りを授かった時だけのド派手な演出。画面全体を金色でフラッシュさせ、
+// 粒子を四方八方に弾き飛ばし、中央に大きな「大当たり！」バナーを出す(神隠しの道の演出=
+// playKamikakushiEffectと同じ構造、色と規模だけ「特大」にしてある)
+function playRareOmamoriEffect() {
+  playSfx("omikuji_daikichi"); // 既存の中で最も「大当たり感」のあるSEを流用(新規アセットは追加しない)
+  const flash = document.createElement("div");
+  flash.className = "omamori-rare-flash-overlay";
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1350);
+
+  const banner = document.createElement("div");
+  banner.className = "omamori-rare-banner";
+  banner.textContent = "大当たり！";
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 1550);
+
+  const layer = document.createElement("div");
+  layer.className = "omamori-rare-particle-layer";
+  document.body.appendChild(layer);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const cx = vw / 2, cy = vh * 0.4;
+  const PARTICLE_COUNT = 36; // kamikakushi(22個)よりさらに派手にするため多めに散らす
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = document.createElement("div");
+    p.className = "omamori-rare-particle";
+    const size = 4 + Math.random() * 8;
+    p.style.width = `${size}px`;
+    p.style.height = `${size}px`;
+    p.style.left = `${cx}px`;
+    p.style.top = `${cy}px`;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 90 + Math.random() * 160;
+    p.style.setProperty("--or-x", `${(Math.cos(angle) * dist).toFixed(1)}px`);
+    p.style.setProperty("--or-y", `${(Math.sin(angle) * dist).toFixed(1)}px`);
+    p.style.setProperty("--or-dur", `${(1.0 + Math.random() * 0.6).toFixed(2)}s`);
+    p.style.setProperty("--or-delay", `${(Math.random() * 0.25).toFixed(2)}s`);
+    layer.appendChild(p);
+  }
+  setTimeout(() => layer.remove(), 2100);
+}
 document.getElementById("shrineOfferBtn").onclick = () => {
   if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { alert("魂のかけらが足りません"); return; }
   // 神社で初めて引くお守りは確定で福禄寿の御守にする(まだ1つも授かっていない=これが最初の1回)
@@ -1749,13 +1790,15 @@ document.getElementById("shrineOfferBtn").onclick = () => {
   state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
   state.omamoriOwned.push(drawn.id);
   saveState();
-  playSfx("skill_confirm");
   const resultEl = document.getElementById("shrineDrawResult");
   resultEl.style.display = "block";
+  resultEl.classList.toggle("omamori-rare-result-card", drawn.tier === 4);
   resultEl.innerHTML = `
     <div class="roster-name">${drawn.name}(${drawn.reading}) を授かった!<span class="status-tag active">${omamoriRarityLabel(drawn.tier)}</span></div>
     <div class="roster-sub" style="margin-top:0.3rem;">${drawn.desc}</div>
   `;
+  if (drawn.tier === 4) playRareOmamoriEffect();
+  else playSfx("skill_confirm");
   renderOnsenShrine();
 };
 document.getElementById("toOnsenShrineBtn").onclick = () => {
