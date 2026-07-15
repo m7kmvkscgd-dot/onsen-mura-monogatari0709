@@ -88,7 +88,13 @@ function renderSmokeBombConfirm(actor) {
   const yesBtn = document.createElement("button");
   yesBtn.className = "big";
   yesBtn.textContent = "はい";
-  yesBtn.onclick = () => useSmokeBomb(actor);
+  yesBtn.onclick = () => {
+    // useSmokeBomb内のplaySmokeBombEffect(演出)が終わってbattle=nullになるまで#actionGridが
+    // そのまま残り続けるため、この間に連打すると煙玉が2個消費されてしまうバグがあった
+    if (battleActionLocked) return;
+    battleActionLocked = true;
+    useSmokeBomb(actor);
+  };
   grid.appendChild(yesBtn);
 
   const noBtn = document.createElement("button");
@@ -111,7 +117,11 @@ function renderExtinguishConfirm(actor) {
   const yesBtn = document.createElement("button");
   yesBtn.className = "big";
   yesBtn.textContent = "はい";
-  yesBtn.onclick = () => useExtinguish(actor);
+  yesBtn.onclick = () => {
+    if (battleActionLocked) return;
+    battleActionLocked = true;
+    useExtinguish(actor);
+  };
   grid.appendChild(yesBtn);
 
   const noBtn = document.createElement("button");
