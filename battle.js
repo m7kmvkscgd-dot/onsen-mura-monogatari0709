@@ -642,7 +642,7 @@ function runTreeSkill(actor, skill) {
           anyHit = true;
           hitTargets.push(t);
           if (r.shotDown) shotDownTargets.push(t);
-          playSfx(hitTakenSfxFor(r.dmg, t.maxHp));
+          playSfx(hitTakenSfxFor(r.dmg, t.maxHp, t.isSwarm));
           if (r.crit) { anyCrit = true; playCritEffects(t.instanceId, actor, r.dmg); }
         }
         else anyEvaded = true;
@@ -676,7 +676,7 @@ function runTreeSkill(actor, skill) {
           // 遅れて2回再生される見た目とテキストの表示タイミングがズレていた
           (hitInfo.logLines || []).forEach((line) => blog(line));
           popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
-          playSfx(hitTakenSfxFor(hitInfo.dmg, target.maxHp));
+          playSfx(hitTakenSfxFor(hitInfo.dmg, target.maxHp, target.isSwarm));
           if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
           playAttackVfx(target.instanceId, actor, "skill");
           if (r.hawkTargetIds && r.hawkTargetIds[i]) playHawkAttackVfx(actor, r.hawkTargetIds[i]);
@@ -689,7 +689,7 @@ function runTreeSkill(actor, skill) {
     }
     if (r && r.hit) {
       popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
-      playSfx(hitTakenSfxFor(r.dmg, target.maxHp));
+      playSfx(hitTakenSfxFor(r.dmg, target.maxHp, target.isSwarm));
       if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
     }
@@ -840,7 +840,7 @@ function runFormSkill(actor, skillKey) {
     targetableEnemies().forEach((e) => {
       const dmg = applyDamageToTarget(e, Math.max(1, Math.round(e.maxHp * skill.dmgPct)), blog, actor.label, null);
       popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
-      playSfx(hitTakenSfxFor(dmg, e.maxHp));
+      playSfx(hitTakenSfxFor(dmg, e.maxHp, e.isSwarm));
       applyPoison(e, resolveValue({ valueMin: skill.poisonMin, valueMax: skill.poisonMax }, skill.poisonMin));
     });
     renderBattleScreen();
@@ -949,7 +949,7 @@ function renderActionButtons(actor) {
             // 試験導入: 味方が被弾した時と同じ4段階の被弾SE(hitTakenSfxFor)を敵側にも流す。
             // 攻撃SE(playSfx(attackSfxFor)、t=0)から見て、非会心はNORMAL_ATTACK_HITSTOP_MS後(このreveal自体が
             // その時点で呼ばれる)、会心はplayCritEffects側の専用SEと重ねて即座に鳴る
-            playSfx(hitTakenSfxFor(result.dmg, target.maxHp));
+            playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
             maybeSpeakOnCrit(actor, result.crit);
             maybeSpeakOnKill(actor, target);
@@ -1049,7 +1049,7 @@ function renderActionButtons(actor) {
                   popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
                   hitTargets.push(t);
                   if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
-                  playSfx(hitTakenSfxFor(result.dmgs[i], t.maxHp));
+                  playSfx(hitTakenSfxFor(result.dmgs[i], t.maxHp, t.isSwarm));
                   applyAbilityOnHitInflicts(actor, t, ability, blog); // 旋風薙ぎ(薙ぎ払いに出血付与)など、このアビリティ専用の追加効果
                   if (result.crits && result.crits[i]) { anyCrit = true; playCritEffects(t.instanceId, actor, result.dmgs[i]); }
                 }
@@ -1070,7 +1070,7 @@ function renderActionButtons(actor) {
             const result = useAbility(actor, target, ability, blog);
             if (result && result.hit) {
               popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
-              playSfx(hitTakenSfxFor(result.dmg, target.maxHp));
+              playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
               if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
               if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
             }

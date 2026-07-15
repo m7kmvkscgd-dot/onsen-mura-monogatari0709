@@ -368,8 +368,10 @@ function loadSfxBuffer(name) {
     .catch(() => {}); // 個別のSEが読み込み・デコードに失敗しても他のSEの読み込みは止めない
 }
 Object.keys(SFX_EXT).forEach(loadSfxBuffer);
-// 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)
-function hitTakenSfxFor(dmg, maxHp) {
+// 被弾ダメージが対象の最大HPに占める割合に応じて効果音を出し分ける(小さい一撃と致命傷級で音の重さを変える)。
+// isSwarm(大群系の小さい敵)は個体のHPが小さくダメージ割合が大きく出やすいため、常に一番軽い音(hit_taken_1)に固定する
+function hitTakenSfxFor(dmg, maxHp, isSwarm) {
+  if (isSwarm) return "hit_taken_1";
   const ratio = maxHp > 0 ? dmg / maxHp : 0;
   if (ratio < 0.2) return "hit_taken_1";
   if (ratio < 0.4) return "hit_taken_2";
