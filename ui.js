@@ -188,18 +188,24 @@ function playTownAreaBgm() {
 // 差し替えることで背景・文字色・尺・SEを完全に分離する(ユーザー指定: 演出を勝敗で共有しない)。
 // 「ヒットストップ」は本物のゲームロジック停止ではなく、既存の会心演出と同じく
 // アニメーション自体の「間」(0%→35%で待たせてから弾ませる)で表現している
+// 帰還成功時のバナー(旧「勝利」表記)。以前は550ms後に自動で消えていたが、
+// ユーザー指示で画面タップを待ってから町へ進むように変更した
 function playVictoryBanner(onDone) {
   const overlay = document.getElementById("resultBannerOverlay");
   const text = document.getElementById("resultBannerText");
   overlay.className = "result-banner-overlay victory";
   text.className = "result-banner-text victory";
-  text.textContent = "勝利";
+  text.textContent = "帰還成功";
   overlay.style.display = "flex";
+  overlay.style.pointerEvents = "auto"; // 通常は演出のみでタップを透過させるが、ここだけタップで進めるようにする
   playSfx("victory");
-  setTimeout(() => {
+  const proceed = () => {
+    overlay.removeEventListener("pointerdown", proceed);
     overlay.style.display = "none";
+    overlay.style.pointerEvents = "none";
     onDone();
-  }, 550);
+  };
+  overlay.addEventListener("pointerdown", proceed);
 }
 function playDefeatBanner(onDone) {
   const overlay = document.getElementById("resultBannerOverlay");
