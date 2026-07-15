@@ -14,47 +14,93 @@
   }
   /* 被弾リアクション: シェイクとフラッシュを、斬撃VFX/SE/HPバー(いずれもt=0で即座に始まる)と
      同じフレームで開始させる(以前は0.05秒の遅延があり、「絵とSEは即座に出るのに敵の仰け反りだけ
-     遅れる」という同期ズレになっていた。ヒットストップ自体は別途まとめて実装する予定のため、
+     遅れる」という同期ズレになっていた。ヒットストップ自体は別途まとめて実装済みのため、
      ここでは単に他要素と足並みを揃えることだけを目的に遅延を撤廃した)。
      .hit-shakeと.hit-flashは常にセットで付与される(shakeClassFor参照)ため、
      両方が同時に付いた状態を1つのセレクタでまとめてanimationプロパティに指定する必要がある。
      .hit-shake単体/.hit-flash単体でそれぞれanimationを宣言すると、同じプロパティを取り合って
-     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正。
-     通常ヒットはhitShakeNormal(振幅/時間ともに基準の0.8倍)、会心/スキル攻撃はhitShakeStrong
-     (同1.2倍)を使い分ける(shakeClassForが.hit-shake-normal/.hit-shake-strongを付与する) */
+     どちらか片方(カスケードで後勝ちした方)しか実際には再生されない不具合があったための修正。 */
   @keyframes hitFlash {
     0%, 100% { filter: brightness(1); }
     30% { filter: brightness(2.4); }
   }
-  .hit-shake.hit-flash.hit-shake-normal {
-    animation: hitShakeNormal 144ms ease-in-out, hitFlash var(--dw-t-dmg) ease-out;
+  /* 被弾ノックバック(2026-07-15、左右対称ジッターから全面刷新)。
+     以前は原点を中心に何度も往復する左右対称の振動(hitShakeNormal/hitShakeStrong)で、
+     「揺れている」以上には見えなかった。任天堂/DQ11/オクトパストラベラー/FANTASIAN系の
+     被弾リアクションが持つ「殴られて衝撃を受けた」という説得力は、揺れの振幅ではなく
+     ①攻撃方向へ一方向に弾かれるノックバック ②押し込まれた瞬間の潰れ(Squash)→
+     飛ばされる方向への伸び(Stretch) ③わずかなバネの戻り(オーバーシュート) ④減衰して静止、
+     という非対称な運動カーブから来ている。この4点をtranslateY(カード本体、剛体の位置ズレ)と
+     scale(ポートレート画像のみ、.card-portrait-img)に分担させて再現する。
+     方向は「攻撃者から離れる向き」に統一: 敵は下(味方側)から殴られるので上へ、
+     味方は上(敵側)から殴られるので下へノックバックする(画面上の配置がそのまま向きの根拠になる
+     ため、個々の攻撃者の位置を計算する必要がない)。振幅はhit-shake-normal/strongの2段階を
+     そのまま踏襲(strongは概ね1.5倍)。所要時間も以前の144ms/216msから大きく変えず
+     (150ms/220ms)、「短く・速く・何百回見ても疲れない」というテンポを維持している */
+  @keyframes hitKnockbackEnemyNormal {
+    0%   { transform: translateY(0); }
+    16%  { transform: translateY(-5px); }
+    44%  { transform: translateY(1.4px); }
+    70%  { transform: translateY(-0.6px); }
+    100% { transform: translateY(0); }
   }
-  .hit-shake.hit-flash.hit-shake-strong {
-    animation: hitShakeStrong 216ms ease-in-out, hitFlash var(--dw-t-dmg) ease-out;
+  @keyframes hitKnockbackEnemyStrong {
+    0%   { transform: translateY(0); }
+    14%  { transform: translateY(-7.5px); }
+    40%  { transform: translateY(2px); }
+    68%  { transform: translateY(-1px); }
+    100% { transform: translateY(0); }
   }
-  /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更)。基準(1倍)の値 */
-  @keyframes hitShakeNormal {
-    0%, 100% { transform: translate(0, 0); }
-    10% { transform: translate(-2.4px, 0.8px); }
-    20% { transform: translate(2.4px, -0.8px); }
-    30% { transform: translate(-2.4px, 0.8px); }
-    40% { transform: translate(1.6px, -0.8px); }
-    50% { transform: translate(-1.6px, 0.8px); }
-    60% { transform: translate(1.6px, -0.8px); }
-    70% { transform: translate(-0.8px, 0.8px); }
-    80% { transform: translate(0.8px, 0); }
-    90% { transform: translate(-0.8px, 0); }
+  @keyframes hitKnockbackAllyNormal {
+    0%   { transform: translateY(0); }
+    16%  { transform: translateY(5px); }
+    44%  { transform: translateY(-1.4px); }
+    70%  { transform: translateY(0.6px); }
+    100% { transform: translateY(0); }
   }
-  @keyframes hitShakeStrong {
-    0%, 100% { transform: translate(0, 0); }
-    10% { transform: translate(-3.6px, 1.2px); }
-    20% { transform: translate(3.6px, -1.2px); }
-    30% { transform: translate(-3.6px, 1.2px); }
-    40% { transform: translate(2.4px, -1.2px); }
-    50% { transform: translate(-2.4px, 1.2px); }
-    60% { transform: translate(2.4px, -1.2px); }
-    70% { transform: translate(-1.2px, 1.2px); }
-    80% { transform: translate(1.2px, 0); }
-    90% { transform: translate(-1.2px, 0); }
+  @keyframes hitKnockbackAllyStrong {
+    0%   { transform: translateY(0); }
+    14%  { transform: translateY(7.5px); }
+    40%  { transform: translateY(-2px); }
+    68%  { transform: translateY(1px); }
+    100% { transform: translateY(0); }
+  }
+  .enemy-card.hit-shake.hit-flash.hit-shake-normal {
+    animation: hitKnockbackEnemyNormal 150ms ease-out, hitFlash var(--dw-t-dmg) ease-out;
+  }
+  .enemy-card.hit-shake.hit-flash.hit-shake-strong {
+    animation: hitKnockbackEnemyStrong 220ms ease-out, hitFlash var(--dw-t-dmg) ease-out;
+  }
+  .party-member.hit-shake.hit-flash.hit-shake-normal {
+    animation: hitKnockbackAllyNormal 150ms ease-out, hitFlash var(--dw-t-dmg) ease-out;
+  }
+  .party-member.hit-shake.hit-flash.hit-shake-strong {
+    animation: hitKnockbackAllyStrong 220ms ease-out, hitFlash var(--dw-t-dmg) ease-out;
+  }
+  /* ポートレート画像だけに掛かる潰れ(Squash)/伸び(Stretch)。カード全体ではなく.card-portrait-img
+     (敵イラスト/味方立ち絵の<img>本体のみ)に限定することで、名前ラベルやHPバーが歪まないようにしている。
+     縦方向に潰れて横に膨らむ(衝撃で押し込まれる)→逆に縦へ伸びて横が締まる(ノックバック方向へ
+     引っ張られる)→わずかに揺り戻す、という順で「弾力のある物体が衝撃を受けた」形の運動にした。
+     上下どちら向きのノックバックでも潰れ方は同じ(scaleは符号を持たないため)なので、
+     敵カード/味方カードで共通の1組のkeyframesを使い回せる */
+  @keyframes hitSquashPortraitNormal {
+    0%   { transform: scale(1, 1); }
+    12%  { transform: scale(1.09, 0.87); }
+    38%  { transform: scale(0.93, 1.07); }
+    64%  { transform: scale(1.02, 0.985); }
+    100% { transform: scale(1, 1); }
+  }
+  @keyframes hitSquashPortraitStrong {
+    0%   { transform: scale(1, 1); }
+    10%  { transform: scale(1.14, 0.82); }
+    34%  { transform: scale(0.90, 1.11); }
+    60%  { transform: scale(1.03, 0.97); }
+    100% { transform: scale(1, 1); }
+  }
+  .hit-shake.hit-flash.hit-shake-normal .card-portrait-img {
+    animation: hitSquashPortraitNormal 150ms ease-out;
+  }
+  .hit-shake.hit-flash.hit-shake-strong .card-portrait-img {
+    animation: hitSquashPortraitStrong 220ms ease-out;
   }
   @keyframes pathDimIn { from { opacity: 0; } to { opacity: 1; } }

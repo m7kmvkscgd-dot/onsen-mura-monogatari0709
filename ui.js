@@ -463,7 +463,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
       <div class="party-portrait-wrap">
-        <img src="${portraitSrc}">
+        <img class="card-portrait-img" src="${portraitSrc}">
         ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
       </div>
