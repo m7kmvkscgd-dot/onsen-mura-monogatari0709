@@ -895,10 +895,15 @@ function renderSkillSubMenu(actor, buttons) {
 
 // 通常攻撃(非会心・命中時のみ)専用のヒットストップ。effects.jsのCRIT_HITSTOP_MS(80ms、会心専用)
 // とは完全に別の定数・別のsetTimeoutで、会心側のコード・演出には一切触れていない。
-// CSSのanimation-delayではなく、着弾リアクション(揺れ・VFX・HPバー反映・次ターンへの進行)一式を
+// CSSのanimation-delayではなく、着弾リアクション(揺れ・HPバー反映・次ターンへの進行)一式を
 // 呼び出すタイミングそのものをここで止めるため、「戦闘進行として正しく止まる」本物の一時停止になる。
 // 25〜35msの範囲で調整したい場合はこの1箇所の値だけを変えればよい
 const NORMAL_ATTACK_HITSTOP_MS = 30;
+// 斬撃VFX(ATTACK_VFX_FRAME_MS=30ms/フレーム、effects.js)は、命中と同時に1フレーム目だけを
+// 即座に見せ(「斬撃が敵へ到達した瞬間」の合図)、ヒットストップ明けに続きのフレームから再開する。
+// 何フレーム目から再開するかは、ヒットストップの長さぶん既に経過したフレーム数+1として算出するため、
+// NORMAL_ATTACK_HITSTOP_MSを25〜35msの範囲で変えても自動的に正しいフレームに追従する
+const NORMAL_ATTACK_VFX_RESUME_FRAME = Math.floor(NORMAL_ATTACK_HITSTOP_MS / ATTACK_VFX_FRAME_MS) + 1;
 
 function renderActionButtons(actor) {
   battleSubMenuActive = false;
@@ -929,10 +934,12 @@ function renderActionButtons(actor) {
           applyStun(target, 1);
           blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
         }
-        // 着弾リアクション本体(揺れ・VFX・HPバー反映・次ターンへの進行)。通常ヒット(非会心)の時だけ
+        // 着弾リアクション本体(揺れ・HPバー反映・次ターンへの進行)。通常ヒット(非会心)の時だけ
         // NORMAL_ATTACK_HITSTOP_MS分の「間」を置いてから発火させ、会心・回避の時は従来通り
-        // 即座に発火する(会心演出=playCritEffects側のタイミング・処理には一切触れていない)
-        const reveal = () => {
+        // 即座に発火する(会心演出=playCritEffects側のタイミング・処理には一切触れていない)。
+        // vfxResumeFrameが渡された時(=ヒットストップ明けの再開時)は、既にt=0で表示済みの
+        // 1フレーム目の続きから再生する。渡されない時(会心・回避)は従来通り1フレーム目から通常再生する
+        const reveal = (vfxResumeFrame) => {
           if (result.hit) {
             popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
@@ -941,12 +948,20 @@ function renderActionButtons(actor) {
           }
           else playSfx("evade");
           renderBattleScreen();
-          if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+          if (result.hit) playAttackVfx(target.instanceId, actor, "normal", vfxResumeFrame);
           if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
           triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction(result.crit));
         };
-        if (result.hit && !result.crit) setTimeout(reveal, NORMAL_ATTACK_HITSTOP_MS);
-        else reveal();
+        if (result.hit && !result.crit) {
+          // 斬撃が敵へ「到達した瞬間」を表現するため、VFXの1フレーム目だけを命中と同フレームで
+          // 即座に表示する(renderBattleScreen()はまだ呼ばない。呼ぶと敵カードのDOMが作り直され、
+          // ここで貼ったVFXが消えてしまうため)。NORMAL_ATTACK_HITSTOP_MS後、reveal()側でカードを
+          // 作り直した上で続きのフレームから再生を再開する
+          playAttackVfx(target.instanceId, actor, "normal");
+          setTimeout(() => reveal(NORMAL_ATTACK_VFX_RESUME_FRAME), NORMAL_ATTACK_HITSTOP_MS);
+        } else {
+          reveal();
+        }
       });
     };
     grid.appendChild(atkBtn);

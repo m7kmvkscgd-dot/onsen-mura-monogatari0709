@@ -78,18 +78,24 @@ const TRANSFORM_ATTACK_VFX = {
   hebi: { normal: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
 };
 const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フレーム数は素材ごとに異なる(CLASS_ATTACK_VFX参照)
-function playAttackVfx(targetId, actor, kind) {
+// startFrame: 省略時は1(先頭から通常再生)。通常攻撃のヒットストップ(battle.js
+// NORMAL_ATTACK_HITSTOP_MS)は、命中と同時にこの関数を先頭から呼んで1フレーム目だけを見せ、
+// ヒットストップ明けにrenderBattleScreen()でカードが作り直された後、続きのフレームから
+// この関数をもう一度呼んで再開する、という2段構えで使う(renderBattleScreen()は敵カードのDOMを
+// 毎回作り直すため、単純に発火を早めただけでは再描画時にVFXが消えてしまうことへの対策)
+function playAttackVfx(targetId, actor, kind, startFrame) {
   const transformOverride = actor.transformForm && TRANSFORM_ATTACK_VFX[actor.transformForm];
   const cfg = (transformOverride && transformOverride[kind]) || (CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind]);
   if (!cfg) return; // 対応するエフェクトが設定されていない組み合わせ(僧侶のskillなど)は何も出さない
   const el = findVisibleCard(targetId);
   if (!el) return;
+  let frame = startFrame || 1;
+  if (frame > cfg.frames) return; // 続きが無ければ何も出さない(既に最終フレームまで再生済み)
   const img = document.createElement("img");
   img.className = "slash-vfx";
   img.style.width = cfg.size + "px";
-  img.src = `${cfg.prefix}1.png`;
+  img.src = `${cfg.prefix}${frame}.png`;
   el.appendChild(img);
-  let frame = 1;
   const timer = setInterval(() => {
     frame++;
     if (frame > cfg.frames) {
