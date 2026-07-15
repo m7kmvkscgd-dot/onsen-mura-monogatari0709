@@ -1041,7 +1041,9 @@ function deliverCarriedAllies() {
   fieldParty.forEach((c) => { c.carryingId = null; });
 }
 
-// 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率を1/4、財宝発見率を1/5に下げる
+// 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率・財宝発見率を下げる(固定値)
+const RETREAT_BATTLE_CHANCE = 0.19;
+const RETREAT_GOLD_CHANCE = 0.10;
 function rollEncounter(pathBias) {
   // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを3つ手に入れる特別な道(戦闘/財宝抽選はしない)
   if (pathBias === "kamikakushi") {
@@ -1058,8 +1060,9 @@ function rollEncounter(pathBias) {
   const bias = !retreating && pathBias ? currentPathDefs()[pathBias] : null;
   const baseBattle = bias ? bias.battle : 0.65;
   const baseGold = bias ? bias.gold : 0.25;
-  const battleChance = retreating ? baseBattle / 4 : baseBattle;
-  const goldChance = retreating ? baseGold / 5 : baseGold;
+  // 帰還中はユーザー指示で戦闘遭遇率19%・財宝発見率10%の固定値にした(以前は基準値の1/4・1/5だった)
+  const battleChance = retreating ? RETREAT_BATTLE_CHANCE : baseBattle;
+  const goldChance = retreating ? RETREAT_GOLD_CHANCE : baseGold;
   const roll = Math.random();
   if (roll < battleChance) {
     startBattle(pickEncounterForFloor(currentFloor, currentStage), bias);
