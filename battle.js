@@ -642,6 +642,7 @@ function runTreeSkill(actor, skill) {
           anyHit = true;
           hitTargets.push(t);
           if (r.shotDown) shotDownTargets.push(t);
+          playSfx(hitTakenSfxFor(r.dmg, t.maxHp));
           if (r.crit) { anyCrit = true; playCritEffects(t.instanceId, actor, r.dmg); }
         }
         else anyEvaded = true;
@@ -675,6 +676,7 @@ function runTreeSkill(actor, skill) {
           // 遅れて2回再生される見た目とテキストの表示タイミングがズレていた
           (hitInfo.logLines || []).forEach((line) => blog(line));
           popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
+          playSfx(hitTakenSfxFor(hitInfo.dmg, target.maxHp));
           if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
           playAttackVfx(target.instanceId, actor, "skill");
           if (r.hawkTargetIds && r.hawkTargetIds[i]) playHawkAttackVfx(actor, r.hawkTargetIds[i]);
@@ -687,6 +689,7 @@ function runTreeSkill(actor, skill) {
     }
     if (r && r.hit) {
       popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+      playSfx(hitTakenSfxFor(r.dmg, target.maxHp));
       if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
     }
@@ -837,6 +840,7 @@ function runFormSkill(actor, skillKey) {
     targetableEnemies().forEach((e) => {
       const dmg = applyDamageToTarget(e, Math.max(1, Math.round(e.maxHp * skill.dmgPct)), blog, actor.label, null);
       popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+      playSfx(hitTakenSfxFor(dmg, e.maxHp));
       applyPoison(e, resolveValue({ valueMin: skill.poisonMin, valueMax: skill.poisonMax }, skill.poisonMin));
     });
     renderBattleScreen();
@@ -1045,6 +1049,7 @@ function renderActionButtons(actor) {
                   popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
                   hitTargets.push(t);
                   if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
+                  playSfx(hitTakenSfxFor(result.dmgs[i], t.maxHp));
                   if (result.crits && result.crits[i]) { anyCrit = true; playCritEffects(t.instanceId, actor, result.dmgs[i]); }
                 }
                 else anyEvaded = true;
@@ -1063,6 +1068,7 @@ function renderActionButtons(actor) {
             const result = useAbility(actor, target, ability, blog);
             if (result && result.hit) {
               popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
+              playSfx(hitTakenSfxFor(result.dmg, target.maxHp));
               if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
               if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
             }
