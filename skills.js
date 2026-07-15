@@ -63,7 +63,7 @@ function playSkillAcquiredEffect(anchorEl, skillName) {
   banner.className = "skill-acquired-banner";
   banner.textContent = `${skillName}を習得！`;
   document.body.appendChild(banner);
-  setTimeout(() => banner.remove(), 900);
+  setTimeout(() => banner.remove(), 2400); // CSS側のskillAcquiredBannerPop(2.35s)より少し後に消す
 
   const rect = anchorEl.getBoundingClientRect();
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;

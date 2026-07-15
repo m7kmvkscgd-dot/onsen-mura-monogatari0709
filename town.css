@@ -224,6 +224,10 @@
   /* 最初の職業選び画面: つかみの第一印象を作る画面のため、リスト羅列ではなく1体ずつ大きい絵を
      見せて左右ボタンでめくるカルーセル形式にしてある(以前は48x48の小さいサムネが縦に並ぶだけの
      地味な一覧だった) */
+  /* この画面だけ、共通の.body-pad(margin-top:34vh)だと小さめの端末で「決めるボタン」まで
+     スクロールしないと届かないとの指摘があったため、上のヒーロー領域を狭めて(22vh)
+     カルーセル全体(写真+名前+説明+技+ボタン)がスクロール無しで収まるようにした */
+  #screen-first-character .body-pad { margin-top: 22vh; }
   .first-char-carousel { display: flex; flex-direction: column; align-items: center; }
   .first-char-photo-wrap { position: relative; width: 100%; max-width: 220px; margin: 0 auto 0.7rem; }
   .first-char-photo {
