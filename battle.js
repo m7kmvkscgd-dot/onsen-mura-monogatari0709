@@ -410,13 +410,7 @@ function processNext() {
     // 逃走準備(fleeState==="preparing")の解決はnextRound()側でラウンドの節目にまとめて行うため、
     // ここでは何もしない(このactorがここに来る時点で既に"fled"になっているか、まだ"preparing"のまま
     // 通常通り行動選択に進む=このラウンド中はまだ逃げていないことになる)
-    // 発狂中の吹き出し(このキャラの手番が来るたび50%)。発狂だけは複数人が同時に喋ることを
-    // 許すため、通常のミューテックスとは別枠のcategoryを使う。ユーザー指示により「発狂中は
-    // 行動不能になることがある」仕様は廃止したため、ここではセリフ判定のみ行い、以降は
-    // 通常通り行動選択に進む(ステータスの弱体化自体はfatigueMalusで別途かかっている)
-    if (stressTier(actor.fatigue) >= 4 && Math.random() < DIALOGUE_CHANCE.breakdownPerTurn) {
-      trySpeak(actor, "breakdown");
-    }
+    // 発狂中の吹き出しトリガーは一時停止中
     if (actor.reloading) {
       actor.reloading = false;
       // 土嚢展開(reloadImmuneのstatMod)が有効な間は装填を発生させない
@@ -1332,6 +1326,7 @@ function afterPlayerAction() {
 function victory() {
   stopBattleBgm();
   playSfx("victory");
+  unlockPeaceDialogueAfterVictory(); // 平和な掛け合い: この勝利をもって次に条件を満たした時1回だけ発火できるようにする
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;

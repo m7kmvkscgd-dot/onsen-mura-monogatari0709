@@ -285,22 +285,23 @@ function stressTier(fatigue) {
   return 0;
 }
 
-// キャラの立ち絵を、ストレス段階に応じて丸ごと差し替える(黒もやもやの透過オーバーレイ方式は廃止)。
-// tier0=通常、tier1(40-59)=軽度、tier2/3(60-99)=重度、tier4(100)=パニック
+// キャラの立ち絵を、ストレス値に応じて丸ごと差し替える(黒もやもやの透過オーバーレイ方式は廃止)。
+// 50%超=軽度、75%超=重度、100=発狂。表情の切り替えはstressTier()(セリフ判定等で使う40/60/80/100の
+// 4段階)とは別基準のため、ここでは直接fatigueの値を見る
 function characterPortraitSrc(c) {
   const cls = CLASSES[c.classId];
-  const tier = stressTier(c.fatigue);
-  if (tier === 0) return cls.image;
+  const f = c.fatigue || 0;
   const variants = CLASS_STRESS_IMAGES[c.classId];
-  if (tier === 1) return variants.mild;
-  if (tier === 4) return variants.panic;
-  return variants.severe;
+  if (f >= 100) return variants.panic;
+  if (f > 75) return variants.severe;
+  if (f > 50) return variants.mild;
+  return cls.image;
 }
 
-// ステータス詳細画面専用。ストレス無し(tier0)の時だけCLASS_STATUS_PORTRAITを使い、
+// ステータス詳細画面専用。ストレス無し(50%以下)の時だけCLASS_STATUS_PORTRAITを使い、
 // ストレスがある時はcharacterPortraitSrc()と同じくCLASS_STRESS_IMAGESを使う
 function statusPortraitSrc(c) {
-  if (stressTier(c.fatigue) === 0) return CLASS_STATUS_PORTRAIT[c.classId];
+  if ((c.fatigue || 0) <= 50) return CLASS_STATUS_PORTRAIT[c.classId];
   return characterPortraitSrc(c);
 }
 

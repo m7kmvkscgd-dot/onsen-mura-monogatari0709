@@ -548,22 +548,14 @@ function checkPinchTrigger(target, hpBefore) {
     else trySpeak(target, "selfPinch");
   }, 500);
 }
-// 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)と、
-// ストレスを抱えている仲間の愚痴セリフ(20%、発狂=tier4は別枠で処理済みなのでtier1〜3のみ対象)を判定する
+// 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)を判定する。
+// ストレスを抱えている仲間の愚痴セリフ(stressLight/Mid/High)のトリガーは一時停止中
 function maybeSpeakOnFloorAdvance() {
   const alive = fieldParty.filter((c) => c.status === "active");
   if (alive.length === 0) return;
   const avgLevel = alive.reduce((sum, c) => sum + c.level, 0) / alive.length;
   if (currentFloor > avgLevel * DANGER_FLOOR_LEVEL_MULT && Math.random() < DIALOGUE_CHANCE.dangerFloor) {
     trySpeak(alive[Math.floor(Math.random() * alive.length)], "dangerFloor");
-  }
-  if (Math.random() < DIALOGUE_CHANCE.stressFloor) {
-    const stressed = alive.filter((c) => { const t = stressTier(c.fatigue); return t >= 1 && t <= 3; });
-    if (stressed.length > 0) {
-      const speaker = stressed[Math.floor(Math.random() * stressed.length)];
-      const tier = stressTier(speaker.fatigue);
-      trySpeak(speaker, tier === 1 ? "stressLight" : tier === 2 ? "stressMid" : "stressHigh");
-    }
   }
 }
 // entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す。

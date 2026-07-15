@@ -47,7 +47,7 @@ const CLASS_ONSEN_RELIEF_IMAGE = {
 };
 
 // ストレス段階ごとのキャラ立ち絵差し替え(通常時はCLASSES[classId].imageをそのまま使う)。
-// mild=ストレス40〜59、severe=60〜99、panic=100(stressTier()の1/2・3/4に対応)
+// mild=ストレス50超、severe=75超、panic=100(engine.jsのcharacterPortraitSrc()参照)
 const CLASS_STRESS_IMAGES = {
   samurai: { mild: "assets/class_samurai_mild.png", severe: "assets/class_samurai_severe.png", panic: "assets/class_samurai_panic.png" },
   ninja: { mild: "assets/class_ninja_mild.png", severe: "assets/class_ninja_severe.png", panic: "assets/class_ninja_panic.png" },
