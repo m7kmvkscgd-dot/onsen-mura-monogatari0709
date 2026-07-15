@@ -581,9 +581,10 @@ function runTreeSkill(actor, skill) {
     blog("八幡神の御守の加護で、技を無償で繰り出せた！");
   }
   if (action.kind === "transform") {
+    const mpBeforeCost = actor.mp; // 3択の「戻る」で変身をやめた時、MP消費を取り消せるよう直前の値を控えておく
     const result = useTreeSkill(actor, actor, skill, blog); // MP消費/不足判定のみ処理される
     if (result && result.failed) { battleActionLocked = false; return; } // 再描画を挟まず抜けるため、ロックを自分で解除しておく
-    renderTransformFormPicker(actor);
+    renderTransformFormPicker(actor, mpBeforeCost);
     return;
   }
   if (action.kind === "buffSelf") {
@@ -731,7 +732,9 @@ function renderTreeSkillAllyPicker(actor, skill) {
 
 // 変化の術: カラス/ガマ/ヘビの3択を表示する。カラスだけは変身直後にすぐ行動できる
 // (ターンを消費せず同じactorの行動選択にそのまま戻る)特典があり、ガマ/ヘビは通常通りそこで手番を終える
-function renderTransformFormPicker(actor) {
+// mpBeforeCost: このピッカーを開く直前のMP。「戻る」で変身自体をやめた時、useTreeSkillが既に
+// 引いていたMP消費を巻き戻すために使う(消費だけされて何も選ばずに戻れてしまうバグの修正)
+function renderTransformFormPicker(actor, mpBeforeCost) {
   battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
@@ -754,7 +757,10 @@ function renderTransformFormPicker(actor) {
   const backBtn = document.createElement("button");
   backBtn.className = "big";
   backBtn.textContent = "戻る";
-  backBtn.onclick = () => renderActionButtons(actor);
+  backBtn.onclick = () => {
+    if (mpBeforeCost != null) actor.mp = mpBeforeCost;
+    renderActionButtons(actor);
+  };
   grid.appendChild(backBtn);
 }
 // ガマの「丸呑み」「吐き出す」/ヘビの「脱皮」「毒液散布」。いずれも専用クールタイム(MPではない、
