@@ -1243,7 +1243,7 @@ function renderSupplies() {
   document.getElementById("potionOwned").textContent = state.inventory.potion || 0;
   document.getElementById("smokeBombOwned").textContent = state.inventory.smokeBomb || 0;
   document.getElementById("buyPotionSupplyBtn").textContent = `購入(${ITEMS.potion.price}G)`;
-  document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || (state.inventory.potion || 0) >= POTION_CAP || state.gold < ITEMS.potion.price;
+  document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || state.gold < ITEMS.potion.price;
   document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
   document.getElementById("buySmokeBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
   // 野営具は旅支度屋を建築するまで出発画面にラインナップされない
@@ -1322,7 +1322,6 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
   if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if ((state.inventory.potion || 0) >= POTION_CAP) { alert(`回復薬は最大${POTION_CAP}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
