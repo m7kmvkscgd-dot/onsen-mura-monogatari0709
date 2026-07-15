@@ -205,7 +205,12 @@
   .enemy-card.dead { opacity: 0.25; }
   .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
-  .enemy-card.swarm img { width: 48px; height: 48px; }
+  /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、
+     height:auto)と詳細度が同じ(クラス2つ+タグ)ため、CSSの記述順で後にあるこちらが勝ってしまい、
+     攻撃エフェクト(本来はJSでwidthだけ指定してheightはautoで縦横比を保つ)の高さまで48pxに
+     押しつぶされてしまっていた(大群系の敵に対してだけヒットエフェクトが極端に潰れて小さく見える
+     不具合の原因)。明示的に対象から除外して、通常サイズの敵と同じ大きさでエフェクトが出るようにした */
+  .enemy-card.swarm img:not(.slash-vfx) { width: 48px; height: 48px; }
   .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
   /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定+overflow:hidden)の
      枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
