@@ -405,71 +405,6 @@ function playDungeonMoveTransition(actualLogic, speedMultiplier) {
   setTimeout(proceedToFade, animMs + 200); // 安全策: onfinishが発火しない場合でも止まらないように
 }
 
-// 帰還ボタン(advanceBtnがretreating中に表示する「帰還」ラベル)を1.5秒長押しすると、歩き演出/暗転を
-// 一切挟まずに1階層ずつ即座に下り続ける高速帰還モードに入る。指を離すと即座に解除される
-// (RETREAT_MOVE_SPEED_MULTIPLIERによる「連打で3倍速」よりさらに踏み込んだ、演出を完全に飛ばす操作)
-const FAST_RETREAT_HOLD_MS = 1500;
-const FAST_RETREAT_STEP_MS = 150;
-let fastRetreatHoldTimer = null;
-let fastRetreatInterval = null;
-let fastRetreatActive = false;
-let suppressNextAdvanceClick = false;
-function stopFastRetreat() {
-  if (fastRetreatInterval) { clearInterval(fastRetreatInterval); fastRetreatInterval = null; }
-  if (fastRetreatActive) {
-    fastRetreatActive = false;
-    document.getElementById("advanceBtn").classList.remove("fast-retreat-active");
-  }
-}
-function fastRetreatStep() {
-  if (!retreating) { stopFastRetreat(); return; }
-  const advanceBtnEl = document.getElementById("advanceBtn");
-  // 瀕死アラート等の割り込みでボタンが無効化されている間は自動歩行を止める(モーダルの選択を
-  // プレイヤーの手に委ねるため。同じ判断はrenderDungeon()側の自己修復ロジックとも整合させてある)
-  if (advanceBtnEl.disabled) { stopFastRetreat(); return; }
-  if (!document.getElementById("screen-dungeon").classList.contains("active")) { stopFastRetreat(); return; }
-  const targetFloor = currentFloor - 1;
-  if (teahouseOfferedForFloor(targetFloor)) {
-    stopFastRetreat();
-    showTeahouseOffer(
-      () => playDungeonMoveTransition(() => moveOneFloor(null, true), RETREAT_MOVE_SPEED_MULTIPLIER),
-      () => playDungeonMoveTransition(() => moveOneFloor(null), RETREAT_MOVE_SPEED_MULTIPLIER)
-    );
-    return;
-  }
-  moveOneFloor(null);
-  // moveOneFloor内で戦闘開始/finishRetreat()により画面が切り替わっていたら、そこで自動的に停止する
-  if (!retreating || !document.getElementById("screen-dungeon").classList.contains("active")) stopFastRetreat();
-}
-function startFastRetreat() {
-  if (fastRetreatActive) return;
-  fastRetreatActive = true;
-  suppressNextAdvanceClick = true; // 長押しが発動した後の指離しで合成clickが発火しても、二重に1階層進めないようにする
-  document.getElementById("advanceBtn").classList.add("fast-retreat-active");
-  playSfx("select");
-  fastRetreatStep();
-  fastRetreatInterval = setInterval(fastRetreatStep, FAST_RETREAT_STEP_MS);
-}
-function armFastRetreatHold() {
-  if (!retreating) return;
-  clearTimeout(fastRetreatHoldTimer);
-  fastRetreatHoldTimer = setTimeout(() => { fastRetreatHoldTimer = null; startFastRetreat(); }, FAST_RETREAT_HOLD_MS);
-}
-function disarmFastRetreatHold() {
-  clearTimeout(fastRetreatHoldTimer);
-  fastRetreatHoldTimer = null;
-  stopFastRetreat();
-}
-(() => {
-  const btn = document.getElementById("advanceBtn");
-  btn.addEventListener("touchstart", armFastRetreatHold, { passive: true });
-  btn.addEventListener("touchend", disarmFastRetreatHold);
-  btn.addEventListener("touchcancel", disarmFastRetreatHold);
-  btn.addEventListener("mousedown", armFastRetreatHold);
-  btn.addEventListener("mouseup", disarmFastRetreatHold);
-  btn.addEventListener("mouseleave", disarmFastRetreatHold);
-})();
-
 // 「里に戻る」を押した最初の一押しから、すぐに1階層分下る(以前はモード切り替えのみで、
 // 実際に1階層下るには帰還ボタンをもう一度押す必要があり「押しても階層が下がらない」ように
 // 見えていた)。以後は「帰還」ボタン(advanceBtn)を押すたびに1階層ずつ下って里まで歩いて帰る
@@ -660,9 +595,6 @@ document.getElementById("floorBadge").addEventListener("touchend", (e) => {
 }, { passive: false });
 document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
 document.getElementById("advanceBtn").onclick = () => {
-  // 高速帰還モードの長押しが発動した直後は、指を離した時に発火する合成clickで
-  // さらにもう1階層進んでしまわないよう、この1回だけ無視する
-  if (suppressNextAdvanceClick) { suppressNextAdvanceClick = false; return; }
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     alert("行動できる仲間がいません");
     return;
