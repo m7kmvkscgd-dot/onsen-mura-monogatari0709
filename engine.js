@@ -733,6 +733,8 @@ function initPassives() {
     guardPartyAtkBuff: 0, // 自分のかばうが成功した瞬間、味方全体に3ターンの攻撃力+この値を配る(鼓舞の盾)
     bleedFollowupOnHit: false, // 出血中の敵への通常攻撃が命中した時、出血スタックを3追加する(追い討ち)
     abilityMpDiscount: {}, // { abilityType: 固定MP割引量 } 職業の基本アビリティ(薙ぎ払い等)のMP消費を固定値で下げる(舞の型など)
+    abilityOnHitInflicts: {}, // { abilityType: [{type,chance,value,valueMin,valueMax,turns}] } 特定の職業基本アビリティ(薙ぎ払い等)が命中した敵にだけ状態異常を付与する(旋風薙ぎなど)
+    abilityAoeSelfBuffs: {}, // { abilityType: [{stat,perHitMult,turns}] } 特定の職業基本アビリティ(薙ぎ払い等)が命中した敵の数に応じて自分に一時バフを与える(円舞など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -803,6 +805,20 @@ function applySkillChoice(character, skill, level) {
       p.abilityMpDiscount = p.abilityMpDiscount || {};
       Object.keys(add.abilityMpDiscount).forEach((k) => {
         p.abilityMpDiscount[k] = (p.abilityMpDiscount[k] || 0) + add.abilityMpDiscount[k];
+      });
+    }
+    if (add.abilityOnHitInflict) {
+      p.abilityOnHitInflicts = p.abilityOnHitInflicts || {};
+      Object.keys(add.abilityOnHitInflict).forEach((k) => {
+        p.abilityOnHitInflicts[k] = p.abilityOnHitInflicts[k] || [];
+        p.abilityOnHitInflicts[k].push(add.abilityOnHitInflict[k]);
+      });
+    }
+    if (add.abilityAoeSelfBuff) {
+      p.abilityAoeSelfBuffs = p.abilityAoeSelfBuffs || {};
+      Object.keys(add.abilityAoeSelfBuff).forEach((k) => {
+        p.abilityAoeSelfBuffs[k] = p.abilityAoeSelfBuffs[k] || [];
+        p.abilityAoeSelfBuffs[k].push(add.abilityAoeSelfBuff[k]);
       });
     }
   }
@@ -1500,6 +1516,37 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     });
   }
   return dmg;
+}
+// 特定の職業基本アビリティ(薙ぎ払い等)がヒットした敵にだけ状態異常を付与する受動効果(旋風薙ぎなど)。
+// applyDamageToTarget内のonHitInflicts(通常攻撃全般に乗る効果)とは別枠で、abilityType(呼び出し元が
+// 明示的に渡す)が一致する時だけ判定する。呼び出し元(battle.js)がAOEアビリティの命中判定ループの中で
+// ヒットした対象ごとに呼ぶ想定
+function applyAbilityOnHitInflicts(actor, target, abilityType, log) {
+  if (!actor || !actor.passives || !actor.passives.abilityOnHitInflicts || target.hp <= 0) return;
+  const list = actor.passives.abilityOnHitInflicts[abilityType];
+  if (!list) return;
+  list.forEach((oh) => {
+    if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
+      const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
+      if (oh.type === "poison") applyPoison(target, (oh.value || 3) + izanamiBoost);
+      if (oh.type === "bleed") applyBleed(target, resolveValue(oh, 2) + izanamiBoost);
+      if (oh.type === "burn") applyBurn(target, oh.turns || 3);
+      if (oh.type === "stun") applyStun(target, oh.turns || 1);
+      if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
+      if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
+    }
+  });
+}
+// 特定の職業基本アビリティ(薙ぎ払い等)が命中させた敵の数に応じて、自分に一時バフを与える受動効果(円舞など)。
+// hitCountが0(1体も当たらなかった)場合は何もしない。呼び出し元(battle.js)がAOEアビリティの
+// 命中判定ループが終わった後、実際に命中した数を渡して1回だけ呼ぶ想定
+function applyAbilityAoeSelfBuffs(actor, abilityType, hitCount) {
+  if (!actor || !actor.passives || !actor.passives.abilityAoeSelfBuffs || hitCount <= 0) return;
+  const list = actor.passives.abilityAoeSelfBuffs[abilityType];
+  if (!list) return;
+  list.forEach((b) => {
+    applyStatMod(actor, b.stat, hitCount * b.perHitMult, b.turns);
+  });
 }
 // 狩人「鷹を呼ぶ」: 鷹が出ている間、狩人自身の単体攻撃(通常攻撃・単体アビリティ・単体スキル)に
 // 鷹も追撃する。命中/回避のどちらでも呼ぶ想定(外れても鷹は独立して追撃する)。全体攻撃からは呼ばない

@@ -1050,12 +1050,14 @@ function renderActionButtons(actor) {
                   hitTargets.push(t);
                   if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
                   playSfx(hitTakenSfxFor(result.dmgs[i], t.maxHp));
+                  applyAbilityOnHitInflicts(actor, t, ability, blog); // 旋風薙ぎ(薙ぎ払いに出血付与)など、このアビリティ専用の追加効果
                   if (result.crits && result.crits[i]) { anyCrit = true; playCritEffects(t.instanceId, actor, result.dmgs[i]); }
                 }
                 else anyEvaded = true;
               });
               if (anyEvaded) playSfx("evade");
               if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
+              applyAbilityAoeSelfBuffs(actor, ability, hitTargets.length); // 円舞(薙ぎ払いの命中数に応じて自分に回避バフ)など
             }
             renderBattleScreen();
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));

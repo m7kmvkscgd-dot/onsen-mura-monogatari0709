@@ -874,11 +874,11 @@ const SKILL_TREES = {
       right: { name: "足払い", desc: "敵単体へ90%ダメージ、85%の確率でスタン(1ターン)", mp: 2, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     3: {
-      left: { name: "円舞", desc: "崩し・威圧などでデバフを受けている敵へのダメージ+20%", mp: 0, passive: { woundBonus: { mult: 1.2, ailment: "debuff" } } },
+      left: { name: "円舞", desc: "薙ぎ払いが命中した敵の数×20%、次の自分のターンまで回避率が上がる", mp: 0, passive: { abilityAoeSelfBuff: { physicalAttackAll: { stat: "evasionAdd", perHitMult: 0.2, turns: 2 } } } },
       right: { name: "崩し", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     4: {
-      left: { name: "旋風薙ぎ", desc: "敵全体へ100%ダメージ、出血2〜4を付与", mp: 4, action: { kind: "damage", aoe: true, mult: 1.0, inflict: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 4 } } },
+      left: { name: "旋風薙ぎ", desc: "薙ぎ払いが出血2〜4を付与するようになる", mp: 0, passive: { abilityOnHitInflict: { physicalAttackAll: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 4 } } } },
       right: { name: "威圧", desc: "通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
