@@ -986,7 +986,7 @@ const SKILL_TREES = {
   onmyoji: {
     2: {
       left: { name: "火遁符", desc: "敵単体へ140%の魔法ダメージ、25%の確率で炎上(3ターン)を付与", mp: 3, action: { kind: "damage", mult: 1.4, useMag: true, inflict: { type: "burn", chance: 0.25, turns: 3 } } },
-      right: { name: "呪縛符", desc: "通常攻撃時、25%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.25, turns: 3 } } },
+      right: { name: "呪縛符", desc: "通常攻撃時、50%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.5, turns: 3 } } },
     },
     3: {
       left: { name: "水遁符", desc: "敵全体へ85%の魔法ダメージ", mp: 5, action: { kind: "damage", aoe: true, mult: 0.85, useMag: true } },
