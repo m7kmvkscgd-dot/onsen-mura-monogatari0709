@@ -12,7 +12,10 @@
     55% { transform: translate(-50%, -7px) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
   }
-  /* ヒットストップ: シェイク/フラッシュの開始を0.05秒だけ遅らせ、一瞬の「間」を作ってから反応させる。
+  /* 被弾リアクション: シェイクとフラッシュを、斬撃VFX/SE/HPバー(いずれもt=0で即座に始まる)と
+     同じフレームで開始させる(以前は0.05秒の遅延があり、「絵とSEは即座に出るのに敵の仰け反りだけ
+     遅れる」という同期ズレになっていた。ヒットストップ自体は別途まとめて実装する予定のため、
+     ここでは単に他要素と足並みを揃えることだけを目的に遅延を撤廃した)。
      .hit-shakeと.hit-flashは常にセットで付与される(shakeClassFor参照)ため、
      両方が同時に付いた状態を1つのセレクタでまとめてanimationプロパティに指定する必要がある。
      .hit-shake単体/.hit-flash単体でそれぞれanimationを宣言すると、同じプロパティを取り合って
@@ -24,10 +27,10 @@
     30% { filter: brightness(2.4); }
   }
   .hit-shake.hit-flash.hit-shake-normal {
-    animation: hitShakeNormal 144ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
+    animation: hitShakeNormal 144ms ease-in-out, hitFlash var(--dw-t-dmg) ease-out;
   }
   .hit-shake.hit-flash.hit-shake-strong {
-    animation: hitShakeStrong 216ms ease-in-out 0.05s backwards, hitFlash var(--dw-t-dmg) ease-out 0.05s backwards;
+    animation: hitShakeStrong 216ms ease-in-out, hitFlash var(--dw-t-dmg) ease-out;
   }
   /* 小刻みな振動(以前の数回の大きな横揺れから、細かく素早い振幅の小さい揺れに変更)。基準(1倍)の値 */
   @keyframes hitShakeNormal {
