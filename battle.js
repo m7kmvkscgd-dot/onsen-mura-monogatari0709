@@ -938,6 +938,12 @@ function renderActionButtons(actor) {
           applyStun(target, 1);
           blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
         }
+        // 被弾SE(敵側)は攻撃SEと同時(t=0)に鳴らす。以前はヒットストップ明け(NORMAL_ATTACK_HITSTOP_MS後)の
+        // reveal()内で鳴らしていたが、「効果音の遅れをなくしてほしい」との指示で分離した。
+        // 狩人だけは矢が届くまでの間を活かしたいとの指示で、従来通りreveal()内(ヒットストップ後)のまま残す
+        if (result.hit && actor.classId !== "hunter") {
+          playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
+        }
         // 着弾リアクション本体(揺れ・HPバー反映・次ターンへの進行)。通常ヒット(非会心)の時だけ
         // NORMAL_ATTACK_HITSTOP_MS分の「間」を置いてから発火させ、会心・回避の時は従来通り
         // 即座に発火する(会心演出=playCritEffects側のタイミング・処理には一切触れていない)。
@@ -946,10 +952,7 @@ function renderActionButtons(actor) {
         const reveal = (vfxResumeFrame) => {
           if (result.hit) {
             popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-            // 試験導入: 味方が被弾した時と同じ4段階の被弾SE(hitTakenSfxFor)を敵側にも流す。
-            // 攻撃SE(playSfx(attackSfxFor)、t=0)から見て、非会心はNORMAL_ATTACK_HITSTOP_MS後(このreveal自体が
-            // その時点で呼ばれる)、会心はplayCritEffects側の専用SEと重ねて即座に鳴る
-            playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
+            if (actor.classId === "hunter") playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
             maybeSpeakOnCrit(actor, result.crit);
             maybeSpeakOnKill(actor, target);
