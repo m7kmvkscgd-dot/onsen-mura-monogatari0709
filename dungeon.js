@@ -198,6 +198,7 @@ document.getElementById("dungeonSwapBtn").onclick = () => {
   `;
   targets.forEach((c) => {
     picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
       pendingAllyPick = null;
       closeDungeonTargetPicker();
       swapReserveMember(c, dlog);
@@ -243,6 +244,7 @@ function pickDungeonAllyTarget(promptText, onPicked) {
   `;
   targets.forEach((c) => {
     picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
+      if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
       pendingAllyPick = null;
       closeDungeonTargetPicker();
       onPicked(c);

@@ -4,6 +4,13 @@ let battle = null;
 let pendingEnemyPick = null; // 対象選択待ちの間、敵カード画像を直接タップしても選べるようにする際のコールバック
 let pendingAllyPick = null; // 同様に、味方対象の選択待ちの間、味方の画像を直接タップしても選べるようにする際のコールバック
 let battleSubMenuActive = false; // 対象選択/道具メニューなどのサブ画面を表示中かどうか(trueの間はコマンド外タップで一段戻れる)
+// このターンで既に行動系ボタン(攻撃/技/かばう/逃げる等)が押されたかどうか。renderActionButtons()の
+// たびにfalseへ戻す。モバイル特有の「ほぼ同時の2本指/2タップが、片方の処理でボタンがDOMから
+// 消える前にもう片方も同じ要素へロックオンして配送される」レースにより、pendingEnemyPick/
+// pendingAllyPickのような状態フラグを経由しない直接actionのボタン(攻撃・かばう・技・逃げる等)は
+// grid.innerHTML=""によるDOM除去だけでは二重発火を防げていなかった(通常攻撃の連打で
+// ダメージ計算が2回走るバグの実際の原因)。ボタンごとにこのフラグを確認してから初めて処理に入る
+let battleActionLocked = false;
 
 // targetId(キャラのid、または敵のinstanceId)から実体(キャラ/敵オブジェクト)を探す。
 // 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
@@ -186,6 +193,7 @@ function renderBattleScreen() {
     `;
     if (targetable) {
       card.onclick = () => {
+        if (!pendingEnemyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
         const picked = pendingEnemyPick;
         pendingEnemyPick = null;
         picked(e);
@@ -516,6 +524,7 @@ function revertAllTransforms() {
 // キャンセルして行動選択に戻る
 function cancelBattleSubMenu() {
   if (!battle || battle.actingId == null) return;
+  if (battleActionLocked) return; // 既に行動を確定させて次のターンへの待機中なら、今さらメニューへ戻さない(二重行動防止)
   const actor = fieldParty.find((c) => c.id === battle.actingId);
   if (!actor) return;
   pendingEnemyPick = null;
@@ -542,7 +551,11 @@ function pickSingleEnemyTarget(onPicked) {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${t.label} (${t.hp}/${t.maxHp})`;
-    btn.onclick = () => { pendingEnemyPick = null; onPicked(t); };
+    btn.onclick = () => {
+      if (!pendingEnemyPick) return; // 既に別経路(敵カード直接タップ等)で選択済みなら無視する(二重行動防止)
+      pendingEnemyPick = null;
+      onPicked(t);
+    };
     grid.appendChild(btn);
   });
   const backBtn = document.createElement("button");
@@ -566,7 +579,7 @@ function runTreeSkill(actor, skill) {
   }
   if (action.kind === "transform") {
     const result = useTreeSkill(actor, actor, skill, blog); // MP消費/不足判定のみ処理される
-    if (result && result.failed) return;
+    if (result && result.failed) { battleActionLocked = false; return; } // 再描画を挟まず抜けるため、ロックを自分で解除しておく
     renderTransformFormPicker(actor);
     return;
   }
@@ -638,7 +651,7 @@ function runTreeSkill(actor, skill) {
     }
     renderBattleScreen();
     hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
-    triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
+    triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
     return;
   }
   pickSingleEnemyTarget((target) => {
@@ -647,7 +660,11 @@ function runTreeSkill(actor, skill) {
     const r = result && result.dmgs && result.dmgs[0];
     if (r && r.hit && r.hits && r.hits.length > 1) {
       // 連突き/二連射のような多段ヒット技: 1振りごとに間を置いて別々の攻撃モーション/ポップアップ/
-      // 鷹の追撃を再生する(合計ダメージを1回にまとめて見せていた旧仕様をユーザー指摘で修正)
+      // 鷹の追撃を再生する(合計ダメージを1回にまとめて見せていた旧仕様をユーザー指摘で修正)。
+      // renderBattleScreen()は#actionGridに触れないため、finishPlayerAction()が呼ばれるまで
+      // 演出中もボタンが押せる状態のまま残っており、連打すると同じ技が多重発動するバグがあった
+      // (renderCarryTargetsの「演出の間はボタンを消して連打を防ぐ」と同じ対策をここにも適用する)
+      document.getElementById("actionGrid").innerHTML = "";
       renderBattleScreen();
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
       const STAGGER_MS = 260;
@@ -664,7 +681,7 @@ function runTreeSkill(actor, skill) {
         }, i * STAGGER_MS);
       });
       setTimeout(() => {
-        triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction());
+        triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction(r.crit));
       }, r.hits.length * STAGGER_MS);
       return;
     }
@@ -677,7 +694,7 @@ function runTreeSkill(actor, skill) {
     renderBattleScreen();
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
     if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
-    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
+    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction(r && r.crit));
   });
 }
 
@@ -878,6 +895,7 @@ function renderSkillSubMenu(actor, buttons) {
 
 function renderActionButtons(actor) {
   battleSubMenuActive = false;
+  battleActionLocked = false;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   grid.style.gridTemplateColumns = ""; // 敵対象選択(3列)からの復帰時、通常の2列に戻す
@@ -889,6 +907,8 @@ function renderActionButtons(actor) {
     atkBtn.className = "big primary";
     atkBtn.textContent = "攻撃";
     atkBtn.onclick = () => {
+      if (battleActionLocked) return;
+      battleActionLocked = true;
       pickSingleEnemyTarget((target) => {
         playSfx(attackSfxFor(actor.classId));
         // 武甕槌命の御守: 戦闘中、最初の通常攻撃が確定で会心になる
@@ -911,7 +931,7 @@ function renderActionButtons(actor) {
         renderBattleScreen();
         if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
         if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
-        triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
+        triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction(result.crit));
       });
     };
     grid.appendChild(atkBtn);
@@ -925,6 +945,8 @@ function renderActionButtons(actor) {
         guardBtn.className = "big";
         guardBtn.textContent = "かばう";
         guardBtn.onclick = () => {
+          if (battleActionLocked) return;
+          battleActionLocked = true;
           playSfx("guard");
           useAbility(actor, actor, "guard", blog);
           renderBattleScreen();
@@ -942,7 +964,11 @@ function renderActionButtons(actor) {
         const onCooldown = cooldownLeft > 0;
         skillBtn.textContent = skill.name + (onCooldown ? `(あと${cooldownLeft}T)` : "");
         skillBtn.disabled = onCooldown;
-        skillBtn.onclick = () => { runFormSkill(actor, skill.key); };
+        skillBtn.onclick = () => {
+          if (battleActionLocked) return;
+          battleActionLocked = true;
+          runFormSkill(actor, skill.key);
+        };
         attachSkillLongPressTooltip(skillBtn, skill.name, skill.desc);
         grid.appendChild(skillBtn);
       });
@@ -960,6 +986,8 @@ function renderActionButtons(actor) {
         abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
         if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
         abBtn.onclick = () => {
+          if (battleActionLocked) return;
+          battleActionLocked = true;
           if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "guard") {
             playSfx("guard");
@@ -992,7 +1020,7 @@ function renderActionButtons(actor) {
             }
             renderBattleScreen();
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
-            triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
+            triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
             return;
           }
           // 単体系(会心の一撃/奇襲/呪符ノ術など)
@@ -1008,7 +1036,7 @@ function renderActionButtons(actor) {
             renderBattleScreen();
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
             if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
-            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
+            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction(result && result.crit));
           });
         };
         attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
@@ -1025,7 +1053,11 @@ function renderActionButtons(actor) {
         const hachimanFree = cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman;
         btn.textContent = skill.name + (hawkActive ? `(滞在中あと${actor.hawkTurnsLeft}T)` : (cost > 0 ? `(MP${cost})` : ""));
         if (hawkActive || (cost > 0 && actor.mp < cost && !hachimanFree)) btn.disabled = true;
-        btn.onclick = () => { runTreeSkill(actor, skill); };
+        btn.onclick = () => {
+          if (battleActionLocked) return;
+          battleActionLocked = true;
+          runTreeSkill(actor, skill);
+        };
         attachSkillLongPressTooltip(btn, skill.name, skill.desc);
         skillButtons.push(btn);
       });
@@ -1070,6 +1102,8 @@ function renderActionButtons(actor) {
       swapBtn.className = "big";
       swapBtn.textContent = "交代";
       swapBtn.onclick = () => {
+        if (battleActionLocked) return;
+        battleActionLocked = true;
         swapReserveMember(actor, blog);
         renderBattleScreen();
         finishPlayerAction();
@@ -1085,6 +1119,8 @@ function renderActionButtons(actor) {
     revertBtn.className = "big";
     revertBtn.textContent = "変身解除";
     revertBtn.onclick = () => {
+      if (battleActionLocked) return;
+      battleActionLocked = true;
       const formName = TRANSFORM_FORMS[actor.transformForm].ja;
       playTransformEffect(() => {
         revertTransform(actor);
@@ -1116,7 +1152,11 @@ function renderActionButtons(actor) {
   const fleeBtn = document.createElement("button");
   fleeBtn.className = "big";
   fleeBtn.textContent = "逃げる";
-  fleeBtn.onclick = () => fleeAction(actor);
+  fleeBtn.onclick = () => {
+    if (battleActionLocked) return;
+    battleActionLocked = true;
+    fleeAction(actor);
+  };
   grid.appendChild(fleeBtn);
 }
 
@@ -1186,7 +1226,11 @@ function renderAllyTargets(actor, kind) {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
-    btn.onclick = () => { pendingAllyPick = null; resolveAllyTarget(actor, kind, target); };
+    btn.onclick = () => {
+      if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
+      pendingAllyPick = null;
+      resolveAllyTarget(actor, kind, target);
+    };
     grid.appendChild(btn);
   });
   const backBtn = document.createElement("button");
@@ -1196,13 +1240,27 @@ function renderAllyTargets(actor, kind) {
   grid.appendChild(backBtn);
 }
 
-// 行動確定の直後に必ず呼ぶ。#actionGridをその場で空にしてから500ms後にターンを進めることで、
+// 行動確定の直後に必ず呼ぶ。#actionGridをその場で空にしてから待機後にターンを進めることで、
 // 演出のディレイ中にボタン(や敵/味方の直接タップ)を連打して同じキャラが何度も行動できてしまう
 // バグ(致命的な二重行動バグ)を防ぐ。renderBattleScreen()自体は#actionGridに触れないため、
-// これを呼ばずにsetTimeout(afterPlayerAction, 500)だけ書くと再発するので注意
-function finishPlayerAction() {
+// これを呼ばずにsetTimeout(afterPlayerAction, ...)だけ書くと再発するので注意
+//
+// wasCrit: この行動で会心が発生したかどうか。会心時はplayCritEffects()(effects.js)の閃光/衝撃波/
+// 火花/バナーがCRIT_HITSTOP_MS(80ms)+約520msかけて再生されるため、待機を縮めると演出が
+// 途中で消えてしまう(500msのまま維持する)。会心が発生していない行動は、揺れ(hit-shake-strong
+// 最大216ms)・攻撃VFX(CLASS_ATTACK_VFXの最大9フレーム=270ms)・HPバートレイル(HP_TRAIL_MS=250ms)
+// のいずれも270ms以内に完了するため、320ms(270ms+50msの安全マージン)待てば全演出が終わってから
+// 次のターンへ進められる
+const FINISH_PLAYER_ACTION_DELAY_CRIT = 500;
+const FINISH_PLAYER_ACTION_DELAY_NORMAL = 320;
+function finishPlayerAction(wasCrit) {
   document.getElementById("actionGrid").innerHTML = "";
-  setTimeout(afterPlayerAction, 500);
+  // 行動が確定した時点で「対象選択などのサブ画面を表示中」の状態も終わらせる。これをfalseに
+  // 戻さないと、待機中(delay経過待ち)に空になったactionGridの外側をたまたま指が触れただけで
+  // pointerdownの委譲ハンドラ(下記)がcancelBattleSubMenu()を呼び、行動選択メニューを
+  // 再描画→battleActionLockedまで解除してしまい、同じ手番でもう一度攻撃できてしまうバグの原因になっていた
+  battleSubMenuActive = false;
+  setTimeout(afterPlayerAction, wasCrit ? FINISH_PLAYER_ACTION_DELAY_CRIT : FINISH_PLAYER_ACTION_DELAY_NORMAL);
 }
 
 function afterPlayerAction() {

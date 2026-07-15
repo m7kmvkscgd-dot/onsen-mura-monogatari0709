@@ -478,6 +478,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     `;
     if (targetable) {
       div.onclick = () => {
+        if (!pendingAllyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
         const picked = pendingAllyPick;
         pendingAllyPick = null;
         picked(c);
