@@ -167,14 +167,17 @@ function renderBattleScreen() {
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
   // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
-  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない
-  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
+  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない。撃破リアクション
+  // (playEnemyDefeatReaction)が完全に再生し終わった敵(__defeatReactionState==="done")も
+  // ここで除外し、初めてレイアウトの幅も詰める(その時点では既に見た目上も透明になっているため、
+  // この瞬間の詰まり自体は目に見えない)
+  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0) && e.__defeatReactionState !== "done");
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
   visibleEnemies.forEach((e) => {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
     const card = document.createElement("div");
-    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + (battle.justAppeared ? " entering" : "") + shakeClassFor(e);
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (dead ? " defeat-hidden" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + (battle.justAppeared ? " entering" : "") + shakeClassFor(e);
     card.dataset.id = e.instanceId;
     const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
     card.innerHTML = `
@@ -201,6 +204,13 @@ function renderBattleScreen() {
       };
     }
     row.appendChild(card);
+    // 撃破リアクションは「初めて死亡を検知した描画」の時だけ起動する(再描画のたびに再生し直さない、
+    // shakeClassFor()と同じ考え方)。カード自体はdefeat-hiddenで見えなくなっているだけなので、
+    // 実際の演出はplayEnemyDefeatReaction()がbody直下に複製したクローンの上で独立に再生する
+    if (dead && !e.__defeatReactionState) {
+      e.__defeatReactionState = "playing";
+      playEnemyDefeatReaction(e, card);
+    }
   });
   battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
   activateHpTrails(row);

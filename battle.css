@@ -203,6 +203,11 @@
     opacity: 0;
   }
   .enemy-card.dead { opacity: 0.25; }
+  /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
+     レイアウトの幅(=他の敵の並び位置)だけ確保したまま見た目だけ消す。実際の演出はbody直下に
+     複製したクローンを独立して動かしている(renderBattleScreen()の毎回のinnerHTML総入れ替えに
+     巻き込まれて演出が途中で切れるのを防ぐため) */
+  .enemy-card.defeat-hidden { visibility: hidden; }
   .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
   /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、

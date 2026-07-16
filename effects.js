@@ -294,6 +294,68 @@ function findVisibleCard(targetId) {
   }
   return candidates[0] || null;
 }
+
+// ============ 敵撃破リアクション(演出ではなく「反応」) ============
+// 目的は派手さではなく「倒した」という手応えを短く上質に伝えること。爆発/回転/吹き飛ばしは
+// 一切使わず、transformのtranslate/scaleとopacityだけで構成する: ①白フラッシュ(40ms)
+// ②攻撃側(=常に画面下の味方側)から押し返されたようにわずかに上へ(8px)+わずかに縮み(scale0.95)+
+// 半透明化(opacity0.4)する(180ms) ③そのまま自然にopacity0までフェードアウトして消える(250ms)。
+// renderBattleScreen()は.enemy-cardを毎回innerHTML総取っ替えで作り直すため、カード自身の上で
+// このアニメーションを再生すると、演出の途中で別の理由の再描画(多段ヒットの次の1発、HPバー更新等)
+// が挟まった瞬間に演出が切れてしまう(hit-shakeで実際に踏んだ地雷と同じ構造の問題)。この演出は
+// 470ms前後とhit-shakeより長く、複数体同時撃破(AOE)では再描画の頻度も上がるため影響を受けやすい。
+// そのためカードの見た目をクローンしてbody直下へ独立させ、Web Animations API(element.animate())で
+// 再生する(hawk projectileと同じ回避パターン)。元のカードは.defeat-hidden(visibility:hidden)で
+// 見た目だけ消し、レイアウト上の幅(=他の敵の並び)は演出が終わるまでそのまま確保しておく
+const ENEMY_DEFEAT_FLASH_MS = 40;
+const ENEMY_DEFEAT_PUSH_MS = 180;
+const ENEMY_DEFEAT_FADE_MS = 250;
+const ENEMY_DEFEAT_PUSH_DISTANCE_PX = 8;
+function playEnemyDefeatReaction(entity, card) {
+  const rect = card.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    // 画面に実際に描画されていない(=見えていない)カードなら演出自体が無意味なので、
+    // 即座に完了扱いにしてrenderBattleScreen()側のフィルタから外れるようにするだけに留める
+    entity.__defeatReactionState = "done";
+    return;
+  }
+  const clone = card.cloneNode(true);
+  clone.classList.remove("targetable", "charging", "entering", "defeat-hidden");
+  clone.onclick = null;
+  clone.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; width:${rect.width}px; height:${rect.height}px; margin:0; pointer-events:none; z-index:40;`;
+  document.body.appendChild(clone);
+
+  // ①白フラッシュ: 新しいoverlay要素をopacityだけで明滅させる(transform/filterは使わない)
+  const flash = document.createElement("div");
+  flash.style.cssText = "position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;";
+  clone.appendChild(flash);
+  const flashAnim = flash.animate(
+    [{ opacity: 0 }, { opacity: 0.85, offset: 0.5 }, { opacity: 0 }],
+    { duration: ENEMY_DEFEAT_FLASH_MS, easing: "linear", fill: "forwards" }
+  );
+
+  // ②③押し返され+縮小+半透明化(180ms)→そのままフェードアウト(250ms)を1本のアニメーションにまとめる
+  // (delayでフラッシュの後から開始し、offsetで2段階の速度/終端opacityを表現する)
+  const pushFadeTotalMs = ENEMY_DEFEAT_PUSH_MS + ENEMY_DEFEAT_FADE_MS;
+  const pushOffset = ENEMY_DEFEAT_PUSH_MS / pushFadeTotalMs;
+  const bodyAnim = clone.animate(
+    [
+      { transform: "translateY(0px) scale(1)", opacity: 1, offset: 0 },
+      { transform: `translateY(-${ENEMY_DEFEAT_PUSH_DISTANCE_PX}px) scale(0.95)`, opacity: 0.4, offset: pushOffset },
+      { transform: `translateY(-${ENEMY_DEFEAT_PUSH_DISTANCE_PX}px) scale(0.95)`, opacity: 0, offset: 1 },
+    ],
+    { duration: pushFadeTotalMs, delay: ENEMY_DEFEAT_FLASH_MS, easing: "ease-out", fill: "forwards" }
+  );
+  bodyAnim.onfinish = () => {
+    flashAnim.cancel();
+    bodyAnim.cancel();
+    clone.remove();
+    entity.__defeatReactionState = "done";
+    // battleが既に終了・破棄されていたら何もしない(戦闘終了直後に最後の1体の演出が終わるケース)
+    if (typeof battle !== "undefined" && battle) renderBattleScreen();
+  };
+}
+
 function renderVfxFor(targetId) {
   const el = findVisibleCard(targetId);
   if (!el) return;
