@@ -59,12 +59,16 @@
      切り替わったことが一目でわかるようにする */
   button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
-  /* 出発ボタン: 「最高◯層」を横に別要素で出していたのをボタン内に収めるよう変更。
-     button.bigは既定でdisplay:flex(横並び)のため、このボタンだけflex-directionを縦にして
-     メイン文言の下に小さく最高到達階を添える(未到達で空文字の時はgapが余白として残らないよう
-     :empty時は要素自体をたたむ) */
-  .depart-btn { flex-direction: column; gap: 2px; line-height: 1.3; }
-  .depart-btn-sub { font-size: 11px; font-weight: 400; color: var(--dw-caption-color); }
+  /* 出発ボタン: 「最高◯層」をボタンの中、メイン文言と同じ行の右側に収める。メイン文言自体は
+     他のボタンと同じくbutton.big既定のjustify-content:centerで中央寄せのまま保ち(最高到達階が
+     無い/未到達のボタンでも見た目が揃うように)、最高到達階だけposition:absoluteでボタン右端に
+     重ねて配置する。文字色は.primary(金色背景)のメイン文言と同じ暗色系にし、薄い色で
+     読めなくなっていた不具合(--dw-caption-colorは金色背景ではほぼ同化して見えなかった)を修正した */
+  .depart-btn { position: relative; }
+  .depart-btn-sub {
+    position: absolute; right: 0.9rem; top: 50%; transform: translateY(-50%);
+    font-size: 12px; font-weight: 600; color: rgba(36,29,10,0.72); white-space: nowrap;
+  }
   .depart-btn-sub:empty { display: none; }
   .card {
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
