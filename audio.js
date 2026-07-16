@@ -359,6 +359,38 @@ function fadeOutOpeningBgm() {
   }
   step();
 }
+// 【調査用・一時的】音声グラフ(MediaElementAudioSourceNode→GainNode→destination)そのものを
+// 実測する。resumeは既に実機で成功していることが確認済みのため、次は「経路の途中で音が
+// 消えていないか」を疑い、以下を約200ms間隔で10秒間継続してログする:
+// ・bgmAudio/openingBgmAudioそれぞれのcurrentTime(実際に時間が進み続けているか)とpaused状態
+// ・それぞれのGainNodeのgain.gain.value(意図せず0になっていないか)
+// ・bgmGainNodeMap.size(createMediaElementSourceが要素ごとに1回しか呼ばれていないか。
+//   もし2回以上呼ばれていれば例外が飛ぶ設計だが、念のためMapのサイズ自体も直接確認する)
+// ・bgmAudioCtx.stateとdestinationへの接続有無
+function startBgmGraphSampler(tag, durationMs) {
+  const startAt = performance.now();
+  const bgmGain = getBgmGainNode(bgmAudio);
+  const openingGain = getBgmGainNode(openingBgmAudio);
+  const scheduler = (typeof perfOrigSetTimeout === "function") ? perfOrigSetTimeout : setTimeout;
+  const sample = () => {
+    const elapsed = performance.now() - startAt;
+    if (elapsed > durationMs) {
+      if (typeof perfDiagLog === "function") perfDiagLog("bgmGraphSampler[" + tag + "]: END");
+      return;
+    }
+    if (typeof perfDiagLog === "function") {
+      perfDiagLog(
+        "graph[" + tag + "] +" + elapsed.toFixed(0) + "ms" +
+        " bgm{t=" + bgmAudio.currentTime.toFixed(2) + ",paused=" + bgmAudio.paused + ",gain=" + (bgmGain ? bgmGain.gain.value.toFixed(3) : "NULL") + "}" +
+        " opening{t=" + openingBgmAudio.currentTime.toFixed(2) + ",paused=" + openingBgmAudio.paused + ",gain=" + (openingGain ? openingGain.gain.value.toFixed(3) : "NULL") + "}" +
+        " ctx=" + (bgmAudioCtx ? bgmAudioCtx.state : "?") + " gainMapSize=" + bgmGainNodeMap.size
+      );
+    }
+    scheduler(sample, 200);
+  };
+  sample();
+}
+
 // 【調査用・一時的】playBgm()が短時間に何回・どのタイミングで重複して呼ばれているかを実測するための
 // 通し番号カウンタ。呼び出しごとに採番し、resumeの待ち時間中に別の呼び出しが割り込んでいないかを見る
 let playBgmCallSeq = 0;
@@ -393,6 +425,7 @@ async function playBgm(key) {
     return;
   }
   console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": RESTARTING track from currentTime=" + (bgmPositions[key] || 0) + " (this resets playback position!)"); // 調査用
+  startBgmGraphSampler(key + "-call" + callId, 10000); // 調査用: 音声グラフを10秒間実測する
   if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
