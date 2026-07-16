@@ -275,7 +275,12 @@ function stopBattleBgm() {
     } else {
       bgmPositions[key] = 0;
       bgmAudio.pause();
-      setBgmAudioVolume(BGM_BASE_VOLUME);
+      // 【不具合対策】pause()直後にgainをBGM_BASE_VOLUMEへ即座に戻すと、Web Audioの処理
+      // パイプラインに残っていた僅かな残留オーディオ(pause()はソース側の「今後の供給」を止める
+      // だけで、既にグラフに渡り済みの数ms分のバッファは即座には消えない)がフルボリュームで
+      // 出力され、フェードの最後に一瞬大きな音が鳴る不具合があった。残留分が確実に流れきる
+      // だけの猶予(150ms)を置いてからgainを戻す
+      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
       currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
@@ -335,7 +340,8 @@ function playLodgingBgm() {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      setBgmAudioVolume(BGM_BASE_VOLUME);
+      // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
+      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
       lodgingBgmAudio.currentTime = 0;
       if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
     }
@@ -365,7 +371,8 @@ function playCampBgm() {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      setBgmAudioVolume(BGM_BASE_VOLUME);
+      // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
+      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
       campBgmAudio.currentTime = 0;
       if (audioUnlocked) campBgmAudio.play().catch(() => {});
     }
