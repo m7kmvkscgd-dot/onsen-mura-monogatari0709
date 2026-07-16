@@ -87,7 +87,10 @@ let bgmAudioCtx = null;
 try {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (AudioContextClass) bgmAudioCtx = new AudioContextClass();
-} catch (e) {}
+  console.error("[BGM DIAG] bgmAudioCtx construction OK, initial state=", bgmAudioCtx ? bgmAudioCtx.state : "NO_CLASS"); // 調査用
+} catch (e) {
+  console.error("[BGM DIAG] bgmAudioCtx construction THREW", e); // 調査用
+}
 // <audio>要素 -> GainNode のキャッシュ。MediaElementAudioSourceNodeは同じ<audio>要素に対して
 // 2度目の生成を試みると例外(InvalidStateError)になる仕様のため、要素ごとに最初の1回だけ
 // source→gain→destinationの接続を作り、以降は必ずこのマップから取り出して使い回す
@@ -101,8 +104,10 @@ function getBgmGainNode(audioEl) {
     const gain = bgmAudioCtx.createGain();
     source.connect(gain).connect(bgmAudioCtx.destination);
     bgmGainNodeMap.set(audioEl, gain);
+    console.error("[BGM DIAG] getBgmGainNode: created OK for", audioEl.id); // 調査用
     return gain;
   } catch (e) {
+    console.error("[BGM DIAG] getBgmGainNode: createMediaElementSource/createGain/connect threw for", audioEl.id, e); // 調査用
     return null; // 生成に失敗した場合、setBgmVolume/getBgmVolumeがaudioEl.volumeへフォールバックする
   }
 }
@@ -114,6 +119,7 @@ function setBgmVolume(audioEl, value) {
     gain.gain.value = value;
     audioEl.volume = 1; // 音量はGainNode側で制御するため、要素自体は常にフルのままにしておく
   } else {
+    console.error("[BGM DIAG] setBgmVolume: FALLBACK path (no gain node) for", audioEl.id, "value=", value); // 調査用
     audioEl.volume = value; // GainNode接続に失敗した環境向けのフォールバック
   }
 }
@@ -122,6 +128,28 @@ function setBgmVolume(audioEl, value) {
 function getBgmVolume(audioEl) {
   const gain = getBgmGainNode(audioEl);
   return gain ? gain.gain.value : audioEl.volume;
+}
+// ============ 【調査用・一時的】BGM無音バグの原因切り分けログ ============
+// 原因が判明するまではロジックを一切変更せず、状態のスナップショットをconsole.errorへ出すだけ。
+// 調査が終わったらこのブロックと各呼び出し箇所は削除する
+function logBgmDiag(label) {
+  try {
+    const gain = bgmGainNodeMap.get(bgmAudio);
+    console.error("[BGM DIAG]", label, JSON.stringify({
+      bgmAudioCtxState: bgmAudioCtx ? bgmAudioCtx.state : "NO_CONTEXT",
+      bgmAudioPaused: bgmAudio.paused,
+      bgmAudioCurrentSrc: bgmAudio.currentSrc,
+      bgmAudioCurrentTime: bgmAudio.currentTime,
+      bgmAudioMuted: bgmAudio.muted,
+      bgmAudioVolume: bgmAudio.volume,
+      gainNodeExists: !!gain,
+      gainValue: gain ? gain.gain.value : "NO_GAIN_NODE",
+      currentBgmKey,
+      audioUnlocked,
+    }));
+  } catch (e) {
+    console.error("[BGM DIAG] logBgmDiag itself threw:", e);
+  }
 }
 
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
@@ -161,19 +189,31 @@ let battleBgmFadeToken = 0;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
+  console.error("[BGM DIAG] unlockAudio: start"); // 調査用
+  logBgmDiag("unlockAudio: before play/resume"); // 調査用
   if (currentBgmKey) {
     // 既に町/冒険用のBGMキーが決まっている(=タイトルより先に進んでいる)場合はそちらを再開する
-    bgmAudio.play().catch(() => {});
-    ambientBgmAudio.play().catch(() => {});
+    bgmAudio.play().then(() => logBgmDiag("unlockAudio: bgmAudio.play() resolved")).catch((e) => { console.error("[BGM DIAG] unlockAudio: bgmAudio.play() REJECTED", e); logBgmDiag("unlockAudio: bgmAudio.play() rejected"); }); // 調査用
+    ambientBgmAudio.play().catch((e) => console.error("[BGM DIAG] unlockAudio: ambientBgmAudio.play() REJECTED", e)); // 調査用
   } else {
     // まだタイトル/オープニング中(currentBgmKeyは最初のplayBgm()呼び出しまでnullのまま)。
     // オープニングBGMの再生を試みる。起動直後の自動再生が制限で失敗していた場合、
     // ユーザーの最初の操作によるこの呼び出しが確実な再試行のタイミングになる
-    openingBgmAudio.play().catch(() => {});
+    openingBgmAudio.play().then(() => logBgmDiag("unlockAudio: openingBgmAudio.play() resolved")).catch((e) => { console.error("[BGM DIAG] unlockAudio: openingBgmAudio.play() REJECTED", e); logBgmDiag("unlockAudio: openingBgmAudio.play() rejected"); }); // 調査用
   }
   // iPhone Safari対策: SE用/BGM用、どちらのAudioContextもユーザーの最初のタップの中でresume()する必要がある
-  if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
-  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().catch(() => {});
+  if (sfxAudioCtx && sfxAudioCtx.state === "suspended") {
+    sfxAudioCtx.resume().then(() => console.error("[BGM DIAG] unlockAudio: sfxAudioCtx.resume() resolved, state=", sfxAudioCtx.state)).catch((e) => console.error("[BGM DIAG] unlockAudio: sfxAudioCtx.resume() REJECTED", e)); // 調査用
+  } else {
+    console.error("[BGM DIAG] unlockAudio: sfxAudioCtx resume NOT attempted. exists=", !!sfxAudioCtx, "state=", sfxAudioCtx ? sfxAudioCtx.state : null); // 調査用
+  }
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
+    bgmAudioCtx.resume().then(() => logBgmDiag("unlockAudio: bgmAudioCtx.resume() resolved")).catch((e) => { console.error("[BGM DIAG] unlockAudio: bgmAudioCtx.resume() REJECTED", e); logBgmDiag("unlockAudio: bgmAudioCtx.resume() rejected"); }); // 調査用
+  } else {
+    console.error("[BGM DIAG] unlockAudio: bgmAudioCtx resume NOT attempted. exists=", !!bgmAudioCtx, "state=", bgmAudioCtx ? bgmAudioCtx.state : null); // 調査用
+  }
+  setTimeout(() => logBgmDiag("unlockAudio: +1000ms snapshot"), 1000); // 調査用
+  setTimeout(() => logBgmDiag("unlockAudio: +3000ms snapshot"), 3000); // 調査用
 }
 ["pointerdown", "touchstart", "mousedown", "keydown"].forEach((evt) => {
   document.addEventListener(evt, unlockAudio, { once: true, passive: true });
@@ -231,7 +271,10 @@ function playBgm(key) {
   if (currentBgmKey === key) {
     // 同じ曲を続けて流すはずの場面(海岸の探索→戦闘の継続再生など)で、何らかの理由で
     // 要素が一時停止してしまっていた場合に無音のまま固まらないよう、ここで取りこぼさず再開する
-    if (bgmAudio.paused && audioUnlocked) bgmAudio.play().catch(() => {});
+    if (bgmAudio.paused && audioUnlocked) {
+      console.error("[BGM DIAG] playBgm(" + key + "): same key, resuming paused element"); // 調査用
+      bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + "): same-key resume play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + "): same-key resume play() REJECTED", e); logBgmDiag("playBgm(" + key + "): same-key resume play() rejected"); }); // 調査用
+    }
     return;
   }
   if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
@@ -239,7 +282,12 @@ function playBgm(key) {
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
   setBgmVolume(bgmAudio, bgmVolumeForKey(key));
-  if (audioUnlocked) bgmAudio.play().catch(() => {});
+  logBgmDiag("playBgm(" + key + "): before play(), audioUnlocked=" + audioUnlocked); // 調査用
+  if (audioUnlocked) {
+    bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + "): play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + "): play() REJECTED", e); logBgmDiag("playBgm(" + key + "): play() rejected"); }); // 調査用
+  } else {
+    console.error("[BGM DIAG] playBgm(" + key + "): audioUnlocked is false, play() NOT called"); // 調査用
+  }
 }
 
 // 戦闘終了時: 森の戦闘専用BGM(dungeon/dungeon_night)をフェードアウトして止める。海岸は戦闘中も
@@ -455,13 +503,13 @@ function playSfx(name) {
 // currentBgmKeyだけが再生中のつもりで固まってしまうことがあるため、同様に復旧を試みる
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
-    sfxAudioCtx.resume().catch(() => {});
+    sfxAudioCtx.resume().catch((e) => console.error("[BGM DIAG] visibilitychange: sfxAudioCtx.resume() REJECTED", e)); // 調査用
   }
   if (document.visibilityState === "visible" && bgmAudioCtx && bgmAudioCtx.state === "suspended") {
-    bgmAudioCtx.resume().catch(() => {});
+    bgmAudioCtx.resume().then(() => logBgmDiag("visibilitychange: bgmAudioCtx.resume() resolved")).catch((e) => console.error("[BGM DIAG] visibilitychange: bgmAudioCtx.resume() REJECTED", e)); // 調査用
   }
   if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
-    bgmAudio.play().catch(() => {});
+    bgmAudio.play().catch((e) => console.error("[BGM DIAG] visibilitychange: bgmAudio.play() REJECTED", e)); // 調査用
   }
 });
 // 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
