@@ -193,8 +193,12 @@
     .skill-acquired-flash-overlay, .skill-acquired-particle, .skill-acquired-banner { animation: none; opacity: 0; }
     .skill-acquired-tap-hint { animation: none; opacity: 0.85; }
   }
-  .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.6rem 0; }
-  .class-pick { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }
+  /* grid-template-columnsの1frは「最小サイズ0」を保証しない(既定はminmax(auto,1fr)扱いで、
+     中身に改行できない/されない長いテキストがあるとそのトラックだけ内容幅ぶん膨らみ、他の列の
+     幅を押しのけてしまう)。子要素の.class-pickにmin-width:0を明示し、長いロック解除条件文が
+     入っても必ずトラック幅(1fr)に収まって折り返すようにする */
+  .class-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin: 0.6rem 0; }
+  .class-pick { min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem; text-align: center; cursor: pointer; }
   .class-pick.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
   .class-pick img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .class-pick span { display: block; font-size: 0.68rem; margin-top: 0.2rem; }
@@ -233,12 +237,16 @@
   }
   .class-pick { position: relative; }
   .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
-  /* 未解禁の職業。図鑑の未遭遇シルエット(grayscale(1) brightness(0.03)、town.js)と同じ濃さの
-     真っ黒シルエットで並べつつ、名前の代わりに解禁条件("道場建築で解禁"等)を出すことで、
-     「まだ見ぬ職業がある」ことをそれと分かる形で見せる(ユーザー指示: フィルターで隠すのではなく
-     並べた上で条件を書く方がワクワクする、という狙い)。タップでは選べないため通常カーソルのまま */
+  /* 未解禁の職業。brightness(0)の黒いシルエット(town.js、輪郭ははっきり残す)で並べつつ、名前の代わりに
+     解禁条件("道場建築で解禁"等)を出すことで、「まだ見ぬ職業がある」ことをそれと分かる形で見せる
+     (ユーザー指示: フィルターで隠すのではなく並べた上で条件を書く方がワクワクする、という狙い)。
+     タップでは選べないため通常カーソルのまま。
+     【重要】word-break:keep-allは使わないこと。CJK文字列のみ(スペースや半角文字を含まない)だと
+     ブラウザが改行できる箇所を見つけられず、overflow-wrap:break-wordの強制改行より優先されて
+     テキストが一切折り返されない実機バグを踏んだ(1列だけimg(aspect-ratio:1/1)ごと巨大化し
+     グリッド全体のレイアウトが崩れた)。word-break:break-allで確実に折り返させる */
   .class-pick.locked { cursor: default; opacity: 0.82; }
-  .class-pick-locked-label { display: block; font-size: 0.6rem; margin-top: 0.25rem; line-height: 1.25; color: var(--text-muted); word-break: keep-all; overflow-wrap: break-word; }
+  .class-pick-locked-label { display: block; font-size: 0.6rem; margin-top: 0.25rem; line-height: 1.25; color: var(--text-muted); word-break: break-all; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
      イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは
