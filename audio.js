@@ -325,6 +325,33 @@ function stopTownBgm() {
   currentBgmKey = null;
 }
 
+// 出発演出(startDeparture、town.js)の開始と同時に町BGMをフェードアウトする。演出全体の
+// 所要時間(徒歩アニメーション→暗転→enterDungeon())より短く終わるようにし、画面が暗転する
+// 頃には自然に無音になっているようにする。フェード完了時にbgmAudio.pause()+currentBgmKey=null
+// まで行うため、その後enterDungeon()内のstopTownBgm()が呼ばれても(まだフェード中でも)
+// 二重に問題を起こさない(既に無音ならpause()は無害、まだフェード中ならここで即座に打ち切る)
+const TOWN_DEPARTURE_FADE_MS = 2500;
+let townDepartureFadeToken = 0;
+function fadeOutTownBgm() {
+  if (currentBgmKey !== "town" || bgmAudio.paused) return;
+  const startVol = getBgmAudioVolume();
+  const startTime = performance.now();
+  const myToken = ++townDepartureFadeToken;
+  function fadeStep() {
+    if (townDepartureFadeToken !== myToken || currentBgmKey !== "town") return; // 途中で別のBGMに切り替わっていたら中断
+    const t = Math.min(1, (performance.now() - startTime) / TOWN_DEPARTURE_FADE_MS);
+    setBgmAudioVolume(startVol * (1 - t));
+    if (t < 1) {
+      requestAnimationFrame(fadeStep);
+    } else {
+      bgmAudio.pause();
+      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150); // 残留オーディオ対策(stopBattleBgm()と同じ理由)
+      currentBgmKey = null;
+    }
+  }
+  fadeStep();
+}
+
 // 宿泊時: 町のBGMをフェードで止め、代わりに宿泊専用の一度きりの曲を再生する。曲が鳴り終わったら
 // (ended)、町のBGMを最初から再開する(bgmPositionsの続きからではなく、必ず頭出しする)。
 // bgmAudio側のフェードはGainNode経由(setBgmAudioVolume/getBgmAudioVolume)のため、

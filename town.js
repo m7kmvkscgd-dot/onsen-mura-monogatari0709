@@ -1429,6 +1429,7 @@ function startDeparture(stage) {
   }
   currentStage = stage;
   playSfx("departure");
+  fadeOutTownBgm(); // 出発演出と同時に町BGMをフェードアウト(以前は暗転の瞬間に無音でぶつ切りだった)
   const departForestBtnEl = document.getElementById("departForestBtn");
   const departCoastBtnEl = document.getElementById("departCoastBtn");
   departForestBtnEl.disabled = true;
