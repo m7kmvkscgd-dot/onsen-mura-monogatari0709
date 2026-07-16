@@ -1112,6 +1112,22 @@ function pickEnemyForFloor(floor, mode, stage) {
   return instantiateEnemy(pick);
 }
 
+// ボス追撃モード(dungeon.js)を見送って(捕まえずに)遠征を終えた時、その時点のHPをここに記録する。
+// state.woundedBosses = { [enemyId]: { hp, maxHp, fledAtMinutes } }。時間経過で少しずつ回復し
+// (1時間につき最大HPの2%)、完全回復したら記録を消して通常の満タンHP出現に戻る。stateに保存する
+// ことで、アプリを閉じて後日再開した場合でも「実際の経過時間ぶん回復している」状態が維持される
+const BOSS_WOUND_HEAL_PER_HOUR_RATIO = 0.02;
+function woundedBossCurrentHp(enemyId, maxHp) {
+  const w = state.woundedBosses && state.woundedBosses[enemyId];
+  if (!w) return null;
+  const elapsedHours = Math.max(0, (absoluteGameMinutes() - w.fledAtMinutes) / 60);
+  const healed = w.hp + elapsedHours * BOSS_WOUND_HEAL_PER_HOUR_RATIO * w.maxHp;
+  if (healed >= w.maxHp) {
+    delete state.woundedBosses[enemyId];
+    return null; // 完全回復。記録を消し、通常通り満タンHPで出現させる
+  }
+  return Math.min(maxHp, Math.round(healed));
+}
 // そのフロアの遭遇を組み立てる。ボスフロア(10の倍数)は必ず単体。
 // それ以外は、まず「大群が絡むか」を1回だけ判定し(SWARM_ENCOUNTER_CHANCE)、絡む場合は
 // pickSwarmInvolvedEncounterで直接まとめて組み立てる(3枠それぞれ独立に大群判定すると、
@@ -1121,6 +1137,10 @@ function pickEnemyForFloor(floor, mode, stage) {
 function pickEncounterForFloor(floor, stage) {
   if (floor % 10 === 0) {
     const boss = pickEnemyForFloor(floor, true, stage);
+    if (boss) {
+      const woundedHp = woundedBossCurrentHp(boss.id, boss.maxHp);
+      if (woundedHp != null) boss.hp = woundedHp; // 見送った手負いのまま(回復途中なら回復途中のHPで)再出現させる
+    }
     return [boss || pickEnemyForFloor(floor, undefined, stage)];
   }
   const hasSwarmHere = Object.values(ENEMIES).some((e) => (e.stage || "forest") === (stage || "forest") && e.isSwarm && floor >= e.minFloor && floor <= e.maxFloor);

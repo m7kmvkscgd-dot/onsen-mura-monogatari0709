@@ -1553,6 +1553,8 @@ function escapeBattle() {
 // 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
 // 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
 function defeat() {
+  updateBossPursuitHpIfFled(); // 追撃モードの再戦中に全滅した場合、その時点のダメージを反映してから記録する
+  recordBossWoundIfPursuing(); // 全滅で追撃を続けられなくなった場合も「見送った」扱いで手負いのHPを記録する
   stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
