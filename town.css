@@ -397,9 +397,12 @@
   .bestiary-detail-body .bestiary-block-label { font-weight: 700; color: var(--dw-title-color); }
   .bestiary-detail-body .weakness-line { color: #9fd8ff; }
   .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
-  /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能だけ最初から展開しておき、
-     未解放は見出しタップで開く(グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
+  /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能は常に展開したまま(見出しは
+     タップしても開閉しない、ユーザー指示)、未解放だけ見出しタップで開閉する
+     (グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
   .facility-group-heading { cursor: pointer; display: flex; align-items: center; color: var(--dw-caption-color); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+  /* 建築可能の見出しは開閉トリガーではなくただのラベルなので、クリック可能に見えるカーソル/矢印を出さない */
+  .facility-group-heading.static { cursor: default; }
   .facility-group-count { font-size: 12px; color: var(--dw-caption-color); margin-left: 0.35rem; font-weight: 400; }
   .facility-group-body { display: none; }
   .facility-group-body.open { display: block; }

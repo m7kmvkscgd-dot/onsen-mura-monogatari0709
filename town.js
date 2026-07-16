@@ -1913,14 +1913,15 @@ const FACILITY_GROUP_DEFS = [
   { key: "ferry", levelField: "ferryLevel", unlock: FERRY_UNLOCK_HOUSE_LEVEL },
   { key: "ryodanki", levelField: "ryodankiLevel", unlock: RYODANKI_UNLOCK_HOUSE_LEVEL },
 ];
-["Available", "Locked"].forEach((name) => {
-  const toggle = document.getElementById("facilityGroup" + name + "Toggle");
-  const body = document.getElementById("facilityGroup" + name);
-  toggle.onclick = () => {
-    toggle.classList.toggle("open");
-    body.classList.toggle("open");
-  };
-});
+// 「建築可能」グループの見出しはタップで開閉するトリガーではなく、常時展開の固定ラベルにする
+// (ユーザー指示)。HTML側で最初から.openを付与したまま、クリックハンドラ自体を付けないことで
+// どうやっても閉じられないようにする。「未解放」グループだけ従来通りタップで開閉できる
+const facilityLockedToggle = document.getElementById("facilityGroupLockedToggle");
+const facilityLockedBody = document.getElementById("facilityGroupLocked");
+facilityLockedToggle.onclick = () => {
+  facilityLockedToggle.classList.toggle("open");
+  facilityLockedBody.classList.toggle("open");
+};
 function groupFacilityBlocks(houseLevel) {
   const availEl = document.getElementById("facilityGroupAvailable");
   const lockedEl = document.getElementById("facilityGroupLocked");
