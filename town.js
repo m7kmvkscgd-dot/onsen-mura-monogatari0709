@@ -2008,11 +2008,12 @@ function renderExtension() {
     const canAfford = state.gold >= cost;
     btn.textContent = `増築する（${cost}G）`;
     btn.disabled = !canAfford;
-    // 押せない理由は所持金不足の時だけ、ボタン直下に「◯◯G必要（所持◯◯G）」の形で表示する
+    // 押せない理由は所持金不足の時だけ、ボタン直下に「所持金が不足しています（70/200G）」の形で表示する
+    // (以前は赤字で「200G必要（所持80G）」だったが、赤は警告が強すぎるとの指摘で色・文言とも変更した)
     if (canAfford) {
       reasonEl.style.display = "none";
     } else {
-      reasonEl.textContent = `${cost}G必要（所持${state.gold}G）`;
+      reasonEl.textContent = `所持金が不足しています（${state.gold}/${cost}G）`;
       reasonEl.style.display = "";
     }
   }

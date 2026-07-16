@@ -399,7 +399,8 @@
   .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
   /* 増築画面「🏠家」カード。「現在」「次の増築(仲間上限アップ)」「次の増築(施設解放)」の3段階で
      プロミネンスを付けている: 現在(一番目立つ、太字+大きめ)>次の増築の仲間上限アップ(中程度、
-     ●付き)>解放施設一覧(--dw-descで一番控えめ、「新施設」という小見出しの下にまとめる)。
+     箇条書きではなく単独の1行にして「施設一覧と同列のリスト項目」に見えないようにした)
+     >解放施設一覧(--dw-descで一番控えめ、「新施設」という小見出しの下にまとめる)。
      「現在」と「次の増築」の区切りは.status-stat-list(キャラ詳細画面)と同じ罫線パターンを流用 */
   .house-status-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--dw-caption-color); margin-bottom: 0.35rem; }
   .house-status-section + .house-status-section { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--dw-card-border); }
@@ -408,8 +409,9 @@
   /* 「現在」は一番目立たせたい主役の情報なので、見出し・数値ともに強調する */
   .house-status-current .house-status-label { font-size: 13px; font-weight: 800; color: var(--dw-heading-color); }
   .house-status-current .house-status-line { font-size: 17px; font-weight: 800; color: var(--dw-title-color); }
-  /* 「次の増築」見出しの中のLv数値だけ金色にして「次の目標」が目に留まるようにする */
-  .house-next-level { color: var(--dw-gold); font-weight: 800; }
+  /* 「次の増築」見出しの中のLv数値だけ金色+一回り大きくして「次の目標」が目に留まるようにする
+     (親の.house-status-labelが11pxの地味なキャプションサイズのため、色だけでは埋もれがちだった) */
+  .house-next-level { color: var(--dw-gold); font-size: 13px; font-weight: 800; }
   /* 「次の増築」内の仲間上限アップは「現在」ほどではないが、下の解放施設一覧よりは目立たせる中間の強さ */
   .house-status-cap-line { font-size: 14px; font-weight: 700; line-height: 1.6; color: var(--dw-body-color); }
   .house-status-cap-line strong { color: var(--dw-heading-color); font-weight: 800; }
@@ -417,8 +419,9 @@
   .house-status-facility-divider { border-top: 1px dashed var(--dw-card-border); margin-bottom: 0.5rem; }
   .house-status-facility-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--dw-caption-color); margin-bottom: 0.2rem; }
   .house-status-unlock { font-size: 12px; line-height: 1.6; color: var(--dw-desc); }
-  /* ボタンが押せない理由(所持金不足時のみ表示)。「なぜ押せないか」がひと目で分かるようdw-dangerを使う */
-  .house-upgrade-reason { font-size: 12px; color: var(--dw-danger); text-align: center; margin: 0.4rem 0 0; }
+  /* ボタンが押せない理由(所持金不足時のみ表示)。赤(dw-danger)は警告が強すぎて高級感を損なうという
+     指摘を受け、他の補足テキストと同じ落ち着いたキャプション色に変更した */
+  .house-upgrade-reason { font-size: 12px; color: var(--dw-caption-color); text-align: center; margin: 0.4rem 0 0; }
   /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能は常に展開したまま(見出しは
      タップしても開閉しない、ユーザー指示)、未解放だけ見出しタップで開閉する
      (グループ単位の折りたたみは個々のfacility-toggleとは別枠) */
