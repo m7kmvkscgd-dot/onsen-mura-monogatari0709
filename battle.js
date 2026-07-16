@@ -19,7 +19,7 @@ function startBattle(enemies, pathDef, encounterText) {
   // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる。この戦闘で使い切る(2戦目以降には持ち越さない)
   const omikujiGuaranteedCrits = state.omikujiGuaranteedCritsLeft || 0;
   if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
-  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits };
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, voluntarySwapUsed: false };
   // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
   // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
   lastPartyBarActingId.battlePartyBar = null;
@@ -160,9 +160,9 @@ function renderBattleScreen() {
   if (!battle) return;
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
-  // 控え(reserveFieldMember)は健在(瀕死でない)間だけ末尾に表示する(瀕死のまま控えに入っている間は
-  // 他の瀕死のfieldPartyメンバーと同様、担がれるまで姿を見せない)
-  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled").concat(reserveFieldMember && reserveFieldMember.status === "active" ? [reserveFieldMember] : []);
+  // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(5人編成でも
+  // 常時表示されるアイコンは4つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
+  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled");
   renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
@@ -1166,17 +1166,23 @@ function renderActionButtons(actor) {
       carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
       grid.appendChild(carryBtn);
     }
-    // 交代: 控えが健在(瀕死でない)の時だけ表示。行動中のキャラの手番を消費して控えと入れ替わる
+    // 交代: 控えが健在(瀕死でない)の時だけ表示。任意の交代は1戦闘につき1回まで(瀕死時の自動提案は
+    // 別枠でカウントしないため回数に影響しない、offerReserveSwapIfNeeded参照)。ターンは消費せず、
+    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(担ぐ・変身解除と同じ「無消費」パターン)
     if (reserveFieldMember && reserveFieldMember.status === "active") {
+      const swapUsed = battle.voluntarySwapUsed;
       const swapBtn = document.createElement("button");
       swapBtn.className = "big";
-      swapBtn.textContent = "交代";
+      swapBtn.textContent = "交代" + (swapUsed ? "(使用済み)" : "");
+      swapBtn.disabled = swapUsed;
       swapBtn.onclick = () => {
-        if (battleActionLocked) return;
-        battleActionLocked = true;
-        swapReserveMember(actor, blog);
+        if (battleActionLocked || battle.voluntarySwapUsed) return;
+        battle.voluntarySwapUsed = true;
+        const incoming = swapReserveMember(actor, blog);
+        if (!incoming) return;
+        battle.actingId = incoming.id; // このターンをそのまま入れ替わった控えのキャラへ引き継ぐ
         renderBattleScreen();
-        finishPlayerAction();
+        renderActionButtons(incoming);
       };
       grid.appendChild(swapBtn);
     }

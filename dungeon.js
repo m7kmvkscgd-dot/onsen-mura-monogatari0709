@@ -115,12 +115,10 @@ function dlog(msg) {
 }
 
 // ストレス段階に応じた落書き風オーバーレイ画像(無ければnull)
-// 交代要員(reserveFieldMember)は、健在(status:"active")の間だけ一覧の末尾に表示する
-// (交代候補として見えている必要があるため)。瀕死のまま控えに入っている間は、他の瀕死の
-// fieldPartyメンバーと同じく非表示にする(担がれるまでは姿を見せない、という既存仕様を踏襲)
+// 交代要員(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない
+// (5人編成でも常時表示されるアイコンは4つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
 function visibleFieldParty() {
-  const pool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
-  return pool.filter((c) => c.status !== "critical" || c.carriedBy);
+  return fieldParty.filter((c) => c.status !== "critical" || c.carriedBy);
 }
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
@@ -193,6 +191,16 @@ function swapReserveMember(activeMember, log) {
   const idx = fieldParty.indexOf(activeMember);
   if (idx === -1 || !reserveFieldMember) return null;
   const incoming = reserveFieldMember;
+  // 控えに下がるキャラの変化の術/鷹を呼ぶは、控え中も効果が残り続けるのは不自然なためここで解除する
+  if (activeMember.transformForm) {
+    const formName = TRANSFORM_FORMS[activeMember.transformForm].ja;
+    revertTransform(activeMember);
+    if (log) log(`${activeMember.name}は控えに下がり、${formName}の姿から人間に戻った。`);
+  }
+  if (activeMember.hawkTurnsLeft > 0) {
+    clearHawkState([activeMember]);
+    if (log) log(`${activeMember.name}の鷹は姿を消した。`);
+  }
   fieldParty[idx] = incoming;
   reserveFieldMember = activeMember;
   if (log) log(`${incoming.name}が${activeMember.name}と交代した。`);

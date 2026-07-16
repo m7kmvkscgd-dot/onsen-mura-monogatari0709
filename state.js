@@ -37,6 +37,7 @@ function defaultState() {
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
+    ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。家レベル6で解禁)。出発パーティの上限が4人→5人になる(5人目は交代要員、旧「助っ人の札」の後継)
     stableLevel: 0, // 増築の1つ、馬小屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
     henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
     teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。深淵の森15層の進路選択に「茶屋」が必ず現れ、一休み(HP/MP回復)や買い物ができるようになる
@@ -135,6 +136,9 @@ function supplyItemTotal() {
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
 const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;
 const WATCHTOWER_COST = 200;
+// 旅団旗: 建築すると出発パーティの上限が4人→5人になる(5人目は交代要員)。旧アイテム「助っ人の札」の後継
+const RYODANKI_UNLOCK_HOUSE_LEVEL = 6;
+const RYODANKI_COST = 100;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
@@ -271,11 +275,9 @@ function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
 
-// 「助っ人の札」アイテムは廃止したため、出発パーティの上限は常に4人。
-// 5人編成+交代要員(reserveFieldMember)という仕組み自体は将来別の解禁方法で使う想定でそのまま残してあり、
-// このパーティ人数の上限だけを緩めれば(例: 5を返すようにすれば)5人編成システムはすぐに復活できる
+// 旅団旗を建築していれば、出発パーティの上限が4人→5人になる(5人目は交代要員扱い)
 function maxActivePartySize() {
-  return 4;
+  return (state.ryodankiLevel || 0) > 0 ? 5 : 4;
 }
 // 瀕死/ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
 // 居座り続けないよう、activePartyIdsから現在isAvailable()でなくなった者を取り除く

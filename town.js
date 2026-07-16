@@ -16,7 +16,7 @@ function hasAnyNewBuilding() {
     ["karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL], ["hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL],
     ["teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL], ["stableLevel", STABLE_UNLOCK_HOUSE_LEVEL],
     ["beeFarmLevel", BEE_FARM_UNLOCK_HOUSE_LEVEL], ["ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL],
-    ["shopLevel", SHOP_UNLOCK_HOUSE_LEVEL],
+    ["shopLevel", SHOP_UNLOCK_HOUSE_LEVEL], ["ryodankiLevel", RYODANKI_UNLOCK_HOUSE_LEVEL],
   ];
   return checks.some(([key, unlockLevel]) => level >= unlockLevel && !(state[key] || 0) && !state.seenUnlockedBuildings[key]);
 }
@@ -1854,6 +1854,7 @@ const FACILITY_GROUP_DEFS = [
   { key: "stable", levelField: "stableLevel", unlock: STABLE_UNLOCK_HOUSE_LEVEL },
   { key: "beeFarm", levelField: "beeFarmLevel", unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL },
   { key: "ferry", levelField: "ferryLevel", unlock: FERRY_UNLOCK_HOUSE_LEVEL },
+  { key: "ryodanki", levelField: "ryodankiLevel", unlock: RYODANKI_UNLOCK_HOUSE_LEVEL },
 ];
 ["Available", "Locked"].forEach((name) => {
   const toggle = document.getElementById("facilityGroup" + name + "Toggle");
@@ -1933,6 +1934,7 @@ function renderExtension() {
   if (!state.gunpowderStoreLevel && nextLevel === GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("火薬庫");
   if (!state.karakuriLevel && nextLevel === KARAKURI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("からくり屋敷");
   if (!state.ferryLevel && nextLevel === FERRY_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("渡し船");
+  if (!state.ryodankiLevel && nextLevel === RYODANKI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅団旗");
   const nextUnlockEl = document.getElementById("extensionNextUnlock");
   nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
     ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
@@ -1985,6 +1987,7 @@ function renderExtension() {
   renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level, "teaHouseNewBadge");
   renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level, "stableNewBadge", true);
   renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level, "ferryNewBadge", true);
+  renderSimpleBuilding("ryodankiLevel", "ryodankiBuildBtn", RYODANKI_UNLOCK_HOUSE_LEVEL, RYODANKI_COST, level, "ryodankiNewBadge");
   // 鶏小屋/養蜂場は道場と同じ多段階建築(段階ごとに効果が伸びる)なので、renderSimpleBuildingでは表現できず個別に描画する
   const henHouseLevel = state.henHouseLevel || 0;
   const henHouseBtn = document.getElementById("henHouseBuildBtn");
@@ -2069,6 +2072,7 @@ const FACILITY_DISPLAY = {
   stableLevel: { icon: "🐎", name: "馬屋" },
   beeFarmLevel: { icon: "🐝", name: "養蜂場" },
   ferryLevel: { icon: "⛴️", name: "渡し船" },
+  ryodankiLevel: { icon: "🚩", name: "旅団旗" },
 };
 // アイコン(または職業解放時は全身立ち絵)がフェードイン→少し間を置いてから結果パネルが現れる、の2段構え。
 // タップで即座にパネルへ進める。imageSrcを渡すとアイコンの絵文字ではなく立ち絵画像を表示する
@@ -2217,6 +2221,7 @@ document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("s
 document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
 document.getElementById("karakuriBuildBtn").onclick = () => buildSimpleBuilding("karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST);
 document.getElementById("ferryBuildBtn").onclick = () => buildSimpleBuilding("ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST);
+document.getElementById("ryodankiBuildBtn").onclick = () => buildSimpleBuilding("ryodankiLevel", RYODANKI_UNLOCK_HOUSE_LEVEL, RYODANKI_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
 document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); renderMagistrateScreen(); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
