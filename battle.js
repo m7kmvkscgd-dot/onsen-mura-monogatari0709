@@ -182,6 +182,7 @@ function renderBattleScreen() {
   // 他の敵の並びは動かないでほしい」という指示に反するため
   const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  const newlyDeadForReaction = []; // 撃破リアクションはループを抜けた後にまとめて起動する(下記コメント参照)
   visibleEnemies.forEach((e) => {
     const dead = e.hp <= 0;
     const targetable = !!pendingEnemyPick && !dead;
@@ -214,13 +215,19 @@ function renderBattleScreen() {
     }
     row.appendChild(card);
     // 撃破リアクションは「初めて死亡を検知した描画」の時だけ起動する(再描画のたびに再生し直さない、
-    // shakeClassFor()と同じ考え方)。カード自体はdefeat-hiddenで見えなくなっているだけなので、
-    // 実際の演出はplayEnemyDefeatReaction()がbody直下に複製したクローンの上で独立に再生する
+    // shakeClassFor()と同じ考え方)。起動自体はこのループを抜けた後にまとめて行う(下記参照)
     if (dead && !e.__defeatReactionState) {
       e.__defeatReactionState = "playing";
-      playEnemyDefeatReaction(e, card);
+      newlyDeadForReaction.push({ entity: e, card });
     }
   });
+  // 【不具合対策】ループの途中(まだ他のカードがrowに入っていない時点)でplayEnemyDefeatReaction()の
+  // card.getBoundingClientRect()を呼ぶと、#enemyRowのflexbox(justify-content:center)が
+  // 「今この瞬間rowに入っている枚数」を基準に再計算されてしまい、全カードが揃った後の最終位置
+  // ではなく「1枚だけの時の中央寄せ位置」を捕まえてしまっていた(2体編成で片方が死ぬと、撃破演出の
+  // クローンが2体の中間にワープして見える不具合の原因だった)。全カードをrowに追加し終えて
+  // レイアウトが確定してから、まとめて起動することで解決する
+  newlyDeadForReaction.forEach(({ entity, card }) => playEnemyDefeatReaction(entity, card));
   battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
   activateHpTrails(row);
   fieldParty.forEach((c) => renderVfxFor(c.id));
