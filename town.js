@@ -1711,6 +1711,17 @@ function renderOnsenShrine() {
     offerBtn.disabled = (state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST;
   }
 
+  document.getElementById("shrineSoulLumpCount").textContent = state.inventory.soulLump || 0;
+  const specialOfferBtn = document.getElementById("shrineSpecialOfferBtn");
+  const highTierAllOwned = OMAMORI_LIST.filter((o) => o.tier >= SHRINE_SPECIAL_OFFER_MIN_TIER).every((o) => state.omamoriOwned.includes(o.id));
+  if (highTierAllOwned) {
+    specialOfferBtn.textContent = "レア度⭐️⭐️⭐️以上を全て授かりました";
+    specialOfferBtn.disabled = true;
+  } else {
+    specialOfferBtn.textContent = `特別祈願する(かけら${SHRINE_OFFER_SOUL_SHARD_COST}個+塊${SHRINE_SPECIAL_OFFER_LUMP_COST}個)`;
+    specialOfferBtn.disabled = (state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST || (state.inventory.soulLump || 0) < SHRINE_SPECIAL_OFFER_LUMP_COST;
+  }
+
   const list = document.getElementById("shrineOmamoriList");
   list.innerHTML = "";
   [1, 2, 3, 4].forEach((tier) => {
@@ -1791,6 +1802,26 @@ document.getElementById("shrineOfferBtn").onclick = () => {
   const drawn = state.omamoriOwned.length === 0 ? omamoriById("fukurokuju") : drawOmamori(state.omamoriOwned);
   if (!drawn) { showInfoModal("すでに全てのお守りを授かっています"); return; }
   state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
+  state.omamoriOwned.push(drawn.id);
+  saveState();
+  const resultEl = document.getElementById("shrineDrawResult");
+  resultEl.style.display = "block";
+  resultEl.classList.toggle("omamori-rare-result-card", drawn.tier === 4);
+  resultEl.innerHTML = `
+    <div class="roster-name">${drawn.name}(${drawn.reading})を授かった！<br><span class="status-tag active">レア度${"⭐️".repeat(drawn.tier)}</span></div>
+    <div class="roster-sub" style="margin-top:0.3rem;">${drawn.desc}</div>
+  `;
+  if (drawn.tier === 4) playRareOmamoriEffect();
+  else playSfx("skill_confirm");
+  renderOnsenShrine();
+};
+document.getElementById("shrineSpecialOfferBtn").onclick = () => {
+  if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { showInfoModal("魂のかけらが足りません"); return; }
+  if ((state.inventory.soulLump || 0) < SHRINE_SPECIAL_OFFER_LUMP_COST) { showInfoModal("魂の塊が足りません"); return; }
+  const drawn = drawOmamori(state.omamoriOwned, SHRINE_SPECIAL_OFFER_MIN_TIER);
+  if (!drawn) { showInfoModal("レア度⭐️⭐️⭐️以上のお守りはすでに全て授かっています"); return; }
+  state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
+  state.inventory.soulLump -= SHRINE_SPECIAL_OFFER_LUMP_COST;
   state.omamoriOwned.push(drawn.id);
   saveState();
   const resultEl = document.getElementById("shrineDrawResult");

@@ -161,6 +161,7 @@ function loadState() {
       if (loaded.shopLevel == null) loaded.shopLevel = 1;
       if (loaded.inventory && loaded.inventory.bomb == null) loaded.inventory.bomb = 0; // 旧セーブ用の初期値(爆弾未所持)
       if (loaded.inventory && loaded.inventory.soulShard == null) loaded.inventory.soulShard = 0; // 旧セーブ用の初期値(魂のかけら未所持)
+      if (loaded.inventory && loaded.inventory.soulLump == null) loaded.inventory.soulLump = 0; // 旧セーブ用の初期値(魂の塊未所持)
       if (loaded.inventory && loaded.inventory.onsenEggPouch == null) loaded.inventory.onsenEggPouch = 0; // 旧セーブ用の初期値(鶏小屋の卵ポーチ未所持)
       if (loaded.inventory && loaded.inventory.takigyo == null) loaded.inventory.takigyo = 0; // 旧セーブ用の初期値(滝行許可証未所持)
       if (loaded.inventory) TEAHOUSE_SNACK_IDS.forEach((id) => { if (loaded.inventory[id] == null) loaded.inventory[id] = 0; }); // 旧セーブ用の初期値(茶屋の菓子未所持)

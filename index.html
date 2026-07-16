@@ -499,6 +499,15 @@
         <button class="big primary" id="shrineOfferBtn" style="margin-top:0.6rem;">奉納する(魂のかけら3個)</button>
         <div id="shrineDrawResult" class="card" style="display:none;margin-top:0.7rem;background:var(--panel-2);"></div>
       </div>
+      <div class="card" id="shrineSpecialOfferCard" style="margin-top:0.8rem;">
+        <div class="roster-name">特別祈願</div>
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">ボスや中ボスが低確率で落とす「魂の塊」を捧げると、レア度⭐️⭐️⭐️以上のお守りだけを授かれます。</p>
+        <div class="shrine-soulshard-row" style="margin-top:0.4rem;">
+          <img src="assets/items/soul_lump.png" class="shrine-soulshard-icon" alt="魂の塊">
+          <span class="shrine-soulshard-text">所持している魂の塊：<span id="shrineSoulLumpCount" class="gold">0</span>個</span>
+        </div>
+        <button class="big shrine-special-offer-btn" id="shrineSpecialOfferBtn" style="margin-top:0.6rem;">特別祈願する(かけら3個+塊1個)</button>
+      </div>
       <h2 style="margin-top:1rem;">お守り一覧(装備中 <span id="shrineEquippedCount">0</span>/<span id="shrineEquipMaxText2"></span>)</h2>
       <div id="shrineOmamoriList"></div>
       <button class="big" id="onsenShrineBackBtn" style="margin-top:1rem;">温泉に戻る</button>

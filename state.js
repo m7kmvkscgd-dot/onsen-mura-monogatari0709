@@ -7,7 +7,7 @@ function defaultState() {
     roster: [],
     activePartyIds: [],
     inventory: {
-      potion: 3, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, onsenEggPouch: 0, takigyo: 0,
+      potion: 3, smokeBomb: 2, campingKit: 0, onsenEgg: 0, bomb: 0, soulShard: 0, soulLump: 0, onsenEggPouch: 0, takigyo: 0,
       // onsenEggPouch=鶏小屋の卵ポーチ(支援物資の上限に含まれない別枠)、takigyo=滝行許可証(スキルリセット)
       // 茶屋の菓子8種(回復薬等と同じ支援物資、TEAHOUSE_SNACK_IDS参照)
       amadango: 0, sanshokudango: 0, sakuramochi: 0, kusamochi: 0, matcha: 0, yakiguri: 0, hoshigaki: 0, konpeito: 0,

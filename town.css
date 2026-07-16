@@ -515,6 +515,17 @@
   .shrine-soulshard-text {
     font-size: 0.85rem; color: var(--dw-body-color, #ead8ab);
   }
+  /* 特別祈願ボタン: 通常の奉納(primary=金)ともう一段差をつけるため、琥珀色の縁取り+微発光にして
+     「魂の塊を使う特別なガチャ」であることを一目で分かるようにしている */
+  button.shrine-special-offer-btn {
+    background: linear-gradient(180deg, #4a3a1e, #382b15);
+    border: 2px solid #d9a94a; color: #ffe9b3;
+    box-shadow: 0 0 10px rgba(217,169,74,0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  button.shrine-special-offer-btn:disabled {
+    background: var(--dw-btn-bg, #3a3630); border-color: #6b6156; color: var(--dw-caption-color, #9c9587);
+    box-shadow: none;
+  }
   /* 星4(最高レア)のお守りを引いた時だけのド派手な演出(playRareOmamoriEffect、town.js)。
      画面全体を金色でフラッシュさせ、粒子が四方八方に弾け飛び、中央に大きなバナーが出る。
      神隠しの道の演出(kamikakushi-flash-overlay、紫〜白)と同じ構造だが、色と規模を「特大」にしてある */

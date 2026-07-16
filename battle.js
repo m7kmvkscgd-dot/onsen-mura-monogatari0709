@@ -1410,11 +1410,13 @@ function victory() {
   // 下のbattle.enemies.forEachで他の敵と同じように処理されるため、ここでは状態のクリアのみ)
   if (battle.bossPursuitEnemyId) bossPursuit = null;
   let soulShardCount = 0;
+  let soulLumpCount = 0;
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
     if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
+    if ((e.isBoss || e.isMidBoss) && Math.random() < SOUL_LUMP_DROP_CHANCE) soulLumpCount++; // ボス/中ボス討伐時のみ低確率で魂の塊をドロップ(神社の特別祈願用)
     aliveField().forEach((c) => {
       const beforeLevel = c.level;
       grantXp(c, e.xp, blog);
@@ -1453,6 +1455,12 @@ function victory() {
     state.inventory.soulShard = (state.inventory.soulShard || 0) + soulShardCount;
     blog(`魂のかけらを${soulShardCount}個手に入れた。`);
   }
+  if (soulLumpCount > 0) {
+    const before = state.inventory.soulLump || 0;
+    state.inventory.soulLump = Math.min(SOUL_LUMP_CAP, before + soulLumpCount);
+    if (state.inventory.soulLump > before) blog(`魂の塊を${state.inventory.soulLump - before}個手に入れた！`);
+    else blog("魂の塊を感じたが、これ以上は持てなかった。");
+  }
   // 大国主命の御守: 戦闘終了後12%でストレスを5回復
   if (hasOmamori("okuninushi") && Math.random() < 0.12) {
     fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.max(0, (c.fatigue || 0) - 5); });
@@ -1467,12 +1475,14 @@ function victory() {
   if (hasOmamori("amenominakanushi")) {
     fieldParty.forEach((c) => { if (c.status === "active" && c.maxMp > 0) c.mp = Math.min(c.maxMp, c.mp + 1); });
   }
-  if (totalGold > 0 || soulShardCount > 0) {
+  if (totalGold > 0 || soulShardCount > 0 || soulLumpCount > 0) {
     if (totalGold > 0) playSfx("coin");
     // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
     // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)。
-    // 魂のかけらを入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
-    showTreasurePopup(Math.round(totalGold / battle.enemies.length), soulShardCount > 0 ? "assets/items/soul_shard.png" : null);
+    // 魂のかけら/魂の塊を入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
+    // (塊の方が激レアなので、両方同時に落ちた場合は塊を優先して見せる)
+    const extraImg = soulLumpCount > 0 ? "assets/items/soul_lump.png" : soulShardCount > 0 ? "assets/items/soul_shard.png" : null;
+    showTreasurePopup(Math.round(totalGold / battle.enemies.length), extraImg);
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
