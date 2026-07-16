@@ -527,14 +527,21 @@
     <div class="body-pad">
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <p class="gold" id="extensionGold">0G</p>
-      <h2>🏠家</h2>
-      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">待機できる仲間の人数上限が増えます。同時に出発できるのは最大4人です。</p>
-      <div class="card">
-        <div class="roster-name">🏠家レベル <span id="extensionLevel"></span></div>
-        <div class="roster-sub" style="margin-top:0.2rem;">仲間上限: <span id="extensionCapacity"></span>人</div>
-        <div class="roster-sub" id="extensionNextUnlock" style="margin-top:0.2rem;color:var(--accent);"></div>
+      <h2>🏠家 Lv<span id="extensionLevel"></span></h2>
+      <div class="card house-status-card">
+        <div class="house-status-section">
+          <div class="house-status-label">現在</div>
+          <div class="house-status-line">・仲間上限：<strong id="extensionCapacity"></strong>人</div>
+        </div>
+        <div class="house-status-section house-status-next" id="extensionNextSection">
+          <div class="house-status-label" id="extensionNextLabel"></div>
+          <div class="house-status-line">・仲間上限：<strong id="extensionNextCapacity"></strong>人</div>
+          <div id="extensionNextUnlockList"></div>
+        </div>
       </div>
       <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
+      <p class="house-upgrade-reason" id="extensionUpgradeReason" style="display:none;"></p>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.6rem 0 0;" id="extensionDesc"></p>
 
       <h2 class="facility-group-heading static open" id="facilityGroupAvailableHeading" style="margin-top:20px;">建築可能<span class="facility-group-count" id="facilityGroupAvailableCount"></span></h2>
       <div class="facility-group-body open" id="facilityGroupAvailable"></div>

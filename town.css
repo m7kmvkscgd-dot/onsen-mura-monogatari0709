@@ -397,6 +397,20 @@
   .bestiary-detail-body .bestiary-block-label { font-weight: 700; color: var(--dw-title-color); }
   .bestiary-detail-body .weakness-line { color: #9fd8ff; }
   .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
+  /* 増築画面「🏠家」カード。「現在」と「次の増築」を同じカード内で上下2段に分け、間に罫線を1本
+     引くだけで済むよう.status-stat-list(キャラ詳細画面)と同じ構造パターンを流用した。
+     「次の増築」側で解放される施設名の一覧(.house-status-unlock)は、キャプション色よりさらに
+     控えめな--dw-descにして、主役の「仲間上限が何人→何人になるか」より目立たないようにしている
+     (ユーザー指示: 次のレベルで解放される情報は現在の情報より目立たせない) */
+  .house-status-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--dw-caption-color); margin-bottom: 0.35rem; }
+  .house-status-section + .house-status-section { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--dw-card-border); }
+  .house-status-line { font-size: 14px; line-height: 1.6; color: var(--dw-body-color); }
+  .house-status-line strong { color: var(--dw-title-color); font-weight: 800; }
+  .house-status-next .house-status-line { color: var(--dw-caption-color); }
+  .house-status-next .house-status-line strong { color: var(--dw-heading-color); }
+  .house-status-unlock { font-size: 12px; line-height: 1.6; color: var(--dw-desc); }
+  /* ボタンが押せない理由(所持金不足時のみ表示)。「なぜ押せないか」がひと目で分かるようdw-dangerを使う */
+  .house-upgrade-reason { font-size: 12px; color: var(--dw-danger); text-align: center; margin: 0.4rem 0 0; }
   /* 施設一覧の2グループ化(建築可能(建築済みも含む)/未解放)。建築可能は常に展開したまま(見出しは
      タップしても開閉しない、ユーザー指示)、未解放だけ見出しタップで開閉する
      (グループ単位の折りたたみは個々のfacility-toggleとは別枠) */

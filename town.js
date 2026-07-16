@@ -1965,16 +1965,8 @@ function renderExtension() {
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
   document.getElementById("extensionCapacity").textContent = rosterCapacity();
-  const btn = document.getElementById("extensionUpgradeBtn");
-  if (level >= HOUSE_MAX_LEVEL) {
-    btn.textContent = "これ以上は増築できません(上限)";
-    btn.disabled = true;
-  } else {
-    const cost = houseUpgradeCost(level);
-    btn.textContent = `増築する(${cost}G) 仲間上限 ${rosterCapacity()}→${rosterCapacity() + 1}人`;
-    btn.disabled = state.gold < cost;
-  }
-  // 次の家レベルで解禁される施設があれば「→ 家レベルN 【解禁】◯◯」の形でプレビュー表示する
+  document.getElementById("extensionDesc").innerHTML = "仲間を雇える上限が増えます。<br>（冒険に出発できる人数は最大4人です。）";
+  // 次の家レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
   const nextLevel = level + 1;
   const unlocksAtNextLevel = [];
   if ((state.dojoLevel || 0) === 0 && nextLevel === DOJO_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("道場");
@@ -1993,10 +1985,34 @@ function renderExtension() {
   if (!state.karakuriLevel && nextLevel === KARAKURI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("からくり屋敷");
   if (!state.ferryLevel && nextLevel === FERRY_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("渡し船");
   if (!state.ryodankiLevel && nextLevel === RYODANKI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅団旗");
-  const nextUnlockEl = document.getElementById("extensionNextUnlock");
-  nextUnlockEl.textContent = unlocksAtNextLevel.length > 0 && level < HOUSE_MAX_LEVEL
-    ? `→ 家レベル${nextLevel} 【解禁】${unlocksAtNextLevel.join("・")}`
-    : "";
+  const btn = document.getElementById("extensionUpgradeBtn");
+  const reasonEl = document.getElementById("extensionUpgradeReason");
+  const nextSection = document.getElementById("extensionNextSection");
+  if (level >= HOUSE_MAX_LEVEL) {
+    // これ以上増築できない=「次」が存在しないので、次の増築セクション自体を非表示にする
+    // (「現在」の情報だけが残り、混乱の元になる「次」の空欄を見せない)
+    nextSection.style.display = "none";
+    btn.textContent = "これ以上は増築できません(上限)";
+    btn.disabled = true;
+    reasonEl.style.display = "none";
+  } else {
+    nextSection.style.display = "";
+    document.getElementById("extensionNextLabel").textContent = `次の増築（Lv${nextLevel}）`;
+    document.getElementById("extensionNextCapacity").textContent = rosterCapacity() + 1;
+    document.getElementById("extensionNextUnlockList").innerHTML = unlocksAtNextLevel
+      .map((name) => `<div class="house-status-line house-status-unlock">・${name} 解放</div>`).join("");
+    const cost = houseUpgradeCost(level);
+    const canAfford = state.gold >= cost;
+    btn.textContent = `増築する（${cost}G）`;
+    btn.disabled = !canAfford;
+    // 押せない理由は所持金不足の時だけ、ボタン直下に「◯◯G必要（所持◯◯G）」の形で表示する
+    if (canAfford) {
+      reasonEl.style.display = "none";
+    } else {
+      reasonEl.textContent = `${cost}G必要（所持${state.gold}G）`;
+      reasonEl.style.display = "";
+    }
+  }
   const dojoLevel = state.dojoLevel || 0;
   const dojoBtn = document.getElementById("dojoBuildBtn");
   const dojoLocked = dojoLevel === 0 && level < DOJO_UNLOCK_HOUSE_LEVEL;
