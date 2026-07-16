@@ -764,6 +764,11 @@ Playwrightで購入→5人選択→出発→控え人数確認→探索中交代
 **この件の教訓(重要、次回同種の場面で必ず思い出すこと)**: 大きな失敗から「動いていた状態に戻す」作業を`git show <古いコミット>:<file> > <file>`のような一括ファイル上書きで行う時は、単に古い内容に戻すだけでなく、**その間(失敗〜復元までの調査・迷走期間)に生まれた独立して有効な修正がないか**を`git log`でコミットメッセージを確認し、あれば復元後の新しい実装にも意識して移植すること。「大失敗した設計」と「その最中にたまたま見つけた別の有効なバグ修正」は別物であり、前者を捨てる時に後者まで無自覚に道連れにしないよう注意する。
 
 ### 最終的な音声アーキテクチャのまとめ(2026-07-16時点)
-- `bgmAudio`(町・冒険中BGM): `bgmAudioCtx`+`bgmGainNode`経由。`setBgmAudioVolume()`/`getBgmAudioVolume()`で読み書き。`masterBgmVolume`(0〜1、右上の0〜10ボタンで調整)と`bgmVolumeForKey(key)`(曲ごとの基準音量、townだけ0.7倍)を掛け合わせた値が実際のgainになる。再生は必ず`resumeAndPlayBgmAudio()`経由(呼ぶたびにsuspendedならresume)。意図した一時停止は必ず`pauseBgmAudio()`経由(400ms猶予で自動復帰ウォッチドッグの対象から除外)
+- `bgmAudio`(町・冒険中BGM): `bgmAudioCtx`+`bgmGainNode`経由。`setBgmAudioVolume()`/`getBgmAudioVolume()`で読み書き。`masterBgmVolume`(0〜1、右上の歯車メニュー内の0〜10ボタンで調整、初期値0.8)と`bgmVolumeForKey(key)`(曲ごとの基準音量、townだけ0.7倍)を掛け合わせた値が実際のgainになる。再生は必ず`resumeAndPlayBgmAudio()`経由(呼ぶたびにsuspendedならresume)。意図した一時停止は必ず`pauseBgmAudio()`経由(400ms猶予で自動復帰ウォッチドッグの対象から除外)
 - `openingBgmAudio`/`lodgingBgmAudio`/`campBgmAudio`/`ambientBgmAudio`: 従来通り`<audio>.volume`のまま(GainNode未移行)。`masterBgmVolume===0`の時だけ`.muted`で連動させている
 - 効果音(`sfxAudioCtx`): 元から独立したWeb Audio API実装で、今回の一連の作業では変更していない
+
+## 右上アイコンをスピーカーから歯車に変更(音量+設定+タイトルに戻るのメニュー化)+全alert()を自前モーダルへ置換(コミット62df730)
+音量調整専用だった右上のポップオーバーを汎用メニューに拡張した。アイコン自体は音量に応じて絵文字が変わる仕様をやめ常に⚙️固定にし、中身は①0〜10の音量ボタン(既存のまま)②「設定」(`#screen-settings`)③「タイトルに戻る」(確認モーダル経由)の3つ。設定画面は元々タイトルからしか開けず「戻る」が常にタイトル固定だったが、町の歯車メニューから開いた場合にタイトルへ飛んでしまわないよう、開く直前の画面を`settingsReturnScreenId`(title.js)に記憶しておき、そこへ戻るよう修正した(未設定=タイトルから開かれた時は従来通りタイトルへ戻る)。
+
+あわせて、ユーザーから「ブラウザ標準のalert()は動作不良を起こしがちだから使うな」との指摘を受け、town.js/battle.js/dungeon.jsに散らばっていた**全40箇所**のalert()を、既存の汎用モーダル`showConfirmModal()`をOK1つだけで呼び出す薄いラッパー`showInfoModal()`(town.js、`showConfirmModal`のすぐ下に新設)に統一した。alert()は同期的にJSの実行を止める仕様のため、タップ直後の演出/オーディオ処理と絡んで実機で不具合を誘発しやすいと考えられる。今後、案内メッセージを1つ出したいだけの場面(在庫切れ・所持金不足等のガード節)は`alert()`ではなく必ず`showInfoModal(message)`を使うこと。
