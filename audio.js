@@ -76,6 +76,48 @@ const campBgmAudio = document.getElementById("campBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const openingBgmAudio = document.getElementById("openingBgmAudio");
 
+// ============ 【調査用・一時的】bgmAudioのメディアイベント実測 ============
+// 実機計測でメインスレッドのブロックが2回とも否定された(ハートビートが最後まで正常に発火し
+// 続けた)にもかかわらずノイズは実際に聞こえたと確認されたため、原因をJSの同期処理ではなく
+// オーディオのバッファリング/デコードパイプライン側(ネットワーク起因のストール等、
+// HTMLMediaElementが発するイベント)に切り替えて実測する。
+function bgmBufferedRangesStr(audioEl) {
+  try {
+    const b = audioEl.buffered;
+    const parts = [];
+    for (let i = 0; i < b.length; i++) parts.push(b.start(i).toFixed(1) + "-" + b.end(i).toFixed(1));
+    return "[" + parts.join(",") + "]";
+  } catch (e) { return "?"; }
+}
+const BGM_MEDIA_DIAG_EVENTS = ["waiting", "stalled", "suspend", "canplay", "canplaythrough", "playing", "pause", "seeking", "seeked", "ended", "emptied", "loadstart", "loadedmetadata", "loadeddata", "ratechange", "error"];
+BGM_MEDIA_DIAG_EVENTS.forEach((evt) => {
+  bgmAudio.addEventListener(evt, () => {
+    if (typeof perfDiagLog === "function") {
+      perfDiagLog("bgmAudio EVENT: " + evt + " (currentTime=" + bgmAudio.currentTime.toFixed(2) + ", readyState=" + bgmAudio.readyState + ", networkState=" + bgmAudio.networkState + ", buffered=" + bgmBufferedRangesStr(bgmAudio) + ")");
+    }
+  });
+});
+// progressは頻発しがちなので、bufferedレンジが実際に変化した時だけログする(ノイズ削減)
+let bgmLastProgressBuffered = "";
+bgmAudio.addEventListener("progress", () => {
+  const cur = bgmBufferedRangesStr(bgmAudio);
+  if (cur !== bgmLastProgressBuffered) {
+    bgmLastProgressBuffered = cur;
+    if (typeof perfDiagLog === "function") {
+      perfDiagLog("bgmAudio EVENT: progress (buffered=" + cur + ", networkState=" + bgmAudio.networkState + ")");
+    }
+  }
+});
+// timeupdateは高頻度で発火するため、currentTimeが予期せず後退した(=誰も呼んでいないのに
+// 巻き戻り/再スタートした)瞬間だけログする
+let bgmLastTimeUpdateAt = 0;
+bgmAudio.addEventListener("timeupdate", () => {
+  if (bgmAudio.currentTime < bgmLastTimeUpdateAt - 0.5 && typeof perfDiagLog === "function") {
+    perfDiagLog("bgmAudio: currentTime JUMPED BACK from " + bgmLastTimeUpdateAt.toFixed(2) + " to " + bgmAudio.currentTime.toFixed(2) + " (unexpected restart?)");
+  }
+  bgmLastTimeUpdateAt = bgmAudio.currentTime;
+});
+
 // ============ BGM音量制御: Web Audio API(GainNode)経由 ============
 // iOS(Safari/Chromeとも中身は同一のWebKitエンジン)は<audio>要素のvolumeプロパティへの
 // JSからの変更を実際の出力に反映しない(音量はハードウェアの物理ボタンのみで変わる、という
