@@ -397,17 +397,25 @@
   .bestiary-detail-body .bestiary-block-label { font-weight: 700; color: var(--dw-title-color); }
   .bestiary-detail-body .weakness-line { color: #9fd8ff; }
   .bestiary-detail-body .locked-line { color: var(--dw-caption-color); }
-  /* 増築画面「🏠家」カード。「現在」と「次の増築」を同じカード内で上下2段に分け、間に罫線を1本
-     引くだけで済むよう.status-stat-list(キャラ詳細画面)と同じ構造パターンを流用した。
-     「次の増築」側で解放される施設名の一覧(.house-status-unlock)は、キャプション色よりさらに
-     控えめな--dw-descにして、主役の「仲間上限が何人→何人になるか」より目立たないようにしている
-     (ユーザー指示: 次のレベルで解放される情報は現在の情報より目立たせない) */
+  /* 増築画面「🏠家」カード。「現在」「次の増築(仲間上限アップ)」「次の増築(施設解放)」の3段階で
+     プロミネンスを付けている: 現在(一番目立つ、太字+大きめ)>次の増築の仲間上限アップ(中程度、
+     ●付き)>解放施設一覧(--dw-descで一番控えめ、「新施設」という小見出しの下にまとめる)。
+     「現在」と「次の増築」の区切りは.status-stat-list(キャラ詳細画面)と同じ罫線パターンを流用 */
   .house-status-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--dw-caption-color); margin-bottom: 0.35rem; }
   .house-status-section + .house-status-section { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--dw-card-border); }
   .house-status-line { font-size: 14px; line-height: 1.6; color: var(--dw-body-color); }
   .house-status-line strong { color: var(--dw-title-color); font-weight: 800; }
-  .house-status-next .house-status-line { color: var(--dw-caption-color); }
-  .house-status-next .house-status-line strong { color: var(--dw-heading-color); }
+  /* 「現在」は一番目立たせたい主役の情報なので、見出し・数値ともに強調する */
+  .house-status-current .house-status-label { font-size: 13px; font-weight: 800; color: var(--dw-heading-color); }
+  .house-status-current .house-status-line { font-size: 17px; font-weight: 800; color: var(--dw-title-color); }
+  /* 「次の増築」見出しの中のLv数値だけ金色にして「次の目標」が目に留まるようにする */
+  .house-next-level { color: var(--dw-gold); font-weight: 800; }
+  /* 「次の増築」内の仲間上限アップは「現在」ほどではないが、下の解放施設一覧よりは目立たせる中間の強さ */
+  .house-status-cap-line { font-size: 14px; font-weight: 700; line-height: 1.6; color: var(--dw-body-color); }
+  .house-status-cap-line strong { color: var(--dw-heading-color); font-weight: 800; }
+  .house-status-facility-block { margin-top: 0.5rem; }
+  .house-status-facility-divider { border-top: 1px dashed var(--dw-card-border); margin-bottom: 0.5rem; }
+  .house-status-facility-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--dw-caption-color); margin-bottom: 0.2rem; }
   .house-status-unlock { font-size: 12px; line-height: 1.6; color: var(--dw-desc); }
   /* ボタンが押せない理由(所持金不足時のみ表示)。「なぜ押せないか」がひと目で分かるようdw-dangerを使う */
   .house-upgrade-reason { font-size: 12px; color: var(--dw-danger); text-align: center; margin: 0.4rem 0 0; }

@@ -1997,10 +1997,13 @@ function renderExtension() {
     reasonEl.style.display = "none";
   } else {
     nextSection.style.display = "";
-    document.getElementById("extensionNextLabel").textContent = `次の増築（Lv${nextLevel}）`;
+    document.getElementById("extensionNextLabel").innerHTML = `次の増築（<span class="house-next-level">Lv${nextLevel}</span>）`;
     document.getElementById("extensionNextCapacity").textContent = rosterCapacity() + 1;
+    // 解放される施設が無いレベルでは「新施設」の見出しだけ浮くのを避けるため、このブロックごと隠す
+    const facilityBlock = document.getElementById("extensionFacilityBlock");
+    facilityBlock.style.display = unlocksAtNextLevel.length > 0 ? "" : "none";
     document.getElementById("extensionNextUnlockList").innerHTML = unlocksAtNextLevel
-      .map((name) => `<div class="house-status-line house-status-unlock">・${name} 解放</div>`).join("");
+      .map((name) => `<div class="house-status-unlock">・${name}</div>`).join("");
     const cost = houseUpgradeCost(level);
     const canAfford = state.gold >= cost;
     btn.textContent = `増築する（${cost}G）`;
