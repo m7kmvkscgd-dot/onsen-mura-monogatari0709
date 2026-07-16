@@ -233,6 +233,12 @@
   }
   .class-pick { position: relative; }
   .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
+  /* 未解禁の職業。図鑑の未遭遇シルエット(grayscale(1) brightness(0.03)、town.js)と同じ濃さの
+     真っ黒シルエットで並べつつ、名前の代わりに解禁条件("道場建築で解禁"等)を出すことで、
+     「まだ見ぬ職業がある」ことをそれと分かる形で見せる(ユーザー指示: フィルターで隠すのではなく
+     並べた上で条件を書く方がワクワクする、という狙い)。タップでは選べないため通常カーソルのまま */
+  .class-pick.locked { cursor: default; opacity: 0.82; }
+  .class-pick-locked-label { display: block; font-size: 0.6rem; margin-top: 0.25rem; line-height: 1.25; color: var(--text-muted); word-break: keep-all; overflow-wrap: break-word; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の
      イベント委譲で制御)。cursor:helpは見た目上の変更が最小限になるようアイコン自体のレイアウトは

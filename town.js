@@ -426,16 +426,25 @@ document.getElementById("toDungeonBtn").onclick = () => {
 
 // ============ 宿屋 ============
 // 建物で解禁されたばかり(まだこの一覧で見ていない)の職業に「NEW」を出す。侍/槍士/狩人/陰陽師のような
-// 建物不要で最初から雇える職業は対象外(CLASS_UNLOCK_BUILDINGにエントリが無い=判定自体をスキップする)
+// 建物不要で最初から雇える職業は対象外(CLASS_UNLOCK_BUILDINGにエントリが無い=判定自体をスキップする)。
+// 未解禁の職業は一覧から除外せず、真っ黒シルエット+解禁条件付きで並べる(「まだこんな職業がいるのか」という
+// ワクワク感を出すためのユーザー指示。図鑑の未遭遇シルエットと同じgrayscale+brightness(0.03)を流用)
 function renderClassGrid() {
   const grid = document.getElementById("classGrid");
   grid.innerHTML = "";
   const descArea = document.getElementById("classDescArea");
   descArea.textContent = CLASS_DESC[selectedClass] || "";
   let anyNewlySeen = false;
-  Object.keys(CLASSES).filter(isClassUnlocked).forEach((classId) => {
+  Object.keys(CLASSES).forEach((classId) => {
     const c = CLASSES[classId];
     const div = document.createElement("div");
+    if (!isClassUnlocked(classId)) {
+      div.className = "class-pick locked";
+      const buildingName = (FACILITY_DISPLAY[CLASS_UNLOCK_BUILDING[classId]] || {}).name || "";
+      div.innerHTML = `<img src="${c.image}" style="filter:grayscale(1) brightness(0.03);"><span class="class-pick-locked-label">🔒${buildingName}建築で解禁</span>`;
+      grid.appendChild(div);
+      return;
+    }
     div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
     const isNew = !!CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId];
     div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>${isNew ? '<span class="new-badge">NEW</span>' : ""}`;
