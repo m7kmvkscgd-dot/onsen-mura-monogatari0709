@@ -474,7 +474,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
-      ${isReserve ? '<span class="reserve-badge">控え</span>' : ""}
       ${hpBarHtml(c)}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
