@@ -59,6 +59,13 @@
      切り替わったことが一目でわかるようにする */
   button.retreat-active { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* 出発ボタン: 「最高◯層」を横に別要素で出していたのをボタン内に収めるよう変更。
+     button.bigは既定でdisplay:flex(横並び)のため、このボタンだけflex-directionを縦にして
+     メイン文言の下に小さく最高到達階を添える(未到達で空文字の時はgapが余白として残らないよう
+     :empty時は要素自体をたたむ) */
+  .depart-btn { flex-direction: column; gap: 2px; line-height: 1.3; }
+  .depart-btn-sub { font-size: 11px; font-weight: 400; color: var(--dw-caption-color); }
+  .depart-btn-sub:empty { display: none; }
   .card {
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
