@@ -117,6 +117,29 @@ bgmAudio.addEventListener("timeupdate", () => {
   }
   bgmLastTimeUpdateAt = bgmAudio.currentTime;
 });
+// 【対策】町到達直後の実機計測で、bgmAudio.play()が一度resolveして'playing'イベントまで
+// 発火した直後(1秒以内)に、こちらのコードは一切.pause()を呼んでいないのにも関わらず
+// bgmAudio.pausedがtrueへ戻り、currentTimeが約1.2〜1.4秒ほど0付近で停滞する現象を確認した
+// (iOS側のWeb Audio API + HTMLMediaElement連携特有の、再生開始直後の瞬断とみられる)。
+// 意図した一時停止(曲切り替え・フェード終了時のbgmAudio.pause()呼び出し)はpauseBgmAudio()
+// 経由に統一し、その場合だけ短い猶予(400ms)を設けて自動復帰の対象から除外する。それ以外の
+// (=このコードが一切関与していない)pauseは「意図しない停止」とみなし、即座にplay()を
+// 呼び直して自動的に復帰させる
+let bgmIntentionalPauseUntil = 0;
+function pauseBgmAudio() {
+  bgmIntentionalPauseUntil = performance.now() + 400;
+  bgmAudio.pause();
+}
+bgmAudio.addEventListener("pause", () => {
+  if (performance.now() < bgmIntentionalPauseUntil) return; // 意図した一時停止
+  if (!currentBgmKey || !audioUnlocked) return; // 何も再生する意図がない/まだアンロック前
+  if (typeof perfDiagLog === "function") {
+    perfDiagLog("bgmAudio: UNEXPECTED pause detected (currentBgmKey=" + currentBgmKey + ", currentTime=" + bgmAudio.currentTime.toFixed(2) + ") -> auto re-play()");
+  }
+  bgmAudio.play().catch((e) => {
+    if (typeof perfDiagLog === "function") perfDiagLog("bgmAudio: auto re-play() after unexpected pause REJECTED: " + e.message);
+  });
+});
 
 // ============ BGM音量制御: Web Audio API(GainNode)経由 ============
 // iOS(Safari/Chromeとも中身は同一のWebKitエンジン)は<audio>要素のvolumeプロパティへの
@@ -478,7 +501,7 @@ function stopBattleBgm() {
       requestAnimationFrame(fadeStep);
     } else {
       bgmPositions[key] = 0;
-      bgmAudio.pause();
+      pauseBgmAudio();
       setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
@@ -511,7 +534,7 @@ function stopAmbientBgm() {
 // 海岸ステージの探索用BGM(coast/coast_night、戦闘中も継続して流れている)を止める。里に帰る時に呼ぶ
 function stopCoastAreaBgm() {
   if (currentBgmKey !== "coast" && currentBgmKey !== "coast_night") return;
-  bgmAudio.pause();
+  pauseBgmAudio();
   bgmPositions[currentBgmKey] = 0;
   currentBgmKey = null;
 }
@@ -520,7 +543,7 @@ function stopCoastAreaBgm() {
 // 明示的に止めておかないと、以前ここでplayBgm("dungeon")を呼んでいた(=同じ要素のsrcを上書きすることで
 // 自動的に町の曲が止まっていた)頃と違い、何もしなければ町のBGMが鳴りっぱなしになってしまう
 function stopTownBgm() {
-  bgmAudio.pause();
+  pauseBgmAudio();
   currentBgmKey = null;
 }
 
@@ -537,7 +560,7 @@ function playLodgingBgm() {
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
-      bgmAudio.pause();
+      pauseBgmAudio();
       setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       lodgingBgmAudio.currentTime = 0;
       if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
@@ -567,7 +590,7 @@ function playCampBgm() {
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
-      bgmAudio.pause();
+      pauseBgmAudio();
       setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       campBgmAudio.currentTime = 0;
       if (audioUnlocked) campBgmAudio.play().catch(() => {});
