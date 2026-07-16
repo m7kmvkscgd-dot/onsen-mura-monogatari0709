@@ -182,12 +182,12 @@ function renderBgmDiagOverlay() {
     if (!el) {
       el = document.createElement("div");
       el.id = "bgmDiagOverlay";
-      el.style.cssText = "position:fixed;top:0;left:0;z-index:999999;background:rgba(0,0,0,0.9);color:#0f0;font-size:9px;font-family:monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:auto;overflow-y:auto;max-width:100vw;max-height:55vh;line-height:1.25;";
+      el.style.cssText = "position:fixed;top:0;left:0;z-index:999999;background:rgba(0,0,0,0.85);color:#0f0;font-size:9px;font-family:monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:none;overflow-y:auto;max-width:100vw;max-height:40vh;line-height:1.25;";
       document.body.appendChild(el);
     }
     const s = bgmDiagSnapshot();
     const header =
-      "[BGM DIAG] (タップでスクロール可)\n" +
+      "[BGM DIAG]\n" +
       "ctxState: " + s.bgmAudioCtxState + "\n" +
       "paused: " + s.bgmAudioPaused + "  muted: " + s.bgmAudioMuted + "\n" +
       "volume: " + s.bgmAudioVolume + "  gain: " + s.gainValue + "\n" +
@@ -195,11 +195,10 @@ function renderBgmDiagOverlay() {
       "key: " + s.currentBgmKey + "  unlocked: " + s.audioUnlocked + "\n" +
       "src: " + (s.bgmAudioCurrentSrc || "").split("/").pop() + "\n" +
       "----- history(古い順、下が最新) -----\n";
-    // スクロール位置維持: ユーザーが履歴を読んでいる最中に自動で最下部へ飛ばされないよう、
-    // 既に一番下までスクロール済みの時だけ更新後も最下部へ追従させる
-    const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+    // ボタン操作を妨げないようpointer-events:noneにしたため手動スクロールはできない。
+    // 代わりに常に最新行が見えるよう自動で最下部へ追従させる
     el.textContent = header + bgmDiagHistory.join("\n");
-    if (wasAtBottom) el.scrollTop = el.scrollHeight;
+    el.scrollTop = el.scrollHeight;
   } catch (e) {
     console.error("[BGM DIAG] renderBgmDiagOverlay threw:", e);
   }
