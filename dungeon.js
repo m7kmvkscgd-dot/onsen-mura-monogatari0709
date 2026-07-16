@@ -406,6 +406,11 @@ function playDungeonMoveTransition(actualLogic) {
   const retreatBtnEl = document.getElementById("retreatBtn");
   advanceBtnEl.disabled = true;
   retreatBtnEl.disabled = true;
+  // 安全策: 帰還の連続ズーム(autoRetreatZoomAnim)がまだ片付けられずに残っていた場合の保険
+  // (通常finishRetreat()で片付け済みのはずだが、念のためここでも歩行ズームの開始前に必ず
+  // 素の状態にしておく。cancel()と直後のanimate()はどちらも同期処理で描画を挟まないため、
+  // 途中経過が一瞬見えることはない)
+  if (autoRetreatZoomAnim) { autoRetreatZoomAnim.cancel(); autoRetreatZoomAnim = null; }
   playSfx("footstep");
   const moveAnim = bg.animate(buildWalkKeyframes(animMs), { duration: animMs, easing: "ease-in-out", fill: "forwards" });
   let proceeded = false;
@@ -603,6 +608,13 @@ document.getElementById("retreatBtn").onclick = () => {
 
 function finishRetreat() {
   stopAutoRetreat(); // オート帰還中に0階層へ到達した場合のクリーンアップ(タイマー解除・ボタン再有効化)
+  // 【不具合対策】帰還の連続ズーム(autoRetreatZoomAnim)はstopAutoRetreat()では意図的にpause()の
+  // みで止める(手動キャンセル時に一瞬縮んで見えるのを防ぐため)。しかし帰還そのものが完了した
+  // 今はもう不要なので、ここでcancel()して背景の変形を完全にリセットする。これをしないと、
+  // 次の遠征開始後「進む」を押した時に、まだ残っていた古いズームと新しい歩行ズームが競合し、
+  // 一瞬「引きの画像にスナップしてからズームする」という不自然な見た目になっていた
+  if (autoRetreatZoomAnim) { autoRetreatZoomAnim.cancel(); autoRetreatZoomAnim = null; }
+  document.getElementById("dungeonBgInner").style.transform = "";
   stopAmbientBgm();
   stopCoastAreaBgm();
   retreating = false;
