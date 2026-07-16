@@ -171,10 +171,18 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
         confirmBtn.onclick = () => {
           confirmBtn.disabled = true; // 演出中の連打で二重に確定してしまわないようにする
           playSkillAcquiredEffect(confirmBtn, skill.name);
-          // 「習得！」バナー(CSS側のskillAcquiredBannerPop、2.35s)の表示時間ぴったり(2350ms)に
-          // 合わせたはずが、実際に見た目でバナーが消えるタイミングより画面切り替えが0.5秒ほど
-          // 遅れて感じるとの指摘を受け、1850msへ短縮して再調整した
-          setTimeout(() => resolveSkillChoice(character, lv, side, skill), 1850);
+          // バナー演出(CSS側のskillAcquiredBannerPop)の秒数に画面切り替えのタイミングを
+          // 合わせようと何度か調整したが、環境によって見た目とのズレが解消しなかったため、
+          // 自動切り替えはやめてタップ待ちにした(画面のどこかをタップした瞬間に進む)
+          const hint = document.createElement("div");
+          hint.className = "skill-acquired-tap-hint";
+          hint.textContent = "タップして進む";
+          document.body.appendChild(hint);
+          const proceed = () => {
+            hint.remove();
+            resolveSkillChoice(character, lv, side, skill);
+          };
+          document.addEventListener("pointerdown", proceed, { once: true });
         };
       }
     };
