@@ -237,15 +237,20 @@
   }
   .class-pick { position: relative; }
   .class-pick .new-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; }
-  /* 未解禁の職業。brightness(0)の黒いシルエット(town.js、輪郭ははっきり残す)で並べつつ、名前の代わりに
-     解禁条件("道場建築で解禁"等)を出すことで、「まだ見ぬ職業がある」ことをそれと分かる形で見せる
-     (ユーザー指示: フィルターで隠すのではなく並べた上で条件を書く方がワクワクする、という狙い)。
-     タップでは選べないため通常カーソルのまま。
+  /* 未解禁の職業。黒いシルエットで並べつつ、名前の代わりに解禁条件("道場建築で解禁"等)を出すことで、
+     「まだ見ぬ職業がある」ことをそれと分かる形で見せる(ユーザー指示: フィルターで隠すのではなく
+     並べた上で条件を書く方がワクワクする、という狙い)。タップでは選べないため通常カーソルのまま。
      【重要】word-break:keep-allは使わないこと。CJK文字列のみ(スペースや半角文字を含まない)だと
      ブラウザが改行できる箇所を見つけられず、overflow-wrap:break-wordの強制改行より優先されて
      テキストが一切折り返されない実機バグを踏んだ(1列だけimg(aspect-ratio:1/1)ごと巨大化し
      グリッド全体のレイアウトが崩れた)。word-break:break-allで確実に折り返させる */
   .class-pick.locked { cursor: default; opacity: 0.82; }
+  /* CSSのfilterは要素自身のbackground-colorも含めて丸ごと暗くする(=filterを直接掛けたimgに
+     background:#353a44(.class-pick imgの共通ルール)が付いたままだと、背景色ごと真っ黒に潰れて
+     輪郭が見えなくなる実機バグを踏んだ)。フィルターを掛けないこの親要素に背景色を持たせ、
+     img側は透明背景にしてフィルター後の黒い輪郭だけが背景の上に浮かぶようにしている */
+  .class-pick-locked-portrait { width: 100%; aspect-ratio: 1/1; background: #353a44; border-radius: var(--radius-xs); overflow: hidden; }
+  .class-pick-locked-portrait img { width: 100%; height: 100%; object-fit: contain; background: transparent; filter: brightness(0); }
   .class-pick-locked-label { display: block; font-size: 0.6rem; margin-top: 0.25rem; line-height: 1.25; color: var(--text-muted); word-break: break-all; }
   .party-member .nm { font-size: 0.6rem; margin-top: 0.15rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
   /* 状態異常/バフ/デバフアイコン。PCはホバー、スマホは0.5秒長押しで説明を出す(index.html下部の

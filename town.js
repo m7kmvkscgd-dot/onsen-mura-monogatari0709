@@ -444,11 +444,14 @@ function renderClassGrid() {
     if (!isClassUnlocked(classId)) {
       div.className = "class-pick locked";
       const buildingName = (FACILITY_DISPLAY[CLASS_UNLOCK_BUILDING[classId]] || {}).name || "";
-      // brightness(0)は不透明ピクセルを問答無用で黒(0,0,0)にし、アルファ(=キャラの輪郭)だけ残す
-      // 「本物のシルエット」の作り方。図鑑の未遭遇演出(brightness(0.03))は輪郭ごとほぼ潰して
-      // 「特徴が透けて見えるのを防ぐ」ことが目的だったが、ここではむしろ輪郭がはっきり見える方が
-      // 「まだ見ぬ職業がいる」というワクワク感に繋がるため、あえて別の値を使っている
-      div.innerHTML = `<img src="${c.image}" style="filter:brightness(0);"><span class="class-pick-locked-label">🔒${buildingName}建築で解禁</span>`;
+      // filter:brightness(0)は不透明ピクセルを問答無用で黒(0,0,0)にし、アルファ(=キャラの輪郭)だけ
+      // 残す「本物のシルエット」の作り方…のはずだったが、CSSのfilterは要素全体の描画結果(画像+その
+      // 要素自身のbackground-color)に一括で掛かる。imgに直接background:#353a44(.class-pick img
+      // の共通ルール)が付いたままフィルターを掛けると、その背景色ごと真っ黒に潰れてしまい、
+      // キャラの輪郭と背景の区別が付かない「ただの黒い長方形」になっていた(実機で発覚)。
+      // フィルターを掛けない親要素(.class-pick-locked-portrait)側に背景色を持たせ、imgの背景は
+      // 透明にすることで、暗くなった輪郭だけがフィルターを通さない背景の上に浮かぶようにした
+      div.innerHTML = `<div class="class-pick-locked-portrait"><img src="${c.image}"></div><span class="class-pick-locked-label">🔒${buildingName}建築で解禁</span>`;
       grid.appendChild(div);
       return;
     }
