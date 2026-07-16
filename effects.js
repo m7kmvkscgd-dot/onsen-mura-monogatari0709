@@ -350,9 +350,7 @@ function playEnemyDefeatReaction(entity, card) {
     flashAnim.cancel();
     bodyAnim.cancel();
     clone.remove();
-    entity.__defeatReactionState = "done";
-    // battleが既に終了・破棄されていたら何もしない(戦闘終了直後に最後の1体の演出が終わるケース)
-    if (typeof battle !== "undefined" && battle) renderBattleScreen();
+    entity.__defeatReactionState = "done"; // 再生済みフラグのみ。枠自体はrenderBattleScreen()側で外さないため再描画は不要
   };
 }
 

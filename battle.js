@@ -167,11 +167,11 @@ function renderBattleScreen() {
   const row = document.getElementById("enemyRow");
   row.innerHTML = "";
   // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
-  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない。撃破リアクション
-  // (playEnemyDefeatReaction)が完全に再生し終わった敵(__defeatReactionState==="done")も
-  // ここで除外し、初めてレイアウトの幅も詰める(その時点では既に見た目上も透明になっているため、
-  // この瞬間の詰まり自体は目に見えない)
-  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0) && e.__defeatReactionState !== "done");
+  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない。撃破された敵は
+  // (演出が終わった後も)このリストから外さない=枠は残したままにする。外すと#enemyRowの
+  // justify-content:centerにより残った敵が中央へ詰め直されてしまい、「敵が死んで消えても
+  // 他の敵の並びは動かないでほしい」という指示に反するため
+  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
   visibleEnemies.forEach((e) => {
     const dead = e.hp <= 0;
