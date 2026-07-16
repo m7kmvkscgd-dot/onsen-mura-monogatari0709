@@ -120,11 +120,10 @@ const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
 const OPENING_BGM_VOLUME = 0.55;
-// ============ 音量調整(右上のスピーカーアイコン→スライダー) ============
-// 0(ミュート)〜1の倍率。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
+// ============ 音量調整(右上のスピーカーアイコン→0〜10のボタン) ============
+// 0(ミュート)〜1の倍率、0.1刻み。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
 // 他のBGM要素(opening/lodging/camp/ambient)はGainNode化していないため、この値では音量までは
-// 変えられないが、0の時だけ.mutedで完全に黙らせる(スライダーを0まで下げる=ミュート、という
-// 直感的な挙動に合わせるため)
+// 変えられないが、0の時だけ.mutedで完全に黙らせる(0ボタン=ミュート、という直感的な挙動に合わせるため)
 let masterBgmVolume = 1;
 let lastMasterBgmVolumeBeforeMute = 1; // ミュート前の音量を覚えておき、設定画面のON/OFFトグルで復元する
 function targetBgmVolume(key) {
@@ -141,8 +140,10 @@ function applyMasterVolumeToUi() {
   campBgmAudio.muted = isMuted;
   const btn = document.getElementById("muteBtn");
   if (btn) btn.textContent = isMuted ? "🔇" : (masterBgmVolume < 0.5 ? "🔉" : "🔊");
-  const slider = document.getElementById("volumeSlider");
-  if (slider) slider.value = Math.round(masterBgmVolume * 100);
+  const activeStep = Math.round(masterBgmVolume * 10);
+  document.querySelectorAll(".volume-step-btn").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.step) === activeStep);
+  });
 }
 function setMasterBgmVolume(v) {
   masterBgmVolume = Math.max(0, Math.min(1, v));
@@ -533,21 +534,42 @@ function critSfxFor(classId) {
   return CLASS_CRIT_SFX[classId] || "crit_slash";
 }
 
-// スピーカーアイコンをタップすると音量スライダーのポップオーバーを開閉する(単純なミュート
-// トグルから、連続的な音量調整に変更)。ポップオーバーの外側をタップすると閉じる
+// スピーカーアイコンをタップすると音量調整のポップオーバーを開閉する。実機で<input type="range">の
+// つまみが小さくタップ判定がシビアすぎるという指摘が2回続いたため、スライダーはやめて
+// 0〜10の11段階ボタン(タップ式、当たり判定は1つ1つ十分に大きい)に変更した
+(() => {
+  const row = document.getElementById("volumeBtnRow");
+  for (let i = 0; i <= 10; i++) {
+    const b = document.createElement("button");
+    b.className = "volume-step-btn";
+    b.dataset.step = i;
+    b.textContent = i;
+    b.onclick = (e) => {
+      e.stopPropagation();
+      setMasterBgmVolume(i / 10);
+    };
+    row.appendChild(b);
+  }
+})();
+// ポップオーバーはbody直下のposition:fixed要素のため、開くたびにmuteBtnの実際の画面上の位置
+// (getBoundingClientRect)を基準に座標を計算し直す(タブ切り替え等でボタン位置が変わっても追従する)
 document.getElementById("muteBtn").onclick = (e) => {
   e.stopPropagation();
   const popover = document.getElementById("volumePopover");
-  popover.style.display = popover.style.display === "none" ? "block" : "none";
+  if (popover.style.display !== "none") {
+    popover.style.display = "none";
+    return;
+  }
+  const btnRect = e.currentTarget.getBoundingClientRect();
+  popover.style.top = `${Math.round(btnRect.bottom + 8)}px`;
+  popover.style.right = `${Math.round(window.innerWidth - btnRect.right)}px`;
+  popover.style.display = "block";
 };
-document.getElementById("volumeSlider").addEventListener("input", (e) => {
-  setMasterBgmVolume(Number(e.target.value) / 100);
-});
 document.addEventListener("click", (e) => {
   const popover = document.getElementById("volumePopover");
   if (popover.style.display !== "none" && !popover.contains(e.target) && e.target.id !== "muteBtn") {
     popover.style.display = "none";
   }
 });
-applyMasterVolumeToUi(); // 初期表示(スライダー位置・アイコン)を実際の音量に同期させる
+applyMasterVolumeToUi(); // 初期表示(ボタンの選択状態・アイコン)を実際の音量に同期させる
 

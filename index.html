@@ -136,12 +136,7 @@
   <div class="screen" id="screen-town">
     <div class="hero" id="townHero" style="background-image:url('assets/bg/town.jpg')">
       <div class="topbar" style="justify-content:flex-end;">
-        <div class="volume-control-wrap">
-          <button class="mute-btn" id="muteBtn">🔊</button>
-          <div class="volume-popover" id="volumePopover" style="display:none;">
-            <input type="range" id="volumeSlider" min="0" max="100" value="100">
-          </div>
-        </div>
+        <button class="mute-btn" id="muteBtn">🔊</button>
       </div>
       <div class="hero-title-row">
         <span class="time-of-day-label" id="townDateLabel"></span>
@@ -330,6 +325,14 @@
     <div class="tutorial-dim-band" id="tutorialDimRight"></div>
   </div>
   <div id="tutorialBubble" style="display:none;"><p id="tutorialBubbleText"></p></div>
+
+  <!-- 音量調整ポップオーバー(右上のスピーカーアイコン)。.hero > *(ui.css)がheroの直下の子要素に
+       一律z-index:1を与えているため、hero内に置いたままだとDOM順で後に来る.hero-title-row(同じ
+       z-index:1)に隠れてタップできない不具合があった。body直下(position:fixed)に置き、
+       開くたびにmuteBtnの実際の位置を基準にJSで座標を計算する -->
+  <div class="volume-popover" id="volumePopover" style="display:none;">
+    <div class="volume-btn-row" id="volumeBtnRow"></div>
+  </div>
 
   <!-- 出発直前のゲームコンセプト説明(初回のみ) -->
   <div id="conceptIntroOverlay" style="display:none; position:fixed; inset:0; z-index:95; background:rgba(10,12,14,0.94); overflow-y:auto;">

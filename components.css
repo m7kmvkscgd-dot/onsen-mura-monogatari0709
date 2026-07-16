@@ -10,36 +10,26 @@
   .owned-supply-icons .supply-icon-emoji { width: 32px; height: 32px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); cursor: pointer; transition: transform 0.1s; }
   .owned-supply-icons img:active, .owned-supply-icons .supply-icon-emoji:active { transform: scale(0.85); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
-  .volume-control-wrap { position: relative; }
-  .volume-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-  /* デフォルトのつまみ(thumb)が小さく、スマホ実機でタップ判定がシビアすぎて掴みにくいとの
-     指摘を受け、トラック・つまみとも大きめに作り直した。-webkit-appearance:noneでブラウザ既定の
-     見た目をリセットしないと、thumbのカスタムサイズ指定(::-webkit-slider-thumb)が効かない */
-  .volume-popover input[type="range"] {
-    width: 150px; display: block; -webkit-appearance: none; appearance: none;
-    height: 28px; /* トラックの高さではなく要素全体の当たり判定を広げるため、上下にも余裕を持たせる */
-    background: transparent; margin: 0; padding: 10px 0;
+  /* z-indexは同じスタッキングコンテキスト内でしか比較されない。ui.cssの`.hero > *`ルールが
+     heroの直下の子要素(.topbar/.hero-title-row等)全てに一律z-index:1を与えているため、
+     .topbar内に置いたポップオーバー側でどれだけz-indexを上げてもDOM順で後に来る
+     .hero-title-row(同じz-index:1)を飛び越えられなかった(実機で音量ボタンが日付ラベルの
+     裏に隠れてタップできない不具合の原因)。body直下(position:fixed)に置くことで
+     hero側のスタッキングコンテキストから完全に切り離した(座標はJS側でmuteBtnの実際の
+     位置から計算する、audio.js参照) */
+  .volume-popover { position: fixed; z-index: 90; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  /* <input type="range">はつまみが小さくスマホ実機でタップ判定がシビアすぎて掴みにくいとの
+     指摘が2回続いたため、スライダーをやめて0〜10の11段階ボタン(タップ式)に変更した。
+     6列×2行(6+5)のグリッドで、ボタン1つ1つに十分な大きさの当たり判定を持たせる */
+  .volume-btn-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; width: 204px; }
+  .volume-step-btn {
+    min-width: 30px; min-height: 30px; padding: 0;
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    background: var(--surface-2); color: var(--text);
+    font-size: 0.8rem; font-weight: 700; cursor: pointer;
   }
-  .volume-popover input[type="range"]::-webkit-slider-runnable-track {
-    height: 6px; border-radius: 3px; background: var(--border);
-  }
-  .volume-popover input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 28px; height: 28px; border-radius: 50%;
-    background: var(--accent); border: 2px solid var(--panel);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    margin-top: -11px; /* トラック高さ(6px)に対してthumb(28px)を縦中央に合わせる */
-    cursor: pointer;
-  }
-  .volume-popover input[type="range"]::-moz-range-track {
-    height: 6px; border-radius: 3px; background: var(--border);
-  }
-  .volume-popover input[type="range"]::-moz-range-thumb {
-    width: 28px; height: 28px; border-radius: 50%;
-    background: var(--accent); border: 2px solid var(--panel);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    cursor: pointer;
-  }
+  .volume-step-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1410; font-weight: 900; }
+  .volume-step-btn:active { transform: scale(0.9); }
   .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; transition: opacity 0.25s ease; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
