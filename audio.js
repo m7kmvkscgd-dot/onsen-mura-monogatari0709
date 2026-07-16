@@ -132,25 +132,53 @@ function getBgmVolume(audioEl) {
 // ============ 【調査用・一時的】BGM無音バグの原因切り分けログ ============
 // 原因が判明するまではロジックを一切変更せず、状態のスナップショットをconsole.errorへ出すだけ。
 // 調査が終わったらこのブロックと各呼び出し箇所は削除する
+function bgmDiagSnapshot() {
+  const gain = bgmGainNodeMap.get(bgmAudio);
+  return {
+    bgmAudioCtxState: bgmAudioCtx ? bgmAudioCtx.state : "NO_CONTEXT",
+    bgmAudioPaused: bgmAudio.paused,
+    bgmAudioCurrentSrc: bgmAudio.currentSrc,
+    bgmAudioCurrentTime: bgmAudio.currentTime,
+    bgmAudioMuted: bgmAudio.muted,
+    bgmAudioVolume: bgmAudio.volume,
+    gainNodeExists: !!gain,
+    gainValue: gain ? gain.gain.value : "NO_GAIN_NODE",
+    currentBgmKey,
+    audioUnlocked,
+  };
+}
 function logBgmDiag(label) {
   try {
-    const gain = bgmGainNodeMap.get(bgmAudio);
-    console.error("[BGM DIAG]", label, JSON.stringify({
-      bgmAudioCtxState: bgmAudioCtx ? bgmAudioCtx.state : "NO_CONTEXT",
-      bgmAudioPaused: bgmAudio.paused,
-      bgmAudioCurrentSrc: bgmAudio.currentSrc,
-      bgmAudioCurrentTime: bgmAudio.currentTime,
-      bgmAudioMuted: bgmAudio.muted,
-      bgmAudioVolume: bgmAudio.volume,
-      gainNodeExists: !!gain,
-      gainValue: gain ? gain.gain.value : "NO_GAIN_NODE",
-      currentBgmKey,
-      audioUnlocked,
-    }));
+    console.error("[BGM DIAG]", label, JSON.stringify(bgmDiagSnapshot()));
   } catch (e) {
     console.error("[BGM DIAG] logBgmDiag itself threw:", e);
   }
 }
+// スマホ実機でSafari Web Inspector等を使わなくても目視で状態を確認できるよう、画面左上に
+// 小さな診断パネルを常設し、200msごとに最新の状態を表示し続ける。調査専用の一時コード
+function renderBgmDiagOverlay() {
+  try {
+    let el = document.getElementById("bgmDiagOverlay");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "bgmDiagOverlay";
+      el.style.cssText = "position:fixed;top:0;left:0;z-index:999999;background:rgba(0,0,0,0.85);color:#0f0;font-size:10px;font-family:monospace;padding:4px 6px;white-space:pre;pointer-events:none;max-width:100vw;line-height:1.3;";
+      document.body.appendChild(el);
+    }
+    const s = bgmDiagSnapshot();
+    el.textContent =
+      "[BGM DIAG]\n" +
+      "ctxState: " + s.bgmAudioCtxState + "\n" +
+      "paused: " + s.bgmAudioPaused + "  muted: " + s.bgmAudioMuted + "\n" +
+      "volume: " + s.bgmAudioVolume + "  gain: " + s.gainValue + "\n" +
+      "currentTime: " + s.bgmAudioCurrentTime.toFixed(2) + "\n" +
+      "key: " + s.currentBgmKey + "  unlocked: " + s.audioUnlocked + "\n" +
+      "src: " + (s.bgmAudioCurrentSrc || "").split("/").pop();
+  } catch (e) {
+    console.error("[BGM DIAG] renderBgmDiagOverlay threw:", e);
+  }
+}
+setInterval(renderBgmDiagOverlay, 200); // 調査用
 
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
