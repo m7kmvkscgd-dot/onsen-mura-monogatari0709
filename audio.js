@@ -132,6 +132,26 @@ function getBgmVolume(audioEl) {
 // ============ 【調査用・一時的】BGM無音バグの原因切り分けログ ============
 // 原因が判明するまではロジックを一切変更せず、状態のスナップショットをconsole.errorへ出すだけ。
 // 調査が終わったらこのブロックと各呼び出し箇所は削除する
+//
+// ユーザーがSafari Web Inspector等でconsole.errorを直接見られない(実機のみで確認している)ため、
+// console.errorを横取りして画面上の履歴パネルにも同じ内容を溜め込む。個々の呼び出し箇所を
+// 全部書き換える必要が無いよう、console.error自体をラップする方式にしてある
+const bgmDiagHistory = [];
+const BGM_DIAG_HISTORY_MAX = 60;
+const bgmDiagOrigConsoleError = console.error.bind(console);
+console.error = function (...args) {
+  bgmDiagOrigConsoleError(...args);
+  try {
+    const msg = args.map((a) => {
+      if (typeof a === "string") return a;
+      try { return JSON.stringify(a); } catch (e2) { return String(a); }
+    }).join(" ");
+    if (msg.indexOf("[BGM DIAG]") !== -1) {
+      bgmDiagHistory.push("+" + performance.now().toFixed(0) + "ms " + msg.replace("[BGM DIAG] ", ""));
+      if (bgmDiagHistory.length > BGM_DIAG_HISTORY_MAX) bgmDiagHistory.shift();
+    }
+  } catch (e2) {}
+};
 function bgmDiagSnapshot() {
   const gain = bgmGainNodeMap.get(bgmAudio);
   return {
@@ -162,18 +182,24 @@ function renderBgmDiagOverlay() {
     if (!el) {
       el = document.createElement("div");
       el.id = "bgmDiagOverlay";
-      el.style.cssText = "position:fixed;top:0;left:0;z-index:999999;background:rgba(0,0,0,0.85);color:#0f0;font-size:10px;font-family:monospace;padding:4px 6px;white-space:pre;pointer-events:none;max-width:100vw;line-height:1.3;";
+      el.style.cssText = "position:fixed;top:0;left:0;z-index:999999;background:rgba(0,0,0,0.9);color:#0f0;font-size:9px;font-family:monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:auto;overflow-y:auto;max-width:100vw;max-height:55vh;line-height:1.25;";
       document.body.appendChild(el);
     }
     const s = bgmDiagSnapshot();
-    el.textContent =
-      "[BGM DIAG]\n" +
+    const header =
+      "[BGM DIAG] (タップでスクロール可)\n" +
       "ctxState: " + s.bgmAudioCtxState + "\n" +
       "paused: " + s.bgmAudioPaused + "  muted: " + s.bgmAudioMuted + "\n" +
       "volume: " + s.bgmAudioVolume + "  gain: " + s.gainValue + "\n" +
       "currentTime: " + s.bgmAudioCurrentTime.toFixed(2) + "\n" +
       "key: " + s.currentBgmKey + "  unlocked: " + s.audioUnlocked + "\n" +
-      "src: " + (s.bgmAudioCurrentSrc || "").split("/").pop();
+      "src: " + (s.bgmAudioCurrentSrc || "").split("/").pop() + "\n" +
+      "----- history(古い順、下が最新) -----\n";
+    // スクロール位置維持: ユーザーが履歴を読んでいる最中に自動で最下部へ飛ばされないよう、
+    // 既に一番下までスクロール済みの時だけ更新後も最下部へ追従させる
+    const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+    el.textContent = header + bgmDiagHistory.join("\n");
+    if (wasAtBottom) el.scrollTop = el.scrollHeight;
   } catch (e) {
     console.error("[BGM DIAG] renderBgmDiagOverlay threw:", e);
   }
@@ -292,18 +318,25 @@ function fadeOutOpeningBgm() {
   }
   step();
 }
+// 【調査用・一時的】playBgm()が短時間に何回・どのタイミングで重複して呼ばれているかを実測するための
+// 通し番号カウンタ。呼び出しごとに採番し、resumeの待ち時間中に別の呼び出しが割り込んでいないかを見る
+let playBgmCallSeq = 0;
 async function playBgm(key) {
+  const callId = ++playBgmCallSeq;
+  const callStartMs = performance.now();
+  console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": ENTER at t=" + callStartMs.toFixed(1) + "ms, ctxState=" + (bgmAudioCtx ? bgmAudioCtx.state : "NO_CTX")); // 調査用
   // 【調査用・一時的】resume仮説の最小実験: 呼ばれるたびに(unlockAudio()の1回きりの試行に
   // 頼らず)suspendedならここで毎回resumeを試みる。これだけでBGMが鳴るようになるか検証する
   if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
-    console.error("[BGM DIAG] playBgm(" + key + "): ctx suspended, awaiting resume()..."); // 調査用
+    console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": ctx suspended, awaiting resume()..."); // 調査用
     try {
       await bgmAudioCtx.resume();
-      console.error("[BGM DIAG] playBgm(" + key + "): resume() succeeded, state=", bgmAudioCtx.state); // 調査用
+      console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": resume() succeeded at t=" + performance.now().toFixed(1) + "ms (waited " + (performance.now() - callStartMs).toFixed(1) + "ms), state=", bgmAudioCtx.state); // 調査用
     } catch (e) {
-      console.error("[BGM DIAG] playBgm(" + key + "): resume() REJECTED", e); // 調査用
+      console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": resume() REJECTED", e); // 調査用
     }
   }
+  console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": PROCEEDING past resume-wait at t=" + performance.now().toFixed(1) + "ms, currentBgmKey=" + currentBgmKey); // 調査用
   // タイトル画面を離れて最初の本編BGMが決まった瞬間、流れっぱなしのオープニング/タイトル曲を
   // フェードアウトする(このガードが無いと、町BGMと二重に鳴り続けてしまう)
   fadeOutOpeningBgm();
@@ -311,21 +344,24 @@ async function playBgm(key) {
     // 同じ曲を続けて流すはずの場面(海岸の探索→戦闘の継続再生など)で、何らかの理由で
     // 要素が一時停止してしまっていた場合に無音のまま固まらないよう、ここで取りこぼさず再開する
     if (bgmAudio.paused && audioUnlocked) {
-      console.error("[BGM DIAG] playBgm(" + key + "): same key, resuming paused element"); // 調査用
-      bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + "): same-key resume play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + "): same-key resume play() REJECTED", e); logBgmDiag("playBgm(" + key + "): same-key resume play() rejected"); }); // 調査用
+      console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": same key, resuming paused element"); // 調査用
+      bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + ") call#" + callId + ": same-key resume play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": same-key resume play() REJECTED", e); logBgmDiag("playBgm(" + key + ") call#" + callId + ": same-key resume play() rejected"); }); // 調査用
+    } else {
+      console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": same key, already playing, NO-OP"); // 調査用
     }
     return;
   }
+  console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": RESTARTING track from currentTime=" + (bgmPositions[key] || 0) + " (this resets playback position!)"); // 調査用
   if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
   setBgmVolume(bgmAudio, bgmVolumeForKey(key));
-  logBgmDiag("playBgm(" + key + "): before play(), audioUnlocked=" + audioUnlocked); // 調査用
+  logBgmDiag("playBgm(" + key + ") call#" + callId + ": before play(), audioUnlocked=" + audioUnlocked); // 調査用
   if (audioUnlocked) {
-    bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + "): play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + "): play() REJECTED", e); logBgmDiag("playBgm(" + key + "): play() rejected"); }); // 調査用
+    bgmAudio.play().then(() => logBgmDiag("playBgm(" + key + ") call#" + callId + ": play() resolved")).catch((e) => { console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": play() REJECTED", e); logBgmDiag("playBgm(" + key + ") call#" + callId + ": play() rejected"); }); // 調査用
   } else {
-    console.error("[BGM DIAG] playBgm(" + key + "): audioUnlocked is false, play() NOT called"); // 調査用
+    console.error("[BGM DIAG] playBgm(" + key + ") call#" + callId + ": audioUnlocked is false, play() NOT called"); // 調査用
   }
 }
 
