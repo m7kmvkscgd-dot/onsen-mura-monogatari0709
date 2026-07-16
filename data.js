@@ -266,12 +266,12 @@ const ENEMIES = {
   // ---- 序盤の中ボス級(奉行所の依頼専用。questOnly:trueのため通常の階層抽選には出ず、
   //      指名討伐でのみスポーンする) ----
   // 大猪(猪の討伐依頼で実際にスポーンする上位個体、QUEST_DEFS.inoshishi.spawnId参照)。
-  // 高HPで通常攻撃は控えめだが、大技(bigAttack.mult:7.5)は庇う槍士でもギリギリ耐えられるかどうかの
-  // 一撃になるよう逆算した(かばう成功で被ダメ0.4倍、槍士の実効防御力想定でHPの8割前後を削る計算)。
-  // 大技は「構え中(bigAttackPending)にスタンを入れると完全に潰せる」という既存仕組みを
-  // プレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
-  oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 63, atk: 7, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 6.8 } },
+  // 高HPで通常攻撃は控えめだが、大技(bigAttack.mult:5.95、atk8との積が旧atk7×mult6.8と同値になるよう逆算)は
+  // 庇う槍士でもギリギリ耐えられるかどうかの一撃になるよう調整済み(かばう成功で被ダメ0.4倍、
+  // 槍士の実効防御力想定でHPの8割前後を削る計算)。大技は「構え中(bigAttackPending)にスタンを
+  // 入れると完全に潰せる」という既存仕組みをプレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
+  oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 126, atk: 8, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
+    bigAttack: { mult: 5.95 } },
   q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 39, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 12, isBoss: true, questOnly: true, isMidBoss: true,

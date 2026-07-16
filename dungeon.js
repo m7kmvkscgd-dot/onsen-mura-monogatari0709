@@ -745,6 +745,10 @@ function tryForceQuestEncounter() {
   // 全回復した状態で出現し直すと「逃げても意味がない」緊張感の代わりに「毎回振り出しに戻る」不公平感になるため
   if (isChaseEncounter && q.carryHp) {
     enemies.forEach((e, i) => { if (q.carryHp[i] != null) e.hp = Math.min(q.carryHp[i], e.maxHp); });
+    // 追いついた再戦は、逃げた時点で既にBOSS_FLEE_HP_RATIO以下のHPで出現し得る。何もしないと
+    // renderBattleScreen()の判定でその場即座にまた自動逃走してしまう(ボス追撃モードと同じ地雷、
+    // tryForceBossPursuitEncounter参照)ため、追いついた以上はこのインスタンスはもう自主逃走しない
+    enemies.forEach((e) => { e.__hasFledPursuit = true; });
   }
   enemies.forEach((e) => { e.isQuestTarget = true; }); // 敵カードに🎯マークと金色パルス枠を出すための目印
   const def = QUEST_DEFS[q.questKey];

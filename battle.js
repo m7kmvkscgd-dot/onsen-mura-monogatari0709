@@ -158,13 +158,16 @@ function anyCrowScoutActive() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
-  // ボス追撃モードの発動判定。討伐依頼対象(isQuestTarget、既に専用の追跡システムを持つ)は対象外。
+  // ボス追撃モードの発動判定。討伐依頼対象(isQuestTarget)も含めて全てのボス/中ボスが対象。
+  // 討伐依頼対象は逃走後の追跡先が別のシステム(state.acceptedQuest.chasing/carryHp、
+  // triggerQuestBossFlee参照)になるだけで、「HPが一定以下で自動的に逃げる」こと自体は共通。
   // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする(HPが閾値以下のまま複数回
   // renderBattleScreen()が呼ばれても再発動しない)
-  const fleeingBoss = battle.enemies.find((e) => (e.isBoss || e.isMidBoss) && !e.isQuestTarget && !e.__hasFledPursuit && e.hp > 0 && e.hp / e.maxHp <= BOSS_FLEE_HP_RATIO);
+  const fleeingBoss = battle.enemies.find((e) => (e.isBoss || e.isMidBoss) && !e.__hasFledPursuit && e.hp > 0 && e.hp / e.maxHp <= BOSS_FLEE_HP_RATIO);
   if (fleeingBoss) {
     fleeingBoss.__hasFledPursuit = true;
-    triggerBossFlee(fleeingBoss);
+    if (fleeingBoss.isQuestTarget) triggerQuestBossFlee(fleeingBoss);
+    else triggerBossFlee(fleeingBoss);
     return;
   }
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
@@ -1519,6 +1522,31 @@ function markQuestChasingIfFled() {
 function triggerBossFlee(enemy) {
   bossPursuit = { enemyId: enemy.id, hp: enemy.hp, maxHp: enemy.maxHp, stage: currentStage };
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
+  battle = null;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  clearDotEffects(fieldParty);
+  clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
+  fieldParty.forEach((c) => { c.fleeState = null; });
+  advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+  showScreen("screen-dungeon");
+  renderDungeon();
+  dlog(`${enemy.label}は手負いのまま逃げ出した！`);
+  checkStrandedOnCurrentFloor();
+}
+// 討伐依頼対象のボス/中ボス(大猪など)がHPをBOSS_FLEE_HP_RATIO以下まで削られた時の自動逃走。
+// triggerBossFlee()のbossPursuitの代わりに、既存の討伐依頼追跡システム
+// (state.acceptedQuest.chasing/carryHp)へ直接書き込む点だけが違う(以後はtryForceQuestEncounter()が
+// 同じ仕組みで追いかけてくる。プレイヤーが手動で逃げた場合のmarkQuestChasingIfFled()と結果は同じ)
+function triggerQuestBossFlee(enemy) {
+  const q = state.acceptedQuest;
+  if (q && battle && battle.questKey === q.questKey) {
+    q.chasing = true;
+    q.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
+  }
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   battle = null;
   pendingEnemyPick = null;
   pendingAllyPick = null;
