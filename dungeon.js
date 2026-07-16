@@ -441,6 +441,10 @@ function stopAutoRetreat() {
   autoRetreatActive = false;
   clearTimeout(autoRetreatTimer);
   autoRetreatTimer = null;
+  // cancel()ではなくpause(): 停止した瞬間の拡大率のまま止めておく(cancel()だと即座にscale(1)へ
+  // 巻き戻ってしまい、タップでの手動キャンセル等のたびに背景が一瞬縮んで見える不具合になる)。
+  // 次にstartAutoRetreatZoomAnimation()が呼ばれた時点でこのアニメーションは改めてcancel()される
+  if (autoRetreatZoomAnim) autoRetreatZoomAnim.pause();
   document.getElementById("advanceBtn").disabled = false;
   document.getElementById("retreatBtn").disabled = false;
 }
@@ -494,13 +498,20 @@ function crossfadeDungeonBgForTimeOfDay(prevTimeOfDay, callback) {
   toEl.style.transform = getComputedStyle(fromEl).transform;
   crossfadeBg(fromEl, toEl, currentAreaBgSet()[state.timeOfDay || "day"], AUTO_RETREAT_TIMEOFDAY_FADE_MS, callback);
 }
-// 帰還開始階層〜0階層まで、リセットせず連続的に拡大するズームを1階層分(1tick=1秒)だけ進める
-function animateAutoRetreatZoomStep() {
+// 帰還開始階層〜0階層までのズームを「1本の連続したアニメーション」として管理する。
+// 以前は1tick(1秒)ごとに新しいアニメーションを作り直して繋いでいたが、setTimeoutの発火が
+// 数msでもずれると、前のアニメーションがfill:forwardsで止まった状態と次のアニメーションの
+// 開始との間にわずかな空白ができ、「階層が下がるごとに一瞬ズームが止まる」ように見えていた。
+// 開始階層〜0階層ぶんの時間(階層数×AUTO_RETREAT_TICK_MS)を一括で1本のアニメーションにし、
+// ブラウザのコンポジタ側で滑らかに再生させることでtickの発火タイミングに依存しないようにした
+let autoRetreatZoomAnim = null;
+function startAutoRetreatZoomAnimation() {
+  if (autoRetreatZoomAnim) autoRetreatZoomAnim.cancel();
+  if (autoRetreatStartFloor <= 0) { autoRetreatZoomAnim = null; return; }
   const bg = document.getElementById("dungeonBgInner");
-  const floorsDone = autoRetreatStartFloor - currentFloor; // この関数はmoveOneFloor()呼び出しより前に呼ぶため、まだ今回の1階層分は未加算
-  const fromScale = 1 + AUTO_RETREAT_ZOOM_PER_FLOOR * floorsDone;
-  const toScale = fromScale + AUTO_RETREAT_ZOOM_PER_FLOOR;
-  bg.animate([{ transform: `scale(${fromScale.toFixed(4)})` }, { transform: `scale(${toScale.toFixed(4)})` }], { duration: AUTO_RETREAT_TICK_MS, easing: "linear", fill: "forwards" });
+  const toScale = 1 + AUTO_RETREAT_ZOOM_PER_FLOOR * autoRetreatStartFloor;
+  const totalDuration = autoRetreatStartFloor * AUTO_RETREAT_TICK_MS;
+  autoRetreatZoomAnim = bg.animate([{ transform: "scale(1)" }, { transform: `scale(${toScale.toFixed(4)})` }], { duration: totalDuration, easing: "linear", fill: "forwards" });
 }
 function scheduleNextAutoRetreatTick() {
   if (!autoRetreatActive) return;
@@ -510,7 +521,6 @@ function scheduleNextAutoRetreatTick() {
 function performAutoRetreatFloorMove(enterTeahouse) {
   const prevTimeOfDay = state.timeOfDay;
   lastFloorMoveOutcome = null;
-  animateAutoRetreatZoomStep();
   playSfx("footstep");
   moveOneFloor(null, enterTeahouse);
   if (!autoRetreatActive) return; // queueCriticalAlerts側等で既に停止済み
@@ -550,6 +560,7 @@ function startAutoRetreat() {
   autoRetreatStartFloor = currentFloor;
   document.getElementById("advanceBtn").disabled = true;
   document.getElementById("retreatBtn").disabled = true;
+  startAutoRetreatZoomAnimation();
   runAutoRetreatTick();
 }
 // オート帰還中は画面のどこをタップしても即座に手動操作へ戻せる
