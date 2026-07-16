@@ -38,7 +38,8 @@ function perfMeasureLast(name, startLabel, endLabel) {
 let perfHeartbeatActive = false;
 let perfHeartbeatCount = 0;
 const PERF_HEARTBEAT_INTERVAL_MS = 50;
-const PERF_HEARTBEAT_MAX_TICKS = 60; // 50ms×60 = 最大3秒間追跡する
+// 前回の計測でtick#12以降END(60tick到達)が10秒近く現れなかったため、追跡時間を10秒まで延長する
+const PERF_HEARTBEAT_MAX_TICKS = 200; // 50ms×200 = 最大10秒間追跡する
 function startPerfHeartbeat(tag) {
   if (perfHeartbeatActive) return;
   perfHeartbeatActive = true;
@@ -52,8 +53,18 @@ function startPerfHeartbeat(tag) {
       return;
     }
     const scheduledAt = performance.now();
-    setTimeout(() => {
+    // 【重要】ここは意図的にwindow.setTimeout(=下でパッチされる可能性がある版)ではなく、
+    // ファイル先頭でキャプチャした素のperfOrigSetTimeoutを直接使う。前回の計測で「このハート
+    // ビートの連鎖だけが13tick目以降沈黙し、別の単発setTimeout(resourceTiming用)は予定通り
+    // 発火する」という奇妙な非対称が観測された。自作のsetTimeoutパッチ(下記)を経由する再帰的な
+    // 連鎖が何か特殊な挙動を引き起こしている可能性を切り分けるため、パッチを迂回させて同じ現象が
+    // 再現するかを確認する
+    perfOrigSetTimeout(() => {
       const actualDelay = performance.now() - scheduledAt;
+      // 10tickごとに遅延の有無を問わず必ずログする(「連鎖が生きているか」を無条件に確認できるように)
+      if (perfHeartbeatCount % 10 === 0) {
+        perfDiagLog("heartbeat[" + tag + "] #" + perfHeartbeatCount + ": alive check, actual=" + actualDelay.toFixed(1) + "ms");
+      }
       // 数msの誤差は正常。10ms以上ずれた時だけログしてノイズを減らす
       if (actualDelay > PERF_HEARTBEAT_INTERVAL_MS + 10) {
         perfDiagLog("heartbeat[" + tag + "] #" + perfHeartbeatCount + ": DELAYED (scheduled " + PERF_HEARTBEAT_INTERVAL_MS + "ms, actual " + actualDelay.toFixed(1) + "ms, drift +" + (actualDelay - PERF_HEARTBEAT_INTERVAL_MS).toFixed(1) + "ms)");

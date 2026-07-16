@@ -183,7 +183,7 @@ function renderTown() {
   // 【調査用・一時的】町へ到達してから最初の数秒間に何が実行されているかを実測する
   perfMark("town:start");
   startPerfHeartbeat("town-arrival");
-  activatePerfPatchWindow(3000);
+  activatePerfPatchWindow(10000);
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
   perfMark("town:after:pruneActiveParty");
@@ -229,7 +229,8 @@ function renderTown() {
   perfMeasureLast("town:maybeShowDepartTutorial", "town:after:checkOnsenReliefPopups", "town:end");
   perfMeasureLast("town:TOTAL_SYNC", "town:start", "town:end");
   const resourceSince = performance.now();
-  setTimeout(() => dumpImageResourceTimingSince(resourceSince - 500, "town-arrival"), 3000);
+  setTimeout(() => dumpImageResourceTimingSince(resourceSince - 500, "town-arrival+3s"), 3000);
+  setTimeout(() => dumpImageResourceTimingSince(resourceSince - 500, "town-arrival+9s"), 9000);
 }
 
 // ============ 温泉の入浴完了ポップアップ ============
