@@ -75,12 +75,52 @@ const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const openingBgmAudio = document.getElementById("openingBgmAudio");
+
+// ============ bgmAudio専用: Web Audio API(GainNode)による音量制御【最小構成】 ============
+// AudioContext → MediaElementAudioSourceNode → GainNode → destination の1本道のみ。
+// まずbgmAudio(町・冒険中BGM)だけをこの経路に乗せる。他のBGM要素(openingBgmAudio/
+// lodgingBgmAudio/campBgmAudio/ambientBgmAudio)は今回は触らず、従来通り<audio>.volumeの
+// ままにしておく(bgmAudio単体でPC・iPhoneとも正常動作することを確認してから、
+// 同じパターンを他の要素にも1つずつ広げる方針)。
+// GainNode構築に失敗した場合(古いブラウザ等)は、bgmAudio.volumeへの直接代入にフォールバックする。
+let bgmAudioCtx = null;
+let bgmGainNode = null;
+try {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) {
+    bgmAudioCtx = new AudioContextClass();
+    const bgmSource = bgmAudioCtx.createMediaElementSource(bgmAudio);
+    bgmGainNode = bgmAudioCtx.createGain();
+    bgmSource.connect(bgmGainNode).connect(bgmAudioCtx.destination);
+  }
+} catch (e) {
+  bgmAudioCtx = null;
+  bgmGainNode = null;
+}
+function setBgmAudioVolume(value) {
+  if (bgmGainNode) bgmGainNode.gain.value = value;
+  else bgmAudio.volume = value;
+}
+function getBgmAudioVolume() {
+  return bgmGainNode ? bgmGainNode.gain.value : bgmAudio.volume;
+}
+// bgmAudioがWeb Audio API経由になったため、AudioContextが未resume(suspended)のままだと
+// 無音になる。iOSはユーザー操作の中で1回resumeしただけでは以後suspendedへ戻ることがあるため、
+// 効果音(sfxAudioCtx)と同じく「再生を試みるたびに、suspendedならresumeしてから鳴らす」方式にする
+function resumeAndPlayBgmAudio() {
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
+    bgmAudioCtx.resume().then(() => bgmAudio.play().catch(() => {})).catch(() => {});
+  } else {
+    bgmAudio.play().catch(() => {});
+  }
+}
+
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
 const OPENING_BGM_VOLUME = 0.55;
-bgmAudio.volume = BGM_BASE_VOLUME;
+setBgmAudioVolume(BGM_BASE_VOLUME);
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
 ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
@@ -114,7 +154,7 @@ function unlockAudio() {
   audioUnlocked = true;
   if (currentBgmKey) {
     // 既に町/冒険用のBGMキーが決まっている(=タイトルより先に進んでいる)場合はそちらを再開する
-    bgmAudio.play().catch(() => {});
+    resumeAndPlayBgmAudio();
     ambientBgmAudio.play().catch(() => {});
   } else {
     // まだタイトル/オープニング中(currentBgmKeyは最初のplayBgm()呼び出しまでnullのまま)。
@@ -122,8 +162,9 @@ function unlockAudio() {
     // ユーザーの最初の操作によるこの呼び出しが確実な再試行のタイミングになる
     openingBgmAudio.play().catch(() => {});
   }
-  // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
+  // iPhone Safari対策: SE用/BGM用、両方のAudioContextともユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().catch(() => {});
 }
 ["pointerdown", "touchstart", "mousedown", "keydown"].forEach((evt) => {
   document.addEventListener(evt, unlockAudio, { once: true, passive: true });
@@ -183,15 +224,15 @@ function playBgm(key) {
   if (currentBgmKey === key) {
     // 同じ曲を続けて流すはずの場面(海岸の探索→戦闘の継続再生など)で、何らかの理由で
     // 要素が一時停止してしまっていた場合に無音のまま固まらないよう、ここで取りこぼさず再開する
-    if (bgmAudio.paused && audioUnlocked) bgmAudio.play().catch(() => {});
+    if (bgmAudio.paused && audioUnlocked) resumeAndPlayBgmAudio();
     return;
   }
   if (currentBgmKey) bgmPositions[currentBgmKey] = bgmAudio.currentTime;
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
-  bgmAudio.volume = bgmVolumeForKey(key);
-  if (audioUnlocked) bgmAudio.play().catch(() => {});
+  setBgmAudioVolume(bgmVolumeForKey(key));
+  if (audioUnlocked) resumeAndPlayBgmAudio();
 }
 
 // 戦闘終了時: 森の戦闘専用BGM(dungeon/dungeon_night)をフェードアウトして止める。海岸は戦闘中も
@@ -217,7 +258,7 @@ function stopBattleBgm() {
   // 戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
   // (coast_battleは元々このキー自体で確定していた)
   const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle") && currentStage === "coast");
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmAudioVolume();
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;
   function fadeStep() {
@@ -228,13 +269,13 @@ function stopBattleBgm() {
     // battleBgmFadeTokenの不一致は、同じキーのまま次の戦闘が頭出しされたケースを検出する
     if (currentBgmKey !== key || battleBgmFadeToken !== myFadeToken) return;
     const t = Math.min(1, (performance.now() - startTime) / BATTLE_BGM_FADE_OUT_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmAudioVolume(startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmPositions[key] = 0;
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmAudioVolume(BGM_BASE_VOLUME);
       currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
@@ -281,21 +322,20 @@ function stopTownBgm() {
 
 // 宿泊時: 町のBGMをフェードで止め、代わりに宿泊専用の一度きりの曲を再生する。曲が鳴り終わったら
 // (ended)、町のBGMを最初から再開する(bgmPositionsの続きからではなく、必ず頭出しする)。
-// 補足: <audio>要素のvolumeでのフェードはiOS Safariでは効かない(音量はハードウェアボタンのみで制御され、
-// JSからの変更は無視される)ため実機では厳密には滑らかにならない。Web Audio API(GainNode)化で
-// 直そうとしたが、村の基本BGMまで無音になる重大な副作用が出たため、確実に動く現状の方式に戻してある
+// bgmAudio側のフェードはGainNode経由(setBgmAudioVolume/getBgmAudioVolume)のため、
+// iOS実機でも滑らかに減衰する。lodgingBgmAudio自体はまだ<audio>.volumeのまま(未移行)
 const LODGING_BGM_FADE_OUT_MS = 1200;
 function playLodgingBgm() {
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmAudioVolume();
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / LODGING_BGM_FADE_OUT_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmAudioVolume(startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmAudioVolume(BGM_BASE_VOLUME);
       lodgingBgmAudio.currentTime = 0;
       if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
     }
@@ -316,16 +356,16 @@ lodgingBgmAudio.addEventListener("ended", () => {
 // 逆方向のフェードを行い、冒険中BGMを(頭出しではなく)続きから再開する
 const CAMP_BGM_FADE_MS = 1200;
 function playCampBgm() {
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmAudioVolume();
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmAudioVolume(startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmAudioVolume(BGM_BASE_VOLUME);
       campBgmAudio.currentTime = 0;
       if (audioUnlocked) campBgmAudio.play().catch(() => {});
     }
@@ -411,8 +451,11 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
     sfxAudioCtx.resume().catch(() => {});
   }
+  if (document.visibilityState === "visible" && bgmAudioCtx && bgmAudioCtx.state === "suspended") {
+    bgmAudioCtx.resume().catch(() => {});
+  }
   if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
-    bgmAudio.play().catch(() => {});
+    resumeAndPlayBgmAudio();
   }
 });
 // 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
