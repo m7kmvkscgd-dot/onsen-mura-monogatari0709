@@ -174,6 +174,15 @@
   .status-takigyo-btn:disabled { opacity: 0.4; cursor: default; }
   .roster-name { font-weight: 700; font-size: 0.88rem; }
   .roster-sub { font-size: 0.7rem; color: var(--text-muted); }
+  /* Lv./職業名の行(statusLabel())だけ、.roster-subの汎用サイズ(他の説明文と共用)より少し大きくして
+     読みやすくする。.roster-subは図鑑説明文・ストレス表示・御守説明など無関係な箇所でも使い回して
+     いるため、そちらに影響しないようこの行専用のクラスで上書きする */
+  .roster-class-line { font-size: 0.78rem; }
+  /* 宿屋名簿/宿泊選択でのHP・MPバー。MPバー(青)がHPバーの半分未満の太さしかなく貧弱に見えるという
+     指摘のため、この画面のバーだけ両方とも太くする(battle.jsの戦闘中バーは.hpbar-track/.mpbar-trackを
+     共有しているため、ここではなくroster-row配下に限定してスコープする) */
+  .roster-row .hpbar-track { height: 11px; }
+  .roster-row .mpbar-track { height: 7px; }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }

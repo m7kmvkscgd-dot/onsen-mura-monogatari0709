@@ -131,7 +131,8 @@ function renderDwHeader(prefix, title, onBack) {
 
 function statusLabel(c) {
   if (c.status === "active") {
-    const base = `Lv.${c.level} ${CLASSES[c.classId].ja}`;
+    // 「職業名 Lv.数値」の順(以前はLv.が先)にして、まず何の職業かが目に入るようにした
+    const base = `${CLASSES[c.classId].ja} Lv.${c.level}`;
     if (stressTier(c.fatigue) >= 4) return `${base}(発狂中)`;
     return base;
   }

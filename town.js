@@ -499,7 +499,9 @@ function renderRosterList() {
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
     const hasPendingSkill = pendingLevels.length > 0;
-    const levelUpFrom = hasPendingSkill ? Math.min(...pendingLevels) - 1 : null;
+    // レベルアップバッジの文言は以前「レベルアップ！ Lv.1→10」のように具体的な数値範囲を出していたが、
+    // 一気に10まで上がったのかと誤読されやすいという指摘のため「レベルアップ！」だけに簡略化した
+    // (下のスキル選択ボタンとセットで十分に意味が伝わるため、数値は不要と判断)
     const row = document.createElement("div");
     // 瀕死/ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
     // 同じ.disabledクラス(半透明)でグレーアウト表示する
@@ -508,8 +510,8 @@ function renderRosterList() {
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
-        <div class="roster-sub">${statusLabel(c)}</div>
-        ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！ Lv.${levelUpFrom}→${c.level}</div>` : ""}
+        <div class="roster-sub roster-class-line">${statusLabel(c)}</div>
+        ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！</div>` : ""}
         ${c.status === "active" ? `
           <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
           ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
@@ -1228,7 +1230,7 @@ function renderPartySelect() {
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
-        <div class="roster-sub">${statusLabel(c)}</div>
+        <div class="roster-sub roster-class-line">${statusLabel(c)}</div>
       </div>
     `;
     row.onclick = (e) => {
