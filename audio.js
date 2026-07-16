@@ -75,16 +75,65 @@ const lodgingBgmAudio = document.getElementById("lodgingBgmAudio");
 const campBgmAudio = document.getElementById("campBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const openingBgmAudio = document.getElementById("openingBgmAudio");
+
+// ============ BGM音量制御: Web Audio API(GainNode)経由 ============
+// iOS(Safari/Chromeとも中身は同一のWebKitエンジン)は<audio>要素のvolumeプロパティへの
+// JSからの変更を実際の出力に反映しない(音量はハードウェアの物理ボタンのみで変わる、という
+// 既知のプラットフォーム制約)。これを回避するため、BGM系の5つの<audio>要素はすべて専用の
+// AudioContext(bgmAudioCtx、効果音用のsfxAudioCtxとは完全に別インスタンス)へ接続し、
+// 実際の音量制御はすべてGainNode.gain.valueで行う。audioEl.volumeは常に1(フル)のまま
+// 以後一切変更しない(GainNode接続に失敗した異常系だけの例外的なフォールバックを除く)
+let bgmAudioCtx = null;
+try {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) bgmAudioCtx = new AudioContextClass();
+} catch (e) {}
+// <audio>要素 -> GainNode のキャッシュ。MediaElementAudioSourceNodeは同じ<audio>要素に対して
+// 2度目の生成を試みると例外(InvalidStateError)になる仕様のため、要素ごとに最初の1回だけ
+// source→gain→destinationの接続を作り、以降は必ずこのマップから取り出して使い回す
+const bgmGainNodeMap = new Map();
+function getBgmGainNode(audioEl) {
+  if (!bgmAudioCtx) return null;
+  const cached = bgmGainNodeMap.get(audioEl);
+  if (cached) return cached;
+  try {
+    const source = bgmAudioCtx.createMediaElementSource(audioEl);
+    const gain = bgmAudioCtx.createGain();
+    source.connect(gain).connect(bgmAudioCtx.destination);
+    bgmGainNodeMap.set(audioEl, gain);
+    return gain;
+  } catch (e) {
+    return null; // 生成に失敗した場合、setBgmVolume/getBgmVolumeがaudioEl.volumeへフォールバックする
+  }
+}
+// BGM系<audio>要素1つぶんの実効音量を設定する共通ヘルパー。既存の初期化・フェード処理は
+// すべてこの関数経由に統一し、audioEl.volumeへの直接代入は行わない
+function setBgmVolume(audioEl, value) {
+  const gain = getBgmGainNode(audioEl);
+  if (gain) {
+    gain.gain.value = value;
+    audioEl.volume = 1; // 音量はGainNode側で制御するため、要素自体は常にフルのままにしておく
+  } else {
+    audioEl.volume = value; // GainNode接続に失敗した環境向けのフォールバック
+  }
+}
+// フェード処理の「現在の音量」の読み取りにも同じ経路を使う(GainNode接続時はgain.value、
+// フォールバック時はaudioEl.volumeを返す)
+function getBgmVolume(audioEl) {
+  const gain = getBgmGainNode(audioEl);
+  return gain ? gain.gain.value : audioEl.volume;
+}
+
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
 const OPENING_BGM_VOLUME = 0.55;
-bgmAudio.volume = BGM_BASE_VOLUME;
-lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
-campBgmAudio.volume = CAMP_BGM_VOLUME;
-ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
-openingBgmAudio.volume = OPENING_BGM_VOLUME;
+setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
+setBgmVolume(lodgingBgmAudio, LODGING_BGM_VOLUME);
+setBgmVolume(campBgmAudio, CAMP_BGM_VOLUME);
+setBgmVolume(ambientBgmAudio, AMBIENT_BGM_VOLUME);
+setBgmVolume(openingBgmAudio, OPENING_BGM_VOLUME);
 let audioUnlocked = false;
 let muted = false;
 let currentBgmKey = null;
@@ -122,8 +171,9 @@ function unlockAudio() {
     // ユーザーの最初の操作によるこの呼び出しが確実な再試行のタイミングになる
     openingBgmAudio.play().catch(() => {});
   }
-  // iPhone Safari対策: SE用AudioContextはユーザーの最初のタップの中でresume()する必要がある
+  // iPhone Safari対策: SE用/BGM用、どちらのAudioContextもユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().catch(() => {});
 }
 ["pointerdown", "touchstart", "mousedown", "keydown"].forEach((evt) => {
   document.addEventListener(evt, unlockAudio, { once: true, passive: true });
@@ -141,12 +191,10 @@ function unlockAudio() {
 
 // 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
 const COAST_BGM_VOLUME_MULT = 1.7;
-// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を調整できる仕組み。
-// <audio>要素のvolumeはiOS(Safari/Chromeともに中身は同じWebKitのため同一の制約)では
-// JSからの変更が無視され、ハードウェアの音量ボタンでしか変わらない。この仕組み自体はほぼ無意味と
-// 判明したため、ユーザー指示で1.0(無調整)に戻した。将来Web Audio API(GainNode)化する場合に
-// 備え、bgmVolumeForKey()の仕組みごとは残してある
-const TOWN_DAY_BGM_VOLUME_MULT = 1.0;
+// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を調整する。
+// 以前は<audio>要素のvolumeで制御しておりiOSでは反映されなかったが、GainNode経由の音量制御に
+// 移行したことで実機でも効くようになった。ユーザー指示で現状比70%(30%減)にする
+const TOWN_DAY_BGM_VOLUME_MULT = 0.7;
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
@@ -158,20 +206,20 @@ function bgmVolumeForKey(key) {
 let openingBgmFadeToken = 0;
 function fadeOutOpeningBgm() {
   if (openingBgmAudio.paused) return;
-  const startVol = openingBgmAudio.volume;
+  const startVol = getBgmVolume(openingBgmAudio);
   const startTime = performance.now();
   const myToken = ++openingBgmFadeToken;
   const durationMs = 600;
   function step() {
     if (openingBgmFadeToken !== myToken) return;
     const t = Math.min(1, (performance.now() - startTime) / durationMs);
-    openingBgmAudio.volume = startVol * (1 - t);
+    setBgmVolume(openingBgmAudio, startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(step);
     } else {
       openingBgmAudio.pause();
       openingBgmAudio.currentTime = 0;
-      openingBgmAudio.volume = OPENING_BGM_VOLUME;
+      setBgmVolume(openingBgmAudio, OPENING_BGM_VOLUME);
     }
   }
   step();
@@ -190,7 +238,7 @@ function playBgm(key) {
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
-  bgmAudio.volume = bgmVolumeForKey(key);
+  setBgmVolume(bgmAudio, bgmVolumeForKey(key));
   if (audioUnlocked) bgmAudio.play().catch(() => {});
 }
 
@@ -217,7 +265,7 @@ function stopBattleBgm() {
   // 戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
   // (coast_battleは元々このキー自体で確定していた)
   const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle") && currentStage === "coast");
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmVolume(bgmAudio);
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;
   function fadeStep() {
@@ -228,13 +276,13 @@ function stopBattleBgm() {
     // battleBgmFadeTokenの不一致は、同じキーのまま次の戦闘が頭出しされたケースを検出する
     if (currentBgmKey !== key || battleBgmFadeToken !== myFadeToken) return;
     const t = Math.min(1, (performance.now() - startTime) / BATTLE_BGM_FADE_OUT_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmVolume(bgmAudio, startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmPositions[key] = 0;
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
@@ -281,21 +329,19 @@ function stopTownBgm() {
 
 // 宿泊時: 町のBGMをフェードで止め、代わりに宿泊専用の一度きりの曲を再生する。曲が鳴り終わったら
 // (ended)、町のBGMを最初から再開する(bgmPositionsの続きからではなく、必ず頭出しする)。
-// 補足: <audio>要素のvolumeでのフェードはiOS Safariでは効かない(音量はハードウェアボタンのみで制御され、
-// JSからの変更は無視される)ため実機では厳密には滑らかにならない。Web Audio API(GainNode)化で
-// 直そうとしたが、村の基本BGMまで無音になる重大な副作用が出たため、確実に動く現状の方式に戻してある
+// 音量制御はGainNode経由(setBgmVolume)のため、iOS実機でも滑らかにフェードする
 const LODGING_BGM_FADE_OUT_MS = 1200;
 function playLodgingBgm() {
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmVolume(bgmAudio);
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / LODGING_BGM_FADE_OUT_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmVolume(bgmAudio, startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       lodgingBgmAudio.currentTime = 0;
       if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
     }
@@ -316,16 +362,16 @@ lodgingBgmAudio.addEventListener("ended", () => {
 // 逆方向のフェードを行い、冒険中BGMを(頭出しではなく)続きから再開する
 const CAMP_BGM_FADE_MS = 1200;
 function playCampBgm() {
-  const startVol = bgmAudio.volume;
+  const startVol = getBgmVolume(bgmAudio);
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
-    bgmAudio.volume = startVol * (1 - t);
+    setBgmVolume(bgmAudio, startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      bgmAudio.volume = BGM_BASE_VOLUME;
+      setBgmVolume(bgmAudio, BGM_BASE_VOLUME);
       campBgmAudio.currentTime = 0;
       if (audioUnlocked) campBgmAudio.play().catch(() => {});
     }
@@ -333,16 +379,16 @@ function playCampBgm() {
   fadeStep();
 }
 function stopCampBgm(onDone) {
-  const startVol = campBgmAudio.volume;
+  const startVol = getBgmVolume(campBgmAudio);
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
-    campBgmAudio.volume = startVol * (1 - t);
+    setBgmVolume(campBgmAudio, startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       campBgmAudio.pause();
-      campBgmAudio.volume = CAMP_BGM_VOLUME;
+      setBgmVolume(campBgmAudio, CAMP_BGM_VOLUME);
       if (onDone) onDone();
     }
   }
@@ -354,8 +400,8 @@ function stopCampBgm(onDone) {
 // ============ 効果音(SE): Web Audio API低遅延方式 ============
 // new Audio()+cloneNode().play()は端末によって呼び出しから実際の再生開始までに遅延が乗ることがあるため、
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
-// 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
-// lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
+// 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio等)は
+// 別途bgmAudioCtx(上のsetBgmVolume/getBgmGainNode参照)を使うため、このAudioContextはSE専用のまま
 const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", onsen_enter: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3", title_tap: "mp3", hawk_summon: "mp3", omikuji_normal: "mp3", omikuji_daikichi: "mp3", onsen_relief: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
@@ -410,6 +456,9 @@ function playSfx(name) {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
     sfxAudioCtx.resume().catch(() => {});
+  }
+  if (document.visibilityState === "visible" && bgmAudioCtx && bgmAudioCtx.state === "suspended") {
+    bgmAudioCtx.resume().catch(() => {});
   }
   if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
     bgmAudio.play().catch(() => {});
