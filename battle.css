@@ -122,6 +122,22 @@
     0% { opacity: 1; transform: translate(0,0) scale(1); }
     100% { opacity: 0; transform: translate(var(--spark-x, 20px), var(--spark-y, -20px)) scale(0.3); }
   }
+  /* ボス/中ボスの大技を味方が被弾した時の重い衝撃演出(effects.js playBossBigAttackImpact)。
+     会心の白閃光/衝撃波(祝福・気持ちよさの演出)とは対を成す「痛打を受けた」赤系の演出にして、
+     見た目で区別できるようにした。画面シェイクは会心と同じ--crit-shake-x/y(battle-bg/battle-top/
+     battle-actionsが既に参照している)をそのまま使い回すが、振幅を大きく・尺を長くして「重さ」を出す */
+  .impact-flash-overlay {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 26;
+    background: radial-gradient(circle, rgba(255,90,60,0.9) 0%, rgba(255,90,60,0) 72%);
+    animation: impactFlash 0.26s ease-out forwards;
+  }
+  @keyframes impactFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+  .impact-shockwave {
+    position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+    border: 4px solid rgba(255,150,110,0.9); border-radius: 50%; pointer-events: none; z-index: 27;
+    animation: impactShockwave 0.34s ease-out forwards;
+  }
+  @keyframes impactShockwave { 0% { opacity: 0.95; transform: scale(0.3); } 100% { opacity: 0; transform: scale(5.5); } }
   /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
   .crit-banner {
     /* 敵カードが画面上端に近いと文字が画面外に切れて見えなくなっていたため、カード真上ではなく

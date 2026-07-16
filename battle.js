@@ -355,6 +355,9 @@ function processNext() {
             if (r.hit) {
               popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
               playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
+              // ボス/中ボスの大技だけ、画面シェイク+被弾カードの赤い閃光/衝撃波で「重い一撃」を強調する
+              // (雑魚の大技には付けない、ユーザー指示)
+              if (actor.isBoss || actor.isMidBoss) playBossBigAttackImpact(r.target.id);
             } else {
               playSfx("evade");
             }

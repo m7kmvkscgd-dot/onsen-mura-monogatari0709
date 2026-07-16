@@ -281,6 +281,39 @@ function playCritEffects(targetId, actor, dmg) {
     setTimeout(() => banner.remove(), 520);
   }, CRIT_HITSTOP_MS);
 }
+// ボス/中ボスの大技を味方が被弾した時だけの重い衝撃演出(通常の敵の大技には付けない、ユーザー指示)。
+// playScreenShakeCrit()と同じ--crit-shake-x/y経由の画面シェイクを使い回すが、振幅を大きく(1.7倍相当)・
+// 尺を長く(180ms→260ms)して「痛打を受けた」重さを出す。ヒットストップは挟まず、命中と同時に即座に発火する
+// (会心は「加害側のご褒美演出」なので一呼吸置いて溜めるが、被弾側の衝撃はもたつかせず即応させたいため)
+const BIG_IMPACT_SHAKE_FRAMES = [[0, 0], [-11, 7], [9, -6], [-7, 5], [5, -3], [-2, 1], [0, 0]];
+const BIG_IMPACT_SHAKE_DURATION_MS = 260;
+function playScreenShakeBigImpact() {
+  const targets = [document.getElementById("battleBg"), document.getElementById("battleTop"), document.querySelector(".battle-actions")].filter(Boolean);
+  if (targets.length === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / BIG_IMPACT_SHAKE_DURATION_MS);
+    const idx = Math.min(BIG_IMPACT_SHAKE_FRAMES.length - 1, Math.floor(t * (BIG_IMPACT_SHAKE_FRAMES.length - 1)));
+    const [dx, dy] = BIG_IMPACT_SHAKE_FRAMES[idx];
+    targets.forEach((el) => { el.style.setProperty("--crit-shake-x", `${dx}px`); el.style.setProperty("--crit-shake-y", `${dy}px`); });
+    if (t < 1) requestAnimationFrame(step);
+    else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
+  }
+  requestAnimationFrame(step);
+}
+function playBossBigAttackImpact(targetId) {
+  playScreenShakeBigImpact();
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const flash = document.createElement("div");
+  flash.className = "impact-flash-overlay";
+  el.appendChild(flash);
+  setTimeout(() => flash.remove(), 260);
+  const wave = document.createElement("div");
+  wave.className = "impact-shockwave";
+  el.appendChild(wave);
+  setTimeout(() => wave.remove(), 340);
+}
 // 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
 // 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出す
 // (以前は1秒間画面が停止していたが、ユーザー指示で廃止し即座に次へ進行するようにした)
