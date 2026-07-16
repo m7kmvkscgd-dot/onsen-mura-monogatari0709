@@ -180,19 +180,11 @@ function showConceptIntro(onDone) {
   };
 }
 function renderTown() {
-  // 【調査用・一時的】町へ到達してから最初の数秒間に何が実行されているかを実測する
-  perfMark("town:start");
-  startPerfHeartbeat("town-arrival");
-  activatePerfPatchWindow(10000);
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
-  perfMark("town:after:pruneActiveParty");
   refillHenHouseEggPouchIfNewDay();
-  perfMark("town:after:refillHenHouseEgg");
   saveState();
-  perfMark("town:after:saveState");
-  if (checkGameOver()) { perfMark("town:end(gameOver-early-return)"); return; }
-  perfMark("town:after:checkGameOver");
+  if (checkGameOver()) return;
   document.getElementById("townGold").textContent = state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
@@ -206,31 +198,11 @@ function renderTown() {
   document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
   document.getElementById("onsenTownNewBadge").style.display = hasAnyNewOnsenFeature() ? "" : "none";
   document.getElementById("dungeonTownNewBadge").style.display = hasAnyNewSupplyFeature() ? "" : "none";
-  perfMark("town:after:domTextUpdates");
   playTownAreaBgm();
-  perfMark("town:after:playTownAreaBgm");
   updateSceneBackgrounds();
-  perfMark("town:after:updateSceneBackgrounds");
   showScreen("screen-town");
-  perfMark("town:after:showScreen");
   checkOnsenReliefPopups(); // 入浴ロックが明けたキャラがいれば「リラックスできた！」ポップアップを出す(町画面限定)
-  perfMark("town:after:checkOnsenReliefPopups");
   maybeShowDepartTutorial();
-  perfMark("town:end");
-  perfMeasureLast("town:pruneActiveParty", "town:start", "town:after:pruneActiveParty");
-  perfMeasureLast("town:refillHenHouseEgg", "town:after:pruneActiveParty", "town:after:refillHenHouseEgg");
-  perfMeasureLast("town:saveState(call-overhead)", "town:after:refillHenHouseEgg", "town:after:saveState");
-  perfMeasureLast("town:checkGameOver", "town:after:saveState", "town:after:checkGameOver");
-  perfMeasureLast("town:domTextUpdates", "town:after:checkGameOver", "town:after:domTextUpdates");
-  perfMeasureLast("town:playTownAreaBgm", "town:after:domTextUpdates", "town:after:playTownAreaBgm");
-  perfMeasureLast("town:updateSceneBackgrounds", "town:after:playTownAreaBgm", "town:after:updateSceneBackgrounds");
-  perfMeasureLast("town:showScreen", "town:after:updateSceneBackgrounds", "town:after:showScreen");
-  perfMeasureLast("town:checkOnsenReliefPopups", "town:after:showScreen", "town:after:checkOnsenReliefPopups");
-  perfMeasureLast("town:maybeShowDepartTutorial", "town:after:checkOnsenReliefPopups", "town:end");
-  perfMeasureLast("town:TOTAL_SYNC", "town:start", "town:end");
-  const resourceSince = performance.now();
-  setTimeout(() => dumpImageResourceTimingSince(resourceSince - 500, "town-arrival+3s"), 3000);
-  setTimeout(() => dumpImageResourceTimingSince(resourceSince - 500, "town-arrival+9s"), 9000);
 }
 
 // ============ 温泉の入浴完了ポップアップ ============

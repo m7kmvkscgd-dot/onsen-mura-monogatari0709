@@ -249,14 +249,6 @@ function loadState() {
 // __allies/__enemyAllies(かばう連携/貫き矢がengine.js側から他の味方/敵を参照するための自己参照。
 // fieldParty自身を指すため循環参照になる)はJSON.stringifyできないので、保存対象から除外する
 function saveState() {
-  // 【調査用・一時的】save処理とlocalStorageアクセスをそれぞれ個別に実測する
-  const t0 = performance.now();
-  const json = JSON.stringify(state, (key, value) => (key === "__allies" || key === "__enemyAllies") ? undefined : value);
-  const t1 = performance.now();
-  localStorage.setItem(SAVE_KEY, json);
-  const t2 = performance.now();
-  if (typeof perfDiagLog === "function") {
-    perfDiagLog("saveState(): JSON.stringify=" + (t1 - t0).toFixed(2) + "ms, localStorage.setItem=" + (t2 - t1).toFixed(2) + "ms, jsonLength=" + json.length);
-  }
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state, (key, value) => (key === "__allies" || key === "__enemyAllies") ? undefined : value));
 }
 
