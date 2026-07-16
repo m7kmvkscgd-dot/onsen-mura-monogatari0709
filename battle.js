@@ -158,6 +158,15 @@ function anyCrowScoutActive() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
+  // ボス追撃モードの発動判定。討伐依頼対象(isQuestTarget、既に専用の追跡システムを持つ)は対象外。
+  // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする(HPが閾値以下のまま複数回
+  // renderBattleScreen()が呼ばれても再発動しない)
+  const fleeingBoss = battle.enemies.find((e) => (e.isBoss || e.isMidBoss) && !e.isQuestTarget && !e.__hasFledPursuit && e.hp > 0 && e.hp / e.maxHp <= BOSS_FLEE_HP_RATIO);
+  if (fleeingBoss) {
+    fleeingBoss.__hasFledPursuit = true;
+    triggerBossFlee(fleeingBoss);
+    return;
+  }
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(5人編成でも
@@ -1390,6 +1399,9 @@ function victory() {
     state.magistrateQuestClearedOn = state.magistrateQuestClearedOn || {};
     state.magistrateQuestClearedOn[battle.questKey] = state.dayCount;
   }
+  // ボス追撃モード: 追いついて仕留めきった戦闘なら追撃状態を終了する(通常のgold/xp報酬は
+  // 下のbattle.enemies.forEachで他の敵と同じように処理されるため、ここでは状態のクリアのみ)
+  if (battle.bossPursuitEnemyId) bossPursuit = null;
   let soulShardCount = 0;
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
@@ -1483,8 +1495,40 @@ function markQuestChasingIfFled() {
     state.acceptedQuest.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
   }
 }
+// ボス追撃モード: 討伐依頼対象ではないボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られると、
+// プレイヤーの選択を待たずその場で瀕死のまま戦闘から逃走する(escapeBattle()のプレイヤー主導の
+// 逃走とは違い、敵側が一方的に切り上げる形)。以後bossPursuitが立ち、tryForceBossPursuitEncounter()
+// (dungeon.js)が同じステージのフロア移動のたびに一定確率で追いつかせる
+function triggerBossFlee(enemy) {
+  bossPursuit = { enemyId: enemy.id, hp: enemy.hp, maxHp: enemy.maxHp, stage: currentStage };
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
+  battle = null;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  clearDotEffects(fieldParty);
+  clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
+  fieldParty.forEach((c) => { c.fleeState = null; });
+  advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+  showScreen("screen-dungeon");
+  renderDungeon();
+  dlog(`${enemy.label}は手負いのまま逃げ出した！`);
+  checkStrandedOnCurrentFloor();
+}
+// ボス追撃モードの再戦(battle.bossPursuitEnemyId)からプレイヤー側が逃げた(escapeBattle/
+// useSmokeBomb)場合、その時点のHPをbossPursuitへ書き戻す。これをしないと、追撃中に一部
+// ダメージを与えてから再度逃げた分が失われ、追いつくたびに同じHPで出現してしまう
+// (討伐依頼のmarkQuestChasingIfFled/carryHpと同じ考え方)
+function updateBossPursuitHpIfFled() {
+  if (battle && battle.bossPursuitEnemyId && bossPursuit && bossPursuit.enemyId === battle.bossPursuitEnemyId) {
+    const enemy = battle.enemies.find((e) => e.id === battle.bossPursuitEnemyId);
+    if (enemy) bossPursuit.hp = enemy.hp;
+  }
+}
 function escapeBattle() {
   markQuestChasingIfFled();
+  updateBossPursuitHpIfFled();
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   blog("残った仲間全員が戦闘から逃げ延びた。");
   battle = null;

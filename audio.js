@@ -296,7 +296,9 @@ function isBossBgmActive() {
   return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle" || currentBgmKey === "quest_target_battle";
 }
 function shouldKeepBossBgmOnFlee() {
-  return !!(state.acceptedQuest && state.acceptedQuest.chasing && isBossBgmActive());
+  // 討伐依頼の追跡(state.acceptedQuest.chasing)に加え、ボス追撃モード(bossPursuit、
+  // dungeon.jsのボス自主逃走)中も同じ理由でボス戦BGMを止めずに流し続ける
+  return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit) && isBossBgmActive();
 }
 function stopBattleBgm() {
   if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle") return;

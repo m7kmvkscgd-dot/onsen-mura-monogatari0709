@@ -1459,6 +1459,11 @@ const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(瀕死・ロストを除
 // 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
 const CHASE_ENCOUNTER_CHANCE = 0.6;
+// ボス/中ボス(isBoss/isMidBoss、討伐依頼対象を除く)がHPをこの割合以下まで削られると、瀕死のまま
+// 戦闘から逃走する(追撃モード開始)。追撃中は以後どのフロアでもこの確率で追いつき再戦になる
+// (dungeon.jsのbossPursuit/tryForceBossPursuitEncounter参照、討伐依頼のchasing/carryHpと同じ仕組み)
+const BOSS_FLEE_HP_RATIO = 0.2;
+const BOSS_PURSUIT_ENCOUNTER_CHANCE = 0.6;
 
 
 // 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。
