@@ -136,7 +136,12 @@
   <div class="screen" id="screen-town">
     <div class="hero" id="townHero" style="background-image:url('assets/bg/town.jpg')">
       <div class="topbar" style="justify-content:flex-end;">
-        <button class="mute-btn" id="muteBtn">🔊</button>
+        <div class="volume-control-wrap">
+          <button class="mute-btn" id="muteBtn">🔊</button>
+          <div class="volume-popover" id="volumePopover" style="display:none;">
+            <input type="range" id="volumeSlider" min="0" max="100" value="100">
+          </div>
+        </div>
       </div>
       <div class="hero-title-row">
         <span class="time-of-day-label" id="townDateLabel"></span>

@@ -120,13 +120,45 @@ const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
 const OPENING_BGM_VOLUME = 0.55;
-setBgmAudioVolume(BGM_BASE_VOLUME);
+// ============ 音量調整(右上のスピーカーアイコン→スライダー) ============
+// 0(ミュート)〜1の倍率。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
+// 他のBGM要素(opening/lodging/camp/ambient)はGainNode化していないため、この値では音量までは
+// 変えられないが、0の時だけ.mutedで完全に黙らせる(スライダーを0まで下げる=ミュート、という
+// 直感的な挙動に合わせるため)
+let masterBgmVolume = 1;
+let lastMasterBgmVolumeBeforeMute = 1; // ミュート前の音量を覚えておき、設定画面のON/OFFトグルで復元する
+function targetBgmVolume(key) {
+  return bgmVolumeForKey(key) * masterBgmVolume;
+}
+function baseTargetVolume() {
+  return BGM_BASE_VOLUME * masterBgmVolume;
+}
+function applyMasterVolumeToUi() {
+  const isMuted = masterBgmVolume === 0;
+  lodgingBgmAudio.muted = isMuted;
+  openingBgmAudio.muted = isMuted;
+  ambientBgmAudio.muted = isMuted;
+  campBgmAudio.muted = isMuted;
+  const btn = document.getElementById("muteBtn");
+  if (btn) btn.textContent = isMuted ? "🔇" : (masterBgmVolume < 0.5 ? "🔉" : "🔊");
+  const slider = document.getElementById("volumeSlider");
+  if (slider) slider.value = Math.round(masterBgmVolume * 100);
+}
+function setMasterBgmVolume(v) {
+  masterBgmVolume = Math.max(0, Math.min(1, v));
+  if (masterBgmVolume > 0) lastMasterBgmVolumeBeforeMute = masterBgmVolume;
+  if (currentBgmKey && !bgmAudio.paused) setBgmAudioVolume(targetBgmVolume(currentBgmKey));
+  applyMasterVolumeToUi();
+}
+function toggleMute() {
+  setMasterBgmVolume(masterBgmVolume > 0 ? 0 : (lastMasterBgmVolumeBeforeMute || 1));
+}
+setBgmAudioVolume(baseTargetVolume());
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
 ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
 openingBgmAudio.volume = OPENING_BGM_VOLUME;
 let audioUnlocked = false;
-let muted = false;
 let currentBgmKey = null;
 // 場面ごとの再生位置記憶(例: 町の曲は町に戻るたびに続きから再生される)。
 // ただしダンジョンの曲だけは、新しい冒険を始めるたびにenterDungeon()でこの値を0に戻し、
@@ -182,12 +214,9 @@ function unlockAudio() {
 
 // 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
 const COAST_BGM_VOLUME_MULT = 1.7;
-// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を調整できる仕組み。
-// <audio>要素のvolumeはiOS(Safari/Chromeともに中身は同じWebKitのため同一の制約)では
-// JSからの変更が無視され、ハードウェアの音量ボタンでしか変わらない。この仕組み自体はほぼ無意味と
-// 判明したため、ユーザー指示で1.0(無調整)に戻した。将来Web Audio API(GainNode)化する場合に
-// 備え、bgmVolumeForKey()の仕組みごとは残してある
-const TOWN_DAY_BGM_VOLUME_MULT = 1.0;
+// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を下げる。
+// bgmAudioはGainNode経由の音量制御に移行済みのため、iOS実機でも実際に反映される
+const TOWN_DAY_BGM_VOLUME_MULT = 0.7;
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
@@ -231,7 +260,7 @@ function playBgm(key) {
   currentBgmKey = key;
   bgmAudio.src = BGM_TRACKS[key];
   bgmAudio.currentTime = bgmPositions[key] || 0;
-  setBgmAudioVolume(bgmVolumeForKey(key));
+  setBgmAudioVolume(targetBgmVolume(key));
   if (audioUnlocked) resumeAndPlayBgmAudio();
 }
 
@@ -280,7 +309,7 @@ function stopBattleBgm() {
       // だけで、既にグラフに渡り済みの数ms分のバッファは即座には消えない)がフルボリュームで
       // 出力され、フェードの最後に一瞬大きな音が鳴る不具合があった。残留分が確実に流れきる
       // だけの猶予(150ms)を置いてからgainを戻す
-      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
+      setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150);
       currentBgmKey = null;
       if (wasCoastBattle) playExplorationAreaBgm(); // 海岸は戦闘終了後、探索用BGM(coast/coast_night)へ戻す
     }
@@ -345,7 +374,7 @@ function fadeOutTownBgm() {
       requestAnimationFrame(fadeStep);
     } else {
       bgmAudio.pause();
-      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150); // 残留オーディオ対策(stopBattleBgm()と同じ理由)
+      setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150); // 残留オーディオ対策(stopBattleBgm()と同じ理由)
       currentBgmKey = null;
     }
   }
@@ -368,7 +397,7 @@ function playLodgingBgm() {
     } else {
       bgmAudio.pause();
       // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
-      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
+      setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150);
       lodgingBgmAudio.currentTime = 0;
       if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
     }
@@ -399,7 +428,7 @@ function playCampBgm() {
     } else {
       bgmAudio.pause();
       // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
-      setTimeout(() => setBgmAudioVolume(BGM_BASE_VOLUME), 150);
+      setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150);
       campBgmAudio.currentTime = 0;
       if (audioUnlocked) campBgmAudio.play().catch(() => {});
     }
@@ -460,7 +489,7 @@ function hitTakenSfxFor(dmg, maxHp, isSwarm) {
   return "hit_taken_4";
 }
 function playSfx(name) {
-  if (muted) return;
+  if (masterBgmVolume === 0) return;
   const buffer = sfxBuffers[name];
   if (!buffer || !sfxAudioCtx) return; // デコードがまだ終わっていない場合は諦める(旧実装の.catch(()=>{})と同じく無音で失敗させる)
   const start = () => {
@@ -504,11 +533,21 @@ function critSfxFor(classId) {
   return CLASS_CRIT_SFX[classId] || "crit_slash";
 }
 
-document.getElementById("muteBtn").onclick = () => {
-  muted = !muted;
-  bgmAudio.muted = muted;
-  lodgingBgmAudio.muted = muted;
-  openingBgmAudio.muted = muted;
-  document.getElementById("muteBtn").textContent = muted ? "🔇" : "🔊";
+// スピーカーアイコンをタップすると音量スライダーのポップオーバーを開閉する(単純なミュート
+// トグルから、連続的な音量調整に変更)。ポップオーバーの外側をタップすると閉じる
+document.getElementById("muteBtn").onclick = (e) => {
+  e.stopPropagation();
+  const popover = document.getElementById("volumePopover");
+  popover.style.display = popover.style.display === "none" ? "block" : "none";
 };
+document.getElementById("volumeSlider").addEventListener("input", (e) => {
+  setMasterBgmVolume(Number(e.target.value) / 100);
+});
+document.addEventListener("click", (e) => {
+  const popover = document.getElementById("volumePopover");
+  if (popover.style.display !== "none" && !popover.contains(e.target) && e.target.id !== "muteBtn") {
+    popover.style.display = "none";
+  }
+});
+applyMasterVolumeToUi(); // 初期表示(スライダー位置・アイコン)を実際の音量に同期させる
 

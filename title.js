@@ -307,15 +307,15 @@ document.getElementById("titleSettingsBtn").onclick = () => {
 // そのままON/OFFトグルとして見せるだけの、新しい仕組みを持たない最小限の設定画面
 function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
-  soundBtn.textContent = muted ? "OFF" : "ON";
-  soundBtn.classList.toggle("is-on", !muted);
+  soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
+  soundBtn.classList.toggle("is-on", masterBgmVolume > 0);
   const tutoBtn = document.getElementById("settingsTutorialToggle");
   const tutoOn = state.tutorialEnabled !== false;
   tutoBtn.textContent = tutoOn ? "ON" : "OFF";
   tutoBtn.classList.toggle("is-on", tutoOn);
 }
 document.getElementById("settingsSoundToggle").onclick = () => {
-  document.getElementById("muteBtn").click();
+  toggleMute();
   renderSettingsScreen();
 };
 document.getElementById("settingsTutorialToggle").onclick = () => {
