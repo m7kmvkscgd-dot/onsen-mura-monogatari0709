@@ -292,7 +292,18 @@ function fadeOutOpeningBgm() {
   }
   step();
 }
-function playBgm(key) {
+async function playBgm(key) {
+  // 【調査用・一時的】resume仮説の最小実験: 呼ばれるたびに(unlockAudio()の1回きりの試行に
+  // 頼らず)suspendedならここで毎回resumeを試みる。これだけでBGMが鳴るようになるか検証する
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
+    console.error("[BGM DIAG] playBgm(" + key + "): ctx suspended, awaiting resume()..."); // 調査用
+    try {
+      await bgmAudioCtx.resume();
+      console.error("[BGM DIAG] playBgm(" + key + "): resume() succeeded, state=", bgmAudioCtx.state); // 調査用
+    } catch (e) {
+      console.error("[BGM DIAG] playBgm(" + key + "): resume() REJECTED", e); // 調査用
+    }
+  }
   // タイトル画面を離れて最初の本編BGMが決まった瞬間、流れっぱなしのオープニング/タイトル曲を
   // フェードアウトする(このガードが無いと、町BGMと二重に鳴り続けてしまう)
   fadeOutOpeningBgm();
