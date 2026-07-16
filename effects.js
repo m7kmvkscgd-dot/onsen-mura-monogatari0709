@@ -17,6 +17,21 @@ function triggerWarningFlash() {
   void el.offsetWidth;
   el.style.animation = "screenWarningFlash 0.6s ease-out";
 }
+// ボス/中ボスが自分の手番で逃走を選んだ瞬間の演出(triggerBossFlee/triggerQuestBossFlee共通、battle.js参照)。
+// 画面を軽く暗転させつつ中央に大きく「◯◯は逃げ出した！」の告知バナーを出し、専用SE(既存の"flee"、
+// 仲間の逃走完了時と同じ音を流用)を鳴らす。逃げる本人のカードにも後ずさりして駆け去る退場アニメーションを
+// 付ける。BOSS_FLEE_BANNER_MSが経過したら呼び出し元のonDone(実際の戦闘終了処理)を実行する
+const BOSS_FLEE_BANNER_MS = 1400;
+function playBossFleeBanner(enemy, onDone) {
+  const card = findVisibleCard(enemy.instanceId);
+  if (card) card.classList.add("boss-fleeing-out");
+  playSfx("flee");
+  const overlay = document.createElement("div");
+  overlay.className = "boss-flee-banner-overlay";
+  overlay.innerHTML = `<div class="boss-flee-banner-text">💨 ${enemy.label}は逃げ出した！</div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { overlay.remove(); onDone(); }, BOSS_FLEE_BANNER_MS);
+}
 // 攻撃系のdmgポップアップ呼び出し時、技/会心なら"strong"(揺れ1.2倍)、通常攻撃なら"normal"(揺れ0.8倍)を
 // 呼び出し元で明示的に渡す(毒/炎上などの継続ダメージは渡さず、常にnormal扱いにする)
 function dmgShakeIntensity(isSkill) {

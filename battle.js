@@ -158,18 +158,6 @@ function anyCrowScoutActive() {
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
-  // ボス追撃モードの発動判定。討伐依頼対象(isQuestTarget)も含めて全てのボス/中ボスが対象。
-  // 討伐依頼対象は逃走後の追跡先が別のシステム(state.acceptedQuest.chasing/carryHp、
-  // triggerQuestBossFlee参照)になるだけで、「HPが一定以下で自動的に逃げる」こと自体は共通。
-  // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする(HPが閾値以下のまま複数回
-  // renderBattleScreen()が呼ばれても再発動しない)
-  const fleeingBoss = battle.enemies.find((e) => (e.isBoss || e.isMidBoss) && !e.__hasFledPursuit && e.hp > 0 && e.hp / e.maxHp <= BOSS_FLEE_HP_RATIO);
-  if (fleeingBoss) {
-    fleeingBoss.__hasFledPursuit = true;
-    if (fleeingBoss.isQuestTarget) triggerQuestBossFlee(fleeingBoss);
-    else triggerBossFlee(fleeingBoss);
-    return;
-  }
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(5人編成でも
@@ -301,6 +289,18 @@ function processNext() {
     if (actor.hp <= 0) {
       renderBattleScreen();
       setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    // ボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られている場合、自分の手番が回ってきたタイミングで
+    // 通常の行動(攻撃/大技/スタン硬直)の代わりに逃走する。以前はHPが閾値を割った瞬間(=プレイヤーの
+    // 攻撃直後)に即座に割り込んで逃げていたが、「敵の手番が来たら逃げる」という自然な流れにしてほしい
+    // というユーザー指示で、判定タイミングをこの敵自身の手番の先頭に移した。討伐依頼対象(isQuestTarget)も
+    // 含めて全てのボス/中ボスが対象(追跡先のシステムが違うだけ、triggerQuestBossFlee参照)。
+    // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
+    if ((actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
+      actor.__hasFledPursuit = true;
+      if (actor.isQuestTarget) triggerQuestBossFlee(actor);
+      else triggerBossFlee(actor);
       return;
     }
     if (actor.stunTurns > 0) {
@@ -1515,26 +1515,31 @@ function markQuestChasingIfFled() {
     state.acceptedQuest.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
   }
 }
-// ボス追撃モード: 討伐依頼対象ではないボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られると、
-// プレイヤーの選択を待たずその場で瀕死のまま戦闘から逃走する(escapeBattle()のプレイヤー主導の
-// 逃走とは違い、敵側が一方的に切り上げる形)。以後bossPursuitが立ち、tryForceBossPursuitEncounter()
+// ボス追撃モード: 討伐依頼対象ではないボス/中ボスのHPがBOSS_FLEE_HP_RATIO以下の状態で自分の手番が
+// 来ると、プレイヤーの選択を待たずその手番で瀕死のまま戦闘から逃走する(escapeBattle()のプレイヤー主導の
+// 逃走とは違い、敵側が一方的に切り上げる形。呼び出し元はprocessNext()、判定タイミングの詳細はdata.js
+// BOSS_FLEE_HP_RATIOのコメント参照)。以後bossPursuitが立ち、tryForceBossPursuitEncounter()
 // (dungeon.js)が同じステージのフロア移動のたびに一定確率で追いつかせる
 function triggerBossFlee(enemy) {
   bossPursuit = { enemyId: enemy.id, hp: enemy.hp, maxHp: enemy.maxHp, stage: currentStage };
-  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
-  battle = null;
-  pendingEnemyPick = null;
-  pendingAllyPick = null;
-  clearDotEffects(fieldParty);
-  clearHawkState(fieldParty);
-  clearGuardState(fieldParty);
-  clearOmamoriIwanagaBonus(fieldParty);
-  fieldParty.forEach((c) => { c.fleeState = null; });
-  advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-  showScreen("screen-dungeon");
-  renderDungeon();
-  dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-  checkStrandedOnCurrentFloor();
+  // 「◯◯が逃走した！」の告知バナー(effects.js playBossFleeBanner)を挟んでから、
+  // 戦闘の後片付け(BGM停止・battle=null・探索画面への遷移)を行う
+  playBossFleeBanner(enemy, () => {
+    if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
+    battle = null;
+    pendingEnemyPick = null;
+    pendingAllyPick = null;
+    clearDotEffects(fieldParty);
+    clearHawkState(fieldParty);
+    clearGuardState(fieldParty);
+    clearOmamoriIwanagaBonus(fieldParty);
+    fieldParty.forEach((c) => { c.fleeState = null; });
+    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+    showScreen("screen-dungeon");
+    renderDungeon();
+    dlog(`${enemy.label}は手負いのまま逃げ出した！`);
+    checkStrandedOnCurrentFloor();
+  });
 }
 // 討伐依頼対象のボス/中ボス(大猪など)がHPをBOSS_FLEE_HP_RATIO以下まで削られた時の自動逃走。
 // triggerBossFlee()のbossPursuitの代わりに、既存の討伐依頼追跡システム
@@ -1546,20 +1551,22 @@ function triggerQuestBossFlee(enemy) {
     q.chasing = true;
     q.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
   }
-  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
-  battle = null;
-  pendingEnemyPick = null;
-  pendingAllyPick = null;
-  clearDotEffects(fieldParty);
-  clearHawkState(fieldParty);
-  clearGuardState(fieldParty);
-  clearOmamoriIwanagaBonus(fieldParty);
-  fieldParty.forEach((c) => { c.fleeState = null; });
-  advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-  showScreen("screen-dungeon");
-  renderDungeon();
-  dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-  checkStrandedOnCurrentFloor();
+  playBossFleeBanner(enemy, () => {
+    if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
+    battle = null;
+    pendingEnemyPick = null;
+    pendingAllyPick = null;
+    clearDotEffects(fieldParty);
+    clearHawkState(fieldParty);
+    clearGuardState(fieldParty);
+    clearOmamoriIwanagaBonus(fieldParty);
+    fieldParty.forEach((c) => { c.fleeState = null; });
+    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+    showScreen("screen-dungeon");
+    renderDungeon();
+    dlog(`${enemy.label}は手負いのまま逃げ出した！`);
+    checkStrandedOnCurrentFloor();
+  });
 }
 // ボス追撃モードの再戦(battle.bossPursuitEnemyId)からプレイヤー側が逃げた(escapeBattle/
 // useSmokeBomb)場合、その時点のHPをbossPursuitへ書き戻す。これをしないと、追撃中に一部

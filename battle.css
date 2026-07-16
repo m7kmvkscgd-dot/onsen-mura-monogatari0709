@@ -161,6 +161,32 @@
   /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
   .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
   @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  /* 逃走告知バナー本体。勝敗バナー(result.css)と同じ「画面暗転+中央大文字」の型を、戦闘継続中に
+     一瞬だけ割り込ませる形で流用した(z-indexは.battle-top(5)より確実に前、汎用確認モーダル(80)よりは
+     後ろでよいので30を使用) */
+  .boss-flee-banner-overlay {
+    position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; background: rgba(10,8,6,0.45); animation: bossFleeOverlayFade 1.4s ease-out forwards;
+  }
+  @keyframes bossFleeOverlayFade {
+    0% { opacity: 0; }
+    12% { opacity: 1; }
+    78% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .boss-flee-banner-text {
+    font-size: 1.5rem; font-weight: 900; letter-spacing: 0.08em; text-align: center; white-space: nowrap;
+    color: #ffe9b8; text-shadow: 0 0 16px rgba(255,180,60,0.7), 0 3px 8px rgba(0,0,0,0.85);
+    opacity: 0; animation: bossFleeTextPop 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes bossFleeTextPop {
+    0% { opacity: 0; transform: scale(0.5); }
+    16% { opacity: 1; transform: scale(1.12); }
+    26% { transform: scale(0.97); }
+    36% { transform: scale(1); }
+    82% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.94); }
+  }
   @keyframes enemyLunge {
     0% { transform: translateY(0); }
     35% { transform: translateY(14px); }
@@ -224,6 +250,16 @@
   /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
      オレンジとは別枠。狙われている側=targetableとは違い「これが依頼の対象そのもの」を示す表示) */
   .enemy-card.quest-target { border-color: rgba(201,162,74,0.85); box-shadow: 0 0 10px rgba(201,162,74,0.6); animation: questTargetPulse 1.3s ease-in-out infinite; }
+  /* ボス/中ボスが自分の手番に逃走を選んだ瞬間、後ずさりしてから駆け去るように見せる退場アニメーション
+     (effects.js playBossFleeBanner、.boss-fleeing-outクラスを付与)。.charging/.quest-target等
+     他の状態クラスもanimationプロパティを使うため、CSSの記述順で確実に後勝ちさせるようここに置く
+     (詳細度が同じ場合、animationのようなショートハンドは合成されず後に書かれた方で丸ごと上書きされる) */
+  .enemy-card.boss-fleeing-out { animation: bossFleeCardOut 0.5s ease-in forwards; }
+  @keyframes bossFleeCardOut {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    30% { opacity: 1; transform: translateY(6px) scale(0.97); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.8); }
+  }
   @keyframes questTargetPulse {
     0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
     50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
