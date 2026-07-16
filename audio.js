@@ -141,8 +141,12 @@ function unlockAudio() {
 
 // 海岸ステージのBGMだけ、ユーザー指示で音量を1.7倍にする(他は通常のBGM_BASE_VOLUMEのまま)
 const COAST_BGM_VOLUME_MULT = 1.7;
-// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を調整する。
-const TOWN_DAY_BGM_VOLUME_MULT = 0.05; // 検証用に一時的に最終音量4%(0.8*0.05)相当まで下げる(実機で聞き取り確認用)
+// 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を調整できる仕組み。
+// <audio>要素のvolumeはiOS(Safari/Chromeともに中身は同じWebKitのため同一の制約)では
+// JSからの変更が無視され、ハードウェアの音量ボタンでしか変わらない。この仕組み自体はほぼ無意味と
+// 判明したため、ユーザー指示で1.0(無調整)に戻した。将来Web Audio API(GainNode)化する場合に
+// 備え、bgmVolumeForKey()の仕組みごとは残してある
+const TOWN_DAY_BGM_VOLUME_MULT = 1.0;
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
