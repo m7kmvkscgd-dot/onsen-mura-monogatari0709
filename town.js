@@ -277,7 +277,7 @@ function triggerDevCheat() {
   state.roster.forEach((c) => devSetCharacterLevel(c, MAX_LEVEL));
   saveState();
   renderTown();
-  alert("開発者モード: 所持金9999G・名簿全員Lv10にしました。");
+  showInfoModal("開発者モード: 所持金9999G・名簿全員Lv10にしました。");
 }
 // レベルを直接指定する(levelUpは1段ずつしか上げられないため、一度基礎値まで戻してから
 // 目的のレベルまでlevelUpを繰り返し適用することで、成長式を通した正しいステータスを再現する)
@@ -819,7 +819,7 @@ function renderStatusScreen(charId, onBack) {
   document.getElementById("statusRenameCancelBtn").onclick = () => { renameRow.style.display = "none"; };
   document.getElementById("statusRenameConfirmBtn").onclick = () => {
     const newName = renameInput.value.trim();
-    if (!newName) { alert("名前を入力してください"); return; }
+    if (!newName) { showInfoModal("名前を入力してください"); return; }
     c.name = newName;
     c.label = newName;
     saveState();
@@ -920,6 +920,12 @@ function showConfirmModal(text, buttons, textColor) {
 function hideConfirmModal() {
   document.getElementById("genericConfirmOverlay").style.display = "none";
 }
+// ブラウザ標準のshowInfoModal()は実機(特にiOS)でタップ直後の操作シーケンスと絡んで固まる/反応しなくなる
+// といった不具合を誘発しやすいとの指摘を受け、ゲーム内の案内メッセージは全てこちら(OK1つだけの
+// showConfirmModal)に統一した。呼び出し側はshowInfoModal(msg)と同じ感覚でそのまま使える
+function showInfoModal(message) {
+  showConfirmModal(message, [{ label: "OK", className: "big primary" }]);
+}
 
 // ============ 最初の1人選び(ゲーム開始時、名簿が空の間だけ表示) ============
 // つかみの画面のため、一覧をずらっと並べるのではなく1体ずつ大きい絵で見せるカルーセル形式にしてある。
@@ -1013,8 +1019,8 @@ function pickNonDuplicatePersonality() {
 document.getElementById("createCharBtn").onclick = () => {
   const nameInput = document.getElementById("newCharName");
   const name = nameInput.value.trim() || randomFemaleName();
-  if (state.roster.length >= rosterCapacity()) { alert(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
-  if (state.gold < HIRE_COST) { alert(`お金が足りません(${HIRE_COST}G必要)`); return; }
+  if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
+  if (state.gold < HIRE_COST) { showInfoModal(`お金が足りません(${HIRE_COST}G必要)`); return; }
   hideTutorialGuide(); // STEP1の案内が出ていれば、職業カードを個別に選ばず直接雇っても消える(初期選択済みの職業のまま雇うケースもあるため)
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
@@ -1213,7 +1219,7 @@ function renderPartySelect() {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
       } else {
         const cap = maxActivePartySize();
-        if (state.activePartyIds.length >= cap) { alert(`パーティは最大${cap}人までです`); return; }
+        if (state.activePartyIds.length >= cap) { showInfoModal(`パーティは最大${cap}人までです`); return; }
         state.activePartyIds.push(c.id);
       }
       saveState();
@@ -1320,8 +1326,8 @@ function confirmSellSupplyItem(itemId) {
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
-  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
+  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.potion.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
   saveState();
@@ -1331,8 +1337,8 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
 document.getElementById("buySmokeBombBtn").onclick = () => {
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
-  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
+  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.smokeBomb.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
   state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
   saveState();
@@ -1340,8 +1346,8 @@ document.getElementById("buySmokeBombBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buyCampingKitBtn").onclick = () => {
-  if ((state.inventory.campingKit || 0) >= CAMPING_KIT_CAP) { alert(`野営具は最大${CAMPING_KIT_CAP}個までしか持てません`); return; }
-  if (state.gold < ITEMS.campingKit.price) { alert("お金が足りません"); return; }
+  if ((state.inventory.campingKit || 0) >= CAMPING_KIT_CAP) { showInfoModal(`野営具は最大${CAMPING_KIT_CAP}個までしか持てません`); return; }
+  if (state.gold < ITEMS.campingKit.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.campingKit.price;
   state.inventory.campingKit = (state.inventory.campingKit || 0) + 1;
   saveState();
@@ -1350,8 +1356,8 @@ document.getElementById("buyCampingKitBtn").onclick = () => {
 };
 document.getElementById("buyBombBtn").onclick = () => {
   const total = supplyItemTotal();
-  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.bomb.price) { alert("お金が足りません"); return; }
+  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.bomb.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.bomb.price;
   state.inventory.bomb = (state.inventory.bomb || 0) + 1;
   saveState();
@@ -1424,7 +1430,7 @@ const DEPARTURE_FADEIN_MS = 500;
 const DEPARTURE_BLACK_HOLD_MS = 1500;
 function startDeparture(stage) {
   if (state.activePartyIds.length === 0) {
-    alert("パーティを1人以上選んでください");
+    showInfoModal("パーティを1人以上選んでください");
     return;
   }
   currentStage = stage;
@@ -1474,7 +1480,7 @@ function startDeparture(stage) {
 let pendingDepartureStage = null;
 function showDepartConfirm(stage) {
   if (state.activePartyIds.length === 0) {
-    alert("パーティを1人以上選んでください");
+    showInfoModal("パーティを1人以上選んでください");
     return;
   }
   hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、出発を確定する前に消す
@@ -1661,10 +1667,10 @@ function renderOnsenShop() {
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
-  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { alert("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
+  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { showInfoModal("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
   const total = supplyItemTotal();
-  if (total >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.onsenEgg.price) { alert("お金が足りません"); return; }
+  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.onsenEgg.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.onsenEgg.price;
   state.inventory.onsenEgg = (state.inventory.onsenEgg || 0) + 1;
   state.onsenEggDailyCount = (state.onsenEggDailyCount || 0) + 1;
@@ -1673,7 +1679,7 @@ document.getElementById("buyOnsenEggBtn").onclick = () => {
   renderOnsenShop();
 };
 document.getElementById("buyTakigyoBtn").onclick = () => {
-  if (state.gold < ITEMS.takigyo.price) { alert("お金が足りません"); return; }
+  if (state.gold < ITEMS.takigyo.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.takigyo.price;
   state.inventory.takigyo = (state.inventory.takigyo || 0) + 1;
   saveState();
@@ -1726,7 +1732,7 @@ function renderOnsenShrine() {
           if (equipped) {
             state.omamoriEquipped = state.omamoriEquipped.filter((id) => id !== o.id);
           } else {
-            if (state.omamoriEquipped.length >= OMAMORI_EQUIP_MAX) { alert(`お守りは同時に${OMAMORI_EQUIP_MAX}個までしか装備できません`); return; }
+            if (state.omamoriEquipped.length >= OMAMORI_EQUIP_MAX) { showInfoModal(`お守りは同時に${OMAMORI_EQUIP_MAX}個までしか装備できません`); return; }
             state.omamoriEquipped.push(o.id);
           }
           saveState();
@@ -1780,10 +1786,10 @@ function playRareOmamoriEffect() {
   setTimeout(() => layer.remove(), 2100);
 }
 document.getElementById("shrineOfferBtn").onclick = () => {
-  if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { alert("魂のかけらが足りません"); return; }
+  if ((state.inventory.soulShard || 0) < SHRINE_OFFER_SOUL_SHARD_COST) { showInfoModal("魂のかけらが足りません"); return; }
   // 神社で初めて引くお守りは確定で福禄寿の御守にする(まだ1つも授かっていない=これが最初の1回)
   const drawn = state.omamoriOwned.length === 0 ? omamoriById("fukurokuju") : drawOmamori(state.omamoriOwned);
-  if (!drawn) { alert("すでに全てのお守りを授かっています"); return; }
+  if (!drawn) { showInfoModal("すでに全てのお守りを授かっています"); return; }
   state.inventory.soulShard -= SHRINE_OFFER_SOUL_SHARD_COST;
   state.omamoriOwned.push(drawn.id);
   saveState();
@@ -1807,7 +1813,7 @@ document.getElementById("toOnsenShrineBtn").onclick = () => {
     state.shrineFirstVisitRewardGiven = true;
     state.inventory.soulShard = (state.inventory.soulShard || 0) + SHRINE_FIRST_VISIT_SOUL_SHARD_GIFT;
     saveState();
-    alert(`神社を訪れた記念に、魂のかけらを${SHRINE_FIRST_VISIT_SOUL_SHARD_GIFT}個授かった！`);
+    showInfoModal(`神社を訪れた記念に、魂のかけらを${SHRINE_FIRST_VISIT_SOUL_SHARD_GIFT}個授かった！`);
   }
   renderOnsenShrine();
   showScreen("screen-onsen-shrine");
@@ -2376,7 +2382,7 @@ function renderMagistrateScreen() {
       btn.className = "big primary";
       btn.textContent = `受注する(報酬 ${questGoldReward(def)}G${QUEST_REWARD_XP > 0 ? ` / XP${QUEST_REWARD_XP}` : ""})`;
       btn.onclick = () => {
-        if (state.gold < fee) { alert(`契約金が足りません(あと${fee - state.gold}G不足)`); return; }
+        if (state.gold < fee) { showInfoModal(`契約金が足りません(あと${fee - state.gold}G不足)`); return; }
         acceptQuest(id);
       };
     }
@@ -2488,8 +2494,8 @@ function buyEquipment(classId, slot) {
   const ownedTier = state.classUpgrades[classId][slot] || 0;
   if (ownedTier >= tiers.length) return;
   const next = tiers[ownedTier];
-  if (!classHasReachedLevel(state.roster, classId, next.level)) { alert(`Lv${next.level}に到達した${CLASSES[classId].ja}が必要です`); return; }
-  if (state.gold < next.price) { alert("お金が足りません"); return; }
+  if (!classHasReachedLevel(state.roster, classId, next.level)) { showInfoModal(`Lv${next.level}に到達した${CLASSES[classId].ja}が必要です`); return; }
+  if (state.gold < next.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= next.price;
   state.classUpgrades[classId][slot] = ownedTier + 1;
   refreshEquipBonus(state.roster, classId, state.classUpgrades);

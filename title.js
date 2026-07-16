@@ -304,7 +304,12 @@ document.getElementById("titleSettingsBtn").onclick = () => {
 
 // ============ 設定画面 ============
 // 既存のミュート機能(#muteBtn/audio.js)とチュートリアル表示フラグ(state.tutorialEnabled)を
-// そのままON/OFFトグルとして見せるだけの、新しい仕組みを持たない最小限の設定画面
+// そのままON/OFFトグルとして見せるだけの、新しい仕組みを持たない最小限の設定画面。
+// 元々タイトル画面からしか開けなかったため「戻る」は常にタイトルへ固定だったが、町画面の
+// 歯車メニューからも開けるようになったため、開く直前の画面を記憶しておいて戻れるようにする
+// (audio.jsのmenuSettingsBtnが設定する)。未設定(nullのまま)ならタイトルから開かれた
+// ケースなので従来通りタイトルへ戻る
+let settingsReturnScreenId = null;
 function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
   soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
@@ -325,8 +330,13 @@ document.getElementById("settingsTutorialToggle").onclick = () => {
   renderSettingsScreen();
 };
 document.getElementById("settingsBackBtn").onclick = () => {
-  showScreen("screen-title");
-  renderTitleScreen();
+  if (settingsReturnScreenId) {
+    showScreen(settingsReturnScreenId);
+    settingsReturnScreenId = null;
+  } else {
+    showScreen("screen-title");
+    renderTitleScreen();
+  }
 };
 
 // ============ 製作者より ============

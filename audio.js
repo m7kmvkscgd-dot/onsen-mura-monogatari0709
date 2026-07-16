@@ -155,8 +155,8 @@ function applyMasterVolumeToUi() {
   openingBgmAudio.muted = isMuted;
   ambientBgmAudio.muted = isMuted;
   campBgmAudio.muted = isMuted;
-  const btn = document.getElementById("muteBtn");
-  if (btn) btn.textContent = isMuted ? "🔇" : (masterBgmVolume < 0.5 ? "🔉" : "🔊");
+  // ボタン自体は歯車アイコン固定(設定/タイトルに戻るも収めた汎用メニューに変わったため、
+  // 音量状態を絵文字で出し分けるのはやめた。現在の音量はポップオーバー内のボタンのハイライトで分かる)
   const activeStep = Math.round(masterBgmVolume * 10);
   document.querySelectorAll(".volume-step-btn").forEach((b) => {
     b.classList.toggle("active", Number(b.dataset.step) === activeStep);
@@ -588,5 +588,19 @@ document.addEventListener("click", (e) => {
     popover.style.display = "none";
   }
 });
-applyMasterVolumeToUi(); // 初期表示(ボタンの選択状態・アイコン)を実際の音量に同期させる
+// メニュー内の「設定」「タイトルに戻る」。どちらもタップした瞬間にポップオーバー自体は閉じる
+document.getElementById("menuSettingsBtn").onclick = () => {
+  document.getElementById("volumePopover").style.display = "none";
+  settingsReturnScreenId = document.querySelector(".screen.active")?.id || null;
+  showScreen("screen-settings");
+  renderSettingsScreen();
+};
+document.getElementById("menuTitleBtn").onclick = () => {
+  document.getElementById("volumePopover").style.display = "none";
+  showConfirmModal("タイトルに戻りますか？", [
+    { label: "はい", className: "big danger", onClick: () => { showScreen("screen-title"); renderTitleScreen(); } },
+    { label: "いいえ", className: "big" },
+  ]);
+};
+applyMasterVolumeToUi(); // 初期表示(ボタンの選択状態)を実際の音量に同期させる
 

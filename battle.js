@@ -797,7 +797,7 @@ function runFormSkill(actor, skillKey) {
   const skill = form.formSkills.find((s) => s.key === skillKey);
   if (skillKey === "marunomi") {
     const targets = targetableEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
-    if (targets.length === 0) { alert("丸呑みにできる敵がいません"); return; }
+    if (targets.length === 0) { showInfoModal("丸呑みにできる敵がいません"); return; }
     battleSubMenuActive = true;
     const grid = document.getElementById("actionGrid");
     grid.innerHTML = "";
@@ -826,7 +826,7 @@ function runFormSkill(actor, skillKey) {
   // (クールタイムなし、ターンは消費する)
   if (skillKey === "hakidasu") {
     const swallowed = battle.enemies.filter((e) => e.swallowedTurns > 0);
-    if (swallowed.length === 0) { alert("丸呑みにしている相手がいません"); return; }
+    if (swallowed.length === 0) { showInfoModal("丸呑みにしている相手がいません"); return; }
     if (swallowed.length === 1) {
       swallowed[0].swallowedTurns = 0;
       blog(`${actor.name}は${swallowed[0].label}を吐き出した！`);

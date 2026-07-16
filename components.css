@@ -18,6 +18,9 @@
      hero側のスタッキングコンテキストから完全に切り離した(座標はJS側でmuteBtnの実際の
      位置から計算する、audio.js参照) */
   .volume-popover { position: fixed; z-index: 90; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  /* 歯車アイコンのメニュー内、「音量」の小見出し。設定/タイトルに戻るボタンはbutton.bigの
+     共通スタイルをそのまま使う(幅だけこのポップオーバーの204pxに合わせてwidth:100%) */
+  .volume-popover-label { font-size: 12px; font-weight: 700; color: var(--dw-caption-color); margin-bottom: 0.4rem; }
   /* <input type="range">はつまみが小さくスマホ実機でタップ判定がシビアすぎて掴みにくいとの
      指摘が2回続いたため、スライダーをやめて0〜10の11段階ボタン(タップ式)に変更した。
      6列×2行(6+5)のグリッドで、ボタン1つ1つに十分な大きさの当たり判定を持たせる */

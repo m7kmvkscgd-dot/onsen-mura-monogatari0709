@@ -211,7 +211,7 @@ function swapReserveMember(activeMember, log) {
 document.getElementById("dungeonSwapBtn").onclick = () => {
   if (!reserveFieldMember || reserveFieldMember.status !== "active") return;
   const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.carryingId);
-  if (targets.length === 0) { alert("交代できる仲間がいません(全員ふさがっています)"); return; }
+  if (targets.length === 0) { showInfoModal("交代できる仲間がいません(全員ふさがっています)"); return; }
   pendingAllyPick = (t) => {
     pendingAllyPick = null;
     closeDungeonTargetPicker();
@@ -590,7 +590,7 @@ document.getElementById("screen-dungeon").addEventListener("pointerdown", () => 
 // 戦闘/財宝発見/茶屋/瀕死発見が起きた時と、任意のタイミングでの画面タップだけが一時停止のきっかけになる)
 document.getElementById("retreatBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
-    alert("行動できる仲間がいません");
+    showInfoModal("行動できる仲間がいません");
     return;
   }
   showConfirmModal("里に戻りますか？", [
@@ -777,7 +777,7 @@ function handleDevFloorBadgeTap() {
     const input = prompt(`ジャンプする階層を入力してください(現在:${currentFloor}層目)`);
     if (input === null) return;
     const target = parseInt(input, 10);
-    if (!Number.isFinite(target) || target < 1) { alert("正しい階層数を入力してください"); return; }
+    if (!Number.isFinite(target) || target < 1) { showInfoModal("正しい階層数を入力してください"); return; }
     currentFloor = target;
     retreating = false;
     recordMaxFloorReached();
@@ -792,7 +792,7 @@ document.getElementById("floorBadge").addEventListener("touchend", (e) => {
 document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
 document.getElementById("advanceBtn").onclick = () => {
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
-    alert("行動できる仲間がいません");
+    showInfoModal("行動できる仲間がいません");
     return;
   }
   const targetFloor = retreating ? currentFloor - 1 : currentFloor + 1;
@@ -1141,7 +1141,7 @@ function showCriticalAlert(critical, onResolved) {
     setTimeout(next, 150);
   }
   document.getElementById("carryBtn").onclick = () => {
-    // 担げる仲間が1人もいない場合はshowCarryPicker側がalert()を出して現在のアラートをそのまま
+    // 担げる仲間が1人もいない場合はshowCarryPicker側がshowInfoModal()を出して現在のアラートをそのまま
     // 残す仕様なので、その場合だけは退場演出を挟まずに現在の表示を維持する
     if (aliveField().filter((c) => !c.carryingId).length === 0) {
       showCarryPicker(critical, onResolved);
@@ -1166,7 +1166,7 @@ function showCarryPicker(critical, onResolved) {
   const div = document.getElementById("criticalAlert");
   const carriers = aliveField().filter((c) => !c.carryingId);
   if (carriers.length === 0) {
-    alert("担げる仲間がいません(全員ふさがっています)");
+    showInfoModal("担げる仲間がいません(全員ふさがっています)");
     return;
   }
   activeCriticalAlert = { critical, onResolved, screen: "carryPicker" };
@@ -1494,9 +1494,9 @@ function renderTeahouseSnackList() {
     btn.textContent = `購入(${item.price}G)`;
     btn.disabled = supplyItemTotal() >= supplyCap() || state.gold < item.price;
     btn.onclick = () => {
-      if ((state.teaHouseStockCounts[id] || 0) >= TEAHOUSE_SNACK_STOCK) { alert(`${item.ja}は本日もう売り切れです`); return; }
-      if (supplyItemTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-      if (state.gold < item.price) { alert("お金が足りません"); return; }
+      if ((state.teaHouseStockCounts[id] || 0) >= TEAHOUSE_SNACK_STOCK) { showInfoModal(`${item.ja}は本日もう売り切れです`); return; }
+      if (supplyItemTotal() >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+      if (state.gold < item.price) { showInfoModal("お金が足りません"); return; }
       state.gold -= item.price;
       state.inventory[id] = (state.inventory[id] || 0) + 1;
       state.teaHouseStockCounts[id] = (state.teaHouseStockCounts[id] || 0) + 1;
@@ -1507,10 +1507,10 @@ function renderTeahouseSnackList() {
   });
 }
 document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
-  if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { alert("回復薬は本日もう売り切れです"); return; }
-  if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if ((state.inventory.potion || 0) >= TEAHOUSE_POTION_CAP) { alert(`回復薬は最大${TEAHOUSE_POTION_CAP}個までしか持てません`); return; }
-  if (state.gold < ITEMS.potion.price) { alert("お金が足りません"); return; }
+  if ((state.teaHouseStockCounts.potion || 0) >= TEAHOUSE_POTION_STOCK) { showInfoModal("回復薬は本日もう売り切れです"); return; }
+  if (teahouseSupplyTotal() >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if ((state.inventory.potion || 0) >= TEAHOUSE_POTION_CAP) { showInfoModal(`回復薬は最大${TEAHOUSE_POTION_CAP}個までしか持てません`); return; }
+  if (state.gold < ITEMS.potion.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.potion.price;
   state.inventory.potion = (state.inventory.potion || 0) + 1;
   state.teaHouseStockCounts.potion = (state.teaHouseStockCounts.potion || 0) + 1;
@@ -1519,9 +1519,9 @@ document.getElementById("teaHouseBuyPotionBtn").onclick = () => {
   renderTeahouse();
 };
 document.getElementById("teaHouseBuySmokeBombBtn").onclick = () => {
-  if ((state.teaHouseStockCounts.smokeBomb || 0) >= TEAHOUSE_SMOKEBOMB_STOCK) { alert("煙玉は本日もう売り切れです"); return; }
-  if (teahouseSupplyTotal() >= supplyCap()) { alert(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.smokeBomb.price) { alert("お金が足りません"); return; }
+  if ((state.teaHouseStockCounts.smokeBomb || 0) >= TEAHOUSE_SMOKEBOMB_STOCK) { showInfoModal("煙玉は本日もう売り切れです"); return; }
+  if (teahouseSupplyTotal() >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+  if (state.gold < ITEMS.smokeBomb.price) { showInfoModal("お金が足りません"); return; }
   state.gold -= ITEMS.smokeBomb.price;
   state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
   state.teaHouseStockCounts.smokeBomb = (state.teaHouseStockCounts.smokeBomb || 0) + 1;

@@ -136,7 +136,7 @@
   <div class="screen" id="screen-town">
     <div class="hero" id="townHero" style="background-image:url('assets/bg/town.jpg')">
       <div class="topbar" style="justify-content:flex-end;">
-        <button class="mute-btn" id="muteBtn">🔊</button>
+        <button class="mute-btn" id="muteBtn">⚙️</button>
       </div>
       <div class="hero-title-row">
         <span class="time-of-day-label" id="townDateLabel"></span>
@@ -326,12 +326,15 @@
   </div>
   <div id="tutorialBubble" style="display:none;"><p id="tutorialBubbleText"></p></div>
 
-  <!-- 音量調整ポップオーバー(右上のスピーカーアイコン)。.hero > *(ui.css)がheroの直下の子要素に
-       一律z-index:1を与えているため、hero内に置いたままだとDOM順で後に来る.hero-title-row(同じ
-       z-index:1)に隠れてタップできない不具合があった。body直下(position:fixed)に置き、
-       開くたびにmuteBtnの実際の位置を基準にJSで座標を計算する -->
+  <!-- 右上の歯車アイコンから開くメニュー(音量・設定・タイトルに戻る)。.hero > *(ui.css)が
+       heroの直下の子要素に一律z-index:1を与えているため、hero内に置いたままだとDOM順で後に来る
+       .hero-title-row(同じz-index:1)に隠れてタップできない不具合があった。body直下
+       (position:fixed)に置き、開くたびにmuteBtnの実際の位置を基準にJSで座標を計算する -->
   <div class="volume-popover" id="volumePopover" style="display:none;">
+    <div class="volume-popover-label">音量</div>
     <div class="volume-btn-row" id="volumeBtnRow"></div>
+    <button class="big" id="menuSettingsBtn" style="width:100%;margin-top:0.7rem;">設定</button>
+    <button class="big danger" id="menuTitleBtn" style="width:100%;margin-top:0.4rem;">タイトルに戻る</button>
   </div>
 
   <!-- 出発直前のゲームコンセプト説明(初回のみ) -->
