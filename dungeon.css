@@ -1,5 +1,9 @@
   /* ============ dungeon.css: 探索画面(背景・進路選択・瀕死救出・財宝・煙玉演出等) ============ */
-  .floor-badge { text-align: left; padding: 122px 0.6rem 0.6rem; }
+  /* 時刻バッジを階層バッジの真上に積むレイアウト(以前は同じピルの中に横並びだった)。
+     .dungeon-info-stackがposition:absoluteのため、ここで高さが増えても.dungeon-info-row
+     (height:176px固定)や#dungeonLogの位置には一切影響しない。ただし見た目の上下位置が
+     ズレないよう、追加した時刻表示ぶん(1行+gap)だけpadding-topを詰めてある */
+  .floor-badge { text-align: left; padding: 106px 0.6rem 0.6rem; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   /* 階層表示を目立たせるため、単なるテキストから縁取り付きのバッジ(枠+背景+影)にした */
   .floor-badge span {
     display: inline-block; font-size: 1.45rem; font-weight: 800; color: var(--accent);
@@ -8,13 +12,11 @@
     text-shadow: 0 1px 4px rgba(0,0,0,0.7); box-shadow: 0 2px 14px rgba(0,0,0,0.4);
   }
   /* 探索中も町・宿屋などと同じく時刻が常に見えるようにする小さいバッジ(茶屋の営業時間判断等に使う)。
-     階層バッジ(固定176px高さの枠に収まる設計)の縦スペースを一切消費しないよう、
-     新しい行を作らず同じピルの中に横並びで添える(#dungeonTimeBadgeのID指定で.floor-badge spanの
-     汎用スタイルより優先させる) */
+     #dungeonTimeBadgeのID指定で.floor-badge spanの汎用(大きいピル)スタイルより優先させる */
   #dungeonTimeBadge {
-    display: inline-block; margin-left: 0.6rem; font-size: 0.68rem; font-weight: 700;
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
     color: var(--dw-caption-color); background: none; border: none; box-shadow: none;
-    padding: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.8); vertical-align: middle;
+    padding: 0 0.2rem; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   }
   /* 奉行所の依頼受注中、探索画面で対象の敵と残り層数を常に見えるようにするバッジ。
      依頼が無い時はdisplay:noneではなくvisibility:hiddenにして、常に同じ高さを確保しておく
