@@ -11,8 +11,35 @@
   .owned-supply-icons img:active, .owned-supply-icons .supply-icon-emoji:active { transform: scale(0.85); }
   .mute-btn { background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-xs); padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
   .volume-control-wrap { position: relative; }
-  .volume-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-  .volume-popover input[type="range"] { width: 130px; display: block; }
+  .volume-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  /* デフォルトのつまみ(thumb)が小さく、スマホ実機でタップ判定がシビアすぎて掴みにくいとの
+     指摘を受け、トラック・つまみとも大きめに作り直した。-webkit-appearance:noneでブラウザ既定の
+     見た目をリセットしないと、thumbのカスタムサイズ指定(::-webkit-slider-thumb)が効かない */
+  .volume-popover input[type="range"] {
+    width: 150px; display: block; -webkit-appearance: none; appearance: none;
+    height: 28px; /* トラックの高さではなく要素全体の当たり判定を広げるため、上下にも余裕を持たせる */
+    background: transparent; margin: 0; padding: 10px 0;
+  }
+  .volume-popover input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px; background: var(--border);
+  }
+  .volume-popover input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--panel);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    margin-top: -11px; /* トラック高さ(6px)に対してthumb(28px)を縦中央に合わせる */
+    cursor: pointer;
+  }
+  .volume-popover input[type="range"]::-moz-range-track {
+    height: 6px; border-radius: 3px; background: var(--border);
+  }
+  .volume-popover input[type="range"]::-moz-range-thumb {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--panel);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    cursor: pointer;
+  }
   .body-pad { position: relative; z-index: 1; background: var(--panel); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 34vh; padding: 1rem 1rem calc(1rem + 80px); flex: 1; transition: opacity 0.25s ease; }
   .btn-col { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
   /* ボタン内アイコン。文字と高さを揃え、少し右に余白を空ける(既存のSVG線画アイコンとも共存させるため
