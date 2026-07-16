@@ -496,12 +496,25 @@ const AUTO_RETREAT_TIMEOFDAY_FADE_MS = 900; // オート帰還中に時刻が変
 // (この2行は同期処理でブラウザの再描画より前に終わるため、瞬時に差し替わった瞬間が見えることはない)。
 // toElにはfromElの現在のズーム倍率(WAAPIで継続中のtransform)をそのままコピーしてから重ねることで、
 // クロスフェード中に拡大率がズレて見えないようにしている
+// 【不具合対策】上記のtoElへのコピーは「その瞬間だけの静止画」だが、fromEl側のズーム
+// (autoRetreatZoomAnim)はクロスフェード中も止めずに動き続けていたため、900ms後にクロスフェードが
+// 完了してfromEl側に新しい絵が焼き込まれ直す瞬間、「静止していたtoElの拡大率」から
+// 「900ms分ズームが進んだfromElの拡大率」へ一気にジャンプし、背景が一瞬カクつくように見えていた
+// (900msは1階層ぶんのズーム時間(1000ms)にほぼ相当するため、ジャンプ幅が体感できるレベルだった)。
+// クロスフェード中だけズームを一時停止し(stopAutoRetreat()と同じくpause()で拡大率を保ったまま
+// 止める)、完了後に再開することでfromEl側の拡大率もこの間ずっと静止させ、ジャンプを無くす。
+// クロスフェード中に手動タップ等でオート帰還自体が中断されていた場合はautoRetreatActiveが
+// falseになっているため、誤って再開しない
 function crossfadeDungeonBgForTimeOfDay(prevTimeOfDay, callback) {
   const fromEl = document.getElementById("dungeonBgInner");
   const toEl = document.getElementById("dungeonBgInner2");
+  if (autoRetreatZoomAnim) autoRetreatZoomAnim.pause();
   fromEl.style.backgroundImage = `url('${currentAreaBgSet()[prevTimeOfDay]}')`;
   toEl.style.transform = getComputedStyle(fromEl).transform;
-  crossfadeBg(fromEl, toEl, currentAreaBgSet()[state.timeOfDay || "day"], AUTO_RETREAT_TIMEOFDAY_FADE_MS, callback);
+  crossfadeBg(fromEl, toEl, currentAreaBgSet()[state.timeOfDay || "day"], AUTO_RETREAT_TIMEOFDAY_FADE_MS, () => {
+    if (autoRetreatZoomAnim && autoRetreatActive) autoRetreatZoomAnim.play();
+    if (callback) callback();
+  });
 }
 // 帰還開始階層〜0階層までのズームを「1本の連続したアニメーション」として管理する。
 // 以前は1tick(1秒)ごとに新しいアニメーションを作り直して繋いでいたが、setTimeoutの発火が
