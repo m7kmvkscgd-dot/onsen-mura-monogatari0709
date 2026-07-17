@@ -830,7 +830,7 @@ function updateBossPursuitBadge() {
   badge.style.visibility = "visible";
   badge.textContent = `🔥 追撃中！ ${enemyDef.ja}`;
 }
-// 茶屋(建築済みの時、深淵の森22層(階層1.5倍化に伴い15→22)に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
+// 茶屋(建築済みの時、深淵の森20層(TEA_HOUSE_FLOOR)に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
 // その階へ向かう時は毎回この判定が通るため、行きと帰りに二回立ち寄ることもできる)
 function teahouseOfferedForFloor(floor) {
   return currentStage === "forest" && (state.teaHouseLevel || 0) > 0 && floor === TEA_HOUSE_FLOOR;

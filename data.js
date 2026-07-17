@@ -714,7 +714,7 @@ const CAMP_STRESS_RELIEF = 20;
 // 野営中に選べる3行動のうち「慰める」のストレス軽減量
 const CAMP_COMFORT_STRESS_RELIEF = 10;
 // 茶屋(深淵の森15層、茶屋を建築済みの時だけ進路選択に必ず現れる休憩所)
-const TEA_HOUSE_FLOOR = 22; // 階層1.5倍化(2026-07-18)に伴い15→22へ移動
+const TEA_HOUSE_FLOOR = 20; // 階層1.5倍化で15→22にした後、ユーザー指示(2026-07-18)で20へ調整
 const TEAHOUSE_REST_COST = 30; // 一休みの利用料(G)
 const TEAHOUSE_REST_HP_RATIO = 0.4;
 const TEAHOUSE_REST_MP_RATIO = 0.4;

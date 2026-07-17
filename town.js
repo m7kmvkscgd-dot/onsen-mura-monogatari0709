@@ -1908,7 +1908,7 @@ const BUILDING_DEFS = [
     desc: "砲術士が雇えるようになります。" },
   { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
     unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST],
-    desc: "深淵の森22層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
+    desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
   { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
     unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
     desc: "(詳細は未定)" },

@@ -532,7 +532,10 @@
     0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
     100% { opacity: 0; transform: translate(-22px, -14px) scale(0.4); }
   }
-  .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; }
+  /* background:#000 — クロスフェード中はfrom/toの不透明度が同時に中間値になる瞬間があり、
+     合成が100%に届かず背後の画面(宿屋の名簿など)が一瞬透けて見えていた(ユーザー報告2026-07-18)。
+     オーバーレイ自体に黒を敷いて、透けても黒しか見えないようにする(野営のcampTransitionも同じクラス) */
+  .lodging-transition { position: fixed; inset: 0; z-index: 60; overflow: hidden; background: #000; }
   .lodging-transition-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .lodging-transition-black { position: absolute; inset: 0; background: #000; opacity: 0; }
   .lodging-transition-caption {
