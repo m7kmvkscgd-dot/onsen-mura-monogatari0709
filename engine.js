@@ -85,7 +85,7 @@ function createCharacter(name, classId, classUpgrades) {
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
     status: "active", // active | critical | lost
-    onsenLockUntilMinutes: null, // 入浴した時点の絶対分数+ONSEN_LOCK_MINUTES。この値を過ぎるまでパーティ編成に組み込めない
+    onsenLockUntilMinutes: null, // 入浴した時点から見て翌朝(dawn=4:30)の絶対分数。この値を過ぎるまでパーティ編成に組み込めない
     onsenPendingRelief: false, // 入浴済みでまだ「リラックスできた！」演出(ストレス減少)を再生していない場合true
     criticalFloor: null,
     criticalExpireMinutes: null, // ロストするゲーム内絶対分数(この値を過ぎるとtickCriticalExpiryでロストになる)
@@ -160,7 +160,7 @@ function onsenCost(level) {
   return ONSEN_FLAT_COST + (level - 1) * ONSEN_COST_PER_LEVEL;
 }
 
-// 入浴後、まだONSEN_LOCK_MINUTES(2時間)経っていなければパーティ編成に組み込めない
+// 入浴後、翌朝(dawn=4:30)にならなければパーティ編成に組み込めない
 // (宿泊の可否には影響しない、宿泊は別途c.status==="active"のみで判定している)
 function isOnsenLocked(character, absoluteMinutes) {
   return character.onsenLockUntilMinutes != null && absoluteMinutes < character.onsenLockUntilMinutes;
@@ -173,17 +173,17 @@ function isAvailable(character, absoluteMinutes) {
   return true;
 }
 
-// 温泉に入る。以後2時間はパーティ編成に組み込めない。
-// 【仕様変更】ストレスはこの時点では減らさない。入浴が明ける(2時間経過する)瞬間に町画面へ
+// 温泉に入る。以後翌朝(早朝4:30)までパーティ編成に組み込めない。
+// 【仕様変更】ストレスはこの時点では減らさない。入浴が明ける(翌朝になる)瞬間に町画面へ
 // 「温泉でリラックスできた！」ポップアップを出しながら演出的に減らす(collectReadyOnsenReliefs参照)。
 // そのため実際のfatigue減算はここでは行わず、onsenPendingReliefを立てておくだけにとどめる
 function useOnsen(character, absoluteMinutes) {
-  character.onsenLockUntilMinutes = absoluteMinutes + ONSEN_LOCK_MINUTES;
+  character.onsenLockUntilMinutes = nextMorningAbsoluteMinutes(absoluteMinutes);
   character.onsenPendingRelief = true;
   // 次の遠征中限定のランダムバフを付与する(野営する、または町へ帰ると失効する)
   character.onsenBuffKey = pickOnsenBuff();
 }
-// 入浴ロックが明けた(=2時間経過した)のに、まだ「リラックスできた！」演出を再生していないキャラを
+// 入浴ロックが明けた(=翌朝になった)のに、まだ「リラックスできた！」演出を再生していないキャラを
 // 集め、この時点で実際にストレスを減らして一覧を返す(呼び出し元がポップアップ表示に使う)。
 // 町画面(renderTown)からのみ呼ぶ想定(探索/戦闘パートでは表示不要という仕様のため)
 function collectReadyOnsenReliefs(roster, absoluteMinutes) {

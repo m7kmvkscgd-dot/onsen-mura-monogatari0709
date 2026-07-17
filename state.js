@@ -3,7 +3,7 @@
 
 function defaultState() {
   return {
-    gold: 150,
+    gold: 50,
     roster: [],
     activePartyIds: [],
     inventory: {
@@ -21,7 +21,7 @@ function defaultState() {
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
     dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
-    houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限2人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
+    houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限4人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
     magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
@@ -97,7 +97,7 @@ function houseUpgradeCost(level) {
   return 250 + (level - 2) * 100; // レベル3以降は1レベルごとに250Gから+100Gずつ上がる(レベル3→4=350G、4→5=450G…)
 }
 function rosterCapacity() {
-  return Math.min(10, (state.houseLevel || 1) + 1);
+  return Math.min(10, (state.houseLevel || 1) + 3);
 }
 const DOJO_LEVEL1_COST = 10; // 道場レベル1の建築費用
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
@@ -172,10 +172,19 @@ const SHRINE_COST = 30;
 const FERRY_UNLOCK_HOUSE_LEVEL = 7;
 const FERRY_COST = 250;
 
-// ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(2時間)など、
+// ゲーム開始(dayCount=1の0:00)を起点とした絶対分数。温泉の入浴ロック(翌朝まで)など、
 // 日をまたぐ可能性のある時間比較はdayCount/clockMinutesを別々に見るのではなくこの値で行う
 function absoluteGameMinutes() {
   return ((state.dayCount || 1) - 1) * 1440 + (state.clockMinutes || 0);
+}
+
+// 指定した絶対分数(fromMinutes)より後で最初に訪れる「早朝(dawn=4:30)」の絶対分数を返す。
+// 温泉の入浴ロック(useOnsen)が「翌朝まで」を計算するのに使う。既に今日の4:30を過ぎていれば
+// 翌日の4:30を、まだ今日の4:30前(=深夜0:00〜4:29の間)なら今日の4:30を返す
+function nextMorningAbsoluteMinutes(fromMinutes) {
+  const dayStart = Math.floor(fromMinutes / 1440) * 1440;
+  const todayDawn = dayStart + PHASE_START_MINUTES.dawn;
+  return fromMinutes < todayDawn ? todayDawn : todayDawn + 1440;
 }
 
 // dayCount(1始まり=4月1日)を「M月D日」の表示文字列に変換する。うるう年を考慮する必要がないよう
