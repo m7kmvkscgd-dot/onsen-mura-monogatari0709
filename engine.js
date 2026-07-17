@@ -419,12 +419,21 @@ function enemyWeaknessType(entity, type) {
   return w && w.type === type ? w : null;
 }
 const SPIRIT_WEAKNESS_DMG_MULT = 1.5; // 霊力弱点(ENEMY_WEAKNESS type:"spirit")を持つ敵の被ダメージ倍率
-const POISON_MAX_STACKS = 6; // OP化を防ぐための毒蓄積の上限
+const POISON_MAX_STACKS = 6; // (旧)毒蓄積の上限。2026-07-18ユーザー指示で天井撤廃済み、現在はどこも参照しない(module.exports互換のため定義だけ残置)
+// ボス保険: 毒/出血の天井撤廃(2026-07-18)に伴い、ボス級だけはDOTで溶けないよう
+// 1ティックのダメージを最大HPのこの割合で頭打ちにする(雑魚・味方には適用しない)
+const DOT_TICK_BOSS_CAP_RATIO = 0.06;
+function dotTickBossCap(entity, dmg) {
+  if (!entity.isBoss && !entity.isMidBoss) return dmg;
+  return Math.min(dmg, Math.max(1, Math.round(entity.maxHp * DOT_TICK_BOSS_CAP_RATIO)));
+}
 // 毒を付与する。重ね掛けは加算ではなく現在値との大きい方に上書きする(無限に積み上がらないように)
 function applyPoison(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;
-  entity.poison = Math.min(POISON_MAX_STACKS, Math.max(entity.poison || 0, stacks));
+  // 2026-07-18ユーザー指示: 「最大値で上書き・上限6」から「加算式・天井なし」へ変更。
+  // 暴走対策はボス級への1ティック上限(dotTickBossCap)側で行う
+  entity.poison = (entity.poison || 0) + stacks;
   // 毒弱点②: 詠唱・予告中(大技の構え)に毒を受けると、その大技は中断される
   const w = enemyWeaknessType(entity, "poison");
   if (w && w.tier === 2 && entity.bigAttackPending) entity.bigAttackPending = false;
@@ -434,7 +443,7 @@ function applyPoison(entity, stacks) {
 function tickPoison(entity, log) {
   if (!entity.poison || entity.poison <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "poison");
-  const dmg = Math.min(entity.hp, Math.round(entity.poison * (weak ? 2 : 1)));
+  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.round(entity.poison * (weak ? 2 : 1))));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は毒で${dmg}ダメージ！`);
   entity.poison = Math.max(0, entity.poison - 1);
@@ -447,20 +456,21 @@ function applyBurn(entity, turns) {
   if (blockedByOmamoriIzanagi(entity)) return;
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
 }
-const BLEED_MAX_STACKS = 5; // 毒(6)よりわずかに低い上限。海岸ステージの敵向け新DOT
+const BLEED_MAX_STACKS = 5; // (旧)出血蓄積の上限。2026-07-18ユーザー指示で天井撤廃済み、現在はどこも参照しない(module.exports互換のため定義だけ残置)
 // 出血: 毒(重ね掛けは大きい方に上書き)とは違い、こちらは加算で積み上がる方式にしてある
 // (磯魚などの低威力多段ヒットで着実に蓄積していく手触りを狙ったもの、上限で頭打ちにはなる)。
 // 技側の付与量を毒より低めに設定する運用にしてあり、代わりに出血中は常時攻撃力-10%が乗る(effectiveStat側)
 function applyBleed(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;
-  entity.bleed = Math.min(BLEED_MAX_STACKS, (entity.bleed || 0) + stacks);
+  // 2026-07-18ユーザー指示: 上限5を撤廃して天井なしの加算式に(毒と同じ扱い)
+  entity.bleed = (entity.bleed || 0) + stacks;
 }
 // 出血弱点を持つ敵はダメージ2倍(tier1/2共通)。防御力低下(tier2)はeffectiveStat側で別途処理する
 function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "bleed");
-  const dmg = Math.min(entity.hp, Math.round(entity.bleed * (weak ? 2 : 1)));
+  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.round(entity.bleed * (weak ? 2 : 1))));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は出血で${dmg}ダメージ！`);
   entity.bleed = Math.max(0, entity.bleed - 1);
@@ -1779,10 +1789,11 @@ function enemyAttack(enemy, targets, log) {
   target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
   // 敵固有の通常攻撃時デバフ(ぬらりこうもりの毒など)。かばう/挑発で同じ相手が何度も狙われ続けると
   // 蓄積が重なって危険域に達しやすい、という「かばうへの天敵」を演出するための仕組み。
-  // stacking:trueの毒は通常のapplyPoison(最大値で頭打ち)と違い、命中のたびに加算される特殊仕様
+  // stacking:trueは元々「加算される特殊仕様」だったが、2026-07-18の全DOT加算化で標準と同じ挙動になった
+  // (蓄積値付きの専用ログを出すためだけに分岐を残している)
   if (!wentDown && enemy.onHitInflict && Math.random() < enemy.onHitInflict.chance) {
     if (enemy.onHitInflict.type === "poison" && enemy.onHitInflict.stacking && target.statusImmuneTurns <= 0) {
-      target.poison = Math.min(POISON_MAX_STACKS, (target.poison || 0) + (enemy.onHitInflict.value || 1));
+      target.poison = (target.poison || 0) + (enemy.onHitInflict.value || 1);
       log(`${target.label}は${enemy.label}に噛まれ、毒が蓄積した！(${target.poison})`);
     } else {
       resolveDebuffEffect(target, enemy.onHitInflict.type, enemy.onHitInflict, log);
