@@ -482,6 +482,23 @@
   }
   /* 選べない選択肢(銭が足りない等)。ネイティブdisabledは使わずクラスだけで表現する(進路選択の神隠しと同じ理由) */
   .path-tag-disabled { opacity: 0.45; filter: grayscale(0.6); }
+  /* ============ 探索イベントのモーダル化(2026-07-18ユーザー指摘の修理) ============
+     以前はパネルが通常フローのまま下へ伸び、選択肢カードが画面下部の探索ボタン群
+     (.bottom-actions、position:fixed top:500px)と重なって非常に見づらかった。
+     イベント表示中はパネルを画面中央の固定モーダルにし、探索ボタン群は丸ごと非表示にする
+     (ボタンはshowDungeonEvent側でdisabledにもなっているので、非表示にしても挙動は変わらない) */
+  body.dungeon-event-active .bottom-actions { display: none; }
+  body.dungeon-event-active #dungeonPartyBar { opacity: 0.25; }
+  /* 進路選択(0.23)より一段暗くして、モーダルの文字を読みやすくする */
+  body.dungeon-event-active::before { background: rgba(0,0,0,0.5); }
+  body.dungeon-event-active .dungeon-event-panel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) translateZ(0);
+    width: min(92vw, 400px); max-height: 84dvh; overflow-y: auto; z-index: 6;
+    margin: 0; padding: 0.9rem 0.9rem 1rem;
+    background: linear-gradient(180deg, rgba(26,22,18,0.97), rgba(12,11,9,0.96));
+    border: 1px solid var(--accent); border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
 
   /* ============ 光る道の財宝発見・豪華演出 ============ */
   /* 全ての動きはdungeon.jsのplayHikaruTreasureCelebration()がWAAPIで付ける。ここは配置と見た目だけ */

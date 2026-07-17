@@ -1429,9 +1429,13 @@ function showDungeonEvent(ev) {
   const div = document.getElementById("criticalAlert");
   document.getElementById("dungeonLog").style.display = "none";
   document.body.classList.add("path-choice-active");
+  // イベント中は専用クラスでパネルを画面中央の固定モーダルにし、下部の探索ボタン群を非表示にする
+  // (以前はパネルが通常フローで下へ伸び、選択肢がbottom-actionsと重なって非常に見づらかった)
+  document.body.classList.add("dungeon-event-active");
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
   function close() {
     document.body.classList.remove("path-choice-active");
+    document.body.classList.remove("dungeon-event-active");
     div.innerHTML = "";
     document.getElementById("dungeonLog").style.display = "";
   }
@@ -1671,7 +1675,12 @@ function rollEncounter(pathBias) {
     // 森だけユーザー指示で基準値を6→5に1G下げた(海岸はこれまでどおり6のまま)
     const treasureMax = (currentStage === "coast" ? 6 : 5) + currentFloor;
     const treasureMin = Math.max(1, Math.round(treasureMax * 0.5));
-    const g = treasureMin + Math.floor(Math.random() * (treasureMax - treasureMin + 1));
+    const baseG = treasureMin + Math.floor(Math.random() * (treasureMax - treasureMin + 1));
+    // ユーザー指示(2026-07-18)の財宝配分調整: 道端で拾うゴールドは基準値の半分に減らし、
+    // 代わりに「何かが光る道」の宝箱から出るゴールドは基準値の2.8倍に増やす
+    // (道端拾いを地味に、宝箱を「開ける価値のある当たり」にするメリハリ付け)
+    const isHikaruChest = !retreating && pathBias === "hikaru";
+    const g = isHikaruChest ? Math.round(baseG * 2.8) : Math.max(1, Math.round(baseG * 0.5));
     state.gold += g;
     advGoldEarned += g; // リザルト画面の「収穫」にも反映されるよう、戦闘報酬と同じ集計に加算する
     saveState();
@@ -1904,10 +1913,13 @@ function playHikaruTreasureCelebration(amount) {
       { duration: 520, easing: "ease-in-out" }
     );
   }, 660);
-  // 3) 光が弾けて金額がドン+火花が放射状に飛ぶ
+  // 3) 光が弾けて金額がドン+火花が放射状に飛ぶ。
+  // ユーザー指示(2026-07-18): 弾けた瞬間に宝箱のアイコンを消してコイン(金額段階のゴールド絵)に
+  // 切り替え、「開けたら中からコインが出てきた」流れに見せる
   setTimeout(() => {
     playSfx("coin");
     flash.animate([{ opacity: 1, transform: "scale(0.5)" }, { opacity: 0, transform: "scale(1.6)" }], { duration: 480, easing: "ease-out", fill: "forwards" });
+    chest.src = `assets/gold/${treasureTierImage(amount)}.png`;
     chest.animate([{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }], { duration: 300, easing: "ease-out" });
     amountEl.animate(
       [
