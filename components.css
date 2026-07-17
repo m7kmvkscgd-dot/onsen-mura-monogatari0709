@@ -78,22 +78,11 @@
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
   }
   .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
-  /* 選択中(宿泊/温泉/出発準備などでタップして選ぶ行)の視覚フィードバックを強化。1px→2pxの金枠+
-     淡い金色のグロー(box-shadow)を足し、選んでいる感が薄いという指摘に対応した */
-  .roster-row.selected { border: 2px solid var(--accent); background: rgba(58,48,32,0.7); box-shadow: 0 0 8px rgba(201,162,74,0.35); }
+  .roster-row.selected { border-color: var(--accent); background: rgba(58,48,32,0.65); }
   .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
-  /* 「詳細」は行内の主役ではなく補助アクションなので、アイコンボタン程度の控えめなサイズにする
-     (以前はここが.skill-pending-btnより大きく、レベルアップ後に本来押してほしい「スキル選択」より
-     目立ってしまっていた) */
-  .detail-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.25rem 0.5rem; font-size: 0.65rem; cursor: pointer; }
-  .roster-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
-  /* レベルアップ後に押してほしい主役のボタンなので、.levelup-badge-smallと同じ金色パルスにして
-     視線を誘導する(以前は紫の小ボタンで.detail-btnより目立たなかった) */
-  .skill-pending-btn {
-    background: linear-gradient(90deg, #ffd76a, #ffb84d); border: none; color: #3a2a00;
-    border-radius: var(--radius-xs); padding: 0.5rem 0.75rem; font-size: 0.78rem; font-weight: 800;
-    cursor: pointer; white-space: nowrap; animation: levelupPulse 1.2s ease-in-out infinite;
-  }
+  .detail-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.55rem 0.8rem; font-size: 0.8rem; cursor: pointer; }
+  .roster-actions { display: flex; flex-direction: column; gap: 0.3rem; }
+  .skill-pending-btn { background: #8a5fd6; border: 1px solid #8a5fd6; color: #fff; border-radius: var(--radius-xs); padding: 0.3rem 0.5rem; font-size: 0.68rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
   .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
   .skill-entry { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; cursor: pointer; }
   .skill-entry-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; }
