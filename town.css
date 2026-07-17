@@ -183,6 +183,9 @@
      共有しているため、ここではなくroster-row配下に限定してスコープする) */
   .roster-row .hpbar-track { height: 11px; }
   .roster-row .mpbar-track { height: 7px; }
+  /* 宿屋名簿(宿泊選択)のカード間の余白を明示的に統一する。以前はroster-row同士に隙間の指定が
+     無く、選択時の金枠(box-shadow)が隣のカードとほぼ密着して見えていた */
+  #rosterList { display: flex; flex-direction: column; gap: 0.5rem; }
   .status-tag { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; }
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }

@@ -50,7 +50,7 @@
     background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: var(--fw-button); cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
     display: flex; align-items: center; justify-content: center; text-align: center;
-    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out, opacity var(--dw-t-btn) ease-out;
   }
   /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる+内側に沈み込むシャドウ)。filterでの明度調整は
      button.big単体でも.primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに
@@ -77,19 +77,30 @@
     background: var(--dw-card-bg); border: 2px solid var(--dw-card-border); border-radius: 14px;
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
   }
-  .roster-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
-  /* 選択中(宿泊/温泉/出発準備などでタップして選ぶ行)の視覚フィードバックを強化。1px→2pxの金枠+
+  /* border/background/box-shadowをtransitionに含め、選択トグル時の変化を130msでふわっと
+     アニメーションさせる(以前は瞬時に切り替わっていた) */
+  .roster-row {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm);
+    cursor: pointer; border: 1px solid transparent;
+    transition: border-color 130ms ease-out, background-color 130ms ease-out, box-shadow 130ms ease-out;
+  }
+  /* 選択中(宿泊/温泉/出発準備などでタップして選ぶ行)の視覚フィードバック。1px→2pxの金枠+
      淡い金色のグロー(box-shadow)を足し、選んでいる感が薄いという指摘に対応した */
   .roster-row.selected { border: 2px solid var(--accent); background: rgba(58,48,32,0.7); box-shadow: 0 0 8px rgba(201,162,74,0.35); }
   .roster-row.disabled { opacity: 0.45; cursor: not-allowed; }
-  /* 「詳細」は行内の主役ではなく補助アクションなので、アイコンボタン程度の控えめなサイズにする
+  /* レイアウトの縦位置を統一するために存在自体は常にDOMへ出しつつ見た目だけ消したい要素に使う
+     (display:noneだと場所ごと消えて後続要素が詰まってしまうが、visibility:hiddenなら
+     スペースは維持したまま見えなくできる。かつクリック判定も同時に無効化される) */
+  .hidden-slot { visibility: hidden; }
+  /* 「詳細」は行内の主役ではなく補助アクションなので、.skill-pending-btnより控えめなサイズにする
      (以前はここが.skill-pending-btnより大きく、レベルアップ後に本来押してほしい「スキル選択」より
-     目立ってしまっていた) */
-  .detail-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.25rem 0.5rem; font-size: 0.65rem; cursor: pointer; white-space: nowrap; }
-  /* .roster-actionsは以前「中身に合わせて幅が伸縮」だったため、スキル選択ボタンの有無で
-     .roster-info(flex:1、HP/MPバーの実質幅を決める)の残り幅が行ごとに変わり、一覧の中で
-     バーの長さがバラついて見える原因になっていた。ここを固定幅にして「ボタン用の枠」を
-     常に同じサイズだけ確保することで、中身が「詳細」1個でも2個でもHP/MPバーの幅は常に揃う */
+     目立ってしまっていた)。ただしスマホでのタップ領域確保のため、以前よりは一回り大きくしてある */
+  .detail-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.35rem 0.6rem; font-size: 0.7rem; cursor: pointer; white-space: nowrap; }
+  /* .roster-actionsは「詳細」「スキル選択」の2ボタン分の高さを常に確保する(スキル選択が無い時は
+     hidden-slotで見えなくなるだけで、DOM上には存在し続ける)。これにより、スキル選択ボタンの
+     有無によって.roster-info(flex:1、HP/MPバーの実質幅を決める)の残り幅はもちろん、「詳細」ボタン
+     自体の縦位置も一切変わらなくなる(以前はボタンが1個の時と2個の時でactions全体の高さが変わり、
+     .roster-row側のalign-items:centerによる中央寄せの結果「詳細」の位置が微妙にズレていた) */
   .roster-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 0.3rem; flex: 0 0 118px; width: 118px; }
   /* レベルアップ後に押してほしい主役のボタンなので、.levelup-badge-smallと同じ金色パルスにして
      視線を誘導する(以前は紫の小ボタンで.detail-btnより目立たなかった) */

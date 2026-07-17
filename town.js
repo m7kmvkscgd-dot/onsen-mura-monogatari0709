@@ -506,20 +506,22 @@ function renderRosterList() {
     // 瀕死/ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
     // 同じ.disabledクラス(半透明)でグレーアウト表示する
     row.className = "roster-row" + (lodgeSelected ? " selected" : "") + (c.status !== "active" ? " disabled" : "");
+    // カードレイアウトを全キャラクターで完全に統一するため、レベルアップ枠・HP/MPバーは
+    // 該当しないキャラでも常にマークアップ自体は出力し(内容が無い/該当しない時は
+    // hidden-slotで見た目だけ消す)、行の高さや各要素の縦位置が瀕死・ロスト・レベルアップの
+    // 有無によってズレないようにしている
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
         <div class="roster-sub roster-class-line">${statusLabel(c)}</div>
-        ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！</div>` : ""}
-        ${c.status === "active" ? `
-          <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
-          ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-        ` : ""}
+        <div class="levelup-badge-small${hasPendingSkill ? "" : " hidden-slot"}">レベルアップ！</div>
+        <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
+        <div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>
       </div>
       <div class="roster-actions">
         <button class="detail-btn" data-id="${c.id}">詳細</button>
-        ${hasPendingSkill ? `<button class="skill-pending-btn">🎓スキル選択</button>` : ""}
+        <button class="skill-pending-btn${hasPendingSkill ? "" : " hidden-slot"}">🎓スキル選択</button>
       </div>
     `;
     row.querySelector(".detail-btn").onclick = (e) => {
