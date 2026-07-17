@@ -20,6 +20,7 @@ const BGM_TRACKS = {
   boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
   mid_boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
   quest_target_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用。ただし中ボス/ボスの方が優先度が高い
+  tengu_battle: "assets/bgm/tengu_battle_bgm.mp3", // 天狗の腕試し(イベント戦)専用(ユーザー提供曲、2026-07-18追加)
 };
 // 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
 // 最終ボス(kishin_rasetsuo/kaiyoujo_ou)や序盤緊急依頼ボス(isBoss:trueだがこのSetには含めない)は
@@ -41,6 +42,14 @@ function isContinuingBossChase() {
 }
 function playBattleBgm() {
   const continuingChase = isContinuingBossChase();
+  // 天狗の腕試し(イベント戦)専用BGM。追跡戦は存在しないので毎回頭から再生する
+  if (battle && battle.enemies && battle.enemies.some((e) => e.id === "tengu_shiren")) {
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.tengu_battle = 0;
+    playBgm("tengu_battle");
+    return;
+  }
   if (battle && battle.enemies && battle.enemies.some((e) => MID_BOSS_BGM_IDS.has(e.id))) {
     if (continuingChase && currentBgmKey === "mid_boss_battle") { playBgm("mid_boss_battle"); return; }
     battleBgmFadeToken++;
@@ -310,12 +319,12 @@ function shouldKeepBossBgmOnFlee() {
   return isContinuingBossChase() && isBossBgmActive();
 }
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle" && currentBgmKey !== "tengu_battle") return;
   const key = currentBgmKey;
-  // ボス戦(boss_battle/mid_boss_battle/quest_target_battle)は森・海岸共通の1トラックのため、
+  // ボス戦(boss_battle/mid_boss_battle/quest_target_battle)や天狗戦は森・海岸共通の1トラックのため、
   // 戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
   // (coast_battleは元々このキー自体で確定していた)
-  const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle") && currentStage === "coast");
+  const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle" || key === "tengu_battle") && currentStage === "coast");
   const startVol = getBgmAudioVolume();
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;
