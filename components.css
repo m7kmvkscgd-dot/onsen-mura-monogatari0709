@@ -85,19 +85,14 @@
   /* 「詳細」は行内の主役ではなく補助アクションなので、アイコンボタン程度の控えめなサイズにする
      (以前はここが.skill-pending-btnより大きく、レベルアップ後に本来押してほしい「スキル選択」より
      目立ってしまっていた) */
-  .detail-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.25rem 0.5rem; font-size: 0.65rem; cursor: pointer; white-space: nowrap; }
-  /* .roster-actionsは以前「中身に合わせて幅が伸縮」だったため、スキル選択ボタンの有無で
-     .roster-info(flex:1、HP/MPバーの実質幅を決める)の残り幅が行ごとに変わり、一覧の中で
-     バーの長さがバラついて見える原因になっていた。ここを固定幅にして「ボタン用の枠」を
-     常に同じサイズだけ確保することで、中身が「詳細」1個でも2個でもHP/MPバーの幅は常に揃う */
-  .roster-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 0.3rem; flex: 0 0 118px; width: 118px; }
+  .detail-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-xs); padding: 0.25rem 0.5rem; font-size: 0.65rem; cursor: pointer; }
+  .roster-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
   /* レベルアップ後に押してほしい主役のボタンなので、.levelup-badge-smallと同じ金色パルスにして
      視線を誘導する(以前は紫の小ボタンで.detail-btnより目立たなかった) */
   .skill-pending-btn {
     background: linear-gradient(90deg, #ffd76a, #ffb84d); border: none; color: #3a2a00;
-    border-radius: var(--radius-xs); padding: 0.5rem 0.6rem; font-size: 0.74rem; font-weight: 800;
+    border-radius: var(--radius-xs); padding: 0.5rem 0.75rem; font-size: 0.78rem; font-weight: 800;
     cursor: pointer; white-space: nowrap; animation: levelupPulse 1.2s ease-in-out infinite;
-    max-width: 100%; box-sizing: border-box;
   }
   .stat-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
   .skill-entry { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; cursor: pointer; }
