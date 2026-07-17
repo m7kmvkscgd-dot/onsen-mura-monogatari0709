@@ -630,6 +630,17 @@ function playPairedDialogueExchange(member1, member2, entry, category, ignoreMut
   return true;
 }
 
+// 3人掛け合い(A→B→Cで全員が1回ずつ喋る)。呼び出し側(dungeon.jsのmaybeTriggerPeaceDialogue)が
+// entry.pA/pB/pCと性格を照合済みのメンバーを渡してくるため、ここでは並び替えをしない。
+// 間隔・ミューテックスの扱いは2人版(playPairedDialogueExchange)と同じ:
+// 先頭のAだけignoreMutexForFirstに従い、B/Cは会話の続きとしてミューテックスを無視して重ねる
+function playTrioDialogueExchange(mA, mB, mC, entry, category, ignoreMutexForFirst) {
+  if (!speakExplicitLine(mA, entry.lineA, category, ignoreMutexForFirst)) return false;
+  setTimeout(() => { speakExplicitLine(mB, entry.lineB, category, true); }, PAIRED_DIALOGUE_GAP_MS);
+  setTimeout(() => { speakExplicitLine(mC, entry.lineC, category, true); }, PAIRED_DIALOGUE_GAP_MS * 2);
+  return true;
+}
+
 // 会心発生時の吹き出し判定(assets/dialogues/dialogue_crit.txt、通常攻撃/技どちらの会心でも共通)。
 // 発生条件: パーティ全員のストレスが60%以下の時のみ。会心が起きるたびCRIT_DIALOGUE_TRIGGER_CHANCE(75%)で
 // 発生の有無を抽選し、発生した場合は必ず会心を出した本人(A)がまずかけ声を発する。そこからさらに

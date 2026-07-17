@@ -1745,8 +1745,46 @@ function pickTwoRandomElements(list) {
   const second = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
   return [first, second];
 }
+// 3人掛け合いの抽選率(ユーザー指示2026-07-18: 2人版60%/3人版40%)。
+// 3人版はパーティに元気な3人以上がいて、性格の組み合わせに合う未消化の候補が残っている時だけ
+// 抽選対象になり、候補が無い場合は従来どおり2人版banterのみが出る
+const TRIO_DIALOGUE_CHANCE = 0.4;
+// パーティの現在メンバーで成立する3人掛け合い候補を全て集める(tiredのcollectTiredDialogueCandidatesと
+// 同じ総当たり方式。同じ性格のメンバーが複数いても別人として全組み合わせを列挙する)
+function collectTrioDialogueCandidates() {
+  const list = trioDialogueList();
+  if (!list.length) return [];
+  const active = fieldParty.filter((c) => c.status === "active");
+  if (active.length < 3) return [];
+  const results = [];
+  list.forEach((entry) => {
+    if (expeditionSpokenDialogueKeys.has("trio:" + entry.id)) return; // この遠征で既出のセリフは使わない
+    active.forEach((mA) => {
+      if (mA.personality !== entry.pA) return;
+      active.forEach((mB) => {
+        if (mB === mA || mB.personality !== entry.pB) return;
+        active.forEach((mC) => {
+          if (mC === mA || mC === mB || mC.personality !== entry.pC) return;
+          results.push({ entry, mA, mB, mC });
+        });
+      });
+    });
+  });
+  return results;
+}
 function maybeTriggerPeaceDialogue() {
   if (!peaceDialogueConditionsMet()) return;
+  // まず3人版を40%で抽選(ユーザー指示)。2人版・3人版はpeaceDialogueLockedを共有しているため、
+  // どちらか片方が発火した時点で、次の戦闘勝利までもう片方も発火の権利を失う
+  const trioCandidates = collectTrioDialogueCandidates();
+  if (trioCandidates.length > 0 && Math.random() < TRIO_DIALOGUE_CHANCE) {
+    const picked = trioCandidates[Math.floor(Math.random() * trioCandidates.length)];
+    if (playTrioDialogueExchange(picked.mA, picked.mB, picked.mC, picked.entry, "banter", true)) {
+      peaceDialogueLocked = true;
+      expeditionSpokenDialogueKeys.add("trio:" + picked.entry.id);
+      return;
+    }
+  }
   const active = fieldParty.filter((c) => c.status === "active");
   // この2人の並び順に意味は無い(pickTwoRandomElementsは単にランダムに2人選ぶだけ)。
   // 実際にどちらが先に喋るかはplayPairedDialogueExchange側でentry.pAとの一致で決め直す

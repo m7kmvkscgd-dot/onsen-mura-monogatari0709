@@ -114,6 +114,56 @@ function soloPersonalityLines(categoryKey, personality, slot) {
   return [...new Set(lines)];
 }
 
+// ============ 3人掛け合い(trio)の読み込み ============
+// せりふくん3人版(平和)で採用されたセリフ。テキスト形式(1エントリ、区切りは"---"または空行):
+//   ID:001
+//   TRIO:性格A|性格B|性格C
+//
+//   A:性格Aのキャラが言うセリフ
+//   B:性格Bのキャラが言うセリフ
+//   C:性格Cのキャラが言うセリフ
+// 3行固定(A→B→Cの順で全員が1回ずつ喋る)。平和文脈=banterと同じ発生条件で、
+// 2人版banterとの60%/40%抽選で発火する(dungeon.jsのmaybeTriggerPeaceDialogue参照)
+const TRIO_DIALOGUE_FILE = "assets/dialogues/dialogue_trio.txt";
+let trioDialogueStore = null; // 読み込み完了まではnull(その間は候補0件扱いで2人版のみ発火する)
+
+function parseTrioDialogueText(raw) {
+  const lines = raw.split(/\r?\n/);
+  const entries = [];
+  let cur = null;
+  const pushIfComplete = () => {
+    if (cur && cur.id && cur.pA && cur.pB && cur.pC && cur.lineA && cur.lineB && cur.lineC) entries.push(cur);
+  };
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (line.startsWith("ID:")) {
+      pushIfComplete();
+      cur = { id: line.slice(3).trim(), pA: null, pB: null, pC: null, lineA: null, lineB: null, lineC: null };
+    } else if (line.startsWith("TRIO:") && cur) {
+      const parts = line.slice(5).trim().split("|");
+      cur.pA = (parts[0] || "").trim();
+      cur.pB = (parts[1] || "").trim();
+      cur.pC = (parts[2] || "").trim();
+    } else if (line.startsWith("A:") && cur) {
+      cur.lineA = line.slice(2).trim();
+    } else if (line.startsWith("B:") && cur) {
+      cur.lineB = line.slice(2).trim();
+    } else if (line.startsWith("C:") && cur) {
+      cur.lineC = line.slice(2).trim();
+    }
+  });
+  pushIfComplete();
+  return entries;
+}
+fetch(TRIO_DIALOGUE_FILE)
+  .then((res) => res.text())
+  .then((text) => { trioDialogueStore = { list: parseTrioDialogueText(text) }; })
+  .catch(() => {}); // 読み込み失敗時は3人掛け合いが出ないだけで、2人版banterは従来どおり動く
+
+function trioDialogueList() {
+  return trioDialogueStore ? trioDialogueStore.list : [];
+}
+
 // ============ 単独発言型のセリフ(ペア形式ではなく、性格ごとに1行だけ喋るカテゴリ用) ============
 // 例: かばう(槍士がかばうボタンを押した時の一言)。今後の「通常セリフ」(戦闘開始/瀕死/撃破時など、
 // 旧DIALOGUE_LINESが担っていた単独発言の各種イベント)もこの仕組みに乗せられる。
