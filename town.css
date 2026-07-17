@@ -621,3 +621,30 @@
     .omamori-rare-flash-overlay, .omamori-rare-particle, .omamori-rare-banner { animation: none; opacity: 0; }
     .omamori-rare-result-card { animation: none; }
   }
+  /* ============ 出発準備(#partySelectList)・宿屋(#rosterList)の名簿2列化 ============
+     ユーザー指示(2026-07-18): 仲間が増えると縦スクロールが長くなりすぎるため、この2画面だけ
+     2列グリッドにする(図鑑/温泉/お守りなど他の.roster-row一覧は従来の1列のまま)。
+     アイコンサイズ(60px)は変更しない。行はflex-wrapで折り返し、「詳細」等のボタン列は
+     カード下段に横並びで配置する */
+  #rosterList, #partySelectList {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; align-items: stretch;
+  }
+  #rosterList .roster-row, #partySelectList .roster-row {
+    flex-wrap: wrap; align-content: flex-start; padding: 0.45rem;
+    background: rgba(20,18,14,0.5); border-color: rgba(255,255,255,0.08);
+  }
+  #rosterList .roster-row.selected, #partySelectList .roster-row.selected { border-color: var(--accent); }
+  /* 狭い幅で名前・バー・ラベルが潰れないように */
+  #rosterList .roster-info, #partySelectList .roster-info { flex: 1; min-width: 0; }
+  #rosterList .roster-name, #partySelectList .roster-name { font-size: 0.8rem; overflow-wrap: anywhere; }
+  #rosterList .roster-sub, #partySelectList .roster-sub { font-size: 0.66rem; }
+  #rosterList .roster-actions {
+    flex-basis: 100%; flex-direction: row; margin-top: 0.35rem;
+  }
+  #rosterList .roster-actions .detail-btn,
+  #rosterList .roster-actions .skill-pending-btn {
+    flex: 1; padding: 0.32rem 0.4rem; font-size: 0.72rem; min-height: auto;
+  }
+  /* 長い名前の折り返し時、ステータスタグ(待機中/入浴中など)が文字の途中で割れないように
+     タグ自体は1かたまりのまま次の行へ送る */
+  #rosterList .status-tag, #partySelectList .status-tag { white-space: nowrap; }

@@ -135,6 +135,20 @@ function statusLabel(c) {
     if (stressTier(c.fatigue) >= 4) return `${base}(発狂中)`;
     return base;
   }
+  return statusLabelNonActive(c);
+}
+// 出発準備(パーティ編成)・宿屋の名簿用: 職業名の代わりに性格を表示する(ユーザー指示2026-07-18
+// 「レベルの横に職業書かなくていいから性格書いといて」)。職業は詳細画面で確認できる。
+// active以外(瀕死/ロスト)の表示はstatusLabelと共通
+function statusLabelPersonality(c) {
+  if (c.status === "active") {
+    const base = `Lv.${c.level} ${c.personality || CLASSES[c.classId].ja}`;
+    if (stressTier(c.fatigue) >= 4) return `${base}(発狂中)`;
+    return base;
+  }
+  return statusLabelNonActive(c);
+}
+function statusLabelNonActive(c) {
   if (c.status === "critical") {
     if (c.carriedBy) {
       const carrier = getRosterChar(c.carriedBy);
