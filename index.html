@@ -547,106 +547,20 @@
       <p class="house-upgrade-reason" id="extensionUpgradeReason" style="display:none;"></p>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0.6rem 0 0;" id="extensionDesc"></p>
 
-      <h2 class="facility-group-heading static open" id="facilityGroupAvailableHeading" style="margin-top:20px;">建築可能<span class="facility-group-count" id="facilityGroupAvailableCount"></span></h2>
-      <div class="facility-group-body open" id="facilityGroupAvailable"></div>
-
-      <button type="button" class="big facility-group-heading facility-group-locked-btn" id="facilityGroupLockedToggle" style="margin-top:20px;width:100%;">未解放<span class="facility-group-count" id="facilityGroupLockedCount"></span><span class="facility-caret">▾</span></button>
-      <div class="facility-group-body" id="facilityGroupLocked"></div>
-
-      <div class="facility-block" id="facilityBlock-magistrate">
-        <h2 class="facility-toggle" style="margin-top:12px;">🏯奉行所<span class="new-badge" id="magistrateNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">依頼を受けられるようになります。依頼は毎日入れ替わります。</p>
-        <button class="big primary" id="magistrateBuildBtn" style="margin-top:0.6rem;"></button>
+      <!-- 施設一覧: 「仲間を雇う」画面と同じ4列アイコングリッドを、建築済み/建築可能/未解放の
+           3セクションに分けて表示する(BUILDING_DEFS/renderBuildingGrid、town.js参照)。
+           セクションは空の時タイトルごとJSで非表示にする -->
+      <div id="buildingSectionBuilt" style="display:none;">
+        <h2 style="margin-top:20px;">建築済み</h2>
+        <div class="building-grid" id="buildingGridBuilt"></div>
       </div>
-
-      <div class="facility-block" id="facilityBlock-shop">
-        <h2 class="facility-toggle" style="margin-top:12px;">⚒️鍛冶屋<span class="new-badge" id="shopNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">武器・防具を購入できるようになります。</p>
-        <button class="big primary" id="shopBuildBtn" style="margin-top:0.6rem;"></button>
+      <div id="buildingSectionAvailable" style="display:none;">
+        <h2 style="margin-top:20px;">建築可能</h2>
+        <div class="building-grid" id="buildingGridAvailable"></div>
       </div>
-
-      <div class="facility-block" id="facilityBlock-travelPrepShop">
-        <h2 class="facility-toggle" style="margin-top:12px;">🏕️旅支度屋<span class="new-badge" id="travelPrepShopNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">出発画面で野営具を購入できるようになります。</p>
-        <button class="big primary" id="travelPrepShopBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-dojo">
-        <h2 class="facility-toggle" style="margin-top:12px;">🥋道場<span class="new-badge" id="dojoNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえるようになります(レベル1で30%、レベル2で35%)。</p>
-        <button class="big primary" id="dojoBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-karakuri">
-        <h2 class="facility-toggle" style="margin-top:12px;">🎎からくり屋敷<span class="new-badge" id="karakuriNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。</p>
-        <button class="big primary" id="karakuriBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-bagShop">
-        <h2 class="facility-toggle" style="margin-top:12px;">🧳鞄屋<span class="new-badge" id="bagShopNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">支援物資の所持上限が1つ増えます。</p>
-        <button class="big primary" id="bagShopBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-ryodanki">
-        <h2 class="facility-toggle" style="margin-top:12px;">🚩旅団旗<span class="new-badge" id="ryodankiNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員で、探索中・戦闘中に「交代」でいつでも入れ替えられます。</p>
-        <button class="big primary" id="ryodankiBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-watchtower">
-        <h2 class="facility-toggle" style="margin-top:12px;">🏹見張り台<span class="new-badge" id="watchtowerNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">村が襲撃された時、狩人・砲術士が援護射撃できるようになります。</p>
-        <button class="big primary" id="watchtowerBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-henHouse">
-        <h2 class="facility-toggle" style="margin-top:12px;">🐓鶏小屋<span class="new-badge" id="henHouseNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">支援物資の上限とは別枠の「卵ポーチ」が手に入り、毎日無料で温泉卵が1個(ポーチの容量まで)補充されます。増築でポーチの容量が増えます。</p>
-        <button class="big primary" id="henHouseBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-shrine">
-        <h2 class="facility-toggle" style="margin-top:12px;">⛩️神社<span class="new-badge" id="shrineNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">魂のかけらを捧げるとお守りがもらえるようになる。(温泉ボタンから入れます)</p>
-        <button class="big primary" id="shrineBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-hotSpringKeeper">
-        <h2 class="facility-toggle" style="margin-top:12px;">♨️湯守屋<span class="new-badge" id="hotSpringKeeperNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">温泉で回復するストレスの量が上がります(50→70)。</p>
-        <button class="big primary" id="hotSpringKeeperBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-gunpowderStore">
-        <h2 class="facility-toggle" style="margin-top:12px;">💣火薬庫<span class="new-badge" id="gunpowderStoreNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">砲術士が雇えるようになります。</p>
-        <button class="big primary" id="gunpowderStoreBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-teaHouse">
-        <h2 class="facility-toggle" style="margin-top:12px;">🍡茶屋<span class="new-badge" id="teaHouseNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">深淵の森15層の進路選択に必ず現れるようになり、一休みや買い物ができる</p>
-        <button class="big primary" id="teaHouseBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-stable">
-        <h2 class="facility-toggle" style="margin-top:12px;">🐎馬屋<span class="new-badge" id="stableNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">馬を購入すると、出発時の移動速度が上がります。</p>
-        <button class="big primary" id="stableBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-beeFarm">
-        <h2 class="facility-toggle" style="margin-top:12px;">🐝養蜂場<span class="new-badge" id="beeFarmNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">回復薬の回復量が段階ごとに+2%上がります(最大5段階、合計+10%まで)。</p>
-        <button class="big primary" id="beeFarmBuildBtn" style="margin-top:0.6rem;"></button>
-      </div>
-
-      <div class="facility-block" id="facilityBlock-ferry">
-        <h2 class="facility-toggle" style="margin-top:12px;">⛴️渡し船<span class="new-badge" id="ferryNewBadge" style="display:none;">NEW</span><span class="facility-caret">▾</span></h2>
-        <p class="facility-desc" style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0 0;">(詳細は未定)</p>
-        <button class="big primary" id="ferryBuildBtn" style="margin-top:0.6rem;"></button>
+      <div id="buildingSectionLocked" style="display:none;">
+        <h2 style="margin-top:20px;">未解放</h2>
+        <div class="building-grid" id="buildingGridLocked"></div>
       </div>
 
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
@@ -988,6 +902,18 @@
       </div>
       <div class="bestiary-detail-name" id="bestiaryDetailName"></div>
       <div class="bestiary-detail-body" id="bestiaryDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- 増築画面の施設詳細モーダル(BUILDING_DEFSのカードをタップすると開く) -->
+  <div class="bestiary-detail-overlay" id="buildingDetailOverlay" style="display:none;">
+    <div class="bestiary-detail-panel card">
+      <button class="bestiary-detail-close" id="buildingDetailCloseBtn">×</button>
+      <div id="buildingDetailIconWrap"></div>
+      <div class="bestiary-detail-name" id="buildingDetailName"></div>
+      <div class="building-detail-desc" id="buildingDetailDesc"></div>
+      <button class="big primary" id="buildingDetailActionBtn" style="margin-top:0.8rem;width:100%;"></button>
+      <p class="house-upgrade-reason" id="buildingDetailReason" style="display:none;"></p>
     </div>
   </div>
 

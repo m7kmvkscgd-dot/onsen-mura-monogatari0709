@@ -1872,91 +1872,175 @@ document.getElementById("onsenShrineBackBtn").onclick = () => { renderOnsen(); s
 document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
 
 // ============ 増築 ============
-// 新しく建築可能(houseLevelは足りたがまだ未建築)になった施設に「NEW」バッジを出す。
-// 一度でもこの画面で表示されるとその場でseenUnlockedBuildingsに記録するため、次にこの画面を
-// 開いた時にはもう出ない(「見た瞬間に消える」方式。建てるまで粘り強く出し続ける方式ではない)
-function markBuildingNewBadge(stateKey, badgeId, unlocked, built) {
-  const badge = document.getElementById(badgeId);
-  const isNew = unlocked && !built && !state.seenUnlockedBuildings[stateKey];
-  badge.style.display = isNew ? "" : "none";
-  if (isNew) state.seenUnlockedBuildings[stateKey] = true;
-}
-// 施設一覧の説明文はタップで開閉する(静的HTMLのまま一度だけイベントを貼る。renderExtension()の
-// たびに貼り直す必要はない)。ただし家レベルが足りず未解放の施設は、タップしても説明を開けない
-// (setFacilityLockedStateが付与する.lockedクラスで判定し、どんな効果かを完全に隠す)
-document.querySelectorAll(".facility-toggle").forEach((el) => {
-  el.onclick = () => {
-    if (el.classList.contains("locked") || el.classList.contains("always-open")) return;
-    el.classList.toggle("open");
-  };
-});
-// 施設一覧を「建築可能(建築済みも含む)/未解放」の2グループへ分けて表示する。各施設のブロック
-// (h2+説明+ボタンの3点セット)自体は元のまま、renderExtension()のたびに該当グループへ
-// appendChildで移動させるだけ(要素を作り直さないのでイベントハンドラや開閉状態を保持できる)。
-// 建築済みの施設を別グループへ隔離せず「建築可能」内にそのまま残すことで、既に建てた施設も
-// 一覧からすぐ見つけられるようにしている(ユーザー指示)
-const FACILITY_GROUP_DEFS = [
-  { key: "magistrate", levelField: "magistrateLevel", unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL },
-  { key: "shop", levelField: "shopLevel", unlock: SHOP_UNLOCK_HOUSE_LEVEL },
-  { key: "travelPrepShop", levelField: "travelPrepShopLevel", unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL },
-  { key: "dojo", levelField: "dojoLevel", unlock: DOJO_UNLOCK_HOUSE_LEVEL },
-  { key: "karakuri", levelField: "karakuriLevel", unlock: KARAKURI_UNLOCK_HOUSE_LEVEL },
-  { key: "bagShop", levelField: "bagShopLevel", unlock: BAG_SHOP_UNLOCK_HOUSE_LEVEL },
-  { key: "watchtower", levelField: "watchtowerLevel", unlock: WATCHTOWER_UNLOCK_HOUSE_LEVEL },
-  { key: "henHouse", levelField: "henHouseLevel", unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL },
-  { key: "shrine", levelField: "shrineLevel", unlock: SHRINE_UNLOCK_HOUSE_LEVEL },
-  { key: "hotSpringKeeper", levelField: "hotSpringKeeperLevel", unlock: HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL },
-  { key: "gunpowderStore", levelField: "gunpowderStoreLevel", unlock: GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL },
-  { key: "teaHouse", levelField: "teaHouseLevel", unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL },
-  { key: "stable", levelField: "stableLevel", unlock: STABLE_UNLOCK_HOUSE_LEVEL },
-  { key: "beeFarm", levelField: "beeFarmLevel", unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL },
-  { key: "ferry", levelField: "ferryLevel", unlock: FERRY_UNLOCK_HOUSE_LEVEL },
-  { key: "ryodanki", levelField: "ryodankiLevel", unlock: RYODANKI_UNLOCK_HOUSE_LEVEL },
+// ============ 建築(増築画面の施設一覧) ============
+// 「仲間を雇う」画面(宿屋)と同じ設計思想(アイコン中心の4列グリッド、詳細は別モーダル)に全面刷新。
+// 全16施設のデータを1箇所(BUILDING_DEFS)にまとめ、建築/増築の実処理(buildOrUpgradeBuilding)も
+// 汎用の1関数に統一した(以前はdojo/bagShop/henHouse/beeFarmだけ個別のonclickハンドラを持ち、
+// 残り12施設もrenderSimpleBuilding/buildSimpleBuildingという別の共通処理を使う、という二重構造
+// だったが、costsを「レベルごとの建築費配列」として持たせることで単発建築(costs長さ1)も
+// 多段階建築(costs長さ2以上)も同じロジックで扱えるようにした)。
+// iconImgが無い施設(まだ専用イラストが無いもの)は絵文字にフォールバックする
+const BUILDING_DEFS = [
+  { key: "magistrate", levelField: "magistrateLevel", name: "奉行所", icon: "🏯", iconImg: null,
+    unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL, costs: [MAGISTRATE_COST],
+    desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。" },
+  { key: "shop", levelField: "shopLevel", name: "鍛冶屋", icon: "⚒️", iconImg: null,
+    unlock: SHOP_UNLOCK_HOUSE_LEVEL, costs: [SHOP_COST],
+    desc: "武器・防具を購入できるようになります。" },
+  { key: "travelPrepShop", levelField: "travelPrepShopLevel", name: "旅支度屋", icon: "🏕️", iconImg: null,
+    unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST],
+    desc: "出発画面で野営具を購入できるようになります。" },
+  { key: "dojo", levelField: "dojoLevel", name: "道場", icon: "🥋", iconImg: null,
+    unlock: DOJO_UNLOCK_HOUSE_LEVEL, costs: [DOJO_LEVEL1_COST, DOJO_LEVEL2_COST], classUnlock: "naginata",
+    desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。",
+    levelEffectLabel: "分け前", levelEffect: (lv) => `${Math.round(DOJO_XP_SHARE_BY_LEVEL[lv] * 100)}%` },
+  { key: "karakuri", levelField: "karakuriLevel", name: "からくり屋敷", icon: "🎎", iconImg: null,
+    unlock: KARAKURI_UNLOCK_HOUSE_LEVEL, costs: [KARAKURI_COST], classUnlock: "ninja",
+    desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。" },
+  { key: "bagShop", levelField: "bagShopLevel", name: "鞄屋", icon: "🧳", iconImg: null,
+    unlock: BAG_SHOP_UNLOCK_HOUSE_LEVEL, costs: [BAG_SHOP_LEVEL1_COST, BAG_SHOP_LEVEL2_COST, BAG_SHOP_LEVEL3_COST],
+    desc: "支援物資の所持上限が増えます。",
+    levelEffectLabel: "所持上限", levelEffect: (lv) => `+${lv}` },
+  { key: "watchtower", levelField: "watchtowerLevel", name: "見張り台", icon: "🏹", iconImg: null,
+    unlock: WATCHTOWER_UNLOCK_HOUSE_LEVEL, costs: [WATCHTOWER_COST],
+    desc: "(詳細は未定)" },
+  { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
+    unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_COST, HEN_HOUSE_COST],
+    desc: "(詳細は未定)" },
+  { key: "shrine", levelField: "shrineLevel", name: "神社", icon: "⛩️", iconImg: "assets/icons/buildings/shrine.png",
+    unlock: SHRINE_UNLOCK_HOUSE_LEVEL, costs: [SHRINE_COST], classUnlock: "priest",
+    desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。" },
+  { key: "hotSpringKeeper", levelField: "hotSpringKeeperLevel", name: "湯守屋", icon: "♨️", iconImg: "assets/icons/buildings/hotSpringKeeper.png",
+    unlock: HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, costs: [HOT_SPRING_KEEPER_COST],
+    desc: "温泉で回復するストレスの量が上がります(50→70)。" },
+  { key: "gunpowderStore", levelField: "gunpowderStoreLevel", name: "火薬庫", icon: "💣", iconImg: "assets/icons/buildings/gunpowderStore.png",
+    unlock: GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, costs: [GUNPOWDER_STORE_COST], classUnlock: "gunner",
+    desc: "砲術士が雇えるようになります。" },
+  { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
+    unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST],
+    desc: "深淵の森15層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
+  { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
+    unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
+    desc: "(詳細は未定)" },
+  { key: "beeFarm", levelField: "beeFarmLevel", name: "養蜂場", icon: "🐝", iconImg: "assets/icons/buildings/beeFarm.png",
+    unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL, costs: Array(BEE_FARM_MAX_LEVEL).fill(BEE_FARM_COST),
+    desc: "回復薬の回復量が段階ごとに上がります。",
+    levelEffectLabel: "回復薬", levelEffect: (lv) => `+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * lv)}%` },
+  { key: "ferry", levelField: "ferryLevel", name: "渡し船", icon: "⛴️", iconImg: "assets/icons/buildings/ferry.png",
+    unlock: FERRY_UNLOCK_HOUSE_LEVEL, costs: [FERRY_COST],
+    desc: "(詳細は未定)" },
+  { key: "ryodanki", levelField: "ryodankiLevel", name: "旅団旗", icon: "🚩", iconImg: "assets/icons/buildings/ryodanki.png",
+    unlock: RYODANKI_UNLOCK_HOUSE_LEVEL, costs: [RYODANKI_COST],
+    desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。" },
 ];
-// 「建築可能」グループの見出しはタップで開閉するトリガーではなく、常時展開の固定ラベルにする
-// (ユーザー指示)。HTML側で最初から.openを付与したまま、クリックハンドラ自体を付けないことで
-// どうやっても閉じられないようにする。「未解放」グループだけ従来通りタップで開閉できる
-const facilityLockedToggle = document.getElementById("facilityGroupLockedToggle");
-const facilityLockedBody = document.getElementById("facilityGroupLocked");
-facilityLockedToggle.onclick = () => {
-  facilityLockedToggle.classList.toggle("open");
-  facilityLockedBody.classList.toggle("open");
-};
-function groupFacilityBlocks(houseLevel) {
-  const availEl = document.getElementById("facilityGroupAvailable");
-  const lockedEl = document.getElementById("facilityGroupLocked");
-  let availCount = 0, lockedCount = 0;
-  FACILITY_GROUP_DEFS.forEach((def) => {
-    const block = document.getElementById("facilityBlock-" + def.key);
-    if (!block) return;
+// 施設アイコンのHTML。写真素材(iconImg)があればそれを、無ければ絵文字を表示する。
+// silhouette=trueの時はfilter:brightness(0)で黒いシルエットにする。CSSのfilterは要素自身の
+// background-colorも含めて丸ごと暗くしてしまうため(職業雇用画面のシルエットで踏んだのと同じ地雷)、
+// フィルターを掛けないラッパー側に背景色を持たせ、フィルター対象(img/絵文字本体)側は透明にする
+function buildingIconHtml(def, opts) {
+  opts = opts || {};
+  const wrapCls = opts.large ? "building-detail-icon-wrap" : "building-card-icon-wrap";
+  const silCls = opts.silhouette ? " silhouette" : "";
+  if (def.iconImg) return `<div class="${wrapCls}"><img class="building-icon-img${silCls}" src="${def.iconImg}"></div>`;
+  return `<div class="${wrapCls}"><div class="building-icon-emoji${silCls}">${def.icon}</div></div>`;
+}
+// 新しく建築可能になった施設に「NEW」バッジを出す。一度でも一覧に表示されるとその場で
+// state.seenUnlockedBuildingsに記録するため、次に開いた時にはもう出ない(「見た瞬間に消える」方式)
+function buildingNewBadgeHtml(def, unlocked, built) {
+  const isNew = unlocked && !built && !state.seenUnlockedBuildings[def.levelField];
+  if (isNew) state.seenUnlockedBuildings[def.levelField] = true;
+  return isNew ? '<span class="new-badge building-new-badge">NEW</span>' : "";
+}
+// 「建築済み/建築可能/未解放」の3グリッドを描画する。空のグループはタイトルごと非表示にする
+function renderBuildingGrid(houseLevel) {
+  const builtEl = document.getElementById("buildingGridBuilt");
+  const availEl = document.getElementById("buildingGridAvailable");
+  const lockedEl = document.getElementById("buildingGridLocked");
+  builtEl.innerHTML = ""; availEl.innerHTML = ""; lockedEl.innerHTML = "";
+  BUILDING_DEFS.forEach((def) => {
     const lv = state[def.levelField] || 0;
-    const toggle = block.querySelector(".facility-toggle");
-    // 建築済み/建築可能はどちらも同じ「建築可能」グループにまとめて表示する(建築済みの項目だけを
-    // 別グループへ隔離しない、というユーザー指示)。家レベルが足りていない施設だけ未解放グループへ
-    if (lv > 0 || houseLevel >= def.unlock) {
-      availEl.appendChild(block);
-      availCount++;
-      // 建築可能グループの施設はタップ開閉をやめ、常に説明文を表示する
-      if (toggle) { toggle.classList.add("open", "always-open"); }
+    const unlocked = houseLevel >= def.unlock;
+    const built = lv > 0;
+    const card = document.createElement("div");
+    if (built) {
+      card.className = "building-card";
+      card.innerHTML = `
+        ${buildingIconHtml(def)}
+        <span class="building-badge built">建築済み</span>
+        <div class="building-card-name">${def.name}</div>
+        ${def.costs.length > 1 ? `<div class="building-card-lv">Lv${lv}</div>` : ""}
+      `;
+      card.onclick = () => openBuildingDetail(def.key);
+      builtEl.appendChild(card);
+    } else if (unlocked) {
+      card.className = "building-card";
+      const cost = def.costs[0];
+      const canAfford = state.gold >= cost;
+      card.innerHTML = `
+        ${buildingIconHtml(def)}
+        ${buildingNewBadgeHtml(def, unlocked, built)}
+        <div class="building-card-name">${def.name}</div>
+        <div class="building-card-action">${canAfford
+          ? `<button class="building-build-btn" type="button">建築する</button>`
+          : `<div class="building-need-gold">必要：${cost}G</div>`}</div>
+      `;
+      if (canAfford) {
+        card.querySelector(".building-build-btn").onclick = (e) => { e.stopPropagation(); buildOrUpgradeBuilding(def.key); };
+      }
+      card.onclick = (e) => { if (e.target.closest(".building-build-btn")) return; openBuildingDetail(def.key); };
+      availEl.appendChild(card);
     } else {
-      lockedEl.appendChild(block);
-      lockedCount++;
-      if (toggle) toggle.classList.remove("always-open");
+      card.className = "building-card locked";
+      card.innerHTML = `
+        ${buildingIconHtml(def, { silhouette: true })}
+        <div class="building-card-locked-label">🔒家Lv${def.unlock}で解放</div>
+      `;
+      lockedEl.appendChild(card);
     }
   });
-  document.getElementById("facilityGroupAvailableCount").textContent = `(${availCount})`;
-  document.getElementById("facilityGroupLockedCount").textContent = `(${lockedCount})`;
+  document.getElementById("buildingSectionBuilt").style.display = builtEl.children.length > 0 ? "" : "none";
+  document.getElementById("buildingSectionAvailable").style.display = availEl.children.length > 0 ? "" : "none";
+  document.getElementById("buildingSectionLocked").style.display = lockedEl.children.length > 0 ? "" : "none";
 }
-// 家レベルが足りず未解放の施設は、タップしても効果の説明文を開けないようにする
-// (.facility-toggleへ.lockedクラスを付け、開いていればその場で強制的に閉じる)
-function setFacilityLockedState(blockKey, locked) {
-  const block = document.getElementById("facilityBlock-" + blockKey);
-  if (!block) return;
-  const toggle = block.querySelector(".facility-toggle");
-  if (!toggle) return;
-  toggle.classList.toggle("locked", locked);
-  if (locked) toggle.classList.remove("open");
+// 施設タップで開く詳細モーダル。建築済みなら現在の効果+次の段階への増築ボタン(あれば)、
+// 建築可能なら効果説明+建築ボタンを表示する。図鑑のモンスター詳細モーダルと同じ
+// overlay+card+閉じるボタンの型を流用している(未解放の施設はカード自体がタップ不可なので対象外)
+function openBuildingDetail(key) {
+  const def = BUILDING_DEFS.find((d) => d.key === key);
+  if (!def) return;
+  const lv = state[def.levelField] || 0;
+  document.getElementById("buildingDetailIconWrap").innerHTML = buildingIconHtml(def, { large: true });
+  document.getElementById("buildingDetailName").textContent = def.name + (lv > 0 && def.costs.length > 1 ? ` Lv.${lv}` : "");
+  const effectLine = (lv > 0 && def.levelEffect) ? `${def.levelEffectLabel}${def.levelEffect(lv)}` : "";
+  document.getElementById("buildingDetailDesc").textContent = [def.desc, effectLine].filter(Boolean).join("\n");
+  const btn = document.getElementById("buildingDetailActionBtn");
+  const reasonEl = document.getElementById("buildingDetailReason");
+  if (lv >= def.costs.length) {
+    btn.style.display = "none";
+    reasonEl.style.display = "none";
+  } else {
+    const cost = def.costs[lv];
+    const canAfford = state.gold >= cost;
+    btn.style.display = "";
+    btn.textContent = `${lv === 0 ? "建築する" : "増築する"}（${cost}G）`;
+    btn.disabled = !canAfford;
+    // 押せない理由は所持金不足の時だけボタン直下に表示する(家カードと同じ文言パターン)
+    if (canAfford) {
+      reasonEl.style.display = "none";
+    } else {
+      reasonEl.textContent = `所持金が不足しています（${state.gold}/${cost}G）`;
+      reasonEl.style.display = "";
+    }
+    btn.onclick = () => {
+      document.getElementById("buildingDetailOverlay").style.display = "none";
+      buildOrUpgradeBuilding(def.key);
+    };
+  }
+  document.getElementById("buildingDetailOverlay").style.display = "flex";
 }
+document.getElementById("buildingDetailCloseBtn").onclick = () => {
+  document.getElementById("buildingDetailOverlay").style.display = "none";
+};
 function renderExtension() {
   playTownAreaBgm();
   updateSceneBackgrounds();
@@ -1968,23 +2052,7 @@ function renderExtension() {
   document.getElementById("extensionDesc").innerHTML = "仲間を雇える上限が増えます。<br>（冒険に出発できる人数は最大4人です。）";
   // 次の家レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
   const nextLevel = level + 1;
-  const unlocksAtNextLevel = [];
-  if ((state.dojoLevel || 0) === 0 && nextLevel === DOJO_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("道場");
-  if (!state.magistrateLevel && nextLevel === MAGISTRATE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("奉行所");
-  if (!state.shopLevel && nextLevel === SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鍛冶屋");
-  if (!state.travelPrepShopLevel && nextLevel === TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅支度屋");
-  if (!state.bagShopLevel && nextLevel === BAG_SHOP_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鞄屋");
-  if (!state.watchtowerLevel && nextLevel === WATCHTOWER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("見張り台");
-  if (!state.stableLevel && nextLevel === STABLE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("馬屋");
-  if (!state.henHouseLevel && nextLevel === HEN_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("鶏小屋");
-  if (!state.teaHouseLevel && nextLevel === TEA_HOUSE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("茶屋");
-  if (!state.hotSpringKeeperLevel && nextLevel === HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("湯守屋");
-  if (!state.beeFarmLevel && nextLevel === BEE_FARM_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("養蜂場");
-  if (!state.shrineLevel && nextLevel === SHRINE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("神社");
-  if (!state.gunpowderStoreLevel && nextLevel === GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("火薬庫");
-  if (!state.karakuriLevel && nextLevel === KARAKURI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("からくり屋敷");
-  if (!state.ferryLevel && nextLevel === FERRY_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("渡し船");
-  if (!state.ryodankiLevel && nextLevel === RYODANKI_UNLOCK_HOUSE_LEVEL) unlocksAtNextLevel.push("旅団旗");
+  const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
   const btn = document.getElementById("extensionUpgradeBtn");
   const reasonEl = document.getElementById("extensionUpgradeReason");
   const nextSection = document.getElementById("extensionNextSection");
@@ -2017,118 +2085,8 @@ function renderExtension() {
       reasonEl.style.display = "";
     }
   }
-  const dojoLevel = state.dojoLevel || 0;
-  const dojoBtn = document.getElementById("dojoBuildBtn");
-  const dojoLocked = dojoLevel === 0 && level < DOJO_UNLOCK_HOUSE_LEVEL;
-  if (dojoLocked) {
-    dojoBtn.textContent = `家レベル${DOJO_UNLOCK_HOUSE_LEVEL}で解禁されます`;
-    dojoBtn.disabled = true;
-  } else if (dojoLevel >= DOJO_MAX_LEVEL) {
-    dojoBtn.textContent = "これ以上は増築できません(上限)";
-    dojoBtn.disabled = true;
-  } else if (dojoLevel === 0) {
-    dojoBtn.textContent = `建築する(${DOJO_LEVEL1_COST}G)`;
-    dojoBtn.disabled = state.gold < DOJO_LEVEL1_COST;
-  } else {
-    dojoBtn.textContent = `増築する(${DOJO_LEVEL2_COST}G) 分け前${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%→${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel + 1] * 100)}%`;
-    dojoBtn.disabled = state.gold < DOJO_LEVEL2_COST;
-  }
-  markBuildingNewBadge("dojoLevel", "dojoNewBadge", level >= DOJO_UNLOCK_HOUSE_LEVEL, dojoLevel >= 1);
-  setFacilityLockedState("dojo", dojoLocked);
-  renderSimpleBuilding("magistrateLevel", "magistrateBuildBtn", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST, level, "magistrateNewBadge");
-  renderSimpleBuilding("shopLevel", "shopBuildBtn", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST, level, "shopNewBadge");
-  renderSimpleBuilding("travelPrepShopLevel", "travelPrepShopBuildBtn", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST, level, "travelPrepShopNewBadge");
-  const bagShopLevel = state.bagShopLevel || 0;
-  const bagShopBtn = document.getElementById("bagShopBuildBtn");
-  const bagShopLocked = bagShopLevel === 0 && level < BAG_SHOP_UNLOCK_HOUSE_LEVEL;
-  if (bagShopLocked) {
-    bagShopBtn.textContent = `家レベル${BAG_SHOP_UNLOCK_HOUSE_LEVEL}で解禁されます`;
-    bagShopBtn.disabled = true;
-  } else if (bagShopLevel >= BAG_SHOP_MAX_LEVEL) {
-    bagShopBtn.textContent = "これ以上は増築できません(上限)";
-    bagShopBtn.disabled = true;
-  } else if (bagShopLevel === 0) {
-    bagShopBtn.textContent = `建築する(${BAG_SHOP_LEVEL1_COST}G)`;
-    bagShopBtn.disabled = state.gold < BAG_SHOP_LEVEL1_COST;
-  } else {
-    const nextCost = bagShopLevel === 1 ? BAG_SHOP_LEVEL2_COST : BAG_SHOP_LEVEL3_COST;
-    bagShopBtn.textContent = `増築する(${nextCost}G) 所持上限${supplyCap()}→${supplyCap() + 1}個`;
-    bagShopBtn.disabled = state.gold < nextCost;
-  }
-  markBuildingNewBadge("bagShopLevel", "bagShopNewBadge", level >= BAG_SHOP_UNLOCK_HOUSE_LEVEL, bagShopLevel >= 1);
-  setFacilityLockedState("bagShop", bagShopLocked);
-  renderSimpleBuilding("watchtowerLevel", "watchtowerBuildBtn", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST, level, "watchtowerNewBadge", true);
-  renderSimpleBuilding("shrineLevel", "shrineBuildBtn", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST, level, "shrineNewBadge");
-  renderSimpleBuilding("gunpowderStoreLevel", "gunpowderStoreBuildBtn", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST, level, "gunpowderStoreNewBadge");
-  renderSimpleBuilding("karakuriLevel", "karakuriBuildBtn", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST, level, "karakuriNewBadge");
-  renderSimpleBuilding("hotSpringKeeperLevel", "hotSpringKeeperBuildBtn", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST, level, "hotSpringKeeperNewBadge");
-  renderSimpleBuilding("teaHouseLevel", "teaHouseBuildBtn", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST, level, "teaHouseNewBadge");
-  renderSimpleBuilding("stableLevel", "stableBuildBtn", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST, level, "stableNewBadge", true);
-  renderSimpleBuilding("ferryLevel", "ferryBuildBtn", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST, level, "ferryNewBadge", true);
-  renderSimpleBuilding("ryodankiLevel", "ryodankiBuildBtn", RYODANKI_UNLOCK_HOUSE_LEVEL, RYODANKI_COST, level, "ryodankiNewBadge");
-  // 鶏小屋/養蜂場は道場と同じ多段階建築(段階ごとに効果が伸びる)なので、renderSimpleBuildingでは表現できず個別に描画する
-  const henHouseLevel = state.henHouseLevel || 0;
-  const henHouseBtn = document.getElementById("henHouseBuildBtn");
-  const henHouseLocked = henHouseLevel === 0 && level < HEN_HOUSE_UNLOCK_HOUSE_LEVEL;
-  if (henHouseLocked) {
-    henHouseBtn.textContent = `家レベル${HEN_HOUSE_UNLOCK_HOUSE_LEVEL}で解禁されます`;
-    henHouseBtn.disabled = true;
-  } else if (henHouseLevel >= HEN_HOUSE_MAX_LEVEL) {
-    henHouseBtn.textContent = "これ以上は増築できません(上限)";
-    henHouseBtn.disabled = true;
-  } else if (henHouseLevel === 0) {
-    henHouseBtn.textContent = `建築する(${HEN_HOUSE_COST}G) 温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100)}%`;
-    henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
-  } else {
-    henHouseBtn.textContent = `増築する(${HEN_HOUSE_COST}G) 温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * henHouseLevel)}%→+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * (henHouseLevel + 1))}%`;
-    henHouseBtn.disabled = state.gold < HEN_HOUSE_COST;
-  }
-  markBuildingNewBadge("henHouseLevel", "henHouseNewBadge", level >= HEN_HOUSE_UNLOCK_HOUSE_LEVEL, henHouseLevel >= 1);
-  setFacilityLockedState("henHouse", henHouseLocked);
-  const beeFarmLevel = state.beeFarmLevel || 0;
-  const beeFarmBtn = document.getElementById("beeFarmBuildBtn");
-  const beeFarmLocked = beeFarmLevel === 0 && level < BEE_FARM_UNLOCK_HOUSE_LEVEL;
-  if (beeFarmLocked) {
-    beeFarmBtn.textContent = `家レベル${BEE_FARM_UNLOCK_HOUSE_LEVEL}で解禁されます`;
-    beeFarmBtn.disabled = true;
-  } else if (beeFarmLevel >= BEE_FARM_MAX_LEVEL) {
-    beeFarmBtn.textContent = "これ以上は増築できません(上限)";
-    beeFarmBtn.disabled = true;
-  } else if (beeFarmLevel === 0) {
-    beeFarmBtn.textContent = `建築する(${BEE_FARM_COST}G) 回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100)}%`;
-    beeFarmBtn.disabled = state.gold < BEE_FARM_COST;
-  } else {
-    beeFarmBtn.textContent = `増築する(${BEE_FARM_COST}G) 回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * beeFarmLevel)}%→+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * (beeFarmLevel + 1))}%`;
-    beeFarmBtn.disabled = state.gold < BEE_FARM_COST;
-  }
-  markBuildingNewBadge("beeFarmLevel", "beeFarmNewBadge", level >= BEE_FARM_UNLOCK_HOUSE_LEVEL, beeFarmLevel >= 1);
-  setFacilityLockedState("beeFarm", beeFarmLocked);
-  groupFacilityBlocks(level);
+  renderBuildingGrid(level);
   saveState();
-}
-// 奉行所/鞄屋/見張り台/馬屋は全て「家レベルで解禁→1回建築したら終わり(レベル1のみ)」という
-// 同じ形の建物なので、表示更新の共通処理をまとめている
-// underConstruction: trueの施設は解禁済みでも購入ボタンを常に無効化し「工事中」表示にする
-// (まだ効果を実装していない建物を、それと分かる形で一旦購入不可にしておくためのフラグ)
-function renderSimpleBuilding(stateKey, btnId, unlockHouseLevel, cost, houseLevel, badgeId, underConstruction) {
-  const built = (state[stateKey] || 0) >= 1;
-  const btn = document.getElementById(btnId);
-  const unlocked = houseLevel >= unlockHouseLevel;
-  if (!built && !unlocked) {
-    btn.textContent = `家レベル${unlockHouseLevel}で解禁されます`;
-    btn.disabled = true;
-  } else if (built) {
-    btn.textContent = "建築済み";
-    btn.disabled = true;
-  } else if (underConstruction) {
-    btn.textContent = "工事中のため購入できません";
-    btn.disabled = true;
-  } else {
-    btn.textContent = `建築する(${cost}G)`;
-    btn.disabled = state.gold < cost;
-  }
-  if (badgeId) markBuildingNewBadge(stateKey, badgeId, unlocked, built);
-  setFacilityLockedState(stateKey.replace(/Level$/, ""), !built && !unlocked);
 }
 // ============ 建築/増築の完了演出 ============
 // 職業解放を伴う建築(からくり屋敷/火薬庫/神社/道場の初回建築)は、通常の建築演出の代わりに
@@ -2192,15 +2150,14 @@ function showBuildCompleteOverlay(icon, title, name, effectLines, imageSrc) {
     overlay.style.display = "none";
   };
 }
-// 新規建築完了(職業解放を伴わない場合のみ呼ばれる)。施設一覧の説明文をそのまま効果表示に流用する
+// 新規建築完了(職業解放を伴わない場合のみ呼ばれる)。BUILDING_DEFSの説明文をそのまま効果表示に流用する
 function showBuildCompleteForNewFacility(stateKey) {
   const info = FACILITY_DISPLAY[stateKey];
   if (!info) return;
-  const block = document.getElementById("facilityBlock-" + stateKey.replace(/Level$/, ""));
-  const desc = block ? block.querySelector(".facility-desc").textContent : "";
-  showBuildCompleteOverlay(info.icon, "建築完了！", `${info.name} 完成`, [desc]);
+  const def = BUILDING_DEFS.find((d) => d.levelField === stateKey);
+  showBuildCompleteOverlay(info.icon, "建築完了！", `${info.name} 完成`, [def ? def.desc : ""]);
 }
-// 施設強化完了(家・道場の2段階目)。今回増えた効果の差分だけを表示する
+// 施設強化完了(家・道場の2段階目等)。今回増えた効果の差分だけを表示する
 function showBuildCompleteForUpgrade(stateKey, newLevel, deltaLines) {
   const info = FACILITY_DISPLAY[stateKey];
   if (!info) return;
@@ -2213,17 +2170,28 @@ function showClassUnlockCelebration(classId) {
   // (CLASS_STATUS_PORTRAIT、本来はステータス詳細画面専用)をこの演出だけ使い回す
   showBuildCompleteOverlay(null, "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"], CLASS_STATUS_PORTRAIT[classId]);
 }
-function buildSimpleBuilding(stateKey, unlockHouseLevel, cost) {
-  const built = (state[stateKey] || 0) >= 1;
+// 建築/増築の共通処理。全16施設がこの1つの関数で完結する(costsが1要素なら単発建築のみ、
+// 複数要素なら道場/鞄屋/養蜂場/鶏小屋のような多段階建築になる)
+function buildOrUpgradeBuilding(key) {
+  const def = BUILDING_DEFS.find((d) => d.key === key);
+  if (!def) return;
+  const lv = state[def.levelField] || 0;
   const houseLevel = state.houseLevel || 1;
-  if (built || houseLevel < unlockHouseLevel || state.gold < cost) return;
+  if (lv >= def.costs.length) return;
+  if (lv === 0 && houseLevel < def.unlock) return;
+  const cost = def.costs[lv];
+  if (state.gold < cost) return;
   state.gold -= cost;
-  state[stateKey] = 1;
+  state[def.levelField] = lv + 1;
   saveState();
   renderExtension();
-  const unlockedClassId = Object.keys(CLASS_UNLOCK_BUILDING).find((cid) => CLASS_UNLOCK_BUILDING[cid] === stateKey);
-  if (unlockedClassId) showClassUnlockCelebration(unlockedClassId);
-  else showBuildCompleteForNewFacility(stateKey);
+  if (lv === 0) {
+    if (def.classUnlock) showClassUnlockCelebration(def.classUnlock);
+    else showBuildCompleteForNewFacility(def.levelField);
+  } else {
+    const deltaLine = def.levelEffect ? `${def.levelEffectLabel}${def.levelEffect(lv)}→${def.levelEffect(lv + 1)}` : null;
+    showBuildCompleteForUpgrade(def.levelField, state[def.levelField], [deltaLine].filter(Boolean));
+  }
 }
 document.getElementById("extensionUpgradeBtn").onclick = () => {
   const level = state.houseLevel || 1;
@@ -2237,69 +2205,6 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   renderExtension();
   showBuildCompleteForUpgrade("houseLevel", state.houseLevel, [`仲間上限 ${capBefore}→${rosterCapacity()}人`]);
 };
-document.getElementById("dojoBuildBtn").onclick = () => {
-  const dojoLevel = state.dojoLevel || 0;
-  if (dojoLevel >= DOJO_MAX_LEVEL) return;
-  if (dojoLevel === 0 && (state.houseLevel || 1) < DOJO_UNLOCK_HOUSE_LEVEL) return;
-  const cost = dojoLevel === 0 ? DOJO_LEVEL1_COST : DOJO_LEVEL2_COST;
-  if (state.gold < cost) return;
-  state.gold -= cost;
-  state.dojoLevel = dojoLevel + 1;
-  saveState();
-  renderExtension();
-  if (dojoLevel === 0) showClassUnlockCelebration("naginata"); // 道場の初回建築は薙刀士の解放を伴う
-  else showBuildCompleteForUpgrade("dojoLevel", state.dojoLevel, [`分け前 ${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel] * 100)}%→${Math.round(DOJO_XP_SHARE_BY_LEVEL[dojoLevel + 1] * 100)}%`]);
-};
-document.getElementById("magistrateBuildBtn").onclick = () => buildSimpleBuilding("magistrateLevel", MAGISTRATE_UNLOCK_HOUSE_LEVEL, MAGISTRATE_COST);
-document.getElementById("shopBuildBtn").onclick = () => buildSimpleBuilding("shopLevel", SHOP_UNLOCK_HOUSE_LEVEL, SHOP_COST);
-document.getElementById("travelPrepShopBuildBtn").onclick = () => buildSimpleBuilding("travelPrepShopLevel", TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, TRAVEL_PREP_SHOP_COST);
-document.getElementById("bagShopBuildBtn").onclick = () => {
-  const bagShopLevel = state.bagShopLevel || 0;
-  if (bagShopLevel >= BAG_SHOP_MAX_LEVEL) return;
-  if (bagShopLevel === 0 && (state.houseLevel || 1) < BAG_SHOP_UNLOCK_HOUSE_LEVEL) return;
-  const cost = bagShopLevel === 0 ? BAG_SHOP_LEVEL1_COST : (bagShopLevel === 1 ? BAG_SHOP_LEVEL2_COST : BAG_SHOP_LEVEL3_COST);
-  if (state.gold < cost) return;
-  const capBefore = supplyCap();
-  state.gold -= cost;
-  state.bagShopLevel = bagShopLevel + 1;
-  saveState();
-  renderExtension();
-  if (bagShopLevel === 0) showBuildCompleteForNewFacility("bagShopLevel"); // 初回建築(鞄屋自体はどの職業も解禁しない)
-  else showBuildCompleteForUpgrade("bagShopLevel", state.bagShopLevel, [`所持上限 ${capBefore}→${supplyCap()}個`]);
-};
-document.getElementById("watchtowerBuildBtn").onclick = () => buildSimpleBuilding("watchtowerLevel", WATCHTOWER_UNLOCK_HOUSE_LEVEL, WATCHTOWER_COST);
-document.getElementById("stableBuildBtn").onclick = () => buildSimpleBuilding("stableLevel", STABLE_UNLOCK_HOUSE_LEVEL, STABLE_COST);
-document.getElementById("henHouseBuildBtn").onclick = () => {
-  const henHouseLevel = state.henHouseLevel || 0;
-  if (henHouseLevel >= HEN_HOUSE_MAX_LEVEL) return;
-  if (henHouseLevel === 0 && (state.houseLevel || 1) < HEN_HOUSE_UNLOCK_HOUSE_LEVEL) return;
-  if (state.gold < HEN_HOUSE_COST) return;
-  state.gold -= HEN_HOUSE_COST;
-  state.henHouseLevel = henHouseLevel + 1;
-  saveState();
-  renderExtension();
-  if (henHouseLevel === 0) showBuildCompleteForNewFacility("henHouseLevel");
-  else showBuildCompleteForUpgrade("henHouseLevel", state.henHouseLevel, [`温泉卵+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * henHouseLevel)}%→+${Math.round(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL * 100 * (henHouseLevel + 1))}%`]);
-};
-document.getElementById("teaHouseBuildBtn").onclick = () => buildSimpleBuilding("teaHouseLevel", TEA_HOUSE_UNLOCK_HOUSE_LEVEL, TEA_HOUSE_COST);
-document.getElementById("hotSpringKeeperBuildBtn").onclick = () => buildSimpleBuilding("hotSpringKeeperLevel", HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, HOT_SPRING_KEEPER_COST);
-document.getElementById("beeFarmBuildBtn").onclick = () => {
-  const beeFarmLevel = state.beeFarmLevel || 0;
-  if (beeFarmLevel >= BEE_FARM_MAX_LEVEL) return;
-  if (beeFarmLevel === 0 && (state.houseLevel || 1) < BEE_FARM_UNLOCK_HOUSE_LEVEL) return;
-  if (state.gold < BEE_FARM_COST) return;
-  state.gold -= BEE_FARM_COST;
-  state.beeFarmLevel = beeFarmLevel + 1;
-  saveState();
-  renderExtension();
-  if (beeFarmLevel === 0) showBuildCompleteForNewFacility("beeFarmLevel");
-  else showBuildCompleteForUpgrade("beeFarmLevel", state.beeFarmLevel, [`回復薬+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * beeFarmLevel)}%→+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * (beeFarmLevel + 1))}%`]);
-};
-document.getElementById("shrineBuildBtn").onclick = () => buildSimpleBuilding("shrineLevel", SHRINE_UNLOCK_HOUSE_LEVEL, SHRINE_COST);
-document.getElementById("gunpowderStoreBuildBtn").onclick = () => buildSimpleBuilding("gunpowderStoreLevel", GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, GUNPOWDER_STORE_COST);
-document.getElementById("karakuriBuildBtn").onclick = () => buildSimpleBuilding("karakuriLevel", KARAKURI_UNLOCK_HOUSE_LEVEL, KARAKURI_COST);
-document.getElementById("ferryBuildBtn").onclick = () => buildSimpleBuilding("ferryLevel", FERRY_UNLOCK_HOUSE_LEVEL, FERRY_COST);
-document.getElementById("ryodankiBuildBtn").onclick = () => buildSimpleBuilding("ryodankiLevel", RYODANKI_UNLOCK_HOUSE_LEVEL, RYODANKI_COST);
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
 document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); renderMagistrateScreen(); };
 document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
