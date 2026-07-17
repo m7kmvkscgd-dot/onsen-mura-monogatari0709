@@ -360,7 +360,8 @@ function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, sho
     `;
   }).join("");
   panel.style.display = "flex";
-  activateHpTrails(list);
+  // 一拍(0.9秒)おいてから0.9秒かけてゆっくり伸ばす(回復している感を出すためのユーザー指示)
+  activateHpTrails(list, { delayMs: 900, durationMs: 900 });
   document.getElementById(nextBtnId).onclick = () => {
     panel.style.display = "none";
     onNext();
@@ -421,21 +422,37 @@ function hpBarHtml(entity) {
 // (実測したところheadless Chromiumでも)トランジションが一切発火せず一瞬で目標値に飛んでしまう
 // ことがあったため、Web Animations API(element.animate())で確実にアニメーションさせる方式にした。
 // 回復用ゲージは追いついたら(アニメーション完了時)非表示にする
-function activateHpTrails(container) {
+// opts(省略可): { delayMs, durationMs } — 回復サマリー(宿泊/野営/茶屋)だけは「一拍おいてから
+// ゆっくり回復」の演出にしたい(ユーザー指示2026-07-18: 即始まると回復している感じが分かりにくい)ため、
+// 開始遅延と伸びる時間を呼び出し側から指定できるようにした。未指定なら従来どおり即時250ms
+function activateHpTrails(container, opts) {
   const HP_TRAIL_MS = 250;
+  const delayMs = (opts && opts.delayMs) || 0;
+  const durationMs = (opts && opts.durationMs) || HP_TRAIL_MS;
   const trails = container.querySelectorAll("[data-hp-trail]");
   const healTrails = container.querySelectorAll("[data-hp-heal-trail]");
   trails.forEach((el) => {
     const from = Number(el.dataset.from);
     const target = Number(el.dataset.target);
     if (from === target) return;
-    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: HP_TRAIL_MS, easing: "ease-out", fill: "forwards" });
+    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: durationMs, delay: delayMs, easing: "ease-out", fill: "forwards" });
     anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; };
   });
   healTrails.forEach((el) => {
     const from = Number(el.dataset.from);
     const target = Number(el.dataset.target);
-    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: HP_TRAIL_MS, easing: "ease-out", fill: "forwards" });
+    // 遅延ありの時は、待っている間バー全体が「回復前の量」に見えている必要がある。
+    // 完成形の緑/青バー(.hpbar-fill/.mpbar-fill)は描画時点で回復後の値になっているため、
+    // いったんfromまで戻してからトレイルと同じタイミングで一緒に伸ばす
+    if (delayMs > 0) {
+      const fillEl = el.parentElement.querySelector(".hpbar-fill, .mpbar-fill");
+      if (fillEl) {
+        fillEl.style.width = `${from}%`;
+        const fillAnim = fillEl.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: durationMs, delay: delayMs, easing: "ease-out", fill: "forwards" });
+        fillAnim.onfinish = () => { fillAnim.cancel(); fillEl.style.width = `${target}%`; };
+      }
+    }
+    const anim = el.animate([{ width: `${from}%` }, { width: `${target}%` }], { duration: durationMs, delay: delayMs, easing: "ease-out", fill: "forwards" });
     anim.onfinish = () => { anim.cancel(); el.style.width = `${target}%`; el.style.display = "none"; };
   });
 }
