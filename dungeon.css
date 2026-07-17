@@ -491,13 +491,28 @@
   body.dungeon-event-active #dungeonPartyBar { opacity: 0.25; }
   /* 進路選択(0.23)より一段暗くして、モーダルの文字を読みやすくする */
   body.dungeon-event-active::before { background: rgba(0,0,0,0.5); }
+  /* 【重要】このパネルの祖先(.dungeon-top)はtransformを持つため、position:fixedの基準が
+     ビューポートではなく.dungeon-topになる(CSSの仕様)。top:50%のような%指定は
+     .dungeon-topの小さな箱(176px)基準になってしまい、実機でパネルが右下へ大きくズレて
+     半分画面外に出ていた(ユーザー報告2026-07-18)。そこで:
+     - 縦: ビューポート基準の長さになるdvh単位(top:50dvh)+自身の高さ基準のtranslateY(-50%)で画面中央へ
+     - 横: .dungeon-topはゲーム列(max480px)いっぱい・中央揃えなので、left:50%+translateX(-50%)でそのまま列中央 */
   body.dungeon-event-active .dungeon-event-panel {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) translateZ(0);
+    position: fixed; top: 50dvh; left: 50%; transform: translate(-50%, -50%) translateZ(0);
     width: min(92vw, 400px); max-height: 84dvh; overflow-y: auto; z-index: 6;
     margin: 0; padding: 0.9rem 0.9rem 1rem;
     background: linear-gradient(180deg, rgba(26,22,18,0.97), rgba(12,11,9,0.96));
     border: 1px solid var(--accent); border-radius: var(--radius-lg);
     box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    /* 【重要】土台の.path-choice-panelが持つ登場アニメーション(pathChoiceFadeIn、fill:forwards)は
+       終了後もtransform:translateY(0)を保持し続け、上のtransform(-50%,-50%)を上書きしてしまう
+       (アニメーションは通常宣言より優先されるため)。これが実機でパネルが右下へズレて
+       半分画面外に出ていたもう一つの原因。中央寄せのtransformを含んだ専用の登場アニメで置き換える */
+    animation: dungeonEventPanelIn 0.2s ease forwards;
+  }
+  @keyframes dungeonEventPanelIn {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) translateZ(0); }
+    to { opacity: 1; transform: translate(-50%, -50%) translateZ(0); }
   }
 
   /* ============ 光る道の財宝発見・豪華演出 ============ */
