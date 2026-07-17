@@ -32,24 +32,35 @@ function playExplorationAreaBgm() {
 // 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)。
 // 中ボス(battle.enemies内にMID_BOSS_BGM_IDSの敵が1体でもいる場合)はmid_boss_battle、
 // それ以外のボス(最終ボス・序盤緊急依頼ボス、isBoss:true)はboss_battleを、森・海岸問わず優先する
+// 討伐依頼の追跡(state.acceptedQuest.chasing)またはボス追撃モード(bossPursuit)の最中は、
+// 接敵→逃走/被追跡→再遭遇の間ずっと同じ相手との決着がついていないため、再遭遇のたびに
+// ボス曲を頭出しし直さず、途切れず流れ続けているBGMをそのまま続投させる
+// (ユーザー指摘: 大猪の追跡戦で再戦するたびに曲が最初から再生されてしまっていた不具合の対応)
+function isContinuingBossChase() {
+  return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit);
+}
 function playBattleBgm() {
+  const continuingChase = isContinuingBossChase();
   if (battle && battle.enemies && battle.enemies.some((e) => MID_BOSS_BGM_IDS.has(e.id))) {
+    if (continuingChase && currentBgmKey === "mid_boss_battle") { playBgm("mid_boss_battle"); return; }
     battleBgmFadeToken++;
     currentBgmKey = null;
-    bgmPositions.mid_boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い)
+    bgmPositions.mid_boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い、ただし追跡継続中を除く)
     playBgm("mid_boss_battle");
     return;
   }
   if (battle && battle.enemies && battle.enemies.some((e) => e.isBoss)) {
+    if (continuingChase && currentBgmKey === "boss_battle") { playBgm("boss_battle"); return; }
     battleBgmFadeToken++;
     currentBgmKey = null;
-    bgmPositions.boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い)
+    bgmPositions.boss_battle = 0; // ボス戦は毎回頭から再生する(coast_battleと同じ扱い、ただし追跡継続中を除く)
     playBgm("boss_battle");
     return;
   }
   // 奉行所の討伐依頼対象(🎯、isQuestTarget)との戦闘専用BGM。中ボス/ボス(isBoss:trueの依頼対象も
   // 含む)は上の2つの分岐で既に処理済みのため、ここに来る時点でボス級ではないと確定している
   if (battle && battle.enemies && battle.enemies.some((e) => e.isQuestTarget)) {
+    if (continuingChase && currentBgmKey === "quest_target_battle") { playBgm("quest_target_battle"); return; }
     battleBgmFadeToken++;
     currentBgmKey = null;
     bgmPositions.quest_target_battle = 0;
@@ -296,9 +307,7 @@ function isBossBgmActive() {
   return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle" || currentBgmKey === "quest_target_battle";
 }
 function shouldKeepBossBgmOnFlee() {
-  // 討伐依頼の追跡(state.acceptedQuest.chasing)に加え、ボス追撃モード(bossPursuit、
-  // dungeon.jsのボス自主逃走)中も同じ理由でボス戦BGMを止めずに流し続ける
-  return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit) && isBossBgmActive();
+  return isContinuingBossChase() && isBossBgmActive();
 }
 function stopBattleBgm() {
   if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle") return;

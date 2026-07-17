@@ -1025,7 +1025,7 @@ function renderFirstCharacterCard() {
   };
 }
 
-const HIRE_COST = 50; // 新しい冒険者を仲間にする際の費用
+const HIRE_COST = 30; // 新しい冒険者を仲間にする際の費用
 // 最初に仲間にする人数分は性格が誰とも被らないようにする。ACTIVE_PERSONALITIES(現在9種、
 // 「世話好き」を除外中)を使い切ったら(10人目以降)完全ランダムに戻る
 function pickNonDuplicatePersonality() {

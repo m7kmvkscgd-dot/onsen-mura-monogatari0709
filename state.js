@@ -3,7 +3,7 @@
 
 function defaultState() {
   return {
-    gold: 170,
+    gold: 150,
     roster: [],
     activePartyIds: [],
     inventory: {
