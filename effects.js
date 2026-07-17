@@ -402,6 +402,57 @@ function playEnemyDefeatReaction(entity, card) {
   };
 }
 
+// ============ 吹き出しテキストの自動改行整形 ============
+// .speech-bubbleはmax-width:150px(全角約11文字)で成り行き折り返しになるため、15文字前後のセリフが
+// 「11文字+4文字」のような不格好な位置で割れてしまう。表示直前に「文章として自然な切れ目」へ
+// 明示的な改行(\n + white-space:pre-line)を入れて整える。データ側(セリフtxt等)は一切変更しない
+const BUBBLE_LINE_MAX = 11; // 全角換算で1行に収まる文字数(150px ÷ 0.72rem)
+const BUBBLE_BREAK_PUNCT = "、。!！?？…」〜 　"; // この直後が最優先の改行位置(のんびり口調の「〜」と空白も含む)
+const BUBBLE_BREAK_PARTICLES = "はがをにでとものへねよて"; // 助詞・接続の「て」の直後は次点の改行位置
+// 「て/で」の直後がこれらだと助詞ではなく単語の途中の可能性が高い(てる/てた/できる/ていく等)ので折らない
+const BUBBLE_TE_DE_NG_NEXT = "るたないてでちじきしすせ";
+const BUBBLE_HEAD_FORBIDDEN = "、。!！?？…」ーっんらゃゅょぁぃぅぇぉ゛゜〜 　"; // 行頭禁則(この文字で行を始めない)
+function bubbleTextWidth(str) {
+  let w = 0;
+  for (const ch of str) w += ch.codePointAt(0) <= 0xff ? 0.5 : 1; // 半角は0.5文字扱い
+  return w;
+}
+function formatSpeechBubbleText(text) {
+  if (!text || text.includes("\n")) return text;
+  const chars = [...text];
+  const total = bubbleTextWidth(text);
+  // 1行に収まるならそのまま。逆に2行にも収まらない長文は下手にいじらずCSSの成り行きに任せる
+  if (total <= BUBBLE_LINE_MAX || total > BUBBLE_LINE_MAX * 2) return text;
+  let bestPunct = null;
+  let bestParticle = null;
+  for (let i = 2; i <= chars.length - 2; i++) {
+    const prev = chars[i - 1];
+    const next = chars[i];
+    if (BUBBLE_HEAD_FORBIDDEN.includes(next)) continue;
+    if (prev === "「") continue; // 行末に開きかっこを残さない
+    if (prev === "っ") continue; // 「言っ|て」のような促音直後で折らない
+    if ((prev === "て" || prev === "で") && BUBBLE_TE_DE_NG_NEXT.includes(next)) continue;
+    const left = bubbleTextWidth(chars.slice(0, i).join(""));
+    const right = total - left;
+    if (left > BUBBLE_LINE_MAX || right > BUBBLE_LINE_MAX || left < 2 || right < 2) continue;
+    const imbalance = Math.abs(left - right); // 2行の長さが揃うほど良い
+    if (BUBBLE_BREAK_PUNCT.includes(prev)) {
+      if (!bestPunct || imbalance < bestPunct.imbalance) bestPunct = { i, imbalance };
+    } else if (BUBBLE_BREAK_PARTICLES.includes(prev) && !BUBBLE_BREAK_PARTICLES.includes(next)) {
+      if (!bestParticle || imbalance < bestParticle.imbalance) bestParticle = { i, imbalance };
+    }
+  }
+  // 句読点・記号の直後があれば(多少長さが偏っても)そちらを優先。無ければ最も中央に近い助詞の直後
+  const joinAt = (i) => chars.slice(0, i).join("").replace(/[ 　]+$/, "") + "\n" + chars.slice(i).join("").replace(/^[ 　]+/, "");
+  const chosen = bestPunct || bestParticle;
+  if (chosen) return joinAt(chosen.i);
+  // 自然な切れ目が無い場合は中央で折る(行頭禁則の文字が来たら右へずらす)
+  let mid = Math.round(chars.length / 2);
+  while (mid < chars.length - 1 && (BUBBLE_HEAD_FORBIDDEN.includes(chars[mid]) || chars[mid - 1] === "「" || chars[mid - 1] === "っ")) mid++;
+  if (mid <= 1 || mid >= chars.length) return text;
+  return joinAt(mid);
+}
+
 function renderVfxFor(targetId) {
   const el = findVisibleCard(targetId);
   if (!el) return;
@@ -443,7 +494,7 @@ function renderVfxFor(targetId) {
       if (existingBubble) existingBubble.remove();
       const bubble = document.createElement("div");
       bubble.className = "speech-bubble";
-      bubble.textContent = entity.__speechText;
+      bubble.textContent = formatSpeechBubbleText(entity.__speechText);
       bubble.dataset.speechId = targetId;
       bubble.dataset.speechAt = String(speechAtSnapshot);
       layer.appendChild(bubble);
