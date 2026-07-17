@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>せりふくん(軽度ストレス)</title>
+<style>
+  :root {
+    --bg: #1c1a22;
+    --card-bg: #2a2733;
+    --text: #f0ecf5;
+    --sub: #a89fb5;
+    --accent: #e6c977;
+    --tired-bg: #4a2530;
+    --tired-border: #d16b7a;
+    --energetic-bg: #1f3d33;
+    --energetic-border: #5fbf94;
+    --adopt: #4caf7d;
+    --reject: #d9576a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 4px;
+    flex: 0 0 auto;
+  }
+  .topbar-left {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  .topbar-right {
+    display: flex;
+    gap: 6px;
+  }
+  .topbar-right button {
+    background: #3a3646;
+    color: var(--text);
+    border: 1px solid #4c4759;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .progress-wrap {
+    flex: 0 0 auto;
+    padding: 2px 12px 8px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #3a3646;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .stats {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--sub);
+    text-align: center;
+  }
+  .card-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    padding: 4px 12px;
+  }
+  .card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 10px 12px;
+  }
+  .card-meta {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #3a3646;
+    color: var(--sub);
+    white-space: nowrap;
+  }
+  .badge-id { color: var(--accent); }
+  .bubbles {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    overflow: hidden;
+    padding: 4px 2px;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.4;
+    border: 2px solid;
+    word-break: break-word;
+  }
+  .bubble-a { align-self: flex-start; border-bottom-left-radius: 3px; }
+  .bubble-b { align-self: flex-end; border-bottom-right-radius: 3px; text-align: right; }
+  .bubble.mood-tired { background: var(--tired-bg); border-color: var(--tired-border); }
+  .bubble.mood-energetic { background: var(--energetic-bg); border-color: var(--energetic-border); }
+  .chars {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    gap: 4%;
+    height: 34dvh;
+    max-height: 260px;
+  }
+  .char-slot {
+    width: 42%;
+    max-width: 180px;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: flex-end;
+  }
+  .char-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+  }
+  .empty-state {
+    margin: auto;
+    color: var(--sub);
+    font-size: 16px;
+    text-align: center;
+  }
+  .action-bar {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .action-bar button {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .btn-back { flex: 0.7 !important; background: #4c4759; color: var(--text); }
+  .btn-reject { background: var(--reject); }
+  .btn-adopt { background: var(--adopt); }
+  .action-bar button:disabled { opacity: 0.4; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .overlay-panel {
+    width: 100%;
+    max-width: 480px;
+    max-height: 80dvh;
+    background: var(--card-bg);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .overlay-header {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid #3a3646;
+    font-weight: bold;
+  }
+  .overlay-header button {
+    background: #3a3646;
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 14px;
+  }
+  .history-empty {
+    color: var(--sub);
+    text-align: center;
+    padding: 20px 0;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    border-bottom: 1px solid #3a3646;
+    font-size: 13px;
+  }
+  .history-icon { font-size: 16px; width: 20px; text-align: center; }
+  .history-item.adopt .history-icon { color: var(--adopt); }
+  .history-item.reject .history-icon { color: var(--reject); }
+  .history-id { color: var(--sub); flex: 0 0 auto; }
+  .history-preview {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #exportText {
+    width: 100%;
+    height: 40dvh;
+    background: #1c1a22;
+    color: var(--text);
+    border: 1px solid #3a3646;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    resize: none;
+  }
+  #btnCopyExport {
+    margin-top: 8px;
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #2a2733;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .export-empty { color: var(--sub); text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">せりふくん(軽度ストレス)</div>
+    <div class="topbar-right">
+      <button id="btnHistory">履歴</button>
+      <button id="btnExport">出力</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="stats" id="statsText"></div>
+  </div>
+
+  <div class="card-area" id="cardArea"></div>
+
+  <div class="action-bar">
+    <button id="btnBack" class="btn-back">← 戻る</button>
+    <button id="btnReject" class="btn-reject">✕ 没</button>
+    <button id="btnAdopt" class="btn-adopt">◯ 採用</button>
+  </div>
+</div>
+
+<div class="overlay" id="historyOverlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <span>履歴</span>
+      <button id="btnCloseHistory">閉じる</button>
+    </div>
+    <div class="overlay-body" id="historyList"></div>
+  </div>
+</div>
+
+<div class="overlay" id="exportOverlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <span>出力(採用分)</span>
+      <button id="btnCloseExport">閉じる</button>
+    </div>
+    <div class="overlay-body">
+      <textarea id="exportText" readonly></textarea>
+      <button id="btnCopyExport">クリップボードにコピー</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// せりふくん(軽度ストレス) - セリフ判定システム
+// LINESデータは「続き」ワークフローでこの配列に追記していく(ID連番継続)。
+// 1件の形式: { id, pair:[性格A,性格B], mood:"bothTired"|"aTiredBEnergetic"|"aEnergeticBTired",
+//              lines:[{speaker:"A"|"B", text:"..."}, ...] } (lines は2〜3件)
+// ============================================================
+const LINES = [
+];
+
+const STORAGE_KEY = "serifuKunState";
+const TIRED_IMG = { samurai: "images/侍軽度2.PNG", hunter: "images/狩人軽度.PNG" };
+const ENERGETIC_IMG = { samurai: "images/侍普通.PNG", hunter: "images/狩人普通.PNG" };
+const MOOD_LABEL = {
+  bothTired: "両者疲弊",
+  aTiredBEnergetic: "A疲弊 / B元気",
+  aEnergeticBTired: "A元気 / B疲弊",
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { judgments: {}, history: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      judgments: parsed.judgments || {},
+      history: parsed.history || [],
+    };
+  } catch (e) {
+    return { judgments: {}, history: [] };
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function currentCard() {
+  return LINES.find(l => !(l.id in state.judgments));
+}
+
+function moodFlags(mood) {
+  if (mood === "bothTired") return { aTired: true, bTired: true };
+  if (mood === "aTiredBEnergetic") return { aTired: true, bTired: false };
+  if (mood === "aEnergeticBTired") return { aTired: false, bTired: true };
+  return { aTired: false, bTired: false };
+}
+
+function pickCharacterAssignment() {
+  return {
+    samuraiIsA: Math.random() < 0.5,
+    samuraiOnLeft: Math.random() < 0.5,
+  };
+}
+
+function renderCard() {
+  const cardArea = document.getElementById("cardArea");
+
+  if (LINES.length === 0) {
+    cardArea.innerHTML = '<div class="empty-state">まだセリフがありません</div>';
+    return;
+  }
+
+  const card = currentCard();
+  if (!card) {
+    cardArea.innerHTML = '<div class="empty-state">判定完了<br><span style="font-size:13px;">「出力」でダウンロードしてから<br>Claude Codeに「続き」と伝えてください</span></div>';
+    return;
+  }
+
+  const { aTired, bTired } = moodFlags(card.mood);
+  const { samuraiIsA, samuraiOnLeft } = pickCharacterAssignment();
+
+  const leftChar = samuraiOnLeft ? "samurai" : "hunter";
+  const rightChar = samuraiOnLeft ? "hunter" : "samurai";
+  const leftSpeaker = (leftChar === "samurai") === samuraiIsA ? "A" : "B";
+  const rightSpeaker = leftSpeaker === "A" ? "B" : "A";
+  const leftTired = leftSpeaker === "A" ? aTired : bTired;
+  const rightTired = rightSpeaker === "A" ? aTired : bTired;
+  const leftImg = (leftTired ? TIRED_IMG : ENERGETIC_IMG)[leftChar];
+  const rightImg = (rightTired ? TIRED_IMG : ENERGETIC_IMG)[rightChar];
+
+  const bubblesHtml = card.lines.map(line => {
+    const tired = line.speaker === "A" ? aTired : bTired;
+    const speakerCls = line.speaker === "A" ? "bubble-a" : "bubble-b";
+    const moodCls = tired ? "mood-tired" : "mood-energetic";
+    return `<div class="bubble ${speakerCls} ${moodCls}">${escapeHtml(line.text)}</div>`;
+  }).join("");
+
+  cardArea.innerHTML = `
+    <div class="card">
+      <div class="card-meta">
+        <span class="badge badge-id">ID:${String(card.id).padStart(3, "0")}</span>
+        <span class="badge badge-pair">${escapeHtml(card.pair[0])} × ${escapeHtml(card.pair[1])}</span>
+        <span class="badge badge-mood">${MOOD_LABEL[card.mood] || card.mood}</span>
+      </div>
+      <div class="bubbles">${bubblesHtml}</div>
+      <div class="chars">
+        <div class="char-slot"><img src="${leftImg}" alt=""></div>
+        <div class="char-slot"><img src="${rightImg}" alt=""></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStats() {
+  const total = LINES.length;
+  const judgedCount = Object.keys(state.judgments).length;
+  const adoptCount = Object.values(state.judgments).filter(v => v === "adopt").length;
+  const rejectCount = judgedCount - adoptCount;
+  document.getElementById("statsText").textContent =
+    `判定済み ${judgedCount}/${total}　採用 ${adoptCount}　没 ${rejectCount}`;
+  const pct = total > 0 ? Math.round((judgedCount / total) * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+}
+
+function renderButtons() {
+  const hasCard = LINES.length > 0 && !!currentCard();
+  document.getElementById("btnReject").disabled = !hasCard;
+  document.getElementById("btnAdopt").disabled = !hasCard;
+  document.getElementById("btnBack").disabled = state.history.length === 0;
+}
+
+function renderAll() {
+  renderCard();
+  renderStats();
+  renderButtons();
+}
+
+function judge(result) {
+  const card = currentCard();
+  if (!card) return;
+  state.judgments[card.id] = result;
+  state.history.push(card.id);
+  saveState();
+  renderAll();
+}
+
+function goBack() {
+  const lastId = state.history.pop();
+  if (lastId === undefined) return;
+  delete state.judgments[lastId];
+  saveState();
+  renderAll();
+}
+
+document.getElementById("btnAdopt").addEventListener("click", () => judge("adopt"));
+document.getElementById("btnReject").addEventListener("click", () => judge("reject"));
+document.getElementById("btnBack").addEventListener("click", goBack);
+
+// ---- 履歴 ----
+function renderHistoryList() {
+  const listEl = document.getElementById("historyList");
+  const judgedIds = Object.keys(state.judgments).map(Number).sort((a, b) => a - b);
+  if (judgedIds.length === 0) {
+    listEl.innerHTML = '<div class="history-empty">まだ判定がありません</div>';
+    return;
+  }
+  listEl.innerHTML = judgedIds.map(id => {
+    const line = LINES.find(l => l.id === id);
+    if (!line) return "";
+    const result = state.judgments[id];
+    const cls = result === "adopt" ? "adopt" : "reject";
+    const icon = result === "adopt" ? "◯" : "✕";
+    const preview = line.lines.map(l => l.text).join(" / ");
+    return `<div class="history-item ${cls}" data-id="${id}">
+      <span class="history-icon">${icon}</span>
+      <span class="history-id">ID:${String(id).padStart(3, "0")}</span>
+      <span class="history-preview">${escapeHtml(preview)}</span>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("historyList").addEventListener("click", (e) => {
+  const item = e.target.closest(".history-item");
+  if (!item) return;
+  const id = Number(item.dataset.id);
+  delete state.judgments[id];
+  state.history = state.history.filter(x => x !== id);
+  saveState();
+  renderHistoryList();
+  renderAll();
+});
+
+document.getElementById("btnHistory").addEventListener("click", () => {
+  renderHistoryList();
+  document.getElementById("historyOverlay").classList.add("open");
+});
+document.getElementById("btnCloseHistory").addEventListener("click", () => {
+  document.getElementById("historyOverlay").classList.remove("open");
+});
+
+// ---- 出力 ----
+function buildExportText() {
+  const adoptedIds = Object.keys(state.judgments)
+    .filter(id => state.judgments[id] === "adopt")
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  if (adoptedIds.length === 0) return "";
+
+  const blocks = adoptedIds.map((id, idx) => {
+    const line = LINES.find(l => l.id === id);
+    const newId = String(idx + 1).padStart(3, "0");
+    const pairStr = line.pair.join("|");
+    const body = line.lines.map(l => `${l.speaker}:${l.text}`).join("\n");
+    return `ID:${newId}\nPAIR:${pairStr}\nMOOD:${line.mood}\n\n${body}`;
+  });
+
+  return blocks.join("\n\n---\n\n");
+}
+
+function downloadExportFile(text) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const filename = `せりふくん軽度ストレス_出力_${stamp}.txt`;
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("btnExport").addEventListener("click", () => {
+  const text = buildExportText();
+  const exportTextEl = document.getElementById("exportText");
+  if (!text) {
+    exportTextEl.style.display = "none";
+    let emptyEl = document.querySelector(".export-empty");
+    if (!emptyEl) {
+      emptyEl = document.createElement("div");
+      emptyEl.className = "export-empty";
+      emptyEl.textContent = "採用されたセリフがまだありません";
+      exportTextEl.insertAdjacentElement("beforebegin", emptyEl);
+    }
+    document.getElementById("btnCopyExport").disabled = true;
+  } else {
+    exportTextEl.style.display = "";
+    const emptyEl = document.querySelector(".export-empty");
+    if (emptyEl) emptyEl.remove();
+    exportTextEl.value = text;
+    document.getElementById("btnCopyExport").disabled = false;
+    downloadExportFile(text);
+  }
+  document.getElementById("exportOverlay").classList.add("open");
+});
+document.getElementById("btnCloseExport").addEventListener("click", () => {
+  document.getElementById("exportOverlay").classList.remove("open");
+});
+document.getElementById("btnCopyExport").addEventListener("click", async () => {
+  const text = document.getElementById("exportText").value;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById("btnCopyExport");
+    const original = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (e) {
+    alert("コピーに失敗しました。テキストを選択して手動でコピーしてください。");
+  }
+});
+
+renderAll();
+</script>
+</body>
+</html>
