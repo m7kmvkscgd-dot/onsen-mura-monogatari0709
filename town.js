@@ -509,7 +509,7 @@ function renderRosterList() {
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
         <div class="roster-sub">${statusLabelPersonality(c)}</div>
-        ${hasPendingSkill ? `<div class="levelup-badge-small">レベルアップ！ Lv.${levelUpFrom}→${c.level}</div>` : ""}
+        ${hasPendingSkill ? `<div class="levelup-badge-small"><span class="nowrap">レベルアップ！</span> <span class="nowrap">Lv.${levelUpFrom}→${c.level}</span></div>` : ""}
         ${c.status === "active" ? `
           <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
           ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}

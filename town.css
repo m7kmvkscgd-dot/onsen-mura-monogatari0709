@@ -648,3 +648,10 @@
   /* 長い名前の折り返し時、ステータスタグ(待機中/入浴中など)が文字の途中で割れないように
      タグ自体は1かたまりのまま次の行へ送る */
   #rosterList .status-tag, #partySelectList .status-tag { white-space: nowrap; }
+  /* レベルアップバッジの改行を「レベルアップ!」と「Lv.◯→◯」の間に固定する
+     (2列化した宿屋カードの狭い幅で「レベルアッ/プ!」と単語の途中で折れていた不具合の修正)。
+     文字も一回り小さくして、なるべく1行で収まるようにする */
+  .levelup-badge-small .nowrap { white-space: nowrap; }
+  #rosterList .levelup-badge-small {
+    font-size: 0.6rem; padding: 0.1rem 0.4rem; text-align: center; line-height: 1.35;
+  }
