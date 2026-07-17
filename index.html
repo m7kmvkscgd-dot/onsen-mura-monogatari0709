@@ -751,6 +751,25 @@
     </div>
   </div>
 
+  <!-- 化け狸の賭場: 賭け金入力(ユーザー指示2026-07-18で「有り金の半分」固定から自分で金額を決める方式に変更)。
+       見た目はgenericConfirmOverlayと同じ構成の専用オーバーレイ(dungeon.jsのshowTanukiBetModal参照) -->
+  <div id="tanukiBetOverlay" style="display:none; position:fixed; inset:0; z-index:80; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.2rem; max-width:320px; width:100%; text-align:center;">
+      <p style="font-weight:800; margin:0 0 0.25rem;">化け狸の賭場</p>
+      <p id="tanukiBetGoldText" style="font-size:0.8rem; color:var(--text-muted); margin:0 0 0.7rem;"></p>
+      <input type="number" id="tanukiBetInput" inputmode="numeric" min="1" style="text-align:center; font-size:1.05rem;">
+      <div style="display:flex; gap:0.4rem; margin:0.6rem 0 0.8rem;">
+        <button class="big" id="tanukiBet10" style="flex:1; min-height:40px; padding:0.4rem;">10G</button>
+        <button class="big" id="tanukiBetHalf" style="flex:1; min-height:40px; padding:0.4rem;">半分</button>
+        <button class="big" id="tanukiBetAll" style="flex:1; min-height:40px; padding:0.4rem;">全額</button>
+      </div>
+      <div style="display:flex; gap:0.6rem; justify-content:center;">
+        <button class="big" id="tanukiBetCancel">やめる</button>
+        <button class="big primary" id="tanukiBetGo">勝負！</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 温泉の入浴完了ポップアップ: 入浴ロックが明けた瞬間、町画面に戻ってきた時だけ表示する。
        複数人が同時に明けている場合はまとめて1つのポップアップに表示する -->
   <div id="onsenReliefOverlay" class="onsen-relief-overlay" style="display:none;">
