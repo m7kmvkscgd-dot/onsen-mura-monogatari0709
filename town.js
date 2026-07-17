@@ -469,9 +469,12 @@ function renderClassGrid() {
 }
 let selectedClass = "samurai";
 
-// 宿屋の名簿一覧: 宿泊できる仲間には「宿泊する」ボタンを表示(まとめて選んで下部の確定ボタンで1回だけ宿泊)。
+// 宿屋の名簿一覧。宿泊は選択式ではなく「宿泊する」で稼働中の仲間全員が一括で泊まる
+// (ユーザー指示2026-07-18の大幅変更。料金は従来どおり1人10G×人数)。
 // 解雇はここではなく各キャラの「詳細」画面(renderStatusScreen)の下部に移した(誤タップ防止のため)
-let lodgingSelectedIds = [];
+function lodgeableMembers() {
+  return state.roster.filter((c) => c.status === "active");
+}
 
 function renderRosterList() {
   const list = document.getElementById("rosterList");
@@ -480,19 +483,10 @@ function renderRosterList() {
     list.innerHTML = "";
     return;
   }
-  // 選択後に瀕死/ロストになったキャラ(遠征中の事故など)は宿泊対象になれないため選択を自動解除する。
-  // これをしないと、宿泊ボタン自体が出ない(=解除する手段がない)まま選択済み扱いのidだけが残り、
-  // 宿泊人数・料金に数えられ続けて宿泊自体ができなくなる不具合が起きる
-  lodgingSelectedIds = lodgingSelectedIds.filter((id) => {
-    const c = state.roster.find((r) => r.id === id);
-    return c && c.status === "active";
-  });
   const now = absoluteGameMinutes();
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
-    const lodgeable = c.status === "active";
-    const lodgeSelected = lodgingSelectedIds.includes(c.id);
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
     const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
@@ -503,7 +497,7 @@ function renderRosterList() {
     const row = document.createElement("div");
     // 瀕死/ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
     // 同じ.disabledクラス(半透明)でグレーアウト表示する
-    row.className = "roster-row" + (lodgeSelected ? " selected" : "") + (c.status !== "active" ? " disabled" : "");
+    row.className = "roster-row" + (c.status !== "active" ? " disabled" : "");
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
@@ -545,23 +539,14 @@ function renderRosterList() {
         openSkillChoiceFor(c.id);
       };
     }
-    // 個別の「宿泊する」ボタンは廃止し、行全体(詳細/スキル選択ボタン以外)をタップすると
-    // 宿泊対象として選択/解除できるようにする
-    if (lodgeable) {
-      row.style.cursor = "pointer";
-      row.onclick = (e) => {
-        if (e.target.closest(".onsen-buff-tag")) return; // 温泉効果タグのタップはツールチップ表示のみ、宿泊選択を巻き込まない
-        if (lodgeSelected) lodgingSelectedIds = lodgingSelectedIds.filter((id) => id !== c.id);
-        else lodgingSelectedIds.push(c.id);
-        renderRosterList();
-      };
-    }
+    // 宿泊の全員一括化(2026-07-18)に伴い、行タップでの宿泊選択トグルは廃止した
     list.appendChild(row);
   });
-  const cost = LODGE_COST * lodgingSelectedIds.length;
+  const targets = lodgeableMembers();
+  const cost = LODGE_COST * targets.length;
   const confirmBtn = document.getElementById("lodgeConfirmBtn");
-  confirmBtn.textContent = lodgingSelectedIds.length > 0 ? `宿泊する(${cost}G)` : "宿泊する";
-  confirmBtn.disabled = lodgingSelectedIds.length === 0 || state.gold < cost;
+  confirmBtn.textContent = targets.length > 0 ? `宿泊する(${targets.length}人・${cost}G)` : "宿泊する";
+  confirmBtn.disabled = targets.length === 0 || state.gold < cost;
 }
 
 // 宿泊時の演出。現在の時間帯から朝を迎えるまでの残りの時間帯(例: 朝スタートなら昼→夕→夜)を
@@ -649,7 +634,8 @@ function showLodgingRestSummary(beforeSnapshot, onNext) {
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
-  const targets = state.roster.filter((c) => lodgingSelectedIds.includes(c.id));
+  // 稼働中の仲間全員が一括で宿泊する(選択式は廃止、ユーザー指示2026-07-18)
+  const targets = lodgeableMembers();
   if (targets.length === 0) return;
   const cost = LODGE_COST * targets.length;
   showConfirmModal(`宿泊しますか？(${targets.length}人・${cost}G)`, [
@@ -669,7 +655,6 @@ document.getElementById("lodgeConfirmBtn").onclick = () => {
           });
           targets.forEach((c) => useLodging(c));
           advanceToNextMorning();
-          lodgingSelectedIds = [];
           saveState();
           showLodgingRestSummary(beforeSnapshot, () => {
             revealLodgingMorning(() => {

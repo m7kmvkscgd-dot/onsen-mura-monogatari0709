@@ -7,10 +7,20 @@
   }
   .camp-rest-summary h2 { color: #fff; text-align: center; margin: 0 0 1.2rem; letter-spacing: 0.1em; }
   /* キャラを縦に並べる1列レイアウトだと、人数が多い時に下の「次へ」ボタンが画面外へ
-     押し出されて押せなくなっていたため、3列グリッドに変更(宿泊/野営/茶屋の3画面で共通利用) */
+     押し出されて押せなくなっていたため、3列に変更(宿泊/野営/茶屋の3画面で共通利用)。
+     さらに宿泊の全員一括化(2026-07-18)で最大10人が並ぶようになったため、gridではなく
+     中央寄せのflex折り返しにして、最終行の端数(10人=3+3+3+1など)が左に寄らず中央に揃うようにした */
   #lodgingRestSummaryList, #campRestSummaryList, #teahouseRestSummaryList {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; width: 100%; max-width: 420px;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; width: 100%; max-width: 420px;
   }
+  .camp-rest-row { width: calc((100% - 1rem) / 3); }
+  /* 7人以上の時はshowRestSummaryが.camp-rest-manyを付ける: 4列+ひと回り小さいカードにして、
+     スクロールなしでも全員と「次へ」ボタンが画面に収まりやすくする */
+  .camp-rest-many .camp-rest-row { width: calc((100% - 1.5rem) / 4); padding: 0.4rem 0.25rem; }
+  .camp-rest-many .camp-rest-row img { width: 44px; height: 44px; }
+  .camp-rest-many .camp-rest-info .nm { font-size: 0.7rem; }
+  .camp-rest-many .camp-rest-stat-label { font-size: 0.56rem; }
+  .camp-rest-many .camp-rest-stress { font-size: 0.6rem; }
   .camp-rest-row {
     display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.3rem;
     background: rgba(20,24,27,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md);
