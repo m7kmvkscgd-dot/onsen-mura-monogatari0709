@@ -523,15 +523,8 @@ function renderRosterList() {
       renderStatusScreen(c.id, defaultStatusOnBack);
       showScreen("screen-status");
     };
-    // アイコン写真自体をタップしても詳細ステータスを開けるようにする(既存の「詳細」ボタンと同じ遷移)。
-    // 行全体のクリック(宿泊選択トグル)を巻き込まないようstopPropagationする
-    const rosterImg = row.querySelector("img");
-    rosterImg.style.cursor = "pointer";
-    rosterImg.onclick = (e) => {
-      e.stopPropagation();
-      renderStatusScreen(c.id, defaultStatusOnBack);
-      showScreen("screen-status");
-    };
+    // 宿屋の名簿ではアイコン写真タップでの詳細遷移はしない(ユーザー指示2026-07-18で無効化。
+    // 詳細を見たい時は「詳細」ボタンから。出発準備画面のアイコンタップ遷移はそのまま)
     const skillBtn = row.querySelector(".skill-pending-btn");
     if (skillBtn) {
       skillBtn.onclick = (e) => {
