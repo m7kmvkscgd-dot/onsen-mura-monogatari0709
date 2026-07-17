@@ -20,7 +20,6 @@
 // 「熱血」「優しい」の順で問い合わせて取得できる)。
 
 const PAIRED_DIALOGUE_FILES = {
-  peace: "assets/dialogues/dialogue_peace.txt", // 未使用(旧・平和な掛け合い用データ、banterに差し替え済み。ファイルは削除せず残置)
   banter: "assets/dialogues/dialogue_banter.txt", // お笑い寄りの掛け合い(旧peaceカテゴリのトリガーがこちらを参照するよう差し替え済み、dungeon.jsのmaybeTriggerPeaceDialogue参照)
   crit: "assets/dialogues/dialogue_crit.txt", // 会心ヒット時のかけ声+仲間の反応
   // 今後追加予定: camp: "assets/dialogues/dialogue_camp.txt"(野営会話)、
