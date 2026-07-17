@@ -1745,10 +1745,10 @@ function pickTwoRandomElements(list) {
   const second = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
   return [first, second];
 }
-// 3人掛け合いの抽選率(ユーザー指示2026-07-18: 2人版60%/3人版40%)。
+// 3人掛け合いの抽選率(ユーザー指示2026-07-18: 当初60%/40%→同日「両方50%に」で半々に変更)。
 // 3人版はパーティに元気な3人以上がいて、性格の組み合わせに合う未消化の候補が残っている時だけ
 // 抽選対象になり、候補が無い場合は従来どおり2人版banterのみが出る
-const TRIO_DIALOGUE_CHANCE = 0.4;
+const TRIO_DIALOGUE_CHANCE = 0.5;
 // パーティの現在メンバーで成立する3人掛け合い候補を全て集める(tiredのcollectTiredDialogueCandidatesと
 // 同じ総当たり方式。同じ性格のメンバーが複数いても別人として全組み合わせを列挙する)
 function collectTrioDialogueCandidates() {
@@ -1774,7 +1774,7 @@ function collectTrioDialogueCandidates() {
 }
 function maybeTriggerPeaceDialogue() {
   if (!peaceDialogueConditionsMet()) return;
-  // まず3人版を40%で抽選(ユーザー指示)。2人版・3人版はpeaceDialogueLockedを共有しているため、
+  // まず3人版をTRIO_DIALOGUE_CHANCE(50%)で抽選。2人版・3人版はpeaceDialogueLockedを共有しているため、
   // どちらか片方が発火した時点で、次の戦闘勝利までもう片方も発火の権利を失う
   const trioCandidates = collectTrioDialogueCandidates();
   if (trioCandidates.length > 0 && Math.random() < TRIO_DIALOGUE_CHANCE) {
