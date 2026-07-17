@@ -14,6 +14,8 @@
     display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; width: 100%; max-width: 420px;
   }
   .camp-rest-row { width: calc((100% - 1rem) / 3); }
+  /* 4人ちょうどの時はshowRestSummaryが.camp-rest-fourを付ける: 3+1の端数にせず2×2で組む(ユーザー指示) */
+  .camp-rest-four .camp-rest-row { width: calc((100% - 0.5rem) / 2); max-width: 170px; }
   /* 7人以上の時はshowRestSummaryが.camp-rest-manyを付ける: 4列+ひと回り小さいカードにして、
      スクロールなしでも全員と「次へ」ボタンが画面に収まりやすくする */
   .camp-rest-many .camp-rest-row { width: calc((100% - 1.5rem) / 4); padding: 0.4rem 0.25rem; }

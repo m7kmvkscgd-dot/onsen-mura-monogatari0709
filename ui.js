@@ -338,8 +338,10 @@ function fadeOpacity(el, from, to, durationMs, callback) {
 function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, showStress = true) {
   const panel = document.getElementById(panelId);
   const list = document.getElementById(listId);
-  // 7人以上(宿泊の全員一括化で名簿上限10人まで並び得る)はコンパクト4列表示にする(camp.css参照)
+  // 7人以上(宿泊の全員一括化で名簿上限10人まで並び得る)はコンパクト4列表示にする(camp.css参照)。
+  // 4人ちょうどは3+1の端数を出さず2×2で組む(ユーザー指示)
   list.classList.toggle("camp-rest-many", beforeSnapshot.length > 6);
+  list.classList.toggle("camp-rest-four", beforeSnapshot.length === 4);
   list.innerHTML = beforeSnapshot.map(({ id, fatigueBefore }) => {
     const c = getRosterChar(id);
     if (!c) return "";
