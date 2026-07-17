@@ -461,3 +461,52 @@
      横幅いっぱいに伸びてしまう(他のボタンだけ並んだ時より不自然に大きく見える)ため、
      他のボタンと同じくらいのサイズで頭打ちにする */
   #dungeonToolsBtn { flex: 0 1 160px; }
+
+  /* ============ 探索イベント(選択イベント)のカード ============ */
+  /* 進路選択と同じpath-tags-panelの枠組みに、イラスト+情景テキストを足した構成。
+     イラストは切り抜き済みの透過PNGで、drop-shadowで背景から浮かせる */
+  .dungeon-event-panel .path-choice-title { font-size: 1.05rem; }
+  .dungeon-event-img {
+    display: block; margin: 0.2rem auto 0.45rem; max-width: min(60vw, 220px); max-height: 140px;
+    object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+    animation: dungeon-event-img-in 0.45s ease-out both;
+  }
+  @keyframes dungeon-event-img-in {
+    0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .dungeon-event-flavor {
+    margin: 0 auto 0.6rem; max-width: 300px; text-align: center;
+    font-size: 0.8rem; line-height: 1.55; color: #f2e8d8;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6);
+  }
+  /* 選べない選択肢(銭が足りない等)。ネイティブdisabledは使わずクラスだけで表現する(進路選択の神隠しと同じ理由) */
+  .path-tag-disabled { opacity: 0.45; filter: grayscale(0.6); }
+
+  /* ============ 光る道の財宝発見・豪華演出 ============ */
+  /* 全ての動きはdungeon.jsのplayHikaruTreasureCelebration()がWAAPIで付ける。ここは配置と見た目だけ */
+  .hikaru-celebration { position: fixed; inset: 0; z-index: 250; pointer-events: none; }
+  .hikaru-backdrop {
+    position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(90,66,12,0.5), rgba(0,0,0,0.85));
+  }
+  .hikaru-rays {
+    position: absolute; left: 50%; top: 45%; width: 140vmax; height: 140vmax; border-radius: 50%;
+    transform: translate(-50%, -50%); opacity: 0;
+    background: repeating-conic-gradient(rgba(255,214,110,0.17) 0deg 8deg, rgba(255,214,110,0) 8deg 26deg);
+  }
+  .hikaru-stage { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); }
+  .hikaru-chest {
+    display: block; width: min(54vw, 240px); opacity: 0;
+    filter: drop-shadow(0 0 18px rgba(255,214,110,0.45)) drop-shadow(0 10px 22px rgba(0,0,0,0.65));
+  }
+  .hikaru-flash {
+    position: absolute; inset: -35%; border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle, rgba(255,250,222,0.95) 0%, rgba(255,238,170,0.5) 40%, rgba(255,238,170,0) 72%);
+  }
+  .hikaru-amount {
+    position: absolute; left: 50%; top: -18%; transform: translateX(-50%); opacity: 0;
+    font-size: 2.1rem; font-weight: 800; white-space: nowrap; color: #ffd76a;
+    text-shadow: 0 2px 0 #7a5200, 0 0 14px rgba(255,200,80,0.55), 0 4px 14px rgba(0,0,0,0.85);
+  }
+  .hikaru-spark { position: absolute; left: 50%; top: 50%; font-size: 1.25rem; opacity: 0; }

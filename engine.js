@@ -1105,7 +1105,7 @@ function pickEnemyForFloor(floor, mode, stage) {
   if (mode === true && eligible.length === 0) return null;
   const weighted = [];
   eligible.forEach((e) => {
-    const weight = e.isBoss ? (floor % 10 === 0 ? 6 : 1) : 10;
+    const weight = e.isBoss ? (floor % 15 === 0 ? 6 : 1) : 10;
     for (let i = 0; i < weight; i++) weighted.push(e);
   });
   const pick = weighted[Math.floor(Math.random() * weighted.length)];
@@ -1128,14 +1128,14 @@ function woundedBossCurrentHp(enemyId, maxHp) {
   }
   return Math.min(maxHp, Math.round(healed));
 }
-// そのフロアの遭遇を組み立てる。ボスフロア(10の倍数)は必ず単体。
+// そのフロアの遭遇を組み立てる。ボスフロア(15の倍数、階層1.5倍化に伴い10→15)は必ず単体。
 // それ以外は、まず「大群が絡むか」を1回だけ判定し(SWARM_ENCOUNTER_CHANCE)、絡む場合は
 // pickSwarmInvolvedEncounterで直接まとめて組み立てる(3枠それぞれ独立に大群判定すると、
 // 6体まで揃う確率が0.15^3のようにほぼ0まで潰れてしまうため、複数回のサイコロを重ねる設計を避けた)。
 // 絡まない場合は従来通り1〜3体の通常敵のみ。
 // 雑魚集団は範囲攻撃(魔法使いのメテオ/忍者の乱れ突き)で効率よく削れる、という職業差別化の要
 function pickEncounterForFloor(floor, stage) {
-  if (floor % 10 === 0) {
+  if (floor % 15 === 0) {
     const boss = pickEnemyForFloor(floor, true, stage);
     if (boss) {
       const woundedHp = woundedBossCurrentHp(boss.id, boss.maxHp);
@@ -1149,7 +1149,7 @@ function pickEncounterForFloor(floor, stage) {
   }
   const roll = Math.random();
   let count = 1;
-  if (floor >= 4) {
+  if (floor >= 6) { // 複数体出現の解禁階も階層1.5倍化に合わせて4→6
     if (roll < 0.45) count = 1;
     else if (roll < 0.8) count = 2;
     else count = 3;
@@ -1494,6 +1494,13 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     target.hp = 1;
     log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
     log(`${target.label}は須佐之男命の御守の加護で致命傷をこらえた！`);
+  } else if (lethal && typeof jizoBlessingActive !== "undefined" && jizoBlessingActive && fieldParty.includes(target)) {
+    // 探索イベント「苔むしたお地蔵さま」の加護: 賽銭を納めていると、遠征中1回だけ味方の致命傷をHP1でこらえる。
+    // おみくじ大吉/須佐之男の御守とはスロットを共有しない独立の枠(passivesの単一スロットを奪い合わないための別変数方式)
+    jizoBlessingActive = false;
+    target.hp = 1;
+    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(`${target.label}はお地蔵さまの加護で致命傷をこらえた！`);
   } else if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
     target.hp = 1;

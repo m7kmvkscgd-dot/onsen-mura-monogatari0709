@@ -1919,7 +1919,7 @@ const BUILDING_DEFS = [
     desc: "砲術士が雇えるようになります。" },
   { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
     unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST],
-    desc: "深淵の森15層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
+    desc: "深淵の森22層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
   { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
     unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
     desc: "(詳細は未定)" },
@@ -2240,7 +2240,7 @@ function refreshMagistrateQuestsIfNeeded() {
       if (QUEST_DEFS[id].tier !== tier) return false;
       if (QUEST_DEFS[id].requiresOoInoshishi && !state.defeatedOoInoshishi) return false; // ボス級指名討伐は大猪を一度倒すまで張り出されない
       if (QUEST_DEFS[id].minQuestClears && (state.magistrateQuestClearCount || 0) < QUEST_DEFS[id].minQuestClears) return false; // 大猪(中ボス)は依頼を規定回数達成するまで張り出されない
-      if (tier === 1 && isFirstMagistrateTier1Draw && QUEST_DEFS[id].targetFloor > 5) return false;
+      if (tier === 1 && isFirstMagistrateTier1Draw && QUEST_DEFS[id].targetFloor > 8) return false;
       if (id === tierKeepKey) return false; // 受注中のものは既に確定枠なので通常抽選プールには含めない
       const shownDay = lastShown[id];
       return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;

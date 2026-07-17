@@ -71,6 +71,8 @@ function resetPeaceDialogueState() {
   peaceDialogueLocked = true; // 遠征開始時点では1回も勝利していないので発火不可
   tiredDialogueLocked = true;
   expeditionSpokenDialogueKeys = new Set();
+  // 探索イベントの遠征内状態も同じライフサイクル(遠征開始/里への帰還/全滅)でリセットする
+  resetExpeditionEventState();
 }
 // 戦闘に勝利するたび(battle.jsのvictory()から)呼ぶ。これで次に条件を満たした瞬間1回だけ発火できるようになる
 function unlockPeaceDialogueAfterVictory() {
@@ -828,7 +830,7 @@ function updateBossPursuitBadge() {
   badge.style.visibility = "visible";
   badge.textContent = `🔥 追撃中！ ${enemyDef.ja}`;
 }
-// 茶屋(建築済みの時、深淵の森15層に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
+// 茶屋(建築済みの時、深淵の森22層(階層1.5倍化に伴い15→22)に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
 // その階へ向かう時は毎回この判定が通るため、行きと帰りに二回立ち寄ることもできる)
 function teahouseOfferedForFloor(floor) {
   return currentStage === "forest" && (state.teaHouseLevel || 0) > 0 && floor === TEA_HOUSE_FLOOR;
@@ -900,22 +902,22 @@ document.getElementById("advanceBtn").onclick = () => {
 // 各道のbattle/gold率、ambushChance(暗い道の奇襲)、goldMult(暗い道の獲得金増)は
 // キーごとに1本化し、出現の重み(NORMAL_PATH_WEIGHTS/ONE_CHOICE_PATH_WEIGHTS)とは分離してある
 const PATH_DEFS = {
-  rindou: { icon: "🌲", label: "林道", battle: 0.60, gold: 0.20 }, // 一度60%→55%に下げたが、ユーザー指示で60%に戻した(海岸の「砂浜」は55%のまま据え置き)
-  kemono: { icon: "🐾", label: "獣道", battle: 0.75, gold: 0.15 },
-  kurai: { icon: "🌑", label: "暗い道", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
-  shizuka: { icon: "🍃", label: "静かな道", battle: 0.15, gold: 0.25 },
-  komorebi: { icon: "🌿", label: "木漏れ日の道", battle: 0.20, gold: 0.30 },
+  rindou: { icon: "🌲", label: "林道", battle: 0.35, gold: 0.20 }, // 戦闘だるさ軽減の全体調整で60%→35%(2026-07-18、階層1.5倍化とセット)
+  kemono: { icon: "🐾", label: "獣道", battle: 0.60, gold: 0.15 },
+  kurai: { icon: "🌑", label: "暗い道", battle: 0.70, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
+  shizuka: { icon: "🍃", label: "静かな道", battle: 0.10, gold: 0.25 },
+  komorebi: { icon: "🌿", label: "木漏れ日の道", battle: 0.15, gold: 0.30 },
   hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.90 },
   fuon: { icon: "👁️", label: "不穏な道", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "神隠しの道", battle: 0.00, gold: 0.00 },
 };
 // 海岸ステージ版の進路(キーは共通、アイコン/ラベルだけ海のテーマに差し替え。battle/gold等の数値は森と完全に同じ)
 const COAST_PATH_DEFS = {
-  rindou: { icon: "🏝️", label: "砂浜", battle: 0.55, gold: 0.20 }, // 林道と合わせて戦闘遭遇率を60%→55%に
-  kemono: { icon: "🪨", label: "岩場", battle: 0.75, gold: 0.15 },
-  kurai: { icon: "🌊", label: "波打ち際", battle: 0.80, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
-  shizuka: { icon: "🐚", label: "静かな砂浜", battle: 0.15, gold: 0.25 },
-  komorebi: { icon: "🐟", label: "潮溜まり", battle: 0.20, gold: 0.30 },
+  rindou: { icon: "🏝️", label: "砂浜", battle: 0.35, gold: 0.20 }, // 林道と同値に(2026-07-18の全体調整)
+  kemono: { icon: "🪨", label: "岩場", battle: 0.60, gold: 0.15 },
+  kurai: { icon: "🌊", label: "波打ち際", battle: 0.70, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
+  shizuka: { icon: "🐚", label: "静かな砂浜", battle: 0.10, gold: 0.25 },
+  komorebi: { icon: "🐟", label: "潮溜まり", battle: 0.15, gold: 0.30 },
   hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.90 },
   fuon: { icon: "👁️", label: "不穏な砂浜", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "幻の島", battle: 0.00, gold: 0.00 },
@@ -1128,6 +1130,344 @@ function showTeahouseOffer(onEnter, onSkip) {
   });
 }
 
+// ============ 探索イベント(進んだ先で出会う「何か」) ============
+// フロア到着抽選に「イベント」枠を追加する(戦闘/財宝の確率は変えず、静寂の取り分から削る)。
+// 同じイベントは1遠征に1回まで(expeditionSeenEventIds、平和セリフの重複防止と同じ方式)。
+// 静か系の道(静かな道/木漏れ日の道)はイベント率が高く、「静か系=イベント狙い」の個性を持たせる
+const DUNGEON_EVENT_CHANCE = 0.12;
+const DUNGEON_EVENT_CHANCE_QUIET = 0.18;
+const JIZO_COST = 30;
+const MERCHANT_HEAL_COST = 50;
+let expeditionSeenEventIds = new Set();
+let jizoBlessingActive = false; // 地蔵の加護: この遠征中1回だけ、倒れる一撃をHP1でこらえる(engine.jsの被ダメ処理で消費)
+let warashiLuckActive = false; // 座敷わらしの幸運: この遠征中、財宝発見率1.5倍(rollEncounterで参照)
+let koOniRepayFloorsLeft = 0; // 傷ついた小鬼の恩返しまでの残りフロア数(静かな通路に着くたび1減り、0で恩返し)
+function resetExpeditionEventState() {
+  expeditionSeenEventIds = new Set();
+  jizoBlessingActive = false;
+  warashiLuckActive = false;
+  koOniRepayFloorsLeft = 0;
+}
+// 財宝の基準額(rollEncounterの財宝発見と同じ式)。イベントの金銭報酬はこれの倍数で決める
+function eventTreasureBase() {
+  const treasureMax = (currentStage === "coast" ? 6 : 5) + currentFloor;
+  const treasureMin = Math.max(1, Math.round(treasureMax * 0.5));
+  return treasureMin + Math.floor(Math.random() * (treasureMax - treasureMin + 1));
+}
+function grantEventGold(g) {
+  state.gold += g;
+  advGoldEarned += g;
+  saveState();
+  playSfx("coin");
+  showTreasurePopup(g);
+}
+// 化け長持/天狗など「その階層に合った強さの敵」を土台にした特別な敵を作るための抽選。
+// pickEnemyForFloor(mode未指定)はボスも稀に混ざるため、通常敵を引くまで数回引き直す
+function pickEventEnemyBase(floor) {
+  for (let i = 0; i < 8; i++) {
+    const e = pickEnemyForFloor(floor, undefined, currentStage);
+    if (e && !e.isBoss && !e.isMidBoss) return e;
+  }
+  return pickEnemyForFloor(1, undefined, currentStage);
+}
+function startEventBattle(enemies, pathDef, encounterText) {
+  playSfx("big_attack_warning");
+  startBattle(enemies, pathDef, encounterText);
+  flashFromBlackOverCurrentScreen(); // イベント選択は明転後のタップなので、戦闘への切り替わりに暗転の区切りを入れる
+}
+// 各イベントの定義。choices()を都度呼ぶことで、所持金など「その瞬間の状態」でラベル/可否を出し分ける
+const DUNGEON_EVENTS = [
+  {
+    id: "jizo", title: "苔むしたお地蔵さま", image: "assets/events/jizo.png",
+    flavor: "古いお地蔵さまが佇んでいる。前に賽銭箱が置かれている。",
+    choices: () => [
+      {
+        icon: "🙏", label: `賽銭を入れる(${JIZO_COST}G)`, desc: "旅の無事を祈る", disabled: state.gold < JIZO_COST || jizoBlessingActive,
+        onPick: () => {
+          state.gold -= JIZO_COST;
+          jizoBlessingActive = true;
+          playSfx("coin");
+          dlog("賽銭を納め、深く祈った。お地蔵さまが微笑んだ…気がする。(この遠征中一度だけ、倒れる一撃をこらえる)");
+          saveState();
+          renderDungeon();
+        },
+      },
+      { icon: "🚶", label: "手を合わせるだけ", desc: "気持ちだけ置いていく", onPick: () => { dlog("静かに手を合わせ、先へ進んだ。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "mimic", title: "道端の長持", image: "assets/events/treasure_chest.png",
+    flavor: "立派な長持が置き捨てられている。…何かがおかしい気がする。",
+    choices: () => [
+      {
+        icon: "🔓", label: "開けてみる", desc: "財宝か、それとも…",
+        onPick: () => {
+          if (Math.random() < 0.7) {
+            const g = eventTreasureBase() * 2;
+            dlog(`長持には財宝が詰まっていた！${g}Gを手に入れた！`);
+            grantEventGold(g);
+            renderDungeon();
+          } else {
+            const e = pickEventEnemyBase(currentFloor);
+            e.id = "bake_nagamochi";
+            e.ja = "化け長持";
+            e.label = "化け長持";
+            e.image = "assets/events/mimic.png";
+            e.maxHp = Math.round(e.maxHp * 1.4);
+            e.hp = e.maxHp;
+            e.atk = Math.round(e.atk * 1.15);
+            e.goldMin = Math.round((e.goldMin || 5) * 3);
+            e.goldMax = Math.round((e.goldMax || 10) * 3);
+            e.xp = Math.round((e.xp || 5) * 1.5);
+            dlog("長持が牙を剥いた！化け長持だ！");
+            startEventBattle([e], null, "長持が牙を剥いた！化け長持だ！");
+          }
+        },
+      },
+      { icon: "🚶", label: "置いていく", desc: "触らぬ神に祟りなし", onPick: () => { dlog("長持には触れず、そっと通り過ぎた。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "merchant", title: "旅の薬売り", image: "assets/events/merchant.png",
+    flavor: "行商人が店を広げている。「山値段ですがね、命には代えられますまい」",
+    choices: () => [
+      {
+        icon: "🧺", label: `手当てを頼む(${MERCHANT_HEAL_COST}G)`, desc: "全員のHPが全回復", disabled: state.gold < MERCHANT_HEAL_COST,
+        onPick: () => {
+          state.gold -= MERCHANT_HEAL_COST;
+          fieldParty.forEach((c) => { if (c.status === "active") c.hp = c.maxHp; });
+          playSfx("heal");
+          dlog("薬売りの見事な手当てを受けた。全員の傷がすっかり癒えた！");
+          saveState();
+          renderDungeon();
+        },
+      },
+      { icon: "🚶", label: "断る", desc: "先を急ぐ", onPick: () => { dlog("「またご縁がありましたら」薬売りは笑って店をたたんだ。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "spring", title: "こんこんと湧く泉", image: "assets/events/spring.png",
+    flavor: "澄んだ湧き水が湧いている。心が洗われるようだ。",
+    choices: () => [
+      {
+        icon: "🛁", label: "一番疲れた者を浸からせる", desc: "ストレスを大きく回復",
+        onPick: () => {
+          const alive = fieldParty.filter((c) => c.status === "active");
+          const t = alive.reduce((a, b) => ((b.fatigue || 0) > (a.fatigue || 0) ? b : a), alive[0]);
+          if (t) {
+            t.fatigue = Math.max(0, (t.fatigue || 0) - 30);
+            playSfx("onsen_relief");
+            dlog(`${t.label}は泉にゆっくり浸かった。心がすっと軽くなった。(ストレス-30)`);
+          }
+          saveState();
+          renderDungeon();
+        },
+      },
+      {
+        icon: "💧", label: "全員で少しずつ飲む", desc: "全員のストレスを小さく回復",
+        onPick: () => {
+          fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.max(0, (c.fatigue || 0) - 8); });
+          playSfx("heal");
+          dlog("全員で冷たい湧き水を分け合った。少し気持ちが安らいだ。(全員ストレス-8)");
+          saveState();
+          renderDungeon();
+        },
+      },
+    ],
+  },
+  {
+    id: "shrine", title: "古びた祠", image: "assets/events/shrine.png",
+    flavor: "小さな祠から、ただならぬ妖気が漂っている…。",
+    choices: () => [
+      {
+        icon: "⛩️", label: "一人が祈祷する", desc: "最もMPが減った者のMP全回復、代わりにストレス+15",
+        onPick: () => {
+          const alive = fieldParty.filter((c) => c.status === "active" && c.maxMp > 0);
+          const t = alive.reduce((a, b) => ((b.mp / b.maxMp) < (a.mp / a.maxMp) ? b : a), alive[0]);
+          if (t) {
+            t.mp = t.maxMp;
+            t.fatigue = Math.min(FATIGUE_MAX, (t.fatigue || 0) + 15);
+            playSfx("omikuji_daikichi");
+            dlog(`${t.label}が祠に祈祷した。妖力が満ちていく…だが妖気に当てられた。(MP全回復、ストレス+15)`);
+          }
+          saveState();
+          renderDungeon();
+        },
+      },
+      { icon: "🚶", label: "近寄らない", desc: "妖気には関わらない", onPick: () => { dlog("祠には近寄らず、足早に通り過ぎた。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "warashi", title: "迷い子の童", image: "assets/events/warashi.png",
+    flavor: "小さな子がついてくる。…足音がしない。",
+    choices: () => [
+      {
+        icon: "🖐️", label: "頭を撫でる", desc: "悪い子には見えない",
+        onPick: () => {
+          warashiLuckActive = true;
+          playSfx("omikuji_normal");
+          dlog("童の頭をそっと撫でた。ふっと姿が消え、袖に小さな鈴が結ばれていた。(この遠征中、財宝発見率が上がった)");
+          renderDungeon();
+        },
+      },
+      { icon: "🙈", label: "気づかないふりをする", desc: "関わらないでおく", onPick: () => { dlog("気づかないふりをして歩き続けた。いつの間にか気配は消えていた。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "tanuki", title: "化け狸の賭場", image: "assets/events/tanuki.png",
+    flavor: "狸が壺を振っている。「丁か半か、乗ってきな」",
+    choices: () => [
+      {
+        icon: "🎲", label: "有り金の半分を賭ける", desc: "勝てば倍、負ければ没収", disabled: state.gold < 10,
+        onPick: () => {
+          const bet = Math.floor(state.gold / 2);
+          if (Math.random() < 0.5) {
+            dlog(`「あんた強運だね」賭けた${bet}Gが倍になって返ってきた！`);
+            grantEventGold(bet);
+          } else {
+            state.gold -= bet;
+            dlog(`「残念、また来な」狸は笑いながら${bet}Gを掻き集めた…。`);
+            saveState();
+          }
+          renderDungeon();
+        },
+      },
+      { icon: "🚶", label: "乗らない", desc: "賭け事はしない", onPick: () => { dlog("「つまらないねえ」狸は壺を抱えて茂みに消えた。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "well", title: "古井戸", image: "assets/events/well.png",
+    flavor: "涸れ井戸の底で、何かが光っている。",
+    choices: () => [
+      {
+        icon: "🔦", label: "のぞき込む", desc: "光の正体を確かめる",
+        onPick: () => {
+          if (Math.random() < 0.6) {
+            state.inventory.soulShard = (state.inventory.soulShard || 0) + 1;
+            saveState();
+            playSfx("omikuji_daikichi");
+            dlog("井戸の底から魂のかけらを拾い上げた！");
+            showTreasurePopup(0, "assets/items/soul_shard.png");
+            renderDungeon();
+          } else {
+            dlog("井戸の底から妖怪が飛び出してきた！");
+            startEventBattle(pickEncounterForFloor(currentFloor, currentStage), { ambushChance: 1 }, "井戸から妖怪が飛び出してきた！");
+          }
+        },
+      },
+      { icon: "🚶", label: "立ち去る", desc: "嫌な予感がする", onPick: () => { dlog("井戸には近寄らないことにした。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "kooni", title: "傷ついた小鬼", image: "assets/events/oni.png",
+    flavor: "小鬼が倒れている。敵…のはずだが、虫の息だ。",
+    choices: () => [
+      {
+        icon: "🩹", label: "手当てしてやる", desc: "一番元気な者のHP-10", disabled: !fieldParty.some((c) => c.status === "active" && c.hp > 10),
+        onPick: () => {
+          const alive = fieldParty.filter((c) => c.status === "active" && c.hp > 10);
+          const donor = alive.reduce((a, b) => (b.hp > a.hp ? b : a), alive[0]);
+          if (donor) {
+            donor.hp -= 10;
+            koOniRepayFloorsLeft = 3 + Math.floor(Math.random() * 3);
+            playSfx("heal");
+            dlog(`${donor.label}は手持ちの薬で小鬼の手当てをしてやった。(HP-10) 小鬼は何度も振り返りながら森の奥へ消えていった…。`);
+          }
+          saveState();
+          renderDungeon();
+        },
+      },
+      { icon: "🚶", label: "放っておく", desc: "情けは無用", onPick: () => { dlog("小鬼には関わらず、先へ進んだ。"); renderDungeon(); } },
+    ],
+  },
+  {
+    id: "tengu", title: "天狗の腕試し", image: "assets/events/tengu.png",
+    flavor: "天狗が扇を鳴らした。「貴様ら、少しは骨のある奴はいるか」",
+    choices: () => [
+      {
+        icon: "⚔️", label: "受けて立つ", desc: "強敵。勝てば大きな恵み",
+        onPick: () => {
+          const e = pickEventEnemyBase(currentFloor + 8);
+          e.id = "tengu_shiren";
+          e.ja = "天狗";
+          e.label = "天狗";
+          e.image = "assets/events/tengu.png";
+          e.maxHp = Math.round(e.maxHp * 1.1);
+          e.hp = e.maxHp;
+          e.goldMin = Math.round((e.goldMin || 5) * 1.5);
+          e.goldMax = Math.round((e.goldMax || 10) * 1.5);
+          dlog("腕試しを受けて立った！");
+          startEventBattle([e], null, "天狗「いざ、尋常に勝負！」");
+          battle.tenguChallenge = true; // victory()側で勝利報酬(魂のかけら2+全員ストレス回復)を出すための目印
+        },
+      },
+      {
+        icon: "🙇", label: "丁重に断る", desc: "全員ストレス+5",
+        onPick: () => {
+          fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 5); });
+          dlog("丁重に断ると、天狗の高笑いが山じゅうに響き渡った…。(全員ストレス+5)");
+          saveState();
+          renderDungeon();
+        },
+      },
+    ],
+  },
+];
+// イベント発生の入り口(rollEncounterから呼ばれる)。未消化のイベントが無ければfalseを返して静寂にフォールバック
+function tryStartDungeonEvent() {
+  const pool = DUNGEON_EVENTS.filter((ev) => !expeditionSeenEventIds.has(ev.id));
+  if (pool.length === 0) return false;
+  const ev = pool[Math.floor(Math.random() * pool.length)];
+  expeditionSeenEventIds.add(ev.id);
+  dlog(`${ev.title}に出会った。`);
+  showDungeonEvent(ev);
+  return true;
+}
+// イベントカードUI。進路選択(showPathChoice)と同じ#criticalAlertパネル枠+path-tagカードの見た目を使い回し、
+// 上部にイベントのイラストと情景テキストを足した構成にする
+function showDungeonEvent(ev) {
+  const div = document.getElementById("criticalAlert");
+  document.getElementById("dungeonLog").style.display = "none";
+  document.body.classList.add("path-choice-active");
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
+  function close() {
+    document.body.classList.remove("path-choice-active");
+    div.innerHTML = "";
+    document.getElementById("dungeonLog").style.display = "";
+  }
+  const choices = ev.choices();
+  div.innerHTML = `
+    <div class="path-choice-panel path-tags-panel dungeon-event-panel">
+      <p class="path-choice-title">${ev.title}</p>
+      <img class="dungeon-event-img" src="${ev.image}" alt="">
+      <p class="dungeon-event-flavor">${ev.flavor}</p>
+      <div class="path-choice-cards path-tags-stack">
+        ${choices.map((c, idx) => `
+          ${idx > 0 ? '<span class="path-tag-rope" aria-hidden="true"></span>' : ""}
+          <button class="path-card path-tag${c.disabled ? " path-tag-disabled" : ""}" data-idx="${idx}" style="--i:${idx}">
+            <span class="path-card-icon">${c.icon}</span>
+            <span class="path-tag-text">
+              <span class="path-card-label">${c.label}</span>
+              <span class="path-card-desc">${c.desc}</span>
+            </span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  const stack = div.querySelector(".path-tags-stack");
+  const btns = Array.from(div.querySelectorAll(".path-tag"));
+  btns.forEach((btn, idx) => {
+    btn.onclick = () => {
+      if (stack.classList.contains("path-tags-locked")) return;
+      if (choices[idx].disabled) return;
+      stack.classList.add("path-tags-locked");
+      btns.forEach((el) => el.classList.add(el === btn ? "path-tag-selected" : "path-tag-fading"));
+      setTimeout(() => { close(); choices[idx].onPick(); }, 170);
+    };
+  });
+}
+
 // 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く。
 // 商品在庫は来訪のたびにリセットするのではなく日付単位で持続する(resetTeahouseStockIfNewDay、
 // renderTeahouse側で呼ぶ)ため、ここでは何もリセットしない
@@ -1316,7 +1656,10 @@ function rollEncounter(pathBias) {
   const baseGold = bias ? bias.gold : 0.25;
   // 帰還中はユーザー指示で戦闘遭遇率19%・財宝発見率10%の固定値にした(以前は基準値の1/4・1/5だった)
   const battleChance = retreating ? RETREAT_BATTLE_CHANCE : baseBattle;
-  const goldChance = retreating ? RETREAT_GOLD_CHANCE : baseGold;
+  // 座敷わらしの幸運(イベント): この遠征中は財宝発見率1.5倍(戦闘率は不変、合計が1を超えないよう上限あり)
+  const goldChance = retreating ? RETREAT_GOLD_CHANCE : Math.min(baseGold * (warashiLuckActive ? 1.5 : 1), Math.max(0, 1 - battleChance));
+  // 探索イベントの取り分(静寂の枠から削る。帰還中・進路選択なし(依頼対象接近等)の時は出ない)
+  const eventChance = !retreating && pathBias ? (pathBias === "shizuka" || pathBias === "komorebi" ? DUNGEON_EVENT_CHANCE_QUIET : DUNGEON_EVENT_CHANCE) : 0;
   const roll = Math.random();
   if (roll < battleChance) {
     lastFloorMoveOutcome = "battle"; // オート帰還の一時停止判定用
@@ -1332,15 +1675,33 @@ function rollEncounter(pathBias) {
     state.gold += g;
     advGoldEarned += g; // リザルト画面の「収穫」にも反映されるよう、戦闘報酬と同じ集計に加算する
     saveState();
-    playSfx("coin");
     dlog(`${g}Gの財宝を見つけた！`);
     renderDungeon();
-    showTreasurePopup(g);
+    // 「何かが光る道」で見つけた財宝だけは特別な宝箱演出(SFXも演出側が鳴らす)。それ以外は従来のポップアップ
+    if (!retreating && pathBias === "hikaru") {
+      playHikaruTreasureCelebration(g);
+    } else {
+      playSfx("coin");
+      showTreasurePopup(g);
+    }
     // 財宝発見時も(戦闘に遭遇していなければ)平和/疲弊の掛け合いの対象にする(帰還中の「帰還」ボタンは対象外)。
     // 両者はストレス条件が相互排他(平和=全員元気、疲弊=疲労キャラを含むペア)のため、同時には発火しない
     if (!retreating) { maybeTriggerPeaceDialogue(); maybeTriggerTiredDialogue(); }
+  } else if (roll < battleChance + goldChance + eventChance && tryStartDungeonEvent()) {
+    lastFloorMoveOutcome = "event"; // 未消化イベントが無い場合はtryStartDungeonEventがfalseを返し、下の静寂へ落ちる
   } else {
     lastFloorMoveOutcome = "silent"; // オート帰還の一時停止判定用
+    // 傷ついた小鬼の恩返し(イベント): 手当てから数フロア後、静かな通路で待っていて財宝のありかを教えてくれる
+    if (koOniRepayFloorsLeft > 0) {
+      koOniRepayFloorsLeft--;
+      if (koOniRepayFloorsLeft === 0) {
+        const g = ((currentStage === "coast" ? 6 : 5) + currentFloor) * 3;
+        dlog(`手当てした小鬼が待っていた！恩返しに、隠された財宝のありかをこっそり教えてくれた。${g}Gを手に入れた！`);
+        grantEventGold(g);
+        renderDungeon();
+        return;
+      }
+    }
     dlog("静かな通路だ。何も起こらなかった。");
     renderDungeon();
     // 「すすむ」で敵と遭遇しなかった時だけ、平和/疲弊の掛け合いの発生条件をチェックする(帰還中の「帰還」ボタンは対象外)
@@ -1493,6 +1854,91 @@ function treasureTierImage(amount) {
   if (amount <= 25) return "churyo";
   return "tairyo";
 }
+// ============ 光る道の財宝発見・豪華演出 ============
+// 「何かが光る道」(hikaru)で財宝を見つけた時だけ、通常のポップアップの代わりに再生する特別演出。
+// 暗めの幕→宝箱がドンと降ってくる→ガタガタ震える→光が弾けて金額がドン、という流れを全てWAAPIで組む
+// (CSS transitionはこのプロジェクトでは信頼できない実績があるためelement.animate()のみ使用)
+const HIKARU_CELEBRATION_TOTAL_MS = 2600;
+function playHikaruTreasureCelebration(amount) {
+  const old = document.querySelector(".hikaru-celebration");
+  if (old) old.remove(); // 連続発見時の保険(通常は演出中に次の発見は起きない)
+  const layer = document.createElement("div");
+  layer.className = "hikaru-celebration";
+  layer.innerHTML = `
+    <div class="hikaru-backdrop"></div>
+    <div class="hikaru-rays"></div>
+    <div class="hikaru-stage">
+      <div class="hikaru-flash"></div>
+      <img class="hikaru-chest" src="assets/events/treasure_chest.png" alt="">
+      <div class="hikaru-amount">+${amount}G</div>
+      ${Array.from({ length: 10 }, () => '<span class="hikaru-spark">✨</span>').join("")}
+    </div>`;
+  document.body.appendChild(layer);
+  const backdrop = layer.querySelector(".hikaru-backdrop");
+  const rays = layer.querySelector(".hikaru-rays");
+  const chest = layer.querySelector(".hikaru-chest");
+  const flash = layer.querySelector(".hikaru-flash");
+  const amountEl = layer.querySelector(".hikaru-amount");
+  const sparks = Array.from(layer.querySelectorAll(".hikaru-spark"));
+  // 1) 幕が下りて宝箱が落ちてくる(バウンド付き)
+  backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: "ease", fill: "forwards" });
+  playSfx("omikuji_normal");
+  chest.animate(
+    [
+      { opacity: 0, transform: "translateY(-58vh) scale(0.8)", offset: 0 },
+      { opacity: 1, transform: "translateY(0) scale(1)", offset: 0.55 },
+      { opacity: 1, transform: "translateY(-5vh) scale(1.02)", offset: 0.75 },
+      { opacity: 1, transform: "translateY(0) scale(1)", offset: 1 },
+    ],
+    { duration: 620, easing: "ease-in-out", fill: "forwards" }
+  );
+  // 2) 期待の間: 宝箱がガタガタと震え、背後で光の帯が回り始める
+  setTimeout(() => {
+    rays.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: "ease", fill: "forwards" });
+    rays.animate([{ transform: "translate(-50%, -50%) rotate(0deg)" }, { transform: "translate(-50%, -50%) rotate(360deg)" }], { duration: 7000, iterations: Infinity, easing: "linear" });
+    chest.animate(
+      [
+        { transform: "rotate(0deg)" }, { transform: "rotate(-5deg)" }, { transform: "rotate(5deg)" },
+        { transform: "rotate(-7deg)" }, { transform: "rotate(7deg)" }, { transform: "rotate(-4deg)" }, { transform: "rotate(0deg)" },
+      ],
+      { duration: 520, easing: "ease-in-out" }
+    );
+  }, 660);
+  // 3) 光が弾けて金額がドン+火花が放射状に飛ぶ
+  setTimeout(() => {
+    playSfx("coin");
+    flash.animate([{ opacity: 1, transform: "scale(0.5)" }, { opacity: 0, transform: "scale(1.6)" }], { duration: 480, easing: "ease-out", fill: "forwards" });
+    chest.animate([{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }], { duration: 300, easing: "ease-out" });
+    amountEl.animate(
+      [
+        { opacity: 0, transform: "translateX(-50%) scale(0.3)", offset: 0 },
+        { opacity: 1, transform: "translateX(-50%) scale(1.25)", offset: 0.55 },
+        { opacity: 1, transform: "translateX(-50%) scale(1)", offset: 1 },
+      ],
+      { duration: 380, easing: "ease-out", fill: "forwards" }
+    );
+    sparks.forEach((s, i) => {
+      const angle = (i / sparks.length) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 70 + Math.random() * 70;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      s.animate(
+        [
+          { opacity: 1, transform: "translate(-50%, -50%) scale(0.5)" },
+          { opacity: 0, transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${dy.toFixed(0)}px)) scale(1.3)` },
+        ],
+        { duration: 650 + Math.random() * 250, easing: "ease-out", fill: "forwards" }
+      );
+    });
+  }, 1180);
+  // 4) 余韻→全体フェードアウトして片付け
+  setTimeout(() => {
+    const out = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, easing: "ease", fill: "forwards" });
+    out.onfinish = () => layer.remove();
+    setTimeout(() => layer.remove(), 600); // onfinish不発時の保険
+  }, HIKARU_CELEBRATION_TOTAL_MS - 380);
+}
+
 let treasurePopupTimer = null;
 // extraImageSrc: ゴールドと同時に表示したい追加アイテムのイラスト(鬼火の魂のかけら等)のsrc。
 // 省略時は従来通りゴールドのイラスト1枚だけを表示する。amount<=0の時はゴールド側の絵を隠し、

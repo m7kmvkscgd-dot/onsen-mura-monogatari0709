@@ -1417,6 +1417,12 @@ function victory() {
   if (battle.bossPursuitEnemyId) bossPursuit = null;
   let soulShardCount = 0;
   let soulLumpCount = 0;
+  // 探索イベント「天狗の腕試し」に勝利: 魂のかけら2つ+全員のストレス回復(胸のすく勝利)
+  if (battle.tenguChallenge) {
+    soulShardCount += 2;
+    aliveField().forEach((c) => { c.fatigue = Math.max(0, (c.fatigue || 0) - 20); });
+    blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら2つ+全員ストレス-20)");
+  }
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
