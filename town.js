@@ -520,9 +520,13 @@ function renderRosterList() {
         ${hasPendingSkill ? `<button class="skill-pending-btn">🎓スキル選択</button>` : ""}
       </div>
     `;
+    // 戻り先(defaultStatusOnBack=宿屋)を明示して渡す。renderStatusScreenのstatusScreenOnBackは
+    // 「前回の戻り先を使い回す」仕様(スキルツリー往復などで文脈を保つため)なので、ここで明示しないと
+    // 直前に出発準備画面から詳細を開いていた場合に、宿屋から開いたのに「戻る」で出発タブへ
+    // 飛ばされるバグになる(ユーザー報告2026-07-18)
     row.querySelector(".detail-btn").onclick = (e) => {
       e.stopPropagation();
-      renderStatusScreen(c.id);
+      renderStatusScreen(c.id, defaultStatusOnBack);
       showScreen("screen-status");
     };
     // アイコン写真自体をタップしても詳細ステータスを開けるようにする(既存の「詳細」ボタンと同じ遷移)。
@@ -531,7 +535,7 @@ function renderRosterList() {
     rosterImg.style.cursor = "pointer";
     rosterImg.onclick = (e) => {
       e.stopPropagation();
-      renderStatusScreen(c.id);
+      renderStatusScreen(c.id, defaultStatusOnBack);
       showScreen("screen-status");
     };
     const skillBtn = row.querySelector(".skill-pending-btn");
