@@ -569,7 +569,13 @@ function playPairedDialogueExchange(member1, member2, entry, category, ignoreMut
   const speaksFirst = entry.pA === member1.personality ? member1 : member2;
   const speaksSecond = speaksFirst === member1 ? member2 : member1;
   if (!speakExplicitLine(speaksFirst, entry.lineA, category, ignoreMutexForFirst, forcefulFirst)) return false;
-  setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, gapMs != null ? gapMs : PAIRED_DIALOGUE_GAP_MS);
+  const gap = gapMs != null ? gapMs : PAIRED_DIALOGUE_GAP_MS;
+  setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, gap);
+  // A→B→Aの3行掛け合い(tiredカテゴリの一部エントリ)は、Bの発言からさらに同じ間隔を空けて
+  // Aがオチの一言を返す。2行エントリ(lineA2無し)ではこの処理は走らず従来通り
+  if (entry.lineA2) {
+    setTimeout(() => { speakExplicitLine(speaksFirst, entry.lineA2, category, true); }, gap * 2);
+  }
   return true;
 }
 

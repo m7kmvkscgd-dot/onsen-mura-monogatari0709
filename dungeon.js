@@ -58,12 +58,18 @@ let lastFloorMoveOutcome = null; // rollEncounter()が"battle"/"gold"/"silent"/"
 // ============ 戦闘後の平和な掛け合い: 「戦闘に勝利する→その後1回だけ発火可能」のサイクルで管理する状態 ============
 // (他の探索限定の変数と同じくstateには保存しない)
 let peaceDialogueLocked = true; // true=発火不可(まだ一度も勝利していない、または前回の勝利後に発火済み)
+// 疲弊時の掛け合い(tiredカテゴリ)用。peaceと同じ「勝利→1回だけ発火可」のサイクルだが、
+// ストレス条件が正反対(peaceは全員49以下、tiredは話者に50〜99のキャラを含む)のため
+// 同時に条件を満たすことはなく、ロックだけ独立に持つ
+let tiredDialogueLocked = true;
 function resetPeaceDialogueState() {
   peaceDialogueLocked = true; // 遠征開始時点では1回も勝利していないので発火不可
+  tiredDialogueLocked = true;
 }
 // 戦闘に勝利するたび(battle.jsのvictory()から)呼ぶ。これで次に条件を満たした瞬間1回だけ発火できるようになる
 function unlockPeaceDialogueAfterVictory() {
   peaceDialogueLocked = false;
+  tiredDialogueLocked = false;
 }
 
 function applyOmikujiExpeditionStart() {
@@ -1324,14 +1330,15 @@ function rollEncounter(pathBias) {
     dlog(`${g}Gの財宝を見つけた！`);
     renderDungeon();
     showTreasurePopup(g);
-    // 財宝発見時も(戦闘に遭遇していなければ)平和な掛け合いの対象にする(帰還中の「帰還」ボタンは対象外)
-    if (!retreating) maybeTriggerPeaceDialogue();
+    // 財宝発見時も(戦闘に遭遇していなければ)平和/疲弊の掛け合いの対象にする(帰還中の「帰還」ボタンは対象外)。
+    // 両者はストレス条件が相互排他(平和=全員元気、疲弊=疲労キャラを含むペア)のため、同時には発火しない
+    if (!retreating) { maybeTriggerPeaceDialogue(); maybeTriggerTiredDialogue(); }
   } else {
     lastFloorMoveOutcome = "silent"; // オート帰還の一時停止判定用
     dlog("静かな通路だ。何も起こらなかった。");
     renderDungeon();
-    // 「すすむ」で敵と遭遇しなかった時だけ、平和な掛け合いの発生条件をチェックする(帰還中の「帰還」ボタンは対象外)
-    if (!retreating) maybeTriggerPeaceDialogue();
+    // 「すすむ」で敵と遭遇しなかった時だけ、平和/疲弊の掛け合いの発生条件をチェックする(帰還中の「帰還」ボタンは対象外)
+    if (!retreating) { maybeTriggerPeaceDialogue(); maybeTriggerTiredDialogue(); }
   }
 }
 
@@ -1374,6 +1381,61 @@ function maybeTriggerPeaceDialogue() {
   // ignoreMutexForFirst=true: 発生条件が厳しい特別なイベントなので、直前のアンビエントセリフ
   // (警戒/ストレス愚痴等)とたまたま重なって黙って不発になることがないよう優先して発言させる
   if (playPairedDialogueExchange(member1, member2, entry, "banter", true)) peaceDialogueLocked = true;
+}
+
+// ============ 疲弊時の掛け合い(トリガー判定) ============
+// 平和な掛け合い(banter)と全く同じ発生条件・発火サイクル(勝利→敵と遭遇しなかったフロアで
+// 1回だけ100%発火、神隠しの道と帰還中は対象外)だが、ストレス条件だけが異なる:
+// banterは「全員49以下(=全員元気)」であるのに対し、こちらは「セリフのMOODが要求する
+// 疲労/元気の組み合わせに合致する2人が実際にパーティにいること」が条件になる。
+//   疲労 = ストレス50〜99(100=発狂圏は対象外)、元気 = ストレス49以下
+//   bothTired        → A役・B役とも疲労
+//   aTiredBEnergetic → A役が疲労、B役が元気
+//   aEnergeticBTired → A役が元気、B役が疲労
+// 全MOODが「少なくとも1人は疲労」を要求するため、banterの発生条件(全員元気)とは
+// 同時に成立せず、どちらか一方しか発火しない
+function tiredStressMatches(member, needTired) {
+  const f = member.fatigue || 0;
+  return needTired ? f >= 50 && f <= 99 : f <= 49;
+}
+function tiredDialogueConditionsMet() {
+  if (tiredDialogueLocked) return false; // 勝利→1回発火のサイクル(banterのpeaceDialogueLockedと同じ)
+  const active = fieldParty.filter((c) => c.status === "active");
+  if (active.length < 2) return false;
+  if (fieldParty.some((c) => c.status === "critical")) return false; // 瀕死がいない
+  if (fieldParty.some((c) => c.carryingId)) return false; // 担いでいない
+  if (!active.every((c) => c.maxHp > 0 && c.hp / c.maxHp >= 0.5)) return false; // HP50%以上
+  return true;
+}
+// パーティの現在のストレス状態で成立する(性格ペア+MOODが両方合致する)セリフ候補を全て集める
+function collectTiredDialogueCandidates() {
+  const store = pairedDialogueStore["tired"];
+  if (!store) return [];
+  const active = fieldParty.filter((c) => c.status === "active");
+  const results = [];
+  store.list.forEach((entry) => {
+    if (!entry.mood) return; // MOOD行の無い壊れたエントリは対象外
+    const needATired = entry.mood === "bothTired" || entry.mood === "aTiredBEnergetic";
+    const needBTired = entry.mood === "bothTired" || entry.mood === "aEnergeticBTired";
+    active.forEach((mA) => {
+      if (mA.personality !== entry.pA || !tiredStressMatches(mA, needATired)) return;
+      active.forEach((mB) => {
+        if (mB === mA) return;
+        if (mB.personality !== entry.pB || !tiredStressMatches(mB, needBTired)) return;
+        results.push({ entry, mA, mB });
+      });
+    });
+  });
+  return results;
+}
+function maybeTriggerTiredDialogue() {
+  if (!tiredDialogueConditionsMet()) return;
+  const candidates = collectTiredDialogueCandidates();
+  if (candidates.length === 0) return;
+  const picked = candidates[Math.floor(Math.random() * candidates.length)];
+  // playPairedDialogueExchangeはentry.pAと話者の性格の一致で先攻を決めるため、
+  // MOOD判定済みのmA(A役)を第1引数に渡せばA役が必ず先に喋る
+  if (playPairedDialogueExchange(picked.mA, picked.mB, picked.entry, "tired", true)) tiredDialogueLocked = true;
 }
 
 // 神隠しの道を抜けた時だけの特別演出: 画面全体を紫〜白の幻想的な光でフラッシュさせ、

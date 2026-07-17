@@ -244,7 +244,9 @@ function finishCamping() {
     fieldParty.forEach((c) => { if (c.status === "active") { useCampRest(c); clearOnsenBuff(c); } });
     // 平和な掛け合いは通常「戦闘勝利後に1回まで」だが、野営を挟んだ場合はユーザー指示により
     // 例外的にロックを解除し、次の勝利を待たずとも条件(HP/ストレス等)を満たせば再度発生できるようにする。
+    // 疲弊時の掛け合い(tired)も同じ扱いにする
     peaceDialogueLocked = false;
+    tiredDialogueLocked = false;
     saveState();
     showCampRestSummary(beforeSnapshot, () => {
       revealCampMorning(() => {

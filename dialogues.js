@@ -22,6 +22,7 @@
 const PAIRED_DIALOGUE_FILES = {
   banter: "assets/dialogues/dialogue_banter.txt", // お笑い寄りの掛け合い(旧peaceカテゴリのトリガーがこちらを参照するよう差し替え済み、dungeon.jsのmaybeTriggerPeaceDialogue参照)
   crit: "assets/dialogues/dialogue_crit.txt", // 会心ヒット時のかけ声+仲間の反応
+  tired: "assets/dialogues/dialogue_tired.txt", // 疲弊時の掛け合い(MOOD行付き。ストレス50〜99のキャラを含むペア限定、dungeon.jsのmaybeTriggerTiredDialogue参照)
   // 今後追加予定: camp: "assets/dialogues/dialogue_camp.txt"(野営会話)、
   // bossPre: "assets/dialogues/dialogue_boss_pre.txt"(ボス前会話)、
   // homecoming: "assets/dialogues/dialogue_homecoming.txt"(帰還時会話)、
@@ -51,13 +52,20 @@ function parsePairedDialogueText(raw) {
     const line = rawLine.trim();
     if (line.startsWith("ID:")) {
       pushIfComplete();
-      cur = { id: line.slice(3).trim(), pA: null, pB: null, lineA: null, lineB: null };
+      cur = { id: line.slice(3).trim(), pA: null, pB: null, lineA: null, lineB: null, lineA2: null, mood: null };
     } else if (line.startsWith("PAIR:") && cur) {
       const parts = line.slice(5).trim().split("|");
       cur.pA = (parts[0] || "").trim();
       cur.pB = (parts[1] || "").trim();
+    } else if (line.startsWith("MOOD:") && cur) {
+      // 疲弊時の掛け合い(tired)用: bothTired / aTiredBEnergetic / aEnergeticBTired のいずれか。
+      // MOOD行を持たないカテゴリ(banter/crit)ではnullのまま(既存の動作に影響しない)
+      cur.mood = line.slice(5).trim();
     } else if (line.startsWith("A:") && cur) {
-      cur.lineA = line.slice(2).trim();
+      // 2つ目のA:行(A→B→Aの3行掛け合いのオチ)はlineA2として別枠で持つ。
+      // Bより前のA:はlineA(1行目)、Bより後のA:はlineA2(3行目)
+      if (cur.lineB != null) cur.lineA2 = line.slice(2).trim();
+      else cur.lineA = line.slice(2).trim();
     } else if (line.startsWith("B:") && cur) {
       cur.lineB = line.slice(2).trim();
     }

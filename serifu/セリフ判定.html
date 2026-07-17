@@ -336,6 +336,2313 @@
 //              lines:[{speaker:"A"|"B", text:"..."}, ...] } (lines は2〜3件)
 // ============================================================
 const LINES = [
+  { id: 1, pair: ["真面目","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"歩数を数えて気を紛らわせます"},
+    {speaker:"B", text:"さっき三回目の「一」だったな"},
+    {speaker:"A", text:"……一…"}
+  ]},
+  { id: 2, pair: ["お調子者","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"水筒振ったら音するもん!"},
+    {speaker:"B", text:"それは空の音だ"}
+  ]},
+  { id: 3, pair: ["のんびり","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"風が気持ちいいね〜"},
+    {speaker:"B", text:"立ったまま寝ないでね…"}
+  ]},
+  { id: 4, pair: ["熱血","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"鳥も応援してるぞ!"},
+    {speaker:"B", text:"あれ警戒の声だって…"}
+  ]},
+  { id: 5, pair: ["優しい","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"静かだね…大丈夫？"},
+    {speaker:"B", text:"……帰りたい"}
+  ]},
+  { id: 6, pair: ["生意気","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"地図はあたしに任せてって"},
+    {speaker:"B", text:"逆さまだ"}
+  ]},
+  { id: 7, pair: ["怖がり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今の音…敵かな…"},
+    {speaker:"B", text:"お前の腹だ"}
+  ]},
+  { id: 8, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"あれ〜何しに来たんだっけ〜"},
+    {speaker:"B", text:"探索です"}
+  ]},
+  { id: 9, pair: ["熱血","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あと三層で着くぞ!"},
+    {speaker:"B", text:"五層前にも聞いた…"}
+  ]},
+  { id: 10, pair: ["お調子者","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歌でも歌おうもん!"},
+    {speaker:"B", text:"……却下"}
+  ]},
+  { id: 11, pair: ["のんびり","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"まばたきしたら進んでた〜"},
+    {speaker:"B", text:"それ、寝てたんだよ…"}
+  ]},
+  { id: 12, pair: ["真面目","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"補給食は計画的に食べます"},
+    {speaker:"B", text:"もう食べたもん…"},
+    {speaker:"A", text:"えっ"}
+  ]},
+  { id: 13, pair: ["怖がり","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"手が冷たいんだけど…"},
+    {speaker:"B", text:"走れば温まる…ぞ…"},
+    {speaker:"A", text:"その元気ないかな…"}
+  ]},
+  { id: 14, pair: ["のんびり","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"目、開けたまま休憩中〜"},
+    {speaker:"B", text:"それを寝ると言う"}
+  ]},
+  { id: 15, pair: ["生意気","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"あたし全然余裕だし"},
+    {speaker:"B", text:"声が小さい"}
+  ]},
+  { id: 16, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"あの苔ふかふかそう〜"},
+    {speaker:"B", text:"寝てはいけません"}
+  ]},
+  { id: 17, pair: ["熱血","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気か!?"},
+    {speaker:"B", text:"……元気"},
+    {speaker:"A", text:"目が死んでるぞ!"}
+  ]},
+  { id: 18, pair: ["熱血","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"まだ腕立てできるぞ…!"},
+    {speaker:"B", text:"三回で止まってる"}
+  ]},
+  { id: 19, pair: ["怖がり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"あの影…動いた…"},
+    {speaker:"B", text:"岩だ"},
+    {speaker:"A", text:"岩も怖い…"}
+  ]},
+  { id: 20, pair: ["優しい","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"その歌、いい曲だね"},
+    {speaker:"B", text:"あくびだよ〜"}
+  ]},
+  { id: 21, pair: ["お調子者","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"甘いもの食べたいじゃん!"},
+    {speaker:"B", text:"うん…"},
+    {speaker:"A", text:"絶対聞いてないじゃん!"}
+  ]},
+  { id: 22, pair: ["熱血","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"深呼吸で回復だー!"},
+    {speaker:"B", text:"虫、入っちゃうよ…"}
+  ]},
+  { id: 23, pair: ["真面目","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"二足す三は…六です"},
+    {speaker:"B", text:"五だって。重症じゃん"}
+  ]},
+  { id: 24, pair: ["生意気","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"次…あっちでしょ…"},
+    {speaker:"B", text:"そちらは来た道です"}
+  ]},
+  { id: 25, pair: ["優しい","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"ありがとう…えっと、誰？"},
+    {speaker:"B", text:"名前忘れられた!?"}
+  ]},
+  { id: 26, pair: ["真面目","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れたら挙手してください"},
+    {speaker:"B", text:"……もう挙げてる"}
+  ]},
+  { id: 27, pair: ["熱血","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"荷物なら全部任せろ!"},
+    {speaker:"B", text:"あなたのが一番重いよ…"}
+  ]},
+  { id: 28, pair: ["お調子者","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"ポケットに飴あったもん!"},
+    {speaker:"B", text:"それ…石だよ…？"}
+  ]},
+  { id: 29, pair: ["怖がり","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"ここで休むの…嫌だな…"},
+    {speaker:"B", text:"もう座っちゃった〜"}
+  ]},
+  { id: 30, pair: ["優しい","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"泣いてるの？"},
+    {speaker:"B", text:"汗だ…目から汗だ…"}
+  ]},
+  { id: 31, pair: ["お調子者","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"壁ぶち抜けば近道じゃん!"},
+    {speaker:"B", text:"却下です…"}
+  ]},
+  { id: 32, pair: ["優しい","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"どこかで合唱きこえるね"},
+    {speaker:"B", text:"私たちの腹だ"}
+  ]},
+  { id: 33, pair: ["熱血","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あの雲、何に見える!?"},
+    {speaker:"B", text:"おふとん…"}
+  ]},
+  { id: 34, pair: ["熱血","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……いくぞぉ…"},
+    {speaker:"B", text:"気合い置いてきたでしょ"}
+  ]},
+  { id: 35, pair: ["怖がり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"一人多い気がする…"},
+    {speaker:"B", text:"あんたの影だって"}
+  ]},
+  { id: 36, pair: ["真面目","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"もう…無理っす…"},
+    {speaker:"B", text:"敬語が力尽きてるって"}
+  ]},
+  { id: 37, pair: ["優しい","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"あなたが二人に見える…"},
+    {speaker:"B", text:"私は一人です。休みましょう"}
+  ]},
+  { id: 38, pair: ["生意気","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"ペース上げてこって"},
+    {speaker:"B", text:"この速さが一番〜"}
+  ]},
+  { id: 39, pair: ["生意気","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"水たまり、跳べるでしょ"},
+    {speaker:"B", text:"……直進"}
+  ]},
+  { id: 40, pair: ["真面目","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"非常食を半分にします"},
+    {speaker:"B", text:"もう粉だよ〜"}
+  ]},
+  { id: 41, pair: ["生意気","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"体力温存のコツ教えたげる"},
+    {speaker:"B", text:"さっき寝ながら歩いてたな"}
+  ]},
+  { id: 42, pair: ["お調子者","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"白ごはんの匂いするもん…"},
+    {speaker:"B", text:"幻覚です"}
+  ]},
+  { id: 43, pair: ["怖がり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"怖がるのも疲れた…"},
+    {speaker:"B", text:"それはそれで心配だぞ!"}
+  ]},
+  { id: 44, pair: ["冷静","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物が妙に重い"},
+    {speaker:"B", text:"石拾ったからね〜"}
+  ]},
+  { id: 45, pair: ["のんびり","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あの子撫でたら回復しそう〜"},
+    {speaker:"B", text:"噛まれるよ…"}
+  ]},
+  { id: 46, pair: ["優しい","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"石さんも頑張ってるね"},
+    {speaker:"B", text:"ついに石と話してる…"}
+  ]},
+  { id: 47, pair: ["冷静","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"矢が数えるたび増える"},
+    {speaker:"B", text:"それ怖いんだけど…"}
+  ]},
+  { id: 48, pair: ["お調子者","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"面白い話…あとでするもん…"},
+    {speaker:"B", text:"予約制なのか"}
+  ]},
+  { id: 49, pair: ["怖がり","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"置いてかないで…"},
+    {speaker:"B", text:"……掴まれ"}
+  ]},
+  { id: 50, pair: ["怖がり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"寒いんだけど…"},
+    {speaker:"B", text:"着ぶくれまんまるじゃん!"}
+  ]},
+  { id: 51, pair: ["お調子者","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"回復薬、振ると効くもん!"},
+    {speaker:"B", text:"ただ濁るだけだ"}
+  ]},
+  { id: 52, pair: ["優しい","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"しりとりしようか"},
+    {speaker:"B", text:"……ん"},
+    {speaker:"A", text:"「ん」!?"}
+  ]},
+  { id: 53, pair: ["真面目","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"点呼します。一"},
+    {speaker:"B", text:"二〜"},
+    {speaker:"A", text:"寝たまま返事はだめです"}
+  ]},
+  { id: 54, pair: ["生意気","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"別に強がってないし…"},
+    {speaker:"B", text:"誰も何も言ってないよ？"}
+  ]},
+  { id: 55, pair: ["熱血","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"私の背中についてこい!"},
+    {speaker:"B", text:"それは壁だ"}
+  ]},
+  { id: 56, pair: ["のんびり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"やまびこさんも眠そう〜"},
+    {speaker:"B", text:"お前の声が遅いだけだ"}
+  ]},
+  { id: 57, pair: ["怖がり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"暗いの苦手…"},
+    {speaker:"B", text:"平気、あたしも見えないもん!"}
+  ]},
+  { id: 58, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"報告。まぶたが重いです"},
+    {speaker:"B", text:"却下する"}
+  ]},
+  { id: 59, pair: ["生意気","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"なんか喋ってよ…"},
+    {speaker:"B", text:"……無理"}
+  ]},
+  { id: 60, pair: ["優しい","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"少し…休みたいな…"},
+    {speaker:"B", text:"よし、全力で休むぞ!"}
+  ]},
+  { id: 61, pair: ["冷静","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"記憶が飛んでる"},
+    {speaker:"B", text:"変な踊りしてたじゃん!"},
+    {speaker:"A", text:"記憶を消せ"}
+  ]},
+  { id: 62, pair: ["真面目","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"忘れ物はありませんか"},
+    {speaker:"B", text:"勇気を忘れてきた…"}
+  ]},
+  { id: 63, pair: ["のんびり","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"歩きながら夢見てた〜"},
+    {speaker:"B", text:"器用すぎでしょ"}
+  ]},
+  { id: 64, pair: ["熱血","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"腹が減っては…戦は…"},
+    {speaker:"B", text:"続きはご飯のあとでね"}
+  ]},
+  { id: 65, pair: ["怖がり","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰り道、覚えてる…？"},
+    {speaker:"B", text:"前を向いて歩きましょう"},
+    {speaker:"A", text:"ごまかした…"}
+  ]},
+  { id: 66, pair: ["お調子者","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"面白い顔してあげる…"},
+    {speaker:"B", text:"いつもと同じじゃん"}
+  ]},
+  { id: 67, pair: ["冷静","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"会話で気を紛らわせよう"},
+    {speaker:"B", text:"……どうぞ"},
+    {speaker:"A", text:"話題が無い"}
+  ]},
+  { id: 68, pair: ["のんびり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"気合いってどこで売ってる〜？"},
+    {speaker:"B", text:"心で作るんだ!"}
+  ]},
+  { id: 69, pair: ["生意気","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"幽霊なんていないって"},
+    {speaker:"B", text:"後ろ見て言ってよ…"}
+  ]},
+  { id: 70, pair: ["優しい","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"お水が…甘く感じる…"},
+    {speaker:"B", text:"相当疲れてるな"}
+  ]},
+  { id: 71, pair: ["真面目","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"士気を…上げましょう…"},
+    {speaker:"B", text:"ネタもう無いもん…"}
+  ]},
+  { id: 72, pair: ["熱血","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"だめだ…声が出ん…"},
+    {speaker:"B", text:"十分聞こえてるよ…？"}
+  ]},
+  { id: 73, pair: ["冷静","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"検討する。休むか否か"},
+    {speaker:"B", text:"休む一択でしょ…"},
+    {speaker:"A", text:"満場一致だ"}
+  ]},
+  { id: 74, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"家まであと何歩かな…"},
+    {speaker:"B", text:"知らない方が幸せだよ？"}
+  ]},
+  { id: 75, pair: ["無口","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……重い"},
+    {speaker:"B", text:"荷物か!? 任せろ!"},
+    {speaker:"A", text:"……体"}
+  ]},
+  { id: 76, pair: ["のんびり","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"いいこと思いついた〜"},
+    {speaker:"B", text:"聞く元気ないもん…"}
+  ]},
+  { id: 77, pair: ["真面目","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"気合いの在庫が切れました"},
+    {speaker:"B", text:"私のも…空だ…"}
+  ]},
+  { id: 78, pair: ["のんびり","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"このキノコ食べられるかな〜"},
+    {speaker:"B", text:"色がだめって言ってる…"}
+  ]},
+  { id: 79, pair: ["生意気","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"別におんぶ要らないし…"},
+    {speaker:"B", text:"乗れ! 話は後だ!"}
+  ]},
+  { id: 80, pair: ["優しい","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"いっぱい頑張ったね"},
+    {speaker:"B", text:"泣きそうだからやめて…"}
+  ]},
+  { id: 81, pair: ["冷静","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲労を数字で報告しろ"},
+    {speaker:"B", text:"けたが足りない…"}
+  ]},
+  { id: 82, pair: ["お調子者","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"目つぶって歩くと楽じゃん…"},
+    {speaker:"B", text:"木に謝る羽目になるぞ"}
+  ]},
+  { id: 83, pair: ["真面目","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"手順書に「休憩」とあります"},
+    {speaker:"B", text:"手順書えらい…"}
+  ]},
+  { id: 84, pair: ["熱血","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら温泉だ!"},
+    {speaker:"B", text:"……唯一の希望"}
+  ]},
+  { id: 85, pair: ["生意気","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"あくびうつった…責任とって"},
+    {speaker:"B", text:"どうぞもう一個〜"}
+  ]},
+  { id: 86, pair: ["怖がり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手、つないでいい…？"},
+    {speaker:"B", text:"いいよ…って冷たっ!?"}
+  ]},
+  { id: 87, pair: ["冷静","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"燃料切れだ"},
+    {speaker:"B", text:"私の熱を分けてやる!"},
+    {speaker:"A", text:"物理的に無理だ"}
+  ]},
+  { id: 88, pair: ["のんびり","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"おしゃべりしよ〜"},
+    {speaker:"B", text:"……している"}
+  ]},
+  { id: 89, pair: ["お調子者","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"肝試しって知ってるじゃん？"},
+    {speaker:"B", text:"今がもう肝試し…"}
+  ]},
+  { id: 90, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"箸より重い物が持てません"},
+    {speaker:"B", text:"剣を置くな"}
+  ]},
+  { id: 91, pair: ["優しい","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"応援の歌、歌おうか？"},
+    {speaker:"B", text:"子守唄がいい〜"}
+  ]},
+  { id: 92, pair: ["熱血","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"燃え尽きた…真っ白だ…"},
+    {speaker:"B", text:"土色です"}
+  ]},
+  { id: 93, pair: ["生意気","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"ツッコミ役やってよ…"},
+    {speaker:"B", text:"ボケる元気もないもん…"}
+  ]},
+  { id: 94, pair: ["冷静","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"表情筋を節約中だ"},
+    {speaker:"B", text:"いつもと同じだよ…？"}
+  ]},
+  { id: 95, pair: ["無口","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……あと少し？"},
+    {speaker:"B", text:"あたしを信じるな…"}
+  ]},
+  { id: 96, pair: ["怖がり","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"心細いんだけど…"},
+    {speaker:"B", text:"隣にいる"}
+  ]},
+  { id: 97, pair: ["お調子者","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"走って帰らない？"},
+    {speaker:"B", text:"いいな、やろう…!"},
+    {speaker:"A", text:"嘘。歩こ…"}
+  ]},
+  { id: 98, pair: ["真面目","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"到着予定を計算しました"},
+    {speaker:"B", text:"聞かないでおく〜"}
+  ]},
+  { id: 99, pair: ["優しい","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"川の音、きれいだね"},
+    {speaker:"B", text:"渡るの…？渡るの…？"}
+  ]},
+  { id: 100, pair: ["冷静","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら十二時間寝る"},
+    {speaker:"B", text:"私は十三〜"},
+    {speaker:"A", text:"勝負じゃない"}
+  ]},
+  { id: 101, pair: ["のんびり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"雲が追いかけてくるよ〜"},
+    {speaker:"B", text:"追われる心当たりがない"}
+  ]},
+  { id: 102, pair: ["生意気","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"慰めてよ、上手にね"},
+    {speaker:"B", text:"注文が細かいね？"}
+  ]},
+  { id: 103, pair: ["熱血","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"心の炎はまだ燃えてる…"},
+    {speaker:"B", text:"煙しか見えない"}
+  ]},
+  { id: 104, pair: ["怖がり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"何か言って…安心したい…"},
+    {speaker:"B", text:"……何か"}
+  ]},
+  { id: 105, pair: ["お調子者","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったらごちそうじゃん!"},
+    {speaker:"B", text:"その話、お腹に響きます…"}
+  ]},
+  { id: 106, pair: ["優しい","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"えらいえらい"},
+    {speaker:"B", text:"子ども扱い…悪くない…"}
+  ]},
+  { id: 107, pair: ["冷静","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"静かだ"},
+    {speaker:"B", text:"ね〜"},
+    {speaker:"A", text:"会話終了か"}
+  ]},
+  { id: 108, pair: ["真面目","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"警戒を…緩めません…"},
+    {speaker:"B", text:"目、閉じかけてるよ…？"}
+  ]},
+  { id: 109, pair: ["無口","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……水"},
+    {speaker:"B", text:"はい水! 他には!?"},
+    {speaker:"A", text:"……静けさ"}
+  ]},
+  { id: 110, pair: ["熱血","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"競争だ…先に着いた方が…"},
+    {speaker:"B", text:"勝ちを譲るよ〜"}
+  ]},
+  { id: 111, pair: ["生意気","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物持つ権利、あげる"},
+    {speaker:"B", text:"辞退する"}
+  ]},
+  { id: 112, pair: ["優しい","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"お花咲いてるよ、ほら"},
+    {speaker:"B", text:"食べられないなら興味ない…"}
+  ]},
+  { id: 113, pair: ["お調子者","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"休憩券、使うもん…"},
+    {speaker:"B", text:"どこで手に入れた"}
+  ]},
+  { id: 114, pair: ["のんびり","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"お腹と背中がくっつきそう〜"},
+    {speaker:"B", text:"医学的に危険です…"}
+  ]},
+  { id: 115, pair: ["怖がり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"ため息しか出ない…"},
+    {speaker:"B", text:"吸ってから吐け!"}
+  ]},
+  { id: 116, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"顔に「限界」と書いてある"},
+    {speaker:"B", text:"読まないでよ…"}
+  ]},
+  { id: 117, pair: ["真面目","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"姿勢が乱れています"},
+    {speaker:"B", text:"猫背も戦略だし…"}
+  ]},
+  { id: 118, pair: ["熱血","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"誰か私を応援してくれ…"},
+    {speaker:"B", text:"がんばれ…私も…"}
+  ]},
+  { id: 119, pair: ["のんびり","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"足あとがついてくるね〜"},
+    {speaker:"B", text:"言い方!! 怖いよ!!"}
+  ]},
+  { id: 120, pair: ["お調子者","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"ねぇ、今の聞いた？"},
+    {speaker:"B", text:"……空耳"},
+    {speaker:"A", text:"即答こわいもん…"}
+  ]},
+  { id: 121, pair: ["生意気","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"根性見せてよ、ほら"},
+    {speaker:"B", text:"今…見せてる…最中…"}
+  ]},
+  { id: 122, pair: ["優しい","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"いいこと数えよ？"},
+    {speaker:"B", text:"数えるものが無い"}
+  ]},
+  { id: 123, pair: ["冷静","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今何層目か覚えてるか"},
+    {speaker:"B", text:"数えるのをやめた記憶なら…"}
+  ]},
+  { id: 124, pair: ["怖がり","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"もう一歩も動けない…"},
+    {speaker:"B", text:"あと五百歩はいけるって"},
+    {speaker:"A", text:"具体的にしないで…"}
+  ]},
+  { id: 125, pair: ["無口","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……甘いもの"},
+    {speaker:"B", text:"ないんだ、ごめんね"},
+    {speaker:"A", text:"……世界の終わり"}
+  ]},
+  { id: 126, pair: ["熱血","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"鍛えれば疲れも消えるぞ!"},
+    {speaker:"B", text:"鍛える体力がありません…"}
+  ]},
+  { id: 127, pair: ["お調子者","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"変顔対決しよ!"},
+    {speaker:"B", text:"今の顔で出るよ〜"}
+  ]},
+  { id: 128, pair: ["真面目","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"反省します…配分を…"},
+    {speaker:"B", text:"反省は座ってからね"}
+  ]},
+  { id: 129, pair: ["生意気","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"なんであんたは平気なの…"},
+    {speaker:"B", text:"平気に見える才能〜"}
+  ]},
+  { id: 130, pair: ["冷静","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"恐怖で眠気が飛ぶな"},
+    {speaker:"B", text:"私で実験しないで…"}
+  ]},
+  { id: 131, pair: ["優しい","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"元気を少し分けて…"},
+    {speaker:"B", text:"全部あげる! ぜんぶ!"},
+    {speaker:"A", text:"重い…"}
+  ]},
+  { id: 132, pair: ["のんびり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"着いたら何する〜？"},
+    {speaker:"B", text:"……無"}
+  ]},
+  { id: 133, pair: ["熱血","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"恐れるな! 私がいる!"},
+    {speaker:"B", text:"その声が一番驚く…"}
+  ]},
+  { id: 134, pair: ["真面目","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"本日の反省点は"},
+    {speaker:"B", text:"来たこと、だもん…"}
+  ]},
+  { id: 135, pair: ["生意気","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"競歩しよ、負けたら荷物持ち"},
+    {speaker:"B", text:"歩くだけで全力だもん…"}
+  ]},
+  { id: 136, pair: ["怖がり","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"私が先頭歩こうか…？"},
+    {speaker:"B", text:"どうしたの急に…"},
+    {speaker:"A", text:"後ろの方が怖くなった…"}
+  ]},
+  { id: 137, pair: ["無口","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……あれ"},
+    {speaker:"B", text:"どれだ"},
+    {speaker:"A", text:"……忘れた"}
+  ]},
+  { id: 138, pair: ["お調子者","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"温泉入ったら三時間出ないもん"},
+    {speaker:"B", text:"のぼせちゃうよ…？"}
+  ]},
+  { id: 139, pair: ["熱血","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"帰ったら特訓だ…"},
+    {speaker:"B", text:"帰ってから言えば？"}
+  ]},
+  { id: 140, pair: ["のんびり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"川のお水きもちい〜…"},
+    {speaker:"B", text:"顔まで浸けないでね？"}
+  ]},
+  { id: 141, pair: ["冷静","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気確認。叫んでみろ"},
+    {speaker:"B", text:"わー…"},
+    {speaker:"A", text:"診断、重症"}
+  ]},
+  { id: 142, pair: ["優しい","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"半分寝ながら歩いてない…？"},
+    {speaker:"B", text:"半分は起きています"}
+  ]},
+  { id: 143, pair: ["生意気","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気なら返事して"},
+    {speaker:"B", text:"……"},
+    {speaker:"A", text:"正直じゃん…"}
+  ]},
+  { id: 144, pair: ["お調子者","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"悲鳴あげる元気もないもん…"},
+    {speaker:"B", text:"それはそれで怖い…"}
+  ]},
+  { id: 145, pair: ["真面目","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"荷物の中身、三つ言えますか"},
+    {speaker:"B", text:"おやつ〜おやつ〜おやつ〜"}
+  ]},
+  { id: 146, pair: ["熱血","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"笑顔を忘れるな!"},
+    {speaker:"B", text:"顔が筋肉痛だもん…"}
+  ]},
+  { id: 147, pair: ["冷静","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"五感が三感しかない"},
+    {speaker:"B", text:"どの三つか気になるって"}
+  ]},
+  { id: 148, pair: ["怖がり","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"早く帰りたくない…？"},
+    {speaker:"B", text:"帰り道もお散歩だよ〜"}
+  ]},
+  { id: 149, pair: ["優しい","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"もう頑張らなくていいよ…"},
+    {speaker:"B", text:"その言葉…効く…"}
+  ]},
+  { id: 150, pair: ["無口","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……つかれた"},
+    {speaker:"B", text:"初めて聞いた気がする〜"},
+    {speaker:"A", text:"……二回目"}
+  ]},
+  { id: 151, pair: ["お調子者","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"一発芸見せるもん!"},
+    {speaker:"B", text:"今のか"},
+    {speaker:"A", text:"まだやってないじゃん!"}
+  ]},
+  { id: 152, pair: ["優しい","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手足に言うこと聞かせて…"},
+    {speaker:"B", text:"説得は任せろ! おーい手足!"}
+  ]},
+  { id: 153, pair: ["冷静","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"静寂に詳しいな"},
+    {speaker:"B", text:"……専門"}
+  ]},
+  { id: 154, pair: ["生意気","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"怖い話してあげよっか"},
+    {speaker:"B", text:"今の体力だと死んじゃう…"}
+  ]},
+  { id: 155, pair: ["熱血","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"限界という言葉は嫌いだ…"},
+    {speaker:"B", text:"嫌いでも来ちゃったね…"}
+  ]},
+  { id: 156, pair: ["のんびり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"まぶたに重り付いてる〜"},
+    {speaker:"B", text:"あたしのより軽そうじゃん…"}
+  ]},
+  { id: 157, pair: ["真面目","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歩幅、報告してください"},
+    {speaker:"B", text:"半歩…いや、四分の一…"}
+  ]},
+  { id: 158, pair: ["怖がり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物が背中で育ってる気がする…"},
+    {speaker:"B", text:"収穫まだじゃん!"}
+  ]},
+  { id: 159, pair: ["無口","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……がんば"},
+    {speaker:"B", text:"貴重なやつ…効くね…"}
+  ]},
+  { id: 160, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"帰ったら十個おやつ食べるもん…"},
+    {speaker:"B", text:"半分こしようね"}
+  ]},
+  { id: 161, pair: ["冷静","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"歩行を自動化した。考えるな"},
+    {speaker:"B", text:"さっき曲がり忘れてたって"}
+  ]},
+  { id: 162, pair: ["熱血","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"気合いだーの「だー」が出ん…"},
+    {speaker:"B", text:"気合い、で止まってました"}
+  ]},
+  { id: 163, pair: ["優しい","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"深〜く息して？ 楽になるよ"},
+    {speaker:"B", text:"息は勝手に任せてる〜"}
+  ]},
+  { id: 164, pair: ["生意気","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"歩き方おかしくなってきたし"},
+    {speaker:"B", text:"私は正しく…ふらついてます"}
+  ]},
+  { id: 165, pair: ["怖がり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気そうだね…なんで…？"},
+    {speaker:"B", text:"感情を消したからだ"},
+    {speaker:"A", text:"それ元気なの…？"}
+  ]},
+  { id: 166, pair: ["のんびり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"瞬間移動おぼえたい〜"},
+    {speaker:"B", text:"覚えたらあたしも運んで…"}
+  ]},
+  { id: 167, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"判断力が…低下…どっち…"},
+    {speaker:"B", text:"まず立ち止まれ"},
+    {speaker:"A", text:"それだ"}
+  ]},
+  { id: 168, pair: ["熱血","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"皆の元気を集めて使いたい…"},
+    {speaker:"B", text:"集めても一人分ないもん…"}
+  ]},
+  { id: 169, pair: ["優しい","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物…私のまで持ってる…"},
+    {speaker:"B", text:"……ついで"}
+  ]},
+  { id: 170, pair: ["お調子者","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気な人、手あげて!"},
+    {speaker:"B", text:"あんた以外いないって…"}
+  ]},
+  { id: 171, pair: ["冷静","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"弱音を一つ吐いていいか"},
+    {speaker:"B", text:"どうぞどうぞ"},
+    {speaker:"A", text:"疲れた。以上だ"}
+  ]},
+  { id: 172, pair: ["生意気","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"あんたの元気うつしてよ"},
+    {speaker:"B", text:"私が借りたい側だ…"}
+  ]},
+  { id: 173, pair: ["怖がり","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"もう景色見たくない…"},
+    {speaker:"B", text:"私の背中だけ見てて…？"}
+  ]},
+  { id: 174, pair: ["無口","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……肩、貸す"},
+    {speaker:"B", text:"え、あんたも疲れてるでしょ"},
+    {speaker:"A", text:"……お互い様"}
+  ]},
+  { id: 175, pair: ["のんびり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"数えたら休憩百回目〜"},
+    {speaker:"B", text:"歩数より多いな"}
+  ]},
+  { id: 176, pair: ["真面目","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"冗談を…言ってみます…"},
+    {speaker:"B", text:"おっ、聞くじゃん!"},
+    {speaker:"A", text:"忘れました"}
+  ]},
+  { id: 177, pair: ["熱血","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"私の辞書に疲労の文字は…ある…"},
+    {speaker:"B", text:"今日追加されたな"}
+  ]},
+  { id: 178, pair: ["優しい","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"甘えていいんだよ…？"},
+    {speaker:"B", text:"じゃあ…荷物…"},
+    {speaker:"A", text:"ごめん無理かも"}
+  ]},
+  { id: 179, pair: ["お調子者","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れた分だけ強くなるじゃん!"},
+    {speaker:"B", text:"じゃあ今むてき…？"}
+  ]},
+  { id: 180, pair: ["冷静","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"熱を測ってくれ。気力の"},
+    {speaker:"B", text:"測定不能! 低すぎて!"}
+  ]},
+  { id: 181, pair: ["生意気","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"二人三脚したら楽…？"},
+    {speaker:"B", text:"転ぶ未来が見える〜"}
+  ]},
+  { id: 182, pair: ["怖がり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"夢と現実の境目があいまい…"},
+    {speaker:"B", text:"ここは現実です。残念ながら"}
+  ]},
+  { id: 183, pair: ["無口","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……歌って"},
+    {speaker:"B", text:"珍しいリクエストじゃん…!"},
+    {speaker:"A", text:"……小さい声で"}
+  ]},
+  { id: 184, pair: ["のんびり","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"競走〜？受けて立つよ〜"},
+    {speaker:"B", text:"歩く速さで言うな…"}
+  ]},
+  { id: 185, pair: ["真面目","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"私語を禁止します。眠いので"},
+    {speaker:"B", text:"理由、正直すぎない…？"}
+  ]},
+  { id: 186, pair: ["熱血","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"大丈夫だ! 多分! おそらく!"},
+    {speaker:"B", text:"減ってく減ってく…"}
+  ]},
+  { id: 187, pair: ["優しい","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"眉間にしわ寄ってるよ？"},
+    {speaker:"B", text:"顔が勝手に真剣なだけもん…"}
+  ]},
+  { id: 188, pair: ["冷静","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"護衛を頼む。私の眠気からの"},
+    {speaker:"B", text:"どうやって!?"}
+  ]},
+  { id: 189, pair: ["生意気","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰り道、短くならないかな"},
+    {speaker:"B", text:"あたしが縮めるも…ん…"},
+    {speaker:"A", text:"寝るなじゃん"}
+  ]},
+  { id: 190, pair: ["のんびり","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"転がって帰りたいな〜"},
+    {speaker:"B", text:"……坂が要る"}
+  ]},
+  { id: 191, pair: ["真面目","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"口癖が「疲れた」になりそうです"},
+    {speaker:"B", text:"もうなってるって"}
+  ]},
+  { id: 192, pair: ["熱血","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"声が出ないなら心で叫べ…!"},
+    {speaker:"B", text:"……もう叫んだ"}
+  ]},
+  { id: 193, pair: ["優しい","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"優しくして…今日だけ…"},
+    {speaker:"B", text:"平常運転が私の優しさだ"}
+  ]},
+  { id: 194, pair: ["お調子者","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"指がぷるぷるするもん…"},
+    {speaker:"B", text:"芸を仕込んだの〜？"}
+  ]},
+  { id: 195, pair: ["怖がり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら三日は出ない…"},
+    {speaker:"B", text:"三日で足りる…？"}
+  ]},
+  { id: 196, pair: ["無口","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……つらい"},
+    {speaker:"B", text:"具体的にお願いします"},
+    {speaker:"A", text:"……ぜんぶ"}
+  ]},
+  { id: 197, pair: ["のんびり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"まぶたと相談してくる〜"},
+    {speaker:"B", text:"負けないでね？"}
+  ]},
+  { id: 198, pair: ["熱血","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"最後の一踏ん張りだ!"},
+    {speaker:"B", text:"踏ん張り、小分けすぎ…"}
+  ]},
+  { id: 199, pair: ["冷静","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"沈黙が続くと不安か"},
+    {speaker:"B", text:"冷静が喋ると不安じゃん…"}
+  ]},
+  { id: 200, pair: ["優しい","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったらいっぱい寝ようね"},
+    {speaker:"B", text:"夢の中でも歩いてそう…"}
+  ]},
+  { id: 201, pair: ["お調子者","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"なぞなぞ大会、中止するもん…"},
+    {speaker:"B", text:"開催予定は初耳です"}
+  ]},
+  { id: 202, pair: ["生意気","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物あたしのだけ重くない…？"},
+    {speaker:"B", text:"全員同じ重さだ"},
+    {speaker:"A", text:"じゃあ世界がずるい…"}
+  ]},
+  { id: 203, pair: ["熱血","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"闘志が…そよ風程度に…"},
+    {speaker:"B", text:"気持ちいいね、その風〜"}
+  ]},
+  { id: 204, pair: ["怖がり","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"となり、歩いていい…？"},
+    {speaker:"B", text:"……指定席"}
+  ]},
+  { id: 205, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"心はもう里に着いてる〜"},
+    {speaker:"B", text:"体を置いていかないでください"}
+  ]},
+  { id: 206, pair: ["優しい","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"休憩にしよ？ 提案です"},
+    {speaker:"B", text:"助かる…命令にしてくれ…"}
+  ]},
+  { id: 207, pair: ["冷静","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"相槌を自動化していいか"},
+    {speaker:"B", text:"いい…はい…ええ…はい…"}
+  ]},
+  { id: 208, pair: ["生意気","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れてる人の顔まねしよっか"},
+    {speaker:"B", text:"鏡でいいんじゃない…？"}
+  ]},
+  { id: 209, pair: ["無口","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……水いる？"},
+    {speaker:"B", text:"お前が飲め…最後のだろ…"},
+    {speaker:"A", text:"……半分こ"}
+  ]},
+  { id: 210, pair: ["お調子者","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"蜃気楼？ 宿が見えるもん!"},
+    {speaker:"B", text:"幻覚だ"}
+  ]},
+  { id: 211, pair: ["真面目","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"「あと少し」の定義を求めます"},
+    {speaker:"B", text:"ないと思う…定義…"}
+  ]},
+  { id: 212, pair: ["熱血","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"折れない心が…曲がってきた"},
+    {speaker:"B", text:"曲がるのは折れてない証拠だよ"}
+  ]},
+  { id: 213, pair: ["のんびり","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れた分、あとで楽しいよ〜"},
+    {speaker:"B", text:"前借りできない…？"}
+  ]},
+  { id: 214, pair: ["冷静","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"五分だけ意識を手放したい"},
+    {speaker:"B", text:"それ、うたた寝って言うんだよ…"}
+  ]},
+  { id: 215, pair: ["生意気","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"静かすぎ。存在確認、はい"},
+    {speaker:"B", text:"……いる"}
+  ]},
+  { id: 216, pair: ["怖がり","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"今なら戦える気がする…!"},
+    {speaker:"B", text:"どうした急に…こわい…"}
+  ]},
+  { id: 217, pair: ["優しい","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"湯気が恋しいね…温泉の…"},
+    {speaker:"B", text:"鼻がもう匂い出してる〜"}
+  ]},
+  { id: 218, pair: ["お調子者","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声援ちょうだいもん…"},
+    {speaker:"B", text:"がんばれ…私…"}
+  ]},
+  { id: 219, pair: ["冷静","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"時間の流れが遅い"},
+    {speaker:"B", text:"え、もう着くかと思ってた〜"}
+  ]},
+  { id: 220, pair: ["真面目","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"何か励ましの言葉を…"},
+    {speaker:"B", text:"……報酬"},
+    {speaker:"A", text:"効きます"}
+  ]},
+  { id: 221, pair: ["熱血","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"弱気だ…張り倒してくれ"},
+    {speaker:"B", text:"できないよ!? 無理だよ!?"}
+  ]},
+  { id: 222, pair: ["生意気","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"きれいにバテても損じゃん？"},
+    {speaker:"B", text:"美学です…"}
+  ]},
+  { id: 223, pair: ["のんびり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声がのびのびになる〜〜"},
+    {speaker:"B", text:"いつもと違いわかんないもん!"}
+  ]},
+  { id: 224, pair: ["怖がり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"泣いてもいい…？"},
+    {speaker:"B", text:"いいよ。水分は惜しいけど"}
+  ]},
+  { id: 225, pair: ["無口","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……眠い"},
+    {speaker:"B", text:"同じく。だが歩け"},
+    {speaker:"A", text:"……鬼"}
+  ]},
+  { id: 226, pair: ["お調子者","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れ吹き飛ぶ話あるじゃん!"},
+    {speaker:"B", text:"先に座らせて…"},
+    {speaker:"A", text:"話が飛んだもん"}
+  ]},
+  { id: 227, pair: ["熱血","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"私が皆を背負う!"},
+    {speaker:"B", text:"定員は一名までだ"}
+  ]},
+  { id: 228, pair: ["優しい","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手が震えて水がこぼれる…"},
+    {speaker:"B", text:"口を水に近づけなって"}
+  ]},
+  { id: 229, pair: ["冷静","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲労も観察すると面白い"},
+    {speaker:"B", text:"観察対象からの苦情じゃん!"}
+  ]},
+  { id: 230, pair: ["のんびり","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"空を見て歩けば楽かな〜"},
+    {speaker:"B", text:"さっき転びかけたでしょ…"}
+  ]},
+  { id: 231, pair: ["真面目","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"頑張るって言う力が無い…"},
+    {speaker:"B", text:"私が代わりに言う! がんばる!"}
+  ]},
+  { id: 232, pair: ["生意気","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"風、あたしを運びなさい"},
+    {speaker:"B", text:"風に命令してる…"}
+  ]},
+  { id: 233, pair: ["無口","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……珍しく静か"},
+    {speaker:"B", text:"からっぽだもん…"}
+  ]},
+  { id: 234, pair: ["優しい","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"今日のごほうび決めよっか"},
+    {speaker:"B", text:"布団…いえ達成感…いえ布団"}
+  ]},
+  { id: 235, pair: ["熱血","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"燃える闘魂が…とろ火に…"},
+    {speaker:"B", text:"煮物ができそう〜"}
+  ]},
+  { id: 236, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"感想を述べよ。今の気分の"},
+    {speaker:"B", text:"語彙が疲れてるんだって…"}
+  ]},
+  { id: 237, pair: ["お調子者","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"いつも通りでずるいもん…"},
+    {speaker:"B", text:"……これでも限界"}
+  ]},
+  { id: 238, pair: ["生意気","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"優しくされたら泣くから禁止"},
+    {speaker:"B", text:"なでなで"},
+    {speaker:"A", text:"聞いてないでしょ…っ"}
+  ]},
+  { id: 239, pair: ["怖がり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れすぎて怖いものがない…"},
+    {speaker:"B", text:"良い傾向だ"},
+    {speaker:"A", text:"それが怖い…"}
+  ]},
+  { id: 240, pair: ["のんびり","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"里をこっちに呼べない〜？"},
+    {speaker:"B", text:"里は動かん…私も動けん…"}
+  ]},
+  { id: 241, pair: ["真面目","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"反省文を心の中で執筆中です"},
+    {speaker:"B", text:"長編になりそうだな"}
+  ]},
+  { id: 242, pair: ["熱血","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"筋肉に相談してくる…"},
+    {speaker:"B", text:"返事あったら教えてもん…"}
+  ]},
+  { id: 243, pair: ["優しい","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"今日はたくさん歩いたね"},
+    {speaker:"B", text:"……よく生きた"}
+  ]},
+  { id: 244, pair: ["お調子者","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"調子上げたいもん…"},
+    {speaker:"B", text:"上がる要素、無いって"}
+  ]},
+  { id: 245, pair: ["冷静","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"沈黙も体力を使うと知った"},
+    {speaker:"B", text:"なら叫ぼう!…すう…無理だ"}
+  ]},
+  { id: 246, pair: ["生意気","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"歩くのって誰が発明したの…"},
+    {speaker:"B", text:"苦情はご先祖に〜"}
+  ]},
+  { id: 247, pair: ["怖がり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"心細さで胸がいっぱい…"},
+    {speaker:"B", text:"満腹じゃん、よかったもん…"}
+  ]},
+  { id: 248, pair: ["無口","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……そろそろ"},
+    {speaker:"B", text:"うん、そろそろだね…"},
+    {speaker:"A", text:"……何が？"}
+  ]},
+  { id: 249, pair: ["のんびり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"心があくびしてる〜"},
+    {speaker:"B", text:"体も釣られてるぞ"}
+  ]},
+  { id: 250, pair: ["優しい","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら、いっぱい褒め合お？"},
+    {speaker:"B", text:"望むところだ…途中で寝るなよ…"}
+  ]},
+  { id: 251, pair: ["お調子者","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"最後の金平糖…もう終わり…"},
+    {speaker:"B", text:"舐めて延命しましょう"}
+  ]},
+  { id: 252, pair: ["熱血","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"影が薄くなった気がする…"},
+    {speaker:"B", text:"存在感まで疲れてるじゃん"}
+  ]},
+  { id: 253, pair: ["冷静","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"良い知らせと悪い知らせがある"},
+    {speaker:"B", text:"良い方だけ…!"},
+    {speaker:"A", text:"では以上だ"}
+  ]},
+  { id: 254, pair: ["のんびり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"せーので立とう〜？せーの〜"},
+    {speaker:"B", text:"……不発"}
+  ]},
+  { id: 255, pair: ["優しい","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"疲れると優しくできなくて嫌…"},
+    {speaker:"B", text:"今も充分優しいって"}
+  ]},
+  { id: 256, pair: ["真面目","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"本日の成果を発表します"},
+    {speaker:"B", text:"生きてるもん!"},
+    {speaker:"A", text:"大成果です"}
+  ]},
+  { id: 257, pair: ["生意気","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れてる演技上手いでしょ"},
+    {speaker:"B", text:"演技ではないな"}
+  ]},
+  { id: 258, pair: ["怖がり","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物に埋まって運ばれたい…"},
+    {speaker:"B", text:"積み荷は喋らないよ〜"}
+  ]},
+  { id: 259, pair: ["無口","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……交代"},
+    {speaker:"B", text:"何のだ"},
+    {speaker:"A", text:"……疲れ役"}
+  ]},
+  { id: 260, pair: ["熱血","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"気合い注入してやろう!"},
+    {speaker:"B", text:"逆に漏れそう…"}
+  ]},
+  { id: 261, pair: ["お調子者","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"面白い話で寝かせないもん!"},
+    {speaker:"B", text:"おやすみ〜"}
+  ]},
+  { id: 262, pair: ["真面目","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"歩数計が壊れました。私の中の"},
+    {speaker:"B", text:"元からあった…？"}
+  ]},
+  { id: 263, pair: ["優しい","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"温泉卵の話していい…？"},
+    {speaker:"B", text:"それは兵器だ"}
+  ]},
+  { id: 264, pair: ["のんびり","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"競争しよ〜まばたき我慢〜"},
+    {speaker:"B", text:"寝る前提の勝負はだめだ!"}
+  ]},
+  { id: 265, pair: ["冷静","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"冗談を処理する余力がない"},
+    {speaker:"B", text:"じゃあ解説付きでいくもん!"},
+    {speaker:"A", text:"やめろ"}
+  ]},
+  { id: 266, pair: ["生意気","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら一番風呂もらうし"},
+    {speaker:"B", text:"二番でいいよ…"},
+    {speaker:"A", text:"譲られると弱い…"}
+  ]},
+  { id: 267, pair: ["怖がり","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"元気の出る話して…"},
+    {speaker:"B", text:"昔、腹ぺこの侍がいた…"},
+    {speaker:"A", text:"もうだめそう…"}
+  ]},
+  { id: 268, pair: ["無口","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……眠気いらない"},
+    {speaker:"B", text:"あたしに寄越さないでもん!"}
+  ]},
+  { id: 269, pair: ["のんびり","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"雲のお布団あったらな〜"},
+    {speaker:"B", text:"落ちます"}
+  ]},
+  { id: 270, pair: ["熱血","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"掛け声だけ先に帰った…"},
+    {speaker:"B", text:"呼び戻せ"}
+  ]},
+  { id: 271, pair: ["優しい","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"手拍子する？ 元気出るよ"},
+    {speaker:"B", text:"手が重くて音が湿るもん…"}
+  ]},
+  { id: 272, pair: ["真面目","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"音を上げそうです"},
+    {speaker:"B", text:"……ご一緒に"}
+  ]},
+  { id: 273, pair: ["生意気","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歩き方だらしないって"},
+    {speaker:"B", text:"究極の脱力歩法だよ〜"}
+  ]},
+  { id: 274, pair: ["冷静","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲労困憊の定義を体現するな"},
+    {speaker:"B", text:"見本になれてよかった…"}
+  ]},
+  { id: 275, pair: ["お調子者","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら自慢話するもん!"},
+    {speaker:"B", text:"聞き役はもう疲れてる…"}
+  ]},
+  { id: 276, pair: ["熱血","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"休むのも修行だ!"},
+    {speaker:"B", text:"休憩の型から学びます"}
+  ]},
+  { id: 277, pair: ["無口","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……声、預ける"},
+    {speaker:"B", text:"預かって元気にして返すね"}
+  ]},
+  { id: 278, pair: ["のんびり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れの物々交換しない〜？"},
+    {speaker:"B", text:"等価交換すぎて意味ないって"}
+  ]},
+  { id: 279, pair: ["怖がり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"静かすぎて耳が変…"},
+    {speaker:"B", text:"無音にも音があるからな"}
+  ]},
+  { id: 280, pair: ["優しい","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"荷物と一体化してきた…"},
+    {speaker:"B", text:"進化か!?"}
+  ]},
+  { id: 281, pair: ["お調子者","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰り道クイズ大会するじゃん!"},
+    {speaker:"B", text:"全問「休みたい」で答える"}
+  ]},
+  { id: 282, pair: ["生意気","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"弱ってるとこ見せたくない…"},
+    {speaker:"B", text:"もう見えてる…内緒にするね…"}
+  ]},
+  { id: 283, pair: ["真面目","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歩きながら寝る技術、禁止です"},
+    {speaker:"B", text:"免許制にして〜"}
+  ]},
+  { id: 284, pair: ["熱血","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲労なんて気の持ちようだ!"},
+    {speaker:"B", text:"その気を持つ手が疲れたもん…"}
+  ]},
+  { id: 285, pair: ["冷静","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"会話の予算が残りわずかだ"},
+    {speaker:"B", text:"……破産"}
+  ]},
+  { id: 286, pair: ["のんびり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"石段が意地悪してくる〜"},
+    {speaker:"B", text:"段に性格ないじゃん!"}
+  ]},
+  { id: 287, pair: ["真面目","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"弱音日誌をつけ始めました"},
+    {speaker:"B", text:"題材に困らないね…？"}
+  ]},
+  { id: 288, pair: ["熱血","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"吠える元気もない…"},
+    {speaker:"B", text:"静かな方が助かるかも…"}
+  ]},
+  { id: 289, pair: ["優しい","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れた顔も味があるよ…？"},
+    {speaker:"B", text:"記録には残さないでください"}
+  ]},
+  { id: 290, pair: ["無口","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……荷物、投げたい"},
+    {speaker:"B", text:"分かる。拾うのはあんたよ"}
+  ]},
+  { id: 291, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"笑い声の蓄えが切れたもん…"},
+    {speaker:"B", text:"補充は帰ってからね"}
+  ]},
+  { id: 292, pair: ["冷静","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"感情の起伏を平らにしたい"},
+    {speaker:"B", text:"私は起伏しかないぞ…"}
+  ]},
+  { id: 293, pair: ["生意気","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"元気なフリ選手権しよ"},
+    {speaker:"B", text:"優勝経験者だもん…現役…"}
+  ]},
+  { id: 294, pair: ["怖がり","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"紐を結ぶ気力もない…"},
+    {speaker:"B", text:"私が結ぶ…指が動けば…"}
+  ]},
+  { id: 295, pair: ["のんびり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歩いた分だけ偉いんだよ〜"},
+    {speaker:"B", text:"なら今日は聖人だな"}
+  ]},
+  { id: 296, pair: ["真面目","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"予定通りです。すべて"},
+    {speaker:"B", text:"疲れるのも予定…？"}
+  ]},
+  { id: 297, pair: ["熱血","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"やる気のツボどこだ…"},
+    {speaker:"B", text:"押す力ないでしょ〜"}
+  ]},
+  { id: 298, pair: ["優しい","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"今日のわたし、頑張った…？"},
+    {speaker:"B", text:"……満点"}
+  ]},
+  { id: 299, pair: ["お調子者","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"変な歩き方対決…不戦勝で"},
+    {speaker:"B", text:"今のあんたが優勝だって"}
+  ]},
+  { id: 300, pair: ["冷静","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"折り返し地点だ"},
+    {speaker:"B", text:"折り返したくない〜"}
+  ]},
+  { id: 301, pair: ["生意気","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今のあたし、点数つけて"},
+    {speaker:"B", text:"採点する側も限界です"}
+  ]},
+  { id: 302, pair: ["怖がり","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"賑やかしお願い…静かだと不安…"},
+    {speaker:"B", text:"本日休演だもん…"}
+  ]},
+  { id: 303, pair: ["無口","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……ここどこ"},
+    {speaker:"B", text:"私に聞くの〜？"}
+  ]},
+  { id: 304, pair: ["熱血","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"熱く語りたいが…燃料が…"},
+    {speaker:"B", text:"続きは温泉でね"}
+  ]},
+  { id: 305, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"ため息が二十回を超えた"},
+    {speaker:"B", text:"数えてたの!?"}
+  ]},
+  { id: 306, pair: ["お調子者","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"早口言葉で目を覚まそうじゃん!"},
+    {speaker:"B", text:"なまむぎ…なま…すみません"}
+  ]},
+  { id: 307, pair: ["のんびり","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"世界がゆっくりに見える〜"},
+    {speaker:"B", text:"それ多分こっちが遅いだけ…"}
+  ]},
+  { id: 308, pair: ["優しい","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"声にも肩こりってあるのかな…"},
+    {speaker:"B", text:"あるな…今なってる…"}
+  ]},
+  { id: 309, pair: ["真面目","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"危機管理として先に謝ります"},
+    {speaker:"B", text:"何をだ"},
+    {speaker:"A", text:"居眠りを"}
+  ]},
+  { id: 310, pair: ["生意気","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"慰めの言葉とかいらないけど"},
+    {speaker:"B", text:"……よしよし"},
+    {speaker:"A", text:"だから、いらな…続けて"}
+  ]},
+  { id: 311, pair: ["熱血","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"円陣組もう…気合い入れ…"},
+    {speaker:"B", text:"二人で円は無理だもん…"}
+  ]},
+  { id: 312, pair: ["冷静","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"感謝を先に言っておく"},
+    {speaker:"B", text:"遺言みたいだよ…？"},
+    {speaker:"A", text:"後で言う体力がない"}
+  ]},
+  { id: 313, pair: ["怖がり","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"強がり方教えて…？"},
+    {speaker:"B", text:"まず「余裕」って言うの"},
+    {speaker:"A", text:"よ、よゆ…むり…"}
+  ]},
+  { id: 314, pair: ["無口","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……相槌、休みます"},
+    {speaker:"B", text:"承認します"}
+  ]},
+  { id: 315, pair: ["のんびり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"燃え方教えて〜あとで〜"},
+    {speaker:"B", text:"あとでって言うな! 今だ!"},
+    {speaker:"A", text:"今はむり〜"}
+  ]},
+  { id: 316, pair: ["優しい","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れ自慢大会、する…？"},
+    {speaker:"B", text:"優勝しちゃうから出ない"}
+  ]},
+  { id: 317, pair: ["お調子者","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声のツヤがなくなったもん…"},
+    {speaker:"B", text:"元の艶を知らない"}
+  ]},
+  { id: 318, pair: ["真面目","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"「もう無理」の敬語って何です…"},
+    {speaker:"B", text:"もう無理でございます…"}
+  ]},
+  { id: 319, pair: ["冷静","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"判断を任せる。全部"},
+    {speaker:"B", text:"一番怖いんだけどそれ…!"}
+  ]},
+  { id: 320, pair: ["生意気","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"あんたのペースが正解だった…"},
+    {speaker:"B", text:"ようこそ〜"}
+  ]},
+  { id: 321, pair: ["熱血","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"叫び方教えてやろうか!"},
+    {speaker:"B", text:"……遠慮"},
+    {speaker:"A", text:"即答!?"}
+  ]},
+  { id: 322, pair: ["優しい","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"元気の出るおまじない、いる…？"},
+    {speaker:"B", text:"五個ちょうだい、今すぐ"}
+  ]},
+  { id: 323, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"規則正しく休みたい〜"},
+    {speaker:"B", text:"では十歩ごとに休憩を…"},
+    {speaker:"A", text:"守れそう〜"}
+  ]},
+  { id: 324, pair: ["怖がり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"二人とも静かだと不安…"},
+    {speaker:"B", text:"……歌う？"},
+    {speaker:"A", text:"それも不安"}
+  ]},
+  { id: 325, pair: ["お調子者","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったらぱーっとやるじゃん!"},
+    {speaker:"B", text:"静かに寝たい…"}
+  ]},
+  { id: 326, pair: ["冷静","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"悔しいが…おぶってくれ"},
+    {speaker:"B", text:"任された!!!"},
+    {speaker:"A", text:"声で酔う"}
+  ]},
+  { id: 327, pair: ["生意気","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れると素直が漏れる…やだ…"},
+    {speaker:"B", text:"漏れてる分、拾っておくね"}
+  ]},
+  { id: 328, pair: ["真面目","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"集中の糸が切れました…"},
+    {speaker:"B", text:"結び直したげるもん!"}
+  ]},
+  { id: 329, pair: ["無口","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……燃料"},
+    {speaker:"B", text:"補給は里までない"},
+    {speaker:"A", text:"……絶望"}
+  ]},
+  { id: 330, pair: ["のんびり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れたら空を見るといいよ〜"},
+    {speaker:"B", text:"首も疲れてるもん…"}
+  ]},
+  { id: 331, pair: ["優しい","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"三歩進むごとに褒めるね"},
+    {speaker:"B", text:"幼児教育か"},
+    {speaker:"A", text:"歩けてるでしょ？"}
+  ]},
+  { id: 332, pair: ["熱血","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"気合いで浮けたら楽なのにな!"},
+    {speaker:"B", text:"気合いに期待しすぎ…"}
+  ]},
+  { id: 333, pair: ["怖がり","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"弱音って言っていいやつ…？"},
+    {speaker:"B", text:"許可します。私も続きます"}
+  ]},
+  { id: 334, pair: ["お調子者","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"ものまねして! あたしの!"},
+    {speaker:"B", text:"……もん"},
+    {speaker:"A", text:"完成度高いじゃん!?"}
+  ]},
+  { id: 335, pair: ["冷静","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"思考が止まる。定期的に"},
+    {speaker:"B", text:"おそろいだね〜"}
+  ]},
+  { id: 336, pair: ["生意気","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"情けないとこ見せた…忘れて"},
+    {speaker:"B", text:"焼き付けた!!"},
+    {speaker:"A", text:"消して!?"}
+  ]},
+  { id: 337, pair: ["真面目","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"休憩の許可証を発行します"},
+    {speaker:"B", text:"えらい人だったの…？"}
+  ]},
+  { id: 338, pair: ["無口","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……静かにして"},
+    {speaker:"B", text:"何も言ってないもん!?"}
+  ]},
+  { id: 339, pair: ["のんびり","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れた〜って言うと楽だよ〜"},
+    {speaker:"B", text:"疲れた〜…ほんとだ…"}
+  ]},
+  { id: 340, pair: ["熱血","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"情熱の残量、一割だ…"},
+    {speaker:"B", text:"それでも常人の十倍です"}
+  ]},
+  { id: 341, pair: ["優しい","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったらお布団に感謝しよ…"},
+    {speaker:"B", text:"神様みたいに拝みそう…"}
+  ]},
+  { id: 342, pair: ["お調子者","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れ顔番付つくるじゃん!"},
+    {speaker:"B", text:"横綱にしないでよ…"}
+  ]},
+  { id: 343, pair: ["冷静","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"本日の教訓、「休憩は正義」"},
+    {speaker:"B", text:"同意します"}
+  ]},
+  { id: 344, pair: ["生意気","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"元気そうに見える化粧ない…？"},
+    {speaker:"B", text:"化粧じゃ隠れないもん…"}
+  ]},
+  { id: 345, pair: ["怖がり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"みんな無事に帰れるかな…"},
+    {speaker:"B", text:"帰る。予定は変更しない"}
+  ]},
+  { id: 346, pair: ["無口","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……手上げて"},
+    {speaker:"B", text:"はい…？"},
+    {speaker:"A", text:"……つないで帰る"}
+  ]},
+  { id: 347, pair: ["のんびり","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"いっそ転がして〜？"},
+    {speaker:"B", text:"坂の下は敵地だ"}
+  ]},
+  { id: 348, pair: ["熱血","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声が…ささやきになった…"},
+    {speaker:"B", text:"初めて聞き取りやすいもん!"}
+  ]},
+  { id: 349, pair: ["優しい","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"無理の境界線ってどこ…？"},
+    {speaker:"B", text:"三層前に越えました"}
+  ]},
+  { id: 350, pair: ["冷静","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"感想戦をしよう"},
+    {speaker:"B", text:"……疲れた"},
+    {speaker:"A", text:"同意見だ。解散"}
+  ]},
+  { id: 351, pair: ["お調子者","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"桜餅の夢まで見たもん…"},
+    {speaker:"B", text:"起きても現実は葉っぱだ"}
+  ]},
+  { id: 352, pair: ["優しい","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"おみくじ引いたら「休め」出そう…"},
+    {speaker:"B", text:"……大吉"}
+  ]},
+  { id: 353, pair: ["熱血","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"妖怪より速く歩くぞ!"},
+    {speaker:"B", text:"妖怪も引くって…"}
+  ]},
+  { id: 354, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"草餅の草って道の草〜？"},
+    {speaker:"B", text:"違います。食べないでください"}
+  ]},
+  { id: 355, pair: ["冷静","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"煙玉で帰りたい"},
+    {speaker:"B", text:"それ逃げる用だよ…!?"}
+  ]},
+  { id: 356, pair: ["生意気","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"抹茶飲みたい…苦いのがいい…"},
+    {speaker:"B", text:"疲れの味覚だね…"}
+  ]},
+  { id: 357, pair: ["怖がり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"お守り握りすぎて手汗が…"},
+    {speaker:"B", text:"お守りも息苦しいもん…"}
+  ]},
+  { id: 358, pair: ["無口","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……補給"},
+    {speaker:"B", text:"干し柿ならある!"},
+    {speaker:"A", text:"……神"}
+  ]},
+  { id: 359, pair: ["のんびり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"焼き栗の匂いの幻〜"},
+    {speaker:"B", text:"あたしも同じ幻見てるもん…"}
+  ]},
+  { id: 360, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"反省。甘味を里に忘れました…"},
+    {speaker:"B", text:"重罪だ"}
+  ]},
+  { id: 361, pair: ["優しい","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"三色団子買って帰ろ？"},
+    {speaker:"B", text:"食う元気は…ある…!"}
+  ]},
+  { id: 362, pair: ["生意気","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あたしの回復薬どこ置いたっけ"},
+    {speaker:"B", text:"三本とも飲んだだろ"}
+  ]},
+  { id: 363, pair: ["怖がり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"妖怪が出ない日ってないの…"},
+    {speaker:"B", text:"今のところ皆勤です"}
+  ]},
+  { id: 364, pair: ["お調子者","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"甘団子一本で三層歩けるもん"},
+    {speaker:"B", text:"じゃあ二本で里まで…？"}
+  ]},
+  { id: 365, pair: ["熱血","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"素振りの余力を残すべきか…"},
+    {speaker:"B", text:"……残すな"}
+  ]},
+  { id: 366, pair: ["冷静","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"前を歩いてくれ。風よけに"},
+    {speaker:"B", text:"私、盾なんだ〜？"}
+  ]},
+  { id: 367, pair: ["生意気","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れたって言ったら負けかな"},
+    {speaker:"B", text:"……もう言った"}
+  ]},
+  { id: 368, pair: ["優しい","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら茶屋寄ろっか"},
+    {speaker:"B", text:"生き返ったもん!!"},
+    {speaker:"A", text:"まだ寄ってない"}
+  ]},
+  { id: 369, pair: ["真面目","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"装備が重く感じます…"},
+    {speaker:"B", text:"成長痛だ! 強くなってる!"}
+  ]},
+  { id: 370, pair: ["のんびり","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"苔がまくらに見えてきた〜"},
+    {speaker:"B", text:"ふかふか詐欺だよ、それ…"}
+  ]},
+  { id: 371, pair: ["お調子者","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"宿のごはん何かなもん…"},
+    {speaker:"B", text:"白米。それだけで泣ける"}
+  ]},
+  { id: 372, pair: ["熱血","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"帯がゆるむ…力が入らん…"},
+    {speaker:"B", text:"暴れなければすぐ結べるよ？"}
+  ]},
+  { id: 373, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"無言の時間が長い"},
+    {speaker:"B", text:"沈黙って疲れないから最高じゃん…"}
+  ]},
+  { id: 374, pair: ["怖がり","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"怖い時どうしてる…？"},
+    {speaker:"B", text:"……寝る"}
+  ]},
+  { id: 375, pair: ["無口","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……まだ？"},
+    {speaker:"B", text:"まだだよ〜"},
+    {speaker:"A", text:"……そう"}
+  ]},
+  { id: 376, pair: ["生意気","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら覚えてなさいよ…"},
+    {speaker:"B", text:"何をだ…？"},
+    {speaker:"A", text:"わかんないけど何かを"}
+  ]},
+  { id: 377, pair: ["優しい","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手が…おにぎり握る形のまま…"},
+    {speaker:"B", text:"空腹病だな"}
+  ]},
+  { id: 378, pair: ["お調子者","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"屁理屈こねる元気もないもん…"},
+    {speaker:"B", text:"平和です"}
+  ]},
+  { id: 379, pair: ["のんびり","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰り道、下り坂にならないかな〜"},
+    {speaker:"B", text:"山を削る気か!?"}
+  ]},
+  { id: 380, pair: ["真面目","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"誰か私を叱って…緩んでて…"},
+    {speaker:"B", text:"……えらい"}
+  ]},
+  { id: 381, pair: ["熱血","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"心の火鉢が…消えかけ…"},
+    {speaker:"B", text:"炭を里に忘れたな"}
+  ]},
+  { id: 382, pair: ["冷静","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"笑いのツボが浅くなった"},
+    {speaker:"B", text:"今なら全部ウケるじゃん!"}
+  ]},
+  { id: 383, pair: ["怖がり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"桜餅の葉、食べる派…？"},
+    {speaker:"B", text:"今それ聞く…？"}
+  ]},
+  { id: 384, pair: ["無口","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……歩幅、合わせる"},
+    {speaker:"B", text:"別に頼んでないし…ありがと"}
+  ]},
+  { id: 385, pair: ["のんびり","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"ふわぁ…うつった…？"},
+    {speaker:"B", text:"ふわ…うん…回ってきた…"}
+  ]},
+  { id: 386, pair: ["真面目","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"湯もみの練習でもしましょうか"},
+    {speaker:"B", text:"温泉ついてから言って"}
+  ]},
+  { id: 387, pair: ["熱血","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声が枯れた…代わりに叫べ…"},
+    {speaker:"B", text:"内容は自分で考えてじゃん"}
+  ]},
+  { id: 388, pair: ["優しい","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"お茶にしよ？ 心の中で"},
+    {speaker:"B", text:"心の湯呑みを用意します"}
+  ]},
+  { id: 389, pair: ["冷静","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"記憶の整理をしたい。手伝え"},
+    {speaker:"B", text:"……全部捨てる"}
+  ]},
+  { id: 390, pair: ["生意気","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今日のあたしたち、がんばった側？"},
+    {speaker:"B", text:"番付なら前頭だもん…"}
+  ]},
+  { id: 391, pair: ["怖がり","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"勇気の補充ってどこで…"},
+    {speaker:"B", text:"売っていない。自家製だ"}
+  ]},
+  { id: 392, pair: ["お調子者","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら宴会するもん…"},
+    {speaker:"B", text:"……欠席"},
+    {speaker:"A", text:"主賓なのに!?"}
+  ]},
+  { id: 393, pair: ["のんびり","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"野営具ってまくらになる〜？"},
+    {speaker:"B", text:"使ったら最後、寝るでしょ"}
+  ]},
+  { id: 394, pair: ["熱血","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"姿勢で気力を騙そう…胸を張れ…"},
+    {speaker:"B", text:"張ってます…折れそうですが…"}
+  ]},
+  { id: 395, pair: ["優しい","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あと少しだよ、ほんとに"},
+    {speaker:"B", text:"「ほんと」が三回目…"}
+  ]},
+  { id: 396, pair: ["無口","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……重い、これ"},
+    {speaker:"B", text:"思い出をいっぱい詰めたじゃん!"},
+    {speaker:"A", text:"……捨てる"}
+  ]},
+  { id: 397, pair: ["生意気","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"疲れ顔見せていい相手、いる？"},
+    {speaker:"B", text:"光栄だ"}
+  ]},
+  { id: 398, pair: ["のんびり","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"唄、うたってあげよ〜か？"},
+    {speaker:"B", text:"……全員寝る"}
+  ]},
+  { id: 399, pair: ["真面目","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"静粛に。集中が乱れます"},
+    {speaker:"B", text:"静粛のしすぎで眠いもん…"}
+  ]},
+  { id: 400, pair: ["冷静","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら猫のように寝る"},
+    {speaker:"B", text:"猫に失礼なくらい寝そう…"}
+  ]},
+  { id: 401, pair: ["お調子者","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"肩もんで…五秒でいいもん…"},
+    {speaker:"B", text:"五秒で何が変わるの"}
+  ]},
+  { id: 402, pair: ["熱血","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"手合わせで目を覚まそう…!"},
+    {speaker:"B", text:"今やったら二人とも倒れる…"}
+  ]},
+  { id: 403, pair: ["優しい","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら何食べたい？"},
+    {speaker:"B", text:"……白いの"},
+    {speaker:"A", text:"ごはんね"}
+  ]},
+  { id: 404, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"一列縦隊…維持できません…"},
+    {speaker:"B", text:"隊はもう崩れている"}
+  ]},
+  { id: 405, pair: ["生意気","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"温泉で背中流したげる…特別"},
+    {speaker:"B", text:"やった〜背中広めだよ〜"}
+  ]},
+  { id: 406, pair: ["怖がり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"妖怪も今頃休憩してるかな…"},
+    {speaker:"B", text:"向こうも「怖い」って言ってるもん"}
+  ]},
+  { id: 407, pair: ["無口","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……歩数、代わりに数える"},
+    {speaker:"B", text:"助かります。今何歩ですか"},
+    {speaker:"A", text:"……一から"}
+  ]},
+  { id: 408, pair: ["のんびり","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"疲れって溶けないかな〜温泉で"},
+    {speaker:"B", text:"溶ける。実証済みだ"}
+  ]},
+  { id: 409, pair: ["熱血","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"里が見えたら全力疾走する…"},
+    {speaker:"B", text:"見えてからね…約束ね…"}
+  ]},
+  { id: 410, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"生存報告を要求する"},
+    {speaker:"B", text:"生きてるし…ぎり…"}
+  ]},
+  { id: 411, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"干し柿ひとくちで戻る元気ある…"},
+    {speaker:"B", text:"じゃあ里まで持つね、これで"}
+  ]},
+  { id: 412, pair: ["真面目","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"火の用心の見回りみたいですね"},
+    {speaker:"B", text:"我々が消えかけの火だがな…!"}
+  ]},
+  { id: 413, pair: ["怖がり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"置いていかれる夢見そう…"},
+    {speaker:"B", text:"現実では置いてかないから…"},
+    {speaker:"A", text:"現実「では」…？"}
+  ]},
+  { id: 414, pair: ["無口","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……あと三歩で終わり"},
+    {speaker:"B", text:"え、里まだ遠いよ…？"},
+    {speaker:"A", text:"……気力が"}
+  ]},
+  { id: 415, pair: ["のんびり","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"面白い形の雲〜ほら〜"},
+    {speaker:"B", text:"首が仕事しないもん…"}
+  ]},
+  { id: 416, pair: ["熱血","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"静かに歩く修行だと思おう…"},
+    {speaker:"B", text:"……向いてる"}
+  ]},
+  { id: 417, pair: ["優しい","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れたねって言い合うだけの会"},
+    {speaker:"B", text:"入会する…疲れたね…"},
+    {speaker:"A", text:"疲れたね…"}
+  ]},
+  { id: 418, pair: ["冷静","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"恐怖心を貸せ。眠気に効く"},
+    {speaker:"B", text:"貸したら私が眠くなる…!?"}
+  ]},
+  { id: 419, pair: ["生意気","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"猫背なおす…帰ったら…"},
+    {speaker:"B", text:"「帰ったら」が積もってます"}
+  ]},
+  { id: 420, pair: ["お調子者","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れ吹き飛ぶ手品見せるもん!"},
+    {speaker:"B", text:"疲れは物理的に飛ばない"}
+  ]},
+  { id: 421, pair: ["熱血","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"布団まで競争…しない…"},
+    {speaker:"B", text:"しない〜"}
+  ]},
+  { id: 422, pair: ["真面目","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"点検します。心のひび、一箇所"},
+    {speaker:"B", text:"私は三箇所…"}
+  ]},
+  { id: 423, pair: ["無口","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……しゃべった方がいい？"},
+    {speaker:"B", text:"不要だ"},
+    {speaker:"A", text:"……楽"}
+  ]},
+  { id: 424, pair: ["のんびり","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら抹茶点てて〜"},
+    {speaker:"B", text:"点てます…手が震えますが…"}
+  ]},
+  { id: 425, pair: ["優しい","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今日いちばん頑張った人は…？"},
+    {speaker:"B", text:"全員だもん…"},
+    {speaker:"A", text:"表彰式は温泉で"}
+  ]},
+  { id: 426, pair: ["生意気","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手、引いてくれてもいいけど？"},
+    {speaker:"B", text:"……はいはい"}
+  ]},
+  { id: 427, pair: ["怖がり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"今日転ばなかった…えらい…？"},
+    {speaker:"B", text:"世紀の大手柄だ!"}
+  ]},
+  { id: 428, pair: ["お調子者","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"まぶた閉店しそうもん…"},
+    {speaker:"B", text:"営業継続を要請します"}
+  ]},
+  { id: 429, pair: ["冷静","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"温泉に入る体力は残せ"},
+    {speaker:"B", text:"それだけは死守してる…"}
+  ]},
+  { id: 430, pair: ["のんびり","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"誰かの背中で寝たい〜"},
+    {speaker:"B", text:"私は無理…共倒れになる…"}
+  ]},
+  { id: 431, pair: ["熱血","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"弱音は言わない主義だ…が…"},
+    {speaker:"B", text:"「が」の続き、言っちゃえば？"}
+  ]},
+  { id: 432, pair: ["優しい","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"心の中で歌ってるの、ばれてる…？"},
+    {speaker:"B", text:"口が動いてる"}
+  ]},
+  { id: 433, pair: ["真面目","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"隊列の最後尾、任せました…"},
+    {speaker:"B", text:"私だと全員待つよ〜？"}
+  ]},
+  { id: 434, pair: ["無口","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……元気分けて"},
+    {speaker:"B", text:"いいもん! 高いもん!"},
+    {speaker:"A", text:"……つけで"}
+  ]},
+  { id: 435, pair: ["生意気","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"おやつ最後の一個、じゃんけんね"},
+    {speaker:"B", text:"負けてあげる技術には自信ある"}
+  ]},
+  { id: 436, pair: ["怖がり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"静かな道…罠かな…"},
+    {speaker:"B", text:"……平和"}
+  ]},
+  { id: 437, pair: ["お調子者","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"意気込みだけ二人前あるもん…"},
+    {speaker:"B", text:"体が半人前もない…!"}
+  ]},
+  { id: 438, pair: ["冷静","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲労報告は簡潔に"},
+    {speaker:"B", text:"疲れました"},
+    {speaker:"A", text:"満点だ"}
+  ]},
+  { id: 439, pair: ["のんびり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"三色団子の緑の気持ちわかる〜"},
+    {speaker:"B", text:"どういう気持ち!?"}
+  ]},
+  { id: 440, pair: ["熱血","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"今日のおまえはよく戦った!"},
+    {speaker:"B", text:"戦ってない日も言ってね…？"}
+  ]},
+  { id: 441, pair: ["真面目","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"荷物点検…あとで…します…"},
+    {speaker:"B", text:"「あとで」仲間じゃん…"}
+  ]},
+  { id: 442, pair: ["無口","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……歩けてる？私"},
+    {speaker:"B", text:"進んでる進んでる〜"},
+    {speaker:"A", text:"……ならいい"}
+  ]},
+  { id: 443, pair: ["生意気","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"今日のあたし、何点だった？"},
+    {speaker:"B", text:"満点だ! いつも通り!"}
+  ]},
+  { id: 444, pair: ["優しい","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"こわい話じゃなくて温かい話しよ"},
+    {speaker:"B", text:"助かる…心の毛布…"}
+  ]},
+  { id: 445, pair: ["お調子者","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰り道って行きより長いじゃん…"},
+    {speaker:"B", text:"同じ距離だ。気分の問題だ"}
+  ]},
+  { id: 446, pair: ["熱血","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"明日の私に任せる…!"},
+    {speaker:"B", text:"引き継ぎ書を書いておきましょう"}
+  ]},
+  { id: 447, pair: ["冷静","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"荷物が私を運べばいい"},
+    {speaker:"B", text:"天才の発想もん!!"}
+  ]},
+  { id: 448, pair: ["怖がり","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"里の屋根見えたら泣くかも…"},
+    {speaker:"B", text:"一緒に泣こうね"}
+  ]},
+  { id: 449, pair: ["無口","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……あと少し、ほんと？"},
+    {speaker:"B", text:"ほんと。あたしを信じな"},
+    {speaker:"A", text:"……信じる"}
+  ]},
+  { id: 450, pair: ["優しい","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったらまず何する？"},
+    {speaker:"B", text:"「ただいま〜」の練習する〜"},
+    {speaker:"A", text:"今しよっか"}
+  ]},
+  { id: 451, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"手ぬぐい絞る力もないもん…"},
+    {speaker:"B", text:"二人がかりで絞ろっか"}
+  ]},
+  { id: 452, pair: ["冷静","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"銭勘定を頼む。頭が回らん"},
+    {speaker:"B", text:"あたしに任せたら増えるよ？"},
+    {speaker:"A", text:"減る予感しかない"}
+  ]},
+  { id: 453, pair: ["無口","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……お手玉、見る？"},
+    {speaker:"B", text:"見る見る〜"},
+    {speaker:"A", text:"……落とした"}
+  ]},
+  { id: 454, pair: ["熱血","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"川柳が浮かんだ…疲れの…"},
+    {speaker:"B", text:"五七五になってから発表を"}
+  ]},
+  { id: 455, pair: ["優しい","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"縁側でお茶飲みたいな…"},
+    {speaker:"B", text:"その話、あと百回聞ける…"}
+  ]},
+  { id: 456, pair: ["生意気","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら手相見たげる"},
+    {speaker:"B", text:"疲労線あるじゃん絶対…"}
+  ]},
+  { id: 457, pair: ["真面目","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"私語も休憩に含まれますか"},
+    {speaker:"B", text:"……含む"},
+    {speaker:"A", text:"では続けます"}
+  ]},
+  { id: 458, pair: ["のんびり","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"風車みたいに回って進みたい〜"},
+    {speaker:"B", text:"目が回って終わりだ!"}
+  ]},
+  { id: 459, pair: ["怖がり","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"湯たんぽ抱いて寝たい…もう…"},
+    {speaker:"B", text:"まだ歩行中だ"}
+  ]},
+  { id: 460, pair: ["お調子者","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"ないしょ話しよ! 耳かして!"},
+    {speaker:"B", text:"……声大きい"},
+    {speaker:"A", text:"ないしょ失敗もん"}
+  ]},
+  { id: 461, pair: ["冷静","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰宅後の予定。湯、飯、寝"},
+    {speaker:"B", text:"完璧な計画だね…"}
+  ]},
+  { id: 462, pair: ["生意気","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"独り言増えてない？あたし"},
+    {speaker:"B", text:"はい。全部聞こえてます"}
+  ]},
+  { id: 463, pair: ["熱血","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"相撲ごっこで目を覚まそう…!"},
+    {speaker:"B", text:"押す前に寄りかかって寝そう〜"}
+  ]},
+  { id: 464, pair: ["優しい","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"湯上がりに飲むなら？"},
+    {speaker:"B", text:"……甘酒"},
+    {speaker:"A", text:"通だね"}
+  ]},
+  { id: 465, pair: ["真面目","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"荷造りの天才を自称してましたね"},
+    {speaker:"B", text:"重さは才能と別だし…"}
+  ]},
+  { id: 466, pair: ["のんびり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"おうちの匂い、思い出せない〜"},
+    {speaker:"B", text:"重症の郷愁だ"}
+  ]},
+  { id: 467, pair: ["怖がり","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"宿の門限…過ぎてないよね…"},
+    {speaker:"B", text:"過ぎてたら共に謝ろう…"}
+  ]},
+  { id: 468, pair: ["無口","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……つっかえ棒して"},
+    {speaker:"B", text:"あたしは棒じゃないし…"},
+    {speaker:"A", text:"……棒…"}
+  ]},
+  { id: 469, pair: ["お調子者","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れてない選手権、優勝したもん!"},
+    {speaker:"B", text:"参加者はお前だけだ"}
+  ]},
+  { id: 470, pair: ["熱血","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"拳を握る力が…零だ…"},
+    {speaker:"B", text:"じゃあ手をつなぐのは楽だね"}
+  ]},
+  { id: 471, pair: ["生意気","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"歩き比べしよ、遅い方が勝ち"},
+    {speaker:"B", text:"得意分野〜"}
+  ]},
+  { id: 472, pair: ["冷静","怖がり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"反応速度が落ちている"},
+    {speaker:"B", text:"さっきの物音も気づいてない…？"},
+    {speaker:"A", text:"何の音だ"}
+  ]},
+  { id: 473, pair: ["優しい","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"そっと荷物軽くしておいたよ"},
+    {speaker:"B", text:"妖術かもん…!?"}
+  ]},
+  { id: 474, pair: ["真面目","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"見張りの順番を決めましょう…"},
+    {speaker:"B", text:"全員すぐ寝る予感がする…!"}
+  ]},
+  { id: 475, pair: ["のんびり","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"会話しなくても伝わるね〜"},
+    {speaker:"B", text:"……"},
+    {speaker:"A", text:"ほらね〜"}
+  ]},
+  { id: 476, pair: ["怖がり","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"半分こわい、半分ねむい…"},
+    {speaker:"B", text:"混ぜないでよ、その感情"}
+  ]},
+  { id: 477, pair: ["お調子者","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"面白い夢見る自信あるもん…"},
+    {speaker:"B", text:"起きたら教えて下さい。要約で"}
+  ]},
+  { id: 478, pair: ["冷静","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今日は怒る元気もない"},
+    {speaker:"B", text:"平和!…と喜ぶ元気もない…"}
+  ]},
+  { id: 479, pair: ["生意気","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"慰め先払いして。転ぶ前に"},
+    {speaker:"B", text:"はい、先によしよし"}
+  ]},
+  { id: 480, pair: ["熱血","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"漢字一文字で今の気分を!"},
+    {speaker:"B", text:"……眠"},
+    {speaker:"A", text:"私は「無」だ…"}
+  ]},
+  { id: 481, pair: ["優しい","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"三日分がんばったね、今日"},
+    {speaker:"B", text:"計算が合う。三日分疲れた"}
+  ]},
+  { id: 482, pair: ["無口","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……肩たたき、要る？"},
+    {speaker:"B", text:"神様じゃん…お願いもん…"}
+  ]},
+  { id: 483, pair: ["のんびり","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"頭がお粥になってる〜"},
+    {speaker:"B", text:"私は重湯です…"}
+  ]},
+  { id: 484, pair: ["怖がり","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら勇気の分だけ団子食べる…"},
+    {speaker:"B", text:"今日は何本…？"},
+    {speaker:"A", text:"十本…"}
+  ]},
+  { id: 485, pair: ["お調子者","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れてても可愛いって言って"},
+    {speaker:"B", text:"言わない。事実でも"}
+  ]},
+  { id: 486, pair: ["冷静","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"相談がある。聞き役を頼む"},
+    {speaker:"B", text:"……手短に"},
+    {speaker:"A", text:"忘れた"}
+  ]},
+  { id: 487, pair: ["熱血","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"熱い風呂と疲れ、どっちが勝つ…"},
+    {speaker:"B", text:"いい勝負すぎて怖いって"}
+  ]},
+  { id: 488, pair: ["真面目","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰路の目標を設定します"},
+    {speaker:"B", text:"「帰る」〜"},
+    {speaker:"A", text:"完璧です"}
+  ]},
+  { id: 489, pair: ["生意気","無口"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れすぎて優しくなりそう…"},
+    {speaker:"B", text:"……歓迎"}
+  ]},
+  { id: 490, pair: ["優しい","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"湯船で浮く練習しとく…？"},
+    {speaker:"B", text:"今から浮く気か…!"}
+  ]},
+  { id: 491, pair: ["のんびり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"足元がふわふわ〜雲みたい〜"},
+    {speaker:"B", text:"それ多分危ないやつもん!"}
+  ]},
+  { id: 492, pair: ["怖がり","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら日記に何て書こう…"},
+    {speaker:"B", text:"「生還」の二文字で十分です"}
+  ]},
+  { id: 493, pair: ["無口","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……そっちの荷物、貸して"},
+    {speaker:"B", text:"重いよ…？"},
+    {speaker:"A", text:"……おそろい"}
+  ]},
+  { id: 494, pair: ["お調子者","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら祝勝会するじゃん!"},
+    {speaker:"B", text:"勝ってはいない…生きてるだけ…"},
+    {speaker:"A", text:"生存祝賀会じゃん!"}
+  ]},
+  { id: 495, pair: ["冷静","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"まぶたの重量が増加した"},
+    {speaker:"B", text:"貸し借りできたらな〜"}
+  ]},
+  { id: 496, pair: ["生意気","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"あたしが妖怪ならもう襲ってる"},
+    {speaker:"B", text:"なんで今それ言うの!?"}
+  ]},
+  { id: 497, pair: ["真面目","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"明るさを分けてください…"},
+    {speaker:"B", text:"押し貸しするもん! いっぱい!"}
+  ]},
+  { id: 498, pair: ["熱血","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"温泉が私を呼んでいる…!"},
+    {speaker:"B", text:"幻聴だが、正しい幻聴だ"}
+  ]},
+  { id: 499, pair: ["優しい","生意気"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"今日は助けられてばかりだった…"},
+    {speaker:"B", text:"明日はあたしが借りる番だし"}
+  ]},
+  { id: 500, pair: ["のんびり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"五百歩くらい歩いた〜？"},
+    {speaker:"B", text:"桁が二つ足りない"}
+  ]},
+  { id: 501, pair: ["怖がり","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"心臓の音がうるさい…"},
+    {speaker:"B", text:"元気な証拠じゃんもん!"}
+  ]},
+  { id: 502, pair: ["無口","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……検討します"},
+    {speaker:"B", text:"何をですか"},
+    {speaker:"A", text:"……歩くのを"}
+  ]},
+  { id: 503, pair: ["お調子者","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"おかえりって言われたいもん…"},
+    {speaker:"B", text:"私が毎回言うよ？"}
+  ]},
+  { id: 504, pair: ["冷静","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"眠気と交渉した。決裂だ"},
+    {speaker:"B", text:"交渉できると思ったのが偉いって"}
+  ]},
+  { id: 505, pair: ["熱血","のんびり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"気力を植えたら育つだろうか!"},
+    {speaker:"B", text:"水やり忘れそう〜"}
+  ]},
+  { id: 506, pair: ["真面目","冷静"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"判断力残量、警告域です…"},
+    {speaker:"B", text:"では全て保留にしろ"}
+  ]},
+  { id: 507, pair: ["生意気","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"疲れた顔、見ないでよね…"},
+    {speaker:"B", text:"見てない! 閉じて歩いてる!"},
+    {speaker:"A", text:"それはそれでやめて"}
+  ]},
+  { id: 508, pair: ["のんびり","怖がり"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"きのこ汁の話しようよ〜"},
+    {speaker:"B", text:"お腹すくからやめて…禁止…"}
+  ]},
+  { id: 509, pair: ["優しい","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"疲れを半分こできたらいいのに…"},
+    {speaker:"B", text:"……全部くれ"}
+  ]},
+  { id: 510, pair: ["お調子者","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"起きてるのに夢見てるもん…"},
+    {speaker:"B", text:"走馬灯ではないだろうな"}
+  ]},
+  { id: 511, pair: ["熱血","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"心の薪が最後の一本だ…"},
+    {speaker:"B", text:"大事にくべよ…？"}
+  ]},
+  { id: 512, pair: ["生意気","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"歩くのを歩くのがつらい…言葉変…"},
+    {speaker:"B", text:"疲労は文法も壊すのですね"}
+  ]},
+  { id: 513, pair: ["怖がり","無口"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"後ろ、何もいないよね…？"},
+    {speaker:"B", text:"……見ない主義"},
+    {speaker:"A", text:"見てよ!?"}
+  ]},
+  { id: 514, pair: ["冷静","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"独り言が増えた。すまん"},
+    {speaker:"B", text:"会話に昇格させるじゃん!"}
+  ]},
+  { id: 515, pair: ["無口","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"……交代で寝る？"},
+    {speaker:"B", text:"歩きながらは無理だよ〜"},
+    {speaker:"A", text:"……惜しい"}
+  ]},
+  { id: 516, pair: ["真面目","優しい"], mood: "bothTired", lines: [
+    {speaker:"A", text:"弱音を申請します"},
+    {speaker:"B", text:"承認します、いくらでも"}
+  ]},
+  { id: 517, pair: ["のんびり","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れも寝たら他人事〜"},
+    {speaker:"B", text:"その境地、教わりたいって"}
+  ]},
+  { id: 518, pair: ["熱血","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"私の勇姿、覚えていてくれ…"},
+    {speaker:"B", text:"今の…勇姿…？"}
+  ]},
+  { id: 519, pair: ["優しい","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"今日、お礼言い忘れてない…？"},
+    {speaker:"B", text:"五回もらった! 大入りもん!"}
+  ]},
+  { id: 520, pair: ["お調子者","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら語り明かそうもん!"},
+    {speaker:"B", text:"……三分で寝る"}
+  ]},
+  { id: 521, pair: ["冷静","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"歩幅がもう畳の目の幅だ"},
+    {speaker:"B", text:"着実だよ…？"}
+  ]},
+  { id: 522, pair: ["生意気","のんびり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"あくびが会話に混ざる…ふぁ…"},
+    {speaker:"B", text:"通訳できるよ〜"}
+  ]},
+  { id: 523, pair: ["怖がり","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"目を閉じたら寝ちゃう…"},
+    {speaker:"B", text:"閉じても歩かせるから安心しろ"},
+    {speaker:"A", text:"それも怖い"}
+  ]},
+  { id: 524, pair: ["無口","熱血"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……荷物、置いていい？"},
+    {speaker:"B", text:"私が背負う! 全部!"},
+    {speaker:"A", text:"……半分で"}
+  ]},
+  { id: 525, pair: ["のんびり","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"数を数えると眠くなる〜一〜"},
+    {speaker:"B", text:"羊ではなく歩数です!"}
+  ]},
+  { id: 526, pair: ["熱血","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったら伝説を語る…今日の…"},
+    {speaker:"B", text:"内容うすいもん…きっと…"}
+  ]},
+  { id: 527, pair: ["優しい","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今日の私たち、頑張り屋さん…？"},
+    {speaker:"B", text:"認定する"}
+  ]},
+  { id: 528, pair: ["真面目","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"護衛対象は私です…今だけ…"},
+    {speaker:"B", text:"荷が重い…心が…"}
+  ]},
+  { id: 529, pair: ["生意気","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"おだてて。伸びるから"},
+    {speaker:"B", text:"よっ、天下一!"},
+    {speaker:"A", text:"単純だから効く…"}
+  ]},
+  { id: 530, pair: ["冷静","熱血"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"感情表現を貸そうか"},
+    {speaker:"B", text:"借り方がわからん!"}
+  ]},
+  { id: 531, pair: ["お調子者","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"早く帰って早く寝る、天才もん？"},
+    {speaker:"B", text:"天才の定義が優しい世界です"}
+  ]},
+  { id: 532, pair: ["無口","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……前髪、乱れてる"},
+    {speaker:"B", text:"直して…じゃなくて自分でやる"}
+  ]},
+  { id: 533, pair: ["のんびり","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"疲れた心にお灸すえたいね〜"},
+    {speaker:"B", text:"効きそうだけど熱いよ…？"}
+  ]},
+  { id: 534, pair: ["怖がり","お調子者"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰り道で迷子になる夢、正夢…？"},
+    {speaker:"B", text:"あたしが迷子役やるから大丈夫もん"}
+  ]},
+  { id: 535, pair: ["冷静","真面目"], mood: "bothTired", lines: [
+    {speaker:"A", text:"業務連絡。もう眠い"},
+    {speaker:"B", text:"受理します。私もです"}
+  ]},
+  { id: 536, pair: ["熱血","生意気"], mood: "bothTired", lines: [
+    {speaker:"A", text:"疲れと戦って…引き分けた…"},
+    {speaker:"B", text:"負けてないの偉いじゃん"}
+  ]},
+  { id: 537, pair: ["優しい","真面目"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"頑張れって言うのも体力いるね…"},
+    {speaker:"B", text:"では交代で言い合いましょう"}
+  ]},
+  { id: 538, pair: ["お調子者","のんびり"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったらお手玉の練習するもん…"},
+    {speaker:"B", text:"今日はもう玉落とす側だね〜"}
+  ]},
+  { id: 539, pair: ["生意気","冷静"], mood: "bothTired", lines: [
+    {speaker:"A", text:"あーあ、誰か迎えに来ないかな"},
+    {speaker:"B", text:"来る予定を作っていない"}
+  ]},
+  { id: 540, pair: ["無口","お調子者"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"……もどりたい"},
+    {speaker:"B", text:"進んだ方が近いもん!"},
+    {speaker:"A", text:"……理屈"}
+  ]},
+  { id: 541, pair: ["のんびり","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"帰ったらいっぱい食べよ〜ね〜"},
+    {speaker:"B", text:"おかわり十杯…いや三杯…"}
+  ]},
+  { id: 542, pair: ["真面目","生意気"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"音楽が欲しいですね、行進曲"},
+    {speaker:"B", text:"子守唄しか浮かばないし…"}
+  ]},
+  { id: 543, pair: ["怖がり","優しい"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"先に温泉入っていいよ…？"},
+    {speaker:"B", text:"一緒に入ろ？ 怖くないし"}
+  ]},
+  { id: 544, pair: ["冷静","無口"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"本日の総括を"},
+    {speaker:"B", text:"……完"},
+    {speaker:"A", text:"簡潔で良い"}
+  ]},
+  { id: 545, pair: ["熱血","真面目"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったら反省より称賛会だ!"},
+    {speaker:"B", text:"議題は「全員えらい」ですね"}
+  ]},
+  { id: 546, pair: ["お調子者","怖がり"], mood: "aTiredBEnergetic", lines: [
+    {speaker:"A", text:"声からして疲れてるもん、あたし…"},
+    {speaker:"B", text:"いつもの倍、落ち着いてる…"}
+  ]},
+  { id: 547, pair: ["生意気","優しい"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"荷物ちょっと貸して。鍛えるから"},
+    {speaker:"B", text:"優しさの言い訳へたくそだね"}
+  ]},
+  { id: 548, pair: ["無口","冷静"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"……まだ歩ける？"},
+    {speaker:"B", text:"九割気力、一割意地だ"}
+  ]},
+  { id: 549, pair: ["のんびり","お調子者"], mood: "aEnergeticBTired", lines: [
+    {speaker:"A", text:"帰ったらお祭りみたいだね〜"},
+    {speaker:"B", text:"祭りの体力はないもん…"}
+  ]},
+  { id: 550, pair: ["優しい","熱血"], mood: "bothTired", lines: [
+    {speaker:"A", text:"今日もお疲れさま、って言わせて"},
+    {speaker:"B", text:"心に染みる…染みすぎて滲む…"}
+  ]},
 ];
 
 const STORAGE_KEY = "serifuKunState";
@@ -386,10 +2693,13 @@ function moodFlags(mood) {
   return { aTired: false, bTired: false };
 }
 
+// A役を侍と狩人のどちらが演じるかだけをランダムに決める。
+// 吹き出しが「A=左上、B=右上」で固定なので、立ち位置も必ずA=左、B=右にする
+// (以前は立ち位置も独立にランダムにしていたため、Aのキャラが右に立った回は
+// 疲弊/元気の絵が吹き出しの左右と食い違って見えるバグがあった)
 function pickCharacterAssignment() {
   return {
     samuraiIsA: Math.random() < 0.5,
-    samuraiOnLeft: Math.random() < 0.5,
   };
 }
 
@@ -408,16 +2718,13 @@ function renderCard() {
   }
 
   const { aTired, bTired } = moodFlags(card.mood);
-  const { samuraiIsA, samuraiOnLeft } = pickCharacterAssignment();
+  const { samuraiIsA } = pickCharacterAssignment();
 
-  const leftChar = samuraiOnLeft ? "samurai" : "hunter";
-  const rightChar = samuraiOnLeft ? "hunter" : "samurai";
-  const leftSpeaker = (leftChar === "samurai") === samuraiIsA ? "A" : "B";
-  const rightSpeaker = leftSpeaker === "A" ? "B" : "A";
-  const leftTired = leftSpeaker === "A" ? aTired : bTired;
-  const rightTired = rightSpeaker === "A" ? aTired : bTired;
-  const leftImg = (leftTired ? TIRED_IMG : ENERGETIC_IMG)[leftChar];
-  const rightImg = (rightTired ? TIRED_IMG : ENERGETIC_IMG)[rightChar];
+  // 左=A(吹き出し左上と対応)、右=B(吹き出し右上と対応)で固定
+  const leftChar = samuraiIsA ? "samurai" : "hunter";
+  const rightChar = samuraiIsA ? "hunter" : "samurai";
+  const leftImg = (aTired ? TIRED_IMG : ENERGETIC_IMG)[leftChar];
+  const rightImg = (bTired ? TIRED_IMG : ENERGETIC_IMG)[rightChar];
 
   const bubblesHtml = card.lines.map(line => {
     const tired = line.speaker === "A" ? aTired : bTired;
