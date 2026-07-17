@@ -58,13 +58,19 @@ let lastFloorMoveOutcome = null; // rollEncounter()が"battle"/"gold"/"silent"/"
 // ============ 戦闘後の平和な掛け合い: 「戦闘に勝利する→その後1回だけ発火可能」のサイクルで管理する状態 ============
 // (他の探索限定の変数と同じくstateには保存しない)
 let peaceDialogueLocked = true; // true=発火不可(まだ一度も勝利していない、または前回の勝利後に発火済み)
-// 疲弊時の掛け合い(tiredカテゴリ)用。peaceと同じ「勝利→1回だけ発火可」のサイクルだが、
+// 疲弊時の掛け合い=お疲れ雑談(tiredカテゴリ)用。peaceと同じ「勝利→1回だけ発火可」のサイクルだが、
 // ストレス条件が正反対(peaceは全員49以下、tiredは話者に50〜99のキャラを含む)のため
 // 同時に条件を満たすことはなく、ロックだけ独立に持つ
 let tiredDialogueLocked = true;
+// 同じ遠征の中で同じセリフ(エントリ)が二度発火しないようにするための既出記録。
+// banter(平和な掛け合い)とtired(お疲れ雑談)の両カテゴリ共通で「カテゴリ:ID」のキーを貯め、
+// 遠征開始/里への帰還/全滅時(=resetPeaceDialogueStateの呼び出し箇所)にリセットする。
+// 野営ではリセットしない(野営はロックを解くだけで、遠征自体は続いているため)
+let expeditionSpokenDialogueKeys = new Set();
 function resetPeaceDialogueState() {
   peaceDialogueLocked = true; // 遠征開始時点では1回も勝利していないので発火不可
   tiredDialogueLocked = true;
+  expeditionSpokenDialogueKeys = new Set();
 }
 // 戦闘に勝利するたび(battle.jsのvictory()から)呼ぶ。これで次に条件を満たした瞬間1回だけ発火できるようになる
 function unlockPeaceDialogueAfterVictory() {
@@ -1375,12 +1381,17 @@ function maybeTriggerPeaceDialogue() {
   // この2人の並び順に意味は無い(pickTwoRandomElementsは単にランダムに2人選ぶだけ)。
   // 実際にどちらが先に喋るかはplayPairedDialogueExchange側でentry.pAとの一致で決め直す
   const [member1, member2] = pickTwoRandomElements(active);
-  const candidates = pairedDialoguesForPair("banter", member1.personality, member2.personality);
+  // この遠征で既に発火したセリフは候補から除く(banter/tired共通の既出記録)
+  const candidates = pairedDialoguesForPair("banter", member1.personality, member2.personality)
+    .filter((e) => !expeditionSpokenDialogueKeys.has("banter:" + e.id));
   if (candidates.length === 0) return;
   const entry = candidates[Math.floor(Math.random() * candidates.length)];
   // ignoreMutexForFirst=true: 発生条件が厳しい特別なイベントなので、直前のアンビエントセリフ
   // (警戒/ストレス愚痴等)とたまたま重なって黙って不発になることがないよう優先して発言させる
-  if (playPairedDialogueExchange(member1, member2, entry, "banter", true)) peaceDialogueLocked = true;
+  if (playPairedDialogueExchange(member1, member2, entry, "banter", true)) {
+    peaceDialogueLocked = true;
+    expeditionSpokenDialogueKeys.add("banter:" + entry.id);
+  }
 }
 
 // ============ 疲弊時の掛け合い(トリガー判定) ============
@@ -1415,6 +1426,7 @@ function collectTiredDialogueCandidates() {
   const results = [];
   store.list.forEach((entry) => {
     if (!entry.mood) return; // MOOD行の無い壊れたエントリは対象外
+    if (expeditionSpokenDialogueKeys.has("tired:" + entry.id)) return; // この遠征で既出のセリフは使わない
     const needATired = entry.mood === "bothTired" || entry.mood === "aTiredBEnergetic";
     const needBTired = entry.mood === "bothTired" || entry.mood === "aEnergeticBTired";
     active.forEach((mA) => {
@@ -1435,7 +1447,10 @@ function maybeTriggerTiredDialogue() {
   const picked = candidates[Math.floor(Math.random() * candidates.length)];
   // playPairedDialogueExchangeはentry.pAと話者の性格の一致で先攻を決めるため、
   // MOOD判定済みのmA(A役)を第1引数に渡せばA役が必ず先に喋る
-  if (playPairedDialogueExchange(picked.mA, picked.mB, picked.entry, "tired", true)) tiredDialogueLocked = true;
+  if (playPairedDialogueExchange(picked.mA, picked.mB, picked.entry, "tired", true)) {
+    tiredDialogueLocked = true;
+    expeditionSpokenDialogueKeys.add("tired:" + picked.entry.id);
+  }
 }
 
 // 神隠しの道を抜けた時だけの特別演出: 画面全体を紫〜白の幻想的な光でフラッシュさせ、
