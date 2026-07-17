@@ -1392,7 +1392,8 @@ const DUNGEON_EVENTS = [
           e.ja = "天狗";
           e.label = "天狗";
           e.image = "assets/events/tengu.png";
-          e.maxHp = Math.round(e.maxHp * 1.1);
+          // ユーザー指示(2026-07-18): HPを従来(1.1倍)の1.5倍に増量 → 1.65倍
+          e.maxHp = Math.round(e.maxHp * 1.65);
           e.hp = e.maxHp;
           e.goldMin = Math.round((e.goldMin || 5) * 1.5);
           e.goldMax = Math.round((e.goldMax || 10) * 1.5);
