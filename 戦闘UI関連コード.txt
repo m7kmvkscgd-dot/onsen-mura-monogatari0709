@@ -1,0 +1,2573 @@
+====================================================================
+温泉村物語 - 戦闘パートUI(アニメーション含む)関連コード一式
+生成日: 2026-07-15 17:29:30
+====================================================================
+
+対象ファイル:
+  - battle.js       : 戦闘ロジック+画面描画(renderBattleScreen等)
+  - effects.js      : VFX/演出(会心・被弾トレイル・撃ち落とし等)
+  - items.js        : 戦闘中の道具メニュー(回復薬/煙玉/爆弾/消火)
+  - battle.css      : 戦闘UIのスタイル/アニメーション定義
+  - index.html の #screen-battle マークアップ部分(747-758行目)
+
+====================================================================
+### index.html: #screen-battle マークアップ (747-758行目) ###
+====================================================================
+  <div class="screen" id="screen-battle">
+    <div class="battle-bg" id="battleBg"></div>
+    <div id="screenWarningFlash"></div>
+    <div class="battle-top" id="battleTop">
+      <div class="enemy-row" id="enemyRow"></div>
+      <div id="battleLog"></div>
+    </div>
+    <div class="party-bar" id="battlePartyBar"></div>
+    <div class="battle-actions">
+      <div class="action-grid" id="actionGrid"></div>
+    </div>
+  </div>
+
+====================================================================
+### battle.js (全1380行) ###
+====================================================================
+// ============ battle.js: 戦闘(ターン進行・行動選択・対象選択・勝敗判定) ============
+// ============ 戦闘 ============
+let battle = null;
+let pendingEnemyPick = null; // 対象選択待ちの間、敵カード画像を直接タップしても選べるようにする際のコールバック
+let pendingAllyPick = null; // 同様に、味方対象の選択待ちの間、味方の画像を直接タップしても選べるようにする際のコールバック
+let battleSubMenuActive = false; // 対象選択/道具メニューなどのサブ画面を表示中かどうか(trueの間はコマンド外タップで一段戻れる)
+
+// targetId(キャラのid、または敵のinstanceId)から実体(キャラ/敵オブジェクト)を探す。
+// 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
+function startBattle(enemies, pathDef, encounterText) {
+  markEnemiesSeen(enemies); // 図鑑: 遭遇した敵を記録する(倒す必要はなく、出会った時点で登録される)
+  // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる。この戦闘で使い切る(2戦目以降には持ち越さない)
+  const omikujiGuaranteedCrits = state.omikujiGuaranteedCritsLeft || 0;
+  if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits };
+  // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
+  // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
+  lastPartyBarActingId.battlePartyBar = null;
+  // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
+  // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
+  enemies.forEach((e) => { e.__enemyAllies = enemies; });
+  // 新しい戦闘のたびに前回の逃走状態/状態異常/一時バフ/戦闘限定の受動効果をリセット(毒などが戦闘をまたいで残らないように)
+  fieldParty.forEach((c) => {
+    c.fleeState = null;
+    c.poison = 0;
+    c.burnTurns = 0;
+    c.bleed = 0;
+    c.stunTurns = 0;
+    c.stunResistTurns = 0;
+    c.silenceTurns = 0;
+    c.statusImmuneTurns = 0;
+    c.tauntTurns = 0;
+    c.statMods = [];
+    c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
+    c.hawkTurnsLeft = 0; // 狩人「鷹を呼ぶ」も戦闘をまたいで持ち越さない
+    c.hawkGuardTargetId = null;
+    // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
+    // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
+    c.__allies = fieldParty;
+    if (c.passives) {
+      c.passives.onceGuardUsed = false;
+      c.passives.firstAttackUsed = false;
+      c.passives.onKillStacks = 0;
+      c.passives.onKillStacksTurns = 0;
+      c.passives.omamoriIzanagiPending = null;
+      c.passives.omamoriIzanamiPending = null;
+      c.passives.omamoriSharedSurviveFatal = null;
+      c.passives.omamoriBishamonPending = false; // 前回誰かに配られた分が残らないよう、毎戦闘リセットしてから配り直す
+    }
+  });
+  battleLogLines = [];
+  document.getElementById("battleLog").innerHTML = "";
+  // お守り(戦闘単位で発動するもの)のセットアップ。全て装備中(state.omamoriEquipped)の時だけ発動する。
+  // battleLogLinesのクリアより後に置く(blog()を呼ぶsarutahikoの分がクリアで消えてしまわないように)
+  if (hasOmamori("izanagi")) {
+    const guard = { used: false };
+    fieldParty.forEach((c) => { if (c.passives) c.passives.omamoriIzanagiPending = guard; });
+  }
+  if (hasOmamori("izanami")) {
+    const guard = { used: false };
+    fieldParty.forEach((c) => { if (c.passives) c.passives.omamoriIzanamiPending = guard; });
+  }
+  if (hasOmamori("susanoo")) {
+    const guard = { used: false };
+    fieldParty.forEach((c) => { if (c.passives) c.passives.omamoriSharedSurviveFatal = guard; });
+  }
+  if (hasOmamori("inari")) fieldParty.forEach((c) => applyStatMod(c, "evasionAdd", 0.05, 999));
+  if (hasOmamori("yatagarasu")) fieldParty.forEach((c) => applyStatMod(c, "accuracyAdd", 0.12, 999));
+  // 毘沙門天の御守: 戦闘開始時、生存中の味方からランダムに1人選び、次の攻撃を完全無効化するバリアを張る
+  if (hasOmamori("bishamonten")) {
+    const alive = fieldParty.filter((c) => c.status === "active");
+    if (alive.length > 0) {
+      const chosen = alive[Math.floor(Math.random() * alive.length)];
+      if (chosen.passives) chosen.passives.omamoriBishamonPending = true;
+      blog(`毘沙門天の御守の加護で、${chosen.label}に無敵の加護が宿った！`);
+    }
+  }
+  // 石長比売の御守: 最大HP+5%(ぽかぽかの温泉バフと同じ「実際のHPの器を増やす」方式。戦闘終了時に必ず差し引く)
+  if (hasOmamori("iwanagahime")) {
+    fieldParty.forEach((c) => {
+      if (c.status === "active" && !c.omamoriIwanagaHpBonusAmount) {
+        const bonus = Math.max(1, Math.round(c.maxHp * 0.05));
+        c.maxHp += bonus;
+        c.hp += bonus;
+        c.omamoriIwanagaHpBonusAmount = bonus;
+      }
+    });
+  }
+  showScreen("screen-battle");
+  playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。森は夜だけ専用曲、海岸はcoast_battle)
+  blog(encounterText || (enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`));
+  // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる
+  if (omikujiGuaranteedCrits > 0) blog(`おみくじの御利益で、最初の${omikujiGuaranteedCrits}回の攻撃が会心になる！`);
+  if (hasOmamori("sarutahiko")) {
+    // turns:2にしているのはtickStatMods()が「自分の手番開始時に先に1減らす」仕様のため。
+    // turns:1だと最初のティックで即座に0になり消えてしまい、誰の行動にも間に合わない(連斬等と同じ理由)
+    fieldParty.forEach((c) => { applyStatMod(c, "atk", 1.25, 2); applyStatMod(c, "spd", 1.25, 2); });
+    blog("猿田彦神の御守の加護で、味方全体の勢いが増した！");
+  }
+  // 暗い道の奇襲: 一定確率で敵全員の素早さを1ターン目だけ引き上げ、先手を取られやすくする
+  if (pathDef && pathDef.ambushChance && Math.random() < pathDef.ambushChance) {
+    enemies.forEach((e) => applyStatMod(e, "spd", 1.5, 1));
+    blog("奇襲だ！敵の動きが速い！");
+  }
+  // 戦闘開始時の吹き出し(30%)。生存中の仲間からランダムに1人選ぶ
+  if (Math.random() < DIALOGUE_CHANCE.battleStart) {
+    const alive = fieldParty.filter((c) => c.status === "active");
+    if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "battleStart");
+  }
+  // おみくじ「小吉」: 次の遠征の最初の戦闘だけ先制確定。この戦闘で使い切る(2戦目以降には持ち越さない)
+  let forceFirstStrike = state.omikujiFirstStrikePending;
+  if (forceFirstStrike) {
+    state.omikujiFirstStrikePending = false;
+    blog("おみくじの御利益で先手を取った！");
+  }
+  // 月読命の御守: 夜の戦闘は60%で先制する
+  if (!forceFirstStrike && hasOmamori("tsukuyomi") && (state.timeOfDay === "night") && Math.random() < 0.60) {
+    forceFirstStrike = true;
+    blog("月読命の御守の加護で、夜陰に乗じて先手を取った！");
+  }
+  nextRound(forceFirstStrike);
+}
+
+function aliveField() {
+  return fieldParty.filter((c) => c.hp > 0 && c.status === "active" && c.fleeState !== "fled");
+}
+function aliveEnemies() {
+  return battle.enemies.filter((e) => e.hp > 0);
+}
+// 丸呑みされている敵は攻撃対象として選べない/表示もされない(ただしhpは残っているのでaliveEnemies()には
+// 含まれ続け、丸呑み中の敵が最後の1体でも戦闘終了にはならない)
+function targetableEnemies() {
+  return aliveEnemies().filter((e) => !(e.swallowedTurns > 0));
+}
+
+// カラス変身の「観察眼」: 次に行動する組み合わせ(味方/敵問わず)を青い矢印バッジで示す。
+// battle.orderは1ラウンド分しか確定していないため、今のラウンドの残り分だけを覗き見る
+// (ラウンド末尾まで見ても次の行動者がいない=次ラウンドの並び順はまだ未確定、という場合は何も表示しない)
+function nextActingCombatant() {
+  if (!battle || !battle.order) return null;
+  for (let i = battle.orderIndex + 1; i < battle.order.length; i++) {
+    const c = battle.order[i];
+    if (c.hp > 0 && c.fleeState !== "fled" && (c.status === undefined || c.status === "active")) return c;
+  }
+  return null;
+}
+function anyCrowScoutActive() {
+  return fieldParty.some((c) => c.status === "active" && c.transformForm === "karasu");
+}
+
+function renderBattleScreen() {
+  // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
+  if (!battle) return;
+  hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
+  // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
+  // 控え(reserveFieldMember)は健在(瀕死でない)間だけ末尾に表示する(瀕死のまま控えに入っている間は
+  // 他の瀕死のfieldPartyメンバーと同様、担がれるまで姿を見せない)
+  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled").concat(reserveFieldMember && reserveFieldMember.status === "active" ? [reserveFieldMember] : []);
+  renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
+  const row = document.getElementById("enemyRow");
+  row.innerHTML = "";
+  // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
+  // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない
+  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
+  row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  visibleEnemies.forEach((e) => {
+    const dead = e.hp <= 0;
+    const targetable = !!pendingEnemyPick && !dead;
+    const card = document.createElement("div");
+    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + (battle.justAppeared ? " entering" : "") + shakeClassFor(e);
+    card.dataset.id = e.instanceId;
+    const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
+    card.innerHTML = `
+      <div class="enemy-name">${e.label}</div>
+      <div style="position:relative;">
+        <img src="${e.image}" alt="${e.label}">
+        ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>` : ""}
+        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>` : ""}
+        ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>` : ""}
+        ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
+        <div class="enemy-debuff-icons">${statusIconsFor(e)}</div>
+      </div>
+      <div class="hp-with-warning">
+        ${hpBarHtml(e)}
+      </div>
+    `;
+    if (targetable) {
+      card.onclick = () => {
+        const picked = pendingEnemyPick;
+        pendingEnemyPick = null;
+        picked(e);
+      };
+    }
+    row.appendChild(card);
+  });
+  battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
+  activateHpTrails(row);
+  fieldParty.forEach((c) => renderVfxFor(c.id));
+  battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
+  positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
+}
+
+// aliveField()が0人になった時、それが「全滅」なのか「全員逃げ切った」なのかを判定する
+// (fleeStateが"fled"のキャラはaliveField()から除外されるが、hp>0かつstatus==="active"のままなので
+// fieldParty全体で見ればまだ生きている=逃走成功、というケースと区別する必要がある)
+function handleNoOneLeftToFight() {
+  const stillActiveIncludingFled = fieldParty.filter((c) => c.hp > 0 && c.status === "active");
+  if (stillActiveIncludingFled.length > 0) escapeBattle();
+  else defeat();
+}
+
+function nextRound(forceFirstStrike) {
+  // このラウンド中に「逃走準備」に入った仲間は、次のラウンドが始まる前にまとめて実際に逃げ出す。
+  // 以前は本人の次の手番(=次のラウンドの自分の順番)まで待ってから逃げていたため、運が悪いと
+  // 敵の攻撃をラウンドを跨いで2回受けてから逃げる、ということが起きていた。ラウンドの節目で
+  // 解決するようにし、逃走準備中に受ける敵の攻撃は最大でも「そのラウンド中の1回」までに抑える
+  fieldParty.forEach((c) => {
+    if (c.fleeState === "preparing") {
+      c.fleeState = "fled";
+      playSfx("flee");
+      blog(`${c.label}は戦闘から逃げ出した！`);
+    }
+  });
+  const alive = aliveField();
+  if (aliveEnemies().length === 0) { victory(); return; }
+  if (alive.length === 0) { handleNoOneLeftToFight(); return; }
+  battle.order = turnOrder([...alive, ...aliveEnemies()]);
+  // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
+  if (forceFirstStrike) {
+    const allies = battle.order.filter((e) => e.instanceId === undefined);
+    const foes = battle.order.filter((e) => e.instanceId !== undefined);
+    battle.order = [...allies, ...foes];
+  }
+  battle.orderIndex = 0;
+  processNext();
+}
+
+function processNext() {
+  // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていたターン処理が遅れて発火してもクラッシュしないための保険
+  if (!battle) return;
+  battle.actingId = null;
+  battle.actingEnemyId = null;
+  if (aliveEnemies().length === 0) { renderBattleScreen(); victory(); return; }
+  const alive = aliveField();
+  if (alive.length === 0) { renderBattleScreen(); handleNoOneLeftToFight(); return; }
+  if (battle.orderIndex >= battle.order.length) { nextRound(); return; }
+  const actor = battle.order[battle.orderIndex];
+  const isEnemy = battle.enemies.includes(actor);
+  if (isEnemy) {
+    if (actor.hp <= 0) { battle.orderIndex++; processNext(); return; }
+    battle.actingEnemyId = actor.instanceId;
+    // 自分のターンでなくなったので、前のターンの行動ボタンが残って誤タップできてしまわないよう消す
+    document.getElementById("actionGrid").innerHTML = "";
+    renderBattleScreen();
+    const dot = tickTurnStartEffects(actor, blog);
+    if (dot.total > 0) popupOn(actor.instanceId, `-${dot.total}`, "dmg");
+    popupDotStack(actor.instanceId, dot, actor.isPlant ? "burn-plant" : "burn");
+    // 毒/出血/炎上が同時に何種類も出ている時、ポップアップが順番に表示し終わる前に
+    // 敵の攻撃モーションが始まってしまうと忙しなく見えるため、実際に表示される種類数だけ
+    // 行動開始を後ろ倒しにする(表示が無ければ従来通りの600ms、種類が増えるほど長く待つ)
+    const dotTypeCount = [dot.poison, dot.bleed, dot.burn].filter((v) => v > 0).length;
+    const enemyActionDelay = dotTypeCount > 0 ? dotTypeCount * DOT_POPUP_STAGGER_MS : 600;
+    if (actor.hp <= 0) {
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    if (actor.stunTurns > 0) {
+      actor.stunTurns--;
+      blog(`${actor.label}はスタンして動けない！`);
+      popupOn(actor.instanceId, "💫スタン", "stun");
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    // ガマの「丸呑み」で行動不能にされている間はスキップする
+    if (actor.swallowedTurns > 0) {
+      actor.swallowedTurns--;
+      blog(`${actor.label}は丸呑みにされて動けない！`);
+      renderBattleScreen();
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
+    }
+    setTimeout(() => {
+      // 大技サイクル: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、を繰り返す。
+      // 毒弱点②(ENEMY_WEAKNESS)を持つ敵は、毒状態の間は予告も発動もできず通常攻撃のみになる
+      // (サイクルのカウント自体は進め続け、毒が切れれば続きから再開する)
+      const cyclePos = (actor.bigAttackCounter || 0) % BIG_ATTACK_CYCLE_LENGTH;
+      const poisonBlocksBigAttack = (actor.poison || 0) > 0 && !!enemyWeaknessType(actor, "poison") && enemyWeaknessType(actor, "poison").tier === 2;
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1 && !poisonBlocksBigAttack) {
+        actor.bigAttackPending = false;
+        actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
+        blog(`${actor.label}が大技を放った！`);
+        const hpBeforeBig = {};
+        alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
+        const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;
+        const results = enemyBigAttack(actor, alive, blog);
+        if (yatanokagamiActive) {
+          // 八咫鏡の御守: 戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する
+          let prevented = 0;
+          results.forEach((r) => {
+            if (r.hit && r.dmg > 0) {
+              const before = hpBeforeBig[r.target.id];
+              const actualLoss = before - r.target.hp;
+              if (actualLoss > 0) { r.target.hp = Math.min(r.target.maxHp, before); prevented += actualLoss; }
+            }
+          });
+          if (prevented > 0) {
+            battle.omamoriUsed.yatanokagami = true;
+            const reflectDmg = Math.max(1, Math.round(prevented * 0.5));
+            actor.hp = Math.max(0, actor.hp - reflectDmg);
+            blog(`八咫鏡の御守が大技を打ち消し、${actor.label}に${reflectDmg}ダメージを跳ね返した！`);
+            playSfx("evade");
+          }
+        } else {
+          results.forEach((r) => {
+            if (r.hit) {
+              popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+              playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
+            } else {
+              playSfx("evade");
+            }
+          });
+        }
+        alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
+        const newlyCriticalBig = handleFieldDeaths();
+        renderBattleScreen();
+        const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
+        const continueAfterBig = () => {
+          const bigCounterResult = results.find((r) => r.guardCounterDmg);
+          if (bigCounterResult) {
+            // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+            playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
+          } else {
+            setTimeout(advanceTurnAfterBig, 500);
+          }
+        };
+        offerReserveSwapIfNeeded(newlyCriticalBig, continueAfterBig);
+        return;
+      }
+      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
+        actor.bigAttackPending = true;
+        blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
+        triggerWarningFlash();
+        playSfx("big_attack_warning");
+      }
+      actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
+      const hpBeforeAtk = {};
+      alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
+      const result = enemyAttack(actor, alive, blog);
+      if (result && result.hit) {
+        popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+        playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+        checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
+      } else if (result) {
+        playSfx("evade");
+      }
+      const newlyCritical = handleFieldDeaths();
+      renderBattleScreen();
+      const advanceTurn = () => { battle.orderIndex++; processNext(); };
+      const continueAfterAttack = () => {
+        if (result && result.guardCounterDmg) {
+          // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+          playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
+        } else {
+          setTimeout(advanceTurn, 500);
+        }
+      };
+      offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
+    }, enemyActionDelay);
+  } else {
+    if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
+    battle.actingId = actor.id;
+    // 自分のターンが回ってきたら、かばうの構え(と身代わり回数のカウント)は無条件でリセットする
+    actor.guarding = false;
+    actor.guardProtectCount = 0;
+    document.getElementById("actionGrid").innerHTML = "";
+    renderBattleScreen();
+    const dot = tickTurnStartEffects(actor, blog);
+    if (dot.total > 0) {
+      popupOn(actor.id, `-${dot.total}`, "dmg");
+      popupDotStack(actor.id, dot, "burn");
+      const newlyCriticalDot = handleFieldDeaths();
+      renderBattleScreen();
+      if (actor.hp <= 0 || actor.status !== "active") {
+        offerReserveSwapIfNeeded(newlyCriticalDot, () => {
+          setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        });
+        return;
+      }
+    }
+    if (actor.stunTurns > 0) {
+      actor.stunTurns--;
+      blog(`${actor.label}はスタンして動けない！`);
+      popupOn(actor.id, "💫スタン", "stun");
+      renderBattleScreen();
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
+    // 逃走準備(fleeState==="preparing")の解決はnextRound()側でラウンドの節目にまとめて行うため、
+    // ここでは何もしない(このactorがここに来る時点で既に"fled"になっているか、まだ"preparing"のまま
+    // 通常通り行動選択に進む=このラウンド中はまだ逃げていないことになる)
+    // 発狂中の吹き出し(このキャラの手番が来るたび50%)。発狂だけは複数人が同時に喋ることを
+    // 許すため、通常のミューテックスとは別枠のcategoryを使う。ユーザー指示により「発狂中は
+    // 行動不能になることがある」仕様は廃止したため、ここではセリフ判定のみ行い、以降は
+    // 通常通り行動選択に進む(ステータスの弱体化自体はfatigueMalusで別途かかっている)
+    if (stressTier(actor.fatigue) >= 4 && Math.random() < DIALOGUE_CHANCE.breakdownPerTurn) {
+      trySpeak(actor, "breakdown");
+    }
+    if (actor.reloading) {
+      actor.reloading = false;
+      // 土嚢展開(reloadImmuneのstatMod)が有効な間は装填を発生させない
+      const reloadImmune = actor.statMods && actor.statMods.some((m) => m.stat === "reloadImmune");
+      if (!reloadImmune) {
+        blog(`${actor.label}は装填中で動けない！`);
+        battle.orderIndex++;
+        setTimeout(processNext, 500);
+        return;
+      }
+    }
+    if (actor.silenceTurns > 0) {
+      blog(`${actor.label}は沈黙していて技が使えない！`);
+      actor.silenceTurns--;
+    }
+    // 変身中のform専用スキル(丸呑み/脱皮/毒液散布等)のクールタイムは、この変身キャラ自身の
+    // 手番が来るたびにスキルごとに1減る
+    if (actor.formCooldowns) {
+      Object.keys(actor.formCooldowns).forEach((key) => {
+        if (actor.formCooldowns[key] > 0) actor.formCooldowns[key]--;
+      });
+    }
+    renderActionButtons(actor);
+  }
+}
+
+// 戻り値: このタイミングで新たに瀕死になった(fieldParty本人が力尽きた)キャラの配列。
+// 呼び出し元(processNext等)がこれを見て、控えとの交代ポップアップを出すかどうか判断する
+// (担がれていた側が巻き添えで瀕死になったケースは対象外、あくまで直接倒れた本人のみ)
+function handleFieldDeaths() {
+  // 以前は確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ1つ手前のフロアで
+  // 救助できる特例があったが、ユーザー指示で廃止。敵がいたフロアにそのまま取り残す通常仕様に統一する
+  const newlyCritical = [];
+  fieldParty.forEach((c) => {
+    // 変身中に致命傷級のダメージを受けても瀕死にはならず、変身が強制解除されて人間の姿(変身前のHP)に
+    // 戻るだけで済む(「変身が身代わりになる」仕様)
+    if (c.hp <= 0 && c.status === "active" && c.transformForm) {
+      const formName = TRANSFORM_FORMS[c.transformForm].ja;
+      revertTransform(c);
+      blog(`${c.name}は${formName}の姿を保てず、人間の姿に戻った！`);
+      return;
+    }
+    if (c.hp <= 0 && c.status === "active") {
+      // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
+      const carried = fieldParty.find((x) => x.carriedBy === c.id);
+      if (carried) {
+        markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
+        carried.carriedBy = null;
+        c.carryingId = null;
+        blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
+      }
+      // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
+      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
+      markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
+      blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
+      newlyCritical.push(c);
+      // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
+      fieldParty.forEach((ally) => {
+        if (ally.id !== c.id && ally.status === "active") {
+          ally.fatigue = Math.min(FATIGUE_MAX, (ally.fatigue || 0) + 25);
+        }
+      });
+      // 味方が倒れた時の吹き出し(75%)。倒れた本人は喋れないので他の生存者から選ぶ
+      if (Math.random() < DIALOGUE_CHANCE.allyDefeated) {
+        const bystanders = fieldParty.filter((ally) => ally.id !== c.id && ally.status === "active");
+        if (bystanders.length > 0) trySpeak(bystanders[Math.floor(Math.random() * bystanders.length)], "allyDefeated");
+      }
+    }
+  });
+  pruneActiveParty();
+  saveState();
+  return newlyCritical;
+}
+
+// 瀕死になった直後、控え(reserveFieldMember)がいれば「交代しますか？」のポップアップを出す。
+// 「はい」なら瀕死のキャラを控え枠に下げ、控えだったキャラをその場に迎える(ターン進行はonDoneで続ける)。
+// 「いいえ」、または控えがいない/既に控えが瀕死等で交代できない場合は即座にonDoneを呼んで通常通り進む
+function offerReserveSwapIfNeeded(newlyCritical, onDone) {
+  const candidate = newlyCritical.find((c) => c.status === "critical");
+  if (!candidate || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
+  showConfirmModal(`控えの${reserveFieldMember.name}と交代しますか？`, [
+    {
+      label: "はい", className: "big primary", onClick: () => {
+        swapReserveMember(candidate, blog);
+        renderBattleScreen();
+        onDone();
+      },
+    },
+    { label: "いいえ", className: "big", onClick: onDone },
+  ]);
+}
+
+// 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
+// 現在この関数を呼ぶのは野営開始時のみ(camp.js)。
+function revertAllTransforms() {
+  fieldParty.forEach((c) => {
+    if (c.transformForm) {
+      const formName = TRANSFORM_FORMS[c.transformForm].ja;
+      revertTransform(c);
+      blog(`${c.name}は${formName}の姿から人間に戻った。`);
+    }
+  });
+}
+
+// 対象選択/道具メニューなどのサブ画面(戻るボタンは置かず、コマンド外をタップすると呼ばれる)を
+// キャンセルして行動選択に戻る
+function cancelBattleSubMenu() {
+  if (!battle || battle.actingId == null) return;
+  const actor = fieldParty.find((c) => c.id === battle.actingId);
+  if (!actor) return;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  renderBattleScreen();
+  renderActionButtons(actor);
+}
+
+// 敵が2体以上生きている場合は対象を選ばせ、1体だけなら自動でその敵を対象にする。
+// 対象選択中は上の敵カード画像を直接タップしても選べる(pendingEnemyPick、renderBattleScreen側で処理)
+function pickSingleEnemyTarget(onPicked) {
+  const targets = targetableEnemies();
+  if (targets.length === 1) { onPicked(targets[0]); return; }
+  battleSubMenuActive = true;
+  pendingEnemyPick = (t) => { onPicked(t); };
+  renderBattleScreen();
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  // 敵が5体以上いると2列のままでは行数が増えすぎ、末尾の「戻る」がactionGrid(fixed配置)の画面外に
+  // 押し出されて押せなくなっていたため、この対象選択だけ3列にして行数を減らす
+  // (renderActionButtonsで通常の2列に戻す)
+  grid.style.gridTemplateColumns = "1fr 1fr 1fr";
+  targets.forEach((t) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${t.label} (${t.hp}/${t.maxHp})`;
+    btn.onclick = () => { pendingEnemyPick = null; onPicked(t); };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => cancelBattleSubMenu();
+  grid.appendChild(backBtn);
+}
+
+// 担いでいる相手を対象に選ぶ(戦闘中に瀕死になった仲間、または担いでいる最中に別の仲間が瀕死になった場合)
+// スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
+function runTreeSkill(actor, skill) {
+  const action = skill.action;
+  // 八幡神の御守: 戦闘中最初に使う技のMP消費が0になる(消費前にコスト分を先に補充しておき、
+  // useTreeSkill内の通常の減算と相殺させることで実質無償化する)
+  const cost = skillMpCost(actor, skill.mp);
+  if (cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman) {
+    actor.mp += cost;
+    battle.omamoriUsed.hachiman = true;
+    blog("八幡神の御守の加護で、技を無償で繰り出せた！");
+  }
+  if (action.kind === "transform") {
+    const result = useTreeSkill(actor, actor, skill, blog); // MP消費/不足判定のみ処理される
+    if (result && result.failed) return;
+    renderTransformFormPicker(actor);
+    return;
+  }
+  if (action.kind === "buffSelf") {
+    playSfx("select");
+    useTreeSkill(actor, actor, skill, blog);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  if (action.kind === "buffParty") {
+    playSfx("select");
+    useTreeSkill(actor, aliveField(), skill, blog);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  if (action.kind === "summonHawk") {
+    // 担ぐ・変身解除と同じく、召喚自体はターンを消費しない(呼び出した後そのまま別の行動を選べる)
+    const result = useTreeSkill(actor, actor, skill, blog);
+    if (result && result.failed) { renderActionButtons(actor); return; }
+    playSfx("hawk_summon");
+    renderBattleScreen();
+    renderActionButtons(actor);
+    return;
+  }
+  if (action.kind === "heal") {
+    if (action.aoe) {
+      playSfx("heal");
+      const targets = fieldParty.filter((c) => !c.transformForm && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
+      const result = useTreeSkill(actor, targets, skill, blog);
+      if (result && result.healed) {
+        result.healed.forEach((h) => {
+          if (h.revived) { rescueCritical(h.target); h.target.hp = Math.max(1, Math.round(h.target.maxHp * action.reviveHpPct)); blog(`${h.target.name}が蘇生した！`); }
+          else { popupOn(h.target.id, `+${h.heal}`, "heal"); maybeSpeakHealed(h.target); }
+        });
+      }
+      renderBattleScreen();
+      finishPlayerAction();
+      return;
+    }
+    renderTreeSkillAllyPicker(actor, skill);
+    return;
+  }
+  // ダメージ系
+  if (action.aoe) {
+    playSfx(attackSfxFor(actor.classId));
+    const targetsList = targetableEnemies();
+    const result = useTreeSkill(actor, targetsList, skill, blog);
+    const shotDownTargets = [];
+    const hitTargets = [];
+    let anyCrit = false;
+    if (result && result.dmgs) {
+      let anyEvaded = false;
+      let anyHit = false;
+      targetsList.forEach((t, i) => {
+        const r = result.dmgs[i];
+        if (r && r.hit) {
+          popupOn(t.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+          anyHit = true;
+          hitTargets.push(t);
+          if (r.shotDown) shotDownTargets.push(t);
+          if (r.crit) { anyCrit = true; playCritEffects(t.instanceId, actor, r.dmg); }
+        }
+        else anyEvaded = true;
+      });
+      if (anyEvaded) playSfx("evade");
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
+    }
+    renderBattleScreen();
+    hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
+    triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
+    return;
+  }
+  pickSingleEnemyTarget((target) => {
+    playSfx(attackSfxFor(actor.classId));
+    const result = useTreeSkill(actor, target, skill, blog);
+    const r = result && result.dmgs && result.dmgs[0];
+    if (r && r.hit && r.hits && r.hits.length > 1) {
+      // 連突き/二連射のような多段ヒット技: 1振りごとに間を置いて別々の攻撃モーション/ポップアップ/
+      // 鷹の追撃を再生する(合計ダメージを1回にまとめて見せていた旧仕様をユーザー指摘で修正)
+      renderBattleScreen();
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
+      const STAGGER_MS = 260;
+      r.hits.forEach((hitInfo, i) => {
+        setTimeout(() => {
+          // ダメージ行(と貫通/鷹追撃の行があればそれも)を、このヒットのVFXと同時に流す。
+          // 以前はuseTreeSkill内で全振り分のログが即座にまとめて出てしまい、エフェクトだけが
+          // 遅れて2回再生される見た目とテキストの表示タイミングがズレていた
+          (hitInfo.logLines || []).forEach((line) => blog(line));
+          popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
+          if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
+          playAttackVfx(target.instanceId, actor, "skill");
+          if (r.hawkTargetIds && r.hawkTargetIds[i]) playHawkAttackVfx(actor, r.hawkTargetIds[i]);
+        }, i * STAGGER_MS);
+      });
+      setTimeout(() => {
+        triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction());
+      }, r.hits.length * STAGGER_MS);
+      return;
+    }
+    if (r && r.hit) {
+      popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+      if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
+    }
+    else if (r) playSfx("evade");
+    renderBattleScreen();
+    if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
+    if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
+    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction());
+  });
+}
+
+// スキルツリーの単体回復スキル用、味方の対象選択(既存のrenderAllyTargetsは回復薬/治癒の術専用のため別関数にしてある)
+function renderTreeSkillAllyPicker(actor, skill) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  aliveField().filter((target) => !target.transformForm).forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
+    btn.onclick = () => {
+      playSfx("heal");
+      const result = useTreeSkill(actor, target, skill, blog);
+      if (result && result.healed && result.healed[0]) { popupOn(target.id, `+${result.healed[0].heal}`, "heal"); maybeSpeakHealed(target); }
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 変化の術: カラス/ガマ/ヘビの3択を表示する。カラスだけは変身直後にすぐ行動できる
+// (ターンを消費せず同じactorの行動選択にそのまま戻る)特典があり、ガマ/ヘビは通常通りそこで手番を終える
+function renderTransformFormPicker(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  Object.keys(TRANSFORM_FORMS).forEach((formKey) => {
+    const form = TRANSFORM_FORMS[formKey];
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${form.emoji}${form.ja}`;
+    btn.onclick = () => {
+      playTransformEffect(() => {
+        enterTransform(actor, formKey);
+        blog(`${actor.name}は${form.ja}に変身した！`);
+        renderBattleScreen();
+        if (form.extraActionOnTransform) renderActionButtons(actor);
+        else finishPlayerAction();
+      });
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+// ガマの「丸呑み」「吐き出す」/ヘビの「脱皮」「毒液散布」。いずれも専用クールタイム(MPではない、
+// actor.formCooldowns[skillKey]で個別管理)で管理する
+function runFormSkill(actor, skillKey) {
+  const formKey = actor.transformForm;
+  const form = TRANSFORM_FORMS[formKey];
+  const skill = form.formSkills.find((s) => s.key === skillKey);
+  if (skillKey === "marunomi") {
+    const targets = targetableEnemies().filter((e) => !e.isBoss && !e.isMidBoss);
+    if (targets.length === 0) { alert("丸呑みにできる敵がいません"); return; }
+    battleSubMenuActive = true;
+    const grid = document.getElementById("actionGrid");
+    grid.innerHTML = "";
+    targets.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      btn.textContent = t.label;
+      btn.onclick = () => {
+        playSfx("select");
+        t.swallowedTurns = skill.swallowTurns;
+        actor.formCooldowns[skillKey] = skill.cooldown;
+        blog(`${actor.name}は${t.label}を丸呑みにした！`);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.className = "big";
+    backBtn.textContent = "戻る";
+    backBtn.onclick = () => renderActionButtons(actor);
+    grid.appendChild(backBtn);
+    return;
+  }
+  // ガマが行動不能で詰むのを防ぐための解除コマンド。丸呑み中の敵を1体選んで即座に解放する
+  // (クールタイムなし、ターンは消費する)
+  if (skillKey === "hakidasu") {
+    const swallowed = battle.enemies.filter((e) => e.swallowedTurns > 0);
+    if (swallowed.length === 0) { alert("丸呑みにしている相手がいません"); return; }
+    if (swallowed.length === 1) {
+      swallowed[0].swallowedTurns = 0;
+      blog(`${actor.name}は${swallowed[0].label}を吐き出した！`);
+      renderBattleScreen();
+      finishPlayerAction();
+      return;
+    }
+    battleSubMenuActive = true;
+    const grid = document.getElementById("actionGrid");
+    grid.innerHTML = "";
+    swallowed.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.className = "big";
+      btn.textContent = t.label;
+      btn.onclick = () => {
+        t.swallowedTurns = 0;
+        blog(`${actor.name}は${t.label}を吐き出した！`);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.className = "big";
+    backBtn.textContent = "戻る";
+    backBtn.onclick = () => renderActionButtons(actor);
+    grid.appendChild(backBtn);
+    return;
+  }
+  if (skillKey === "datsupi") {
+    playSfx("heal");
+    const heal = Math.round(actor.maxHp * skill.healPct);
+    actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+    actor.poison = 0; actor.bleed = 0; actor.burnTurns = 0; actor.stunTurns = 0; actor.silenceTurns = 0;
+    actor.formCooldowns[skillKey] = skill.cooldown;
+    popupOn(actor.id, `+${heal}`, "heal");
+    blog(`${actor.name}は脱皮してHPを${heal}回復し、状態異常を治した！`);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  if (skillKey === "dokueki") {
+    playSfx(attackSfxFor(actor.classId));
+    actor.formCooldowns[skillKey] = skill.cooldown;
+    blog(`${actor.name}は毒液を撒き散らした！`);
+    targetableEnemies().forEach((e) => {
+      const dmg = applyDamageToTarget(e, Math.max(1, Math.round(e.maxHp * skill.dmgPct)), blog, actor.label, null);
+      popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+      applyPoison(e, resolveValue({ valueMin: skill.poisonMin, valueMax: skill.poisonMax }, skill.poisonMin));
+    });
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+}
+
+function renderCarryTargets(actor, targets) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  targets.forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name}を担ぐ`;
+    btn.onclick = () => {
+      actor.carryingId = target.id;
+      target.carriedBy = actor.id;
+      target.criticalFloor = null;
+      target.criticalExpireMinutes = null;
+      blog(`${actor.label}は${target.name}を担いだ！`);
+      if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(target, "carried");
+      playSfx("carry");
+      document.getElementById("actionGrid").innerHTML = ""; // 演出の間はボタンを消して連打を防ぐ
+      // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
+      setTimeout(() => {
+        renderBattleScreen();
+        renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
+      }, 2000);
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 技(スキル)サブメニュー: 職業の基本アビリティ+スキルツリーの能動スキル+味方を守れの合計が
+// 3つ以上あるクラスは、通常攻撃の右の「技」ボタンからこのサブメニューを開いて選ぶ形にまとめる。
+// buttonsは既にrenderActionButtons側でクリック処理まで組み立て済みの要素をそのまま流用する
+// (作り直さず、DOM上の挿し先を変えるだけ)
+function renderSkillSubMenu(actor, buttons) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  buttons.forEach((btn) => grid.appendChild(btn));
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+function renderActionButtons(actor) {
+  battleSubMenuActive = false;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = ""; // 敵対象選択(3列)からの復帰時、通常の2列に戻す
+  const c = CLASSES[actor.classId];
+
+  // 仲間を担いでいる間は攻撃/技が使えず、逃げるかアイテムしか行動できない
+  if (!actor.carryingId) {
+    const atkBtn = document.createElement("button");
+    atkBtn.className = "big primary";
+    atkBtn.textContent = "攻撃";
+    atkBtn.onclick = () => {
+      pickSingleEnemyTarget((target) => {
+        playSfx(attackSfxFor(actor.classId));
+        // 武甕槌命の御守: 戦闘中、最初の通常攻撃が確定で会心になる
+        const takemikazuchi2Active = hasOmamori("takemikazuchi2") && !battle.omamoriUsed.takemikazuchi2;
+        if (takemikazuchi2Active) { actor.guaranteedCritNext = true; battle.omamoriUsed.takemikazuchi2 = true; }
+        const result = performAttack(actor, target, blog);
+        if (result.hit) {
+          popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+          if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+          maybeSpeakOnCrit(actor, result.crit);
+          maybeSpeakOnKill(actor, target);
+          // 建御雷神の御守: 戦闘中、最初の通常攻撃が命中した時に確定でスタンを付与する
+          if (hasOmamori("takemikazuchi") && !battle.omamoriUsed.takemikazuchi) {
+            battle.omamoriUsed.takemikazuchi = true;
+            applyStun(target, 1);
+            blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
+          }
+        }
+        else playSfx("evade");
+        renderBattleScreen();
+        if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+        if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
+        triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction());
+      });
+    };
+    grid.appendChild(atkBtn);
+
+    // 変化の術で変身中は、通常の職業アビリティ/スキルツリー技の代わりに専用の行動(カラスのかばう、
+    // ガマ/ヘビのform専用スキル)だけを出す。MPの概念が無くなるため沈黙判定も無関係になる
+    if (actor.transformForm) {
+      const formDef = TRANSFORM_FORMS[actor.transformForm];
+      if (formDef.canGuard) {
+        const guardBtn = document.createElement("button");
+        guardBtn.className = "big";
+        guardBtn.textContent = "かばう";
+        guardBtn.onclick = () => {
+          playSfx("guard");
+          useAbility(actor, actor, "guard", blog);
+          renderBattleScreen();
+          finishPlayerAction();
+        };
+        attachSkillLongPressTooltip(guardBtn, "かばう", ABILITY_DESC.guard);
+        grid.appendChild(guardBtn);
+      }
+      (formDef.formSkills || []).forEach((skill) => {
+        // 「吐き出す」は丸呑み中の相手がいる時だけ意味があるため、いなければボタン自体を出さない
+        if (skill.key === "hakidasu" && !battle.enemies.some((e) => e.swallowedTurns > 0)) return;
+        const skillBtn = document.createElement("button");
+        skillBtn.className = "big";
+        const cooldownLeft = (actor.formCooldowns && actor.formCooldowns[skill.key]) || 0;
+        const onCooldown = cooldownLeft > 0;
+        skillBtn.textContent = skill.name + (onCooldown ? `(あと${cooldownLeft}T)` : "");
+        skillBtn.disabled = onCooldown;
+        skillBtn.onclick = () => { runFormSkill(actor, skill.key); };
+        attachSkillLongPressTooltip(skillBtn, skill.name, skill.desc);
+        grid.appendChild(skillBtn);
+      });
+    } else {
+      // スキル(職業の基本アビリティ+スキルツリーで選んだ能動スキル+味方を守れ)は、まず
+      // skillButtonsに集めておき、合計3つ以上になるクラスだけ通常攻撃の右の「技」ボタンに
+      // まとめてサブメニュー化する(action-gridの行数が増えすぎて下のボタンが画面外に
+      // 切れる問題への対策)。2つ以下ならこれまで通り並べて直接表示する
+      const skillButtons = [];
+      // 沈黙中は技(会心の一撃・呪符ノ術など)が使えず、通常攻撃のみになる
+      (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
+        const abBtn = document.createElement("button");
+        abBtn.className = "big";
+        const cost = abilityMpCost(ability);
+        abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
+        if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
+        abBtn.onclick = () => {
+          if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
+          if (ability === "guard") {
+            playSfx("guard");
+            useAbility(actor, actor, "guard", blog);
+            maybeSpeakOnGuard(actor);
+            renderBattleScreen();
+            finishPlayerAction();
+            return;
+          }
+          if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+            playSfx(attackSfxFor(actor.classId));
+            const targetsList = targetableEnemies();
+            const result = useAbility(actor, targetsList, ability, blog);
+            const shotDownTargets = [];
+            const hitTargets = [];
+            let anyCrit = false;
+            if (result && result.hits) {
+              let anyEvaded = false;
+              targetsList.forEach((t, i) => {
+                if (result.hits[i]) {
+                  popupOn(t.instanceId, `-${result.dmgs[i]}`, "dmg", dmgShakeIntensity(true));
+                  hitTargets.push(t);
+                  if (result.shotDowns && result.shotDowns[i]) shotDownTargets.push(t);
+                  if (result.crits && result.crits[i]) { anyCrit = true; playCritEffects(t.instanceId, actor, result.dmgs[i]); }
+                }
+                else anyEvaded = true;
+              });
+              if (anyEvaded) playSfx("evade");
+              if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
+            }
+            renderBattleScreen();
+            hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
+            triggerShootDownEvents(shotDownTargets, () => finishPlayerAction());
+            return;
+          }
+          // 単体系(会心の一撃/奇襲/呪符ノ術など)
+          pickSingleEnemyTarget((target) => {
+            playSfx(attackSfxFor(actor.classId));
+            const result = useAbility(actor, target, ability, blog);
+            if (result && result.hit) {
+              popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
+              if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+              if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
+            }
+            else if (result && !result.failed) playSfx("evade");
+            renderBattleScreen();
+            if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
+            if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
+            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction());
+          });
+        };
+        attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
+        skillButtons.push(abBtn);
+      });
+
+      // スキルツリーで選んだ能動スキル(沈黙中は使えない)
+      (actor.silenceTurns > 0 ? [] : (actor.unlockedSkills || [])).forEach((skill) => {
+        const btn = document.createElement("button");
+        btn.className = "big";
+        const cost = skillMpCost(actor, skill.mp);
+        const hawkActive = skill.action && skill.action.kind === "summonHawk" && actor.hawkTurnsLeft > 0;
+        // 八幡神の御守: 戦闘中最初に使う技はMP消費が0になるため、MP不足でもボタンを押せるようにする
+        const hachimanFree = cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman;
+        btn.textContent = skill.name + (hawkActive ? `(滞在中あと${actor.hawkTurnsLeft}T)` : (cost > 0 ? `(MP${cost})` : ""));
+        if (hawkActive || (cost > 0 && actor.mp < cost && !hachimanFree)) btn.disabled = true;
+        btn.onclick = () => { runTreeSkill(actor, skill); };
+        attachSkillLongPressTooltip(btn, skill.name, skill.desc);
+        skillButtons.push(btn);
+      });
+
+      // 鷹を呼ぶ(狩人)が出ている間だけ使える「味方を守れ」。指定した味方への次の攻撃を鷹が代わりに受けて消滅する
+      if (actor.hawkTurnsLeft > 0) {
+        const hawkGuardBtn = document.createElement("button");
+        hawkGuardBtn.className = "big";
+        hawkGuardBtn.textContent = "味方を守れ" + (HAWK_GUARD_MP_COST > 0 ? `(MP${HAWK_GUARD_MP_COST})` : "");
+        if (actor.mp < HAWK_GUARD_MP_COST) hawkGuardBtn.disabled = true;
+        hawkGuardBtn.onclick = () => { renderAllyTargets(actor, "hawkGuard"); };
+        attachSkillLongPressTooltip(hawkGuardBtn, "味方を守れ", "指定した味方(自分を含む)への次の攻撃を、鷹が代わりに受けて消滅する");
+        skillButtons.push(hawkGuardBtn);
+      }
+
+      if (skillButtons.length >= 3) {
+        const skillMenuBtn = document.createElement("button");
+        skillMenuBtn.className = "big";
+        skillMenuBtn.textContent = "技";
+        skillMenuBtn.onclick = () => renderSkillSubMenu(actor, skillButtons);
+        grid.appendChild(skillMenuBtn);
+      } else {
+        skillButtons.forEach((btn) => grid.appendChild(btn));
+      }
+    }
+
+    // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示。
+    // 控え枠(reserveFieldMember)に瀕死のまま入っているキャラもここに含める(「交代」で控えに下がっても
+    // 歩けないのは変わらないため、担いで救出する必要がある)
+    const carryPool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
+    const carryTargets = carryPool.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
+    if (carryTargets.length > 0) {
+      const carryBtn = document.createElement("button");
+      carryBtn.className = "big";
+      carryBtn.textContent = "担ぐ";
+      carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
+      grid.appendChild(carryBtn);
+    }
+    // 交代: 控えが健在(瀕死でない)の時だけ表示。行動中のキャラの手番を消費して控えと入れ替わる
+    if (reserveFieldMember && reserveFieldMember.status === "active") {
+      const swapBtn = document.createElement("button");
+      swapBtn.className = "big";
+      swapBtn.textContent = "交代";
+      swapBtn.onclick = () => {
+        swapReserveMember(actor, blog);
+        renderBattleScreen();
+        finishPlayerAction();
+      };
+      grid.appendChild(swapBtn);
+    }
+  }
+
+  // 変身解除: 任意のタイミングで解除できる。担いでいる間でも(変身自体は解除したいはずなので)表示し、
+  // ターンを消費せずそのまま行動選択に戻る(担ぐコマンドと同じ「無消費の意思決定」パターン)
+  if (actor.transformForm) {
+    const revertBtn = document.createElement("button");
+    revertBtn.className = "big";
+    revertBtn.textContent = "変身解除";
+    revertBtn.onclick = () => {
+      const formName = TRANSFORM_FORMS[actor.transformForm].ja;
+      playTransformEffect(() => {
+        revertTransform(actor);
+        blog(`${actor.name}は${formName}の姿から人間に戻った。`);
+        renderBattleScreen();
+        renderActionButtons(actor);
+      });
+    };
+    grid.appendChild(revertBtn);
+  }
+
+  const itemBtn = document.createElement("button");
+  itemBtn.className = "big";
+  itemBtn.textContent = "道具";
+  itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
+  itemBtn.onclick = () => { renderItemMenu(actor); };
+  grid.appendChild(itemBtn);
+
+  // 消火: からくり屋敷を建てるまでは使えない。味方に炎上中の仲間が1人でもいる時だけ表示。
+  // 煙玉を1個消費して使い、パーティ全員の炎上を治す。温泉卵と同様にターンを消費しない(誤タップ防止のため使用前に確認を挟む)
+  if ((state.karakuriLevel || 0) > 0 && fieldParty.some((c) => c.burnTurns > 0) && (state.inventory.smokeBomb || 0) > 0) {
+    const extinguishBtn = document.createElement("button");
+    extinguishBtn.className = "big";
+    extinguishBtn.textContent = `消火(${state.inventory.smokeBomb || 0})`;
+    extinguishBtn.onclick = () => renderExtinguishConfirm(actor);
+    grid.appendChild(extinguishBtn);
+  }
+
+  const fleeBtn = document.createElement("button");
+  fleeBtn.className = "big";
+  fleeBtn.textContent = "逃げる";
+  fleeBtn.onclick = () => fleeAction(actor);
+  grid.appendChild(fleeBtn);
+}
+
+// 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
+function fleeAction(actor) {
+  actor.fleeState = "preparing";
+  blog(`${actor.label}は逃走準備を始めた！`);
+  document.getElementById("actionGrid").innerHTML = "";
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  renderBattleScreen();
+  finishPlayerAction();
+}
+
+// 対象選択/道具メニューなどのサブ画面を表示中(battleSubMenuActive)は、コマンド一覧(#actionGrid)や
+// 選択可能な敵/味方カード以外の場所をタップすると行動選択に戻れる(専用の「戻る」ボタンは置かない)。
+// "click"だとボタン押下のハンドラがactionGridの中身を書き換えてから(戻る対象が2択以上ある時など)
+// イベントがbubbleするため、押した要素が既にDOMから外れてclosest("#actionGrid")が見つけられず
+// 誤って直後にキャンセルされてしまう(敵が2体以上いる時に攻撃コマンドが一切効かなくなるバグの原因)。
+// DOM書き換え前に判定できる"pointerdown"で見るようにして回避する
+document.getElementById("screen-battle").addEventListener("pointerdown", (e) => {
+  if (!battleSubMenuActive) return;
+  if (e.target.closest("#actionGrid")) return;
+  if (e.target.closest(".enemy-card.targetable")) return;
+  if (e.target.closest(".party-member.targetable")) return;
+  cancelBattleSubMenu();
+});
+
+function resolveAllyTarget(actor, kind, target) {
+  if (kind === "heal") {
+    playSfx("heal");
+    const result = useAbility(actor, target, "heal", blog);
+    if (result && result.heal) { popupOn(target.id, `+${result.heal}`, "heal"); maybeSpeakHealed(target); }
+  } else if (kind === "hawkGuard") {
+    actor.mp -= HAWK_GUARD_MP_COST;
+    actor.hawkGuardTargetId = target.id;
+    blog(`${actor.label}の鷹が${target.label}を守るために身構えた！`);
+  } else if (TEAHOUSE_SNACK_IDS.includes(kind)) {
+    const item = ITEMS[kind];
+    state.inventory[kind] = Math.max(0, (state.inventory[kind] || 0) - 1);
+    playSfx("heal");
+    const heal = useTeahouseSnack(item, target, blog);
+    popupOn(target.id, `+${heal}`, "heal");
+    maybeSpeakHealed(target);
+    saveState();
+  } else {
+    consumePotion();
+    playSfx("heal");
+    const heal = usePotion(target, blog);
+    popupOn(target.id, `+${heal}`, "heal");
+    maybeSpeakHealed(target);
+    saveState();
+  }
+  renderBattleScreen();
+  finishPlayerAction();
+}
+
+// 味方対象の選択中は、上の味方イラストを直接タップしても選べる(pendingAllyPick、renderPartyBar側で処理)
+function renderAllyTargets(actor, kind) {
+  battleSubMenuActive = true;
+  const targets = aliveField().filter((c) => !c.transformForm);
+  pendingAllyPick = (t) => { pendingAllyPick = null; resolveAllyTarget(actor, kind, t); };
+  renderBattleScreen();
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  targets.forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
+    btn.onclick = () => { pendingAllyPick = null; resolveAllyTarget(actor, kind, target); };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => cancelBattleSubMenu();
+  grid.appendChild(backBtn);
+}
+
+// 行動確定の直後に必ず呼ぶ。#actionGridをその場で空にしてから500ms後にターンを進めることで、
+// 演出のディレイ中にボタン(や敵/味方の直接タップ)を連打して同じキャラが何度も行動できてしまう
+// バグ(致命的な二重行動バグ)を防ぐ。renderBattleScreen()自体は#actionGridに触れないため、
+// これを呼ばずにsetTimeout(afterPlayerAction, 500)だけ書くと再発するので注意
+function finishPlayerAction() {
+  document.getElementById("actionGrid").innerHTML = "";
+  setTimeout(afterPlayerAction, 500);
+}
+
+function afterPlayerAction() {
+  const newlyCritical = handleFieldDeaths();
+  offerReserveSwapIfNeeded(newlyCritical, () => {
+    battle.orderIndex++;
+    processNext();
+  });
+}
+
+function victory() {
+  stopBattleBgm();
+  playSfx("victory");
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
+  clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
+  let totalGold = 0;
+  const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
+  // 奉行所の討伐依頼(受注制): この戦闘がbattle.questKey(tryForceQuestEncounterで確定出現させた
+  // 対象)ならその場で達成とし、報酬はリザルト画面(renderResultScreen)にまとめて表示する。
+  // 猪の依頼(大猪討伐)だけは通常のクリアカウントに含めず、代わりにボス級指名討伐の解禁フラグを立てる
+  if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
+    const qDef = QUEST_DEFS[battle.questKey];
+    const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
+    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP };
+    totalGold += questGold;
+    aliveField().forEach((c) => {
+      const beforeLevel = c.level;
+      grantXp(c, QUEST_REWARD_XP, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + QUEST_REWARD_XP;
+      for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+    });
+    state.acceptedQuest = null;
+    if (battle.questKey === "inoshishi") state.defeatedOoInoshishi = true;
+  }
+  let soulShardCount = 0;
+  battle.enemies.forEach((e) => {
+    const g = goldReward(e);
+    totalGold += g;
+    if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
+    if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
+    aliveField().forEach((c) => {
+      const beforeLevel = c.level;
+      grantXp(c, e.xp, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + e.xp;
+      for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+    });
+    // 道場があれば、この冒険に同行しなかった(名簿にいるが出発していない)仲間にも経験値の一部を分配する
+    if ((state.dojoLevel || 0) >= 1) {
+      const reserveXp = Math.round(e.xp * DOJO_XP_SHARE_BY_LEVEL[state.dojoLevel]);
+      state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c)).forEach((c) => {
+        const beforeLevel = c.level;
+        grantXp(c, reserveXp, blog);
+        advXpGained[c.id] = (advXpGained[c.id] || 0) + reserveXp;
+        for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
+      });
+    }
+  });
+  // 暗い道の危険手当: この戦闘が暗い道由来なら獲得銭を割増する
+  if (battle.goldMult && battle.goldMult !== 1) totalGold = Math.round(totalGold * battle.goldMult);
+  // 温泉バフ「福招き」: パーティの誰か1人でも持っていれば獲得銭+10%
+  if (fieldParty.some((c) => c.onsenBuffKey === "fukumaneki")) totalGold = Math.round(totalGold * 1.1);
+  // 弁財天の御守: 撃破時、低確率でその戦闘のゴールドが2倍になる
+  if (totalGold > 0 && hasOmamori("benzaiten") && Math.random() < 0.10) {
+    totalGold *= 2;
+    blog("弁財天の御守の加護で、ゴールドが2倍になった！");
+  }
+  // 恵比寿神の御守: 勝利時10%でボーナスゴールド+30%
+  if (totalGold > 0 && hasOmamori("ebisu") && Math.random() < 0.10) {
+    totalGold = Math.round(totalGold * 1.30);
+    blog("恵比寿神の御守の加護で、ボーナスゴールドを手に入れた！");
+  }
+  state.gold += totalGold;
+  advGoldEarned += totalGold;
+  blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
+  if (soulShardCount > 0) {
+    state.inventory.soulShard = (state.inventory.soulShard || 0) + soulShardCount;
+    blog(`魂のかけらを${soulShardCount}個手に入れた。`);
+  }
+  // 大国主命の御守: 戦闘終了後12%でストレスを5回復
+  if (hasOmamori("okuninushi") && Math.random() < 0.12) {
+    fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.max(0, (c.fatigue || 0) - 5); });
+    blog("大国主命の御守の加護で、みんなのストレスが和らいだ。");
+  }
+  // 天照大神の御守: 毎回戦闘終了後に、全員のHPを10%回復
+  if (hasOmamori("amaterasu")) {
+    fieldParty.forEach((c) => { if (c.status === "active") c.hp = Math.min(c.maxHp, c.hp + Math.max(1, Math.round(c.maxHp * 0.10))); });
+    blog("天照大神の御守の加護で、みんなの傷が癒えた。");
+  }
+  // 天之御中主神の御守: 毎戦闘終了後にMP1回復
+  if (hasOmamori("amenominakanushi")) {
+    fieldParty.forEach((c) => { if (c.status === "active" && c.maxMp > 0) c.mp = Math.min(c.maxMp, c.mp + 1); });
+  }
+  if (totalGold > 0 || soulShardCount > 0) {
+    if (totalGold > 0) playSfx("coin");
+    // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
+    // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)。
+    // 魂のかけらを入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
+    showTreasurePopup(Math.round(totalGold / battle.enemies.length), soulShardCount > 0 ? "assets/items/soul_shard.png" : null);
+  }
+  queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
+  saveState();
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${currentStageName()}に戻る</button>`;
+  document.getElementById("battleContinueBtn").onclick = () => {
+    battle = null;
+    clearHawkState(fieldParty);
+    clearGuardState(fieldParty);
+    clearOmamoriIwanagaBonus(fieldParty);
+    fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+    showScreen("screen-dungeon");
+    renderDungeon();
+    checkStrandedOnCurrentFloor();
+  };
+}
+
+// レベルアップで選べるスキルツリーがある分だけ、選択待ち(state.pendingSkillChoices)に積む。
+// 以前は戦闘終了直後に強制的に2択オーバーレイを出していたが、1戦で2レベル以上連続で上がった時に
+// 「character.levelを見て記録キーにする」実装だった影響で選択内容の記録が壊れるバグがあったため、
+// 記録は明示的にlevelを渡す形(applySkillChoice参照)に修正した上で、選ぶタイミングも
+// 「宿屋の名簿画面で任意に選ぶ」方式に変更した(openSkillChoiceFor参照)
+function markQuestChasingIfFled() {
+  if (battle && battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
+    state.acceptedQuest.chasing = true;
+  }
+}
+function escapeBattle() {
+  markQuestChasingIfFled();
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
+  blog("残った仲間全員が戦闘から逃げ延びた。");
+  battle = null;
+  pendingEnemyPick = null;
+  pendingAllyPick = null;
+  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
+  fieldParty.forEach((c) => {
+    c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+    // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
+    if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
+  });
+  // 逃げても階層は後退させない(以前は里の方向へ1階層分後退していたが、その場に留まる仕様に変更)
+  advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+  showScreen("screen-dungeon");
+  renderDungeon();
+  checkStrandedOnCurrentFloor();
+}
+
+// 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
+// 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
+function defeat() {
+  stopBattleBgm();
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
+  fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
+  clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
+  clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
+  clearOmikujiExpeditionEffect();
+  resetPeaceDialogueState();
+  blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
+  document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
+  document.getElementById("battleBackTownBtn").onclick = () => {
+    stopAmbientBgm();
+    stopCoastAreaBgm();
+    battle = null;
+    toggleTimeOfDay();
+    bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
+    playDefeatBanner(() => {
+      renderResultScreen(() => {
+        renderTown();
+      }, true);
+    });
+  };
+}
+
+
+====================================================================
+### effects.js (全759行) ###
+====================================================================
+// ============ effects.js: 戦闘演出(VFX/会心演出/セリフ/状態異常アイコンとツールチップ/朱印演出) ============
+function findVfxEntity(targetId) {
+  const ally = fieldParty.find((c) => c.id === targetId);
+  if (ally) return ally;
+  return battle && battle.enemies ? battle.enemies.find((e) => e.instanceId === targetId) : null;
+}
+
+// 与えたダメージ/回復の演出(数字ポップアップ・揺れ)は、DOM要素ではなくキャラ/敵オブジェクト自身に
+// 「いつ・何を表示すべきか」を記録しておく方式にする。renderPartyBar/敵カード生成が毎回このデータを見て
+// その場でポップアップ要素を作るため、ターンのたびにDOM要素が作り直されても消えたり出そびれたりしない
+// 敵の大技予告(bigAttackPending)が発生した瞬間、画面端を一瞬だけ橙色に光らせる警告演出。
+// アニメーションを毎回頭から再生させるため、一度クラスを外してリフローを挟んでから付け直す
+function triggerWarningFlash() {
+  const el = document.getElementById("screenWarningFlash");
+  if (!el) return;
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = "screenWarningFlash 0.6s ease-out";
+}
+// 攻撃系のdmgポップアップ呼び出し時、技/会心なら"strong"(揺れ1.2倍)、通常攻撃なら"normal"(揺れ0.8倍)を
+// 呼び出し元で明示的に渡す(毒/炎上などの継続ダメージは渡さず、常にnormal扱いにする)
+function dmgShakeIntensity(isSkill) {
+  return (isSkill || (typeof lastHitWasCrit !== "undefined" && lastHitWasCrit)) ? "strong" : "normal";
+}
+// ポップアップ(回復/毒/出血/炎上/スタン/会心の数字)が画面に出ている時間。以前は1.5秒だったが
+// 「出てすぐ消えて読めない」というユーザー指摘を受けて延長した(.dmg-popのCSSアニメーション
+// 時間(battle.css)ともセットで変更すること)
+const POPUP_DISPLAY_MS = 2000;
+// ターン開始時の毒/出血/炎上ダメージは、複数が同時に発生すると1個しかないポップアップ枠を
+// 即座に奪い合い、後から発生した種類にすぐ上書きされて前の数字を読む間もなく消えていた。
+// 種類ごとに間隔を空けて1つずつ表示することで、それぞれ読めるようにする
+const DOT_POPUP_STAGGER_MS = 700;
+function popupDotStack(targetId, dot, burnCls) {
+  const entries = [];
+  if (dot.poison > 0) entries.push({ text: `🦠-${dot.poison}`, cls: "poison" });
+  if (dot.bleed > 0) entries.push({ text: `🩸-${dot.bleed}`, cls: "bleed" });
+  if (dot.burn > 0) entries.push({ text: `🔥-${dot.burn}`, cls: burnCls || "burn" });
+  entries.forEach((e, i) => setTimeout(() => popupOn(targetId, e.text, e.cls), i * DOT_POPUP_STAGGER_MS));
+}
+function popupOn(targetId, text, cls, intensity) {
+  const entity = findVfxEntity(targetId);
+  if (!entity) return;
+  if (cls === "dmg") {
+    entity.__shakeUntil = Date.now() + 400;
+    entity.__shakeIntensity = intensity || "normal";
+  }
+  // 赤いダメージ数字のポップアップ表示は敵/味方問わず廃止(揺れ+フラッシュの演出のみ残す)。回復の表示は継続する
+  if (cls === "dmg") return;
+  entity.__popupText = text;
+  entity.__popupCls = cls;
+  entity.__popupAt = Date.now();
+  renderVfxFor(targetId);
+}
+// 攻撃が命中した時に対象カードへ重ねるヒットエフェクト(職業ごとに素材/フレーム数/表示サイズが異なる)。
+// カード自体はrenderBattleScreen()のたびに作り直されるため、要素をDOMに残さず「今表示されている
+// カードに一度だけ追加→アニメーション完了で自分で消える」使い切り方式にしてある。
+// 侍/忍/薙刀士は共通のSlashFX斬撃(通常=黄/技=ティール)、槍士は専用の金属衝撃エフェクト
+// (通常=黄/技=紫)、狩人は星形の黄、砲術士は星形の赤、陰陽師は通常攻撃が槍士と共通の黄(小さめ)・
+// 呪符ノ術等の技だけ紫の星形、僧侶は通常攻撃のみ陰陽師と共通の黄(小さめ)を使う
+// 通常攻撃のエフェクトは全体的に90%サイズにする(スキル系は据え置き、というユーザー指示への対応)
+const CLASS_ATTACK_VFX = {
+  samurai:  { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 454 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 504 } },
+  ninja:    { normal: { prefix: "assets/vfx/slash_magenta_", frames: 9, size: 320 }, skill: { prefix: "assets/vfx/impact_ninja_skill_", frames: 4, size: 200 } },
+  naginata: { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 252 }, skill: { prefix: "assets/vfx/slash_skill_", frames: 9, size: 280 } },
+  spearman: { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 198 }, skill: { prefix: "assets/vfx/impact_spear_skill_", frames: 6, size: 220 } },
+  priest:   { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 } },
+  onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+  hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+  gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
+  // 狩人「鷹を呼ぶ」の追撃専用エントリ。侍の通常斬撃素材を流用しつつ、サイズだけ半分以下(454→200)に
+  // 縮小した後、ユーザー指示でさらに1.5倍(200→300)に拡大した
+  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 300 } },
+};
+// 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
+// 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
+const TRANSFORM_ATTACK_VFX = {
+  gama: { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 } },
+  hebi: { normal: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
+};
+const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フレーム数は素材ごとに異なる(CLASS_ATTACK_VFX参照)
+function playAttackVfx(targetId, actor, kind) {
+  const transformOverride = actor.transformForm && TRANSFORM_ATTACK_VFX[actor.transformForm];
+  const cfg = (transformOverride && transformOverride[kind]) || (CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind]);
+  if (!cfg) return; // 対応するエフェクトが設定されていない組み合わせ(僧侶のskillなど)は何も出さない
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const img = document.createElement("img");
+  img.className = "slash-vfx";
+  img.style.width = cfg.size + "px";
+  img.src = `${cfg.prefix}1.png`;
+  el.appendChild(img);
+  let frame = 1;
+  const timer = setInterval(() => {
+    frame++;
+    if (frame > cfg.frames) {
+      clearInterval(timer);
+      img.remove();
+      return;
+    }
+    img.src = `${cfg.prefix}${frame}.png`;
+  }, ATTACK_VFX_FRAME_MS);
+}
+// かばう反撃(会心の返し)の演出。ダメージ計算自体はengine.js側で敵の攻撃と同時に処理されているが、
+// 見た目上は「敵の攻撃を受ける→一呼吸置いてから槍士が実際に反撃する」という2段構えに分けたいという
+// ユーザー指示のため、呼び出し元(battle.js)で敵の攻撃演出を出した直後にこの関数を呼び、
+// GUARD_COUNTER_DELAY_MS(0.5秒)待ってから槍士側の攻撃VFX/SE/ダメージ揺れをまとめて再生する。
+// onDoneは演出が一通り終わった後に呼ぶ(呼び出し元で次のターンへ進める処理を渡す)
+const GUARD_COUNTER_DELAY_MS = 500;
+// かばう反撃の瞬間、槍士のポートレートを一瞬「ぴょこん」と跳ねさせて攻撃している感を出す
+// (自分の手番中ずっと浮遊し続ける.party-member.actingとは別枠の、一回きりのバウンス演出)
+const GUARD_COUNTER_BOUNCE_MS = 400;
+function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
+  setTimeout(() => {
+    // 実際のHP減算とログ出力はここで初めて行う(engine.js側のhandleGuardSynergyPassivesでは
+    // ダメージ量の計算のみ行い、反撃が発生した事実は伝えていない)。これによりHPバーの減少・
+    // ログ・ダメージポップアップ・攻撃VFXが全て同じタイミングで発生するようになる
+    enemy.hp = Math.max(0, enemy.hp - counterDmg);
+    blog(`${spearman.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
+    popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
+    playSfx(attackSfxFor(spearman.classId));
+    renderBattleScreen();
+    playAttackVfx(enemy.instanceId, spearman, "normal");
+    const card = findVisibleCard(spearman.id);
+    if (card) {
+      card.classList.add("counter-bounce");
+      setTimeout(() => card.classList.remove("counter-bounce"), GUARD_COUNTER_BOUNCE_MS);
+    }
+    setTimeout(onDone, 500);
+  }, GUARD_COUNTER_DELAY_MS);
+}
+// 狩人「鷹を呼ぶ」の追撃演出: 鷹のイラスト(assets/vfx/hawk.png)が狩人の位置から対象へ飛んでいき、
+// 着弾で侍の通常攻撃と同じ斬撃エフェクト+SEを鳴らした後、少しヒットストップしてからUターンで
+// 元の位置に戻って消える。(見た目のサイズだけ侍の半分以下に抑えたCLASS_ATTACK_VFX.hawkを使う)
+const HAWK_PROJECTILE_MS = 306; // ユーザー指示で速度0.8倍(220ms→275ms)からさらに10%減速(275/0.9=305.5→306ms)
+const HAWK_HITSTOP_MS = 80; // 着弾後、Uターンを始めるまでの一呼吸
+function playHawkAttackVfx(hunterActor, targetId) {
+  const strike = () => {
+    // 通常の被ダメージ揺れを対象に発生させる。着弾はrenderBattleScreen()から数百ms遅れて
+    // 非同期に起きる(既に次のターンに進んでいる可能性がある)ため、再描画は挟まずカード要素へ
+    // 直接shakeClassFor相当のクラスを付け外しする(popupOn自体はentity側の状態記録のみ)
+    popupOn(targetId, "", "dmg", "normal");
+    const card = findVisibleCard(targetId);
+    if (card) {
+      const shakeClasses = shakeClassFor(findVfxEntity(targetId)).trim().split(" ").filter(Boolean);
+      card.classList.add(...shakeClasses);
+      setTimeout(() => card.classList.remove(...shakeClasses), 400);
+    }
+    playAttackVfx(targetId, { classId: "hawk" }, "normal");
+    playSfx(attackSfxFor("samurai"));
+  };
+  // 飛翔中(往路〜復路)は、飛んでいる本体と紛らわしいため狩人ポートレートの鷹バッジを一時的に隠す。
+  // hawkFlightActiveフラグはrenderPartyBar側の表示条件にも効くので、飛翔中にrenderBattleScreen()が
+  // 挟まってポートレートDOMが作り直されても(直接のstyle操作は失われても)バッジは隠れたままになる
+  hunterActor.hawkFlightActive = true;
+  const setBadgeHidden = (hidden) => {
+    const card = findVisibleCard(hunterActor.id);
+    const badge = card && card.querySelector(".hawk-badge");
+    if (badge) badge.style.display = hidden ? "none" : "";
+  };
+  const endFlight = () => {
+    hunterActor.hawkFlightActive = false;
+    setBadgeHidden(false);
+    // 飛翔中に(敵ターン等で)renderBattleScreen()が挟まっていた場合、その時点ではまだ
+    // hawkFlightActive=trueでバッジ自体が描画されていない。style操作だけでは戻せないため、
+    // 念のため味方バーを再描画してバッジの有無を現在の状態に合わせ直す
+    if (battle && document.getElementById("battlePartyBar")) {
+      renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
+    }
+  };
+  setBadgeHidden(true);
+  const fromEl = findVisibleCard(hunterActor.id);
+  const toEl = findVisibleCard(targetId);
+  if (!fromEl || !toEl) { strike(); endFlight(); return; }
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+  const fromX = fromRect.left + fromRect.width / 2;
+  const fromY = fromRect.top + fromRect.height / 2;
+  const toX = toRect.left + toRect.width / 2;
+  const toY = toRect.top + toRect.height / 2;
+  const bird = document.createElement("img");
+  bird.className = "hawk-projectile";
+  bird.src = "assets/vfx/hawk.png";
+  document.body.appendChild(bird);
+  const outbound = bird.animate([
+    { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 1 },
+    { transform: `translate(${toX}px, ${toY}px) scale(1.15)`, opacity: 1 },
+  ], { duration: HAWK_PROJECTILE_MS, easing: "ease-in", fill: "forwards" });
+  outbound.onfinish = () => {
+    strike(); // 着弾の瞬間に攻撃が発生する
+    setTimeout(() => {
+      const inbound = bird.animate([
+        { transform: `translate(${toX}px, ${toY}px) scale(1.15)`, opacity: 1 },
+        { transform: `translate(${fromX}px, ${fromY}px) scale(0.8)`, opacity: 0 },
+      ], { duration: HAWK_PROJECTILE_MS, easing: "ease-out", fill: "forwards" });
+      inbound.onfinish = () => { bird.remove(); endFlight(); };
+    }, HAWK_HITSTOP_MS);
+  };
+}
+// 会心専用の演出。通常攻撃の処理そのものは一切変更せず、会心が発生した時だけ追加で呼ぶ。
+// 「ヒットストップ」は本物の処理停止ではなく、通常の斬撃エフェクト/シェイクが鳴った直後に
+// 一呼吸(80ms)置いてから、追加のご褒美演出(画面全体の揺れ・特大金色ダメージ数字・白閃光/衝撃波/
+// 火花・「クリティカル！」バナー・専用SE)がまとめて畳み掛ける、という「間→ドカン」の2段構えで
+// 気持ちよさを表現している。全体の演出時間はヒットストップ80ms+効果本体約250msで0.3秒強に収めてある
+const CRIT_HITSTOP_MS = 80;
+// 会心の画面揺れ: 戦闘画面の固定要素(背景/敵表示・行動選択)自体のtransformにCSS変数経由で
+// オフセットを足し込む方式。以前はbody要素にtransformを掛けてposition:fixedの子要素ごと
+// 揺らしていたが、その方式だとfixed要素の基準(containing block)がviewportからbodyに切り替わり、
+// 実機で画面が一瞬ジャンプする不具合が起きたため、揺らしたい要素そのものを直接動かす方式に変更した。
+// .party-barは過去にtransform常時付与でiOS Safariの再描画不具合を起こした前科があるため対象から除外している
+const SCREEN_SHAKE_FRAMES = [[0, 0], [-6, 3], [5, -3], [-3, 2], [2, -1], [0, 0]];
+const SCREEN_SHAKE_DURATION_MS = 180;
+function playScreenShakeCrit() {
+  const targets = [document.getElementById("battleBg"), document.getElementById("battleTop"), document.querySelector(".battle-actions")].filter(Boolean);
+  if (targets.length === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / SCREEN_SHAKE_DURATION_MS);
+    const idx = Math.min(SCREEN_SHAKE_FRAMES.length - 1, Math.floor(t * (SCREEN_SHAKE_FRAMES.length - 1)));
+    const [dx, dy] = SCREEN_SHAKE_FRAMES[idx];
+    targets.forEach((el) => { el.style.setProperty("--crit-shake-x", `${dx}px`); el.style.setProperty("--crit-shake-y", `${dy}px`); });
+    if (t < 1) requestAnimationFrame(step);
+    else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
+  }
+  requestAnimationFrame(step);
+}
+function playCritEffects(targetId, actor, dmg) {
+  setTimeout(() => {
+    playScreenShakeCrit();
+    playSfx(critSfxFor(actor.classId));
+    const el = findVisibleCard(targetId);
+    if (!el) return;
+    const pop = document.createElement("div");
+    pop.className = "dmg-pop crit";
+    pop.textContent = `-${dmg}`;
+    el.appendChild(pop);
+    setTimeout(() => pop.remove(), 1150);
+    const flash = document.createElement("div");
+    flash.className = "crit-flash-overlay";
+    el.appendChild(flash);
+    setTimeout(() => flash.remove(), 220);
+    const wave = document.createElement("div");
+    wave.className = "crit-shockwave";
+    el.appendChild(wave);
+    setTimeout(() => wave.remove(), 300);
+    for (let i = 0; i < 6; i++) {
+      const spark = document.createElement("div");
+      spark.className = "crit-spark";
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 18 + Math.random() * 14;
+      spark.style.setProperty("--spark-x", `${Math.cos(angle) * dist}px`);
+      spark.style.setProperty("--spark-y", `${Math.sin(angle) * dist}px`);
+      spark.style.setProperty("--spark-dur", `${0.2 + Math.random() * 0.1}s`);
+      el.appendChild(spark);
+      setTimeout(() => spark.remove(), 320);
+    }
+    const banner = document.createElement("div");
+    banner.className = "crit-banner";
+    banner.textContent = "クリティカル！";
+    el.appendChild(banner);
+    setTimeout(() => banner.remove(), 520);
+  }, CRIT_HITSTOP_MS);
+}
+// 狩人/砲術士が飛行(🪽)の敵を撃ち落とした時の演出。対象は複数(範囲技)の可能性があるので配列で受け取る。
+// 1体でも撃ち落としがあれば、専用SEを鳴らし「◯◯を撃ち落とした！」をログに出す
+// (以前は1秒間画面が停止していたが、ユーザー指示で廃止し即座に次へ進行するようにした)
+function triggerShootDownEvents(shotDownTargets, onDone) {
+  if (!shotDownTargets || shotDownTargets.length === 0) { onDone(); return; }
+  shotDownTargets.forEach((t) => blog(`${t.label}を撃ち落とした！`));
+  playSfx("shoot_down");
+  renderBattleScreen(); // 🪽解除後の見た目(HPバー横のマーク消失)をすぐ反映する
+  onDone();
+}
+// entityの現在のカードDOM要素に、保存済みのポップアップ/揺れ状態を反映する
+// (renderPartyBar/敵カード生成の直後に呼ぶことで、その場で作られたばかりのカードにも即座に反映する)
+// 同じキャラのカードは#dungeonPartyBar/#battlePartyBar/#campPartyBarなど複数の画面(.screen)に
+// 同時に存在しうる(現在表示されていない画面の分もDOM上には残っている)。data-idだけで
+// document.querySelector(...)すると、たまたまDOM順で先に出てくる「非表示画面側」のカードに
+// マッチしてしまい、そちらはdisplay:noneの祖先を持つため getBoundingClientRect() が全て0を
+// 返す、という不具合があった(敵側は#enemyRowが戦闘画面にしか存在しないため起こらなかった)。
+// 複数マッチする中から実際にレイアウトされている(幅/高さが0でない)ものを選ぶ
+function findVisibleCard(targetId) {
+  // 担がれているキャラは自分の.party-memberを持たず、担いでいるキャラのカードに重ねた
+  // .carried-badge(data-carried-id)としてしか存在しないため、そちらも検索対象に含める
+  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"], .carried-badge[data-carried-id="${targetId}"]`);
+  for (const c of candidates) {
+    const r = c.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return c;
+  }
+  return candidates[0] || null;
+}
+function renderVfxFor(targetId) {
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const entity = findVfxEntity(targetId);
+  if (!entity) return;
+  if (entity.__popupAt && Date.now() - entity.__popupAt < POPUP_DISPLAY_MS) {
+    const existing = el.querySelector(".dmg-pop");
+    // 前の被弾からまだPOPUP_DISPLAY_MS経っていない状態でもう一度被弾すると、__popupAtが更新されるのに
+    // 「既にポップアップがある」という判定だけで新しい数字がスキップされ、2発目以降が一切表示されなくなる
+    // バグがあった。表示中の数字がどの被弾のものかをdata属性で区別し、最新の被弾なら必ず作り直す
+    const alreadyShowingLatest = existing && Number(existing.dataset.popupAt) === entity.__popupAt;
+    if (!alreadyShowingLatest) {
+      if (existing) existing.remove();
+      const pop = document.createElement("div");
+      pop.className = "dmg-pop" + (entity.__popupCls ? " " + entity.__popupCls : "");
+      pop.textContent = entity.__popupText;
+      pop.dataset.popupAt = String(entity.__popupAt);
+      const elapsed = Date.now() - entity.__popupAt;
+      // カード自体がrenderBattleScreen()の再構築(innerHTML=""での作り直し)で差し替わり、
+      // 表示中のポップアップごと消えてしまうことがある。その場合でも見た目上は同じ1回のポップアップに
+      // 見えるよう、経過時間分だけ負のanimation-delayでアニメーションを巻き戻して途中から再開させる
+      // (これをしないと、作り直しのたびにアニメーションが最初から再生され「2回表示された」ように見える)
+      pop.style.animationDelay = `-${elapsed}ms`;
+      el.appendChild(pop);
+      const remaining = POPUP_DISPLAY_MS - elapsed;
+      setTimeout(() => pop.remove(), Math.max(0, remaining));
+    }
+  }
+  // 吹き出しは.party-member/.enemy-cardの中には置かず、専用の全画面固定レイヤー(#speechBubbleLayer)に
+  // カード位置を実測して配置する(.party-barのスタッキングコンテキストの都合で、内部にどんな高い
+  // z-indexを置いても探索画面側の要素の手前に出せなかったための対策)
+  const layer = document.getElementById("speechBubbleLayer");
+  const existingBubble = layer.querySelector(`[data-speech-id="${targetId}"]`);
+  const withinWindow = entity.__speechAt && Date.now() - entity.__speechAt < SPEECH_BUBBLE_DURATION_MS;
+  if (withinWindow) {
+    const speechAtSnapshot = entity.__speechAt;
+    const alreadyShowingLatest = existingBubble && Number(existingBubble.dataset.speechAt) === speechAtSnapshot;
+    if (!alreadyShowingLatest) {
+      if (existingBubble) existingBubble.remove();
+      const bubble = document.createElement("div");
+      bubble.className = "speech-bubble";
+      bubble.textContent = entity.__speechText;
+      bubble.dataset.speechId = targetId;
+      bubble.dataset.speechAt = String(speechAtSnapshot);
+      layer.appendChild(bubble);
+      // 会心の気合いセリフ(A側)など「力の込もった発言」は、他の吹き出しと同じふわっとしたフェードではなく、
+      // 一瞬で飛び出して弾む「ドンッ」という勢いのある登場にする(ダメージ演出と体感速度を揃える狙い)。
+      // .speech-bubbleのベース transform(中心寄せ+GPUレイヤー昇格)はWAAPIのtransformキーフレームで
+      // 丸ごと上書きされてしまうため、scaleを付け足す形で毎回同じ文字列を明示している
+      const isForceful = !!entity.__speechForceful && entity.__speechForcefulAt === speechAtSnapshot;
+      const bubbleBaseTransform = "translate(-50%, calc(-100% - 5px)) translateZ(0)";
+      const enterKeyframes = isForceful
+        ? [
+            { opacity: 0, transform: `${bubbleBaseTransform} scale(0.4)`, offset: 0 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1.22)`, offset: 0.05 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(0.92)`, offset: 0.09 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1)`, offset: 0.14 },
+            { opacity: 1, transform: `${bubbleBaseTransform} scale(1)`, offset: 0.85 },
+            { opacity: 0, transform: `${bubbleBaseTransform} scale(1)`, offset: 1 },
+          ]
+        : [
+            { opacity: 0, offset: 0 },
+            { opacity: 1, offset: 0.12 },
+            { opacity: 1, offset: 0.85 },
+            { opacity: 0, offset: 1 },
+          ];
+      const fadeAnim = bubble.animate(enterKeyframes, { duration: SPEECH_BUBBLE_DURATION_MS, easing: "linear", fill: "forwards" });
+      const remaining = SPEECH_BUBBLE_DURATION_MS - (Date.now() - speechAtSnapshot);
+      setTimeout(() => { fadeAnim.cancel(); bubble.remove(); }, Math.max(0, remaining));
+    }
+    requestAnimationFrame(() => {
+      const freshEl = findVisibleCard(targetId);
+      const freshBubble = layer.querySelector(`[data-speech-id="${targetId}"][data-speech-at="${speechAtSnapshot}"]`);
+      if (!freshEl || !freshBubble) return;
+      const rect = freshEl.getBoundingClientRect();
+      // 自キャラ(味方)の吹き出しだけ、ユーザー指示によりさらに5px下にずらす(敵はそのまま)
+      const isPartySide = freshEl.classList.contains("party-member") || freshEl.classList.contains("carried-badge");
+      // 4人パーティの左端/右端キャラだと、キャラ中心に吹き出しを置くと画面外にはみ出て
+      // 文字が読めなくなることがあった。吹き出し自体の位置は画面内に収まるようクランプし、
+      // 矢印(::after)だけ--arrow-offsetでキャラの実際の中心へずらして指し示す
+      const desiredCenterX = rect.left + rect.width / 2;
+      const bubbleWidth = freshBubble.getBoundingClientRect().width;
+      const EDGE_MARGIN = 8;
+      const minCenter = EDGE_MARGIN + bubbleWidth / 2;
+      const maxCenter = window.innerWidth - EDGE_MARGIN - bubbleWidth / 2;
+      const clampedCenterX = Math.min(Math.max(desiredCenterX, minCenter), maxCenter);
+      const ARROW_EDGE_MARGIN = 12; // 矢印が吹き出しの丸角にめり込まないための余白
+      const maxArrowOffset = Math.max(0, bubbleWidth / 2 - ARROW_EDGE_MARGIN);
+      const arrowOffset = Math.min(Math.max(desiredCenterX - clampedCenterX, -maxArrowOffset), maxArrowOffset);
+      freshBubble.style.left = `${clampedCenterX}px`;
+      freshBubble.style.top = `${rect.top + (isPartySide ? 5 : 0)}px`;
+      freshBubble.style.setProperty("--arrow-offset", `${arrowOffset}px`);
+    });
+  } else if (existingBubble) {
+    existingBubble.remove();
+  }
+}
+// 現在、発狂(breakdown)以外の理由で吹き出しを表示中の仲間がいるかどうか。
+// 通常は同時に1人しか喋らない(発狂中のセリフだけこのミューテックスを無視して複数同時発言を許す)
+function anyoneSpeaking() {
+  const now = Date.now();
+  return fieldParty.some((c) => c.__speechAt && c.__speechCategory !== "breakdown" && now - c.__speechAt < SPEECH_BUBBLE_DURATION_MS);
+}
+// 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
+function trySpeak(speaker, category) {
+  // 担がれた側(瀕死でstatus==="critical")のセリフだけは例外的に許可する
+  const speakerOk = speaker && (speaker.status === "active" || (category === "carried" && speaker.status === "critical"));
+  if (!speakerOk) return false;
+  // breakdown(発狂)とallDefeated(全滅)は他のセリフより優先させるため、表示中の吹き出しがあっても構わず発言させる
+  const allowConcurrent = category === "breakdown" || category === "allDefeated";
+  if (!allowConcurrent && anyoneSpeaking()) return false;
+  // 変化の術で変身中は、性格ごとのセリフの代わりに鳴き声を喋る
+  const lines = speaker.transformForm
+    ? TRANSFORM_ANIMAL_SOUNDS[speaker.transformForm]
+    : DIALOGUE_LINES[category] && DIALOGUE_LINES[category][speaker.personality];
+  if (!lines || !lines.length) return false;
+  speaker.__speechText = lines[Math.floor(Math.random() * lines.length)];
+  speaker.__speechAt = Date.now();
+  speaker.__speechCategory = category;
+  renderVfxFor(speaker.id);
+  return true;
+}
+
+// ============ 新カテゴリの掛け合い会話システム(戦闘後の平和な掛け合い、他) ============
+// trySpeak()はDIALOGUE_LINES[category][personality]からランダムに1つ選ぶ仕組みのため、
+// PEACE_DIALOGUESのような「性格ペアごとに決まった1文」を明示的に喋らせる用途にはそのまま使えない。
+// trySpeak()自体は変更せず、内部の「表示を確定させる」部分(__speechText/__speechAt/__speechCategoryの
+// セット+renderVfxFor呼び出し)だけを、テキストを直接渡せる形で複製した薄いラッパー。
+// ignoreMutex=trueの時だけ、既に誰か発言中でもミューテックス(anyoneSpeaking)を無視して表示する
+// (2人の掛け合いで、Aの吹き出し表示中にBが続けて喋る自然な会話テンポを作るために使う)。
+// 今後の野営会話/ボス前会話/帰還時会話/温泉会話も、この関数を使い回して実装できる
+function speakExplicitLine(speaker, text, category, ignoreMutex, forceful) {
+  if (!speaker || speaker.status !== "active") return false;
+  if (!ignoreMutex && anyoneSpeaking()) return false;
+  speaker.__speechText = text;
+  speaker.__speechAt = Date.now();
+  speaker.__speechCategory = category;
+  // trySpeak()は変更しない方針のため__speechForcefulを一切セットしない。trySpeak()経由の発言で
+  // 古いforcefulフラグが誤って使い回されないよう、フラグ自体に対応する__speechAtを一緒に記録し、
+  // renderVfxFor側は両者が完全一致した時だけ「力の込もった登場」を採用する
+  speaker.__speechForceful = !!forceful;
+  speaker.__speechForcefulAt = speaker.__speechAt;
+  renderVfxFor(speaker.id);
+  return true;
+}
+// lineA→固定の間→lineBの順で喋らせる2人掛け合い共通処理。entryの{pA, pB, lineA, lineB}は
+// 「pAの性格を持つ側がlineA(問いかけ)を先に、pBの性格を持つ側がlineB(返答)を後に言う」という
+// 順序が固定の会話文なので、呼び出し側から渡される2人(member1/member2)の並び順には依存せず、
+// 必ずpAと性格が一致する方をlineAの話者(先に喋る)、もう一方をlineBの話者(後に喋る)に固定する。
+// (以前はmember1を無条件で先に喋らせていたため、member1の性格がpB側と一致した時に
+// 返答(lineB)が問いかけ(lineA)より先に表示される逆転が起きていた不具合の修正)
+// 先に喋る側の発言は既定ではミューテックスを尊重し(他の誰かが喋っている最中なら不発になる)、
+// 後に喋る側は「相手との自然な会話」としてミューテックスを無視して重ねて表示する
+// (ユーザー指示: 先の吹き出し表示中に後の側が続けて喋ることで実際の会話に見せる)。
+// ignoreMutexForFirst=trueの時は、先に喋る側もミューテックスを無視する。
+// (戦闘後の平和な掛け合いは「1回の遠征につき1回まで」等の厳しい発生条件を満たした特別な瞬間なので、
+// 直前のmaybeSpeakOnFloorAdvance()の警戒/ストレス愚痴のようなアンビエントセリフとたまたま重なって
+// 黙って不発になってしまうと勿体ない。peaceカテゴリのみtrueを渡して優先させる。critのような
+// 頻繁に起こるカテゴリは従来どおり他の発言を尊重させたいので既定のfalseのまま)
+// 先に喋る側が発言できた場合にtrueを返す
+const PAIRED_DIALOGUE_GAP_MS = 2000; // 先の発言から後の発言までの固定の間(ユーザー指示で2秒固定)
+// 会心セリフ(A→B)だけは、他の掛け合い(平和な掛け合い等)より短く畳み掛けるようユーザー指示で調整
+const CRIT_DIALOGUE_GAP_MS = 1200;
+function playPairedDialogueExchange(member1, member2, entry, category, ignoreMutexForFirst, forcefulFirst, gapMs) {
+  const speaksFirst = entry.pA === member1.personality ? member1 : member2;
+  const speaksSecond = speaksFirst === member1 ? member2 : member1;
+  if (!speakExplicitLine(speaksFirst, entry.lineA, category, ignoreMutexForFirst, forcefulFirst)) return false;
+  setTimeout(() => { speakExplicitLine(speaksSecond, entry.lineB, category, true); }, gapMs != null ? gapMs : PAIRED_DIALOGUE_GAP_MS);
+  return true;
+}
+
+// 会心発生時の吹き出し判定(assets/dialogues/dialogue_crit.txt、通常攻撃/技どちらの会心でも共通)。
+// 発生条件: パーティ全員のストレスが60%以下の時のみ。会心が起きるたびCRIT_DIALOGUE_TRIGGER_CHANCE(75%)で
+// 発生の有無を抽選し、発生した場合は必ず会心を出した本人(A)がまずかけ声を発する。そこからさらに
+// CRIT_DIALOGUE_ALLY_JOIN_CHANCE(30%)でランダムな他の仲間(B)が2秒後に反応を続ける(残り70%はAのみで完結)。
+// A/Bのセリフは「特定の2人の組み合わせで固定の会話」ではなく、Aは自分の性格の持ちかけ声、Bは自分の性格の
+// 持ち反応をそれぞれ独立にランダム抽選する(soloPersonalityLines、dialogues.js参照)。
+// playPairedDialogueExchangeへは、抽選済みの2文をその場で組み立てた疑似エントリとして渡すことで、
+// 既存の「A→2秒→B、Bはミューテックス無視」という表示ロジックをそのまま流用する
+const CRIT_DIALOGUE_TRIGGER_CHANCE = 0.75;
+const CRIT_DIALOGUE_ALLY_JOIN_CHANCE = 0.4;
+const CRIT_DIALOGUE_STRESS_THRESHOLD = 60;
+function maybeSpeakOnCrit(actor, wasCrit) {
+  if (!wasCrit) return;
+  const allBelowStressThreshold = fieldParty.every((c) => c.status !== "active" || (c.fatigue || 0) <= CRIT_DIALOGUE_STRESS_THRESHOLD);
+  if (!allBelowStressThreshold) return;
+  if (Math.random() >= CRIT_DIALOGUE_TRIGGER_CHANCE) return;
+  // Aの気合いセリフは、playCritEffects()のダメージ演出(CRIT_HITSTOP_MS後にまとめて畳み掛ける)と
+  // 同じタイミングで出す(以前は500ms遅れで表示され、ダメージ演出より体感で遅く感じられていた)
+  setTimeout(() => {
+    const kiaiLines = soloPersonalityLines("crit", actor.personality, "A");
+    if (!kiaiLines.length) return; // 未読み込み/該当性格の持ちセリフが無い場合は何も言わない
+    const kiaiLine = kiaiLines[Math.floor(Math.random() * kiaiLines.length)];
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== actor.id);
+    if (others.length > 0 && Math.random() < CRIT_DIALOGUE_ALLY_JOIN_CHANCE) {
+      const ally = others[Math.floor(Math.random() * others.length)];
+      const reactionLines = soloPersonalityLines("crit", ally.personality, "B");
+      if (reactionLines.length > 0) {
+        const reactionLine = reactionLines[Math.floor(Math.random() * reactionLines.length)];
+        // Aの気合い(lineA)だけ「力の込もった登場」にする。Bの相槌(lineB)は従来通りのふわっとしたフェード
+        playPairedDialogueExchange(actor, ally, { pA: actor.personality, pB: ally.personality, lineA: kiaiLine, lineB: reactionLine }, "crit", false, true, CRIT_DIALOGUE_GAP_MS);
+        return;
+      }
+    }
+    speakExplicitLine(actor, kiaiLine, "crit", false, true);
+  }, CRIT_HITSTOP_MS);
+}
+// 槍士「かばう」使用時の一言(assets/dialogues/dialogue_guard.txt、単独発言型)。
+// 20%の確率で、かばったキャラ本人が自分の性格の持ちセリフを1つ発言する
+const GUARD_DIALOGUE_CHANCE = 0.2;
+function maybeSpeakOnGuard(actor) {
+  if (Math.random() >= GUARD_DIALOGUE_CHANCE) return;
+  const lines = soloDialogueLines("guard", actor.personality);
+  if (!lines.length) return;
+  speakExplicitLine(actor, lines[Math.floor(Math.random() * lines.length)], "guard");
+}
+// 回復を受けた時の吹き出し判定(20%)。回復された本人が発言する
+function maybeSpeakHealed(target) {
+  if (Math.random() >= DIALOGUE_CHANCE.selfHealed) return;
+  setTimeout(() => trySpeak(target, "selfHealed"), 500);
+}
+// 敵を全滅させた直後に呼ぶ(通常攻撃/技どちらの撃破でも共通)。「全滅させた時」のセリフ(35%、
+// 他のセリフより優先=ミューテックスを無視して発言できる)を、最後に倒した本人(lastEnemyKillActor、
+// engine.js側で自動記録)が65%、別の生存中の仲間が35%の割合で抽選する。全滅していなければ何もしない
+function maybeSpeakAllDefeated() {
+  if (aliveEnemies().length > 0) return false;
+  if (Math.random() >= DIALOGUE_CHANCE.allDefeated) return false;
+  const killer = lastEnemyKillActor;
+  const others = fieldParty.filter((c) => c.status === "active" && (!killer || c.id !== killer.id));
+  if (killer && Math.random() < 0.65) trySpeak(killer, "allDefeated");
+  else if (others.length > 0) trySpeak(others[Math.floor(Math.random() * others.length)], "allDefeated");
+  else if (killer) trySpeak(killer, "allDefeated");
+  return true;
+}
+// 通常攻撃で敵を倒した直後に呼ぶ。全滅していれば全滅セリフを優先し、そうでなければ通常の撃破セリフ(25%)を抽選する
+function maybeSpeakOnKill(killer, target) {
+  if (!target || target.hp > 0) return;
+  if (maybeSpeakAllDefeated()) return;
+  if (Math.random() < DIALOGUE_CHANCE.normalKill) trySpeak(killer, "normalKill");
+}
+// ダメージ判定の前後でHPを比較し、瀕死ライン(30%)を新たに下回った瞬間だけ判定する(20%)。
+// 本人か、ランダムな他の仲間のどちらかが発言する
+function checkPinchTrigger(target, hpBefore) {
+  if (!target || target.status !== "active" || !(target.maxHp > 0)) return;
+  const wasAbove = hpBefore / target.maxHp > 0.3;
+  const nowAtOrBelow = target.hp / target.maxHp <= 0.3 && target.hp > 0;
+  if (!wasAbove || !nowAtOrBelow) return;
+  if (Math.random() >= DIALOGUE_CHANCE.pinch) return;
+  setTimeout(() => {
+    const others = fieldParty.filter((c) => c.status === "active" && c.id !== target.id);
+    if (others.length > 0 && Math.random() < 0.5) trySpeak(others[Math.floor(Math.random() * others.length)], "allyPinch");
+    else trySpeak(target, "selfPinch");
+  }, 500);
+}
+// 探索中、「進む」でフロアが変わるたびに呼ぶ。パーティ平均レベルに対して階層が深すぎる時の警戒セリフ(40%)と、
+// ストレスを抱えている仲間の愚痴セリフ(20%、発狂=tier4は別枠で処理済みなのでtier1〜3のみ対象)を判定する
+function maybeSpeakOnFloorAdvance() {
+  const alive = fieldParty.filter((c) => c.status === "active");
+  if (alive.length === 0) return;
+  const avgLevel = alive.reduce((sum, c) => sum + c.level, 0) / alive.length;
+  if (currentFloor > avgLevel * DANGER_FLOOR_LEVEL_MULT && Math.random() < DIALOGUE_CHANCE.dangerFloor) {
+    trySpeak(alive[Math.floor(Math.random() * alive.length)], "dangerFloor");
+  }
+  if (Math.random() < DIALOGUE_CHANCE.stressFloor) {
+    const stressed = alive.filter((c) => { const t = stressTier(c.fatigue); return t >= 1 && t <= 3; });
+    if (stressed.length > 0) {
+      const speaker = stressed[Math.floor(Math.random() * stressed.length)];
+      const tier = stressTier(speaker.fatigue);
+      trySpeak(speaker, tier === 1 ? "stressLight" : tier === 2 ? "stressMid" : "stressHigh");
+    }
+  }
+}
+// entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す。
+// __shakeUntilの猶予(400ms)は揺れ本体のCSSアニメーション(144〜216ms)より長いため、アニメーション自体は
+// もう終わっているのにまだ「揺れ中判定」の期間が残っていることがある。この期間中にコマンドボタン押下等で
+// renderBattleScreen()が再実行されると、.enemy-card/.party-memberはinnerHTML総取っ替えで新しいDOM要素に
+// 作り直されるため、同じshakeクラスが付いた新要素にCSSアニメーションが最初から再生され、
+// 「コマンドを押すたびにイラストがちかちかする」ように見える不具合があった。1回の被弾(=__shakeUntilの値)
+// につき最初の描画だけクラスを付与し、以降の再描画では付けないようにして再生を1回きりにする
+function shakeClassFor(entity) {
+  if (!entity.__shakeUntil || entity.__shakeUntil <= Date.now()) return "";
+  if (entity.__shakeRenderedFor === entity.__shakeUntil) return "";
+  entity.__shakeRenderedFor = entity.__shakeUntil;
+  const intensityClass = entity.__shakeIntensity === "strong" ? "hit-shake-strong" : "hit-shake-normal";
+  return ` hit-shake hit-flash ${intensityClass}`;
+}
+// 状態異常/バフ/デバフアイコン1個分のHTMLを組み立てる。data-status属性にSTATUS_TOOLTIPSのキーを
+// 埋め込み、ホバー/長押しの説明表示(index.html下部のイベント委譲)から共通の辞書一発で拾えるようにする
+function statusIconHtml(key, value) {
+  const t = STATUS_TOOLTIPS[key];
+  if (!t || !ICONS[key]) return "";
+  return `<span class="status-icon" data-status="${key}">${ICONS[key]}${value != null ? `<span class="status-icon-value">${value}</span>` : ""}</span>`;
+}
+// 毒/炎上/スタン/沈黙/大技の構えの状態アイコンを名前の横に表示する
+function statusIconsFor(entity) {
+  let s = "";
+  if (entity.poison > 0) s += statusIconHtml("poison", entity.poison);
+  if (entity.burnTurns > 0) s += statusIconHtml("burn", entity.burnTurns);
+  if (entity.bleed > 0) s += statusIconHtml("bleed", entity.bleed);
+  if (entity.stunTurns > 0) s += statusIconHtml("stun");
+  if (entity.silenceTurns > 0) s += statusIconHtml("silence");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += statusIconHtml("tangle");
+  // 大技の構え中(bigAttackPending)は、HPバー横の💢マーク(big-attack-warning-icon)だけで示す。
+  // 以前はここ(状態異常アイコン列)にも三角形の警告SVGを重複して出していたが、
+  // 同じ情報を2箇所で示すのは冗長なため削除した(ユーザー指示)。ツールチップは💢側に統合済み
+  return s;
+}
+
+// ============ 状態異常/温泉効果アイコンの説明ツールチップ(PC:ホバー/スマホ:タップ) ============
+// イベント委譲で実装しているため、.status-icon/.onsen-buff-tagがどの画面のどのタイミングで
+// 描画されても(再描画のたびにDOM要素が作り直されても)個別にイベントを貼り直す必要が無い。
+// 温泉効果(.onsen-buff-tag、宿屋の名簿・出発準備画面の「血行促進」等の表示)も状態異常アイコンと
+// 全く同じ見た目・操作方法でタップすると効果説明が出るようにしてあり、かつ「温泉効果」という
+// 見出しを必ず添えることで、状態異常ではなくバフ(温泉に入って得た良い効果)だと分かるようにしている
+const STATUS_TOOLTIP_FADE_MS = 100;
+let statusTooltipAnim = null;
+// title/desc/iconHtml/categoryを直接指定してツールチップを出す共通処理(位置計算・フェードインを担う)。
+// showStatusTooltip(状態異常/温泉効果アイコン)とshowSkillTooltip(戦闘中の技ボタン長押し)の両方から使う
+function showTooltipContent(el, title, desc, iconHtml, category) {
+  const tip = document.getElementById("statusTooltip");
+  tip.innerHTML = `${category ? `<div class="status-tooltip-category">${category}</div>` : ""}<div class="status-tooltip-title">${iconHtml ? iconHtml + " " : ""}${title}</div><div>${desc}</div>`;
+  tip.style.display = "block";
+  const rect = el.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const EDGE_MARGIN = 8;
+  let left = rect.left + rect.width / 2 - tipRect.width / 2;
+  left = Math.min(Math.max(left, EDGE_MARGIN), window.innerWidth - tipRect.width - EDGE_MARGIN);
+  let top = rect.top - tipRect.height - 8;
+  if (top < EDGE_MARGIN) top = rect.bottom + 8; // 画面上端に近い時だけアイコンの下側に出す
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+  if (statusTooltipAnim) statusTooltipAnim.cancel();
+  tip.style.opacity = "0";
+  statusTooltipAnim = tip.animate([{ opacity: 0 }, { opacity: 1 }], { duration: STATUS_TOOLTIP_FADE_MS, fill: "forwards" });
+}
+function showStatusTooltip(el) {
+  let title, desc, iconHtml, category;
+  if (el.classList.contains("onsen-buff-tag")) {
+    const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
+    if (!buff) return;
+    title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
+  } else {
+    const info = STATUS_TOOLTIPS[el.dataset.status];
+    if (!info) return;
+    title = info.title; desc = info.desc; iconHtml = ICONS[el.dataset.status] || ""; category = null;
+  }
+  showTooltipContent(el, title, desc, iconHtml, category);
+}
+function hideStatusTooltip() {
+  if (statusTooltipAnim) { statusTooltipAnim.cancel(); statusTooltipAnim = null; }
+  document.getElementById("statusTooltip").style.display = "none";
+  statusTooltipShownFor = null;
+}
+const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag";
+// PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
+// pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
+document.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const el = e.target.closest(TOOLTIP_TARGET_SELECTOR);
+  if (el) showStatusTooltip(el);
+});
+document.addEventListener("pointerout", (e) => {
+  if (e.pointerType !== "mouse") return;
+  if (e.target.closest(TOOLTIP_TARGET_SELECTOR)) hideStatusTooltip();
+});
+// スマホ: タップで表示し、そのまま指を離しても消えない。もう一度同じアイコンをタップするか、
+// 画面のどこか他の場所をタップすると消える(以前の0.5秒長押し方式から変更)
+let statusTooltipShownFor = null; // 現在表示中の.status-icon/.onsen-buff-tag要素(nullなら非表示)
+document.addEventListener("touchend", (e) => {
+  const el = e.target.closest(TOOLTIP_TARGET_SELECTOR);
+  if (el) {
+    if (statusTooltipShownFor === el) {
+      hideStatusTooltip();
+      statusTooltipShownFor = null;
+    } else {
+      showStatusTooltip(el);
+      statusTooltipShownFor = el;
+    }
+  } else if (statusTooltipShownFor) {
+    hideStatusTooltip();
+    statusTooltipShownFor = null;
+  }
+}, { passive: true });
+
+// ============ 戦闘中の技ボタン長押しで効果説明を出す ============
+// 状態異常アイコン等と違い、これらのボタンは「タップ=技を使う」という本来の役割があるため
+// 同じタップ判定は使えない。長押し(BATTLE_SKILL_LONGPRESS_MS)を検知した時だけツールチップを出し、
+// その直後に発生するclickイベントをキャプチャ段階で握りつぶして技が誤発動しないようにする
+const BATTLE_SKILL_LONGPRESS_MS = 450;
+function showSkillTooltip(el, title, desc) {
+  if (!desc) return;
+  showTooltipContent(el, title, desc, "", "技の効果");
+}
+function attachSkillLongPressTooltip(btn, title, desc) {
+  if (!desc) return;
+  let timer = null;
+  let longPressed = false;
+  const release = () => {
+    clearTimeout(timer);
+    timer = null;
+    if (longPressed) hideStatusTooltip(); // 長押し中に指を離したら(=プレビューを見終わったら)ツールチップを閉じる
+  };
+  btn.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    longPressed = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      longPressed = true;
+      showSkillTooltip(btn, title, desc);
+    }, BATTLE_SKILL_LONGPRESS_MS);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((evt) => btn.addEventListener(evt, release));
+  // capture:trueでボタン自身のonclick(技を使う本来の処理)より先に割り込み、長押し直後のclickだけ握りつぶす
+  btn.addEventListener("click", (e) => {
+    if (longPressed) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      longPressed = false;
+    }
+  }, { capture: true });
+}
+
+function playTransformEffect(onDone) {
+  playSfx("transform");
+  playSmokeBombEffect(onDone);
+}
+// 奉行所の依頼受注演出。①紙が少し拡大→②0.1秒静止→③印鑑が回転しながら落下→④着地の瞬間に
+// ヒットストップ+紙が揺れる+SE+埃→⑤朱印(受領)がインクの染み込みのように現れる→⑥印鑑が上へ戻る、
+// という一連の流れをsetTimeoutでの直列オーケストレーション(CSSアニメーション自体はクラス付与のみ)で作る
+const QUEST_STAMP_TIMINGS = { paperScaleMs: 120, holdMs: 100, sealFallMs: 320, hitstopMs: 60, markMs: 200, liftHoldMs: 250, finalWaitMs: 400 };
+function playQuestAcceptStamp(title, onDone) {
+  const overlay = document.getElementById("questAcceptStampOverlay");
+  const paper = document.getElementById("questStampPaper");
+  const seal = document.getElementById("questStampSeal");
+  const mark = document.getElementById("questStampMark");
+  const dust = document.getElementById("questStampDust");
+  document.getElementById("questStampPaperTitle").textContent = title;
+  // 前回分のクラスをリセットしてから表示する(同じアニメーションを毎回最初からやり直せるように)
+  paper.className = "quest-stamp-paper";
+  seal.className = "quest-stamp-seal";
+  mark.className = "quest-stamp-mark";
+  dust.className = "quest-stamp-dust";
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => {
+    paper.classList.add("scale-up"); // ①→②紙が少し拡大
+    setTimeout(() => {
+      // ③0.1秒静止の後、印鑑が落下
+      seal.classList.add("falling");
+      setTimeout(() => {
+        // ④着地の瞬間: 60msのヒットストップを置いてから、紙の揺れ+SE+埃をまとめて出す
+        setTimeout(() => {
+          paper.classList.add("impact-shake");
+          dust.classList.add("burst");
+          playSfx("quest_accept");
+          // ⑤朱印(受領)が現れる
+          mark.classList.add("show");
+          setTimeout(() => {
+            // ⑥印鑑が上へ戻る
+            seal.classList.add("retreat");
+            setTimeout(() => {
+              overlay.style.display = "none";
+              onDone();
+            }, QUEST_STAMP_TIMINGS.finalWaitMs);
+          }, QUEST_STAMP_TIMINGS.markMs);
+        }, QUEST_STAMP_TIMINGS.hitstopMs);
+      }, QUEST_STAMP_TIMINGS.sealFallMs);
+    }, QUEST_STAMP_TIMINGS.paperScaleMs + QUEST_STAMP_TIMINGS.holdMs);
+  });
+}
+
+====================================================================
+### items.js (全170行) ###
+====================================================================
+// ============ items.js: 戦闘中の道具使用(道具メニュー・煙玉・消火) ============
+function renderItemMenu(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const potionBtn = document.createElement("button");
+  potionBtn.className = "big";
+  potionBtn.textContent = `回復薬(${state.inventory.potion || 0})`;
+  potionBtn.disabled = (state.inventory.potion || 0) <= 0;
+  potionBtn.onclick = () => { renderAllyTargets(actor, "potion"); };
+  grid.appendChild(potionBtn);
+
+  const smokeBtn = document.createElement("button");
+  smokeBtn.className = "big";
+  smokeBtn.textContent = `煙玉(${state.inventory.smokeBomb || 0})`;
+  smokeBtn.disabled = (state.inventory.smokeBomb || 0) <= 0;
+  smokeBtn.onclick = () => renderSmokeBombConfirm(actor);
+  grid.appendChild(smokeBtn);
+
+  // 爆弾の購入効果は廃止済み(火薬庫は砲術士解禁のみの建物)のため新規に入手する手段はないが、
+  // 既存セーブで爆弾を所持している場合は使い切れるよう、所持数がある時だけボタンを出す
+  if ((state.inventory.bomb || 0) > 0) {
+    const bombBtn = document.createElement("button");
+    bombBtn.className = "big";
+    bombBtn.textContent = `爆弾(${state.inventory.bomb || 0})`;
+    bombBtn.disabled = (state.inventory.bomb || 0) <= 0;
+    bombBtn.onclick = () => {
+      state.inventory.bomb--;
+      playSfx("attack_gunner");
+      blog(`${actor.label}は爆弾を投げつけた！`);
+      targetableEnemies().forEach((e) => {
+        const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
+        popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
+      });
+      saveState();
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(bombBtn);
+  }
+
+  // 温泉卵: 回復薬と違い自分にしか使えない(対象選択なし)代わりに、使ってもターンを消費しない
+  // (finishPlayerActionを呼ばず、行動選択メニューに戻すだけ)
+  const eggBtn = document.createElement("button");
+  eggBtn.className = "big";
+  eggBtn.textContent = `温泉卵(${totalOnsenEggCount()})`;
+  eggBtn.disabled = totalOnsenEggCount() <= 0;
+  eggBtn.onclick = () => {
+    consumeOnsenEggFromInventory();
+    playSfx("heal");
+    const heal = useOnsenEgg(actor, blog);
+    popupOn(actor.id, `+${heal}`, "heal");
+    maybeSpeakHealed(actor);
+    saveState();
+    renderBattleScreen();
+    renderActionButtons(actor);
+  };
+  grid.appendChild(eggBtn);
+
+  // 茶屋の菓子: 所持している(=買った)物だけボタンを出す。回復薬と同じくrenderAllyTargets経由で
+  // 対象を選ばせ、resolveAllyTarget側でkind(=菓子のid)を見て専用の回復処理に振り分ける
+  TEAHOUSE_SNACK_IDS.filter((id) => (state.inventory[id] || 0) > 0).forEach((id) => {
+    const item = ITEMS[id];
+    const snackBtn = document.createElement("button");
+    snackBtn.className = "big";
+    snackBtn.textContent = `${item.ja}(${state.inventory[id] || 0})`;
+    snackBtn.onclick = () => { renderAllyTargets(actor, id); };
+    grid.appendChild(snackBtn);
+  });
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 煙玉は消耗品かつ使うと即座に戦闘から一斉離脱してしまうため、誤タップ対策で使用前に確認を挟む
+function renderSmokeBombConfirm(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const msg = document.createElement("div");
+  msg.style.cssText = "grid-column:1/-1;font-size:0.85rem;text-align:center;margin-bottom:0.3rem;";
+  msg.textContent = "煙玉を使いますか？";
+  grid.appendChild(msg);
+
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "big";
+  yesBtn.textContent = "はい";
+  yesBtn.onclick = () => useSmokeBomb(actor);
+  grid.appendChild(yesBtn);
+
+  const noBtn = document.createElement("button");
+  noBtn.className = "big";
+  noBtn.textContent = "いいえ";
+  noBtn.onclick = () => renderItemMenu(actor);
+  grid.appendChild(noBtn);
+}
+
+// 消火(煙玉消費)の誤タップ防止確認。ターンを消費しないため「戻る」で行動選択に戻れる
+function renderExtinguishConfirm(actor) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const msg = document.createElement("div");
+  msg.style.cssText = "grid-column:1/-1;font-size:0.85rem;text-align:center;margin-bottom:0.3rem;";
+  msg.textContent = "煙玉を投げてパーティ全員の炎上を消火しますか？(ターンは消費しません)";
+  grid.appendChild(msg);
+
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "big";
+  yesBtn.textContent = "はい";
+  yesBtn.onclick = () => useExtinguish(actor);
+  grid.appendChild(yesBtn);
+
+  const noBtn = document.createElement("button");
+  noBtn.className = "big";
+  noBtn.textContent = "いいえ";
+  noBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(noBtn);
+}
+function useExtinguish(actor) {
+  consumeSmokeBomb();
+  playSfx("heal");
+  fieldParty.forEach((c) => { c.burnTurns = 0; });
+  blog(`${actor.label}は煙玉を投げ、仲間の炎を消し止めた！`);
+  saveState();
+  renderBattleScreen();
+  renderActionButtons(actor);
+}
+// 煙玉: 使うとパーティ全員がその戦闘から即座に一斉離脱する(消耗品による確実な脱出手段)
+// 煙玉使用時、画面いっぱいに煙が広がって消える演出。CSSのkeyframeアニメーションは
+// (transitionと違い)inline style設定直後でも確実に発火するため、double-rAFのような小細工は不要
+const SMOKE_BOMB_EFFECT_MS = 1700; // 最後のpuffのanimation-delay(0.3s)+アニメーション本体(1.4s)を少し超える長さ
+function playSmokeBombEffect(onDone) {
+  const el = document.getElementById("smokeBombEffect");
+  el.style.display = "block";
+  setTimeout(() => {
+    el.style.display = "none";
+    onDone();
+  }, SMOKE_BOMB_EFFECT_MS);
+}
+// 忍の変化の術: 発動/解除どちらの瞬間も同じ煙エフェクト(既存の煙玉演出を流用)+専用SEを鳴らす
+function useSmokeBomb(actor) {
+  markQuestChasingIfFled();
+  if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
+  fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
+  consumeSmokeBomb();
+  saveState();
+  blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
+  playSfx("smoke_bomb");
+  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  clearHawkState(fieldParty);
+  clearGuardState(fieldParty);
+  clearOmamoriIwanagaBonus(fieldParty);
+  renderBattleScreen();
+  playSmokeBombEffect(() => {
+    battle = null;
+    pendingEnemyPick = null;
+    pendingAllyPick = null;
+    showScreen("screen-dungeon");
+    renderDungeon();
+    checkStrandedOnCurrentFloor();
+  });
+}
+
+// 逃げる: 押した本人だけが「逃走準備」に入り、その場では離脱せず今のターンを消費する。次に自分の番が来た時に
+// 実際に逃げ出す(processNext参照)。パーティ全員が入れ替わりで一人ずつ逃げる必要があり、
+// 誰か一人が逃げただけで全員が離脱するわけではない
+
+====================================================================
+### battle.css (全221行) ###
+====================================================================
+  /* ============ battle.css: 戦闘画面(敵カード・ダメージ演出・会心演出・コマンドボタン) ============ */
+  .battle-bg {
+    position: fixed; top: 0; left: 50%;
+    /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
+       bodyにtransformを掛ける方式だと、position:fixed要素の基準(containing block)が
+       viewportからbodyに変わってしまい、実機で画面が一瞬ジャンプする不具合があったため、
+       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した */
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
+  }
+  .battle-bg::after {
+    content: ''; position: absolute; inset: 0;
+    /* 敵表示の背後だけ淡く明るいスポットライト状のビネットを重ね、視線を敵に誘導する
+       (既存の縦グラデーションによる暗転はそのまま維持し、その上に重ねるだけ) */
+    background:
+      radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
+  .battle-top {
+    position: fixed; top: 0; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 5;
+  }
+  .battle-actions {
+    /* topはJSで味方表示の実測位置から毎回計算して設定する(端末ごとの表示領域の違いに左右されないようにするため)。
+       ここでのtopは計算が走るまでの初期値 */
+    position: fixed; top: 500px; left: 50%;
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+    width: 100%; max-width: 480px; z-index: 4;
+  }
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
+  .enemy-row.crowded { gap: 0.25rem; }
+  .enemy-card {
+    position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;
+    border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+  }
+  /* 敵絵(セミリアル)とSDの味方絵の画風差を、UI側の額装(木枠+和紙背景)で緩和する。
+     絵自体は変更せず、::beforeで敵絵の背後に古紙風の下地を敷くだけ */
+  .enemy-card::before {
+    content: "";
+    position: absolute; inset: 4px; z-index: 0;
+    border-radius: calc(var(--radius-md) - 3px);
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(circle at 78% 85%, rgba(0,0,0,0.15), transparent 60%),
+      #3c3527;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .enemy-card img, .enemy-card .enemy-name, .enemy-card .status-icon-row, .enemy-card .hp-with-warning { position: relative; z-index: 1; }
+  .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
+  .enemy-card.targetable:active { transform: scale(0.94); }
+  @keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(209,80,63,0.35); }
+    50% { box-shadow: 0 0 16px rgba(209,80,63,0.8); }
+  }
+  .dmg-pop {
+    position: absolute; left: 50%; top: 25%; transform: translate(-50%, 0);
+    font-weight: 800; font-size: 1.15rem; color: #ff4d4d;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95); pointer-events: none;
+    animation: dmgFloat 2s ease-out forwards; z-index: 20; white-space: nowrap;
+  }
+  .dmg-pop.heal { color: #8fe0a0; }
+  /* スタンで行動不能になった瞬間だけの素朴な浮き出し表示(会心のような派手な演出はしない) */
+  .dmg-pop.stun { color: #e0d27a; font-size: 1rem; }
+  /* 毒/出血のターン経過ダメージも、それぞれの色(毒=緑, 出血=赤)で素朴に浮き出させる */
+  .dmg-pop.poison { color: #7bc96b; font-size: 1rem; }
+  .dmg-pop.bleed { color: #d9564f; font-size: 1rem; }
+  /* 炎上も同様に素朴な浮き出し(橙)。木霊等の植物系だけは弱点を突いた瞬間なので、ひと回り大きく
+     揺れを付けて目立たせる(会心ほど派手にはしない) */
+  .dmg-pop.burn { color: #e08a3c; font-size: 1rem; }
+  .dmg-pop.burn-plant {
+    color: #ff7a1a; font-size: 1.45rem; font-weight: 900;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.95), 0 0 10px rgba(255,122,26,0.8);
+    animation: burnPlantFloat 1.3s ease-out forwards;
+  }
+  @keyframes burnPlantFloat {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7) rotate(0deg); }
+    15% { opacity: 1; transform: translate(-50%, -6px) scale(1.25) rotate(-4deg); }
+    30% { transform: translate(-50%, -10px) scale(1) rotate(4deg); }
+    45% { transform: translate(-50%, -14px) scale(1.1) rotate(-2deg); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1) rotate(0deg); }
+  }
+  /* 会心専用のダメージ数字。通常は数字表示自体を廃止しているが、会心の時だけ「うわ、出た！」という
+     気持ちよさを出すため特別に表示する(通常の1.4倍サイズ・金色グラデーション・白縁取り) */
+  .dmg-pop.crit {
+    font-size: 1.61rem; font-weight: 900;
+    background: linear-gradient(180deg, #fff6c8, #f0c419 45%, #b8860b 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    animation: critDmgFloat 1.1s ease-out forwards;
+  }
+  @keyframes critDmgFloat {
+    0%, 10% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); }
+    25% { opacity: 1; transform: translate(-50%, -14px) scale(1.35); }
+    38% { transform: translate(-50%, -6px) scale(1.05); }
+    50% { transform: translate(-50%, -11px) scale(1.15); }
+    65% { transform: translate(-50%, -9px) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1.08); }
+  }
+  /* 会心の白閃光/衝撃波/火花(既存の斬撃・打撃エフェクトとは別枠、素材不要のCSSのみで表現) */
+  .crit-flash-overlay {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 26;
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%);
+    animation: critFlash 0.2s ease-out forwards;
+  }
+  @keyframes critFlash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  .crit-shockwave {
+    position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,235,150,0.9); border-radius: 50%; pointer-events: none; z-index: 27;
+    animation: critShockwave 0.28s ease-out forwards;
+  }
+  @keyframes critShockwave { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(4.5); } }
+  .crit-spark {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    background: #fff6c0; border-radius: 50%; box-shadow: 0 0 6px 2px rgba(255,240,170,0.9);
+    pointer-events: none; z-index: 27; animation: critSparkFly var(--spark-dur, 0.25s) ease-out forwards;
+  }
+  @keyframes critSparkFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--spark-x, 20px), var(--spark-y, -20px)) scale(0.3); }
+  }
+  /* 「クリティカル！」バナー。対象カードの真上に出て、拡大→少し縮む→フェードアウトする */
+  .crit-banner {
+    /* 敵カードが画面上端に近いと文字が画面外に切れて見えなくなっていたため、カード真上ではなく
+       カード内側に寄せて表示位置を下げた(ユーザー指示) */
+    position: absolute; left: 50%; top: 18px; transform: translate(-50%, -100%);
+    font-size: 1.05rem; font-weight: 900; color: #ffe066;
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    white-space: nowrap; pointer-events: none; z-index: 28;
+    animation: critBannerPop 0.5s ease-out forwards;
+  }
+  @keyframes critBannerPop {
+    0% { opacity: 0; transform: translate(-50%, -100%) scale(0.4); }
+    25% { opacity: 1; transform: translate(-50%, -100%) scale(1.3); }
+    45% { transform: translate(-50%, -100%) scale(0.95); }
+    60% { transform: translate(-50%, -100%) scale(1.08); }
+    80% { transform: translate(-50%, -100%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.9); }
+  }
+  /* 攻撃が命中した瞬間、対象カードに重ねて出すヒットエフェクト(職業ごとの素材をJSでsrc差し替え
+     アニメーションさせる)。表示幅は職業ごとにJS側(playAttackVfx)でstyle.widthを直接設定するため
+     ここでは指定しない。".enemy-card img"(width:92px固定)より詳細度を上げて上書きする必要がある */
+  .enemy-card img.slash-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+    max-width: none; height: auto; pointer-events: none; z-index: 25;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
+  /* 狩人「鷹を呼ぶ」の追撃演出: 狩人の位置から対象へ飛んでいく鷹のイラスト(document.bodyに直接追加され、
+     element.animate()でtransform:translateを直接動かす。position:fixedなのでgetBoundingClientRectの
+     viewport座標をそのまま使える)。旧🦅絵文字(font-size:33px相当)より20%大きい48pxから、さらに15%
+     大きい幅55pxに設定 */
+  .hawk-projectile {
+    position: fixed; top: 0; left: 0; width: 55px; height: auto; z-index: 30;
+    pointer-events: none; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+  }
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
+  .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
+  @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes enemyLunge {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(14px); }
+    65% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+  }
+  /* 大技の構え中(bigAttackPending)の敵。「赤い鼓動」の指定を受けて色は対象選択中と同じ赤系にしたが、
+     対象選択のtargetPulse(なだらかな単純パルス)とは違い、「ドクン、ドクン」の二拍子(心拍)の
+     揺れ方にすることで、色が同じでも見分けが付くようにしてある */
+  .enemy-card.charging { border-color: rgba(201,93,84,0.8); box-shadow: 0 0 10px rgba(201,93,84,0.55); animation: chargingPulse 1s ease-in-out infinite; }
+  @keyframes chargingPulse {
+    0%, 28%, 60%, 100% { box-shadow: 0 0 8px rgba(201,93,84,0.35); }
+    14% { box-shadow: 0 0 22px rgba(201,93,84,0.95); }
+    42% { box-shadow: 0 0 17px rgba(201,93,84,0.8); }
+  }
+  /* 敵の毒/出血/炎上/スタン等のデバフアイコンは、HPバーの横の別行ではなく敵イラストに重ねて
+     表示する(ユーザー指示)。イラスト下部に中央寄せで並べ、image自身のdrop-shadowと同じ
+     視認性を確保するため各アイコン側のfilter(components.css .status-icon)はそのまま活かす */
+  .enemy-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }
+  .enemy-debuff-icons:empty { display: none; }
+  .hp-with-warning { display: flex; align-items: center; gap: 4px; }
+  .hp-with-warning .hpbar-track { flex: 1; }
+  /* イラスト右上(🎯の左隣)に出す💢アイコン(大技構え中の対象敵だけ)。🪽/🎯と同じ絶対配置+
+     ドロップシャドウの意匠に揃えつつ、心拍と合わせて軽く拍動させる */
+  .big-attack-warning-icon { display: inline-flex; font-size: 20px; color: #d95c50; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); animation: bigAttackIconBeat 1s ease-in-out infinite; }
+  .big-attack-warning-icon svg { width: 15px; height: 15px; }
+  @keyframes bigAttackIconBeat {
+    0%, 28%, 60%, 100% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    42% { transform: scale(1.15); }
+  }
+  @keyframes screenWarningFlash {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #screenWarningFlash {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(245,166,35,0) 55%, rgba(245,166,35,0.35) 100%);
+    opacity: 0;
+  }
+  .enemy-card.dead { opacity: 0.25; }
+  .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .enemy-card.swarm { width: 56px; padding: 0.2rem; }
+  .enemy-card.swarm img { width: 48px; height: 48px; }
+  .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
+  /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定+overflow:hidden)の
+     枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
+  .enemy-card.midboss img { width: 112px; height: 112px; }
+  .enemy-card.midboss .enemy-name { font-size: 0.7rem; margin: 0.1rem 0 0.05rem; }
+  /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
+     オレンジとは別枠。狙われている側=targetableとは違い「これが依頼の対象そのもの」を示す表示) */
+  .enemy-card.quest-target { border-color: rgba(201,162,74,0.85); box-shadow: 0 0 10px rgba(201,162,74,0.6); animation: questTargetPulse 1.3s ease-in-out infinite; }
+  @keyframes questTargetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,162,74,0.4); }
+    50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
+  }
+  .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
