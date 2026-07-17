@@ -328,7 +328,8 @@ function processNext() {
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = false;
         actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
-        blog(`${actor.label}が大技を放った！`);
+        // 専用プロファイルに技名があればそれを表示する(例: 天狗「扇の突風」)。無ければ従来どおり「大技」
+        blog(`${actor.label}が${actor.bigAttack && actor.bigAttack.name ? actor.bigAttack.name : "大技"}を放った！`);
         const hpBeforeBig = {};
         alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
         const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;

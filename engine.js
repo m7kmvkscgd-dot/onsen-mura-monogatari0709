@@ -1829,10 +1829,12 @@ function enemyBigAttack(enemy, targets, log) {
   const profile = enemy.bigAttack;
   // 大技は敵1体につき1人だけを狙う(以前は「かばう中の人がいなければ全員に当たる」実質AOEに
   // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
-  // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う
+  // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。
+  // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
+  // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)
   const guardian = profile && profile.ignoreGuardian ? null : findGuardTarget(alive);
   const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
-  const hitTargets = [singleTarget];
+  const hitTargets = profile && profile.aoe ? alive : [singleTarget];
   let mult = profile ? profile.mult : BIG_ATTACK_MULT;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {

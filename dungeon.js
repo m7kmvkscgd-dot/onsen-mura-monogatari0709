@@ -1394,6 +1394,9 @@ const DUNGEON_EVENTS = [
           e.image = "assets/events/tengu.png";
           // ユーザー指示(2026-07-18): HPを従来(1.1倍)の1.5倍に増量 → 1.65倍
           e.maxHp = Math.round(e.maxHp * 1.65);
+          // ユーザー指示(2026-07-18): 専用のため技「扇の突風」。通常攻撃の1.3倍(+30%)ダメージで
+          // 味方全体に当たり、各対象90%でスタン(1ターン)。土台の敵が元々持っていた大技より優先される
+          e.bigAttack = { name: "扇の突風", mult: 1.3, aoe: true, debuff: { type: "stun", chance: 0.9, turns: 1 } };
           e.hp = e.maxHp;
           e.goldMin = Math.round((e.goldMin || 5) * 1.5);
           e.goldMax = Math.round((e.goldMax || 10) * 1.5);
