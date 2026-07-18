@@ -7,10 +7,28 @@ const BG_SETS = {
   onsen: { day: "assets/bg/onsen.jpg", night: "assets/bg/onsen_night.jpg" },
   departure: { dawn: "assets/bg/departure_gate_dawn.jpg", asa: "assets/bg/departure_gate_asa.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
   teaHouse: { dawn: "assets/bg/teahouse_dawn.jpg", asa: "assets/bg/teahouse_asa.jpg", day: "assets/bg/teahouse_day.jpg", dusk: "assets/bg/teahouse_dusk.jpg", night: "assets/bg/teahouse_night.jpg" },
+  // 洞窟の入口/出口だけ、森や海岸と同じく時間帯で絵が変わる(1層目=森との境目、行きは入口/帰りは出口を使う)
+  caveEntrance: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
+  caveExit: { dawn: "assets/bg/cave_exit_dawn.jpg", asa: "assets/bg/cave_exit_asa.jpg", day: "assets/bg/cave_exit_day.jpg", dusk: "assets/bg/cave_exit_dusk.jpg", night: "assets/bg/cave_exit_night.jpg" },
 };
-// 探索/戦闘の背景・野営背景は森/海岸のどちらのステージ中かで出し分ける
-function currentAreaBgSet() { return currentStage === "coast" ? BG_SETS.coast : BG_SETS.dungeon; }
-function currentCampBgUrl() { return currentStage === "coast" ? "assets/bg/coast_camp.jpg" : "assets/bg/camp_night.jpg"; }
+// 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
+const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
+const CAVE_DEEP_BG_URL = "assets/bg/cave_deep.jpg";
+const CAVE_CAMP_BG_URL = "assets/bg/cave_camp.jpg";
+// 洞窟ステージ中の現在地(階層・進行方向)に応じて、森/海岸と同じ「時間帯キーで引けるセット」の形に組み立てる。
+// 1層目(森との境目)だけ行き/帰りで絵を出し分け、それ以外は階層帯に応じた1枚絵を5つの時間帯キー全てに割り当てる
+function caveBgSetForCurrentState() {
+  if (currentFloor <= 1) return retreating ? BG_SETS.caveExit : BG_SETS.caveEntrance;
+  const url = currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
+  return { dawn: url, asa: url, day: url, dusk: url, night: url };
+}
+// 探索/戦闘の背景・野営背景は森/海岸/洞窟のどのステージ中かで出し分ける
+function currentAreaBgSet() {
+  if (currentStage === "coast") return BG_SETS.coast;
+  if (currentStage === "cave") return caveBgSetForCurrentState();
+  return BG_SETS.dungeon;
+}
+function currentCampBgUrl() { return currentStage === "coast" ? "assets/bg/coast_camp.jpg" : currentStage === "cave" ? CAVE_CAMP_BG_URL : "assets/bg/camp_night.jpg"; }
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
 // 宿屋の4枚だけを先読みしておく。反応速度優先のため、対象は宿泊演出に必要な最小限(4枚、以前は
 // 町/森/温泉も含めた十数枚だった)に絞り、かつrequestIdleCallbackでブラウザが本当に暇な時だけ
@@ -24,6 +42,9 @@ function preloadTavernImages() {
 function preloadDungeonImages() {
   Object.values(BG_SETS.dungeon).forEach((url) => { const img = new Image(); img.src = url; });
   Object.values(BG_SETS.coast).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.caveEntrance).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.caveExit).forEach((url) => { const img = new Image(); img.src = url; });
+  [CAVE_SHALLOW_BG_URL, CAVE_DEEP_BG_URL, CAVE_CAMP_BG_URL].forEach((url) => { const img = new Image(); img.src = url; });
 }
 // 鬼火の「魂のかけら」ドロップ演出(showTreasurePopup)は最大1.8秒しか表示されないため、
 // 初回遭遇時に画像が未読み込みだと表示されないまま消えてしまう。他の先読みと同様、暇な時に読み込んでおく
@@ -163,7 +184,7 @@ function statusLabelNonActive(c) {
       const carrier = getRosterChar(c.carriedBy);
       return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
     }
-    return `${c.criticalStage === "coast" ? "海岸" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${criticalTimeLeftStr(c)}で救出しないとロスト)`;
+    return `${c.criticalStage === "coast" ? "海岸" : c.criticalStage === "cave" ? "洞窟" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${criticalTimeLeftStr(c)}で救出しないとロスト)`;
   }
   return "ロスト(消滅した)";
 }

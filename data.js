@@ -335,6 +335,29 @@ const ENEMIES = {
   warashibe_ningyo: { id: "warashibe_ningyo", ja: "わらしべ人形", image: "assets/enemies/warashibe_ningyo.png", hp: 47, atk: 12, def: 6, spd: 5, goldMin: 22, goldMax: 28, xp: 35, minFloor: 56, maxFloor: 1498, isSwarm: true },
   medama_kozou: { id: "medama_kozou", ja: "目玉こぞう", image: "assets/enemies/medama_kozou.png", hp: 40, atk: 14, def: 5, spd: 6, goldMin: 22, goldMax: 30, xp: 36, minFloor: 56, maxFloor: 1498, isSwarm: true },
 
+  // ==== 洞窟ステージ(stage:"cave")。深淵の森10層目の分かれ道から入る独立ルートで、階層は1〜15で
+  // 独自にカウントする(森の階層とは別枠、pickEnemyForFloorがstageで絞り込む)。ステータスは仮値
+  // (森tier1よりやや強い程度)で、バランス調整は後日まとめて行う予定。土蜘蛛/大百足/大蜘蛛/
+  // ぬらりこうもり/鬼火は森の同名個体と別インスタンス(idを分けて画像だけ使い回し、森側の
+  // 出現階層・強さには一切影響しない)。====
+  cave_tsuchigumo: { id: "cave_tsuchigumo", ja: "土蜘蛛", image: "assets/enemies/tsuchigumo.png", stage: "cave", hp: 24, atk: 7, def: 4, spd: 7, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15 },
+  cave_oomukade: { id: "cave_oomukade", ja: "大百足", image: "assets/enemies/oomukade.png", stage: "cave", hp: 26, atk: 7, def: 4, spd: 6, goldMin: 10, goldMax: 17, xp: 13, minFloor: 1, maxFloor: 15 },
+  cave_oogumo: { id: "cave_oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", stage: "cave", hp: 20, atk: 6, def: 3, spd: 7, goldMin: 9, goldMax: 15, xp: 12, minFloor: 1, maxFloor: 15,
+    bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 森の個体と同じく、糸で絡め取り行動を封じる
+  cave_nurarikoumori: { id: "cave_nurarikoumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", stage: "cave", hp: 8, atk: 4, def: 1, spd: 10, goldMin: 4, goldMax: 7, xp: 6, minFloor: 1, maxFloor: 15, isSwarm: true, isFlying: true,
+    onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
+  cave_onibi: { id: "cave_onibi", ja: "鬼火", image: "assets/enemies/onibi.png", stage: "cave", hp: 16, atk: 6, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
+    onHitInflict: { type: "burn", chance: 0.3, turnsMin: 2, turnsMax: 3 } },
+  doukutsu_shokujinsou: { id: "doukutsu_shokujinsou", ja: "洞窟食人草", image: "assets/enemies/doukutsu_shokujinsou.png", stage: "cave", hp: 22, atk: 7, def: 3, spd: 4, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15, isPlant: true,
+    onHitInflict: { type: "poison", chance: 0.3, value: 3 } },
+  doukutsu_chouchinbi: { id: "doukutsu_chouchinbi", ja: "洞窟の提灯火", image: "assets/enemies/doukutsu_chouchinbi.png", stage: "cave", hp: 18, atk: 6, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15 },
+  bake_nezumi: { id: "bake_nezumi", ja: "化け鼠", image: "assets/enemies/bake_nezumi.png", stage: "cave", hp: 9, atk: 4, def: 1, spd: 9, goldMin: 4, goldMax: 7, xp: 6, minFloor: 1, maxFloor: 15, isSwarm: true },
+  bake_take: { id: "bake_take", ja: "化け茸", image: "assets/enemies/bake_take.png", stage: "cave", hp: 20, atk: 6, def: 3, spd: 4, goldMin: 9, goldMax: 15, xp: 12, minFloor: 1, maxFloor: 15, isPlant: true,
+    onHitInflict: { type: "poison", chance: 0.35, value: 3 } },
+  doukutsu_bourei: { id: "doukutsu_bourei", ja: "洞窟の亡霊", image: "assets/enemies/doukutsu_bourei.png", stage: "cave", hp: 18, atk: 7, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15 },
+  doukutsu_inoshishi: { id: "doukutsu_inoshishi", ja: "洞窟イノシシ", image: "assets/enemies/doukutsu_inoshishi.png", stage: "cave", hp: 26, atk: 7, def: 4, spd: 4, goldMin: 10, goldMax: 17, xp: 13, minFloor: 1, maxFloor: 15,
+    bigAttack: { mult: 1.5 } }, // 猪と同じく、ただ単純な突進の高威力
+
   // ==== 海岸ステージ(stage:"coast")。森とは別枠のプール(pickEnemyForFloorがstageで絞り込む)。====
   // 甲殻類/貝類は防御力を高めに設計し、森とは違う「硬い敵」の手触りを狙った。
   // 出血(bleed)は牙・刃物・突き技を持つ敵(鮫系・海賊骸骨・磯犬・魚人系)に優先的に持たせてある。

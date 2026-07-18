@@ -1147,7 +1147,9 @@ function woundedBossCurrentHp(enemyId, maxHp) {
 // 絡まない場合は従来通り1〜3体の通常敵のみ。
 // 雑魚集団は範囲攻撃(魔法使いのメテオ/忍者の乱れ突き)で効率よく削れる、という職業差別化の要
 function pickEncounterForFloor(floor, stage) {
-  if (floor % 15 === 0) {
+  // 洞窟はまだボス個体を用意していないため、15の倍数フロアでも通常のボスフロア判定(必ず単体)は適用しない
+  // (ユーザー指示、2026-07-19)。将来ここに洞窟専用ボスを置く時に外す想定
+  if (floor % 15 === 0 && stage !== "cave") {
     const boss = pickEnemyForFloor(floor, true, stage);
     if (boss) {
       const woundedHp = woundedBossCurrentHp(boss.id, boss.maxHp);

@@ -1637,7 +1637,7 @@ function defeat() {
   clearOmamoriIwanagaBonus(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
-  blog(`パーティは全滅した...瀕死の仲間を${currentStage === "coast" ? "海岸" : "深淵の森"}に残し、町に戻った。別の仲間で助けに向かおう。`);
+  blog(`パーティは全滅した...瀕死の仲間を${currentStageName()}に残し、町に戻った。別の仲間で助けに向かおう。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     stopAmbientBgm();

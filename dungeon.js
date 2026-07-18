@@ -1,8 +1,12 @@
 // ============ dungeon.js: 深淵の森/海岸探索(進む・進路選択・エンカウント・瀕死救出・帰還) ============
 // ============ ダンジョン ============
 let currentFloor = 0;
-let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸)。町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効
-function currentStageName() { return currentStage === "coast" ? "海岸" : "深淵の森"; }
+let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟)。forest/coastは町の出発ボタンで選び、
+// enterDungeon()〜帰還/全滅まで有効。caveは森10層目の分かれ道(CAVE_FORK_FLOOR)から一時的に切り替わり、
+// 洞窟0階層(=出口)まで帰還すると森のcaveEntryFloorへ自動的に戻る(moveOneFloor参照)
+function currentStageName() { return currentStage === "coast" ? "海岸" : currentStage === "cave" ? "洞窟" : "深淵の森"; }
+// 洞窟に入った時、森側の何層目から分岐したかを覚えておく(帰還時にこの階へ復帰するための橋渡し)
+let caveEntryFloor = 0;
 
 // ============ 遠征状態の永続化(2026-07-18) ============
 // 従来、階層・パーティ・帰還中フラグ等の遠征状態はメモリ上にしか無く、探索中にページを
@@ -18,6 +22,7 @@ function collectExpeditionSnapshot() {
     active: true,
     stage: currentStage,
     floor: currentFloor,
+    caveEntryFloor,
     retreating,
     inBattle: typeof battle !== "undefined" && !!battle,
     fieldPartyIds: fieldParty.map((c) => c.id),
@@ -42,8 +47,9 @@ function clearExpeditionSnapshot() {
 function resumeExpeditionFromSave() {
   const snap = state.expedition;
   if (!snap || !snap.active) return false;
-  currentStage = snap.stage === "coast" ? "coast" : "forest";
+  currentStage = snap.stage === "coast" ? "coast" : snap.stage === "cave" ? "cave" : "forest";
   currentFloor = Math.max(1, snap.floor || 1);
+  caveEntryFloor = snap.caveEntryFloor || 0;
   retreating = !!snap.retreating;
   fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
@@ -90,7 +96,7 @@ function resumeExpeditionFromSave() {
 // ステージごとの最高到達階層を更新する。前進(moveOneFloor)とenterDungeon(1層目突入)からのみ呼び、
 // 帰還中の後退では呼ばない(currentFloorが減る側なので自然にMath.maxで無視される想定だが、念のため明示)
 function recordMaxFloorReached() {
-  state.maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
+  state.maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0, cave: 0 };
   if (currentFloor > (state.maxFloorReached[currentStage] || 0)) state.maxFloorReached[currentStage] = currentFloor;
 }
 let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列(戦闘に出る最大4人。5人目は下記reserveFieldMember)
@@ -797,6 +803,12 @@ function moveOneFloor(pathBias, enterTeahouse) {
   if (retreating) {
     advanceFatigue(fieldParty, FATIGUE_PER_FLOOR_RETREAT); // 帰還中も1階ごとに疲労が半分だけ溜まる(ユーザー指示)
     currentFloor--;
+    if (currentFloor <= 0 && currentStage === "cave") {
+      // 洞窟の出口(0階層)を抜けて、分岐した森の階層へ戻る。帰還自体はまだ終わっておらず、
+      // ここから森側のカウントダウンがそのまま続く(retreatingフラグは維持したまま)
+      currentStage = "forest";
+      currentFloor = caveEntryFloor;
+    }
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
@@ -807,7 +819,15 @@ function moveOneFloor(pathBias, enterTeahouse) {
     }
   } else {
     advanceFatigue(fieldParty); // 往路は1階ごとに1溜まる(帰路はFATIGUE_PER_FLOOR_RETREATで半分)
-    currentFloor++;
+    if (pathBias === CAVE_FORK_KEY) {
+      // 森の分かれ道で「洞窟」を選んだ: 森側のこの階層を覚えておき、洞窟1層目から数え直す
+      caveEntryFloor = currentFloor + 1;
+      currentStage = "cave";
+      currentFloor = 1;
+      pathBias = null; // CAVE_FORK_KEYは実際の道キーではないため、以降の抽選には渡さない(通常抽選と同じ扱いにする)
+    } else {
+      currentFloor++;
+    }
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     recordMaxFloorReached();
     healPartyOnFloorMove();
@@ -967,12 +987,20 @@ document.getElementById("advanceBtn").onclick = () => {
     startAutoRetreat();
     return;
   }
+  // 洞窟はまだ15層より奥を用意していない(この先は未定)ため、そこから先には進めない。
+  // 引き返す(帰還)ことだけができる
+  if (currentStage === "cave" && targetFloor > CAVE_MAX_FLOOR) {
+    showInfoModal("これより奥はまだ道が見えない…引き返そう。");
+    return;
+  }
   const offerTeahouse = teahouseOfferedForFloor(targetFloor);
   // 受注中の依頼の対象階へ確定で到達する時は、道の分岐を選んでも結果(討伐対象との戦闘)が変わらないため
   // 選択肢自体を単一の「目標接近！」に差し替える(茶屋の階と重なる稀なケースは既存の茶屋2択を優先し、
   // このフラグは立てない)
   const q = state.acceptedQuest;
   const questApproach = !offerTeahouse && q && currentStage === "forest" && targetFloor === q.targetFloor;
+  // 深淵の森10層目(CAVE_FORK_FLOOR)へ進む時だけ、洞窟への分かれ道を追加の選択肢として出す
+  const offerCaveFork = !offerTeahouse && !questApproach && currentStage === "forest" && targetFloor === CAVE_FORK_FLOOR;
   showPathChoice((pathBias) => {
     if (pathBias === TEAHOUSE_PATH_KEY) {
       playDungeonMoveTransition(() => moveOneFloor(null, true));
@@ -982,10 +1010,15 @@ document.getElementById("advanceBtn").onclick = () => {
       playDungeonMoveTransition(() => moveOneFloor(null));
       return;
     }
+    if (pathBias === CAVE_FORK_KEY) {
+      dlog("🕳️洞窟へ足を踏み入れた。");
+      playDungeonMoveTransition(() => moveOneFloor(CAVE_FORK_KEY));
+      return;
+    }
     const chosen = currentPathDefs()[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
-  }, offerTeahouse, questApproach);
+  }, offerTeahouse, questApproach, offerCaveFork);
 };
 
 // スレイ・ザ・スパイア風の「進む前に道を選ぶ」システム。選んだ道ごとに戦闘/財宝/静寂の出現率を
@@ -1014,24 +1047,43 @@ const COAST_PATH_DEFS = {
   fuon: { icon: "👁️", label: "不穏な砂浜", battle: 1.00, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "幻の島", battle: 0.00, gold: 0.00 },
 };
-function currentPathDefs() { return currentStage === "coast" ? COAST_PATH_DEFS : PATH_DEFS; }
+// 洞窟ステージ版の進路(キーは共通、アイコン/ラベルだけ洞窟のテーマに差し替え。battle/gold等の数値は森と完全に同じ)
+const CAVE_PATH_DEFS = {
+  rindou: { icon: "🕳️", label: "広い坑道", battle: 0.35, gold: 0.20 },
+  kemono: { icon: "🪨", label: "岩肌の道", battle: 0.60, gold: 0.15 },
+  kurai: { icon: "🌑", label: "闇だまり", battle: 0.70, gold: 0.10, ambushChance: 0.5, goldMult: 1.5 },
+  shizuka: { icon: "💧", label: "水音のする道", battle: 0.10, gold: 0.25 },
+  komorebi: { icon: "🍄", label: "光る苔の道", battle: 0.15, gold: 0.30 },
+  hikaru: { icon: "💰", label: "何かが光る道", battle: 0.10, gold: 0.90 },
+  fuon: { icon: "👁️", label: "獣の唸る道", battle: 1.00, gold: 0.00 },
+  kamikakushi: { icon: "✨", label: "涸れた縦穴", battle: 0.00, gold: 0.00 },
+};
+function currentPathDefs() { return currentStage === "coast" ? COAST_PATH_DEFS : currentStage === "cave" ? CAVE_PATH_DEFS : PATH_DEFS; }
 // 進路選択カードの短い情景描写(演出用の雰囲気テキストのみ。battle/gold等の数値には一切影響しない)
 const PATH_FLAVOR = {
   rindou: "木々に囲まれた広い道", kemono: "草木が生い茂っている", kurai: "危険な気配が漂う",
   shizuka: "静かな竹林が続く", komorebi: "木漏れ日が差し込む小道", hikaru: "何かが遠くで光っている",
   fuon: "得体の知れない気配がする", kamikakushi: "空気が違う…",
 };
+const CAVE_PATH_FLAVOR = {
+  rindou: "岩肌に囲まれた広い通路", kemono: "ゴツゴツした岩場が続く", kurai: "危険な気配が漂う",
+  shizuka: "かすかな水音が響いてくる", komorebi: "淡く光る苔に包まれた道", hikaru: "何かが暗闇で光っている",
+  fuon: "獣の唸り声が聞こえる", kamikakushi: "空気が違う…",
+};
 const COAST_PATH_FLAVOR = {
   rindou: "波の音が心地よい浜辺", kemono: "足場の悪い岩場が続く", kurai: "危険な気配が漂う",
   shizuka: "静かな砂浜が広がる", komorebi: "小さな生き物がいる潮溜まり", hikaru: "何かが波間で光っている",
   fuon: "得体の知れない気配がする", kamikakushi: "見えるはずのない島影…",
 };
-function currentPathFlavor() { return currentStage === "coast" ? COAST_PATH_FLAVOR : PATH_FLAVOR; }
+function currentPathFlavor() { return currentStage === "coast" ? COAST_PATH_FLAVOR : currentStage === "cave" ? CAVE_PATH_FLAVOR : PATH_FLAVOR; }
 // 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
 const NORMAL_PATH_WEIGHTS = {
   rindou: 45, kemono: 30, kurai: 7.6, shizuka: 3.52,
   komorebi: 3.2, hikaru: 3.2, fuon: 2, kamikakushi: 0.48, // ユーザー指示で神隠しの道の重みを2倍(0.24→0.48)
 };
+// 洞窟の1択の時だけ使う重み。森・海岸と違い「不穏な道」を底上げする演出はせず、NORMAL_PATH_WEIGHTSと
+// 同じ配分をそのまま使う(ユーザー指示: 洞窟では不穏な道のブーストなし)
+const CAVE_ONE_CHOICE_PATH_WEIGHTS = NORMAL_PATH_WEIGHTS;
 // 1択専用プール: 静かな道を除外し、不穏な道の重みを引き上げて「避けて通れない恐怖」を演出
 // (不穏な道がこのプール内でちょうど15%のシェアになるよう他の重みから逆算した値)
 const ONE_CHOICE_PATH_WEIGHTS = {
@@ -1039,9 +1091,11 @@ const ONE_CHOICE_PATH_WEIGHTS = {
   komorebi: 3.2, hikaru: 3.2, kamikakushi: 0.48, fuon: 15.75, // 神隠しの道の重みを2倍(0.24→0.48)
 };
 // 1〜2択の出現割合(1択15%/2択85%)。ユーザー指示で3択を廃止し、3択が占めていた15%分は
-// そのまま2択側に回した(旧: 1択15%/2択70%/3択15%)。1択の時だけONE_CHOICE_PATH_WEIGHTSを使う
+// そのまま2択側に回した(旧: 1択15%/2択70%/3択15%)。1択の時だけONE_CHOICE_PATH_WEIGHTSを使う。
+// 洞窟だけは圧迫感を出すため逆転させ、1択80%/2択20%にする(ユーザー指示、2026-07-19)
 function pickPathChoiceCount() {
   const r = Math.random();
+  if (currentStage === "cave") return r < 0.8 ? 1 : 2;
   return r < 0.15 ? 1 : 2;
 }
 // おみくじの効果を進路の重みに反映する。中吉なら不穏な道を候補から除外し、
@@ -1075,8 +1129,13 @@ function weightedPickPathKey(weights) {
 // そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
 const TEAHOUSE_PATH_KEY = "__teahouse__"; // 通常の進路キーとは別枠の特別な選択肢(茶屋)を表す番人値
 const QUEST_APPROACH_KEY = "__quest_approach__"; // 討伐対象の階に確定で到達する時専用の番人値(道の選択自体が無意味になるため単一選択肢にする)
+const CAVE_FORK_KEY = "__cave_fork__"; // 深淵の森の分かれ道で「洞窟」を選んだ時専用の番人値
+const CAVE_FORK_FLOOR = 10; // 深淵の森でこの階に進む時、洞窟への分かれ道を追加の選択肢として提示する
+// 洞窟の最深部(2〜7層=浅い層、8〜15層=深い層、と敵データを15層までしか用意していないため、
+// それより奥はまだ用意がなく進めない。この先(沼/城下町など)は未定なので、15層で足止めする
+const CAVE_MAX_FLOOR = 15;
 const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
-function showPathChoice(onChosen, offerTeahouse, questApproach) {
+function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
   document.getElementById("dungeonLog").style.display = "none";
@@ -1087,13 +1146,16 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
     picked = [QUEST_APPROACH_KEY];
   } else {
     const count = pickPathChoiceCount();
-    const weights = omikujiAdjustedWeights(count === 1 ? ONE_CHOICE_PATH_WEIGHTS : NORMAL_PATH_WEIGHTS);
+    const oneChoiceWeights = currentStage === "cave" ? CAVE_ONE_CHOICE_PATH_WEIGHTS : ONE_CHOICE_PATH_WEIGHTS;
+    const weights = omikujiAdjustedWeights(count === 1 ? oneChoiceWeights : NORMAL_PATH_WEIGHTS);
     picked = [];
-    // 茶屋は通常の抽選プールとは別枠で確定で1枠に加えるが、他の階と同じ1〜3択の分布(pickPathChoiceCount)
-    // からはみ出させない(以前は常に+1して2〜4択になり、実質「必ず3択」に偏って見えていた)。
-    // 茶屋の分を差し引いた残りの枠数だけ通常の道を抽選し、茶屋は常に先頭に来るようunshiftする
-    const normalPickCount = offerTeahouse ? Math.max(0, count - 1) : count;
+    // 茶屋/洞窟への分かれ道は通常の抽選プールとは別枠で確定で1枠に加えるが、他の階と同じ1〜3択の分布
+    // (pickPathChoiceCount)からはみ出させない(以前は常に+1して2〜4択になり、実質「必ず3択」に偏って見えていた)。
+    // その分を差し引いた残りの枠数だけ通常の道を抽選し、特別枠は常に先頭に来るようunshiftする
+    const extraSlots = (offerTeahouse ? 1 : 0) + (offerCaveFork ? 1 : 0);
+    const normalPickCount = Math.max(0, count - extraSlots);
     for (let i = 0; i < normalPickCount; i++) picked.push(weightedPickPathKey(weights));
+    if (offerCaveFork) picked.unshift(CAVE_FORK_KEY);
     if (offerTeahouse) picked.unshift(TEAHOUSE_PATH_KEY);
   }
   document.body.classList.add("path-choice-active");
@@ -1120,12 +1182,14 @@ function showPathChoice(onChosen, offerTeahouse, questApproach) {
           ${picked.map((key, idx) => {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
             const isQuestApproach = key === QUEST_APPROACH_KEY;
+            const isCaveFork = key === CAVE_FORK_KEY;
             const isKamikakushi = key === "kamikakushi";
             const isHikaru = key === "hikaru";
-            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : currentPathDefs()[key];
-            const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : (flavor[key] || "");
+            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : isCaveFork ? { icon: "🕳️", label: "洞窟" } : currentPathDefs()[key];
+            const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : isCaveFork ? "岩肌に空いた洞窟の入り口が見える" : (flavor[key] || "");
             let extraClass = "";
             if (isTeahouse) extraClass = " path-tag-teahouse";
+            else if (isCaveFork) extraClass = " path-tag-cave";
             else if (isKamikakushi) extraClass = " path-tag-kamikakushi path-tag-revealing";
             else if (isHikaru) extraClass = " path-tag-hikaru";
             let sparkles = "";
@@ -1661,7 +1725,7 @@ function showCriticalAlert(critical, onResolved) {
   // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
   // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
   document.getElementById("dungeonLog").style.display = "none";
-  const stageLabel = critical.criticalStage === "coast" ? "海岸" : "深淵の森";
+  const stageLabel = critical.criticalStage === "coast" ? "海岸" : critical.criticalStage === "cave" ? "洞窟" : "深淵の森";
   div.innerHTML = `
     <div class="critical-alert">
       <p class="critical-alert-title">仲間が倒れている</p>
