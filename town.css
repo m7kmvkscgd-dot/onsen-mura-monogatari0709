@@ -185,38 +185,108 @@
   .town-depart-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #55400f; }
   /* NEWバッジはカードの右上角に載せる(ボタンがposition:relativeなのでそのまま絶対配置できる) */
   #screen-town .btn-col .new-badge { position: absolute; top: -7px; right: -4px; }
-  /* ============ ステータス詳細画面(「情報を見る画面」ではなく「眺めたくなる画面」) ============
-     立ち絵を主役にするため96px→132px(約38%増)に拡大し、専用カードで名前直下の余白を整理。
-     ステータス表は罫線を全廃して余白のグルーピングのみで区切る方針にしてある */
-  .status-portrait-wrap { position: relative; display: inline-block; width: 132px; height: 132px; }
-  .status-portrait-card { text-align: center; animation: statusPortraitIn 0.2s ease-out; }
-  @keyframes statusPortraitIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-  .status-portrait-meta { margin-top: 0.6rem; }
-  .status-portrait-class { font-size: 15px; font-weight: 700; color: var(--dw-heading-color); }
-  .status-portrait-personality { font-size: 13px; color: var(--dw-caption-color); margin-top: 0.15rem; }
+  /* ============ ステータス詳細画面(商業クラス版: 立ち絵ショーケース+漆×金) ============
+     heroの見えている帯(body-padの上端=34vhまで)を立ち絵ショーケースとして使う。
+     ショーケースはheroの子なのでfixed基準の背景に張り付き、body-padがその上をスクロールで覆う
+     (旧h1と同じ扱い)。レベルは数字表記をやめて級位メダル(level_N.png)を立ち絵の右上に重ねる */
+  #statusHero::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 34vh;
+    background: linear-gradient(180deg, rgba(10,8,6,0) 55%, rgba(10,8,6,0.55) 92%, rgba(10,8,6,0.7) 100%);
+  }
+  .status-showcase {
+    position: absolute; left: 0; right: 0; top: 34vh; transform: translateY(-100%);
+    display: flex; align-items: flex-end; gap: 15px; padding: 0 20px 14px; z-index: 1;
+  }
+  .status-portrait-ring {
+    position: relative; width: 138px; height: 138px; border-radius: 18px; flex-shrink: 0;
+    background: radial-gradient(circle at 40% 25%, #3b3223, #191410 78%);
+    border: 1px solid rgba(230,201,119,0.55);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), 0 10px 26px rgba(0,0,0,0.55);
+  }
+  .status-portrait-ring img#statusImg { width: 100%; height: 100%; object-fit: contain; }
+  .status-lv-medal {
+    position: absolute; right: -12px; top: -12px; width: 46px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+  }
+  .status-who { min-width: 0; padding-bottom: 2px; }
+  .status-who-name { color: #f3e7c6; font-size: 24px; font-weight: 900; letter-spacing: 0.12em; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
+  .status-who-yomi { color: #b7a887; font-size: 11px; margin-top: 2px; letter-spacing: 0.2em; }
+  .status-who-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .status-chip {
+    padding: 3px 11px; border-radius: 999px; font-size: 11px; font-weight: 800;
+    background: rgba(30,23,15,0.85); border: 1px solid rgba(214,178,96,0.4); color: #e8d9b0;
+  }
+  .status-chip.per { background: rgba(35,74,46,0.6); border-color: rgba(127,224,160,0.4); color: #a9e8c0; }
+  /* 金のヘアライン付きセクション見出し(─── 能力 ───) */
+  .status-sec { display: flex; align-items: center; gap: 10px; margin: 14px 2px 9px; }
+  .status-sec-ln { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(214,178,96,0), rgba(214,178,96,0.45), rgba(214,178,96,0)); }
+  .status-sec-tx { color: #d8c592; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; text-indent: 0.3em; }
   /* カードの登場演出(下から8pxスライド+フェード)。screen.activeのフェードと重ねても違和感が
      ないよう控えめな移動量にしてある */
   .status-card-in { animation: statusCardIn var(--dw-t-card) ease-out; }
   @keyframes statusCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  .status-basic-row { display: flex; justify-content: space-between; padding: 0.2rem 0; font-size: 13px; color: var(--dw-caption-color); }
-  .status-basic-row + .status-basic-row { margin-top: 0.1rem; }
-  .status-stat-list { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--dw-card-border); }
-  .status-stat-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0; }
-  .status-stat-icon { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--dw-caption-color); }
-  .status-stat-label { flex: 1; font-size: 15px; color: var(--dw-body-color); }
-  .status-stat-value { font-size: 15px; font-weight: var(--fw-number); color: var(--dw-body-color); font-variant-numeric: tabular-nums; }
-  .status-stat-row.is-hp .status-stat-icon, .status-stat-row.is-hp .status-stat-value { color: var(--dw-success); }
-  .status-stat-row.is-mp .status-stat-icon, .status-stat-row.is-mp .status-stat-value { color: var(--dw-info); }
-  .status-stat-row.is-stress .status-stat-icon, .status-stat-row.is-stress .status-stat-value { color: var(--dw-danger); }
-  .status-xp-value { color: var(--dw-gold); font-weight: 700; }
-  /* 習得スキル: 未習得(まだ到達していないレベル)は「？？？ Lv◯で習得」のプレースホルダーにして
-     レベルアップの楽しみを持たせる。開けない箱のような見た目にするため文字を薄くしてある */
+  /* 経験値カード: 金のゲージで「あとどれくらい」を一目で */
+  .status-xp-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .status-xp-label { color: var(--dw-caption-color); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
+  .status-xp-value { color: var(--dw-gold); font-weight: 700; font-size: 12px; }
+  .status-xp-track {
+    height: 9px; border-radius: 5px; background: #241e15; margin-top: 8px; overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.7); border: 1px solid rgba(214,178,96,0.18);
+  }
+  .status-xp-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #b98f3e, #f0d896); box-shadow: 0 0 8px rgba(224,183,96,0.5); }
+  /* 能力カード: HP/MP残量バー+2x2能力タイル+ストレス行 */
+  .status-state-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--dw-caption-color); margin-bottom: 0.7rem; }
+  .status-vbar { margin-bottom: 9px; }
+  .status-vbar-row { display: flex; justify-content: space-between; }
+  .status-vbar-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
+  .status-vbar-num { font-size: 12px; font-weight: 800; color: #e8d9b0; font-variant-numeric: tabular-nums; }
+  .status-vbar-track { height: 10px; border-radius: 5px; background: #241e15; margin-top: 5px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.7); }
+  .status-vbar-fill { height: 100%; border-radius: 5px; }
+  .status-vbar.hp .status-vbar-lbl { color: #8fd8a5; }
+  .status-vbar.hp .status-vbar-fill { background: linear-gradient(180deg, #7fdc9a, #4faf6e); }
+  .status-vbar.mp .status-vbar-lbl { color: #8fb8e8; }
+  .status-vbar.mp .status-vbar-fill { background: linear-gradient(180deg, #7fb8ff, #4a7dd6); }
+  .status-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 11px; }
+  .status-tile { text-align: center; padding: 8px 4px 7px; border-radius: 12px; background: rgba(12,9,6,0.6); border: 1px solid rgba(214,178,96,0.2); }
+  .status-tile-ic { font-size: 14px; }
+  .status-tile-lbl { color: var(--dw-caption-color); font-size: 10px; font-weight: 700; margin-top: 2px; }
+  .status-tile-val { color: #f3e7c6; font-size: 16px; font-weight: 900; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .status-tile-bonus { display: block; color: var(--dw-gold); font-size: 9px; font-weight: 700; margin-top: 1px; }
+  .status-stress-row {
+    display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+    padding-top: 9px; border-top: 1px solid rgba(214,178,96,0.12); font-size: 12px;
+  }
+  .status-stress-lbl { color: var(--dw-caption-color); font-weight: 700; }
+  .status-stress-val { color: var(--dw-danger); font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* 習得スキル: 級位メダル風の丸+スキル名+MPの行スタイル。未習得は「？？？ Lv◯で習得」の
+     プレースホルダーにしてレベルアップの楽しみを持たせる */
+  #statSkillList .skill-entry { display: flex; align-items: flex-start; gap: 10px; border: none; border-radius: 0; padding: 8px 2px; margin: 0; }
+  #statSkillList .skill-entry + .skill-entry { border-top: 1px solid rgba(214,178,96,0.12); }
+  .skill-entry-medal {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 34% 28%, #46351d, #241a0e 72%);
+    border: 1px solid rgba(230,201,119,0.45);
+    color: #f0d896; font-size: 14px; font-weight: 900; font-variant-numeric: tabular-nums;
+  }
+  .skill-entry-medal.locked { filter: grayscale(1) brightness(0.8); font-size: 12px; }
+  .skill-entry-main { flex: 1; min-width: 0; }
+  #statSkillList .skill-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  #statSkillList .skill-entry-head strong { color: #f3e7c6; font-size: 13.5px; font-weight: 800; }
+  #statSkillList .skill-entry-side { color: #8fb8e8; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+  /* 旧レイアウトの「タップで説明を開く」はやめて説明は常時表示(displayはcomponents.cssの
+     display:noneより高い詳細度で上書きする) */
+  #statSkillList .skill-entry-desc { display: block; color: var(--dw-caption-color); font-size: 11px; line-height: 1.55; margin: 2px 0 0; }
   .skill-entry.locked { cursor: default; opacity: 0.55; }
   .skill-entry.locked:active { transform: none; }
+  .skill-entry.locked .skill-entry-side { color: var(--dw-caption-color); }
   .skill-entry-mystery { letter-spacing: 0.15em; }
-  /* ボタンの優先度: スキル系譜(primary)を最も目立たせ、戻るは控えめなゴースト調、解雇は危険色だが
+  /* ボタンの優先度: 成長の道(primary)を最も目立たせ、戻るは控えめなゴーストピル、解雇は危険色だが
      小さめ+上に余白を大きく取って誤タップを防ぐ */
-  .status-back-btn-bottom { background: transparent; box-shadow: none; color: var(--dw-caption-color); font-weight: 600; }
+  /* buttonはdisplay:flexでもブロック要素のように自動で親幅いっぱいには広がらない(フォーム部品の
+     width:autoはshrink-to-fit)ため、全幅CTAは明示的にwidth:100%を与える */
+  #statusViewSkillTreeBtn { width: 100%; }
+  .status-back-ghost { display: block; width: 44%; margin: 0 auto; }
   .status-dismiss-btn {
     display: block; margin: 1.6rem auto 0; padding: 0.4rem 0.9rem; min-height: auto;
     background: transparent; border: 1px solid var(--dw-danger); color: var(--dw-danger);

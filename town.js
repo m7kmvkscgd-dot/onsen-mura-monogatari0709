@@ -532,7 +532,7 @@ function retriggerEntryAnim(el, cls) {
 // 詳細ステータスは宿屋の名簿だけでなく、出発準備画面のキャラアイコンからも開けるようにしたため、
 // 「戻る」の遷移先を呼び出し元ごとに変える必要がある。onBackを省略した場合(スキル系譜からの
 // 復帰など、明示的に渡さない内部呼び出し)は直前に使われたonBackをそのまま引き継ぐ。
-// statusBackBtn/statusBackBtnTopは画面ロード時に1度だけイベント登録される固定ボタンのため、
+// statusBackBtnは画面ロード時に1度だけイベント登録される固定ボタンのため、
 // このモジュール変数を参照する形で常に「今表示中のキャラの正しい戻り先」を辿れるようにしてある
 let statusScreenOnBack = null;
 function defaultStatusOnBack() { renderTavern(); showScreen("screen-tavern"); }
@@ -549,46 +549,69 @@ function renderStatusScreen(charId, onBack) {
   document.getElementById("statusName").textContent = displayName;
   renderDwHeader("status", displayName, statusScreenOnBack);
   document.getElementById("statusImg").src = statusPortraitSrc(c);
+  document.getElementById("statusLvMedal").src = `assets/icons/level_${Math.min(MAX_LEVEL, Math.max(1, c.level))}.png`;
+  document.getElementById("statusWhoName").textContent = c.name;
+  const yomiEl = document.getElementById("statusWhoYomi");
+  yomiEl.textContent = reading ? reading.split("").join(" ") : "";
+  yomiEl.style.display = reading ? "" : "none";
   document.getElementById("statClass").textContent = c2.ja;
   document.getElementById("statPersonality").textContent = c.personality || "-";
-  document.getElementById("statLevel").textContent = c.level;
-  document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpToNext(c.level)}`;
+  const xpNeed = xpToNext(c.level);
+  document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpNeed}`;
+  document.getElementById("statusXpFill").style.width = c.level >= MAX_LEVEL
+    ? "100%" : `${Math.max(2, Math.min(100, Math.round((c.xp / xpNeed) * 100)))}%`;
   document.getElementById("statStatus").textContent = statusLabel(c);
 
-  const atkText = effectiveStat(c, "atk") + (c.equipBonus && c.equipBonus.atk ? ` (装備+${c.equipBonus.atk})` : "");
-  const defText = effectiveStat(c, "def") + (c.equipBonus && c.equipBonus.def ? ` (装備+${c.equipBonus.def})` : "");
-  const magText = c.mag > 0 ? effectiveStat(c, "mag") + (c.equipBonus && c.equipBonus.mag ? ` (装備+${c.equipBonus.mag})` : "") : "-";
-  const statRows = [
-    { key: "hp", label: "HP", value: `${c.hp} / ${c.maxHp}` },
-    { key: "mp", label: "MP", value: c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-" },
-    { key: "atk", label: "攻撃力", value: atkText },
-    { key: "def", label: "防御力", value: defText },
-    { key: "spd", label: "素早さ", value: effectiveStat(c, "spd") },
-    { key: "mag", label: "魔力", value: magText },
-    { key: "stress", label: "ストレス", value: c.fatigue || 0 },
+  // 能力欄: HP/MPは残量バー、攻/防/速/魔は2x2タイル、ストレスは下段の1行にまとめる
+  const equipNote = (k) => (c.equipBonus && c.equipBonus[k] ? `<span class="status-tile-bonus">装備+${c.equipBonus[k]}</span>` : "");
+  const hpPct = Math.max(0, Math.min(100, Math.round((c.hp / c.maxHp) * 100)));
+  const mpPct = c.maxMp > 0 ? Math.max(0, Math.min(100, Math.round((c.mp / c.maxMp) * 100))) : 0;
+  const tiles = [
+    { key: "atk", label: "攻撃", val: effectiveStat(c, "atk"), bonus: equipNote("atk") },
+    { key: "def", label: "防御", val: effectiveStat(c, "def"), bonus: equipNote("def") },
+    { key: "spd", label: "素早さ", val: effectiveStat(c, "spd"), bonus: "" },
+    { key: "mag", label: "魔力", val: c.mag > 0 ? effectiveStat(c, "mag") : "-", bonus: c.mag > 0 ? equipNote("mag") : "" },
   ];
-  document.getElementById("statStatList").innerHTML = statRows.map((row) => `
-    <div class="status-stat-row is-${row.key}">
-      <span class="status-stat-icon">${ICONS[row.key]}</span>
-      <span class="status-stat-label">${row.label}</span>
-      <span class="status-stat-value">${row.value}</span>
+  document.getElementById("statStatList").innerHTML = `
+    <div class="status-vbar hp">
+      <div class="status-vbar-row"><span class="status-vbar-lbl">${ICONS.hp} HP</span><span class="status-vbar-num">${c.hp} / ${c.maxHp}</span></div>
+      <div class="status-vbar-track"><div class="status-vbar-fill" style="width:${hpPct}%"></div></div>
     </div>
-  `).join("");
+    <div class="status-vbar mp">
+      <div class="status-vbar-row"><span class="status-vbar-lbl">${ICONS.mp} MP</span><span class="status-vbar-num">${c.maxMp > 0 ? `${c.mp} / ${c.maxMp}` : "-"}</span></div>
+      <div class="status-vbar-track"><div class="status-vbar-fill" style="width:${mpPct}%"></div></div>
+    </div>
+    <div class="status-tiles">${tiles.map((t) => `
+      <div class="status-tile">
+        <div class="status-tile-ic">${ICONS[t.key]}</div>
+        <div class="status-tile-lbl">${t.label}</div>
+        <div class="status-tile-val">${t.val}</div>
+        ${t.bonus}
+      </div>
+    `).join("")}</div>
+    <div class="status-stress-row"><span class="status-stress-lbl">${ICONS.stress} ストレス</span><span class="status-stress-val">${c.fatigue || 0}</span></div>
+  `;
 
   // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
   // レベルアップの楽しみを持たせる(選ばなかった方の枝は「二度と来ない」ので対象外、あくまで未来の枠のみ)。
   // スキルツリー(Lv2〜)とは別枠で、職業が最初から持つLv1のクラスアビリティ(会心の一撃/かばう等)も
   // 「習得済み」として一覧の先頭に載せる(スキルツリー選択とは無関係に全員が最初から使える技のため)
   const skillListEl = document.getElementById("statSkillList");
-  const innateRows = (c2.abilities || []).map((ability) => `
-    <div class="skill-entry" data-level="1">
-      <div class="skill-entry-head">
-        <strong>Lv.1 ${ABILITY_LABEL[ability] || ability}</strong>
-        <span class="skill-entry-side">初期</span>
-      </div>
-      <p class="skill-entry-desc">${ABILITY_DESC[ability] || ""}</p>
+  const skillEntry = ({ medal, medalClass, name, nameClass, side, desc, level }) => `
+    <div class="skill-entry${desc == null ? " locked" : ""}" ${level != null ? `data-level="${level}"` : ""}>
+      <span class="skill-entry-medal${medalClass ? ` ${medalClass}` : ""}">${medal}</span>
+      <span class="skill-entry-main">
+        <span class="skill-entry-head">
+          <strong${nameClass ? ` class="${nameClass}"` : ""}>${name}</strong>
+          <span class="skill-entry-side">${side}</span>
+        </span>
+        ${desc != null ? `<p class="skill-entry-desc">${desc}</p>` : ""}
+      </span>
     </div>
-  `).join("");
+  `;
+  const innateRows = (c2.abilities || []).map((ability) => skillEntry({
+    medal: "初", name: ABILITY_LABEL[ability] || ability, side: "初期", desc: ABILITY_DESC[ability] || "", level: 1,
+  })).join("");
   const tree = SKILL_TREES[c.classId] || {};
   const allLevels = Object.keys(tree).map(Number).sort((a, b) => a - b);
   const skillRows = innateRows + allLevels.map((lv) => {
@@ -596,33 +619,18 @@ function renderStatusScreen(charId, onBack) {
     if (side) {
       const skill = tree[lv][side];
       if (!skill) return "";
-      return `
-        <div class="skill-entry" data-level="${lv}">
-          <div class="skill-entry-head">
-            <strong>Lv.${lv} ${skill.name}</strong>
-            <span class="skill-entry-side">${side === "left" ? "左" : "右"}</span>
-          </div>
-          <p class="skill-entry-desc">${skill.desc}</p>
-        </div>
-      `;
+      return skillEntry({
+        medal: lv, name: skill.name, side: skill.mp > 0 ? `MP${skill.mp}` : "パッシブ", desc: skill.desc, level: lv,
+      });
     }
     if (lv <= c.level) return ""; // レベル到達済みだが選択待ち(スキル選択ポップアップ側で処理するためここには出さない)
-    return `
-      <div class="skill-entry locked">
-        <div class="skill-entry-head">
-          <strong class="skill-entry-mystery">？？？</strong>
-          <span class="skill-entry-side">Lv${lv}で習得</span>
-        </div>
-      </div>
-    `;
+    return skillEntry({
+      medal: "🔒", medalClass: "locked", name: "？？？", nameClass: "skill-entry-mystery", side: `Lv${lv}で習得`, desc: null,
+    });
   }).join("");
   skillListEl.innerHTML = skillRows || '<p style="color:var(--dw-caption-color);font-size:13px;">まだ習得したスキルがありません。</p>';
-  skillListEl.querySelectorAll(".skill-entry:not(.locked)").forEach((el) => {
-    el.onclick = () => { el.classList.toggle("open"); };
-  });
 
-  retriggerEntryAnim(document.getElementById("statusPortraitCard"), "status-portrait-card");
-  [document.getElementById("statusStatCard"), document.getElementById("statusSkillCard")].forEach((el) => retriggerEntryAnim(el, "status-card-in"));
+  [document.getElementById("statusXpCard"), document.getElementById("statusStatCard"), document.getElementById("statusSkillCard")].forEach((el) => retriggerEntryAnim(el, "status-card-in"));
 
   document.getElementById("statusViewSkillTreeBtn").onclick = () => {
     viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
@@ -694,7 +702,6 @@ function renderStatusScreen(charId, onBack) {
   };
 }
 document.getElementById("statusBackBtn").onclick = () => { (statusScreenOnBack || defaultStatusOnBack)(); };
-document.getElementById("statusBackBtnTop").onclick = () => { (statusScreenOnBack || defaultStatusOnBack)(); };
 
 // 各キャラ名表示は基本的に漢字のみ(ふりがなの丸括弧は非表示)。宿屋の詳細ステータス画面
 // (renderStatusScreen)でだけ、NAME_READINGSで引いたふりがなを名前の横に括弧書きで表示する

@@ -335,20 +335,23 @@
         <div class="dw-header-right"><span class="dw-header-gold" id="statusHeaderGold"></span><span class="dw-header-time" id="statusHeaderTime"></span></div>
       </div>
       <h1 id="statusName">-</h1>
-    </div>
-    <div class="body-pad">
-      <button class="big" id="statusBackBtnTop" style="margin-bottom:var(--dw-space-section);">戻る</button>
-
-      <div class="card status-portrait-card" id="statusPortraitCard" style="margin-bottom:var(--dw-space-section);">
-        <div class="status-portrait-wrap">
-          <img id="statusImg" src="" style="width:132px;height:132px;object-fit:contain;background:#353a44;border-radius:var(--radius-md);">
+      <div class="status-showcase">
+        <div class="status-portrait-ring">
+          <img id="statusImg" src="" alt="">
+          <img class="status-lv-medal" id="statusLvMedal" src="" alt="">
         </div>
-        <div class="status-portrait-meta">
-          <div class="status-portrait-class" id="statClass"></div>
-          <div class="status-portrait-personality" id="statPersonality"></div>
+        <div class="status-who">
+          <div class="status-who-name" id="statusWhoName">-</div>
+          <div class="status-who-yomi" id="statusWhoYomi"></div>
+          <div class="status-who-chips">
+            <span class="status-chip" id="statClass"></span>
+            <span class="status-chip per" id="statPersonality"></span>
+          </div>
           <button class="status-rename-btn" id="statusRenameBtn">✏️ 名前を変更</button>
         </div>
       </div>
+    </div>
+    <div class="body-pad">
       <div class="card" id="statusRenameRow" style="display:none; margin-bottom:var(--dw-space-section);">
         <input type="text" id="statusRenameInput" maxlength="8" placeholder="新しい名前を入力">
         <div style="display:flex; gap:0.5rem; margin-top:0.6rem;">
@@ -357,22 +360,25 @@
         </div>
       </div>
 
-      <div class="card" id="statusStatCard" style="margin-bottom:var(--dw-space-section);">
-        <div class="status-basic-row"><span>レベル</span><span id="statLevel"></span></div>
-        <div class="status-basic-row"><span>経験値</span><span id="statXp" class="status-xp-value"></span></div>
-        <div class="status-basic-row"><span>状態</span><span id="statStatus"></span></div>
+      <div class="card status-xp-card" id="statusXpCard">
+        <div class="status-xp-head"><span class="status-xp-label">次のレベルまで</span><span id="statXp" class="status-xp-value"></span></div>
+        <div class="status-xp-track"><div class="status-xp-fill" id="statusXpFill"></div></div>
+      </div>
+
+      <div class="status-sec"><span class="status-sec-ln"></span><span class="status-sec-tx">能力</span><span class="status-sec-ln"></span></div>
+      <div class="card" id="statusStatCard">
+        <div class="status-state-line"><span>状態</span><span id="statStatus"></span></div>
         <div class="status-stat-list" id="statStatList"></div>
       </div>
 
-      <div class="card" id="statusSkillCard" style="margin-bottom:var(--dw-space-section);">
-        <h2 style="margin:0 0 0.3rem;">習得スキル</h2>
-        <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.6rem;">タップで効果を表示</p>
+      <div class="status-sec"><span class="status-sec-ln"></span><span class="status-sec-tx">習得スキル</span><span class="status-sec-ln"></span></div>
+      <div class="card" id="statusSkillCard">
         <div id="statSkillList"></div>
         <button class="status-takigyo-btn" id="statusTakigyoBtn">🌊 滝行でスキルをリセット(<span id="statusTakigyoCount">0</span>個所持)</button>
       </div>
 
-      <button class="big primary" id="statusViewSkillTreeBtn" style="margin-bottom:0.6rem;">⛩️ 成長の道</button>
-      <button class="big status-back-btn-bottom" id="statusBackBtn">戻る</button>
+      <button class="big primary" id="statusViewSkillTreeBtn" style="margin:14px 0 0.6rem;">⛩️ 成長の道</button>
+      <button class="ghost-btn status-back-ghost" id="statusBackBtn">戻る</button>
       <button class="status-dismiss-btn" id="statusDismissBtn">解雇</button>
     </div>
   </div>
