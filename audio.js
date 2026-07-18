@@ -127,11 +127,22 @@ function getBgmAudioVolume() {
 // bgmAudioがWeb Audio API経由になったため、AudioContextが未resume(suspended)のままだと
 // 無音になる。iOSはユーザー操作の中で1回resumeしただけでは以後suspendedへ戻ることがあるため、
 // 効果音(sfxAudioCtx)と同じく「再生を試みるたびに、suspendedならresumeしてから鳴らす」方式にする
+// 【多重呼び出しガード】複数の復旧経路(visibilitychange/pause自動復帰/タップ/playBgm)から
+// 短時間にplay()が重ね掛けされると、iOSでは詰まった要素が曲頭だけを連打再生する引き金になる。
+// play()のPromiseが解決するまで+直後400msは追加要求を無視して、実行を実質1本に絞る
+let bgmPlayRequestPending = false;
+let bgmLastPlayAttemptAt = 0;
 function resumeAndPlayBgmAudio() {
+  const now = performance.now();
+  if (bgmPlayRequestPending || now - bgmLastPlayAttemptAt < 400) return;
+  bgmLastPlayAttemptAt = now;
+  bgmPlayRequestPending = true;
+  const finish = () => { bgmPlayRequestPending = false; };
+  const doPlay = () => bgmAudio.play().then(finish).catch(finish);
   if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
-    bgmAudioCtx.resume().then(() => bgmAudio.play().catch(() => {})).catch(() => {});
+    bgmAudioCtx.resume().then(doPlay).catch(doPlay);
   } else {
-    bgmAudio.play().catch(() => {});
+    doPlay();
   }
 }
 // 【対策】宿泊等でbgmAudioを一度止めて別トラックへ切り替えた後、iOS実機で「play()が一度成功して
@@ -146,9 +157,19 @@ function pauseBgmAudio() {
   bgmIntentionalPauseUntil = performance.now() + 400;
   bgmAudio.pause();
 }
+let bgmAutoRecoverLastAt = 0;
 bgmAudio.addEventListener("pause", () => {
   if (performance.now() < bgmIntentionalPauseUntil) return; // 意図した一時停止
   if (!currentBgmKey || !audioUnlocked) return; // 何も再生する意図がない/まだアンロック前
+  // 【iOSタブ復帰の連打リピート対策(ユーザー報告2026-07-18)】
+  // ①タブが非表示の間のpauseはOSによる正当な停止なので復帰させない(復帰はvisibilitychange側で行う)。
+  //   ここでplay()し返すと、非表示中の「play→OSがpause→play→…」のピンポン連打が始まり、
+  //   タブに戻った時に曲頭の0.5秒だけが機関銃のようにリピートする現象の引き金になっていた
+  if (document.visibilityState !== "visible") return;
+  // ②フォアグラウンドでも自動復帰は1秒に1回まで(万一play↔pauseの往復が起きても連打にしない)
+  const now = performance.now();
+  if (now - bgmAutoRecoverLastAt < 1000) return;
+  bgmAutoRecoverLastAt = now;
   resumeAndPlayBgmAudio();
 });
 
@@ -549,6 +570,12 @@ function playSfx(name) {
 // bgmAudioも、SE再生時のオーディオフォーカス関連などで意図せず一時停止したまま
 // currentBgmKeyだけが再生中のつもりで固まってしまうことがあるため、同様に復旧を試みる
 document.addEventListener("visibilitychange", () => {
+  // タブが隠れる瞬間に現在の再生位置を退避する。iOSはバックグラウンドで要素の位置を
+  // 0付近へリセットすることがあり、復帰時にそのまま鳴らすと曲頭からの再生になってしまう
+  if (document.visibilityState === "hidden" && currentBgmKey && !bgmAudio.paused) {
+    bgmPositions[currentBgmKey] = bgmAudio.currentTime;
+    return;
+  }
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
     sfxAudioCtx.resume().catch(() => {});
   }
@@ -556,6 +583,10 @@ document.addEventListener("visibilitychange", () => {
     bgmAudioCtx.resume().catch(() => {});
   }
   if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
+    // 退避しておいた位置へ戻してから1回だけ再生する(位置が大きくズレている時のみシークする。
+    // シーク自体もiOSでは軽い瞬断の原因になり得るため、正常なケースでは触らない)
+    const pos = bgmPositions[currentBgmKey] || 0;
+    try { if (Math.abs((bgmAudio.currentTime || 0) - pos) > 1.5) bgmAudio.currentTime = pos; } catch (e) {}
     resumeAndPlayBgmAudio();
   }
 });
