@@ -99,7 +99,7 @@
   #screen-town .body-pad {
     /* 2026-07-18: カード化でボタン群が縦に伸びたため、旧・小ボタン用の「下から243px」のままだと
        画面中央付近まで上がって時刻表示に被っていた。承認済みモックと同じ「画面下部ぴったり」へ変更 */
-    position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
+    position: fixed; bottom: calc(38px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
     width: 100%; max-width: 480px; z-index: 1;
     background: transparent; border-radius: 0; margin-top: 0; top: auto;
     padding: 0 1rem; flex: none;
