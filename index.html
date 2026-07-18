@@ -156,10 +156,11 @@
       <!-- 商業クラス化(2026-07-18): 施設ボタンを「漆×金カード(メダルアイコン+機能キャプション)」に、
            出発を全幅の主役CTAに変更。idとJSの紐付けは従来のまま(見た目とマークアップ構造のみ変更) -->
       <div class="btn-col">
+        <!-- 並び(2026-07-18ユーザー指示): 上段=毎回寄る施設(旅の宿・奉行所)、下段=必要な時に寄る施設(温泉・建築)。グリッドは行優先 -->
         <button class="big town-card" id="toTavernBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">旅の宿</span></span><span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
+        <button class="big town-card" id="toMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
         <button class="big town-card" id="toOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">温泉</span></span><span class="new-badge" id="onsenTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big town-card" id="toExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span><span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
-        <button class="big town-card" id="toMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
         <button class="big primary town-depart" id="toDungeonBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span><span class="new-badge" id="dungeonTownNewBadge" style="display:none;">NEW</span></button>
       </div>
     </div>
