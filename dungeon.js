@@ -1269,6 +1269,7 @@ const DUNGEON_EVENTS = [
     choices: () => [
       {
         icon: "🙏", label: `賽銭を入れる(${JIZO_COST}G)`, desc: "旅の無事を祈る", disabled: state.gold < JIZO_COST || jizoBlessingActive,
+        disabledMsg: jizoBlessingActive ? "この遠征ではもう加護を受けている" : "お金が足りません",
         onPick: () => {
           state.gold -= JIZO_COST;
           jizoBlessingActive = true;
@@ -1319,6 +1320,7 @@ const DUNGEON_EVENTS = [
     choices: () => [
       {
         icon: "🧺", label: `手当てを頼む(${MERCHANT_HEAL_COST}G)`, desc: "全員のHPが全回復", disabled: state.gold < MERCHANT_HEAL_COST,
+        disabledMsg: "お金が足りません",
         onPick: () => {
           state.gold -= MERCHANT_HEAL_COST;
           fieldParty.forEach((c) => { if (c.status === "active") c.hp = c.maxHp; });
@@ -1405,6 +1407,7 @@ const DUNGEON_EVENTS = [
     choices: () => [
       {
         icon: "🎲", label: "壺に乗る", desc: "賭け金を自分で決める", disabled: state.gold < 1,
+        disabledMsg: "お金が足りません",
         onPick: () => { showTanukiBetModal(); },
       },
       { icon: "🚶", label: "乗らない", desc: "賭け事はしない", onPick: () => { dlog("「つまらないねえ」狸は壺を抱えて茂みに消えた。"); renderDungeon(); } },
@@ -1439,6 +1442,7 @@ const DUNGEON_EVENTS = [
     choices: () => [
       {
         icon: "🩹", label: "手当てしてやる", desc: "一番元気な者のHP-10", disabled: !fieldParty.some((c) => c.status === "active" && c.hp > 10),
+        disabledMsg: "HPが10より多い仲間がいません",
         onPick: () => {
           const alive = fieldParty.filter((c) => c.status === "active" && c.hp > 10);
           const donor = alive.reduce((a, b) => (b.hp > a.hp ? b : a), alive[0]);
@@ -1580,7 +1584,10 @@ function showDungeonEvent(ev) {
   btns.forEach((btn, idx) => {
     btn.onclick = () => {
       if (stack.classList.contains("path-tags-locked")) return;
-      if (choices[idx].disabled) return;
+      if (choices[idx].disabled) {
+        if (choices[idx].disabledMsg) showInfoModal(choices[idx].disabledMsg);
+        return;
+      }
       stack.classList.add("path-tags-locked");
       btns.forEach((el) => el.classList.add(el === btn ? "path-tag-selected" : "path-tag-fading"));
       setTimeout(() => { close(); choices[idx].onPick(); }, 170);
