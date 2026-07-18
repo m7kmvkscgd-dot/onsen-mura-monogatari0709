@@ -61,6 +61,10 @@ function popupOn(targetId, text, cls, intensity) {
   }
   // 赤いダメージ数字のポップアップ表示は敵/味方問わず廃止(揺れ+フラッシュの演出のみ残す)。回復の表示は継続する
   if (cls === "dmg") return;
+  // ストレス増減ポップアップは一旦保留(ユーザー指示)。頻発するため、同じキャラの回復ポップアップの
+  // 表示枠(1体につき1つしか保持できない__popupText等)を上書きして消してしまう副作用が出ていた。
+  // ストレス自体の計算・蓄積処理(fatigue加減算)はそのまま残し、見た目の数字表示だけを止める
+  if (cls === "stress" || cls === "stress-relief") return;
   entity.__popupText = text;
   entity.__popupCls = cls;
   entity.__popupAt = Date.now();
