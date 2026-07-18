@@ -790,6 +790,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
     fieldParty.forEach((c) => { if (c.status === "active") c.hp = Math.min(c.maxHp, c.hp + 2); });
   }
   if (retreating) {
+    advanceFatigue(fieldParty, FATIGUE_PER_FLOOR_RETREAT); // 帰還中も1階ごとに疲労が半分だけ溜まる(ユーザー指示)
     currentFloor--;
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
@@ -800,7 +801,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
       return;
     }
   } else {
-    advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
+    advanceFatigue(fieldParty); // 往路は1階ごとに1溜まる(帰路はFATIGUE_PER_FLOOR_RETREATで半分)
     currentFloor++;
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     recordMaxFloorReached();
@@ -1481,7 +1482,7 @@ const DUNGEON_EVENTS = [
           e.goldMax = Math.round((e.goldMax || 10) * 1.5);
           dlog("腕試しを受けて立った！");
           startEventBattle([e], null, "天狗「いざ、尋常に勝負！」");
-          battle.tenguChallenge = true; // victory()側で勝利報酬(魂のかけら2+全員ストレス回復)を出すための目印
+          battle.tenguChallenge = true; // victory()側で勝利報酬(魂のかけら1+全員ストレス回復)を出すための目印
         },
       },
       {

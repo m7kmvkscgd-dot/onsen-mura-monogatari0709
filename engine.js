@@ -146,11 +146,13 @@ function levelUp(character, log) {
   log(`${character.label}はレベル${character.level}になった！`);
 }
 
-// フィールドに出ている(ダンジョンに潜っている)キャラに1階分の疲労(ストレス)を加算する
-function advanceFatigue(characters) {
+// フィールドに出ている(ダンジョンに潜っている)キャラに1階分の疲労(ストレス)を加算する。
+// amountを省略すると往路の基本値(FATIGUE_PER_FLOOR)、帰路はdungeon.js側でFATIGUE_PER_FLOOR_RETREATを渡す
+function advanceFatigue(characters, amount) {
+  const add = amount == null ? FATIGUE_PER_FLOOR : amount;
   characters.forEach((c) => {
     if (c.status === "active") {
-      c.fatigue = Math.min(FATIGUE_MAX, c.fatigue + FATIGUE_PER_FLOOR);
+      c.fatigue = Math.min(FATIGUE_MAX, c.fatigue + add);
     }
   });
 }

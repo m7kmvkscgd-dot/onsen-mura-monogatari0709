@@ -589,7 +589,7 @@ function renderStatusScreen(charId, onBack) {
         ${t.bonus}
       </div>
     `).join("")}</div>
-    <div class="status-stress-row"><span class="status-stress-lbl">${ICONS.stress} ストレス</span><span class="status-stress-val">${c.fatigue || 0}</span></div>
+    <div class="status-stress-row"><span class="status-stress-lbl">${ICONS.stress} ストレス</span><span class="status-stress-val">${Math.round(c.fatigue || 0)}</span></div>
   `;
 
   // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
@@ -1361,7 +1361,7 @@ function showDepartConfirm(stage) {
         <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})${isReserve ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
         <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-        <div style="font-size:13px;color:var(--dw-caption-color);margin-top:0.15rem;">HP ${c.hp}/${c.maxHp}${c.maxMp > 0 ? `　MP ${c.mp}/${c.maxMp}` : ""}　ストレス ${c.fatigue || 0}</div>
+        <div style="font-size:13px;color:var(--dw-caption-color);margin-top:0.15rem;">HP ${c.hp}/${c.maxHp}${c.maxMp > 0 ? `　MP ${c.mp}/${c.maxMp}` : ""}　ストレス ${Math.round(c.fatigue || 0)}</div>
       </div>
     `;
     list.appendChild(row);
@@ -1459,8 +1459,8 @@ function renderOnsen() {
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${locked ? "bathing" : "active"}">Lv.${c.level} ${c2.ja}</span></div>
-        <div class="roster-sub">ストレス ${c.fatigue || 0}</div>
-        <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${c.fatigue || 0}%"></div></div>
+        <div class="roster-sub">ストレス ${Math.round(c.fatigue || 0)}</div>
+        <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${Math.round(c.fatigue || 0)}%"></div></div>
       </div>
       <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
     `;

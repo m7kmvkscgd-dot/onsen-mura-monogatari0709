@@ -363,7 +363,7 @@ function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, sho
           <div class="camp-rest-stat-label">HP</div>
           ${hpBarHtml(c)}
           ${c.maxMp > 0 ? `<div class="camp-rest-stat-label" style="margin-top:0.25rem;">MP</div>${mpBarHtml(c)}` : ""}
-          ${showStress ? `<div class="camp-rest-stress">ストレス -${fatigueDelta}</div>` : ""}
+          ${showStress ? `<div class="camp-rest-stress">ストレス -${Math.round(fatigueDelta)}</div>` : ""}
         </div>
       </div>
     `;
