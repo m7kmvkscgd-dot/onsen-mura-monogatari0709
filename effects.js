@@ -188,14 +188,25 @@ function playHawkAttackVfx(hunterActor, targetId) {
       renderPartyBar("battlePartyBar", fieldParty.filter((c) => c.fleeState !== "fled"), battle.actingId);
     }
   };
-  setBadgeHidden(true);
+  // 飛翔の出発点は狩人カードの中心ではなく、ポートレート右上に表示している鷹バッジの位置にする
+  // (ユーザー指摘2026-07-18: 鷹本体はバッジのいる場所から飛んでいってほしい)。バッジはこの後
+  // display:noneで隠すためgetBoundingClientRect()が測れなくなる。必ず「隠す前」にここで測っておく
+  // (以前の実装はカード中心を使っていた上、修正を試みても隠した後に測ってゼロ座標になる罠があった)。
+  // 万一バッジ要素が見つからない場合(再描画のタイミング等)は、バッジの定位置=カード右上を近似で使う
   const fromEl = findVisibleCard(hunterActor.id);
+  const badgeEl = fromEl && fromEl.querySelector(".hawk-badge");
+  const badgeRect = badgeEl ? badgeEl.getBoundingClientRect() : null;
+  setBadgeHidden(true);
   const toEl = findVisibleCard(targetId);
   if (!fromEl || !toEl) { strike(); endFlight(); return; }
   const fromRect = fromEl.getBoundingClientRect();
   const toRect = toEl.getBoundingClientRect();
-  const fromX = fromRect.left + fromRect.width / 2;
-  const fromY = fromRect.top + fromRect.height / 2;
+  // .hawk-projectile(55px幅)は左上原点で配置されるため、出発時に鳥の中心がバッジの中心と
+  // 重なるよう半サイズぶんずらす(バッジがそのまま羽ばたいて飛んでいくように見せる)
+  const badgeCenterX = badgeRect ? badgeRect.left + badgeRect.width / 2 : fromRect.right - 12;
+  const badgeCenterY = badgeRect ? badgeRect.top + badgeRect.height / 2 : fromRect.top + 10;
+  const fromX = badgeCenterX - 27;
+  const fromY = badgeCenterY - 20;
   const toX = toRect.left + toRect.width / 2;
   const toY = toRect.top + toRect.height / 2;
   const bird = document.createElement("img");
