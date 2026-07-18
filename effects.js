@@ -798,6 +798,9 @@ function statusIconsFor(entity) {
   if (entity.stunTurns > 0) s += statusIconHtml("stun");
   if (entity.silenceTurns > 0) s += statusIconHtml("silence");
   if (entity.statMods && entity.statMods.some((m) => m.stat === "spd" && m.mult < 1)) s += statusIconHtml("tangle");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "atk" && m.mult < 1)) s += statusIconHtml("atkDown");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "def" && m.mult < 1)) s += statusIconHtml("defDown");
+  if (entity.statMods && entity.statMods.some((m) => m.stat === "dmgTaken" && m.mult > 1)) s += statusIconHtml("dmgTakenUp");
   // 大技の構え中(bigAttackPending)は、HPバー横の💢マーク(big-attack-warning-icon)だけで示す。
   // 以前はここ(状態異常アイコン列)にも三角形の警告SVGを重複して出していたが、
   // 同じ情報を2箇所で示すのは冗長なため削除した(ユーザー指示)。ツールチップは💢側に統合済み
@@ -837,6 +840,10 @@ function showStatusTooltip(el) {
     const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
     if (!buff) return;
     title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
+  } else if (el.classList.contains("enemy-bigattack-tap")) {
+    // 敵カード右下の📜アイコン。予告ターン(bigAttackPending)を待たずいつでも、その敵の大技の
+    // 中身(engine.jsのbigAttackSummaryTextで機械的に生成)を確認できるようにする(ユーザー指示、2026-07-19)
+    title = `${el.dataset.enemyName}の大技`; desc = el.dataset.bigattackDesc; iconHtml = "📜"; category = null;
   } else {
     const info = STATUS_TOOLTIPS[el.dataset.status];
     if (!info) return;
@@ -849,7 +856,7 @@ function hideStatusTooltip() {
   document.getElementById("statusTooltip").style.display = "none";
   statusTooltipShownFor = null;
 }
-const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag";
+const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag, .enemy-bigattack-tap";
 // PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
 // pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
 document.addEventListener("pointerover", (e) => {

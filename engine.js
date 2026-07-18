@@ -1834,6 +1834,31 @@ function resolveDebuffEffect(target, type, params, log) {
   if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
   if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
   if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }
+  if (type === "dmgTakenUp") { applyStatMod(target, "dmgTaken", 1 + (params.value || 0.15), resolveTurns(params)); log(`${target.label}は呪いを受け、被ダメージが増えた！`); }
+}
+
+// debuff.typeの文字列がSTATUS_TOOLTIPSのキーと1対1でない箇所だけの変換表(spdDownは表示上「束縛」の
+// tangleアイコンに相乗りしているため、キー名がズレている)
+const DEBUFF_TYPE_TOOLTIP_KEY = { spdDown: "tangle" };
+// 敵カード上の📜アイコンをタップした時に出す、その敵の大技の説明文。予告ターン(bigAttackPending)を
+// 待たずにいつでも確認できるようにするため、data.js側の手書きテキストではなくbigAttackプロファイル
+// (mult/debuff/aoe/ignoreGuardian)から機械的に組み立てる(全103体を漏れなくカバーできる)
+function bigAttackSummaryText(enemyDef) {
+  const p = enemyDef.bigAttack;
+  if (!p) return "詳細不明の一撃を放つ。";
+  const parts = [];
+  if (p.aoe) parts.push("味方全体を巻き込む");
+  if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
+  if (p.debuff) {
+    const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
+    const info = STATUS_TOOLTIPS[tooltipKey];
+    const name = info ? info.title : p.debuff.type;
+    const chancePct = Math.round((p.debuff.chance != null ? p.debuff.chance : 1) * 100);
+    parts.push(`命中時${chancePct}%の確率で【${name}】を与える`);
+  } else {
+    parts.push("状態異常は伴わない、純粋な一撃");
+  }
+  return parts.join("。") + "。";
 }
 
 // enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
