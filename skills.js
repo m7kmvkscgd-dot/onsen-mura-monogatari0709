@@ -107,33 +107,37 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
     const optHtml = (side) => `
       <button class="skill-tree-opt ${side} ${sideClass(side)}" data-level="${lv}" data-side="${side}">
         <span class="skill-tree-opt-name">${tree[lv][side].name}</span>
+        ${sideClass(side) === "chosen" ? `<span class="skill-tree-got-chip">習得</span>` : ""}
       </button>
     `;
     return `
       <div class="skill-tree-row-wrap" data-level="${lv}">
         <div class="skill-tree-row ${rowState}">
           ${optHtml("left")}
-          <div class="skill-tree-level-badge"><span>Lv${lv}</span></div>
+          <div class="skill-tree-level-badge${rowState === "locked" ? " locked" : ""}"><img src="assets/icons/level_${lv}.png" alt="Lv${lv}"></div>
           ${optHtml("right")}
+          ${isPending ? `<span class="skill-tree-pick-badge">どちらか1つ</span>` : ""}
         </div>
         <div class="skill-tree-inline-detail" style="display:none;"></div>
       </div>
     `;
   }).join("");
   const hintText = pendingLevel != null
-    ? `Lv${pendingLevel}で新しいスキルを1つ選べます。スキル名をタップすると、その下に説明が開きます`
+    ? `Lv${pendingLevel}で新しいスキルを1つ選べます。スキル名をタップで説明が開きます`
     : "スキル名をタップすると、その下に説明が開きます";
   content.innerHTML = `
-    <button class="big" id="skillTreeBackBtn" style="margin-bottom:0.8rem;">戻る</button>
-    <div class="skill-tree-header">
-      <div class="skill-tree-charname">${character.name}</div>
-      <div class="skill-tree-classname">${c2.ja}の系譜</div>
-      <p class="skill-tree-hint">${hintText}</p>
+    <div class="skill-tree-top">
+      <button class="skill-tree-back-chip" id="skillTreeBackBtn">〈 戻る</button>
+      <span class="skill-tree-who">
+        <img src="${statusPortraitSrc(character)}" alt="">
+        <span><span class="skill-tree-who-name">${character.name}</span><span class="skill-tree-who-sub">Lv.${character.level} ${c2.ja}</span></span>
+      </span>
     </div>
-    <div class="skill-tree-names">
-      <span class="skill-tree-name left">${treeNames.left}</span>
-      <span class="skill-tree-name-spacer"></span>
-      <span class="skill-tree-name right">${treeNames.right}</span>
+    <h1 class="skill-tree-title">${c2.ja}の系譜</h1>
+    <p class="skill-tree-hint">${hintText}</p>
+    <div class="skill-tree-banners">
+      <div class="skill-tree-banner left">${treeNames.left}</div>
+      <div class="skill-tree-banner right">${treeNames.right}</div>
     </div>
     <div class="skill-tree-rows">${rowsHtml}</div>
   `;
@@ -161,9 +165,9 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
       const isAcquired = isThisPending || chosenSide === side;
       detail.dataset.side = side;
       detail.innerHTML = `
-        <h4>Lv${lv}・【${side === "left" ? "左" : "右"}】${skill.name}</h4>
+        <h4>${skill.name}${isAcquired ? `<span class="skill-tree-detail-mp">${skill.mp > 0 ? `MP${skill.mp}` : "パッシブ"}</span>` : ""}</h4>
         ${isAcquired ? `<p>${skill.desc}</p>` : `<p class="skill-tree-hidden-desc">まだ習得していないため、効果は確認できません。</p>`}
-        ${isThisPending ? `<button class="big primary skill-confirm-btn">このスキルに決める</button>` : ""}
+        ${isThisPending ? `<button class="big primary skill-confirm-btn">このスキルを習得する</button>` : ""}
       `;
       detail.style.display = "block";
       if (isThisPending) {

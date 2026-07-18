@@ -99,42 +99,97 @@
   .skill-entry.open .skill-entry-desc { display: block; }
 
   /* スキル選択画面(宿屋の名簿から開く「系譜」一覧)。XCOM風のレイアウトを、温泉宿らしい金・焦げ茶の配色に置き換えている */
-  .skill-tree-header { text-align: center; margin-bottom: 1rem; }
-  .skill-tree-charname { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
-  .skill-tree-classname { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
-  .skill-tree-hint { font-size: 0.7rem; color: var(--text-muted); margin: 0.7rem 0 0; }
+  /* ============ スキル系譜(商業クラス版: 中央の金の背骨+級位メダル+左右の型バナー) ============ */
+  .skill-tree-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .skill-tree-back-chip {
+    color: #e8d9b0; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 999px;
+    background: rgba(20,15,10,0.55); border: 1px solid rgba(214,178,96,0.4); cursor: pointer;
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .skill-tree-back-chip:active { transform: scale(.95); filter: brightness(1.25); }
+  .skill-tree-who { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .skill-tree-who img { width: 40px; height: 40px; object-fit: contain; background: #2c2a25; border-radius: 9px; }
+  .skill-tree-who-name { display: block; color: #f3e7c6; font-size: 15px; font-weight: 800; }
+  .skill-tree-who-sub { display: block; color: #a3906c; font-size: 10.5px; margin-top: 2px; }
+  .skill-tree-title {
+    text-align: center; color: #f3e7c6; font-size: 19px; font-weight: 900;
+    letter-spacing: 0.34em; text-indent: 0.34em; margin: 12px 0 2px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+  }
+  .skill-tree-hint { text-align: center; color: #8d7f60; font-size: 10.5px; margin: 4px 0 12px; }
+  .skill-tree-banners { display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 6px; }
+  .skill-tree-banner {
+    width: 42%; text-align: center; padding: 8px 0 9px; color: #f3e7c6;
+    font-size: 13px; font-weight: 900; letter-spacing: 0.2em; text-indent: 0.2em;
+    clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
+  }
+  .skill-tree-banner.left { background: linear-gradient(180deg, #4b3418, #2b1d0d); border-top: 2px solid #e0bd6c; }
+  .skill-tree-banner.right { background: linear-gradient(180deg, #1e3040, #101b26); border-top: 2px solid #7fb8e8; }
   /* 左右ツリーの通り名(剣豪/明鏡など)。下の系譜一覧と同じ列幅(レベルバッジ42px分)で
      左右に振り分けて表示し、「かっこいい見出し」として金色+レタースペーシングで強調する */
-  .skill-tree-names { display: flex; align-items: center; gap: 0.4rem; margin: 1rem 0 0.2rem; }
-  .skill-tree-name { flex: 1; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
-  .skill-tree-name.left { text-align: left; padding-left: 0.3rem; }
-  .skill-tree-name.right { text-align: right; padding-right: 0.3rem; }
-  .skill-tree-name-spacer { flex: 0 0 42px; width: 42px; }
-  .skill-tree-rows { border-top: 1px solid var(--border); }
-  .skill-tree-row-wrap { border-bottom: 1px solid var(--border); }
-  .skill-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; }
-  .skill-tree-row.pending { background: var(--accent-soft); border-radius: var(--radius-sm); padding-left: 0.3rem; padding-right: 0.3rem; }
-  .skill-tree-level-badge {
-    flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.68rem;
-    background: rgba(20,24,27,0.5);
+  /* 背骨(中央の金のライン)は行コンテナの擬似要素で1本描き、各行のメダルへは左右の短い
+     枝(row側の擬似要素)でつなぐ */
+  .skill-tree-rows { position: relative; padding: 4px 0 20px; }
+  .skill-tree-rows::before {
+    content: ""; position: absolute; left: 50%; top: 0; bottom: 12px; width: 3px; transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(224,183,96,0.75), rgba(224,183,96,0.28) 55%, rgba(224,183,96,0.1));
   }
-  .skill-tree-row.locked .skill-tree-level-badge { border-color: var(--border); color: var(--text-muted); }
-  .skill-tree-row.pending .skill-tree-level-badge { box-shadow: 0 0 8px rgba(201,162,74,0.7); }
-  .skill-tree-opt { flex: 1; background: none; border: none; padding: 0.4rem 0.3rem; cursor: pointer; text-align: left; border-radius: var(--radius-xs); }
-  .skill-tree-opt.right { text-align: right; }
-  .skill-tree-opt-name { font-size: 0.8rem; line-height: 1.3; }
-  .skill-tree-opt.chosen .skill-tree-opt-name { color: var(--accent); font-weight: 700; }
-  .skill-tree-opt.rejected .skill-tree-opt-name { color: var(--text-muted); opacity: 0.6; }
-  .skill-tree-opt.locked .skill-tree-opt-name { color: var(--text-muted); opacity: 0.4; }
-  .skill-tree-opt.pending-choice { background: rgba(28,34,38,0.7); }
-  .skill-tree-opt.pending-choice:active { background: var(--accent-soft); }
-  .skill-tree-inline-detail { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surface-2); }
-  .skill-tree-inline-detail h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.85rem; }
-  .skill-tree-inline-detail p { margin: 0; font-size: 0.8rem; color: var(--text); }
-  .skill-tree-inline-detail p.skill-tree-hidden-desc { color: var(--text-muted); font-style: italic; }
-  .skill-tree-inline-detail .skill-confirm-btn { margin-top: 0.7rem; width: 100%; }
+  .skill-tree-row { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
+  .skill-tree-row::before, .skill-tree-row::after {
+    content: ""; position: absolute; top: 50%; height: 2px; width: 26px; background: rgba(224,183,96,0.4); z-index: 1;
+  }
+  .skill-tree-row::before { left: calc(50% - 54px); }
+  .skill-tree-row::after { right: calc(50% - 54px); }
+  /* 級位メダル(level_N.png)を背骨のノードとしてそのまま使う。未到達はグレースケールで封印感を出す */
+  .skill-tree-level-badge { position: relative; z-index: 2; width: 56px; height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .skill-tree-level-badge img { width: 56px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.75)); }
+  .skill-tree-level-badge.locked img { filter: grayscale(1) brightness(0.5) drop-shadow(0 2px 5px rgba(0,0,0,0.75)); }
+  /* スキルノード: 漆ベース。習得済みは金の盤面+「習得」チップ、選ばなかった側は薄く、
+     未到達は🔒付きで沈め、選択待ちは金の光彩で「今選べる」ことを主張する */
+  .skill-tree-opt {
+    position: relative; z-index: 2; width: calc(50% - 40px); max-width: 168px; min-height: 46px;
+    padding: 11px 8px; border-radius: 13px; text-align: center; cursor: pointer;
+    color: #f3e7c6; font-weight: 800; letter-spacing: 0.04em;
+    background: var(--dw-btn-sheen), linear-gradient(165deg, #262015, #150f09 62%, #0d0906);
+    border: 1px solid rgba(214,178,96,0.3);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5), 0 6px 14px rgba(0,0,0,0.4);
+    transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out;
+  }
+  .skill-tree-opt:active { transform: scale(.96); filter: brightness(1.15); }
+  .skill-tree-opt-name { font-size: 13px; line-height: 1.3; }
+  .skill-tree-opt.chosen {
+    background: linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(255,255,255,0) 34%), linear-gradient(180deg, #f0d896, #d9b662 46%, #b98f3e);
+    color: #2a1f08; border-color: #f8ecc0;
+    box-shadow: inset 0 0 0 1px rgba(120,84,20,0.3), 0 0 16px rgba(224,183,96,0.35), 0 6px 14px rgba(0,0,0,0.4);
+  }
+  .skill-tree-got-chip {
+    position: absolute; top: -8px; right: -5px; padding: 1px 8px; border-radius: 999px;
+    background: #234a2e; border: 1px solid #7fe0a0; color: #a9e8c0; font-size: 9px; font-weight: 900;
+  }
+  .skill-tree-opt.rejected { opacity: 0.34; }
+  .skill-tree-opt.locked { opacity: 0.5; color: #8d8371; }
+  .skill-tree-opt.locked .skill-tree-opt-name::before { content: "🔒"; font-size: 10px; margin-right: 4px; }
+  .skill-tree-opt.pending-choice {
+    border: 1.5px solid #ffe08a;
+    box-shadow: 0 0 0 3px rgba(255,224,138,0.16), 0 0 20px rgba(255,214,110,0.4), inset 0 0 0 1px rgba(0,0,0,0.4);
+  }
+  .skill-tree-pick-badge {
+    position: absolute; top: -13px; left: 50%; transform: translateX(-50%); z-index: 3;
+    padding: 2px 10px; border-radius: 999px;
+    background: linear-gradient(180deg, #ffe08a, #e0b054); color: #3a2a00;
+    font-size: 9.5px; font-weight: 900; letter-spacing: 0.1em; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  }
+  .skill-tree-inline-detail {
+    margin: -4px 4px 14px; padding: 12px 14px; border-radius: 13px;
+    background: linear-gradient(to bottom, rgba(28,22,15,0.95), rgba(16,12,8,0.96));
+    border: 1px solid rgba(255,224,138,0.45); box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  }
+  .skill-tree-inline-detail h4 { margin: 0; color: #ffe9ad; font-size: 13.5px; font-weight: 900; }
+  .skill-tree-detail-mp { color: #8fb8e8; font-size: 11px; font-weight: 800; margin-left: 8px; }
+  .skill-tree-inline-detail p { margin: 5px 0 0; font-size: 11.5px; color: #d8cdb4; line-height: 1.65; }
+  .skill-tree-inline-detail p.skill-tree-hidden-desc { color: #8d7f60; font-style: italic; }
+  .skill-tree-inline-detail .skill-confirm-btn { margin-top: 10px; width: 100%; letter-spacing: 0.15em; text-indent: 0.15em; }
   /* スキル決定時のテンションを上げる演出(playSkillAcquiredEffect、skills.js)。決定ボタンが
      光りながら弾み、画面には青緑の光の粒が決定ボタンの位置から弾け飛び、中央に「習得！」バナーが出る。
      お守りの演出(omamori-rare-*、金色)とは意図的に色を分け、こちらは「気」を感じさせる青緑にしてある */
