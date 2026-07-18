@@ -1788,7 +1788,9 @@ function enemyAttack(enemy, targets, log) {
   // 瀕死になった一撃は、既にHPが減っていて実際のダメージ量(dmg)が小さくても、
   // 気絶するという出来事自体が最大級のストレスになるはずなので、その場合はratio=1.0扱いで計算する
   const wentDown = target.hp <= 0;
-  target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
+  const stressGain = damageStress(wentDown ? target.maxHp : dmg, target.maxHp);
+  target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + stressGain);
+  if (stressGain > 0 && typeof popupOn === "function") popupOn(target.id, String(stressGain), "stress");
   // 敵固有の通常攻撃時デバフ(ぬらりこうもりの毒など)。かばう/挑発で同じ相手が何度も狙われ続けると
   // 蓄積が重なって危険域に達しやすい、という「かばうへの天敵」を演出するための仕組み。
   // stacking:trueは元々「加算される特殊仕様」だったが、2026-07-18の全DOT加算化で標準と同じ挙動になった
@@ -1874,7 +1876,9 @@ function enemyBigAttack(enemy, targets, log) {
     const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
     const guardCounterDmg = suffix === "(かばう)" ? handleGuardSynergyPassives(target, enemy, log) : null;
     const wentDown = target.hp <= 0;
-    target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + damageStress(wentDown ? target.maxHp : dmg, target.maxHp));
+    const stressGain = damageStress(wentDown ? target.maxHp : dmg, target.maxHp);
+    target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + stressGain);
+    if (stressGain > 0 && typeof popupOn === "function") popupOn(target.id, String(stressGain), "stress");
     // 命中した対象ごとに独立してデバフ判定する(戦闘不能になった相手には付けない)
     if (!wentDown) {
       if (profile && profile.debuff) {

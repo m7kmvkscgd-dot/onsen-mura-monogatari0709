@@ -344,7 +344,7 @@ function fadeOpacity(el, from, to, durationMs, callback) {
   };
 }
 
-function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, showStress = true) {
+function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, showStress = true, playHealSfx = true) {
   const panel = document.getElementById(panelId);
   const list = document.getElementById(listId);
   // 7人以上(宿泊の全員一括化で名簿上限10人まで並び得る)はコンパクト4列表示にする(camp.css参照)。
@@ -370,10 +370,10 @@ function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, sho
   }).join("");
   panel.style.display = "flex";
   // 一拍(0.9秒)おいてから0.9秒かけてゆっくり伸ばす(回復している感を出すためのユーザー指示)。
-  // バーが伸び始める瞬間に合わせて回復音を鳴らす(宿泊/野営/茶屋共通、ユーザー提供のSE)
+  // バーが伸び始める瞬間に合わせて回復音を鳴らす(野営/茶屋のみ。宿泊はユーザー指示でSEなしに変更)
   const REST_HEAL_DELAY_MS = 900;
   activateHpTrails(list, { delayMs: REST_HEAL_DELAY_MS, durationMs: 900 });
-  setTimeout(() => playSfx("rest_heal"), REST_HEAL_DELAY_MS);
+  if (playHealSfx) setTimeout(() => playSfx("rest_heal"), REST_HEAL_DELAY_MS);
   document.getElementById(nextBtnId).onclick = () => {
     panel.style.display = "none";
     onNext();

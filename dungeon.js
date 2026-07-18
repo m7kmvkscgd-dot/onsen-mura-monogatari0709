@@ -73,7 +73,12 @@ function resumeExpeditionFromSave() {
     // 戦闘中のリロード: 敵は消えるが、逃走と同じストレスの代償を全員が払う。
     // また通常は戦闘終了処理で行われる後始末(かばう構え解除・石長比売の御守の一時HPボーナス
     // 差し引き)がリロードで飛ばされているため、ここで代わりに行う
-    fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY); });
+    fieldParty.forEach((c) => {
+      if (c.status === "active") {
+        c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
+        popupOn(c.id, String(FLEE_STRESS_PENALTY), "stress");
+      }
+    });
     if (typeof clearGuardState === "function") clearGuardState(fieldParty);
     if (typeof clearOmamoriIwanagaBonus === "function") clearOmamoriIwanagaBonus(fieldParty);
     dlog(`戦いの最中に隙を見て逃げ出した…。(全員ストレス+${FLEE_STRESS_PENALTY})`);
@@ -1345,6 +1350,7 @@ const DUNGEON_EVENTS = [
           const t = alive.reduce((a, b) => ((b.fatigue || 0) > (a.fatigue || 0) ? b : a), alive[0]);
           if (t) {
             t.fatigue = Math.max(0, (t.fatigue || 0) - 30);
+            popupOn(t.id, "30", "stress-relief");
             playSfx("onsen_relief");
             dlog(`${t.label}は泉にゆっくり浸かった。心がすっと軽くなった。(ストレス-30)`);
           }
@@ -1355,7 +1361,7 @@ const DUNGEON_EVENTS = [
       {
         icon: "💧", label: "全員で少しずつ飲む", desc: "全員のストレスを小さく回復",
         onPick: () => {
-          fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.max(0, (c.fatigue || 0) - 8); });
+          fieldParty.forEach((c) => { if (c.status === "active") { c.fatigue = Math.max(0, (c.fatigue || 0) - 8); popupOn(c.id, "8", "stress-relief"); } });
           playSfx("heal");
           dlog("全員で冷たい湧き水を分け合った。少し気持ちが安らいだ。(全員ストレス-8)");
           saveState();
@@ -1376,6 +1382,7 @@ const DUNGEON_EVENTS = [
           if (t) {
             t.mp = t.maxMp;
             t.fatigue = Math.min(FATIGUE_MAX, (t.fatigue || 0) + 15);
+            popupOn(t.id, "15", "stress");
             playSfx("omikuji_daikichi");
             dlog(`${t.label}が祠に祈祷した。妖力が満ちていく…だが妖気に当てられた。(MP全回復、ストレス+15)`);
           }
@@ -1488,7 +1495,7 @@ const DUNGEON_EVENTS = [
       {
         icon: "🙇", label: "丁重に断る", desc: "全員ストレス+5",
         onPick: () => {
-          fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 5); });
+          fieldParty.forEach((c) => { if (c.status === "active") { c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 5); popupOn(c.id, "5", "stress"); } });
           dlog("丁重に断ると、天狗の高笑いが山じゅうに響き渡った…。(全員ストレス+5)");
           saveState();
           renderDungeon();

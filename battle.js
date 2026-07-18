@@ -499,7 +499,8 @@ function handleFieldDeaths() {
         blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
       // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
-      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 20);
+      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 30);
+      popupOn(c.id, "30", "stress");
       markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
       blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
       newlyCritical.push(c);
@@ -507,6 +508,7 @@ function handleFieldDeaths() {
       fieldParty.forEach((ally) => {
         if (ally.id !== c.id && ally.status === "active") {
           ally.fatigue = Math.min(FATIGUE_MAX, (ally.fatigue || 0) + 25);
+          popupOn(ally.id, "25", "stress");
         }
       });
       // 味方が倒れた時の吹き出し(75%)。倒れた本人は喋れないので他の生存者から選ぶ
@@ -1421,11 +1423,10 @@ function victory() {
   if (battle.bossPursuitEnemyId) bossPursuit = null;
   let soulShardCount = 0;
   let soulLumpCount = 0;
-  // 探索イベント「天狗の腕試し」に勝利: 魂のかけら1つ+全員のストレス回復(胸のすく勝利)
+  // 探索イベント「天狗の腕試し」に勝利: 魂のかけら1つ(胸のすく勝利)
   if (battle.tenguChallenge) {
     soulShardCount += 1;
-    aliveField().forEach((c) => { c.fatigue = Math.max(0, (c.fatigue || 0) - 20); });
-    blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ+全員ストレス-20)");
+    blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ)");
   }
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
@@ -1610,7 +1611,10 @@ function escapeBattle() {
   fieldParty.forEach((c) => {
     c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
-    if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
+    if (c.status === "active") {
+      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
+      popupOn(c.id, String(FLEE_STRESS_PENALTY), "stress"); // renderDungeon()後の再描画で探索画面のカードに表示される
+    }
   });
   // 逃げても階層は後退させない(以前は里の方向へ1階層分後退していたが、その場に留まる仕様に変更)
   advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);

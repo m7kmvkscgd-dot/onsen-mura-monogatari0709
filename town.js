@@ -469,7 +469,7 @@ function revealLodgingMorning(onDone) {
 // 野営開始時の演出: 現在の背景(1.5秒静止)→夜の森へクロスフェード(既に夜ならスキップ)→
 // 夜の森を1.5秒静止→ゆっくり暗転→野営地の絵にフェードイン。BGMのフェードアウトと同時に開始する
 function showLodgingRestSummary(beforeSnapshot, onNext) {
-  showRestSummary("lodgingRestSummary", "lodgingRestSummaryList", "lodgingRestNextBtn", beforeSnapshot, onNext);
+  showRestSummary("lodgingRestSummary", "lodgingRestSummaryList", "lodgingRestNextBtn", beforeSnapshot, onNext, true, false);
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {

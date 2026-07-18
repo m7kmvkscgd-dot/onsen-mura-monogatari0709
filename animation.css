@@ -12,6 +12,15 @@
     55% { transform: translate(-50%, -7px) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
   }
+  /* ストレス増減ポップアップ専用(dmgFloatから「揺り戻し」のバウンドを抜いたバージョン)。
+     最初に1回だけふわっと膨らんで等倍に戻ったら、そこから先はスケール変化なしでそのまま上へ浮かんで消える */
+  @keyframes stressPopFloat {
+    0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+    5% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+    18% { opacity: 1; transform: translate(-50%, -12px) scale(1.3); }
+    32% { transform: translate(-50%, -8px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+  }
   /* 被弾リアクション: シェイクとフラッシュを、斬撃VFX/SE/HPバー(いずれもt=0で即座に始まる)と
      同じフレームで開始させる(以前は0.05秒の遅延があり、「絵とSEは即座に出るのに敵の仰け反りだけ
      遅れる」という同期ズレになっていた。ヒットストップ自体は別途まとめて実装済みのため、

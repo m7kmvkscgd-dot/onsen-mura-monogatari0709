@@ -669,8 +669,17 @@ function playTrioDialogueExchange(mA, mB, mC, entry, category, ignoreMutexForFir
 const CRIT_DIALOGUE_TRIGGER_CHANCE = 0.75;
 const CRIT_DIALOGUE_ALLY_JOIN_CHANCE = 0.4;
 const CRIT_DIALOGUE_STRESS_THRESHOLD = 60;
+// 会心関連のちょっとしたストレス軽減(1〜2、都度個別に抽選)。会心を出した爽快感そのものと、
+// 掛け声で気を紛らわせられたことは別の出来事として扱うため、両方に該当する時は重ねて軽減する
+function grantCritStressRelief(c) {
+  if (!c || c.status !== "active") return;
+  const amount = 1 + Math.floor(Math.random() * 2);
+  c.fatigue = Math.max(0, (c.fatigue || 0) - amount);
+  popupOn(c.id, String(amount), "stress-relief");
+}
 function maybeSpeakOnCrit(actor, wasCrit) {
   if (!wasCrit) return;
+  grantCritStressRelief(actor); // 会心を出した本人はセリフの有無に関わらず毎回少しストレスが和らぐ
   const allBelowStressThreshold = fieldParty.every((c) => c.status !== "active" || (c.fatigue || 0) <= CRIT_DIALOGUE_STRESS_THRESHOLD);
   if (!allBelowStressThreshold) return;
   if (Math.random() >= CRIT_DIALOGUE_TRIGGER_CHANCE) return;
@@ -688,10 +697,14 @@ function maybeSpeakOnCrit(actor, wasCrit) {
         const reactionLine = reactionLines[Math.floor(Math.random() * reactionLines.length)];
         // Aの気合い(lineA)だけ「力の込もった登場」にする。Bの相槌(lineB)は従来通りのふわっとしたフェード
         playPairedDialogueExchange(actor, ally, { pA: actor.personality, pB: ally.personality, lineA: kiaiLine, lineB: reactionLine }, "crit", false, true, CRIT_DIALOGUE_GAP_MS);
+        // セリフを言った本人(A=会心を出した本人、B=乗っかった仲間)はさらに気が紛れて少しストレスが和らぐ
+        grantCritStressRelief(actor);
+        grantCritStressRelief(ally);
         return;
       }
     }
     speakExplicitLine(actor, kiaiLine, "crit", false, true);
+    grantCritStressRelief(actor);
   }, CRIT_HITSTOP_MS);
 }
 // 槍士「かばう」使用時の一言(assets/dialogues/dialogue_guard.txt、単独発言型)。

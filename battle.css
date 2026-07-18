@@ -63,6 +63,21 @@
     animation: dmgFloat 2s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* ストレス増減ポップアップ(進む/帰還以外でストレスが即座に増減する場面用)。
+     立ち絵のどの部分に重なっても読めるよう、太い白縁取りでコントラストを確保する(彩度の低い
+     黒/濃色は立ち絵の明るい部分に重なると消えるため不採用。色だけで増減を判別できるので符号は付けない) */
+  .dmg-pop.stress {
+    top: 18%; font-size: 1.3rem; color: #111;
+    -webkit-text-stroke: 3px #fff; paint-order: stroke fill;
+    text-shadow: 0 3px 5px rgba(0,0,0,0.5);
+    animation: stressPopFloat 2s ease-out forwards;
+  }
+  .dmg-pop.stress-relief {
+    top: 18%; font-size: 1.3rem; color: #f2d94e;
+    -webkit-text-stroke: 3px #fff; paint-order: stroke fill;
+    text-shadow: 0 3px 5px rgba(0,0,0,0.5);
+    animation: stressPopFloat 2s ease-out forwards;
+  }
   /* スタンで行動不能になった瞬間だけの素朴な浮き出し表示(会心のような派手な演出はしない) */
   .dmg-pop.stun { color: #e0d27a; font-size: 1rem; }
   /* 毒/出血のターン経過ダメージも、それぞれの色(毒=緑, 出血=赤)で素朴に浮き出させる */
