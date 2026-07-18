@@ -104,6 +104,52 @@
   }
   /* 宿屋画面は名簿+仲間作成で縦に長く、下部のボタンが画面最下部に来て押しにくいため、下側に大きめの余白を追加 */
   #screen-tavern .body-pad { padding-bottom: calc(1rem + 220px); }
+  /* ============ 出発準備画面: 商業クラス化(2026-07-18、モック承認済み) ============ */
+  /* 見出しを「― 支援物資 ―」形式のセンター見出し+金の細線に */
+  #screen-party-select .body-pad h2 {
+    display: flex; align-items: center; gap: 10px; text-align: center;
+    font-size: 12.5px; font-weight: 800; letter-spacing: .3em; text-indent: .3em; color: #d8c592;
+  }
+  #screen-party-select .body-pad h2::before, #screen-party-select .body-pad h2::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(214,178,96,0), rgba(214,178,96,.45), rgba(214,178,96,0));
+  }
+  /* 支援物資などのカードを漆×金に */
+  #screen-party-select .card {
+    background: linear-gradient(to bottom, rgba(255,255,255,.06), rgba(255,255,255,0) 30%), linear-gradient(165deg, #292016, #170f0a 62%, #0e0a06);
+    border: 1px solid rgba(214,178,96,.4); border-radius: 16px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), 0 8px 20px rgba(0,0,0,.45);
+  }
+  /* 仲間カードも漆×金へ(2列レイアウト・レベルメダル等の中身は既存のまま)。
+     選択中は金枠+光彩+右上に「出発」チップ */
+  #partySelectList .roster-row {
+    background: linear-gradient(to bottom, rgba(255,255,255,.05), rgba(255,255,255,0) 30%), linear-gradient(165deg, #262015, #150f09 62%, #0d0906);
+    border-color: rgba(214,178,96,.28);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), 0 6px 16px rgba(0,0,0,.4);
+    position: relative;
+  }
+  #partySelectList .roster-row.selected {
+    border-color: #ecc978; background: linear-gradient(to bottom, rgba(255,255,255,.07), rgba(255,255,255,0) 30%), linear-gradient(165deg, #2c2416, #191209 62%, #100b07);
+    box-shadow: inset 0 0 0 1px rgba(236,201,120,.22), 0 0 18px rgba(224,183,96,.26), 0 6px 16px rgba(0,0,0,.4);
+  }
+  #partySelectList .roster-row.selected::after {
+    content: "出発"; position: absolute; top: -8px; right: -5px; padding: 2px 9px; border-radius: 999px;
+    background: linear-gradient(180deg, #eed695, #d3ae5c); border: 1px solid #f8ecc0;
+    color: #2a1f08; font-size: 9.5px; font-weight: 900; letter-spacing: .1em;
+    box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  /* 海岸行きは藍色の漆カード(森=金のメインCTAとの階層差を付ける) */
+  button.depart-coast {
+    background: linear-gradient(to bottom, rgba(255,255,255,.07), rgba(255,255,255,0) 30%), linear-gradient(165deg, #1d2733, #101922 62%, #0a1016);
+    border-color: rgba(150,190,225,.4); color: #d9e8f3;
+  }
+  button.depart-coast .depart-btn-sub { color: #7e97ab; }
+  /* 「町に戻る」は控えめなゴーストボタン */
+  button.ghost-btn {
+    width: 46%; margin-left: auto; margin-right: auto; min-height: 44px;
+    background: rgba(24,18,12,.5); border: 1px solid rgba(214,178,96,.3);
+    border-radius: 999px; color: #b3a582; font-size: 13.5px; box-shadow: none;
+  }
   /* ============ 町の施設ボタン: 商業クラスカード(2026-07-18) ============
      旧「2x2の文字数依存サイズ+茶ベタボタン」から、モック承認済みの
      「漆×金カード(丸メダルアイコン+機能キャプション)+出発の全幅CTA」に刷新 */
