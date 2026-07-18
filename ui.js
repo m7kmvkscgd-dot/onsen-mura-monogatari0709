@@ -148,6 +148,15 @@ function statusLabelPersonality(c) {
   }
   return statusLabelNonActive(c);
 }
+// レベルメダル+性格の行(ユーザー提供の漢数字メダルassets/icons/level_1..10.png)。
+// 出発準備/宿屋の名簿で「Lv.◯ 性格」の文字表記の代わりに使う(C改レイアウト:
+// 名前→メダル+性格→HP/MPバーの順)。active以外(瀕死/ロスト)はメダルを出さず状態文のみ
+function rosterSubWithLevelBadge(c) {
+  if (c.status !== "active") return statusLabelNonActive(c);
+  const frenzy = stressTier(c.fatigue) >= 4 ? "(発狂中)" : "";
+  const lv = Math.min(10, Math.max(1, c.level || 1));
+  return `<img class="lv-badge" src="assets/icons/level_${lv}.png" alt="Lv.${c.level}">${c.personality || CLASSES[c.classId].ja}${frenzy}`;
+}
 function statusLabelNonActive(c) {
   if (c.status === "critical") {
     if (c.carriedBy) {
