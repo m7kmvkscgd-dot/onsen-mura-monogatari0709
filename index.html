@@ -153,13 +153,15 @@
         <svg class="hire-hint-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
         宿屋で仲間を雇いましょう
       </p>
+      <!-- 商業クラス化(2026-07-18): 施設ボタンを「漆×金カード(メダルアイコン+機能キャプション)」に、
+           出発を全幅の主役CTAに変更。idとJSの紐付けは従来のまま(見た目とマークアップ構造のみ変更) -->
       <div class="btn-col">
-        <button class="big" id="toTavernBtn"><span class="btn-icon"><img src="assets/icons/town_yadoya.png" alt=""></span>旅の宿<span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
-        <button class="big" id="toShopBtn" style="display:none;"><span class="btn-icon"><img src="assets/icons/town_kajiya.png" alt=""></span>鍛冶屋</button>
-        <button class="big" id="toOnsenBtn"><span class="btn-icon"><img src="assets/icons/town_onsen.png" alt=""></span>温泉<span class="new-badge" id="onsenTownNewBadge" style="display:none;">NEW</span></button>
-        <button class="big" id="toExtensionBtn"><span class="btn-icon"><img src="assets/icons/town_kenchiku.png" alt=""></span>建築<span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
-        <button class="big" id="toMagistrateBtn" style="display:none;"><span class="btn-icon"><img src="assets/icons/town_bugyosho.png" alt=""></span>奉行所</button>
-        <button class="big primary" id="toDungeonBtn"><span class="btn-icon"><img src="assets/icons/town_shuppatsu.png" alt=""></span>出発<span class="new-badge" id="dungeonTownNewBadge" style="display:none;">NEW</span></button>
+        <button class="big town-card" id="toTavernBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">旅の宿</span><span class="town-card-cp">宿泊と仲間集め</span></span><span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
+        <button class="big town-card" id="toShopBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span><span class="town-card-cp">装備を鍛える</span></span></button>
+        <button class="big town-card" id="toOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">温泉</span><span class="town-card-cp">ストレスを癒す</span></span><span class="new-badge" id="onsenTownNewBadge" style="display:none;">NEW</span></button>
+        <button class="big town-card" id="toExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span><span class="town-card-cp">村を大きくする</span></span><span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
+        <button class="big town-card" id="toMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span><span class="town-card-cp">討伐の依頼</span></span></button>
+        <button class="big primary town-depart" id="toDungeonBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span><span class="town-card-cp">深淵の森・海岸へ</span></span><span class="town-depart-arrow">▶</span><span class="new-badge" id="dungeonTownNewBadge" style="display:none;">NEW</span></button>
       </div>
     </div>
   </div>

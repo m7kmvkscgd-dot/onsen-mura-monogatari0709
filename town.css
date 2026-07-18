@@ -104,20 +104,39 @@
   }
   /* 宿屋画面は名簿+仲間作成で縦に長く、下部のボタンが画面最下部に来て押しにくいため、下側に大きめの余白を追加 */
   #screen-tavern .body-pad { padding-bottom: calc(1rem + 220px); }
-  /* 町画面のボタンは2x2で、それぞれ文字数に合わせた大きさの箱にする(全幅ボタンにしない) */
+  /* ============ 町の施設ボタン: 商業クラスカード(2026-07-18) ============
+     旧「2x2の文字数依存サイズ+茶ベタボタン」から、モック承認済みの
+     「漆×金カード(丸メダルアイコン+機能キャプション)+出発の全幅CTA」に刷新 */
   #screen-town .btn-col {
-    display: grid; grid-template-columns: repeat(2, auto); gap: 0.7rem;
-    justify-content: start; margin-top: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 0;
   }
-  /* 施設ボタンは全体の90%サイズ(実機で大きすぎるとの指摘)。widthだけでなく高さ・余白・文字・
-     アイコンも同じ比率で縮小し、単純なtransform:scaleではなく実寸で縮めている(scaleだと
-     グリッドのセル自体は縮まずボタン周りに不自然な余白が残るため) */
-  #screen-town .btn-col button.big {
-    width: 135px; white-space: nowrap; padding: 0.81rem 0.45rem; min-height: 48px;
-    font-weight: 700; font-size: 13.5px; border-radius: 13px;
+  #screen-town .btn-col button.town-card {
+    position: relative; justify-content: flex-start; text-align: left;
+    gap: 11px; padding: 11px 12px; min-height: 64px; border-radius: 16px;
+    white-space: nowrap;
   }
-  #screen-town .btn-icon { margin-right: 11px; }
-  #screen-town .btn-icon img { height: 29px; }
+  .town-medal {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 34% 28%, #46351d, #241a0e 72%);
+    border: 1px solid rgba(230,201,119,.5);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.05);
+  }
+  .town-medal img { height: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .town-medal-gold { background: radial-gradient(circle at 34% 28%, #fff3cf, #e0bd6c 72%); border-color: rgba(120,84,20,.4); }
+  .town-card-tx { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+  .town-card-nm { font-size: 15px; font-weight: 800; letter-spacing: .1em; line-height: 1.2; }
+  .town-card-cp { font-size: 10px; font-weight: 600; color: #a3906c; margin-top: 3px; letter-spacing: .03em; }
+  /* 出発CTA: 2列をまたぐ全幅の金ボタン。キャプション色はprimaryの暗色系に合わせる */
+  #screen-town .btn-col button.town-depart {
+    grid-column: 1 / -1; position: relative; justify-content: flex-start; text-align: left;
+    gap: 12px; padding: 11px 14px; min-height: 64px; border-radius: 17px; white-space: nowrap;
+  }
+  .town-depart .town-card-nm { font-size: 17.5px; letter-spacing: .3em; }
+  .town-depart .town-card-cp { color: #6d5622; }
+  .town-depart-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #55400f; }
+  /* NEWバッジはカードの右上角に載せる(ボタンがposition:relativeなのでそのまま絶対配置できる) */
+  #screen-town .btn-col .new-badge { position: absolute; top: -7px; right: -4px; }
   /* ============ ステータス詳細画面(「情報を見る画面」ではなく「眺めたくなる画面」) ============
      立ち絵を主役にするため96px→132px(約38%増)に拡大し、専用カードで名前直下の余白を整理。
      ステータス表は罫線を全廃して余白のグルーピングのみで区切る方針にしてある */
