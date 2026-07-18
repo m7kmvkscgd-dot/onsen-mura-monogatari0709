@@ -182,8 +182,8 @@ const OPENING_BGM_VOLUME = 0.55;
 // 0(ミュート)〜1の倍率、0.1刻み。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
 // 他のBGM要素(opening/lodging/camp/ambient)はGainNode化していないため、この値では音量までは
 // 変えられないが、0の時だけ.mutedで完全に黙らせる(0ボタン=ミュート、という直感的な挙動に合わせるため)
-let masterBgmVolume = 0.8; // ユーザー指示で初期値は8(10段階中)
-let lastMasterBgmVolumeBeforeMute = 0.8; // ミュート前の音量を覚えておき、設定画面のON/OFFトグルで復元する
+let masterBgmVolume = 0.6; // ユーザー指示で初期値は6(10段階中)
+let lastMasterBgmVolumeBeforeMute = 0.6; // ミュート前の音量を覚えておき、設定画面のON/OFFトグルで復元する
 function targetBgmVolume(key) {
   return bgmVolumeForKey(key) * masterBgmVolume;
 }
