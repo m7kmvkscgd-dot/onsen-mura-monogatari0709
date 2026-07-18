@@ -82,9 +82,9 @@ const CLASS_ATTACK_VFX = {
   onmyoji:  { normal: { prefix: "assets/vfx/impact_spear_", frames: 6, size: 99 }, skill: { prefix: "assets/vfx/impact_onmyoji_", frames: 4, size: 200 } },
   hunter:   { normal: { prefix: "assets/vfx/impact_hunter_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
   gunner:   { normal: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 180 }, skill: { prefix: "assets/vfx/impact_gunner_", frames: 4, size: 200 } },
-  // 狩人「鷹を呼ぶ」の追撃専用エントリ。侍の通常斬撃素材を流用しつつ、サイズだけ半分以下(454→200)に
-  // 縮小した後、ユーザー指示でさらに1.5倍(200→300)に拡大した
-  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 300 } },
+  // 狩人「鷹を呼ぶ」の追撃専用エントリ。ユーザー指示(2026-07-18)で侍の通常斬撃と完全に同じ
+  // 見た目(同素材・同サイズ454px)にした(以前は200→300と段階的に縮小版を使っていた)
+  hawk:     { normal: { prefix: "assets/vfx/slash_", frames: 9, size: 454 } },
 };
 // 忍が変化の術で変身中の通常攻撃エフェクト(適当に既存素材から流用)。カラスは素早い爪撃きなので
 // 忍本来のマゼンタ斬撃のままにし、ガマは体当たりで衝撃系、ヘビは毒々しさで紫系のエフェクトにした
@@ -158,11 +158,17 @@ function playHawkAttackVfx(hunterActor, targetId) {
   const strike = () => {
     // 通常の被ダメージ揺れを対象に発生させる。着弾はrenderBattleScreen()から数百ms遅れて
     // 非同期に起きる(既に次のターンに進んでいる可能性がある)ため、再描画は挟まずカード要素へ
-    // 直接shakeClassFor相当のクラスを付け外しする(popupOn自体はentity側の状態記録のみ)
+    // 直接クラスを付け外しする(popupOn自体はentity側の状態記録のみ)。
+    // 【重要】shakeClassFor()経由にしない理由: あちらは「同じ揺れを二重描画しない」ための
+    // __shakeRenderedForガードを持ち、popupOn直後の再描画に食われてここでは空文字が返るため、
+    // 実機では鷹の着弾時に被弾モーションが出ていなかった(ユーザー報告2026-07-18)。
+    // 通常被弾と同じクラス(揺れ+白フラッシュ)を無条件で直接付ける
     popupOn(targetId, "", "dmg", "normal");
     const card = findVisibleCard(targetId);
     if (card) {
-      const shakeClasses = shakeClassFor(findVfxEntity(targetId)).trim().split(" ").filter(Boolean);
+      const shakeClasses = ["hit-shake", "hit-flash", "hit-shake-normal"];
+      card.classList.remove(...shakeClasses);
+      void card.offsetWidth; // 連続ヒット時もアニメーションを再発火させるためのリフロー
       card.classList.add(...shakeClasses);
       setTimeout(() => card.classList.remove(...shakeClasses), 400);
     }
