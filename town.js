@@ -370,7 +370,7 @@ function renderRosterList() {
       showScreen("screen-status");
     };
     // 宿屋の名簿ではアイコン写真タップでの詳細遷移はしない(ユーザー指示2026-07-18で無効化。
-    // 詳細を見たい時は「詳細」ボタンから。出発準備画面のアイコンタップ遷移はそのまま)
+    // 詳細を見たい時は「詳細」ボタンから。出発準備画面のアイコンタップも2026-07-19に同様に無効化した)
     const skillBtn = row.querySelector(".skill-pending-btn");
     if (skillBtn) {
       skillBtn.onclick = (e) => {
@@ -1084,16 +1084,8 @@ function renderPartySelect() {
       saveState();
       renderPartySelect();
     };
-    // アイコン写真をタップした時だけ詳細ステータスを開く(行全体のクリックはパーティ編成の
-    // 選択/解除に使われているため、stopPropagationで巻き込まないようにする)。
-    // 戻るボタンはこの出発準備画面へ戻れるようonBackを明示的に渡す
-    const partyImg = row.querySelector("img");
-    partyImg.style.cursor = "pointer";
-    partyImg.onclick = (e) => {
-      e.stopPropagation();
-      renderStatusScreen(c.id, () => { renderPartySelect(); showScreen("screen-party-select"); });
-      showScreen("screen-status");
-    };
+    // 出発準備画面のアイコン写真タップでの詳細遷移は無効化(ユーザー指示2026-07-19。
+    // 宿屋の名簿と同様、行全体のタップはパーティ選択/解除のみに使う)
     list.appendChild(row);
   });
   activateHpTrails(list);
