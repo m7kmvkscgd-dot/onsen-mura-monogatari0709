@@ -80,13 +80,6 @@ function defaultState() {
     seenCampingKitSupply: false, // 旅支度屋解禁後、出発準備画面(支度タブ=野営具の購入欄)を見たか
     seenBombSupply: false, // 火薬庫解禁後、出発準備画面(支度タブ=爆弾の購入欄)を見たか
     maxFloorReached: { forest: 0, coast: 0 }, // ステージごとの最高到達階層(出発準備画面のボタン横に表示)。moveOneFloor()の前進時にのみ更新する
-    // 新チュートリアル導線(初回のみ): 宿屋での初雇用への誘導→町の出発ボタンへの誘導→出発直前の
-    // コンセプト説明モーダル。表示した瞬間にtrueにする方式(seenShrineTab等と同じ考え方)なので、
-    // 初回だけ出て以降は二度と出ない。旧セーブへの互換初期値(true=見た扱い)はsave.js側で設定する
-    tutHireHintShown: false,
-    tutDepartHintShown: false,
-    tutConceptShown: false,
-    tutSupplyHintShown: false, // STEP2.5: 出発準備画面を初めて開いた時、支援物資を出発前に買えることを一度だけ案内する
   };
 }
 

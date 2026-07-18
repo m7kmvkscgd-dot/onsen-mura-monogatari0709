@@ -29,156 +29,8 @@ function hasAnyNewSupplyFeature() {
   return (state.travelPrepShopLevel || 0) > 0 && !state.seenCampingKitSupply;
 }
 
-// ============ チュートリアル演出(初回のみ): 宿屋の初雇用→町の出発ボタン→出発直前のコンセプト説明 ============
-// 商業作品を意識し、黒帯・赤矢印・派手な点滅・揺れは使わない。「画面を少し暗くする」
-// 「対象要素だけ通常表示(必要ならゆっくり発光)」「小さな吹き出し」の3点だけで誘導する。
-// 各STEPの表示条件はstate.tutXxxShownで管理し、表示した瞬間にtrueにする(seenShrineTab等と同じ考え方)
-// フェードイン/アウトはCSS transition+rAFではなく必ずelement.animate()(Web Animations API)で行う。
-// このプロジェクトでは「inline styleを設定→rAFでtransitionを発火」方式が過去に何度も信頼できず
-// (フェード中に別の状態変化が割り込むと正しく発火しない)問題を起こしているための方針。
-// tutorialGuideAnimTokenは進行中のフェードイン/アウトを世代管理し、showの直後にhideが呼ばれた時
-// (例: rAF待ちの間に対象がクリックされた)古いアニメのonfinishが新しい状態を上書きしないようにする
-// tutorialDimAnim/tutorialBubbleAnimは「現在このdim/bubble要素を動かしているWeb Animations APIの
-// インスタンス」を必ず1つずつだけ保持する。show→hide→showのように短時間に呼び出しが重なった時、
-// 古いhideのフェードアウトがまだ終わっていないのに新しいshowのフェードインを重ねて始めてしまうと、
-// 古い方のonfinish(display:noneにする処理)が後から発火して新しい表示を消してしまう不具合があった。
-// 新しいアニメを始める前に必ず古いインスタンスをcancel()することでこれを防ぐ
-let tutorialGuideTargetEl = null;
-let tutorialGuideAnimToken = 0;
-let tutorialDimAnim = null;
-let tutorialBubbleAnim = null;
-function cancelTutorialAnims() {
-  if (tutorialDimAnim) { tutorialDimAnim.cancel(); tutorialDimAnim = null; }
-  if (tutorialBubbleAnim) { tutorialBubbleAnim.cancel(); tutorialBubbleAnim = null; }
-}
-function showTutorialGuide(targetEl, message, glow) {
-  if (!targetEl) return;
-  tutorialGuideAnimToken++;
-  const myToken = tutorialGuideAnimToken;
-  cancelTutorialAnims();
-  if (tutorialGuideTargetEl) tutorialGuideTargetEl.classList.remove("tutorial-highlight-target", "tutorial-glow-target");
-  tutorialGuideTargetEl = targetEl;
-  targetEl.classList.add(glow ? "tutorial-glow-target" : "tutorial-highlight-target");
-  const dim = document.getElementById("tutorialDim");
-  const bubble = document.getElementById("tutorialBubble");
-  document.getElementById("tutorialBubbleText").textContent = message;
-  dim.style.display = "block";
-  bubble.style.display = "block";
-  dim.style.opacity = "0";
-  bubble.style.opacity = "0";
-  // showTutorialGuide()は呼び出し元のrenderXxx()の中から呼ばれることが多く、その時点では
-  // 直後に続くshowScreen()がまだ実行されておらず画面がdisplay:noneのままのことがある
-  // (positionActionsBelowPartyBarで過去に踏んだのと同じ地雷)。getBoundingClientRect/
-  // scrollIntoViewは画面が実際に表示されてから行う必要があるため、呼び出し元の残りの同期処理
-  // (showScreen()を含む)が終わった後の次フレームまで遅らせる
-  requestAnimationFrame(() => {
-    if (myToken !== tutorialGuideAnimToken) return; // その間にhideされていたら何もしない
-    targetEl.scrollIntoView({ block: "center" });
-    updateTutorialDimBands(targetEl);
-    positionTutorialBubble(targetEl);
-    tutorialDimAnim = dim.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: "ease", fill: "forwards" });
-    tutorialBubbleAnim = bubble.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300, easing: "ease", fill: "forwards" });
-    tutorialDimAnim.onfinish = () => { if (myToken === tutorialGuideAnimToken) { tutorialDimAnim.cancel(); tutorialDimAnim = null; dim.style.opacity = "1"; } };
-    tutorialBubbleAnim.onfinish = () => { if (myToken === tutorialGuideAnimToken) { tutorialBubbleAnim.cancel(); tutorialBubbleAnim = null; bubble.style.opacity = "1"; bubble.style.transform = "translateY(0)"; } };
-  });
-}
-// 対象要素の実際の位置(getBoundingClientRect)を見て、対象の矩形を四方から囲む4枚の帯(上下左右)の
-// top/left/width/height(すべてビューポート座標、#tutorialDim自体がinset:0のposition:fixedのため
-// bandのposition:absoluteはそのままビューポート座標に一致する)を計算する。対象の矩形そのものには
-// 帯が一切存在しないため、対象は常に元の明るさ・常にクリック可能なまま残る(z-indexで対象を暗幕の
-// 上に乗せようとする旧方式が.body-padのスタッキングコンテキストに阻まれて機能しなかった問題の対策)
-function updateTutorialDimBands(targetEl) {
-  const rect = targetEl.getBoundingClientRect();
-  const PAD = 6;
-  const x = Math.max(0, rect.left - PAD);
-  const y = Math.max(0, rect.top - PAD);
-  const w = rect.width + PAD * 2;
-  const h = rect.height + PAD * 2;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  document.getElementById("tutorialDimTop").style.cssText = `top:0; left:0; width:${vw}px; height:${y}px;`;
-  document.getElementById("tutorialDimBottom").style.cssText = `top:${y + h}px; left:0; width:${vw}px; height:${Math.max(0, vh - (y + h))}px;`;
-  document.getElementById("tutorialDimLeft").style.cssText = `top:${y}px; left:0; width:${x}px; height:${h}px;`;
-  document.getElementById("tutorialDimRight").style.cssText = `top:${y}px; left:${x + w}px; width:${Math.max(0, vw - (x + w))}px; height:${h}px;`;
-}
-// 対象要素の実際の位置(getBoundingClientRect)を見て、吹き出しを対象のすぐ下(入らなければ上)に
-// 中央寄せで配置する。画面端では左右方向だけクランプし、しっぽ(::before/::after)は
-// クランプ後の位置に合わせて対象の中心を指すよう再計算する(showTooltipContentと同じ考え方)
-function positionTutorialBubble(targetEl) {
-  const bubble = document.getElementById("tutorialBubble");
-  const rect = targetEl.getBoundingClientRect();
-  const bubbleRect = bubble.getBoundingClientRect();
-  const EDGE_MARGIN = 12;
-  const GAP = 14;
-  let left = rect.left + rect.width / 2 - bubbleRect.width / 2;
-  left = Math.min(Math.max(left, EDGE_MARGIN), window.innerWidth - bubbleRect.width - EDGE_MARGIN);
-  let top = rect.bottom + GAP;
-  let tailUp = true;
-  if (top + bubbleRect.height > window.innerHeight - EDGE_MARGIN) {
-    top = rect.top - bubbleRect.height - GAP;
-    tailUp = false;
-  }
-  bubble.style.left = `${left}px`;
-  bubble.style.top = `${top}px`;
-  bubble.classList.toggle("tail-up", tailUp);
-  bubble.classList.toggle("tail-down", !tailUp);
-  const tailLeft = Math.min(Math.max(rect.left + rect.width / 2 - left, 16), bubbleRect.width - 16);
-  bubble.style.setProperty("--tail-left", `${tailLeft}px`);
-}
-function hideTutorialGuide() {
-  tutorialGuideAnimToken++; // 進行中だったフェードインのonfinishを無効化する
-  cancelTutorialAnims();
-  const dim = document.getElementById("tutorialDim");
-  const bubble = document.getElementById("tutorialBubble");
-  if (tutorialGuideTargetEl) {
-    tutorialGuideTargetEl.classList.remove("tutorial-highlight-target", "tutorial-glow-target");
-    tutorialGuideTargetEl = null;
-  }
-  if (dim.style.display === "none" && bubble.style.display === "none") return;
-  const myToken = tutorialGuideAnimToken;
-  const dimOpacity = getComputedStyle(dim).opacity;
-  const bubbleOpacity = getComputedStyle(bubble).opacity;
-  tutorialDimAnim = dim.animate([{ opacity: dimOpacity }, { opacity: 0 }], { duration: 250, easing: "ease", fill: "forwards" });
-  tutorialBubbleAnim = bubble.animate([{ opacity: bubbleOpacity }, { opacity: 0 }], { duration: 200, easing: "ease", fill: "forwards" });
-  tutorialDimAnim.onfinish = () => { if (myToken !== tutorialGuideAnimToken) return; tutorialDimAnim.cancel(); tutorialDimAnim = null; dim.style.display = "none"; };
-  tutorialBubbleAnim.onfinish = () => { if (myToken !== tutorialGuideAnimToken) return; tutorialBubbleAnim.cancel(); tutorialBubbleAnim = null; bubble.style.display = "none"; bubble.classList.remove("tail-up", "tail-down"); };
-}
-// STEP1: 宿屋で初めて仲間を雇う時だけ(名簿がまだ最初の1人だけの間)、「新しい仲間を雇う」欄を
-// 案内する。職業カードを1枚選んだ瞬間に自動で消える(renderClassGrid側でhideTutorialGuide()を呼ぶ)
-function maybeShowTavernHireTutorial() {
-  if (state.tutorialEnabled === false) return;
-  if (state.tutHireHintShown || state.roster.length !== 1) return;
-  state.tutHireHintShown = true;
-  saveState();
-  showTutorialGuide(document.getElementById("tavernHireTutorialTarget"), "仲間を1人雇おう。好きな職業を選んでください。", false);
-}
-// STEP2: 町へ戻った直後、まだ出発ボタンへの案内を見せていなければ(初めて仲間を雇った後の1回だけ)
-// 出発ボタンをゆっくり発光させて誘導する。ボタンを押した瞬間に自動で消える
-function maybeShowDepartTutorial() {
-  if (state.tutorialEnabled === false) return;
-  if (state.tutDepartHintShown || state.roster.length < 2) return;
-  state.tutDepartHintShown = true;
-  saveState();
-  showTutorialGuide(document.getElementById("toDungeonBtn"), "探索へ出発しよう。", true);
-}
-// STEP2.5: 出発準備画面を初めて開いた時、出発前に支援物資(回復薬など)を購入できることを一度だけ案内する。
-// 支援物資を買うか、出発を確定した瞬間に消える(hideTutorialGuideの呼び出し箇所を参照)
-function maybeShowSupplyTutorial() {
-  if (state.tutorialEnabled === false) return;
-  if (state.tutSupplyHintShown) return;
-  state.tutSupplyHintShown = true;
-  saveState();
-  showTutorialGuide(document.getElementById("partySelectSupplyTutorialTarget"), "出発の前に、ここで道具(回復薬など)を購入できます。", false);
-}
-// STEP3: 出発を確定した直後、探索が始まる前に一度だけゲームコンセプトを説明する
-function showConceptIntro(onDone) {
-  const overlay = document.getElementById("conceptIntroOverlay");
-  overlay.style.display = "block";
-  document.getElementById("conceptIntroStartBtn").onclick = () => {
-    overlay.style.display = "none";
-    onDone();
-  };
-}
+// チュートリアル機能は2026-07-18のユーザー指示で全削除した(作り直し前提の一時撤去)
+
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
@@ -188,10 +40,6 @@ function renderTown() {
   document.getElementById("townGold").textContent = state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
-  // 最初の1人を選んだ直後(まだ宿屋で誰も雇っていない間)だけ、宿屋への案内を出す
-  // (ゲーム開始時にチュートリアル「表示しない」を選んだ場合は出さない。tutorialEnabled===undefinedは
-  // この機能追加前の既存セーブなので、旧来通り表示する側にフォールバックする)
-  document.getElementById("townHireHint").style.display = (state.roster.length === 1 && state.tutorialEnabled !== false) ? "" : "none";
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   // 鍛冶屋ボタンは出発準備画面へ移設(2026-07-18)。表示切替はrenderPartySelect側で行う
   document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
@@ -202,7 +50,6 @@ function renderTown() {
   updateSceneBackgrounds();
   showScreen("screen-town");
   checkOnsenReliefPopups(); // 入浴ロックが明けたキャラがいれば「リラックスできた！」ポップアップを出す(町画面限定)
-  maybeShowDepartTutorial();
 }
 
 // ============ 温泉の入浴完了ポップアップ ============
@@ -418,7 +265,6 @@ document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); rend
 document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
 document.getElementById("toOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("toDungeonBtn").onclick = () => {
-  hideTutorialGuide(); // STEP2の出発ボタン誘導が出ていれば、押した瞬間に消す
   playSfx("select");
   renderPartySelect();
   showScreen("screen-party-select");
@@ -459,7 +305,7 @@ function renderClassGrid() {
     const isNew = !!CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId];
     div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>${isNew ? '<span class="new-badge">NEW</span>' : ""}`;
     if (isNew) { state.seenUnlockedClasses[classId] = true; anyNewlySeen = true; }
-    div.onclick = () => { hideTutorialGuide(); selectedClass = classId; renderClassGrid(); };
+    div.onclick = () => { selectedClass = classId; renderClassGrid(); };
     // カーソルを乗せている間だけそのクラスの説明を表示し、離れたら選択中のクラスの説明に戻す
     div.onmouseenter = () => { descArea.textContent = CLASS_DESC[classId] || ""; };
     div.onmouseleave = () => { descArea.textContent = CLASS_DESC[selectedClass] || ""; };
@@ -673,7 +519,6 @@ function renderTavern() {
   document.getElementById("createCharBtn").disabled = state.gold < HIRE_COST || state.roster.length >= rosterCapacity();
   playTownAreaBgm();
   updateSceneBackgrounds();
-  maybeShowTavernHireTutorial();
 }
 
 // カード等の登場アニメーションはCSSのanimationプロパティで書いているが、同じ要素に対して
@@ -937,16 +782,7 @@ function firstCharClassIds() {
   return Object.keys(CLASSES).filter(isClassUnlocked);
 }
 function renderFirstCharacterScreen() {
-  // ゲーム開始時(名簿が空の間)だけ、チュートリアル案内(宿屋で仲間を雇いましょう等)の
-  // 表示可否を一度だけ選ばせる。既存セーブでroster.length===1のまま(この機能追加前に
-  // 最初の1人を作った)場合はtutorialEnabledがundefinedのままになるが、
-  // townHireHint側は「undefined=表示する」扱いにしてあるため、旧来通りの挙動を保つ
-  if (state.tutorialEnabled === undefined) {
-    showConfirmModal("チュートリアルを表示しますか？", [
-      { label: "はい(推奨)", className: "big primary", onClick: () => { state.tutorialEnabled = true; saveState(); startFirstCharacterPick(); } },
-      { label: "いいえ", className: "big", onClick: () => { state.tutorialEnabled = false; saveState(); startFirstCharacterPick(); } },
-    ]);
-  } else {
+  {
     startFirstCharacterPick();
   }
 }
@@ -1022,7 +858,6 @@ document.getElementById("createCharBtn").onclick = () => {
   const name = nameInput.value.trim() || randomFemaleName();
   if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
   if (state.gold < HIRE_COST) { showInfoModal(`お金が足りません(${HIRE_COST}G必要)`); return; }
-  hideTutorialGuide(); // STEP1の案内が出ていれば、職業カードを個別に選ばず直接雇っても消える(初期選択済みの職業のまま雇うケースもあるため)
   state.gold -= HIRE_COST;
   const c = createCharacter(name, selectedClass, state.classUpgrades);
   c.personality = pickNonDuplicatePersonality();
@@ -1176,7 +1011,6 @@ function renderPartySelect() {
   renderDwHeader("partySelect", "パーティ編成", () => { renderTown(); });
   pruneActiveParty();
   renderSupplies();
-  maybeShowSupplyTutorial();
   document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   document.getElementById("omikujiTabNewBadge").style.display = (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
   const bestiaryUnlocked = (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
@@ -1327,7 +1161,6 @@ function confirmSellSupplyItem(itemId) {
   ]);
 }
 document.getElementById("buyPotionSupplyBtn").onclick = () => {
-  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
   if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.potion.price) { showInfoModal("お金が足りません"); return; }
@@ -1338,7 +1171,6 @@ document.getElementById("buyPotionSupplyBtn").onclick = () => {
   renderSupplies();
 };
 document.getElementById("buySmokeBombBtn").onclick = () => {
-  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、実際に購入した瞬間に消す
   const total = supplyItemTotal();
   if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.smokeBomb.price) { showInfoModal("お金が足りません"); return; }
@@ -1486,7 +1318,6 @@ function showDepartConfirm(stage) {
     showInfoModal("パーティを1人以上選んでください");
     return;
   }
-  hideTutorialGuide(); // STEP2.5の支援物資案内が出ていれば、出発を確定する前に消す
   pendingDepartureStage = stage;
   const list = document.getElementById("departConfirmList");
   list.innerHTML = "";
@@ -1525,14 +1356,7 @@ document.getElementById("departConfirmYesBtn").onclick = () => {
   const stage = pendingDepartureStage;
   pendingDepartureStage = null;
   document.getElementById("departConfirmOverlay").style.display = "none";
-  // STEP3: 初回の出発だけ、探索が始まる前に一度ゲームコンセプトを説明する
-  if (state.tutorialEnabled !== false && !state.tutConceptShown) {
-    state.tutConceptShown = true;
-    saveState();
-    showConceptIntro(() => startDeparture(stage));
-  } else {
-    startDeparture(stage);
-  }
+  startDeparture(stage);
 };
 document.getElementById("departConfirmNoBtn").onclick = () => {
   document.getElementById("departConfirmOverlay").style.display = "none";

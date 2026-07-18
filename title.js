@@ -306,8 +306,8 @@ document.getElementById("titleSettingsBtn").onclick = () => {
 };
 
 // ============ 設定画面 ============
-// 既存のミュート機能(#muteBtn/audio.js)とチュートリアル表示フラグ(state.tutorialEnabled)を
-// そのままON/OFFトグルとして見せるだけの、新しい仕組みを持たない最小限の設定画面。
+// 既存のミュート機能(#muteBtn/audio.js)をON/OFFトグルとして見せるだけの最小限の設定画面。
+// (チュートリアル表示トグルは機能ごと削除した、2026-07-18)
 // 元々タイトル画面からしか開けなかったため「戻る」は常にタイトルへ固定だったが、町画面の
 // 歯車メニューからも開けるようになったため、開く直前の画面を記憶しておいて戻れるようにする
 // (audio.jsのmenuSettingsBtnが設定する)。未設定(nullのまま)ならタイトルから開かれた
@@ -317,19 +317,9 @@ function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
   soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
   soundBtn.classList.toggle("is-on", masterBgmVolume > 0);
-  const tutoBtn = document.getElementById("settingsTutorialToggle");
-  const tutoOn = state.tutorialEnabled !== false;
-  tutoBtn.textContent = tutoOn ? "ON" : "OFF";
-  tutoBtn.classList.toggle("is-on", tutoOn);
 }
 document.getElementById("settingsSoundToggle").onclick = () => {
   toggleMute();
-  renderSettingsScreen();
-};
-document.getElementById("settingsTutorialToggle").onclick = () => {
-  state.tutorialEnabled = state.tutorialEnabled === false ? true : false;
-  saveState();
-  playSfx("select");
   renderSettingsScreen();
 };
 document.getElementById("settingsBackBtn").onclick = () => {

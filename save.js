@@ -207,10 +207,6 @@ function loadState() {
       if (loaded.maxFloorReached == null) loaded.maxFloorReached = { forest: 0, coast: 0 }; // 旧セーブ用の初期値(この機能追加以前は記録していないため0から)
       // 新チュートリアル導線も、旧セーブ(既にある程度進んでいるプレイヤー)にいきなり降ってこないよう、
       // 既存のセーブは全て「見た」扱いにする(defaultStateでは新規プレイヤーのみfalseスタート)
-      if (loaded.tutHireHintShown == null) loaded.tutHireHintShown = true;
-      if (loaded.tutDepartHintShown == null) loaded.tutDepartHintShown = true;
-      if (loaded.tutConceptShown == null) loaded.tutConceptShown = true;
-      if (loaded.tutSupplyHintShown == null) loaded.tutSupplyHintShown = true;
       delete loaded.worldStep;
       if (loaded.inventory) {
         delete loaded.inventory.holyWater;
