@@ -45,18 +45,26 @@
   /* ボタンの質感: 「和風の木札」。木目テクスチャ画像は使わず、上部を薄く明るく・下部を薄く暗くする
      グラデーション(--dw-btn-sheen)を色ベースの背景に重ねるだけで立体感を出す。焦げ茶の枠線+内側の
      ごく薄いハイライト+柔らかい外側ドロップシャドウの3点セットを全ボタン共通にしてある */
+  /* 商業クラス統一スキン(2026-07-18): 明るい茶のベタ塗り→漆黒グラデ+金ヘアラインへ全面変更。
+     サイズ・余白・フォントは従来のまま(見た目の"skin"だけの変更で、配置には影響させない) */
   button.big {
-    min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 2px solid var(--dw-btn-border);
-    background: var(--dw-btn-sheen), var(--dw-btn-bg); color: var(--dw-title-color); font-size: 15px; font-weight: var(--fw-button); cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 11px rgba(0,0,0,.32);
+    min-height: 53px; padding: 0.5rem 0.9rem; border-radius: 14px; border: 1px solid rgba(214,178,96,.42);
+    background: var(--dw-btn-sheen), linear-gradient(165deg, #2b2117, #17100a 62%, #0e0a06);
+    color: var(--dw-title-color); font-size: 15px; font-weight: var(--fw-button); cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10), 0 6px 16px rgba(0,0,0,.45);
     display: flex; align-items: center; justify-content: center; text-align: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6);
     transition: transform var(--dw-t-btn) ease-out, filter var(--dw-t-btn) ease-out, background var(--dw-t-btn) ease-out, box-shadow var(--dw-t-btn) ease-out;
   }
   /* 押した時の触覚的フィードバック(少し縮む+少し暗くなる+内側に沈み込むシャドウ)。filterでの明度調整は
      button.big単体でも.primary/.danger等の色付きバリエーションでも同じ見え方になるため、色ごとに
      個別の:active色を用意する必要がない(全ボタン共通の1ルールで統一できる) */
   button.big:active { transform: scale(.97); filter: brightness(.88); box-shadow: inset 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
-  button.primary { background: var(--dw-btn-sheen), #e3c583; color: #241d0a; border-color: #f2dfa6; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 16px rgba(0,0,0,.42); }
+  button.primary {
+    background: linear-gradient(to bottom, rgba(255,255,255,.33), rgba(255,255,255,0) 34%), linear-gradient(180deg, #f0d896, #d9b662 46%, #b98f3e);
+    color: #2a1f08; border-color: #f7e7b4; text-shadow: none;
+    box-shadow: inset 0 0 0 1px rgba(120,84,20,.35), 0 6px 18px rgba(0,0,0,.45), 0 0 18px rgba(224,183,96,.22);
+  }
   button.danger { background: var(--dw-btn-sheen), var(--dw-danger); color: #fff; border-color: #4a1f1c; }
   /* 里に戻る(帰還)モード中の進むボタン。通常のprimaryより明るい黄色にして、帰還モードに
      切り替わったことが一目でわかるようにする */
