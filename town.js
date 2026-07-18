@@ -193,7 +193,7 @@ function renderTown() {
   // この機能追加前の既存セーブなので、旧来通り表示する側にフォールバックする)
   document.getElementById("townHireHint").style.display = (state.roster.length === 1 && state.tutorialEnabled !== false) ? "" : "none";
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
-  document.getElementById("toShopBtn").style.display = state.shopLevel ? "" : "none";
+  // 鍛冶屋ボタンは出発準備画面へ移設(2026-07-18)。表示切替はrenderPartySelect側で行う
   document.getElementById("tavernNewBadge").style.display = hasAnyNewClass() ? "" : "none";
   document.getElementById("extensionTownNewBadge").style.display = hasAnyNewBuilding() ? "" : "none";
   document.getElementById("onsenTownNewBadge").style.display = hasAnyNewOnsenFeature() ? "" : "none";
@@ -1187,6 +1187,8 @@ function renderPartySelect() {
   document.getElementById("coastMaxFloorLabel").textContent = maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "";
   showPartySelectTab("main");
   renderOmikujiTab();
+  // 鍛冶屋チップ(村トップから移設)。鍛冶屋を建築するまでは非表示
+  document.getElementById("toShopBtn").style.display = state.shopLevel ? "" : "none";
   const list = document.getElementById("partySelectList");
   list.innerHTML = "";
   if (state.roster.length === 0) {
@@ -1868,7 +1870,7 @@ const BUILDING_DEFS = [
     desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。" },
   { key: "shop", levelField: "shopLevel", name: "鍛冶屋", icon: "⚒️", iconImg: "assets/icons/town_kajiya.png",
     unlock: SHOP_UNLOCK_HOUSE_LEVEL, costs: [SHOP_COST],
-    desc: "武器・防具を購入できるようになります。" },
+    desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)" },
   // 旅支度屋だけは専用の建物イラストではなく、既存の野営具アイテムアイコンを流用する(ユーザー指示)
   { key: "travelPrepShop", levelField: "travelPrepShopLevel", name: "旅支度屋", icon: "🏕️", iconImg: "assets/items/camping_kit.png",
     unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST],
@@ -2464,8 +2466,9 @@ function buyEquipment(classId, slot) {
   const purchasedImg = document.querySelector(`#equipmentList img[data-class="${classId}"]`);
   if (purchasedImg) retriggerEntryAnim(purchasedImg, "purchase-glint");
 }
-document.getElementById("shopBackBtn").onclick = () => { renderTown(); };
-document.getElementById("shopBackBtnTop").onclick = () => { renderTown(); };
+// 鍛冶屋は出発準備画面から開くようになった(2026-07-18)ため、戻り先も出発準備にする
+document.getElementById("shopBackBtn").onclick = () => { renderPartySelect(); showScreen("screen-party-select"); };
+document.getElementById("shopBackBtnTop").onclick = () => { renderPartySelect(); showScreen("screen-party-select"); };
 
 // ============ 初期化 ============
 // ゲームの入口は常にタイトル画面(title.js)。ここでの自動遷移は廃止した。

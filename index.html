@@ -157,7 +157,6 @@
            出発を全幅の主役CTAに変更。idとJSの紐付けは従来のまま(見た目とマークアップ構造のみ変更) -->
       <div class="btn-col">
         <button class="big town-card" id="toTavernBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">旅の宿</span><span class="town-card-cp">宿泊と仲間集め</span></span><span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
-        <button class="big town-card" id="toShopBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span><span class="town-card-cp">装備を鍛える</span></span></button>
         <button class="big town-card" id="toOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">温泉</span><span class="town-card-cp">ストレスを癒す</span></span><span class="new-badge" id="onsenTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big town-card" id="toExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span><span class="town-card-cp">村を大きくする</span></span><span class="new-badge" id="extensionTownNewBadge" style="display:none;">NEW</span></button>
         <button class="big town-card" id="toMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span><span class="town-card-cp">討伐の依頼</span></span></button>
@@ -216,6 +215,8 @@
       <button class="big" id="partySelectBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
 
       <div id="partySelectTabBar" style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:0.8rem;">
+        <!-- 鍛冶屋は村トップから出発準備へ移設(2026-07-18ユーザー相談で決定)。「出発前に装備を整える」動線に合わせた -->
+        <button class="omikuji-chip-btn" id="toShopBtn" style="display:none;">⚒️鍛冶屋</button>
         <button class="omikuji-chip-btn" id="partySelectOmikujiTabBtn" style="display:none;">⛩️おみくじ<span class="new-badge" id="omikujiTabNewBadge" style="display:none;">NEW</span></button>
         <button class="omikuji-chip-btn" id="partySelectBestiaryTabBtn">📖図鑑<span class="new-badge" id="bestiaryNewBadge" style="display:none;">NEW</span></button>
       </div>
@@ -412,14 +413,14 @@
       <h1>鍛冶屋</h1>
     </div>
     <div class="body-pad">
-      <button class="big" id="shopBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
+      <button class="big" id="shopBackBtnTop" style="margin-bottom:0.8rem;">出発準備に戻る</button>
       <p class="gold" id="shopGold">0G</p>
 
       <h2>職業別 武器・防具</h2>
       <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.5rem;">一度買えばその職業全員、永久に効果があります。</p>
       <div id="equipmentList"></div>
 
-      <button class="big" id="shopBackBtn">町に戻る</button>
+      <button class="big" id="shopBackBtn">出発準備に戻る</button>
     </div>
   </div>
 
