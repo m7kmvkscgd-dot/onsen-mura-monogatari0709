@@ -1837,8 +1837,8 @@ function resolveDebuffEffect(target, type, params, log) {
 }
 
 // enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
-// 生存中の味方全員に襲いかかる。敵にbigAttackプロファイル(見た目/生態に合わせた専用の威力+デバフ)が
-// あればそれを使い、無ければ汎用フォールバック(BIG_ATTACK_MULT+ランダムデバフプール)を使う。
+// 生存中の味方全員に襲いかかる。全敵がbigAttackプロファイル(見た目/生態に合わせた専用の威力+デバフ)を
+// 持っている前提(data.js ENEMIES、汎用フォールバックは廃止済み、2026-07-19)。
 // 敵自身が毒/炎上状態なら威力がさらに下がる(削る対抗策)。結果は対象ごとの配列で返す
 function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
@@ -1849,10 +1849,10 @@ function enemyBigAttack(enemy, targets, log) {
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。
   // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
   // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)
-  const guardian = profile && profile.ignoreGuardian ? null : findGuardTarget(alive);
+  const guardian = profile.ignoreGuardian ? null : findGuardTarget(alive);
   const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
-  const hitTargets = profile && profile.aoe ? alive : [singleTarget];
-  let mult = profile ? profile.mult : BIG_ATTACK_MULT;
+  const hitTargets = profile.aoe ? alive : [singleTarget];
+  let mult = profile.mult;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   return hitTargets.map((target) => {
     if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
@@ -1882,13 +1882,8 @@ function enemyBigAttack(enemy, targets, log) {
     target.fatigue = Math.min(FATIGUE_MAX, (target.fatigue || 0) + stressGain);
     if (stressGain > 0 && typeof popupOn === "function") popupOn(target.id, String(stressGain), "stress");
     // 命中した対象ごとに独立してデバフ判定する(戦闘不能になった相手には付けない)
-    if (!wentDown) {
-      if (profile && profile.debuff) {
-        if (Math.random() < profile.debuff.chance) resolveDebuffEffect(target, profile.debuff.type, profile.debuff, log);
-      } else if (!profile && Math.random() < BIG_ATTACK_DEBUFF_CHANCE) {
-        const debuffType = BIG_ATTACK_DEBUFF_POOL[Math.floor(Math.random() * BIG_ATTACK_DEBUFF_POOL.length)];
-        resolveDebuffEffect(target, debuffType, {}, log);
-      }
+    if (!wentDown && profile.debuff && Math.random() < profile.debuff.chance) {
+      resolveDebuffEffect(target, profile.debuff.type, profile.debuff, log);
     }
     return { target, dmg, hit: true, guardCounterDmg };
   });
