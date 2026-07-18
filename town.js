@@ -894,16 +894,31 @@ function showPartySelectTab(tab) {
 }
 // おみくじはもう別画面に切り替わらない(ユーザー指示によりテンポ重視で撤廃)。ボタンを押すと
 // その場でカードが更新されるだけで、支援物資/出発メンバー選択/出発ボタンはそのまま下に続けて操作できる。
-// 本日すでに引いていればdrawOmikuji()が無言で早期returnするので、その場合は今日の結果をそのまま表示する
+// 本日すでに引いていればdrawOmikuji()が無言で早期returnするので、その場合は今日の結果をそのまま表示する。
+// ユーザー指示: 開いている状態でもう一度ボタンを押したら閉じる(トグル)ようにする。
+// omikujiDrawnDate/omikujiLastTier等の永続状態には触れず、カードの表示/非表示だけをトグルするので、
+// 画面を出入りし直せば(renderPartySelect経由のrenderOmikujiTab)今日引いた結果はまた見える
 document.getElementById("partySelectOmikujiTabBtn").onclick = () => {
   playSfx("select");
   state.seenOmikujiTab = true;
   document.getElementById("omikujiTabNewBadge").style.display = "none";
   showPartySelectTab("main"); // 図鑑タブを見ていた場合でも、おみくじカードが見える位置(main)へ戻す
-  drawOmikuji();
-  renderOmikujiTab();
+  const resultCard = document.getElementById("omikujiResultCard");
+  const alreadyDrawnToday = (state.omikujiDrawnDate || 0) === state.dayCount;
+  if (alreadyDrawnToday && resultCard.style.display !== "none") {
+    resultCard.style.display = "none";
+  } else {
+    drawOmikuji();
+    renderOmikujiTab();
+  }
 };
-document.getElementById("partySelectBestiaryTabBtn").onclick = () => { playSfx("select"); showPartySelectTab("bestiary"); renderBestiaryTab(); };
+// 図鑑タブもユーザー指示によりトグル化: 開いている時に同じボタンを押すと閉じてmainタブへ戻る
+document.getElementById("partySelectBestiaryTabBtn").onclick = () => {
+  playSfx("select");
+  const isOpen = document.getElementById("partySelectBestiaryTab").style.display !== "none";
+  if (isOpen) { showPartySelectTab("main"); }
+  else { showPartySelectTab("bestiary"); renderBestiaryTab(); }
+};
 document.getElementById("partySelectBackBtnFromBestiary").onclick = () => { playSfx("select"); showPartySelectTab("main"); };
 
 // 図鑑: 遭遇済みの敵を一覧表示する。倒す必要はなく、戦闘に出現した時点で記録される(markEnemiesSeen)。
