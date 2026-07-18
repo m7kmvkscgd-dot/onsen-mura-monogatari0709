@@ -296,7 +296,8 @@ const ENEMIES = {
 
   // ---- 後半(Lv26-40 / floor 24-45)、うち2体は中ボス ----
   oni: { id: "oni", ja: "鬼", image: "assets/enemies/oni.png", hp: 58, atk: 18, def: 9, spd: 9, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67 },
-  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67, isFlying: true },
+  karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67, isFlying: true,
+    bigAttack: { name: "扇の突風", mult: 0.3, aoe: true, debuff: { type: "stun", chance: 0.9, turns: 1 } } }, // 天狗の大技は全種共通(全体攻撃・低威力・高確率スタン)に統一
   yamauba2: { id: "yamauba2", ja: "山姥", image: "assets/enemies/yamauba2.png", hp: 56, atk: 16, def: 9, spd: 8, goldMin: 23, goldMax: 35, xp: 41, minFloor: 35, maxFloor: 67 },
   gyuki: { id: "gyuki", ja: "牛鬼", image: "assets/enemies/gyuki.png", hp: 70, atk: 19, def: 11, spd: 7, goldMin: 28, goldMax: 40, xp: 46, minFloor: 35, maxFloor: 67 },
   nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 52, atk: 18, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67, isFlying: true },
@@ -309,7 +310,8 @@ const ENEMIES = {
   // ---- 終盤(Lv41-50〜 / floor 38-) ----
   shuten_doji: { id: "shuten_doji", ja: "酒呑童子", image: "assets/enemies/shuten_doji.png", hp: 92, atk: 26, def: 13, spd: 10, goldMin: 40, goldMax: 58, xp: 75, minFloor: 56, maxFloor: 1498 },
   ibaraki_doji: { id: "ibaraki_doji", ja: "茨木童子", image: "assets/enemies/ibaraki_doji.png", hp: 98, atk: 28, def: 13, spd: 10, goldMin: 42, goldMax: 60, xp: 78, minFloor: 56, maxFloor: 1498 },
-  dai_tengu: { id: "dai_tengu", ja: "大天狗", image: "assets/enemies/dai_tengu.png", hp: 85, atk: 27, def: 12, spd: 15, goldMin: 41, goldMax: 59, xp: 76, minFloor: 56, maxFloor: 1498 },
+  dai_tengu: { id: "dai_tengu", ja: "大天狗", image: "assets/enemies/dai_tengu.png", hp: 85, atk: 27, def: 12, spd: 15, goldMin: 41, goldMax: 59, xp: 76, minFloor: 56, maxFloor: 1498,
+    bigAttack: { name: "扇の突風", mult: 0.3, aoe: true, debuff: { type: "stun", chance: 0.9, turns: 1 } } }, // 天狗の大技は全種共通(全体攻撃・低威力・高確率スタン)に統一
   yamata_no_orochi: { id: "yamata_no_orochi", ja: "八岐大蛇", image: "assets/enemies/yamata_no_orochi.png", hp: 110, atk: 29, def: 14, spd: 8, goldMin: 45, goldMax: 64, xp: 82, minFloor: 56, maxFloor: 1498 },
   tamamo_no_mae: { id: "tamamo_no_mae", ja: "玉藻前", image: "assets/enemies/tamamo_no_mae.png", hp: 82, atk: 28, def: 11, spd: 12, goldMin: 42, goldMax: 60, xp: 77, minFloor: 56, maxFloor: 1498 },
   giou: { id: "giou", ja: "鵺王", image: "assets/enemies/giou.png", hp: 100, atk: 27, def: 15, spd: 11, goldMin: 44, goldMax: 62, xp: 80, minFloor: 56, maxFloor: 1498 },
