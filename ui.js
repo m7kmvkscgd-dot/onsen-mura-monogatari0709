@@ -714,18 +714,19 @@ document.getElementById("dungeonLog").onclick = () => {
   showLogHistory(dungeonLogLines);
 };
 
-// ============ 背景の覗き見(.heroを0.25秒長押しでUIを消し、背景イラストをよく見せる) ============
-// 戦闘/探索用のattachSkillLongPressTooltip(effects.js)と同じPointer Eventsパターンを踏襲。
-// ボタン/リンク/inputの上から始めた長押しは無視し(本来のタップ操作を妨げない)、
+// ============ 背景の覗き見(.heroの何もない場所をタップでUIを消し、背景イラストをよく見せる) ============
+// 2026-07-18ユーザー指示で長押し(250ms)からタップ発動へ変更。
+// スクロールの開始やドラッグをタップと誤認しないよう、「押してから350ms未満・指の移動10px未満で
+// 離した」場合だけをタップとみなす(スクロール解放のtouchendをタップと誤認した過去のバグと同じ教訓)。
+// ボタン/リンク/inputの上からのタップは無視し(本来の操作を妨げない)、
 // 発動後はbody.bg-peekを付けるだけで、実際にどの要素を隠すかはCSS側(.hero > *と.body-pad)に任せる
-const BG_PEEK_LONGPRESS_MS = 250; // ユーザー指示で従来の半分(500ms→250ms)
+const BG_PEEK_TAP_MAX_MS = 350;
+const BG_PEEK_TAP_MAX_MOVE_PX = 10;
 function initBackgroundPeek() {
   let bgPeekActive = false;
-  let timer = null;
-  const clear = () => { clearTimeout(timer); timer = null; };
+  let tapStart = null;
   const activate = () => {
     bgPeekActive = true;
-    timer = null;
     document.body.classList.add("bg-peek");
     playSfx("select");
   };
@@ -738,10 +739,18 @@ function initBackgroundPeek() {
     hero.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       if (e.target.closest("button, a, input")) return;
-      clear();
-      timer = setTimeout(activate, BG_PEEK_LONGPRESS_MS);
+      tapStart = { x: e.clientX, y: e.clientY, t: performance.now() };
     });
-    ["pointerup", "pointerleave", "pointercancel"].forEach((evt) => hero.addEventListener(evt, clear));
+    hero.addEventListener("pointerup", (e) => {
+      if (!tapStart) return;
+      const dx = e.clientX - tapStart.x;
+      const dy = e.clientY - tapStart.y;
+      const dt = performance.now() - tapStart.t;
+      tapStart = null;
+      if (bgPeekActive) return; // 復帰は下のdocumentキャプチャ側で処理済み
+      if (dt < BG_PEEK_TAP_MAX_MS && dx * dx + dy * dy < BG_PEEK_TAP_MAX_MOVE_PX * BG_PEEK_TAP_MAX_MOVE_PX) activate();
+    });
+    ["pointerleave", "pointercancel"].forEach((evt) => hero.addEventListener(evt, () => { tapStart = null; }));
   });
   // 覗き見中は、画面のどこを再タップしても(ボタンの上でも)そのタップ自体は握りつぶして元に戻すだけにする
   document.addEventListener("pointerdown", (e) => {
