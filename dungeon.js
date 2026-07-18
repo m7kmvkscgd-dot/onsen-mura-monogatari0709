@@ -3,6 +3,85 @@
 let currentFloor = 0;
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸)。町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効
 function currentStageName() { return currentStage === "coast" ? "海岸" : "深淵の森"; }
+
+// ============ 遠征状態の永続化(2026-07-18) ============
+// 従来、階層・パーティ・帰還中フラグ等の遠征状態はメモリ上にしか無く、探索中にページを
+// リロードすると常に町へ戻れてしまっていた(=危険になったら更新で無傷離脱でき、パーマデスが
+// 骨抜きになるというユーザー報告のバグ)。saveState()のたびに遠征スナップショットを
+// state.expeditionへ書き込み、タイトルの「続きから」で遠征の途中から再開させる。
+// 戦闘中のリロードだけは「戦いから逃げ出した」扱いで全員にストレスの代償を払わせる
+// (戦闘そのものの復元はしない。リロードで敵を消す行為をノーコストにしないための措置)
+let expeditionActive = false;
+function collectExpeditionSnapshot() {
+  if (!expeditionActive) { state.expedition = null; return; }
+  state.expedition = {
+    active: true,
+    stage: currentStage,
+    floor: currentFloor,
+    retreating,
+    inBattle: typeof battle !== "undefined" && !!battle,
+    fieldPartyIds: fieldParty.map((c) => c.id),
+    reserveId: reserveFieldMember ? reserveFieldMember.id : null,
+    advGoldEarned,
+    advXpGained,
+    advLevelBefore,
+    advQuestCompleted,
+    jizoBlessingActive,
+    warashiLuckActive,
+    koOniRepayFloorsLeft,
+    seenEventIds: [...expeditionSeenEventIds],
+  };
+}
+// 遠征の終了(帰還完了/全滅)時に呼ぶ。スナップショットを消して「次回は町から」に戻す
+function clearExpeditionSnapshot() {
+  expeditionActive = false;
+  state.expedition = null;
+}
+// タイトルの「続きから」用: セーブに遠征中スナップショットがあれば探索画面へ直接復帰する。
+// 再開できた場合はtrueを返す(呼び出し元は町へ行かない)
+function resumeExpeditionFromSave() {
+  const snap = state.expedition;
+  if (!snap || !snap.active) return false;
+  currentStage = snap.stage === "coast" ? "coast" : "forest";
+  currentFloor = Math.max(1, snap.floor || 1);
+  retreating = !!snap.retreating;
+  fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
+  reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
+  // 稼働できる仲間が誰も居ない(全員瀕死/ロスト)なら再開のしようがないので、諦めて町へ
+  if (fieldParty.filter((c) => c.status === "active").length === 0) {
+    clearExpeditionSnapshot();
+    saveState();
+    return false;
+  }
+  expeditionActive = true;
+  advGoldEarned = snap.advGoldEarned || 0;
+  advXpGained = snap.advXpGained || {};
+  advLevelBefore = snap.advLevelBefore || {};
+  advQuestCompleted = snap.advQuestCompleted || null;
+  jizoBlessingActive = !!snap.jizoBlessingActive;
+  warashiLuckActive = !!snap.warashiLuckActive;
+  koOniRepayFloorsLeft = snap.koOniRepayFloorsLeft || 0;
+  expeditionSeenEventIds = new Set(snap.seenEventIds || []);
+  resetPeaceDialogueState();
+  dungeonLogLines = [];
+  document.getElementById("dungeonLog").innerHTML = "";
+  stopTownBgm();
+  showScreen("screen-dungeon");
+  renderDungeon();
+  dlog(`${currentStageName()}・${currentFloor}層目から冒険を再開した。`);
+  if (snap.inBattle) {
+    // 戦闘中のリロード: 敵は消えるが、逃走と同じストレスの代償を全員が払う。
+    // また通常は戦闘終了処理で行われる後始末(かばう構え解除・石長比売の御守の一時HPボーナス
+    // 差し引き)がリロードで飛ばされているため、ここで代わりに行う
+    fieldParty.forEach((c) => { if (c.status === "active") c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY); });
+    if (typeof clearGuardState === "function") clearGuardState(fieldParty);
+    if (typeof clearOmamoriIwanagaBonus === "function") clearOmamoriIwanagaBonus(fieldParty);
+    dlog(`戦いの最中に隙を見て逃げ出した…。(全員ストレス+${FLEE_STRESS_PENALTY})`);
+    renderDungeon();
+  }
+  saveState();
+  return true;
+}
 // ステージごとの最高到達階層を更新する。前進(moveOneFloor)とenterDungeon(1層目突入)からのみ呼び、
 // 帰還中の後退では呼ばない(currentFloorが減る側なので自然にMath.maxで無視される想定だが、念のため明示)
 function recordMaxFloorReached() {
@@ -140,6 +219,9 @@ function enterDungeon() {
   showScreen("screen-dungeon");
   renderDungeon();
   dlog(`${currentStageName()}に入った。`);
+  // 遠征状態の永続化を開始する(以後saveState()のたびにstate.expeditionへ書き込まれる)
+  expeditionActive = true;
+  saveState();
 }
 
 let dungeonLogLines = [];
@@ -666,6 +748,7 @@ function finishRetreat() {
   stopAmbientBgm();
   stopCoastAreaBgm();
   retreating = false;
+  clearExpeditionSnapshot(); // 帰還完了。リロードしても次からは町スタートに戻る
   recordBossWoundIfPursuing(); // 里に戻った時点で追撃モードは終了。追撃中だったなら手負いのHPを記録する(見送った扱い)
   deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
@@ -708,6 +791,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
   }
   if (retreating) {
     currentFloor--;
+    saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
     if (currentFloor <= 0) {
@@ -718,6 +802,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
   } else {
     advanceFatigue(fieldParty); // ストレスは深層に向かう時だけ溜まる(帰還中は溜めない)
     currentFloor++;
+    saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     recordMaxFloorReached();
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
@@ -852,6 +937,7 @@ function handleDevFloorBadgeTap() {
     const target = parseInt(input, 10);
     if (!Number.isFinite(target) || target < 1) { showInfoModal("正しい階層数を入力してください"); return; }
     currentFloor = target;
+    saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     retreating = false;
     recordMaxFloorReached();
     saveState();

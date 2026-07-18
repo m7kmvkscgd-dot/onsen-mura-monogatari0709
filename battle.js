@@ -23,6 +23,9 @@ function startBattle(enemies, pathDef, encounterText) {
   // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
   // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
   lastPartyBarActingId.battlePartyBar = null;
+  // 戦闘に入った事実を即座に保存する(遠征スナップショットのinBattle=true)。これが無いと
+  // 「嫌な敵に遭遇→保存が走る前に即リロード」でペナルティ無しに敵を消せてしまう
+  saveState();
   // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
   // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
   enemies.forEach((e) => { e.__enemyAllies = enemies; });
@@ -1502,6 +1505,7 @@ function victory() {
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${currentStageName()}に戻る</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
+    saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     clearHawkState(fieldParty);
     clearGuardState(fieldParty);
     clearOmamoriIwanagaBonus(fieldParty);
@@ -1537,6 +1541,7 @@ function triggerBossFlee(enemy) {
   playBossFleeBanner(enemy, () => {
     if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
     battle = null;
+    saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     pendingEnemyPick = null;
     pendingAllyPick = null;
     clearDotEffects(fieldParty);
@@ -1564,6 +1569,7 @@ function triggerQuestBossFlee(enemy) {
   playBossFleeBanner(enemy, () => {
     if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
     battle = null;
+    saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     pendingEnemyPick = null;
     pendingAllyPick = null;
     clearDotEffects(fieldParty);
@@ -1594,6 +1600,7 @@ function escapeBattle() {
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   blog("残った仲間全員が戦闘から逃げ延びた。");
   battle = null;
+  saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
   pendingEnemyPick = null;
   pendingAllyPick = null;
   clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
@@ -1632,6 +1639,8 @@ function defeat() {
     stopAmbientBgm();
     stopCoastAreaBgm();
     battle = null;
+    clearExpeditionSnapshot(); // 全滅で遠征終了。リロードしても町スタートに戻る
+    saveState();
     toggleTimeOfDay();
     bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
     playDefeatBanner(() => {

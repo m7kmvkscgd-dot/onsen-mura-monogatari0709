@@ -250,6 +250,9 @@ function loadState() {
 // __allies/__enemyAllies(かばう連携/貫き矢がengine.js側から他の味方/敵を参照するための自己参照。
 // fieldParty自身を指すため循環参照になる)はJSON.stringifyできないので、保存対象から除外する
 function saveState() {
+  // 遠征中ならスナップショットをstate.expeditionへ反映してから保存する(リロード再開用。
+  // dungeon.js読み込み前にsaveStateが呼ばれる可能性に備えてtypeofで存在確認する)
+  if (typeof collectExpeditionSnapshot === "function") collectExpeditionSnapshot();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state, (key, value) => (key === "__allies" || key === "__enemyAllies") ? undefined : value));
 }
 

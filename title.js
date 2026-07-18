@@ -293,6 +293,9 @@ document.getElementById("titleStartBtn").onclick = () => {
 document.getElementById("titleContinueBtn").onclick = () => {
   if (!titleHasSave()) return;
   playSfx("select");
+  // 遠征の途中でリロードされたセーブなら、町ではなく探索のその場から再開する
+  // (以前は常に町へ戻れてしまい、危険になったら更新で無傷離脱できるパーマデス回避の穴だった)
+  if (state.expedition && state.expedition.active && resumeExpeditionFromSave()) return;
   renderTown();
 };
 
