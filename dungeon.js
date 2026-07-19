@@ -1,5 +1,14 @@
 // ============ dungeon.js: 深淵の森/海岸探索(進む・進路選択・エンカウント・瀕死救出・帰還) ============
 // ============ ダンジョン ============
+// 海の村/山伏の里から「元来た道を歩いて戻る」場合の特別な帰還モード(2026-07-19)。
+// 通常の帰還(オート帰還、0階層に着くまで無操作で進み続ける)とは違い、こちらは普通の
+// 探索と同じく1回のボタン操作で1階層だけ進む(ユーザー指示: 「急に帰還のオートモードが
+// 始まるのはおかしい、あくまで進むじゃないと」)。stageEntryStackが1回popされる
+// (=村の直前のステージまで戻る)たびに自動的に解除される。有効な間は里に戻るボタンが
+// 「(村名)に戻る」に変わり、押すとその場で村へ引き返せる(オート帰還の確認モーダルは出さない)
+let manualRetreatMode = false;
+let manualRetreatHomeVillage = null; // "umimura" | "yamabushi" など、引き返す先の村のcurrentStage名
+const VILLAGE_STAGE_DISPLAY_NAME = { umimura: "海の村", yamabushi: "山伏の里" };
 let currentFloor = 0;
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林) | "shugendo"(修験道) | "yama"(山)。
 // forest/coastは町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効。それ以外は
@@ -282,9 +291,18 @@ function renderDungeon() {
   // 探索用BGMへ上書きし直さない(isBossBgmActive、shouldKeepBossBgmOnFleeと同じ仕組み)
   if (currentStage === "coast" && !isBossBgmActive()) playExplorationAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
-  document.getElementById("advanceBtn").textContent = retreating ? "帰還" : "進む";
-  document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating);
-  document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
+  // 村からの手動帰還中(manualRetreatMode)は、通常の「帰還」ラベルではなく引き続き「進む」の
+  // ままにする(ユーザー指示: あくまで進むという操作感のまま)。里に戻るボタンも隠さず、
+  // 「(村名)に戻る」に差し替えてその場で村へ引き返せるようにする
+  document.getElementById("advanceBtn").textContent = (retreating && !manualRetreatMode) ? "帰還" : "進む";
+  document.getElementById("advanceBtn").classList.toggle("retreat-active", retreating && !manualRetreatMode);
+  if (manualRetreatMode) {
+    document.getElementById("retreatBtn").style.display = "";
+    document.getElementById("retreatBtn").textContent = `${VILLAGE_STAGE_DISPLAY_NAME[manualRetreatHomeVillage] || "村"}に戻る`;
+  } else {
+    document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
+    document.getElementById("retreatBtn").textContent = "里に戻る";
+  }
   // 進む/里に戻るのdisabledは、進路選択(showPathChoice)や瀕死アラート(showCriticalAlert)、
   // 移動演出(playDungeonMoveTransition)など複数箇所が個別にtrue/falseを設定する分散管理になっており、
   // 稀にdisabled=trueのまま解除されずに残ってしまうと次の遠征に持ち越されて「進む/里に戻るが
@@ -726,7 +744,25 @@ document.getElementById("screen-dungeon").addEventListener("pointerdown", () => 
 
 // 「里に戻る」を押すと、確認後すぐにオート帰還が始まる(以後は0階層に着くまで無操作で進み続ける。
 // 戦闘/財宝発見/茶屋/瀕死発見が起きた時と、任意のタイミングでの画面タップだけが一時停止のきっかけになる)
+// 村からの手動帰還中(manualRetreatMode)は、確認モーダルを挟まずその場で村へ引き返す
+// (ユーザー指示、2026-07-19: 「帰還するを押したら海の村に戻る」)
+function returnToManualRetreatVillage() {
+  stageEntryStack.push({ stage: currentStage, floor: currentFloor });
+  retreating = false;
+  const village = manualRetreatHomeVillage;
+  manualRetreatMode = false;
+  manualRetreatHomeVillage = null;
+  currentStage = village;
+  currentFloor = 1;
+  saveState();
+  if (village === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
+  else if (village === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
+}
 document.getElementById("retreatBtn").onclick = () => {
+  if (manualRetreatMode) {
+    returnToManualRetreatVillage();
+    return;
+  }
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     showInfoModal("行動できる仲間がいません");
     return;
@@ -820,6 +856,13 @@ function moveOneFloor(pathBias, enterTeahouse) {
       const prev = stageEntryStack.pop();
       currentStage = prev.stage;
       currentFloor = prev.floor;
+      // 村からの手動帰還中(manualRetreatMode)は、1回popした時点で「村の直前のステージまで
+      // 戻ってきた」=目的地に到着したとみなし、以後は通常の探索(自由に進む/オート帰還)に戻す
+      if (manualRetreatMode) {
+        manualRetreatMode = false;
+        manualRetreatHomeVillage = null;
+        retreating = false;
+      }
     }
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
@@ -1011,7 +1054,13 @@ document.getElementById("advanceBtn").onclick = () => {
     return;
   }
   const targetFloor = retreating ? currentFloor - 1 : currentFloor + 1;
-  // 帰還中(retreating)は、一時停止していたオート帰還を再開するだけ(茶屋の選択肢や割り込み処理は
+  // 村からの手動帰還中(manualRetreatMode)は、オート帰還を再開せず、普通の探索と同じく
+  // 1回のボタン操作で1階層だけ進める(ユーザー指示、2026-07-19)
+  if (retreating && manualRetreatMode) {
+    playDungeonMoveTransition(() => moveOneFloor(null));
+    return;
+  }
+  // 通常の帰還中(retreating)は、一時停止していたオート帰還を再開するだけ(茶屋の選択肢や割り込み処理は
   // すべてrunAutoRetreatTick/performAutoRetreatFloorMove側で扱う)
   if (retreating) {
     startAutoRetreat();
@@ -1347,8 +1396,10 @@ const BAMBOO_MAX_FLOOR = 10; // 光る竹林(仮。最深部で山伏の里(村)
 const SHUGENDO_MAX_FLOOR = 10; // 修験道(仮)
 const YAMA_MAX_FLOOR = 20; // 山(仮。長めのエリア想定のため他より多め。前半/後半で背景を切り替える(yamaBgSetForCurrentState参照))
 const YAMA_STAGE2_FLOOR = 11; // この階から山ステージ2の背景に切り替わる
+// 海岸(2026-07-19、ユーザー指示で既存の海岸ステージを15層に縮めて海の村からの出発先として使う)
+const COAST_MAX_FLOOR = 15;
 const STAGE_CHAIN_NEXT = { cave: "ruins", ruins: "ruinsforest", valley: "bamboo", shugendo: "yama" };
-const STAGE_CHAIN_MAX = { cave: CAVE_MAX_FLOOR, ruins: RUINS_MAX_FLOOR, gate: GATE_MAX_FLOOR, castle: CASTLE_MAX_FLOOR, ruinsforest: RUINSFOREST_MAX_FLOOR, valley: VALLEY_MAX_FLOOR, bamboo: BAMBOO_MAX_FLOOR, shugendo: SHUGENDO_MAX_FLOOR, yama: YAMA_MAX_FLOOR };
+const STAGE_CHAIN_MAX = { cave: CAVE_MAX_FLOOR, ruins: RUINS_MAX_FLOOR, gate: GATE_MAX_FLOOR, castle: CASTLE_MAX_FLOOR, ruinsforest: RUINSFOREST_MAX_FLOOR, valley: VALLEY_MAX_FLOOR, bamboo: BAMBOO_MAX_FLOOR, shugendo: SHUGENDO_MAX_FLOOR, yama: YAMA_MAX_FLOOR, coast: COAST_MAX_FLOOR };
 const STAGE_CHAIN_ENTER_LOG = { cave: "🏚️廃城下町へ足を踏み入れた。", ruins: "🌲森が少しだけ戻ってきた。", valley: "🎋光る竹林へ足を踏み入れた。", shugendo: "⛰️山へ足を踏み入れた。" };
 const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
 function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, offerValleyFork, offerCastleFork) {

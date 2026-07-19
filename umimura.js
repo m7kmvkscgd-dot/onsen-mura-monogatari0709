@@ -55,26 +55,43 @@ function arriveAtUmiMura() {
 
 document.getElementById("umimuraYadoBtn").onclick = () => { renderUmiYado(); showScreen("screen-umiyado"); };
 document.getElementById("umimuraOnsenBtn").onclick = () => { renderUmiOnsen(); showScreen("screen-umionsen"); };
-// 「温泉村へ帰る」: stageEntryStackを1つpopして直前地点(廃城下町)へ戻し、そのまま既存の
-// 帰還カスケード(moveOneFloor内のstageEntryStack pop処理)に合流させる。海の村自体は
-// 「1階層だけの中継ステージ」として扱っているため、ここでのpopは他のステージと同じ形になる
+// 「出発する」: 廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、
+// 新規ルート)の2択(ユーザー指示、2026-07-19)。
+// 「廃城下町へ」はオート帰還ではなく、普通の探索と同じ1階層ずつの手動歩行にする
+// (manualRetreatMode、advanceBtn.onclick/renderDungeon側で挙動を分岐)。海の村自体は
+// 「1階層だけの中継ステージ」として扱っているため、stageEntryStackのpopは他のステージと同じ形になる
 document.getElementById("umimuraLeaveBtn").onclick = () => {
-  showConfirmModal("温泉村へ帰りますか？(廃城下町・洞窟・森を通って歩いて帰ります)", [
+  showConfirmModal("どちらへ出発しますか？", [
     {
-      label: "はい", className: "big danger",
+      label: "廃城下町へ(歩いて戻る)", className: "big primary",
       onClick: () => {
-        retreating = true;
         const prev = stageEntryStack.pop();
         currentStage = prev.stage;
         currentFloor = prev.floor;
-        dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+        retreating = true;
+        manualRetreatMode = true;
+        manualRetreatHomeVillage = "umimura";
+        dlog("引き返すことにした。ここから階層を下って廃城下町へ戻る。");
         saveState();
         showScreen("screen-dungeon");
         renderDungeon();
-        startAutoRetreat();
       },
     },
-    { label: "いいえ", className: "big" },
+    {
+      label: "海岸へ(新ルート)", className: "big primary",
+      onClick: () => {
+        stageEntryStack.push({ stage: "umimura", floor: 1 });
+        currentStage = "coast";
+        currentFloor = 1;
+        advanceFatigue(fieldParty);
+        saveState();
+        recordMaxFloorReached();
+        dlog("🌊海岸へ足を踏み入れた。");
+        showScreen("screen-dungeon");
+        renderDungeon();
+      },
+    },
+    { label: "やめる", className: "big" },
   ]);
 };
 
@@ -166,22 +183,24 @@ document.getElementById("yamabushiContinueBtn").onclick = () => {
   showScreen("screen-dungeon");
   renderDungeon();
 };
-// 「温泉村へ帰る」: 海の村と同じく、直前地点(光る竹林)へstageEntryStackを1つpopして戻し、
-// 既存の帰還カスケードへ合流させる
+// 「光る竹林へ」: 海の村と同じく、直前地点(光る竹林)へstageEntryStackを1つpopして戻すが、
+// オート帰還ではなく普通の探索と同じ1階層ずつの手動歩行にする(manualRetreatMode、
+// ユーザー指示2026-07-19)
 document.getElementById("yamabushiLeaveBtn").onclick = () => {
-  showConfirmModal("温泉村へ帰りますか？(光る竹林・渓流・森を通って歩いて帰ります)", [
+  showConfirmModal("光る竹林へ引き返しますか？(そこから渓流・森を通って歩いて帰ります)", [
     {
       label: "はい", className: "big danger",
       onClick: () => {
-        retreating = true;
         const prev = stageEntryStack.pop();
         currentStage = prev.stage;
         currentFloor = prev.floor;
-        dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+        retreating = true;
+        manualRetreatMode = true;
+        manualRetreatHomeVillage = "yamabushi";
+        dlog("引き返すことにした。ここから階層を下って光る竹林へ戻る。");
         saveState();
         showScreen("screen-dungeon");
         renderDungeon();
-        startAutoRetreat();
       },
     },
     { label: "いいえ", className: "big" },
