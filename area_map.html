@@ -130,6 +130,31 @@
     margin: 0 0 40px 32px; max-width: 56ch; font-size: 0.83rem; color: var(--caption);
     border-top: 1px dashed var(--border); padding-top: 16px;
   }
+
+  /* ============ village rules ============ */
+  .section-title {
+    font-family: var(--font-display); font-size: 1.15rem; font-weight: 600;
+    margin: 0 0 6px; text-wrap: balance;
+  }
+  .section-lede { font-size: 0.85rem; color: var(--caption); margin: 0 0 20px; max-width: 60ch; }
+  .rule-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .rule-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 0.85rem;
+  }
+  .rule-item b { color: var(--gold); }
+
+  .table-scroll { overflow-x: auto; margin-bottom: 12px; }
+  table.facility-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 480px; }
+  table.facility-table th, table.facility-table td {
+    text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border);
+  }
+  table.facility-table th { color: var(--caption); font-weight: 600; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  table.facility-table td.center, table.facility-table th.center { text-align: center; }
+  .yes { color: var(--forest); font-weight: 700; }
+  .no { color: var(--caption); }
+  .unique { color: var(--pending); font-weight: 700; }
+  .table-note { font-size: 0.76rem; color: var(--caption); margin: 0 0 40px; }
   .merge-note b { color: var(--pending); font-weight: 600; }
 
   footer {
@@ -223,12 +248,39 @@
     <b>海の村を発見した後</b>：温泉村の出発画面に「渡し船で海の村へ」が追加される。これは町↔町の移動だけで、ダンジョンの深さは一切スキップしない(救出・危険度には無関係)。海の村からは<b>海岸(1〜10層、既存のまま維持)</b>を探索できる ―― これが海岸への唯一の入り口になる。
   </div>
 
+  <div class="section-title">海の村の運用ルール</div>
+  <p class="section-lede">「拠点が2つに増えるとどうなるか」を詰めた結果のルール。名簿・経済は共通のまま、村の個性(温泉村固有の施設)だけは分ける。</p>
+
+  <div class="rule-list">
+    <div class="rule-item"><b>名簿・所持金は完全共通</b>。海の村専用の名簿枠は作らない。控えの仲間が今どちらの村にいるかは気にしない(今の森/海岸と同じ抽象化)。</div>
+    <div class="rule-item"><b>「今どちらの村にいるか」だけを1つの状態として持つ</b>。渡し船で行き来するたびに切り替わり、着いた村を拠点にして何度でも滞在・出発できる(遠征のたびに温泉村へ強制送還されたりしない)。</div>
+    <div class="rule-item"><b>職業解禁は完全にアカウント単位</b>。神社で僧侶を解禁したら、以後はどちらの村の宿屋からでも僧侶を雇える。「解禁の建物」と「その建物の専用画面」は別物として扱う。</div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="facility-table">
+      <thead>
+        <tr><th>施設</th><th class="center">温泉村</th><th class="center">海の村</th><th>扱い</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>宿屋(HP/MP/ストレス回復)</td><td class="center yes">◯</td><td class="center yes">◯</td><td>基本機能。海の村も最初から自前で持ってる(建てる必要なし)</td></tr>
+        <tr><td>道具屋</td><td class="center yes">◯</td><td class="center yes">◯</td><td>同上、基本機能として両方にある</td></tr>
+        <tr><td>鍛冶屋(装備強化)</td><td class="center yes">◯</td><td class="center yes">◯</td><td>「村の設備」ではなく「持ち歩いてる装備の質」なので場所を問わず共通反映</td></tr>
+        <tr><td>温泉(HPバフ施設)</td><td class="center yes">◯</td><td class="center no">✕</td><td class="unique">温泉村固有。海には無い(海の村が欲しければ「潮湯」等の別物を新設)</td></tr>
+        <tr><td>奉行所(討伐依頼)</td><td class="center yes">◯</td><td class="center no">✕</td><td class="unique">温泉村固有のまま</td></tr>
+        <tr><td>神社(おみくじ・お守り)</td><td class="center yes">◯</td><td class="center no">✕</td><td class="unique">温泉村固有。海の村には竜宮/海神様的な別物を将来検討する余地あり</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="table-note">◯=利用できる　✕=無い(その村では利用できない)</p>
+
   <footer>
     <h2>後回しでいいこと</h2>
     <ul>
       <li>沼地・廃城下町の道選び(進路の名前)・敵の配置・強さ調整</li>
-      <li>古城の固有ボスの詳細</li>
+      <li>古城の固有ボスの詳細(古城がこの筋の最終地点とは限らない、続きの余地は残す)</li>
       <li>瓦礫を爆破するアイテムの仕様(廃止済みの「爆弾」を専用ギミックとして復活させるか等)</li>
+      <li>海の村固有施設の中身(温泉の代わりの「潮湯」、神社の代わりの海神様系施設など)</li>
       <li>雪山(4つ目の入口候補、これは別途ユーザー自身が検討中)</li>
     </ul>
   </footer>
