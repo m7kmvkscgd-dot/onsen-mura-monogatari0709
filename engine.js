@@ -1105,6 +1105,12 @@ function instantiateEnemyById(id) {
   const pick = ENEMIES[id];
   return pick ? instantiateEnemy(pick) : null;
 }
+// 新規ステージ(廃城下町/門/古城等)は敵データを実装するまでの間、戦闘発生率を強制的に0にするための
+// 判定用ヘルパー(dungeon.jsのrollEncounter参照)。ENEMIESに該当stageの敵が1体でも登録されたら
+// 自動的に通常通り戦闘が発生するようになる(このヘルパー自体の変更は不要)
+function stageHasEnemies(stage) {
+  return Object.values(ENEMIES).some((e) => (e.stage || "forest") === (stage || "forest"));
+}
 function pickEnemyForFloor(floor, mode, stage) {
   const eligible = Object.values(ENEMIES).filter((e) => {
     if ((e.stage || "forest") !== (stage || "forest")) return false;

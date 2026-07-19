@@ -10,6 +10,12 @@ const BG_SETS = {
   // 洞窟の入口/出口だけ、森や海岸と同じく時間帯で絵が変わる(1層目=森との境目、行きは入口/帰りは出口を使う)
   caveEntrance: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
   caveExit: { dawn: "assets/bg/cave_exit_dawn.jpg", asa: "assets/bg/cave_exit_asa.jpg", day: "assets/bg/cave_exit_day.jpg", dusk: "assets/bg/cave_exit_dusk.jpg", night: "assets/bg/cave_exit_night.jpg" },
+  // 廃城下町/門/古城(2026-07-19、下地の歩行テスト用)。まだ専用の背景画像が無いため、暫定的に
+  // 既存画像を流用している(TODO: bg_prompt_generator.htmlで生成した ruins_*.jpg / gate_*.jpg /
+  // castle_*.jpg ができ次第、ここのパスを差し替える)
+  ruins: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
+  gate: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
+  castle: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
@@ -22,13 +28,22 @@ function caveBgSetForCurrentState() {
   const url = currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
   return { dawn: url, asa: url, day: url, dusk: url, night: url };
 }
-// 探索/戦闘の背景・野営背景は森/海岸/洞窟のどのステージ中かで出し分ける
+// 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城のどのステージ中かで出し分ける
 function currentAreaBgSet() {
   if (currentStage === "coast") return BG_SETS.coast;
   if (currentStage === "cave") return caveBgSetForCurrentState();
+  if (currentStage === "ruins") return BG_SETS.ruins;
+  if (currentStage === "gate") return BG_SETS.gate;
+  if (currentStage === "castle") return BG_SETS.castle;
   return BG_SETS.dungeon;
 }
-function currentCampBgUrl() { return currentStage === "coast" ? "assets/bg/coast_camp.jpg" : currentStage === "cave" ? CAVE_CAMP_BG_URL : "assets/bg/camp_night.jpg"; }
+function currentCampBgUrl() {
+  if (currentStage === "coast") return "assets/bg/coast_camp.jpg";
+  if (currentStage === "cave") return CAVE_CAMP_BG_URL;
+  // 廃城下町/門/古城もbg_prompt_generator.htmlで野営画像を作る想定だが、まだ無いため暫定的に洞窟野営を流用
+  if (currentStage === "ruins" || currentStage === "gate" || currentStage === "castle") return CAVE_CAMP_BG_URL;
+  return "assets/bg/camp_night.jpg";
+}
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
 // 宿屋の4枚だけを先読みしておく。反応速度優先のため、対象は宿泊演出に必要な最小限(4枚、以前は
 // 町/森/温泉も含めた十数枚だった)に絞り、かつrequestIdleCallbackでブラウザが本当に暇な時だけ
