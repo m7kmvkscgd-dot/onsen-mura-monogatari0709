@@ -80,7 +80,7 @@
   <header>
     <div class="eyebrow">Implementation Status</div>
     <h1>実装状況マップ</h1>
-    <p class="lede">2026-07-19時点。「実装済み」は歩ける・画面が動く状態(敵の有無は問わない)。世界観の設計自体はarea_map.html/world_map.htmlを参照。</p>
+    <p class="lede">2026-07-19時点(手描き地図の整理版に合わせて更新)。「実装済み」は歩ける・画面が動く状態(敵の有無は問わない)。世界観の設計自体はarea_map.html/world_map.htmlを参照。</p>
   </header>
 
   <div class="legend">
@@ -92,8 +92,8 @@
   <div class="summary-box">
     <b>現時点で歩き通せる範囲</b>
     <ul>
-      <li>温泉村 → 森 → 洞窟 → 廃城下町(6層目で門/古城方向は鍵で封鎖) → 少し森 → 海の村</li>
-      <li>温泉村 → 森 → 渓流 → 光る竹林 → 山伏の里 → 修験道 → 山</li>
+      <li>温泉村 → 森 → 洞窟 → 少し森(3層) → ここで分岐: 廃城下町(→門で封鎖) / 海の村 → 海岸</li>
+      <li>温泉村 → 森 → 渓流 → 光る竹林 → 山伏の里 → 修験道 → 山(→山ステージ2)</li>
     </ul>
   </div>
 
@@ -108,10 +108,6 @@
         <div class="stop-head"><span class="stop-name">深淵の森</span><span class="tag done">実装済み</span></div>
         <div class="stop-desc">敵・進路選択・茶屋すべて実装済み。10層目に洞窟への、21層目(20層目の次)に渓流への分かれ道がある。</div>
       </div>
-      <div class="stop todo">
-        <div class="stop-head"><span class="stop-name">海岸</span><span class="tag todo">未接続</span></div>
-        <div class="stop-desc">ダンジョンデータ・敵は既存のまま残っているが、温泉村からの直接出発ボタンは廃止済み(2026-07-19)。今後は海の村→岸壁の先から辿り着く経路に変更予定で、そのルートができるまでは未接続。</div>
-      </div>
     </div>
   </div>
 
@@ -123,17 +119,21 @@
         <div class="stop-head"><span class="stop-name">洞窟(1〜15層)</span><span class="tag done">実装済み</span></div>
         <div class="stop-desc">専用の敵11種・背景(浅い層/深い層)すべて実装済み。</div>
       </div>
-      <div class="stop done">
-        <div class="stop-head"><span class="stop-name">廃城下町(1〜12層)</span><span class="tag wip">一部実装</span></div>
-        <div class="stop-desc">背景(昼夜5種+野営)・進路選択は実装済み。敵データはまだ無く戦闘は発生しない。6層目に古城方向(門)への分かれ道がある。</div>
+      <div class="stop wip">
+        <div class="stop-head"><span class="stop-name">少し森(1〜3層)</span><span class="tag wip">一部実装</span></div>
+        <div class="stop-desc">洞窟を抜けた先に少しだけ現れる森。既存の深淵の森の背景・進路選択をそのまま流用。最深部で「廃城下町へ」/「海の村へ」の2択に分かれる(手描き地図の整理版、2026-07-19)。</div>
       </div>
-      <div class="fork-label">6層目で二手に分かれる(選択式)</div>
+      <div class="fork-label">最深部で二手に分かれる(選択式)</div>
       <div class="fork">
         <div>
-          <div class="fork-branch-title">古城方向ルート</div>
+          <div class="fork-branch-title">廃城下町ルート</div>
+          <div class="stop wip">
+            <div class="stop-head"><span class="stop-name">廃城下町(1〜12層)</span><span class="tag wip">一部実装</span></div>
+            <div class="stop-desc">背景(昼夜5種+野営)・進路選択は実装済み。敵データはまだ無く戦闘は発生しない。内部に分岐は無く、最深部で自動的に門へ突き当たる。</div>
+          </div>
           <div class="stop wip">
             <div class="stop-head"><span class="stop-name">門(1層)</span><span class="tag todo">鍵で封鎖</span></div>
-            <div class="stop-desc">背景は廃城下町を暫定流用。古城の鍵が無いと通れない固定の行き止まり(鍵の入手経路は幽霊船を検討中、未実装)。</div>
+            <div class="stop-desc">背景は廃城下町を暫定流用。古城の鍵が無いと通れない固定の行き止まり(鍵の入手経路として幽霊船を想定、未実装)。</div>
           </div>
           <div class="stop todo">
             <div class="stop-head"><span class="stop-name">古城</span><span class="tag todo">未到達</span></div>
@@ -141,18 +141,18 @@
           </div>
         </div>
         <div>
-          <div class="fork-branch-title">そのまま進むルート</div>
-          <div class="stop wip">
-            <div class="stop-head"><span class="stop-name">少し森(1〜4層)</span><span class="tag wip">一部実装</span></div>
-            <div class="stop-desc">廃城下町を抜けた先に少しだけ現れる森。既存の深淵の森の背景・進路選択をそのまま流用。</div>
-          </div>
+          <div class="fork-branch-title">海の村ルート</div>
           <div class="stop done">
             <div class="stop-head"><span class="stop-name">海の村</span><span class="tag done">実装済み</span></div>
             <div class="stop-desc">村本体+潮風宿(宿泊演出あり)+湯乃里温泉(簡易版)。第二の町として機能する。</div>
           </div>
+          <div class="stop done">
+            <div class="stop-head"><span class="stop-name">海岸(1〜15層)</span><span class="tag done">実装済み</span></div>
+            <div class="stop-desc">既存の海岸ダンジョン(敵・進路選択とも既存のまま)を15層に縮めて、海の村からの出発先として再利用。</div>
+          </div>
           <div class="stop todo">
-            <div class="stop-head"><span class="stop-name">岸壁 以降</span><span class="tag todo">未実装</span></div>
-            <div class="stop-desc">設計のみ。海の村からの継続ボタンは今回未設置。</div>
+            <div class="stop-head"><span class="stop-name">岸壁</span><span class="tag todo">未実装</span></div>
+            <div class="stop-desc">設計のみ。この先で「鍾乳洞」と「幽霊船」に分かれる予定(幽霊船=門の鍵の入手先案)。</div>
           </div>
         </div>
       </div>
@@ -173,18 +173,18 @@
       </div>
       <div class="stop done">
         <div class="stop-head"><span class="stop-name">山伏の里</span><span class="tag done">実装済み</span></div>
-        <div class="stop-desc">村本体+雲海の湯(簡易版)。「修験道へ進む」ボタンで先へ継続できる(宿はまだ未実装)。</div>
+        <div class="stop-desc">村本体+雲海の湯(簡易版)。この先「修験道」と「廃寺院」に分かれる予定だが、現状「修験道へ進む」ボタンのみ実装済み(宿はまだ未実装)。</div>
       </div>
       <div class="stop wip">
         <div class="stop-head"><span class="stop-name">修験道(1〜10層)</span><span class="tag wip">一部実装</span></div>
         <div class="stop-desc">背景・進路選択は実装済み。敵データなし。</div>
       </div>
       <div class="stop wip">
-        <div class="stop-head"><span class="stop-name">山(1〜20層)</span><span class="tag wip">一部実装</span></div>
-        <div class="stop-desc">11層目から背景が後半版(山ステージ2)に自動切り替わる。敵データなし。現時点の最深部(この先の山奥の里は村画面が必要なため足止め)。</div>
+        <div class="stop-head"><span class="stop-name">山(1〜20層)→山ステージ2</span><span class="tag wip">一部実装</span></div>
+        <div class="stop-desc">11層目から背景が後半版(山ステージ2)に自動切り替わる。敵データなし。現時点の最深部(この先の山奥の村は村画面が必要なため足止め)。</div>
       </div>
       <div class="stop todo">
-        <div class="stop-head"><span class="stop-name">山奥の里 / 雪山</span><span class="tag todo">未実装</span></div>
+        <div class="stop-head"><span class="stop-name">山奥の村 → 雪山</span><span class="tag todo">未実装</span></div>
         <div class="stop-desc">設計のみ。雪山はユーザー担当。</div>
       </div>
     </div>
@@ -194,8 +194,8 @@
     <div class="branch-title"><span class="bar"></span>山伏の里からのもう一方(未実装)</div>
     <div class="line">
       <div class="stop todo">
-        <div class="stop-head"><span class="stop-name">廃寺院 → 千本鳥居 / 五重塔</span><span class="tag todo">未実装</span></div>
-        <div class="stop-desc">設計のみ。敵デザイン仕様書は作成済み(生成テキストフォルダ参照)。</div>
+        <div class="stop-head"><span class="stop-name">廃寺院 → 千本鳥居</span><span class="tag todo">未実装</span></div>
+        <div class="stop-desc">設計のみ。五重塔は作業量軽減のため計画から削除(2026-07-19)。敵デザイン仕様書は作成済み(生成テキストフォルダ参照)。</div>
       </div>
     </div>
   </div>
