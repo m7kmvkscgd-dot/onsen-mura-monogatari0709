@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 ― 世界地図(妄想込み)</title>
+<style>
+  :root {
+    --paper: #e9dfc6; --paper-2: #ded1ad; --ink: #4a3826; --ink-soft: #6b5638;
+    --gold: #a97d2e; --confirmed: #6b5638; --proposed: #a04a2f; --dream: #5b4a86;
+    --forest: #52753f; --cave: #6d7580; --swamp: #6a5789; --ruins: #8a6a3d;
+    --castle: #4a3f52; --sea: #2f7873; --village: #b07a2e; --snow: #6f8fa8; --dragon: #1f5c66;
+    --font-display: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+    --font-body: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --paper: #221c14; --paper-2: #2c2419; --ink: #e9dfc6; --ink-soft: #cbbf9e;
+    --gold: #d7b66f; --confirmed: #cbbf9e; --proposed: #e2825c; --dream: #a897d8;
+    --forest: #7fa868; --cave: #9aa3ac; --swamp: #a58ecf; --ruins: #c79e5f;
+    --castle: #a99bc4; --sea: #58b3ac; --village: #e0aa4f; --snow: #9ec3dd; --dragon: #4fa5b0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #221c14; --paper-2: #2c2419; --ink: #e9dfc6; --ink-soft: #cbbf9e;
+      --gold: #d7b66f; --confirmed: #cbbf9e; --proposed: #e2825c; --dream: #a897d8;
+      --forest: #7fa868; --cave: #9aa3ac; --swamp: #a58ecf; --ruins: #c79e5f;
+      --castle: #a99bc4; --sea: #58b3ac; --village: #e0aa4f; --snow: #9ec3dd; --dragon: #4fa5b0;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(ellipse at 30% 10%, var(--paper-2), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, var(--paper-2), transparent 55%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    padding: 40px 16px 80px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .eyebrow { font-size: 0.7rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+  h1 {
+    font-family: var(--font-display); font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700;
+    margin: 0 0 8px; text-wrap: balance; letter-spacing: 0.03em;
+  }
+  .lede { color: var(--ink-soft); font-size: 0.92rem; max-width: 58ch; margin: 0 0 28px; }
+
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.76rem; color: var(--ink-soft);
+    margin-bottom: 22px; padding: 10px 14px; border: 1px solid var(--ink-soft); border-radius: 8px;
+    background: color-mix(in srgb, var(--paper) 70%, transparent);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-line { width: 20px; height: 2px; }
+  .legend-line.confirmed { background: var(--confirmed); }
+  .legend-line.proposed { background: repeating-linear-gradient(90deg, var(--proposed) 0 5px, transparent 5px 9px); }
+  .legend-line.dream { background: repeating-linear-gradient(90deg, var(--dream) 0 3px, transparent 3px 6px); }
+
+  .map-frame {
+    position: relative; border: 2px solid var(--ink); border-radius: 4px;
+    box-shadow: 0 0 0 6px var(--paper), 0 0 0 7px var(--ink-soft), 0 10px 30px rgba(0,0,0,0.25);
+    margin-bottom: 34px; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--paper) 85%, var(--gold) 15%), var(--paper) 75%);
+  }
+  svg { display: block; width: 100%; height: auto; }
+  .region-label {
+    font-family: var(--font-display); font-weight: 700; fill: var(--ink);
+    paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round;
+  }
+  .region-sub { font-family: var(--font-body); fill: var(--ink-soft); font-size: 10px; }
+  .path-line { fill: none; stroke-width: 2.5; }
+  .path-line.confirmed { stroke: var(--confirmed); }
+  .path-line.proposed { stroke: var(--proposed); stroke-dasharray: 6 5; }
+  .path-line.dream { stroke: var(--dream); stroke-dasharray: 2 5; }
+  .node { stroke: var(--paper); stroke-width: 3; }
+  .node.hub { stroke: var(--gold); stroke-width: 3.5; }
+
+  .section-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; margin: 30px 0 6px; }
+  .region-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+  .region-card {
+    background: color-mix(in srgb, var(--paper) 60%, transparent); border: 1px solid var(--ink-soft);
+    border-radius: 8px; padding: 10px 14px; font-size: 0.85rem;
+  }
+  .region-card .name { font-weight: 700; margin-right: 8px; }
+  .region-card .tag {
+    font-size: 0.64rem; padding: 1px 7px; border-radius: 10px; border: 1px solid; letter-spacing: 0.03em;
+  }
+  .tag.confirmed { color: var(--confirmed); border-color: var(--confirmed); }
+  .tag.proposed { color: var(--proposed); border-color: var(--proposed); }
+  .tag.dream { color: var(--dream); border-color: var(--dream); }
+  .region-card p { margin: 6px 0 0; color: var(--ink-soft); }
+
+  footer { border-top: 1px dashed var(--ink-soft); padding-top: 16px; margin-top: 30px; font-size: 0.8rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Onsen-Mura Monogatari — 妄想世界地図</div>
+    <h1>世界地図(妄想込み)</h1>
+    <p class="lede">「厳しい道を進んだ先で新しい村を見つけ、そこがまた次の世界に繋がっていく」っていう今回のノリを、俺なりに地図として広げてみた。実線は今まで確定した話、赤い破線は今回そのノリで考えた新しい提案、紫の点線はさらにその先の妄想。</p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-line confirmed"></span>確定済みの道</div>
+    <div class="legend-item"><span class="legend-line proposed"></span>今回の新規提案</div>
+    <div class="legend-item"><span class="legend-line dream"></span>その先の妄想</div>
+  </div>
+
+  <div class="map-frame">
+    <svg viewBox="0 0 720 900" xmlns="http://www.w3.org/2000/svg">
+      <!-- paths (drawn first, under nodes) -->
+      <!-- 温泉村 -> 森 -->
+      <path class="path-line confirmed" d="M 360 820 L 300 700" />
+      <!-- 森 -> 沼地(直進) -->
+      <path class="path-line confirmed" d="M 300 660 L 340 540" />
+      <!-- 沼地 -> 廃城下町 -->
+      <path class="path-line confirmed" d="M 350 500 L 380 400" />
+      <!-- 廃城下町 -> 古城 -->
+      <path class="path-line confirmed" d="M 390 360 L 400 260" />
+      <!-- 森 -> 洞窟(分岐) -->
+      <path class="path-line confirmed" d="M 280 660 L 200 560" />
+      <!-- 洞窟 -> 瓦礫爆破 -> 海の村 -->
+      <path class="path-line confirmed" d="M 190 520 L 140 430" />
+      <path class="path-line confirmed" d="M 130 400 L 120 320" />
+      <!-- 温泉村 <-渡し船-> 海の村 -->
+      <path class="path-line confirmed" d="M 340 800 C 200 700, 130 550, 115 340" stroke-dasharray="1 8" />
+      <!-- 海の村 -> 海岸 -->
+      <path class="path-line confirmed" d="M 115 290 L 110 190" />
+      <!-- 沼地 -> 陰陽師の隠れ里(新規提案) -->
+      <path class="path-line proposed" d="M 380 490 L 500 460" />
+      <!-- 海岸 -> 竜宮城(妄想) -->
+      <path class="path-line dream" d="M 105 150 L 90 70" />
+      <!-- 古城 -> 黄泉(妄想) -->
+      <path class="path-line dream" d="M 400 220 L 420 110" />
+      <!-- 温泉村 -> 雪山(保留、ユーザー検討中につき点線) -->
+      <path class="path-line dream" d="M 400 810 L 560 700" />
+
+      <!-- 温泉村 -->
+      <circle class="node hub" cx="360" cy="830" r="14" fill="var(--gold)" />
+      <text class="region-label" x="380" y="836" font-size="17">温泉村</text>
+      <text class="region-sub" x="380" y="852">全ての始まり</text>
+
+      <!-- 深淵の森 -->
+      <circle class="node" cx="295" cy="690" r="11" fill="var(--forest)" />
+      <text class="region-label" x="230" y="670" font-size="15">深淵の森</text>
+      <text class="region-sub" x="230" y="686">1〜10層のみ</text>
+
+      <!-- 洞窟 -->
+      <circle class="node" cx="185" cy="550" r="10" fill="var(--cave)" />
+      <text class="region-label" x="120" y="530" font-size="14">洞窟</text>
+      <text class="region-sub" x="120" y="546">瓦礫の先が海へ</text>
+
+      <!-- 沼地 -->
+      <circle class="node" cx="345" cy="530" r="10" fill="var(--swamp)" />
+      <text class="region-label" x="358" y="520" font-size="14">沼地</text>
+      <text class="region-sub" x="358" y="536">汽水域</text>
+
+      <!-- 廃城下町 -->
+      <circle class="node" cx="385" cy="390" r="10" fill="var(--ruins)" />
+      <text class="region-label" x="398" y="380" font-size="14">廃城下町</text>
+      <text class="region-sub" x="398" y="396">無人の廃墟</text>
+
+      <!-- 古城 -->
+      <circle class="node" cx="400" cy="245" r="12" fill="var(--castle)" />
+      <text class="region-label" x="415" y="238" font-size="16">古城</text>
+      <text class="region-sub" x="415" y="254">今のところの最奥</text>
+
+      <!-- 海の村 -->
+      <circle class="node hub" cx="115" cy="310" r="12" fill="var(--village)" />
+      <text class="region-label" x="70" y="292" font-size="15">海の村</text>
+      <text class="region-sub" x="60" y="308">渡し船で温泉村と直結</text>
+
+      <!-- 海岸 -->
+      <circle class="node" cx="105" cy="175" r="10" fill="var(--sea)" />
+      <text class="region-label" x="60" y="165" font-size="14">海岸</text>
+      <text class="region-sub" x="30" y="181">1〜10層のみ</text>
+
+      <!-- 陰陽師の隠れ里(新規提案) -->
+      <circle class="node" cx="510" cy="450" r="10" fill="var(--proposed)" />
+      <text class="region-label" x="522" y="443" font-size="14">陰陽師の隠れ里</text>
+      <text class="region-sub" x="522" y="459">沼地の激しい枝道の先</text>
+
+      <!-- 雪山(保留) -->
+      <circle class="node" cx="575" cy="690" r="10" fill="var(--snow)" opacity="0.75" />
+      <text class="region-label" x="588" y="683" font-size="14" opacity="0.75">雪山</text>
+      <text class="region-sub" x="588" y="699">ユーザー検討中</text>
+
+      <!-- 竜宮城(妄想) -->
+      <circle class="node" cx="82" cy="55" r="11" fill="var(--dragon)" />
+      <text class="region-label" x="40" y="42" font-size="15">竜宮城</text>
+      <text class="region-sub" x="15" y="72">海の最も深い場所</text>
+
+      <!-- 黄泉(妄想) -->
+      <circle class="node" cx="425" cy="90" r="11" fill="var(--dream)" />
+      <text class="region-label" x="440" y="82" font-size="15">黄泉</text>
+      <text class="region-sub" x="440" y="98">死者の国、噂だけ先行</text>
+    </svg>
+  </div>
+
+  <div class="section-title">今回新しく提案した場所</div>
+  <div class="region-list">
+    <div class="region-card">
+      <span class="name">陰陽師の隠れ里</span><span class="tag proposed">提案</span>
+      <p>沼地からさらに厳しい枝道を進んだ先にある隠れ里。俗世を離れた陰陽師たちの集落。既存の陰陽師という職業と絡めて、専用の強力な札(スキル・お守り)をここでだけ習得・購入できる、みたいな使い方ができそう。</p>
+    </div>
+  </div>
+
+  <div class="section-title">その先の妄想(まだ何も決まってない、雰囲気だけ)</div>
+  <div class="region-list">
+    <div class="region-card">
+      <span class="name">竜宮城</span><span class="tag dream">妄想</span>
+      <p>海岸のさらに奥、海の底にある宮殿。浦島太郎の竜宮城そのもの。海ルートの本当の最奥として、古城と対になる存在にできそう(陸の滅びた王国 vs 海の永遠の楽園、みたいな対比)。</p>
+    </div>
+    <div class="region-card">
+      <span class="name">黄泉</span><span class="tag dream">妄想</span>
+      <p>古城のさらに奥に囁かれる、死者の国。今の敵に「黄泉の怨霊」がいるのはこの伏線にできる。今すぐ形にする話じゃなく、将来「本当にラスボスの先に何かあるかもしれない」という余韻として地図の端に置いておくだけの位置づけ。</p>
+    </div>
+  </div>
+
+  <footer>
+    温泉村を起点に、厳しい道を進むたびに新しい土地・新しい村が見つかり、それがまた次の道に繋がっていく ―― っていう構造を地図全体に広げてみた。陰陽師の隠れ里以外は完全に俺の妄想なので、気に入らなければ全部無視してもらって大丈夫。
+  </footer>
+</div>
+</body>
+</html>
