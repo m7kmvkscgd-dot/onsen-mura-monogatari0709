@@ -92,7 +92,7 @@
   <div class="summary-box">
     <b>現時点で歩き通せる範囲</b>
     <ul>
-      <li>温泉村 → 森 → 洞窟 → 廃城下町 → (門 → 古城 / 海の村)</li>
+      <li>温泉村 → 森 → 洞窟 → 廃城下町(6層目で門/古城方向は鍵で封鎖) → 少し森 → 海の村</li>
       <li>温泉村 → 森 → 渓流 → 光る竹林 → 山伏の里 → 修験道 → 山</li>
     </ul>
   </div>
@@ -105,8 +105,8 @@
         <div class="stop-desc">町・宿屋・温泉・道具屋・奉行所など、既存の全機能が揃うホーム拠点。</div>
       </div>
       <div class="stop done">
-        <div class="stop-head"><span class="stop-name">深淵の森(1〜10層)</span><span class="tag done">実装済み</span></div>
-        <div class="stop-desc">敵・進路選択・茶屋すべて実装済み。5層目と10層目にそれぞれ分かれ道がある。</div>
+        <div class="stop-head"><span class="stop-name">深淵の森</span><span class="tag done">実装済み</span></div>
+        <div class="stop-desc">敵・進路選択・茶屋すべて実装済み。10層目に洞窟への、21層目(20層目の次)に渓流への分かれ道がある。</div>
       </div>
       <div class="stop todo">
         <div class="stop-head"><span class="stop-name">海岸</span><span class="tag todo">未接続</span></div>
@@ -125,23 +125,27 @@
       </div>
       <div class="stop done">
         <div class="stop-head"><span class="stop-name">廃城下町(1〜12層)</span><span class="tag wip">一部実装</span></div>
-        <div class="stop-desc">背景(昼夜5種+野営)・進路選択は実装済み。敵データはまだ無く戦闘は発生しない。</div>
+        <div class="stop-desc">背景(昼夜5種+野営)・進路選択は実装済み。敵データはまだ無く戦闘は発生しない。6層目に古城方向(門)への分かれ道がある。</div>
       </div>
-      <div class="fork-label">最深部で二手に分かれる(選択式)</div>
+      <div class="fork-label">6層目で二手に分かれる(選択式)</div>
       <div class="fork">
         <div>
-          <div class="fork-branch-title">門ルート</div>
+          <div class="fork-branch-title">古城方向ルート</div>
           <div class="stop wip">
-            <div class="stop-head"><span class="stop-name">門(1層)</span><span class="tag wip">一部実装</span></div>
-            <div class="stop-desc">背景は廃城下町を暫定流用。敵なし。</div>
+            <div class="stop-head"><span class="stop-name">門(1層)</span><span class="tag todo">鍵で封鎖</span></div>
+            <div class="stop-desc">背景は廃城下町を暫定流用。古城の鍵が無いと通れない固定の行き止まり(鍵の入手経路は幽霊船を検討中、未実装)。</div>
           </div>
-          <div class="stop wip">
-            <div class="stop-head"><span class="stop-name">古城(1〜10層)</span><span class="tag wip">一部実装</span></div>
-            <div class="stop-desc">背景実装済み。敵データなし。現時点の最深部(この先は未実装のため足止め)。</div>
+          <div class="stop todo">
+            <div class="stop-head"><span class="stop-name">古城</span><span class="tag todo">未到達</span></div>
+            <div class="stop-desc">背景・進路選択は実装済みだが、門の鍵が無いため現状は実質到達できない。</div>
           </div>
         </div>
         <div>
-          <div class="fork-branch-title">海の村ルート</div>
+          <div class="fork-branch-title">そのまま進むルート</div>
+          <div class="stop wip">
+            <div class="stop-head"><span class="stop-name">少し森(1〜4層)</span><span class="tag wip">一部実装</span></div>
+            <div class="stop-desc">廃城下町を抜けた先に少しだけ現れる森。既存の深淵の森の背景・進路選択をそのまま流用。</div>
+          </div>
           <div class="stop done">
             <div class="stop-head"><span class="stop-name">海の村</span><span class="tag done">実装済み</span></div>
             <div class="stop-desc">村本体+潮風宿(宿泊演出あり)+湯乃里温泉(簡易版)。第二の町として機能する。</div>
@@ -156,7 +160,7 @@
   </div>
 
   <div class="branch">
-    <div class="branch-title"><span class="bar"></span>渓流ルート(森5層目の分かれ道)</div>
+    <div class="branch-title"><span class="bar"></span>渓流ルート(森21層目の分かれ道)</div>
     <div class="branch-sub">選択式の分岐。洞窟ルートとは別の階に分けて3択化を回避してある</div>
     <div class="line">
       <div class="stop wip">
