@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>背景イラストプロンプト生成</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
+    --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --ink: #ece6d8; --ink-soft: #a8a196;
+    --accent: #c95d54; --ok: #6fa876;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    padding-bottom: 3rem;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: 1px solid var(--card-border);
+    padding: 0.8rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  }
+  header h1 { font-size: 1.05rem; margin: 0; color: var(--gold); }
+  header .progress { font-size: 0.85rem; color: var(--ink-soft); white-space: nowrap; }
+  main { padding: 0.9rem; max-width: 640px; margin: 0 auto; }
+  .panel {
+    background: var(--surface-2); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 0.9rem; margin-bottom: 1rem;
+  }
+  .panel h2 { font-size: 0.9rem; margin: 0 0 0.6rem; color: var(--gold); }
+  textarea {
+    width: 100%; background: #14181b; color: var(--ink); border: 1px solid #3a4147;
+    border-radius: 8px; padding: 0.6rem; font-size: 0.82rem; line-height: 1.5;
+    resize: vertical; font-family: inherit;
+  }
+  .style-tpl { height: 6rem; }
+  .prompt-out { height: 8rem; }
+  .row { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; align-items: center; }
+  select {
+    background: var(--card-bg); color: var(--ink); border: 1px solid var(--card-border);
+    border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.85rem; flex: 1; min-width: 140px;
+  }
+  button {
+    background: var(--card-bg); color: var(--ink); border: 1px solid var(--card-border);
+    border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; cursor: pointer;
+  }
+  button.primary { background: linear-gradient(155deg, #7b5d36, #5c4426); color: #fff5e0; border-color: #937148; font-weight: bold; }
+  button.small { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+  button:active { transform: scale(0.97); }
+  .area-block { margin-bottom: 0.7rem; }
+  .area-title {
+    font-size: 0.88rem; color: var(--gold); padding: 0.4rem 0.2rem; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .area-title .count { font-size: 0.75rem; color: var(--ink-soft); font-weight: normal; }
+  .variant-list { display: none; }
+  .variant-list.open { display: block; }
+  .variant-row {
+    display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.2rem;
+    border-bottom: 1px solid #262c30; cursor: pointer;
+  }
+  .variant-row.done { opacity: 0.4; }
+  .variant-row.picked { background: rgba(215,182,111,0.1); }
+  .variant-row input[type=checkbox] { flex-shrink: 0; }
+  .variant-row .name { font-size: 0.88rem; }
+  .toast {
+    position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+    background: var(--ok); color: #0e1a10; padding: 0.5rem 1rem; border-radius: 20px;
+    font-size: 0.82rem; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    z-index: 50; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>背景イラストプロンプト生成</h1>
+  <div class="progress" id="progressLabel">0/0 完了</div>
+</header>
+<main>
+  <div class="panel">
+    <h2>共通スタイル文(編集可・自動保存)</h2>
+    <textarea class="style-tpl" id="styleTpl"></textarea>
+    <div class="row"><button class="small" id="resetTplBtn">デフォルトに戻す</button></div>
+  </div>
+
+  <div class="panel">
+    <h2>選択中</h2>
+    <div id="selectedLabel" style="font-size:0.85rem; color:var(--ink-soft);">未選択</div>
+    <div class="row">
+      <button class="primary" id="nextOneBtn">未完了から次の1枚を自動選択</button>
+      <button class="small" id="clearSelBtn">選択解除</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>生成用プロンプト(コピーしてChatGPTへ)</h2>
+    <textarea class="prompt-out" id="promptOut" readonly></textarea>
+    <div class="row">
+      <button class="primary" id="copyBtn">コピーする</button>
+      <button id="markDoneBtn">完了にする</button>
+    </div>
+    <div class="row" style="align-items:center;">
+      <span id="filenameHint" style="font-size:0.8rem; color:var(--ink-soft);"></span>
+      <button class="small" id="copyFilenameBtn" style="display:none;">ファイル名をコピー</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>全一覧(タップで選択/チェックで完了)</h2>
+    <div id="areaList"></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_STYLE_TPL = `和風ゲームの探索画面用の背景イラストを1枚描いてください。縦長のスマートフォン画面比率(横:縦 ≒ 5:11)で、プレイヤーが一人称視点で道を進んでいるような構図にしてください。人物・キャラクターは一切描かないでください(誰もいない景色のみ)。
+
+構図の基本は「奥へ続く一本道」を画面の下から上、中央やや奥へ向かって配置し、道の両脇に地形や建造物・植生を配置して奥行きを出してください。道の突き当たりや奥の空間に光源(空・灯り等)を置き、視線が自然に奥へ誘導されるようにしてください。
+
+塗りは絵画的なデジタルイラスト(和風ダークファンタジー系の背景美術、アニメ調の書き込みが濃い塗り)。書き込みは高解像度・高精細を最優先にし、遠景・中景・近景で情報量にメリハリを付けてください(近景は質感を細かく、遠景は霞や空気遠近法でぼかす)。全体がのっぺりと簡略化されないようにしてください。`;
+
+const CAMP_SUFFIX = `
+
+これは野営(キャンプ)シーンです。道の途中に焚き火を中心とした野営地を配置してください。焚き火・三脚に吊るした鍋・寝袋や敷物・木箱や荷物・提灯やランタンの灯りを左右対称気味に配置し、焚き火の暖色の灯りが中心の光源になるようにしてください。時間帯は夜、周囲の風景は下記のエリア指定に準じます。`;
+
+const TIME_VARIANTS = [
+  { key: "dawn", label: "暁(夜明け前)", text: "時間帯は夜明け前の「暁」。空はまだ暗い藍色から薄明るい紫紺へのグラデーション、あたりは薄暗く冷たい空気感。地平線側にわずかな明るみが差し込み始めている程度。" },
+  { key: "asa", label: "朝", text: "時間帯は「朝」。夜明け直後の澄んだ柔らかい光、空気は爽やかで少し霞がかっている。光はまだ低い角度から差し込み、長めの影を落とす。" },
+  { key: "day", label: "昼", text: "時間帯は「昼」。明るく自然な日中の光、緑や色彩がはっきりと発色し、木漏れ日や光の筋(ゴッドレイ)が差し込む。" },
+  { key: "dusk", label: "夕", text: "時間帯は「夕」。夕焼けのオレンジ〜赤紫のグラデーション、道や地面に暖色の長い影が伸びる、ノスタルジックで少し物悲しい雰囲気。" },
+  { key: "night", label: "夜", text: "時間帯は「夜」。深い藍色〜黒に近い夜空、月明かりが主光源。全体は暗いが、月光が当たる部分だけ青白く浮かび上がるコントラストを意識してください。" },
+];
+
+const AREAS = [
+  { area: "廃城下町", desc: "人が消えた城下町。人ではなく町そのものが怪異となった不穏な雰囲気。荒れ果てた木造家屋が立ち並び、朽ちた瓦屋根、傾いた木柱、雑草に埋もれた石畳の通りが続く。窓や戸口の奥は真っ暗で、何かが潜んでいそうな気配。", full: true },
+  { area: "門", desc: "巨大な中門(結界の門)。侵入者を拒む古い門構造、注連縄や紙垂などの神聖な装飾が朽ちかけている。両脇に太い門柱、奥には閉ざされた扉。威圧感のある巨大な建造物として描く。", full: true },
+  { area: "古城", desc: "人が滅びた天守と御殿の内部・外周。武家文化の調度品や建築装飾が朽ちて怪異化した気配が漂う。荒れた畳廊下や崩れかけた欄干、遠くに天守の輪郭。", full: true },
+  { area: "岸壁", desc: "荒波に削られた断崖と磯。切り立った岩壁、潮風、飛沫、点在する漁具の残骸。海そのものより岩・潮だまり・磯の生態系を主役にする。", full: true },
+  { area: "幽霊船", desc: "沈没船と海難事故の怨念が漂う海上、または難破船の甲板・船内。朽ちた帆柱、破れた帆、絡まる鎖、霧に包まれた不気味な静けさ。", full: true },
+  { area: "鍾乳洞の洞窟", desc: "(地下のため簡易セット: 入口のみ昼夜変化・奥は固定1枚)数千年かけて形成された地底世界。鍾乳石・水滴・鉱石・闇をテーマに、人工物は一切登場させない。", full: false },
+  { area: "草原", desc: "一見穏やかな草原地帯。樹木はほとんどなく、広大な視界と風が吹き渡る開けた景観。ススキや丈の長い草が風になびく。", full: true },
+  { area: "渓流", desc: "澄んだ渓流と滝、苔むした岩が続く山間。水しぶき、川の流れ、湿った岩肌の質感を重視する。", full: true },
+  { area: "光る竹林", desc: "夜でも青白く発光する竹が生い茂る幻想的な竹林。かぐや姫伝説を思わせる神秘的で静謐な雰囲気。竹の隙間から漏れる光。", full: true },
+  { area: "廃寺院", desc: "朽ち果てた寺院。荒れた本堂、崩れかけた仏像、蜘蛛の巣が張った梁、苔むした石段。信仰が忘れ去られた静けさと不穏さ。", full: true },
+  { area: "千本鳥居", desc: "果てしなく続く朱色の鳥居の回廊。神域と現世の境界が曖昧になった神秘的な空間。等間隔に並ぶ鳥居が奥へ続く。", full: true },
+  { area: "五重塔", desc: "天へ伸びる五重塔の内部と外周。木組み・瓦屋根・高所からの眺め。風に揺れる風鐸(ふうたく)。高さと開放感を意識する。", full: true },
+  { area: "修験道", desc: "断崖・鎖場を伝って霊峰へ続く修験の道。険しい岩肌、細い山道、霧、修行の緊張感を漂わせる。", full: true },
+  { area: "山", desc: "深い山奥、人の手がほとんど入らない霊峰地帯。巨木・岩峰・霧・雪渓など雄大な自然そのものを主役にする。", full: true },
+];
+
+const LS_DONE = "onsenBgPrompt_done_v1";
+const LS_STYLE = "onsenBgPrompt_style_v1";
+const LS_OPEN = "onsenBgPrompt_open_v1";
+
+function variantId(area, key) { return area + "::" + key; }
+
+let doneSet = new Set(JSON.parse(localStorage.getItem(LS_DONE) || "[]"));
+let openSet = new Set(JSON.parse(localStorage.getItem(LS_OPEN) || "[]"));
+let selected = null; // { area, key, label, desc }
+
+function saveDone() { localStorage.setItem(LS_DONE, JSON.stringify([...doneSet])); }
+function saveOpen() { localStorage.setItem(LS_OPEN, JSON.stringify([...openSet])); }
+
+function variantsFor(a) {
+  if (a.full) return TIME_VARIANTS.concat([{ key: "camp", label: "野営", text: null }]);
+  return [
+    { key: "entrance_dawn", label: "入口・暁", text: TIME_VARIANTS[0].text },
+    { key: "entrance_asa", label: "入口・朝", text: TIME_VARIANTS[1].text },
+    { key: "entrance_day", label: "入口・昼", text: TIME_VARIANTS[2].text },
+    { key: "entrance_dusk", label: "入口・夕", text: TIME_VARIANTS[3].text },
+    { key: "entrance_night", label: "入口・夜", text: TIME_VARIANTS[4].text },
+    { key: "shallow", label: "浅部(固定1枚)", text: "地下のため時間帯変化なし。入口からやや進んだ、まだ光が薄く届く浅い区画。" },
+    { key: "deep", label: "深部(固定1枚)", text: "地下のため時間帯変化なし。完全な暗闇に近い深い区画、光源はごくわずか。" },
+    { key: "camp", label: "野営", text: null },
+  ];
+}
+
+function allVariantsFlat() {
+  const flat = [];
+  AREAS.forEach(a => variantsFor(a).forEach(v => flat.push({ area: a.area, areaDesc: a.desc, key: v.key, label: v.label, text: v.text })));
+  return flat;
+}
+
+function updateProgress() {
+  const total = allVariantsFlat().length;
+  document.getElementById("progressLabel").textContent = `${doneSet.size}/${total} 完了`;
+}
+
+function renderAreaList() {
+  const container = document.getElementById("areaList");
+  container.innerHTML = "";
+  AREAS.forEach(a => {
+    const variants = variantsFor(a);
+    const doneCount = variants.filter(v => doneSet.has(variantId(a.area, v.key))).length;
+    const block = document.createElement("div");
+    block.className = "area-block";
+    const title = document.createElement("div");
+    title.className = "area-title";
+    title.innerHTML = `<span>${a.area}</span><span class="count">${doneCount}/${variants.length}</span>`;
+    const list = document.createElement("div");
+    list.className = "variant-list" + (openSet.has(a.area) ? " open" : "");
+    title.onclick = () => {
+      if (openSet.has(a.area)) openSet.delete(a.area); else openSet.add(a.area);
+      saveOpen();
+      list.classList.toggle("open");
+    };
+    variants.forEach(v => {
+      const id = variantId(a.area, v.key);
+      const row = document.createElement("div");
+      row.className = "variant-row" + (doneSet.has(id) ? " done" : "") + (selected && selected.area === a.area && selected.key === v.key ? " picked" : "");
+      row.innerHTML = `<input type="checkbox" ${doneSet.has(id) ? "checked" : ""}><span class="name">${v.label}</span>`;
+      const cb = row.querySelector("input");
+      cb.onclick = (e) => {
+        e.stopPropagation();
+        if (cb.checked) doneSet.add(id); else doneSet.delete(id);
+        saveDone();
+        updateProgress();
+        row.classList.toggle("done", cb.checked);
+      };
+      row.onclick = (e) => {
+        if (e.target === cb) return;
+        selectVariant(a.area, a.desc, v.key, v.label, v.text);
+      };
+      list.appendChild(row);
+    });
+    block.appendChild(title);
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
+
+function selectVariant(area, areaDesc, key, label, text) {
+  selected = { area, areaDesc, key, label, text };
+  document.getElementById("selectedLabel").textContent = `${area} / ${label}`;
+  renderAreaList();
+  buildPrompt();
+}
+
+let currentFilename = "";
+
+function buildPrompt() {
+  const tpl = document.getElementById("styleTpl").value.trim();
+  const out = document.getElementById("promptOut");
+  const hint = document.getElementById("filenameHint");
+  const copyFilenameBtn = document.getElementById("copyFilenameBtn");
+  if (!selected) {
+    out.value = "";
+    hint.textContent = "";
+    copyFilenameBtn.style.display = "none";
+    return;
+  }
+  let body = `${tpl}\n\nエリア: ${selected.area}\n${selected.areaDesc}`;
+  if (selected.key === "camp") {
+    body += CAMP_SUFFIX;
+  } else if (selected.text) {
+    body += `\n\n${selected.text}`;
+  }
+  out.value = body;
+  currentFilename = `${selected.area}_${selected.key}.jpg`.replace(/[\\/:*?"<>|]/g, "");
+  hint.textContent = `保存名: ${currentFilename}`;
+  copyFilenameBtn.style.display = "";
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+document.getElementById("nextOneBtn").onclick = () => {
+  const flat = allVariantsFlat().filter(v => !doneSet.has(variantId(v.area, v.key)));
+  if (flat.length === 0) { showToast("全て完了しています"); return; }
+  const v = flat[0];
+  selectVariant(v.area, v.areaDesc, v.key, v.label, v.text);
+};
+
+document.getElementById("clearSelBtn").onclick = () => {
+  selected = null;
+  document.getElementById("selectedLabel").textContent = "未選択";
+  renderAreaList();
+  buildPrompt();
+};
+
+document.getElementById("copyBtn").onclick = () => {
+  const text = document.getElementById("promptOut").value;
+  if (!text) { showToast("選択中の項目がありません"); return; }
+  navigator.clipboard.writeText(text).then(() => showToast("コピーしました"));
+};
+
+document.getElementById("copyFilenameBtn").onclick = () => {
+  if (!currentFilename) return;
+  navigator.clipboard.writeText(currentFilename).then(() => showToast("ファイル名をコピーしました"));
+};
+
+document.getElementById("markDoneBtn").onclick = () => {
+  if (!selected) { showToast("選択中の項目がありません"); return; }
+  doneSet.add(variantId(selected.area, selected.key));
+  saveDone();
+  updateProgress();
+  selected = null;
+  document.getElementById("selectedLabel").textContent = "未選択";
+  renderAreaList();
+  buildPrompt();
+  showToast("完了にしました");
+};
+
+document.getElementById("styleTpl").addEventListener("input", () => {
+  localStorage.setItem(LS_STYLE, document.getElementById("styleTpl").value);
+});
+
+document.getElementById("resetTplBtn").onclick = () => {
+  document.getElementById("styleTpl").value = DEFAULT_STYLE_TPL;
+  localStorage.setItem(LS_STYLE, DEFAULT_STYLE_TPL);
+  showToast("デフォルトに戻しました");
+};
+
+document.getElementById("styleTpl").value = localStorage.getItem(LS_STYLE) || DEFAULT_STYLE_TPL;
+updateProgress();
+renderAreaList();
+buildPrompt();
+</script>
+</body>
+</html>

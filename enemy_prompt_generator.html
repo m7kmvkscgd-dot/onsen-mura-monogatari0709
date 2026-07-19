@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>敵イラストプロンプト生成</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --surface-2: #20272b;
+    --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --ink: #ece6d8; --ink-soft: #a8a196;
+    --accent: #c95d54; --ok: #6fa876;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    padding-bottom: 3rem;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: 1px solid var(--card-border);
+    padding: 0.8rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  }
+  header h1 { font-size: 1.05rem; margin: 0; color: var(--gold); }
+  header .progress { font-size: 0.85rem; color: var(--ink-soft); white-space: nowrap; }
+  main { padding: 0.9rem; max-width: 640px; margin: 0 auto; }
+  .panel {
+    background: var(--surface-2); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 0.9rem; margin-bottom: 1rem;
+  }
+  .panel h2 { font-size: 0.9rem; margin: 0 0 0.6rem; color: var(--gold); }
+  textarea {
+    width: 100%; background: #14181b; color: var(--ink); border: 1px solid #3a4147;
+    border-radius: 8px; padding: 0.6rem; font-size: 0.82rem; line-height: 1.5;
+    resize: vertical; font-family: inherit;
+  }
+  .style-tpl { height: 6.5rem; }
+  .prompt-out { height: 9rem; }
+  .row { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+  button {
+    background: var(--card-bg); color: var(--ink); border: 1px solid var(--card-border);
+    border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; cursor: pointer;
+  }
+  button.primary { background: linear-gradient(155deg, #7b5d36, #5c4426); color: #fff5e0; border-color: #937148; font-weight: bold; }
+  button.small { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+  button:active { transform: scale(0.97); }
+  .selected-chip {
+    display: inline-flex; align-items: center; gap: 0.3rem; background: var(--card-bg);
+    border: 1px solid var(--gold); border-radius: 20px; padding: 0.25rem 0.6rem 0.25rem 0.7rem;
+    font-size: 0.78rem; margin: 0.15rem;
+  }
+  .selected-chip button { padding: 0 0.3rem; background: none; border: none; color: var(--ink-soft); font-size: 0.9rem; }
+  .area-block { margin-bottom: 0.7rem; }
+  .area-title {
+    font-size: 0.88rem; color: var(--gold); padding: 0.4rem 0.2rem; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .area-title .count { font-size: 0.75rem; color: var(--ink-soft); font-weight: normal; }
+  .enemy-list { display: none; }
+  .enemy-list.open { display: block; }
+  .enemy-row {
+    display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.5rem 0.2rem;
+    border-bottom: 1px solid #262c30; cursor: pointer;
+  }
+  .enemy-row.done { opacity: 0.4; }
+  .enemy-row.picked { background: rgba(215,182,111,0.1); }
+  .enemy-row input[type=checkbox] { margin-top: 0.2rem; flex-shrink: 0; }
+  .enemy-row .name { font-weight: bold; font-size: 0.88rem; }
+  .enemy-row .desc { font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.1rem; }
+  .toast {
+    position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+    background: var(--ok); color: #0e1a10; padding: 0.5rem 1rem; border-radius: 20px;
+    font-size: 0.82rem; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    z-index: 50; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>敵イラストプロンプト生成</h1>
+  <div class="progress" id="progressLabel">0/0 完了</div>
+</header>
+<main>
+  <div class="panel">
+    <h2>共通スタイル文(編集可・自動保存)</h2>
+    <textarea class="style-tpl" id="styleTpl"></textarea>
+    <div class="row"><button class="small" id="resetTplBtn">デフォルトに戻す</button></div>
+  </div>
+
+  <div class="panel">
+    <h2>選択中のキャラ <span id="selCount" style="color:var(--ink-soft); font-weight:normal;"></span></h2>
+    <div id="selectedChips"></div>
+    <div class="row">
+      <button class="primary" id="nextTwoBtn">未完了から次の2体を自動選択</button>
+      <button class="small" id="clearSelBtn">選択解除</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>生成用プロンプト(コピーしてChatGPTへ)</h2>
+    <textarea class="prompt-out" id="promptOut" readonly></textarea>
+    <div class="row">
+      <button class="primary" id="copyBtn">コピーする</button>
+      <button id="markDoneBtn">選択中の敵を完了にする</button>
+    </div>
+    <div class="row" style="align-items:center; margin-top:0.6rem;">
+      <span id="filenameHint" style="font-size:0.8rem; color:var(--ink-soft);"></span>
+      <button class="small" id="copyFilenameBtn" style="display:none;">ファイル名をコピー</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>全一覧(タップで選択/チェックで完了)</h2>
+    <div id="areaList"></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_STYLE_TPL = `和風ゲームの敵キャラクター2体を描いてください。背景は完全に透明にしてください。PNG形式でアルファチャンネル(透過情報)を保持したまま書き出してください。市松模様(チェッカーボード)などを背景として描き込むのではなく、本当に透明なピクセルとして書き出してください。背景に色や模様、シーンの書き込みは一切なしにしてください。
+
+配置は必ず次の通りにしてください: 縦長のキャンバスを上下2段に分け、1体目を上半分、2体目を下半分に、それぞれ完全に収まるように描いてください。左右に並べる配置は禁止です。2体の間(上半分と下半分の境目)には、何も描かれていない透明な帯を、キャンバス全体の高さの1割程度、十分な幅で空けてください。刀・槍・髪・衣の裾・煙・炎など、どんな部位や持ち物であっても、自分の段の外や隣のキャラクターの領域にはみ出さないようにしてください。
+
+重要: 各キャラクターは、頭の先から足先まで(全身を描く場合)、または描く範囲の端まで、自分の段の中に完全に収まるようにしてください。キャンバスの上端・下端・左右の端でキャラクターの体(頭・足・手・持ち物を含む)が切れてしまうことのないよう、余白を十分に残して少し小さめに描いてください。
+
+キャラクター本体の縁(輪郭)は、ぼかさずくっきりと描いてください。水しぶき・後光・もや・炎のゆらめきなどの演出も、輪郭をくっきりさせ、透明部分との境目が曖昧にならないようにしてください。
+
+塗りは絵画的なデジタルイラスト(セミリアルなダークファンタジー系アニメ塗り)で、輪郭線は強すぎず陰影と質感で立体感を出してください。全体的に不穏で薄暗い雰囲気ですが、過度なグロテスクさは避けてください。構図は全身または上半身〜3/4身、やや見上げるような迫力のあるポーズにしてください。足元のエフェクトは短く、透明な背景部分に溶け込んで消えたりしないようにしてください。
+
+画質・書き込みは高解像度・高精細を最優先にしてください。鎧の装飾、布の質感やシワ、鱗や毛並み、発光のディテールなど、細部まで省略せず緻密に描き込んでください。全体がぼんやりしたり、のっぺりと簡略化された塗りにならないようにしてください。
+
+重要: 色使いについて。基本色は必ず、木・革・布・鉄・骨・石・毛並み・鱗など、そのキャラクターを構成する素材本来の色(墨黒・灰色・焦げ茶・欅色・黒鉄・古銅・生成り色など、彩度を抑えたアースカラー)にしてください。指定された「アクセントカラー」は、目・紋様・発光部分・金具・一部の装飾など、全体の1〜2割程度の範囲だけに使う差し色です。全身をアクセントカラー一色で塗りつぶすことは絶対にしないでください。1体の中でアクセントカラーの使用箇所が全体の8割を超えている場合は失敗とみなしてください。
+
+以下の2体を、それぞれ指定のアクセントカラーを一部の差し色として効かせて描いてください:`;
+
+const AREAS = [
+  { area: "廃城下町", enemies: [
+    ["虚武者", "鎧の輪郭だけが青白く浮かぶ透明な武者、刀だけが実体。細身で肩幅が狭く腕が長い"],
+    ["家鳴り", "古い町家がそのまま四足の獣のように歩く、瓦屋根が背中"],
+    ["長壁", "一本の土塀が大蛇のように地を這う、人型要素なし"],
+    ["土蔵蟹", "巨大な土蔵を甲羅にした八脚の蟹、横幅が最大級"],
+    ["格子蜘蛛", "町家の木格子が巨大蜘蛛になった怪異、八本の木の脚、目は障子の穴"],
+    ["飛瓦", "屋根瓦が数百枚集まってできた怪鳥、羽ばたくたび瓦が擦れる音"],
+    ["辻行灯", "辻に立つ一本脚の行灯、光で幻覚を見せる"],
+    ["城喰い(ボス)", "町を何百年も食べ続け自らが町となった怪異、六脚で背中から家屋や土蔵が突き出る、巨大な口だけが生物らしい"],
+  ]},
+  { area: "門", enemies: [] },
+  { area: "古城", enemies: [
+    ["屏風渡り", "金屏風から抜け出した平面的な怪異、六枚の屏風が羽のように展開"],
+    ["唐櫃虫", "武具を納める唐櫃が巨大な甲虫になった、低重心で六脚、木箱が甲羅"],
+    ["襖影", "襖の絵から剥がれ落ちた極薄の影、紙の身体で壁や床を泳ぐように移動"],
+    ["鬼瓦獅子", "天守の鬼瓦が獣となった姿、四足で巨大なたてがみ、全身が焼き物"],
+    ["掛軸坊", "掛軸を身体として持つ異形の僧、縦長で胴体が巻物"],
+    ["香炉鬼", "香炉に宿る煙の怪異、重い香炉の胴体に煙の四腕"],
+    ["御簾喰い", "御簾が絡み合って巨大クラゲのようになった怪異、房が触手"],
+    ["天守主(ボス)", "歴代城主の執念が天守に宿った怪異、約5m、巨大な袖と天守の屋根を思わせる肩"],
+  ]},
+  { area: "岸壁", enemies: [
+    ["潮牙", "潮だまりから生まれた四足の獣、狼型で背中は珊瑚"],
+    ["岩喰い", "岩壁を削って成長する巨大ヤドカリ、左右非対称で巨大な右鋏"],
+    ["貝面", "巨大な二枚貝が歩く怪異、縦長の貝殻に細い六脚"],
+    ["飛礫", "海風で削られた石の群れでできた怪鳥、翼が砕石、尾は砂"],
+    ["磯百足", "フジツボや貝に覆われた巨大百足、超長体で無数の脚"],
+    ["網這い", "破れた漁網が意思を持った怪異、人型ではなくエイのような形"],
+    ["灯鼻", "岩礁に棲む巨大アシカ、鼻先だけが青白く発光する"],
+    ["崖呑み(ボス)", "断崖そのものが海から起き上がった怪物、高さ約6m、両腕が岩棚、背中は断崖"],
+  ]},
+  { area: "幽霊船", enemies: [
+    ["帆喰い", "朽ちた帆布が巨大なエイのように空を泳ぐ怪異、翼は破れた帆"],
+    ["錨鬼", "巨大な錨に四肢が生えた重量級怪物、逆三角形で両腕が鎖"],
+    ["羅針眼", "羅針盤に巨大な一つ目が宿った円形浮遊怪異、磁針が角"],
+    ["樽蜘蛛", "積荷の酒樽が巨大な蜘蛛になった、丸い胴体に八本脚"],
+    ["舵首鹿", "船首像が四足獣として歩き出した怪異、鹿型で頭部は船首像"],
+    ["海燭", "甲板の蝋燭が群れとなった浮遊怪異、細長い炎の群体"],
+    ["船底喰い", "船底に貼り付く巨大フジツボの怪物、巨大な口が吸盤状"],
+    ["深帆主(ボス)", "幾百もの沈没船が融合した幽霊船の王、全高約7m、背中に折れたマスト、身体中から帆と鎖が伸びる"],
+  ]},
+  { area: "鍾乳洞の洞窟", enemies: [
+    ["滴鬼", "何百年も落ち続けた水滴が意思を持った怪異、球体に細い四肢、頭頂から常に雫"],
+    ["晶角鹿", "水晶が角として成長した地底の鹿、四足で巨大な結晶角"],
+    ["岩蝠", "鍾乳石と一体化した巨大コウモリ、逆さの鍾乳石のような姿、翼は岩肌"],
+    ["洞百足", "全身を鍾乳石が覆う巨大百足、超長体で無数の脚"],
+    ["苔眼", "発光苔だけで構成された浮遊生命、丸い群体に一本だけ長い触手"],
+    ["石喰蜥", "岩を食べ続ける巨大トカゲ、低重心で太い尾"],
+    ["地底蟷螂", "盲目へ進化した巨大カマキリ、鎌が極端に長く頭は小さい"],
+    ["洞王(ボス)", "洞窟そのものの意思、高さ約6m、全身が鍾乳石、腕は巨大結晶"],
+  ]},
+  { area: "草原", enemies: [
+    ["風鬣", "風を纏って走る草原狼、細身の四足で鬣が風そのもの"],
+    ["草隠れ", "全身がススキで覆われた巨大バッタ、長い後脚と細長い胴体"],
+    ["綿狐", "綿毛を纏う狐の怪異、小柄な四足、尾が巨大な綿毛"],
+    ["野槍鹿", "角が槍のように鋭く伸びた巨大鹿、長い脚と巨大な枝角"],
+    ["鎌雀", "翼の先が鎌状に進化した大型の野鳥、低空飛行で斬り裂く"],
+    ["種喰い", "巨大なタンポポの種が群体生命となった怪異、球状で無数の綿毛"],
+    ["土潜り", "地中を泳ぐ巨大モグラ、丸太のような胴に巨大な前脚"],
+    ["風原王(ボス)", "草原を渡る風そのものが肉体を得た王、高さ約5m、鹿にも狼にも見える流線形"],
+  ]},
+  { area: "渓流", enemies: [
+    ["滝落とし", "滝の水が獣となった怪異、豹のような流線形、身体は流れる水"],
+    ["苔亀", "甲羅が苔と小石で覆われた巨大亀、低重心で巨大な甲羅"],
+    ["川牙", "巨大な鮎を思わせる淡水魚の怪異、細長い魚体に鋭い口先"],
+    ["流木鹿", "流木が組み上がって鹿となった精霊、四足で枝角"],
+    ["泡灯", "無数の泡が集まり一つ目となった浮遊生命、球形で長い泡尾"],
+    ["岩蟹", "川石に擬態する淡水蟹、横長で左右非対称の鋏"],
+    ["水蜘蛛", "水面を滑る巨大な蜘蛛、極端に長い脚に小さな胴体"],
+    ["滝神(ボス)", "滝壺に宿る古き水の主、全高約6m、四足獣で身体は渦流と岩"],
+  ]},
+  { area: "光る竹林", enemies: [
+    ["月竹鹿", "発光する竹を角として生やした鹿、細身の四足で角が周囲の竹を共鳴させる"],
+    ["節鎌", "竹の節が連なって生まれた巨大カマキリ、細長い胴体に鎌状の前脚"],
+    ["笹灯", "笹の葉の光が集まり生まれた浮遊生命、小さな球体に笹葉の尾"],
+    ["空筒", "空洞の竹筒が蛇のように這う怪異、節が連続する体"],
+    ["葉走り", "無数の竹葉だけで構成された狼型の獣、走るたび葉が舞う"],
+    ["根穿ち", "竹の地下茎が巨大なムカデとなった怪異、超長体で節ごとに短脚"],
+    ["響竹", "風に鳴る竹が一本脚の怪物となった姿、縦長で腕は細い竹枝"],
+    ["竹皇(ボス)", "竹林全体の意思が一体となった王、全高約6m、細長い巨人型、王冠のような竹枝"],
+  ]},
+  { area: "廃寺院", enemies: [
+    ["木魚獣", "巨大な木魚が四足獣へ変じた怪異、丸い胴体、跳ねるたび重低音が響く"],
+    ["経喰い", "無数の経文が絡み合って生まれた紙の怪異、帯状で蛇のような体"],
+    ["香煙蛾", "線香の煙から生まれた巨大な蛾、幅広い翼に細い胴体"],
+    ["灯明童", "燭台の炎が小さな精霊となった存在、一本脚で頭部は灯明皿"],
+    ["仏手", "巨大な木彫りの手だけが歩く怪異、五本指で歩行、腕は存在しない"],
+    ["鐘喰い", "寺の梵鐘を背負った巨大な蝸牛、長い触角"],
+    ["宝輪鳥", "宝輪が翼となった神秘的な怪鳥、円環状の翼に細長い尾"],
+    ["無言尊(ボス)", "長年祈られなかった本尊が目覚めた姿、全高約6m、巨大な木造仏、背後に割れた後光"],
+  ]},
+  { area: "千本鳥居", enemies: [
+    ["稲火狐", "狐火だけで形作られた神使、細身の狐で身体は炎"],
+    ["鳥居虫", "鳥居を背負って歩く巨大甲虫、六脚で背中に朱塗り鳥居"],
+    ["紙垂蛇", "紙垂が連なって蛇となった怪異、細長い蛇で身体は紙垂のみ"],
+    ["神鈴鹿", "鈴を角として持つ神鹿、優雅な四足、枝角に神鈴"],
+    ["朱翼", "鳥居の朱塗りが羽となった怪鳥、大型の鳥で翼は木組み"],
+    ["注連鬼", "巨大なしめ縄が球状に絡み合った怪異、縄の触手で拘束する"],
+    ["神面", "能面でも鬼面でもない古い神面だけが浮遊する怪異、身体なし"],
+    ["千門大神(ボス)", "千本鳥居すべての結界が一つとなった守護神、全高約7m、身体は朱塗りの鳥居で編まれ頭上に巨大な円環"],
+  ]},
+  { area: "五重塔", enemies: [
+    ["梁渡り", "梁の上だけを駆ける細身の木霊獣、細長い四足で長い尾"],
+    ["瓦梟", "瓦が積み重なって生まれた巨大な梟、丸い胴体に瓦の翼"],
+    ["風鐸蜻蛉", "風鐸を腹部に持つ巨大トンボ、四枚羽で細身"],
+    ["木組蜘蛛", "木組みだけで構成された巨大蜘蛛、八脚で梁の胴体"],
+    ["軒猿", "軒先を縄張りにする黒い猿の怪異、小柄で長い腕"],
+    ["風羽", "風そのものが鳥の姿を得た精霊、半透明の大型鳥で尾が渦風"],
+    ["塔蟷螂", "長い前脚で柱を掴む巨大カマキリ、超細身で巨大な鎌、柱に完全擬態"],
+    ["天輪(ボス)", "五重塔の最上層に宿る守護者、全高約7m、背中に五層の輪、長い四腕"],
+  ]},
+  { area: "修験道", enemies: [
+    ["法螺喰い", "法螺貝が巨大な肉食巻貝へ変じた怪異、渦巻き殻に太い腹足"],
+    ["鎖渡り", "崖の鎖が絡み合って生まれた怪異、長い鎖状で鉤爪だけ実体"],
+    ["岩法師", "積み重なった岩が巡礼者の姿を真似た精霊、ずんぐりとした体に笠のような岩頭"],
+    ["山蛭王", "霊峰で異常成長した巨大な山蛭、極太の蛇状で吸盤口"],
+    ["雲猿", "雲を纏って跳ぶ白毛の霊猿、細身で長い尾、着地と同時に霧を発生"],
+    ["木霊梟", "古木の洞に宿る巨大な梟、大型鳥で木肌の翼"],
+    ["烏天狗", "修験道を見張る古き烏天狗、翼を持つ人型、一本歯下駄"],
+    ["峰天狗(ボス)", "霊峰の頂に座す修験道の支配者、全高約6m、巨大な黒翼、長い鼻、山伏装束"],
+  ]},
+  { area: "山", enemies: [
+    ["峰熊", "岩肌のような毛並みを持つ巨大な山熊、超重量級四足で極太の前脚"],
+    ["岩羊", "花崗岩の角を持つ霊峰の羊、細身の四足で巨大な螺旋角"],
+    ["樹冠鷲", "巨木の枝を翼にした巨大な山鷲、超大型飛行で枝状の翼"],
+    ["岩尾狼", "尾が一枚岩になった山狼、俊敏な四足で巨大な岩尾"],
+    ["霧鹿", "朝霧から生まれた白い神鹿、長い脚に霧のたてがみ"],
+    ["古樹蟲", "樹齢千年の倒木を食べ続け巨大化した甲虫、六脚で樹皮の甲殻"],
+    ["雪尾鼬", "雪渓を縄張りとする白銀の大鼬、細長い胴体に巨大な尾"],
+    ["山神(ボス)", "山そのものに宿る古き守護神、全高約8m、四足と二足の中間の姿、背中から巨木が生える"],
+  ]},
+];
+
+const LS_DONE = "onsenEnemyPrompt_done_v1";
+const LS_STYLE = "onsenEnemyPrompt_style_v1";
+const LS_OPEN = "onsenEnemyPrompt_open_v1";
+
+function enemyId(area, name) { return area + "::" + name; }
+
+let doneSet = new Set(JSON.parse(localStorage.getItem(LS_DONE) || "[]"));
+let openSet = new Set(JSON.parse(localStorage.getItem(LS_OPEN) || "[]"));
+let selected = []; // array of {area, name, desc}
+
+function saveDone() { localStorage.setItem(LS_DONE, JSON.stringify([...doneSet])); }
+function saveOpen() { localStorage.setItem(LS_OPEN, JSON.stringify([...openSet])); }
+
+function allEnemiesFlat() {
+  const flat = [];
+  AREAS.forEach(a => a.enemies.forEach(([name, desc]) => flat.push({ area: a.area, name, desc })));
+  return flat;
+}
+
+function updateProgress() {
+  const total = allEnemiesFlat().length;
+  document.getElementById("progressLabel").textContent = `${doneSet.size}/${total} 完了`;
+}
+
+function renderAreaList() {
+  const container = document.getElementById("areaList");
+  container.innerHTML = "";
+  AREAS.forEach(a => {
+    const doneCount = a.enemies.filter(([name]) => doneSet.has(enemyId(a.area, name))).length;
+    const block = document.createElement("div");
+    block.className = "area-block";
+    const title = document.createElement("div");
+    title.className = "area-title";
+    title.innerHTML = `<span>${a.area}</span><span class="count">${doneCount}/${a.enemies.length}</span>`;
+    const list = document.createElement("div");
+    list.className = "enemy-list" + (openSet.has(a.area) ? " open" : "");
+    title.onclick = () => {
+      if (openSet.has(a.area)) openSet.delete(a.area); else openSet.add(a.area);
+      saveOpen();
+      list.classList.toggle("open");
+    };
+    a.enemies.forEach(([name, desc]) => {
+      const id = enemyId(a.area, name);
+      const row = document.createElement("div");
+      row.className = "enemy-row" + (doneSet.has(id) ? " done" : "") + (selected.some(s => s.area === a.area && s.name === name) ? " picked" : "");
+      row.innerHTML = `
+        <input type="checkbox" ${doneSet.has(id) ? "checked" : ""}>
+        <div><div class="name">${name}</div><div class="desc">${desc}</div></div>
+      `;
+      const cb = row.querySelector("input");
+      cb.onclick = (e) => {
+        e.stopPropagation();
+        if (cb.checked) doneSet.add(id); else doneSet.delete(id);
+        saveDone();
+        updateProgress();
+        row.classList.toggle("done", cb.checked);
+      };
+      row.onclick = (e) => {
+        if (e.target === cb) return;
+        toggleSelect(a.area, name, desc);
+      };
+      list.appendChild(row);
+    });
+    block.appendChild(title);
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
+
+function toggleSelect(area, name, desc) {
+  const idx = selected.findIndex(s => s.area === area && s.name === name);
+  if (idx >= 0) selected.splice(idx, 1);
+  else selected.push({ area, name, desc });
+  renderSelected();
+  renderAreaList();
+  buildPrompt();
+}
+
+function renderSelected() {
+  const wrap = document.getElementById("selectedChips");
+  wrap.innerHTML = "";
+  selected.forEach(s => {
+    const chip = document.createElement("span");
+    chip.className = "selected-chip";
+    chip.innerHTML = `${s.name} <button>×</button>`;
+    chip.querySelector("button").onclick = () => toggleSelect(s.area, s.name, s.desc);
+    wrap.appendChild(chip);
+  });
+  document.getElementById("selCount").textContent = selected.length ? `(${selected.length}体選択中)` : "";
+}
+
+let currentFilename = "";
+
+function buildPrompt() {
+  const tpl = document.getElementById("styleTpl").value.trim();
+  const lines = selected.map(s => `${s.name} — ${s.desc}`).join("\n");
+  document.getElementById("promptOut").value = selected.length ? `${tpl}\n${lines}` : "";
+  const hint = document.getElementById("filenameHint");
+  const copyFilenameBtn = document.getElementById("copyFilenameBtn");
+  if (selected.length) {
+    currentFilename = selected.map(s => s.name.replace(/[\\/:*?"<>|]/g, "")).join("_") + ".png";
+    hint.textContent = `保存名(上から順): ${currentFilename}`;
+    copyFilenameBtn.style.display = "";
+  } else {
+    currentFilename = "";
+    hint.textContent = "";
+    copyFilenameBtn.style.display = "none";
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+document.getElementById("nextTwoBtn").onclick = () => {
+  const flat = allEnemiesFlat().filter(e => !doneSet.has(enemyId(e.area, e.name)));
+  selected = flat.slice(0, 2);
+  renderSelected();
+  renderAreaList();
+  buildPrompt();
+  if (selected.length === 0) showToast("全て完了しています");
+};
+
+document.getElementById("clearSelBtn").onclick = () => {
+  selected = [];
+  renderSelected();
+  renderAreaList();
+  buildPrompt();
+};
+
+document.getElementById("copyBtn").onclick = () => {
+  const text = document.getElementById("promptOut").value;
+  if (!text) { showToast("選択中のキャラがありません"); return; }
+  navigator.clipboard.writeText(text).then(() => showToast("コピーしました"));
+};
+
+document.getElementById("copyFilenameBtn").onclick = () => {
+  if (!currentFilename) return;
+  navigator.clipboard.writeText(currentFilename).then(() => showToast("ファイル名をコピーしました"));
+};
+
+document.getElementById("markDoneBtn").onclick = () => {
+  if (selected.length === 0) { showToast("選択中のキャラがありません"); return; }
+  selected.forEach(s => doneSet.add(enemyId(s.area, s.name)));
+  saveDone();
+  updateProgress();
+  selected = [];
+  renderSelected();
+  renderAreaList();
+  buildPrompt();
+  showToast("完了にしました");
+};
+
+document.getElementById("styleTpl").addEventListener("input", () => {
+  localStorage.setItem(LS_STYLE, document.getElementById("styleTpl").value);
+  buildPrompt();
+});
+
+document.getElementById("resetTplBtn").onclick = () => {
+  document.getElementById("styleTpl").value = DEFAULT_STYLE_TPL;
+  localStorage.setItem(LS_STYLE, DEFAULT_STYLE_TPL);
+  buildPrompt();
+  showToast("デフォルトに戻しました");
+};
+
+document.getElementById("styleTpl").value = localStorage.getItem(LS_STYLE) || DEFAULT_STYLE_TPL;
+updateProgress();
+renderAreaList();
+renderSelected();
+buildPrompt();
+</script>
+</body>
+</html>
