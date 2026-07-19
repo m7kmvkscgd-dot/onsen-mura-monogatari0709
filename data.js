@@ -840,11 +840,11 @@ const SKILL_TREES = {
       right: { name: "心眼の構え", desc: "このターン、敵の単体攻撃を1度だけ完全に無効にし、80%の攻撃力で反撃する。", mp: 1, action: { kind: "guardCounterSelf", mult: 0.8 } },
     },
     5: {
-      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
+      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
       right: { name: "黒曜", desc: "出血、毒、炎上のダメージを半分にする", mp: 0, passive: { dotDamageMult: 0.5 } },
     },
     6: {
-      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
+      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
       right: { name: "百戦錬磨", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
     },
     7: {
