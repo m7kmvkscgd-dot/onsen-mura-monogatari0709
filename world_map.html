@@ -104,7 +104,7 @@
   <header>
     <div class="eyebrow">Onsen-Mura Monogatari — 世界地図 v3</div>
     <h1>世界地図(手描き地図をもとに全面更新)</h1>
-    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟)へ、山ルートは森から直接渓流を経て光る竹林と麓の村へ分かれ、麓の村から山→山奥の里→雪山へと続く(沼地・渓谷はカット済み)。ショートカットになってしまうため、麓の村と草原は繋げず、2本の道は完全に独立させてある。</p>
+    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟/幽霊船)へ、山ルートは森から茶屋を経て渓流→光る竹林と山伏の里へ分かれ、山伏の里から廃寺院、または修験道を経て山→山奥の里→雪山へと続く(沼地・渓谷はカット済み)。ショートカットになってしまうため、山伏の里と草原は繋げず、2本の道は完全に独立させてある。</p>
   </header>
 
   <div class="legend">
@@ -134,20 +134,28 @@
       <path class="path-line proposed" d="M 105 460 L 145 400" />
       <!-- 岸壁 -> 鍾乳洞の洞窟 -->
       <path class="path-line proposed" d="M 165 365 L 240 335" />
+      <!-- 岸壁 -> 幽霊船 -->
+      <path class="path-line proposed" d="M 135 365 L 75 335" />
       <!-- 鍾乳洞の洞窟 -> 森少し -> 草原 -->
       <path class="path-line proposed" d="M 300 315 L 370 295" />
       <path class="path-line proposed" d="M 400 285 L 450 270" />
-      <!-- 草原 -> 潮(未定) -->
-      <path class="path-line dream" d="M 480 250 L 530 210" />
+      <!-- 草原 -> この先未定 -->
+      <path class="path-line dream" d="M 470 245 L 490 210" />
 
-      <!-- 森 -> 渓流(直進、沼地はカット) -->
-      <path class="path-line proposed" d="M 365 1100 L 495 840" />
+      <!-- 森 -> 茶屋 -> 渓流(直進、沼地はカット) -->
+      <path class="path-line proposed" d="M 365 1100 L 425 985" />
+      <path class="path-line proposed" d="M 430 950 L 490 845" />
       <!-- 渓流 -> 光る竹林 -->
       <path class="path-line proposed" d="M 505 800 L 555 730" />
-      <!-- 渓流 -> 麓の村 -->
+      <!-- 渓流 -> 山伏の里 -->
       <path class="path-line proposed" d="M 495 800 L 530 700" />
-      <!-- 麓の村 -> 山(渓谷はカット) -->
-      <path class="path-line proposed" d="M 545 660 L 645 490" />
+      <!-- 山伏の里 -> 修験道 -> 山(渓谷はカット) -->
+      <path class="path-line proposed" d="M 545 660 L 595 570" />
+      <path class="path-line proposed" d="M 605 550 L 645 490" />
+      <!-- 山伏の里 -> 廃寺院 -> 千本鳥居/五重塔 -->
+      <path class="path-line proposed" d="M 510 665 L 445 615" />
+      <path class="path-line proposed" d="M 415 595 L 375 555" />
+      <path class="path-line proposed" d="M 435 590 L 470 545" />
       <!-- 山 -> 山奥の里 -->
       <path class="path-line proposed" d="M 655 455 L 695 400" />
       <!-- 山奥の里 -> 雪山(内容は保留) -->
@@ -184,6 +192,9 @@
       <circle class="node" cx="150" cy="380" r="9" fill="var(--sea)" />
       <text class="region-label" x="105" y="368" font-size="12">岸壁</text>
 
+      <circle class="node" cx="60" cy="320" r="9" fill="var(--dream)" />
+      <text class="region-label" x="0" y="308" font-size="12">幽霊船</text>
+
       <circle class="node" cx="255" cy="320" r="10" fill="var(--cave)" />
       <text class="region-label" x="255" y="308" font-size="12">鍾乳洞の洞窟</text>
       <text class="region-sub" x="255" y="335">最初の洞窟とは別物</text>
@@ -194,11 +205,13 @@
       <circle class="node" cx="460" cy="260" r="10" fill="var(--grass)" />
       <text class="region-label" x="472" y="252" font-size="12">草原</text>
 
-      <circle class="node" cx="540" cy="195" r="9" fill="var(--sea)" opacity="0.7" />
-      <text class="region-label" x="552" y="188" font-size="12" opacity="0.8">潮</text>
-      <text class="region-sub" x="552" y="203">未定</text>
+      <circle class="node" cx="490" cy="195" r="7" fill="var(--dream)" opacity="0.5" />
+      <text class="region-label" x="500" y="190" font-size="11" opacity="0.7">この先未定</text>
 
-      <!-- 山側チェーン(沼地はカット、森から直接渓流へ) -->
+      <!-- 山側チェーン(沼地はカット、森から茶屋を経て渓流へ) -->
+      <circle class="node" cx="425" cy="965" r="7" fill="var(--gold)" />
+      <text class="region-label" x="437" y="957" font-size="11">茶屋</text>
+
       <circle class="node" cx="500" cy="800" r="8" fill="var(--swamp)" />
       <text class="region-label" x="510" y="792" font-size="11">渓流</text>
 
@@ -206,10 +219,23 @@
       <text class="region-label" x="578" y="708" font-size="12">光る竹林</text>
 
       <circle class="node hub" cx="535" cy="680" r="10" fill="var(--village)" />
-      <text class="region-label" x="440" y="670" font-size="12">麓の村</text>
+      <text class="region-label" x="440" y="670" font-size="12">山伏の里</text>
+
+      <circle class="node" cx="425" cy="605" r="8" fill="var(--ruins)" />
+      <text class="region-label" x="435" y="598" font-size="11">廃寺院</text>
+
+      <circle class="node" cx="365" cy="545" r="7" fill="var(--ruins)" />
+      <text class="region-label" x="270" y="538" font-size="10">千本鳥居</text>
+
+      <circle class="node" cx="480" cy="535" r="7" fill="var(--ruins)" />
+      <text class="region-label" x="492" y="528" font-size="10">五重塔</text>
+
+      <circle class="node" cx="600" cy="560" r="7" fill="var(--dream)" />
+      <text class="region-label" x="513" y="553" font-size="10">修験道</text>
 
       <circle class="node" cx="650" cy="475" r="9" fill="var(--mountain)" />
       <text class="region-label" x="662" y="468" font-size="12">山</text>
+      <text class="region-sub" x="662" y="483">階層数が多い長いエリア想定</text>
 
       <circle class="node" cx="700" cy="385" r="10" fill="var(--village)" />
       <text class="region-label" x="605" y="375" font-size="12">山奥の里</text>
@@ -231,25 +257,33 @@
       <p>海岸の岸壁の先にある、最初の洞窟(森10層目の分岐)とは別物の新しい洞窟。海側ルートの奥地。</p>
     </div>
     <div class="region-card">
-      <span class="name">草原・潮</span><span class="tag proposed">提案</span>
-      <p>鍾乳洞の洞窟からわずかな森を抜けた先に広がる草原。その先の「潮」は現時点で未定。</p>
+      <span class="name">幽霊船</span><span class="tag proposed">提案</span>
+      <p>岸壁から鍾乳洞の洞窟とは別方向に分岐する新規スポット。詳細は未定。</p>
     </div>
     <div class="region-card">
-      <span class="name">渓流・光る竹林</span><span class="tag proposed">提案</span>
-      <p>森10層目の分かれ道からそのまま繋がる水路(沼地はカット、早すぎるため削除済み)。「紅葉の小道」という初期案はボツになり光る竹林に変更済み。陰陽師の隠れ里は一旦保留。</p>
+      <span class="name">草原</span><span class="tag proposed">提案</span>
+      <p>鍾乳洞の洞窟からわずかな森を抜けた先に広がる草原。その先はまだ何も決まっていない(「潮」という地名は無し、単なる未定のプレースホルダーだった)。</p>
     </div>
     <div class="region-card">
-      <span class="name">麓の村</span><span class="tag proposed">提案</span>
-      <p>渓流から分岐する山の麓の集落。海側の草原と繋げるとショートカットになってしまうため、あえて独立したルートのままにしてある。</p>
+      <span class="name">茶屋・渓流・光る竹林</span><span class="tag proposed">提案</span>
+      <p>森10層目の分かれ道から茶屋を経て渓流へ(沼地はカット、早すぎるため削除済み)。「紅葉の小道」という初期案はボツになり光る竹林に変更済み。陰陽師の隠れ里は一旦保留。</p>
     </div>
     <div class="region-card">
-      <span class="name">山 → 山奥の里 → 雪山</span><span class="tag dream">保留</span>
-      <p>麓の村から続く山岳ルート。雪山の中身自体はユーザーが別途検討中のため、ここでは接続経路のみ確定。</p>
+      <span class="name">山伏の里</span><span class="tag proposed">提案</span>
+      <p>渓流から分岐する、修験道の行者たちが暮らす集落(旧名: 麓の村)。海側の草原と繋げるとショートカットになってしまうため、あえて独立したルートのままにしてある。</p>
+    </div>
+    <div class="region-card">
+      <span class="name">廃寺院 → 千本鳥居 / 五重塔</span><span class="tag proposed">提案</span>
+      <p>山伏の里から分岐する、朽ちた寺院の跡。千本鳥居と五重塔、2つの見どころに分かれる。</p>
+    </div>
+    <div class="region-card">
+      <span class="name">修験道 → 山 → 山奥の里 → 雪山</span><span class="tag dream">保留</span>
+      <p>山伏の里から山へ向かう、行者の修行道。これから山に踏み込む前の「身を清める」区間という位置づけ。「山」は他のエリアより階層数が多い、長めのエリアとして作る想定。雪山の中身自体はユーザーが別途検討中のため、ここでは接続経路のみ確定。</p>
     </div>
   </div>
 
   <footer>
-    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→潮)と山ルート(渓流→光る竹林/麓の村→山→山奥の里→雪山)は、ショートカットを防ぐためあえて繋げず独立させてある。沼地・渓谷はカットし、森から直接渓流に繋がる形にした。潮の先と雪山の中身はまだ未定。
+    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→未定)と山ルート(茶屋→渓流→光る竹林/山伏の里→(廃寺院)→修験道→山→山奥の里→雪山)は、ショートカットを防ぐためあえて繋げず独立させてある。沼地・渓谷はカットし、森から茶屋を経て渓流に繋がる形にした。草原の先と雪山の中身はまだ未定。
   </footer>
 </div>
 </body>
