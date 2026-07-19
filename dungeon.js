@@ -1145,7 +1145,10 @@ function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork) {
     // 戦闘になり選択が無意味になるため、通常の抽選は行わず「目標接近！」の単一選択肢だけを出す
     picked = [QUEST_APPROACH_KEY];
   } else {
-    const count = pickPathChoiceCount();
+    let count = pickPathChoiceCount();
+    // 洞窟への分かれ道は、通常の道を選ぶという選択肢自体を必ず残す必要がある(でないと洞窟一択を
+    // 強制されてしまう)。pickPathChoiceCountが1択を返した場合はここで2択に底上げする
+    if (offerCaveFork && count < 2) count = 2;
     const oneChoiceWeights = currentStage === "cave" ? CAVE_ONE_CHOICE_PATH_WEIGHTS : ONE_CHOICE_PATH_WEIGHTS;
     const weights = omikujiAdjustedWeights(count === 1 ? oneChoiceWeights : NORMAL_PATH_WEIGHTS);
     picked = [];
