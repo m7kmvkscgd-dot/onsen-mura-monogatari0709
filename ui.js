@@ -18,6 +18,10 @@ const BG_SETS = {
   // 渓流/光る竹林(2026-07-19、下地の歩行テスト用)
   valley: { dawn: "assets/bg/valley_dawn.jpg", asa: "assets/bg/valley_asa.jpg", day: "assets/bg/valley_day.jpg", dusk: "assets/bg/valley_dusk.jpg", night: "assets/bg/valley_night.jpg" },
   bamboo: { dawn: "assets/bg/bamboo_dawn.jpg", asa: "assets/bg/bamboo_asa.jpg", day: "assets/bg/bamboo_day.jpg", dusk: "assets/bg/bamboo_dusk.jpg", night: "assets/bg/bamboo_night.jpg" },
+  // 海の村(第二の町、2026-07-19)。本体/宿/温泉の3画面分
+  umimura: { dawn: "assets/bg/umimura_dawn.jpg", asa: "assets/bg/umimura_asa.jpg", day: "assets/bg/umimura_day.jpg", dusk: "assets/bg/umimura_dusk.jpg", night: "assets/bg/umimura_night.jpg" },
+  umiyado: { dawn: "assets/bg/umiyado_dawn.jpg", asa: "assets/bg/umiyado_asa.jpg", day: "assets/bg/umiyado_day.jpg", dusk: "assets/bg/umiyado_dusk.jpg", night: "assets/bg/umiyado_night.jpg" },
+  umionsen: { dawn: "assets/bg/umionsen_dawn.jpg", asa: "assets/bg/umionsen_asa.jpg", day: "assets/bg/umionsen_day.jpg", dusk: "assets/bg/umionsen_dusk.jpg", night: "assets/bg/umionsen_night.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
@@ -114,6 +118,13 @@ function updateSceneBackgrounds() {
   // 他の「町の施設だが専用の絵が無い」画面(道具屋/増築/リザルト)と同じくtownの絵を流用する
   document.getElementById("magistrateHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("teaHouseHero").style.backgroundImage = `url('${BG_SETS.teaHouse[tod]}')`;
+  // 海の村(第二の町、2026-07-19)。要素が存在しない場合(未実装ビルド等)にエラーにならないよう保険を掛ける
+  const umimuraHero = document.getElementById("umimuraHero");
+  if (umimuraHero) umimuraHero.style.backgroundImage = `url('${BG_SETS.umimura[tod]}')`;
+  const umiyadoHero = document.getElementById("umiyadoHero");
+  if (umiyadoHero) umiyadoHero.style.backgroundImage = `url('${BG_SETS.umiyado[tod]}')`;
+  const umionsenHero = document.getElementById("umionsenHero");
+  if (umionsenHero) umionsenHero.style.backgroundImage = `url('${BG_SETS.umionsen[tod]}')`;
 }
 // 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える

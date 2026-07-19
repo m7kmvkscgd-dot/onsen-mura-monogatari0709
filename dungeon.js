@@ -1010,7 +1010,25 @@ document.getElementById("advanceBtn").onclick = () => {
     startAutoRetreat();
     return;
   }
-  // 中継ステージ(洞窟/廃城下町/門)の最深部へ進もうとした場合は、選択肢を出さず自動的に次の
+  // 廃城下町の出口だけは、選択肢無しの自動継続ではなく「門(→古城)」と「海の村」の分岐になっている
+  // (手描き地図の指示、2026-07-19: 古城の先に海の村があるのではなく、廃城下町の時点で分かれる)
+  if (currentStage === "ruins" && targetFloor > STAGE_CHAIN_MAX.ruins) {
+    showConfirmModal("この先、道が二手に分かれている。どちらへ向かう？", [
+      {
+        label: "門(古城へ)", className: "big primary",
+        onClick: () => {
+          dlog(`${STAGE_CHAIN_ENTER_LOG.ruins}`);
+          playDungeonMoveTransition(() => moveOneFloor(null));
+        },
+      },
+      {
+        label: "海の村へ", className: "big primary",
+        onClick: () => { playDungeonMoveTransition(() => arriveAtUmiMura()); },
+      },
+    ]);
+    return;
+  }
+  // 中継ステージ(洞窟/門)の最深部へ進もうとした場合は、選択肢を出さず自動的に次の
   // ステージへ切り替える(森→洞窟の分かれ道と違い、選ぶ余地のない一本道の継続のため)。
   // 古城(STAGE_CHAIN_NEXTに次が無い)だけは、現時点で用意している一番奥のため引き返すしかない
   const chainMax = STAGE_CHAIN_MAX[currentStage];

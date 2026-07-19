@@ -658,6 +658,66 @@
     </div>
   </div>
 
+  <!-- 海の村(第二の町、2026-07-19。廃城下町の出口の分岐から到達する) -->
+  <div class="screen" id="screen-umimura">
+    <div class="hero has-dw-header" id="umimuraHero">
+      <div class="dw-header">
+        <div class="dw-header-title">海の村</div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="umimuraHeaderGold"></span><span class="dw-header-time" id="umimuraHeaderTime"></span></div>
+      </div>
+      <h1>海の村</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">見知らぬ湊町</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">廃城下町を抜けた先にある、海沿いの村にたどり着いた。</div>
+      </div>
+      <button class="big primary" id="umimuraYadoBtn" style="margin-top:0.8rem;">宿(潮風宿)へ</button>
+      <button class="big primary" id="umimuraOnsenBtn" style="margin-top:0.6rem;">温泉(湯乃里温泉)へ</button>
+      <button class="big" id="umimuraLeaveBtn" style="margin-top:1rem;">温泉村へ帰る</button>
+    </div>
+  </div>
+
+  <!-- 海の村の宿 -->
+  <div class="screen" id="screen-umiyado">
+    <div class="hero has-dw-header" id="umiyadoHero">
+      <div class="dw-header">
+        <button class="dw-header-back" id="umiyadoHeaderBack"></button>
+        <div class="dw-header-title" id="umiyadoHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="umiyadoHeaderGold"></span><span class="dw-header-time" id="umiyadoHeaderTime"></span></div>
+      </div>
+      <h1>潮風宿</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">一泊する</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員のHP・MPが全回復し、疲労が少し和らぐ(1人<span id="umiyadoCostText"></span>G)</div>
+        <button class="big primary" id="umiyadoStayBtn" style="margin-top:0.6rem;"></button>
+      </div>
+      <button class="big" id="umiyadoBackBtn" style="margin-top:1rem;">海の村に戻る</button>
+    </div>
+  </div>
+
+  <!-- 海の村の温泉 -->
+  <div class="screen" id="screen-umionsen">
+    <div class="hero has-dw-header" id="umionsenHero">
+      <div class="dw-header">
+        <button class="dw-header-back" id="umionsenHeaderBack"></button>
+        <div class="dw-header-title" id="umionsenHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="umionsenHeaderGold"></span><span class="dw-header-time" id="umionsenHeaderTime"></span></div>
+      </div>
+      <h1>湯乃里温泉</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">湯に浸かる</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員の疲労がしっかり和らぐ(1人<span id="umionsenCostText"></span>G)</div>
+        <button class="big primary" id="umionsenSoakBtn" style="margin-top:0.6rem;"></button>
+      </div>
+      <button class="big" id="umionsenBackBtn" style="margin-top:1rem;">海の村に戻る</button>
+    </div>
+  </div>
+
   <!-- 野営 -->
   <div class="screen" id="screen-camp">
     <div class="dungeon-bg" id="campBg"></div>
@@ -942,6 +1002,7 @@
 <script src="dungeon.js"></script>
 <script src="camp.js"></script>
 <script src="town.js"></script>
+<script src="umimura.js"></script>
 <script src="title.js"></script>
 </body>
 </html>
