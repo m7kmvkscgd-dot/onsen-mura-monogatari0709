@@ -112,3 +112,91 @@ document.getElementById("umionsenSoakBtn").onclick = () => {
   showConfirmModal("湯に浸かり、疲労が和らいだ。", [{ label: "OK", className: "big" }]);
   renderUmiOnsen();
 };
+
+// ============ 山伏の里(第三の村、2026-07-19)。渓流→光る竹林の先から到達する ============
+// 【現状の位置づけ】海の村と同じく一次実装。宿はまだ絵が無いため未実装、温泉のみ用意した。
+// 海の村と違い、この先(修験道→山)へさらに進める「修験道へ進む」ボタンを持つ
+
+const YAMABUSHIONSEN_COST_PER_PERSON = ONSEN_FLAT_COST; // 雲海の湯の湯代は温泉村の温泉(Lv1相当)と同額
+
+function renderYamabushi() {
+  document.getElementById("yamabushiHeaderGold").textContent = `${state.gold}G`;
+  document.getElementById("yamabushiHeaderTime").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
+  updateSceneBackgrounds();
+}
+
+function renderYamabushiOnsen() {
+  renderDwHeader("yamabushionsen", "雲海の湯", () => { renderYamabushi(); showScreen("screen-yamabushi"); });
+  const activeCount = fieldParty.filter((c) => c.status === "active").length;
+  document.getElementById("yamabushionsenCostText").textContent = YAMABUSHIONSEN_COST_PER_PERSON;
+  const cost = YAMABUSHIONSEN_COST_PER_PERSON * activeCount;
+  const btn = document.getElementById("yamabushionsenSoakBtn");
+  btn.textContent = activeCount > 0 ? `湯に浸かる(${activeCount}人・${cost}G)` : "入れる仲間がいません";
+  btn.disabled = activeCount === 0 || state.gold < cost;
+  updateSceneBackgrounds();
+}
+
+// 光る竹林の最深部に到達した時に呼ぶ(廃城下町→海の村と同じ「1階層だけの中継ステージ」の扱い)
+function arriveAtYamabushi() {
+  advanceFatigue(fieldParty);
+  stageEntryStack.push({ stage: currentStage, floor: currentFloor });
+  currentStage = "yamabushi";
+  currentFloor = 1;
+  saveState();
+  recordMaxFloorReached();
+  healPartyOnFloorMove();
+  advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+  dlog("⛩️山伏の里にたどり着いた。");
+  saveState();
+  renderYamabushi();
+  showScreen("screen-yamabushi");
+}
+
+document.getElementById("yamabushiOnsenBtn").onclick = () => { renderYamabushiOnsen(); showScreen("screen-yamabushionsen"); };
+// 「修験道へ進む」: 海の村には無い、山伏の里だけの選択肢。stageEntryStackにさらに1段積んで
+// (山伏の里, 1階層目)を記録し、通常のダンジョン探索画面へ戻って修験道1層目から再開する。
+// 深く潜ってから帰還すれば、山伏の里→光る竹林→渓流→森→町の順で正しく橋渡しされる
+document.getElementById("yamabushiContinueBtn").onclick = () => {
+  stageEntryStack.push({ stage: "yamabushi", floor: 1 });
+  currentStage = "shugendo";
+  currentFloor = 1;
+  saveState();
+  recordMaxFloorReached();
+  dlog("⛰️修験道へ足を踏み入れた。");
+  showScreen("screen-dungeon");
+  renderDungeon();
+};
+// 「温泉村へ帰る」: 海の村と同じく、直前地点(光る竹林)へstageEntryStackを1つpopして戻し、
+// 既存の帰還カスケードへ合流させる
+document.getElementById("yamabushiLeaveBtn").onclick = () => {
+  showConfirmModal("温泉村へ帰りますか？(光る竹林・渓流・森を通って歩いて帰ります)", [
+    {
+      label: "はい", className: "big danger",
+      onClick: () => {
+        retreating = true;
+        const prev = stageEntryStack.pop();
+        currentStage = prev.stage;
+        currentFloor = prev.floor;
+        dlog("引き返すことにした。ここから階層を下って里へ戻る。");
+        saveState();
+        showScreen("screen-dungeon");
+        renderDungeon();
+        startAutoRetreat();
+      },
+    },
+    { label: "いいえ", className: "big" },
+  ]);
+};
+
+document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
+document.getElementById("yamabushionsenSoakBtn").onclick = () => {
+  const active = fieldParty.filter((c) => c.status === "active");
+  const cost = YAMABUSHIONSEN_COST_PER_PERSON * active.length;
+  if (active.length === 0 || state.gold < cost) return;
+  state.gold -= cost;
+  active.forEach((c) => { c.fatigue = Math.max(0, (c.fatigue || 0) - ONSEN_FATIGUE_RELIEF); });
+  saveState();
+  playSfx("select");
+  showConfirmModal("湯に浸かり、疲労が和らいだ。", [{ label: "OK", className: "big" }]);
+  renderYamabushiOnsen();
+};

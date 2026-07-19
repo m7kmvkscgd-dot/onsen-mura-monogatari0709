@@ -718,6 +718,46 @@
     </div>
   </div>
 
+  <!-- 山伏の里(渓流→光る竹林の先にある第三の村、2026-07-19) -->
+  <div class="screen" id="screen-yamabushi">
+    <div class="hero has-dw-header" id="yamabushiHero">
+      <div class="dw-header">
+        <div class="dw-header-title">山伏の里</div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="yamabushiHeaderGold"></span><span class="dw-header-time" id="yamabushiHeaderTime"></span></div>
+      </div>
+      <h1>山伏の里</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">霧の晴れ間の集落</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">光る竹林を抜けた先、山霧に包まれた修験者たちの里にたどり着いた。</div>
+      </div>
+      <button class="big primary" id="yamabushiOnsenBtn" style="margin-top:0.8rem;">温泉へ</button>
+      <button class="big primary" id="yamabushiContinueBtn" style="margin-top:0.6rem;">修験道へ進む</button>
+      <button class="big" id="yamabushiLeaveBtn" style="margin-top:1rem;">温泉村へ帰る</button>
+    </div>
+  </div>
+
+  <!-- 山伏の里の温泉 -->
+  <div class="screen" id="screen-yamabushionsen">
+    <div class="hero has-dw-header" id="yamabushionsenHero">
+      <div class="dw-header">
+        <button class="dw-header-back" id="yamabushionsenHeaderBack"></button>
+        <div class="dw-header-title" id="yamabushionsenHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="yamabushionsenHeaderGold"></span><span class="dw-header-time" id="yamabushionsenHeaderTime"></span></div>
+      </div>
+      <h1>雲海の湯</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">湯に浸かる</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員の疲労がしっかり和らぐ(1人<span id="yamabushionsenCostText"></span>G)</div>
+        <button class="big primary" id="yamabushionsenSoakBtn" style="margin-top:0.6rem;"></button>
+      </div>
+      <button class="big" id="yamabushionsenBackBtn" style="margin-top:1rem;">山伏の里に戻る</button>
+    </div>
+  </div>
+
   <!-- 野営 -->
   <div class="screen" id="screen-camp">
     <div class="dungeon-bg" id="campBg"></div>

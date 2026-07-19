@@ -1,7 +1,7 @@
 // ============ dungeon.js: 深淵の森/海岸探索(進む・進路選択・エンカウント・瀕死救出・帰還) ============
 // ============ ダンジョン ============
 let currentFloor = 0;
-let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林)。
+let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林) | "shugendo"(修験道) | "yama"(山)。
 // forest/coastは町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効。それ以外は
 // STAGE_CHAIN_NEXT(下記)で繋がった中継ステージで、前のステージの最深部から自動的に切り替わり、
 // 0階層(=出口)まで帰還すると元のステージ・階層へ自動的に戻る(moveOneFloor/stageEntryStack参照)
@@ -9,13 +9,14 @@ function currentStageName() {
   return currentStage === "coast" ? "海岸" : currentStage === "cave" ? "洞窟"
     : currentStage === "ruins" ? "廃城下町" : currentStage === "gate" ? "門" : currentStage === "castle" ? "古城"
     : currentStage === "valley" ? "渓流" : currentStage === "bamboo" ? "光る竹林"
+    : currentStage === "shugendo" ? "修験道" : currentStage === "yama" ? "山"
     : "深淵の森";
 }
 // 中継ステージへ入った時、直前のステージ・階層を積んでおく(0階層まで帰還した時にpopして戻るための橋渡し)。
 // 森→洞窟の1本だけだった頃はcaveEntryFloorという単一変数だったが、洞窟→廃城下町→門→古城と
 // 中継が連鎖するようになったため、スタック形式に一般化した
 let stageEntryStack = [];
-const VALID_STAGES = ["forest", "coast", "cave", "ruins", "gate", "castle", "valley", "bamboo"];
+const VALID_STAGES = ["forest", "coast", "cave", "ruins", "gate", "castle", "valley", "bamboo", "shugendo", "yama"];
 
 // ============ 遠征状態の永続化(2026-07-18) ============
 // 従来、階層・パーティ・帰還中フラグ等の遠征状態はメモリ上にしか無く、探索中にページを
@@ -1028,9 +1029,14 @@ document.getElementById("advanceBtn").onclick = () => {
     ]);
     return;
   }
+  // 光る竹林の最深部は、廃城下町のような分岐ではなく、そのまま山伏の里(村)へ自動的に到着する
+  if (currentStage === "bamboo" && targetFloor > STAGE_CHAIN_MAX.bamboo) {
+    playDungeonMoveTransition(() => arriveAtYamabushi());
+    return;
+  }
   // 中継ステージ(洞窟/門)の最深部へ進もうとした場合は、選択肢を出さず自動的に次の
   // ステージへ切り替える(森→洞窟の分かれ道と違い、選ぶ余地のない一本道の継続のため)。
-  // 古城(STAGE_CHAIN_NEXTに次が無い)だけは、現時点で用意している一番奥のため引き返すしかない
+  // 古城/山(STAGE_CHAIN_NEXTに次が無い)だけは、現時点で用意している一番奥のため引き返すしかない
   const chainMax = STAGE_CHAIN_MAX[currentStage];
   if (chainMax != null && targetFloor > chainMax) {
     if (STAGE_CHAIN_NEXT[currentStage]) {
@@ -1167,11 +1173,32 @@ const BAMBOO_PATH_DEFS = {
   fuon: { icon: "👁️", label: "不穏な竹のざわめき", battle: 0, gold: 0.00 },
   kamikakushi: { icon: "✨", label: "消えた竹の道", battle: 0, gold: 0.00 },
 };
+const SHUGENDO_PATH_DEFS = {
+  rindou: { icon: "⛩️", label: "広い参道", battle: 0, gold: 0.20 },
+  kemono: { icon: "🪨", label: "岩場の細道", battle: 0, gold: 0.15 },
+  kurai: { icon: "🌑", label: "崖沿いの難路", battle: 0, gold: 0.10 },
+  shizuka: { icon: "💧", label: "滝の見える小道", battle: 0, gold: 0.25 },
+  komorebi: { icon: "🌿", label: "苔むした石段", battle: 0, gold: 0.30 },
+  hikaru: { icon: "💰", label: "何かが光る祠", battle: 0, gold: 0.90 },
+  fuon: { icon: "👁️", label: "不穏な行者道", battle: 0, gold: 0.00 },
+  kamikakushi: { icon: "✨", label: "消えた参道", battle: 0, gold: 0.00 },
+};
+const YAMA_PATH_DEFS = {
+  rindou: { icon: "⛰️", label: "広い尾根道", battle: 0, gold: 0.20 },
+  kemono: { icon: "🐾", label: "獣道", battle: 0, gold: 0.15 },
+  kurai: { icon: "🌑", label: "険しい崖道", battle: 0, gold: 0.10 },
+  shizuka: { icon: "🍃", label: "静かな稜線", battle: 0, gold: 0.25 },
+  komorebi: { icon: "🌲", label: "巨木の並ぶ道", battle: 0, gold: 0.30 },
+  hikaru: { icon: "💰", label: "何かが光る岩陰", battle: 0, gold: 0.90 },
+  fuon: { icon: "👁️", label: "不穏な山道", battle: 0, gold: 0.00 },
+  kamikakushi: { icon: "✨", label: "消えた尾根道", battle: 0, gold: 0.00 },
+};
 function currentPathDefs() {
   return currentStage === "coast" ? COAST_PATH_DEFS : currentStage === "cave" ? CAVE_PATH_DEFS
     : currentStage === "ruins" ? RUINS_PATH_DEFS : currentStage === "gate" ? GATE_PATH_DEFS
     : currentStage === "castle" ? CASTLE_PATH_DEFS : currentStage === "valley" ? VALLEY_PATH_DEFS
-    : currentStage === "bamboo" ? BAMBOO_PATH_DEFS : PATH_DEFS;
+    : currentStage === "bamboo" ? BAMBOO_PATH_DEFS : currentStage === "shugendo" ? SHUGENDO_PATH_DEFS
+    : currentStage === "yama" ? YAMA_PATH_DEFS : PATH_DEFS;
 }
 // 進路選択カードの短い情景描写(演出用の雰囲気テキストのみ。battle/gold等の数値には一切影響しない)
 const PATH_FLAVOR = {
@@ -1214,11 +1241,22 @@ const BAMBOO_PATH_FLAVOR = {
   shizuka: "物音一つしない静かな竹林", komorebi: "竹の節目が淡く光っている", hikaru: "竹林の奥で何かが光っている",
   fuon: "得体の知れない気配がする", kamikakushi: "空気が違う…",
 };
+const SHUGENDO_PATH_FLAVOR = {
+  rindou: "石畳が続く広い参道", kemono: "岩場に沿った細い道", kurai: "崖沿いの危うい難路",
+  shizuka: "滝の音だけが響く小道", komorebi: "苔むした石段が続く", hikaru: "祠の奥で何かが光っている",
+  fuon: "得体の知れない気配がする", kamikakushi: "空気が違う…",
+};
+const YAMA_PATH_FLAVOR = {
+  rindou: "見晴らしの良い尾根道", kemono: "獣の踏み跡が続く", kurai: "切り立った険しい崖道",
+  shizuka: "風だけが吹き抜ける稜線", komorebi: "巨木が立ち並ぶ道", hikaru: "岩陰で何かが光っている",
+  fuon: "得体の知れない気配がする", kamikakushi: "空気が違う…",
+};
 function currentPathFlavor() {
   return currentStage === "coast" ? COAST_PATH_FLAVOR : currentStage === "cave" ? CAVE_PATH_FLAVOR
     : currentStage === "ruins" ? RUINS_PATH_FLAVOR : currentStage === "gate" ? GATE_PATH_FLAVOR
     : currentStage === "castle" ? CASTLE_PATH_FLAVOR : currentStage === "valley" ? VALLEY_PATH_FLAVOR
-    : currentStage === "bamboo" ? BAMBOO_PATH_FLAVOR : PATH_FLAVOR;
+    : currentStage === "bamboo" ? BAMBOO_PATH_FLAVOR : currentStage === "shugendo" ? SHUGENDO_PATH_FLAVOR
+    : currentStage === "yama" ? YAMA_PATH_FLAVOR : PATH_FLAVOR;
 }
 // 2択/3択で使う通常プールの出現の重み(重複ありの抽選=同じ道が2つとも出ることもある)
 const NORMAL_PATH_WEIGHTS = {
@@ -1291,10 +1329,13 @@ const RUINS_MAX_FLOOR = 12; // 廃城下町(仮)
 const GATE_MAX_FLOOR = 1; // 門(仮。関門としての通過点なので1層のみ)
 const CASTLE_MAX_FLOOR = 10; // 古城(仮)
 const VALLEY_MAX_FLOOR = 10; // 渓流(仮)
-const BAMBOO_MAX_FLOOR = 10; // 光る竹林(仮。この先の山伏の里は村画面が必要なため今回は未実装)
-const STAGE_CHAIN_NEXT = { cave: "ruins", ruins: "gate", gate: "castle", valley: "bamboo" };
-const STAGE_CHAIN_MAX = { cave: CAVE_MAX_FLOOR, ruins: RUINS_MAX_FLOOR, gate: GATE_MAX_FLOOR, castle: CASTLE_MAX_FLOOR, valley: VALLEY_MAX_FLOOR, bamboo: BAMBOO_MAX_FLOOR };
-const STAGE_CHAIN_ENTER_LOG = { cave: "🏚️廃城下町へ足を踏み入れた。", ruins: "⛩️門をくぐった。", gate: "🏯古城へ足を踏み入れた。", valley: "🎋光る竹林へ足を踏み入れた。" };
+const BAMBOO_MAX_FLOOR = 10; // 光る竹林(仮。最深部で山伏の里(村)へ自動到着する)
+const SHUGENDO_MAX_FLOOR = 10; // 修験道(仮)
+const YAMA_MAX_FLOOR = 20; // 山(仮。長めのエリア想定のため他より多め。前半/後半で背景を切り替える(yamaBgSetForCurrentState参照))
+const YAMA_STAGE2_FLOOR = 11; // この階から山ステージ2の背景に切り替わる
+const STAGE_CHAIN_NEXT = { cave: "ruins", ruins: "gate", gate: "castle", valley: "bamboo", shugendo: "yama" };
+const STAGE_CHAIN_MAX = { cave: CAVE_MAX_FLOOR, ruins: RUINS_MAX_FLOOR, gate: GATE_MAX_FLOOR, castle: CASTLE_MAX_FLOOR, valley: VALLEY_MAX_FLOOR, bamboo: BAMBOO_MAX_FLOOR, shugendo: SHUGENDO_MAX_FLOOR, yama: YAMA_MAX_FLOOR };
+const STAGE_CHAIN_ENTER_LOG = { cave: "🏚️廃城下町へ足を踏み入れた。", ruins: "⛩️門をくぐった。", gate: "🏯古城へ足を踏み入れた。", valley: "🎋光る竹林へ足を踏み入れた。", shugendo: "⛰️山へ足を踏み入れた。" };
 const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
 function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, offerValleyFork) {
   const div = document.getElementById("criticalAlert");

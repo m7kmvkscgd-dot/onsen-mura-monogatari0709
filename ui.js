@@ -22,6 +22,13 @@ const BG_SETS = {
   umimura: { dawn: "assets/bg/umimura_dawn.jpg", asa: "assets/bg/umimura_asa.jpg", day: "assets/bg/umimura_day.jpg", dusk: "assets/bg/umimura_dusk.jpg", night: "assets/bg/umimura_night.jpg" },
   umiyado: { dawn: "assets/bg/umiyado_dawn.jpg", asa: "assets/bg/umiyado_asa.jpg", day: "assets/bg/umiyado_day.jpg", dusk: "assets/bg/umiyado_dusk.jpg", night: "assets/bg/umiyado_night.jpg" },
   umionsen: { dawn: "assets/bg/umionsen_dawn.jpg", asa: "assets/bg/umionsen_asa.jpg", day: "assets/bg/umionsen_day.jpg", dusk: "assets/bg/umionsen_dusk.jpg", night: "assets/bg/umionsen_night.jpg" },
+  // 修験道/山(2026-07-19、下地の歩行テスト用)。山は前半/後半で背景セットが分かれる
+  shugendo: { dawn: "assets/bg/shugendo_dawn.jpg", asa: "assets/bg/shugendo_asa.jpg", day: "assets/bg/shugendo_day.jpg", dusk: "assets/bg/shugendo_dusk.jpg", night: "assets/bg/shugendo_night.jpg" },
+  yama: { dawn: "assets/bg/yama_dawn.jpg", asa: "assets/bg/yama_asa.jpg", day: "assets/bg/yama_day.jpg", dusk: "assets/bg/yama_dusk.jpg", night: "assets/bg/yama_night.jpg" },
+  yama2: { dawn: "assets/bg/yama2_dawn.jpg", asa: "assets/bg/yama2_asa.jpg", day: "assets/bg/yama2_day.jpg", dusk: "assets/bg/yama2_dusk.jpg", night: "assets/bg/yama2_night.jpg" },
+  // 山伏の里(渓流→光る竹林の先にある第三の村、2026-07-19)。本体/温泉の2画面分(宿はまだ無い)
+  yamabushi: { dawn: "assets/bg/yamabushi_dawn.jpg", asa: "assets/bg/yamabushi_asa.jpg", day: "assets/bg/yamabushi_day.jpg", dusk: "assets/bg/yamabushi_dusk.jpg", night: "assets/bg/yamabushi_night.jpg" },
+  yamabushionsen: { dawn: "assets/bg/yamabushionsen_dawn.jpg", asa: "assets/bg/yamabushionsen_asa.jpg", day: "assets/bg/yamabushionsen_day.jpg", dusk: "assets/bg/yamabushionsen_dusk.jpg", night: "assets/bg/yamabushionsen_night.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
@@ -34,7 +41,12 @@ function caveBgSetForCurrentState() {
   const url = currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
   return { dawn: url, asa: url, day: url, dusk: url, night: url };
 }
-// 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城/渓流/光る竹林のどのステージ中かで出し分ける
+// 山ステージ中の現在地(階層)に応じて、前半(yama)/後半(yama2、YAMA_STAGE2_FLOOR以降)の
+// 背景セットを出し分ける(洞窟の浅い層/深い層と同じ考え方)
+function yamaBgSetForCurrentState() {
+  return currentFloor >= YAMA_STAGE2_FLOOR ? BG_SETS.yama2 : BG_SETS.yama;
+}
+// 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城/渓流/光る竹林/修験道/山のどのステージ中かで出し分ける
 function currentAreaBgSet() {
   if (currentStage === "coast") return BG_SETS.coast;
   if (currentStage === "cave") return caveBgSetForCurrentState();
@@ -43,6 +55,8 @@ function currentAreaBgSet() {
   if (currentStage === "castle") return BG_SETS.castle;
   if (currentStage === "valley") return BG_SETS.valley;
   if (currentStage === "bamboo") return BG_SETS.bamboo;
+  if (currentStage === "shugendo") return BG_SETS.shugendo;
+  if (currentStage === "yama") return yamaBgSetForCurrentState();
   return BG_SETS.dungeon;
 }
 function currentCampBgUrl() {
@@ -54,6 +68,8 @@ function currentCampBgUrl() {
   if (currentStage === "gate") return "assets/bg/ruins_camp.jpg";
   if (currentStage === "valley") return "assets/bg/valley_camp.jpg";
   if (currentStage === "bamboo") return "assets/bg/bamboo_camp.jpg";
+  if (currentStage === "shugendo") return "assets/bg/shugendo_camp.jpg";
+  if (currentStage === "yama") return currentFloor >= YAMA_STAGE2_FLOOR ? "assets/bg/yama2_camp.jpg" : "assets/bg/yama_camp.jpg";
   return "assets/bg/camp_night.jpg";
 }
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
@@ -76,6 +92,9 @@ function preloadDungeonImages() {
   Object.values(BG_SETS.castle).forEach((url) => { const img = new Image(); img.src = url; });
   Object.values(BG_SETS.valley).forEach((url) => { const img = new Image(); img.src = url; });
   Object.values(BG_SETS.bamboo).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.shugendo).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.yama).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.yama2).forEach((url) => { const img = new Image(); img.src = url; });
 }
 // 鬼火の「魂のかけら」ドロップ演出(showTreasurePopup)は最大1.8秒しか表示されないため、
 // 初回遭遇時に画像が未読み込みだと表示されないまま消えてしまう。他の先読みと同様、暇な時に読み込んでおく
@@ -125,6 +144,11 @@ function updateSceneBackgrounds() {
   if (umiyadoHero) umiyadoHero.style.backgroundImage = `url('${BG_SETS.umiyado[tod]}')`;
   const umionsenHero = document.getElementById("umionsenHero");
   if (umionsenHero) umionsenHero.style.backgroundImage = `url('${BG_SETS.umionsen[tod]}')`;
+  // 山伏の里(第三の村、2026-07-19)
+  const yamabushiHero = document.getElementById("yamabushiHero");
+  if (yamabushiHero) yamabushiHero.style.backgroundImage = `url('${BG_SETS.yamabushi[tod]}')`;
+  const yamabushionsenHero = document.getElementById("yamabushionsenHero");
+  if (yamabushionsenHero) yamabushionsenHero.style.backgroundImage = `url('${BG_SETS.yamabushionsen[tod]}')`;
 }
 // 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
 // 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
