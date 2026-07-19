@@ -754,8 +754,10 @@ function randomFemaleName() {
   return RANDOM_FEMALE_NAMES[Math.floor(Math.random() * RANDOM_FEMALE_NAMES.length)].name;
 }
 
-// 汎用の確認/案内ポップアップ。buttonsは{label, className, onClick}の配列
-function showConfirmModal(text, buttons, textColor) {
+// 汎用の確認/案内ポップアップ。buttonsは{label, className, onClick}の配列。
+// panelClassを渡すとパネルにそのクラスを追加できる(景色が変わる分岐道の青いグロー演出等、
+// 呼び出し元ごとの特別な見た目のための拡張。省略時は通常の見た目のまま)
+function showConfirmModal(text, buttons, textColor, panelClass) {
   const textEl = document.getElementById("genericConfirmText");
   textEl.textContent = text;
   textEl.style.color = textColor || "";
@@ -771,6 +773,8 @@ function showConfirmModal(text, buttons, textColor) {
     };
     btnWrap.appendChild(btn);
   });
+  const panel = document.getElementById("genericConfirmPanel");
+  panel.className = panelClass || "";
   document.getElementById("genericConfirmOverlay").style.display = "flex";
 }
 function hideConfirmModal() {

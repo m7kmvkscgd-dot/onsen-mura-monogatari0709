@@ -318,6 +318,22 @@
   @media (prefers-reduced-motion: reduce) {
     .path-tag.path-tag-cave { animation: none; box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 14px 2px rgba(124,138,148,0.55); }
   }
+  /* 景色が変わる(ステージそのものが切り替わる)分岐道専用の見た目。汎用確認モーダル
+     (genericConfirmOverlay、showConfirmModalのpanelClass引数)に使う。inline styleで
+     border-colorが指定済みのため!importantで上書きする。洞窟/渓流の分かれ道(path-tag-cave、
+     上記)と同じ「特別な分岐は光らせる」方針を、showPathChoiceの木札式ではなく通常モーダルで
+     出す分岐(廃城下町/海の村など)にも適用するためのもの */
+  #genericConfirmPanel.scene-fork-panel {
+    border-color: #5b9bf0 !important;
+    animation: sceneForkGlow 1.8s ease-in-out infinite;
+  }
+  @keyframes sceneForkGlow {
+    0%, 100% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 10px 1px rgba(91,155,240,0.4); }
+    50% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 22px 5px rgba(91,155,240,0.85); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #genericConfirmPanel.scene-fork-panel { animation: none; box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 16px 3px rgba(91,155,240,0.6); }
+  }
   @keyframes teahouseTagGlow {
     0%, 100% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 10px 1px rgba(215,182,111,0.35); }
     50% { box-shadow: 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 20px 4px rgba(215,182,111,0.75); }

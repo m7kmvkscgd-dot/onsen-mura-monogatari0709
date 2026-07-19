@@ -378,18 +378,20 @@ function stopBattleBgm() {
 
 // 環境音: 探索中・戦闘中を通して共通で流れ続ける環境音。森は虫の声(朝昼insect_day/夕夜insect_night、
 // forceKeyを渡すと時間帯に関わらずそのキーを強制。野営演出が視覚的には常に夜へ切り替わるため、
-// 野営開始時だけ強制的にinsect_nightへ寄せる用途)、海岸は波音(coast_ambient、時間帯に関わらず1種類)を使う
+// 野営開始時だけ強制的にinsect_nightへ寄せる用途)、海岸は波音(coast_ambient、時間帯に関わらず1種類)、
+// 洞窟は洞窟内の音(cave_ambient、時間帯に関わらず1種類)を使う
 const AMBIENT_BGM_TRACKS = { day: "assets/bgm/insect_day.mp3", night: "assets/bgm/insect_night.mp3" };
 const COAST_AMBIENT_TRACK = "assets/bgm/coast_ambient.mp3";
+const CAVE_AMBIENT_TRACK = "assets/bgm/cave_ambient.mp3";
 let currentAmbientKey = null;
 function ambientKeyForTimeOfDay(tod) {
   return tod === "dawn" || tod === "asa" || tod === "day" ? "day" : "night";
 }
 function playAmbientBgm(forceKey) {
-  const key = currentStage === "coast" ? "coast" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
+  const key = currentStage === "coast" ? "coast" : currentStage === "cave" ? "cave" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
   if (currentAmbientKey === key) return;
   currentAmbientKey = key;
-  ambientBgmAudio.src = key === "coast" ? COAST_AMBIENT_TRACK : AMBIENT_BGM_TRACKS[key];
+  ambientBgmAudio.src = key === "coast" ? COAST_AMBIENT_TRACK : key === "cave" ? CAVE_AMBIENT_TRACK : AMBIENT_BGM_TRACKS[key];
   ambientBgmAudio.currentTime = 0;
   if (audioUnlocked) ambientBgmAudio.play().catch(() => {});
 }

@@ -1094,7 +1094,7 @@ document.getElementById("advanceBtn").onclick = () => {
         label: "海の村へ", className: "big primary",
         onClick: () => { playDungeonMoveTransition(() => arriveAtUmiMura()); },
       },
-    ]);
+    ], null, "scene-fork-panel");
     return;
   }
   // 中継ステージ(洞窟/少し森/廃城下町/渓流/光る竹林/修験道)の最深部へ進もうとした場合は、
@@ -2117,12 +2117,12 @@ function deliverCarriedAllies() {
 const RETREAT_BATTLE_CHANCE = 0.18; // ユーザー指示で19%→18%に1%下げた
 const RETREAT_GOLD_CHANCE = 0.10;
 function rollEncounter(pathBias) {
-  // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを3つ手に入れる特別な道(戦闘/財宝抽選はしない)
+  // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを2つ手に入れる特別な道(戦闘/財宝抽選はしない)
   if (pathBias === "kamikakushi") {
     lastFloorMoveOutcome = "kamikakushi"; // オート帰還の一時停止判定用(実際にはpathBiasが常にnullなので帰還中は通らない)
-    state.inventory.soulShard = (state.inventory.soulShard || 0) + 3;
+    state.inventory.soulShard = (state.inventory.soulShard || 0) + 2;
     saveState();
-    dlog("神隠しの道を抜けると、魂のかけらが3つ落ちていた。");
+    dlog("神隠しの道を抜けると、魂のかけらが2つ落ちていた。");
     renderDungeon();
     playKamikakushiEffect();
     playSfx("omikuji_daikichi");
