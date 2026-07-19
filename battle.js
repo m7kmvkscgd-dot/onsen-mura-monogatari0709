@@ -44,6 +44,9 @@ function startBattle(enemies, pathDef, encounterText) {
     c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
     c.hawkTurnsLeft = 0; // 狩人「鷹を呼ぶ」も戦闘をまたいで持ち越さない
     c.hawkGuardTargetId = null;
+    c.turnStackAtkStacks = 0; // 百戦錬磨など、ターン経過で積み上がる攻撃力バフも戦闘をまたいで持ち越さない
+    c.nullifyCounterTurnsLeft = 0; // 心眼の構えなど、このターン限定の無効化反撃も戦闘をまたいで持ち越さない
+    c.nullifyCounterMult = null;
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -627,6 +630,55 @@ function pickSingleEnemyTarget(onPicked) {
   grid.appendChild(backBtn);
 }
 
+// 連斬(会心後の追撃)専用の対象選択。pickSingleEnemyTargetと違い「戻る」を出さない
+// (通常の行動選択に戻れてしまうと、既に確定した通常攻撃の分を無かったことにして
+// 別の行動を選び直せてしまう抜け道になるため)。対象が1体もいなければ追撃自体を諦める
+function pickFollowupTarget(onPicked) {
+  const targets = targetableEnemies();
+  if (targets.length === 0) { onPicked(null); return; }
+  if (targets.length === 1) { onPicked(targets[0]); return; }
+  battleSubMenuActive = true;
+  battleActionLocked = false;
+  pendingEnemyPick = (t) => { onPicked(t); };
+  renderBattleScreen();
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = "1fr 1fr 1fr";
+  targets.forEach((t) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${t.label} (${t.hp}/${t.maxHp})`;
+    btn.onclick = () => {
+      if (!pendingEnemyPick) return;
+      pendingEnemyPick = null;
+      battleActionLocked = true;
+      onPicked(t);
+    };
+    grid.appendChild(btn);
+  });
+}
+// 連斬など: 会心を出した直後の追撃。通常攻撃と同じ処理を簡略版で再現する
+// (最初の一撃の武甕槌命/建御雷神の御守判定・ヒットストップ演出の間は含めない。追撃はあくまで「おまけ」の一撃)
+function runCritFollowupAttack(actor, onDone) {
+  blog(`${actor.label}は会心の勢いのまま、もう一度斬りかかった！`);
+  pickFollowupTarget((target) => {
+    if (!target) { onDone(); return; }
+    playSfx(attackSfxFor(actor.classId));
+    const result = performAttack(actor, target, blog);
+    if (result.hit) playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
+    if (result.hit) {
+      popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+      if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+      maybeSpeakOnKill(actor, target);
+    } else {
+      playSfx("evade");
+    }
+    renderBattleScreen();
+    if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+    triggerShootDownEvents(result.shotDown ? [target] : [], onDone);
+  });
+}
+
 // 担いでいる相手を対象に選ぶ(戦闘中に瀕死になった仲間、または担いでいる最中に別の仲間が瀕死になった場合)
 // スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
 function runTreeSkill(actor, skill) {
@@ -644,6 +696,40 @@ function runTreeSkill(actor, skill) {
     const result = useTreeSkill(actor, actor, skill, blog); // MP消費/不足判定のみ処理される
     if (result && result.failed) { battleActionLocked = false; return; } // 再描画を挟まず抜けるため、ロックを自分で解除しておく
     renderTransformFormPicker(actor, mpBeforeCost);
+    return;
+  }
+  if (action.kind === "guardCounterSelf") {
+    playSfx("guard");
+    useTreeSkill(actor, actor, skill, blog);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  if (action.kind === "damageRandomMulti") {
+    playSfx(attackSfxFor(actor.classId));
+    const result = useTreeSkill(actor, null, skill, blog);
+    const hits = (result && result.randomHits) || [];
+    document.getElementById("actionGrid").innerHTML = "";
+    renderBattleScreen();
+    const STAGGER_MS = 260;
+    let anyCrit = false;
+    hits.forEach((h, i) => {
+      setTimeout(() => {
+        if (h.hit) {
+          popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(true));
+          playSfx(hitTakenSfxFor(h.dmg, h.target.maxHp, h.target.isSwarm));
+          if (h.crit) { anyCrit = true; playCritEffects(h.target.instanceId, actor, h.dmg); }
+          playAttackVfx(h.target.instanceId, actor, "skill");
+        } else {
+          playSfx("evade");
+        }
+        renderBattleScreen();
+      }, i * STAGGER_MS);
+    });
+    setTimeout(() => {
+      if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
+      finishPlayerAction(anyCrit);
+    }, hits.length * STAGGER_MS + 50);
     return;
   }
   if (action.kind === "buffSelf") {
@@ -1029,7 +1115,15 @@ function renderActionButtons(actor) {
           renderBattleScreen();
           if (result.hit) playAttackVfx(target.instanceId, actor, "normal", vfxResumeFrame);
           if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
-          triggerShootDownEvents(result.shotDown ? [target] : [], () => finishPlayerAction(result.crit));
+          triggerShootDownEvents(result.shotDown ? [target] : [], () => {
+            // 連斬など: 会心を出した直後、確率でもう一度だけ通常攻撃できる(対象再選択可)。
+            // 追撃自体はさらに連鎖しない(allowFollowup=falseで呼ぶ)
+            if (result.crit && actor.passives && actor.passives.onCritExtraAttackChance && Math.random() < actor.passives.onCritExtraAttackChance) {
+              runCritFollowupAttack(actor, () => finishPlayerAction(result.crit));
+            } else {
+              finishPlayerAction(result.crit);
+            }
+          });
         };
         if (result.hit && !result.crit) {
           // 斬撃が敵へ「到達した瞬間」を表現するため、VFXの1フレーム目だけを命中と同フレームで

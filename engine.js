@@ -382,6 +382,10 @@ function effectiveStat(entity, key) {
   if (key === "atk" && entity.campWeaponCareBattles > 0) {
     result = Math.max(1, Math.round(result * CAMP_WEAPON_CARE_ATK_MULT));
   }
+  // ターン経過で積み上がる攻撃力バフ(百戦錬磨など)
+  if (key === "atk" && entity.passives && entity.passives.turnStackAtkBuff && entity.turnStackAtkStacks > 0) {
+    result = Math.max(1, Math.round(result * (1 + entity.passives.turnStackAtkBuff.perTurn * entity.turnStackAtkStacks)));
+  }
   return result;
 }
 
@@ -445,7 +449,8 @@ function applyPoison(entity, stacks) {
 function tickPoison(entity, log) {
   if (!entity.poison || entity.poison <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "poison");
-  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.round(entity.poison * (weak ? 2 : 1))));
+  const dotMult = (entity.passives && entity.passives.dotDamageMult) || 1;
+  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.max(1, Math.round(entity.poison * (weak ? 2 : 1) * dotMult))));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は毒で${dmg}ダメージ！`);
   entity.poison = Math.max(0, entity.poison - 1);
@@ -472,7 +477,8 @@ function applyBleed(entity, stacks) {
 function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "bleed");
-  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.round(entity.bleed * (weak ? 2 : 1))));
+  const dotMult = (entity.passives && entity.passives.dotDamageMult) || 1;
+  const dmg = Math.min(entity.hp, dotTickBossCap(entity, Math.max(1, Math.round(entity.bleed * (weak ? 2 : 1) * dotMult))));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は出血で${dmg}ダメージ！`);
   entity.bleed = Math.max(0, entity.bleed - 1);
@@ -540,7 +546,8 @@ function revertTransform(character) {
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
   const w = enemyWeaknessType(entity, "burn");
-  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * (w ? 2 : 1)));
+  const dotMult = (entity.passives && entity.passives.dotDamageMult) || 1;
+  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * (w ? 2 : 1) * dotMult));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は炎上で${dmg}ダメージ！${w ? "(炎上は弱点！)" : ""}`);
   if (!(w && w.tier === 2)) entity.burnTurns--;
@@ -614,6 +621,26 @@ function tickTurnStartEffects(entity, log) {
   if (entity.passives && entity.passives.onKillStacks > 0) {
     entity.passives.onKillStacksTurns--;
     if (entity.passives.onKillStacksTurns <= 0) entity.passives.onKillStacks = 0;
+  }
+  // 百戦錬磨など: 自分のターンが来るたびに攻撃力が少しずつ積み上がる(maxTurnsで頭打ち、戦闘中ずっと持続)
+  if (entity.passives && entity.passives.turnStackAtkBuff) {
+    const b = entity.passives.turnStackAtkBuff;
+    entity.turnStackAtkStacks = Math.min(b.maxTurns, (entity.turnStackAtkStacks || 0) + 1);
+  }
+  // 覇気など: 自分のターン開始時、確率で指定の状態異常を自動で治す
+  if (entity.hp > 0 && entity.passives && entity.passives.turnStartCureChance) {
+    const tc = entity.passives.turnStartCureChance;
+    const hasIt = tc.type === "bleed" ? (entity.bleed || 0) > 0 : tc.type === "poison" ? (entity.poison || 0) > 0 : false;
+    if (hasIt && Math.random() < tc.chance) {
+      if (tc.type === "bleed") entity.bleed = 0;
+      if (tc.type === "poison") entity.poison = 0;
+      log(`${entity.label}は気迫で${tc.type === "bleed" ? "出血" : "毒"}を癒した！`);
+    }
+  }
+  // 心眼の構えなど: 「このターン」限定の無効化反撃が不発のまま自分の次のターンを迎えたら解除する
+  if (entity.nullifyCounterTurnsLeft > 0) {
+    entity.nullifyCounterTurnsLeft--;
+    if (entity.nullifyCounterTurnsLeft <= 0) entity.nullifyCounterMult = null;
   }
   return { total: dmg, poison: poisonDmg, burn: burnDmg, bleed: bleedDmg };
 }
@@ -748,6 +775,11 @@ function initPassives() {
     abilityMpDiscount: {}, // { abilityType: 固定MP割引量 } 職業の基本アビリティ(薙ぎ払い等)のMP消費を固定値で下げる(舞の型など)
     abilityOnHitInflicts: {}, // { abilityType: [{type,chance,value,valueMin,valueMax,turns}] } 特定の職業基本アビリティ(薙ぎ払い等)が命中した敵にだけ状態異常を付与する(旋風薙ぎなど)
     abilityAoeSelfBuffs: {}, // { abilityType: [{stat,perHitMult,turns}] } 特定の職業基本アビリティ(薙ぎ払い等)が命中した敵の数に応じて自分に一時バフを与える(円舞など)
+    onCritExtraAttackChance: 0, // 自分が会心を出した直後、この確率でもう一度通常攻撃できる(対象再選択可、通常攻撃のみ。連斬など)
+    dotDamageMult: 1, // 毒/出血/炎上のダメージ倍率(黒曜など、1未満で軽減)
+    allyCritSelfCritBuff: 0, // 自分以外の仲間が会心を出した直後、次の自分の1ターンだけ会心率がこの値だけ上がる(闘志など)
+    turnStackAtkBuff: null, // {perTurn, maxTurns} 自分のターンが来るたびに攻撃力がperTurnずつ上がる(maxTurnsで頭打ち。百戦錬磨など)
+    turnStartCureChance: null, // {type, chance} 自分のターン開始時、この確率で指定の状態異常(出血など)を自動で治す(覇気など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -834,6 +866,11 @@ function applySkillChoice(character, skill, level) {
         p.abilityAoeSelfBuffs[k].push(add.abilityAoeSelfBuff[k]);
       });
     }
+    if (add.onCritExtraAttackChance) p.onCritExtraAttackChance = add.onCritExtraAttackChance;
+    if (add.dotDamageMult) p.dotDamageMult *= add.dotDamageMult;
+    if (add.allyCritSelfCritBuff) p.allyCritSelfCritBuff += add.allyCritSelfCritBuff;
+    if (add.turnStackAtkBuff) p.turnStackAtkBuff = add.turnStackAtkBuff;
+    if (add.turnStartCureChance) p.turnStartCureChance = add.turnStartCureChance;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -912,8 +949,16 @@ function rollCritMultiplier(actor, extraCritRate, target) {
   }
   // 自分以外の仲間がかばっている間の追加会心率(連携の呼吸など)
   const allyGuardCritAdd = p.allyGuardCritAdd > 0 && anyOtherAllyGuarding(actor) ? p.allyGuardCritAdd : 0;
-  const rate = BASE_CRIT_RATE + p.critRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0);
-  if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd;
+  // 一時的な会心率/会心ダメージバフ(闘志・明鏡止水など)。statMods経由でevasionAddと同じ加算方式で乗る
+  let tempCritRateAdd = 0, tempCritDmgAdd = 0;
+  if (actor.statMods) {
+    actor.statMods.forEach((m) => {
+      if (m.stat === "critRateAdd") tempCritRateAdd += m.mult;
+      if (m.stat === "critDmgAdd") tempCritDmgAdd += m.mult;
+    });
+  }
+  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0);
+  if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd + tempCritDmgAdd;
   return 1;
 }
 // スキルツリーの技のMPコストに、そのキャラのMP割引を適用する
@@ -970,6 +1015,13 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は鷹を呼び出した！`);
     return { summonedHawk: true };
   }
+  // 心眼の構えなど: このターン限定で、敵の単体攻撃を1度だけ完全に無効化して反撃する(applyDamageToTarget側で消費・処理する)
+  if (action.kind === "guardCounterSelf") {
+    actor.nullifyCounterMult = action.mult || 0.8;
+    actor.nullifyCounterTurnsLeft = 2; // 「次の自分の1ターンまで」を表す既存の慣習(連斬のonCritSelfBuffと同じturns:2)
+    log(`${actor.label}は${skill.name}を構えた！`);
+    return { buffed: true };
+  }
   if (action.kind === "buffSelf" || action.kind === "buffParty") {
     const targets = action.kind === "buffParty" ? target : [actor];
     targets.forEach((t) => {
@@ -1002,6 +1054,28 @@ function useTreeSkill(actor, target, skill, log) {
       return { target: t, heal };
     });
     return { healed: heals };
+  }
+  // 乱れ斬り(改)など: 通常のhits>1(単体への連撃)とは別枠で、1振りごとに対象をランダムに選び直す
+  // (targetは呼び出し元で選ばせず、targetableEnemies()から都度抽選する)
+  if (action.kind === "damageRandomMulti") {
+    const hits = action.hits || 3;
+    const atkStat = action.useMag ? effectiveStat(actor, "mag") : effectiveStat(actor, "atk");
+    const randomHits = [];
+    for (let i = 0; i < hits; i++) {
+      const pool = typeof targetableEnemies === "function" ? targetableEnemies() : [];
+      if (!pool.length) break;
+      const t = pool[Math.floor(Math.random() * pool.length)];
+      if (!rollHit(actor, t, skillRangeType(actor, skill))) {
+        log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
+        randomHits.push({ target: t, hit: false, dmg: 0, crit: false });
+        continue;
+      }
+      const def = effectiveStat(t, "def") * (1 - (action.defPierce || 0));
+      const rawHit = Math.max(1, Math.round(withVariance(atkStat * action.mult * mitigation(def, 15), 0.15)));
+      const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor);
+      randomHits.push({ target: t, hit: true, dmg, crit: lastHitWasCrit });
+    }
+    return { randomHits };
   }
   // selfReload: 砲術士の一部の技(貫通弾・一斉砲撃など)は、命中/回避に関わらず撃てば次の自分のターンは
   // 装填で動けなくなる(cannonShotと同じ仕様)。大威力の代わりに手数が落ちる、というトレードオフの表現
@@ -1442,6 +1516,17 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       return 0;
     }
   }
+  // 心眼の構えなど: 「このターン」限定で、敵の攻撃を1度だけ完全に無効化してその場で反撃する
+  if (actor && target.nullifyCounterTurnsLeft > 0) {
+    const counterMult = target.nullifyCounterMult || 0.8;
+    target.nullifyCounterTurnsLeft = 0;
+    target.nullifyCounterMult = null;
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterMult - effectiveStat(actor, "def") * 0.5));
+    actor.hp = Math.max(0, actor.hp - counterDmg);
+    log(`${target.label}は${actorLabel}の攻撃を完全に無効化した！`);
+    log(`${target.label}は${counterDmg}ダメージで反撃した！`);
+    return 0;
+  }
   if (actor && actor.passives && actor.passives.firstAttackBonusMult > 0 && !actor.passives.firstAttackUsed) {
     dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
     actor.passives.firstAttackUsed = true;
@@ -1479,6 +1564,14 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     if (lastHitWasCrit && actor.passives && actor.passives.onCritSelfBuff) {
       const b = actor.passives.onCritSelfBuff;
       applyStatMod(actor, b.stat, b.mult, 2);
+    }
+    // 仲間が会心を出した直後、次の自分の1ターンだけ会心率が上がる受動(闘志など)
+    if (lastHitWasCrit && actor.__allies) {
+      actor.__allies.forEach((ally) => {
+        if (ally !== actor && ally.status === "active" && ally.passives && ally.passives.allyCritSelfCritBuff) {
+          applyStatMod(ally, "critRateAdd", ally.passives.allyCritSelfCritBuff, 2);
+        }
+      });
     }
   }
   // 自分より素早い相手から受けるダメージを軽減する受動(疾風など)。actorは攻撃側なので、
@@ -1553,6 +1646,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 通常攻撃に乗る状態異常付与の受動効果(毒刃・毒矢など): 攻撃が当たった時に確率判定する。複数選んでいれば全て判定する
   if (actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
     actor.passives.onHitInflicts.forEach((oh) => {
+      // targetSlower条件つき(疾風の出血付与など): 対象が自分より素早さが遅い時だけ判定する
+      if (oh.condition === "targetSlower" && !(effectiveStat(actor, "spd") > effectiveStat(target, "spd"))) return;
       if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
         if (oh.type === "poison") applyPoison(target, (oh.value || 3) + izanamiBoost);

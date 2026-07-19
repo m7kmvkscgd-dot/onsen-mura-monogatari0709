@@ -832,28 +832,28 @@ const SKILL_TREES = {
       right: { name: "見切り", desc: "HPが50%以下の時、回避率+25%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, evasionAdd: 0.25 } } },
     },
     3: {
-      left: { name: "連斬", desc: "会心を出した直後、次の自分の1ターンだけ攻撃力+20%", mp: 0, passive: { onCritSelfBuff: { stat: "atk", mult: 1.2 } } },
-      right: { name: "気迫", desc: "HPが80%以上の間、被ダメージ12%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.88 } } },
+      left: { name: "連斬", desc: "会心を出した直後、30%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.3 } },
+      right: { name: "気迫", desc: "HPが80%以上の間、被ダメージ20%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.80 } } },
     },
     4: {
       left: { name: "一閃", desc: "敵単体へ190%ダメージ、防御力25%無視", mp: 4, action: { kind: "damage", mult: 1.9, defPierce: 0.25 } },
-      right: { name: "武士道", desc: "HPが50%以下の間、攻撃力・防御力+18%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, statMult: [{ stat: "atk", mult: 1.18 }, { stat: "def", mult: 1.18 }] } } },
+      right: { name: "心眼の構え", desc: "このターン、敵の単体攻撃を1度だけ完全に無効にし、80%の攻撃力で反撃する。", mp: 1, action: { kind: "guardCounterSelf", mult: 0.8 } },
     },
     5: {
-      left: { name: "隙討ち", desc: "防御力が下がっている敵への会心率+22%", mp: 0, passive: { debuffCritBonus: { stat: "def", addRate: 0.22 } } },
-      right: { name: "連携の呼吸", desc: "仲間がかばっている間、会心率+15%", mp: 0, passive: { allyGuardCritAdd: 0.15 } },
+      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
+      right: { name: "黒曜", desc: "出血、毒、炎上のダメージを半分にする", mp: 0, passive: { dotDamageMult: 0.5 } },
     },
     6: {
-      left: { name: "剣豪", desc: "HPが50%以下の敵への会心率+25%", mp: 0, passive: { executeCritBonus: { belowPct: 0.5, addRate: 0.25 } } },
-      right: { name: "不動", desc: "状態異常にかかる確率が50%減少する", mp: 0, passive: { statusResistMult: 0.5 } },
+      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
+      right: { name: "百戦錬磨", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
     },
     7: {
-      left: { name: "疾風", desc: "自分より素早い相手から受けるダメージ-15%", mp: 0, passive: { fasterFoeDmgReduction: 0.15 } },
-      right: { name: "鉄心", desc: "HPが満タンの間、被ダメージ10%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 1.0, dmgTakenMult: 0.9 } } },
+      left: { name: "疾風", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1を与える", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, value: 1, condition: "targetSlower" } } },
+      right: { name: "覇気", desc: "ターン開始時、50%の確率で出血を自動治癒する。", mp: 0, passive: { turnStartCureChance: { type: "bleed", chance: 0.5 } } },
     },
     8: {
-      left: { name: "乱れ斬り", desc: "敵単体へ3連続攻撃(合計210%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.1, hits: 3 } },
-      right: { name: "反撃", desc: "被弾時、20%の確率で反撃する(通常の1.4倍ダメージ)", mp: 0, passive: { counterChance: 0.2, counterMult: 1.4 } },
+      left: { name: "乱れ斬り", desc: "ランダムな敵へ3回攻撃する。(対象は毎回ランダム)", mp: 3, action: { kind: "damageRandomMulti", mult: 0.65, hits: 3 } },
+      right: { name: "燕返し", desc: "被弾時、25%の確率で反撃する(攻撃力110%)", mp: 0, passive: { counterChance: 0.25, counterMult: 1.1 } },
     },
     9: {
       left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
@@ -861,7 +861,7 @@ const SKILL_TREES = {
     },
     10: {
       left: { name: "神速抜刀", desc: "敵単体へ320%ダメージ、防御力50%無視", mp: 7, action: { kind: "damage", mult: 3.2, defPierce: 0.5 } },
-      right: { name: "明鏡止水", desc: "5ターンの間、攻撃力・防御力・素早さ+20%、毎ターンHP8%回復、状態異常無効", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "atk", mult: 1.2 }, { stat: "def", mult: 1.2 }, { stat: "spd", mult: 1.2 }], turns: 5, hpRegenPct: 0.08, statusImmuneTurns: 5 } },
+      right: { name: "明鏡止水", desc: "3ターン、自身の会心率+40%、会心ダメージ+50%。", mp: 5, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.4 }, { stat: "critDmgAdd", mult: 0.5 }], turns: 3 } },
     },
   },
   ninja: {
