@@ -116,25 +116,25 @@
       <path class="path-line confirmed" d="M 360 820 L 300 700" />
       <!-- 森 -> 沼地(直進) -->
       <path class="path-line confirmed" d="M 300 660 L 340 540" />
-      <!-- 沼地 -> 廃城下町 -->
-      <path class="path-line confirmed" d="M 350 500 L 380 400" />
-      <!-- 廃城下町 -> 古城 -->
-      <path class="path-line confirmed" d="M 390 360 L 400 260" />
+      <!-- 沼地 -> 陰陽師の隠れ里 -->
+      <path class="path-line proposed" d="M 350 500 L 385 415" />
       <!-- 森 -> 洞窟(分岐) -->
       <path class="path-line confirmed" d="M 280 660 L 200 560" />
-      <!-- 洞窟 -> 瓦礫爆破 -> 海の村 -->
-      <path class="path-line confirmed" d="M 190 520 L 140 430" />
-      <path class="path-line confirmed" d="M 130 400 L 120 320" />
+      <!-- 洞窟 -> 瓦礫爆破 -> 廃城下町 -->
+      <path class="path-line proposed" d="M 190 520 L 160 460" />
+      <path class="path-line proposed" d="M 155 425 L 150 415" />
+      <!-- 廃城下町 -> 海の村 -->
+      <path class="path-line proposed" d="M 140 390 L 120 335" />
+      <!-- 廃城下町 -> 古城(鍵で封鎖) -->
+      <path class="path-line proposed" d="M 165 405 L 240 380" />
       <!-- 温泉村 <-渡し船-> 海の村 -->
       <path class="path-line confirmed" d="M 340 800 C 200 700, 130 550, 115 340" stroke-dasharray="1 8" />
       <!-- 海の村 -> 海岸 -->
-      <path class="path-line confirmed" d="M 115 290 L 110 190" />
-      <!-- 沼地 -> 陰陽師の隠れ里(新規提案) -->
-      <path class="path-line proposed" d="M 380 490 L 500 460" />
+      <path class="path-line confirmed" d="M 115 290 L 110 195" />
       <!-- 海岸 -> 竜宮城(妄想) -->
       <path class="path-line dream" d="M 105 150 L 90 70" />
       <!-- 古城 -> 黄泉(妄想) -->
-      <path class="path-line dream" d="M 400 220 L 420 110" />
+      <path class="path-line dream" d="M 280 355 L 305 275" />
       <!-- 温泉村 -> 雪山(保留、ユーザー検討中につき点線) -->
       <path class="path-line dream" d="M 400 810 L 560 700" />
 
@@ -151,7 +151,7 @@
       <!-- 洞窟 -->
       <circle class="node" cx="185" cy="550" r="10" fill="var(--cave)" />
       <text class="region-label" x="120" y="530" font-size="14">洞窟</text>
-      <text class="region-sub" x="120" y="546">瓦礫の先が海へ</text>
+      <text class="region-sub" x="120" y="546">瓦礫の先が廃城下町</text>
 
       <!-- 沼地 -->
       <circle class="node" cx="345" cy="530" r="10" fill="var(--swamp)" />
@@ -159,14 +159,14 @@
       <text class="region-sub" x="358" y="536">汽水域</text>
 
       <!-- 廃城下町 -->
-      <circle class="node" cx="385" cy="390" r="10" fill="var(--ruins)" />
-      <text class="region-label" x="398" y="380" font-size="14">廃城下町</text>
-      <text class="region-sub" x="398" y="396">無人の廃墟</text>
+      <circle class="node" cx="152" cy="410" r="10" fill="var(--ruins)" />
+      <text class="region-label" x="35" y="405" font-size="14">廃城下町</text>
+      <text class="region-sub" x="15" y="421">無人の廃墟、海の村への通過点</text>
 
-      <!-- 古城 -->
-      <circle class="node" cx="400" cy="245" r="12" fill="var(--castle)" />
-      <text class="region-label" x="415" y="238" font-size="16">古城</text>
-      <text class="region-sub" x="415" y="254">今のところの最奥</text>
+      <!-- 古城(鍵で封鎖) -->
+      <circle class="node" cx="255" cy="375" r="12" fill="var(--castle)" />
+      <text class="region-label" x="268" y="368" font-size="16">古城</text>
+      <text class="region-sub" x="268" y="384">🔒鍵が要る・今の最奥</text>
 
       <!-- 海の村 -->
       <circle class="node hub" cx="115" cy="310" r="12" fill="var(--village)" />
@@ -179,9 +179,9 @@
       <text class="region-sub" x="30" y="181">1〜10層のみ</text>
 
       <!-- 陰陽師の隠れ里(新規提案) -->
-      <circle class="node" cx="510" cy="450" r="10" fill="var(--proposed)" />
-      <text class="region-label" x="522" y="443" font-size="14">陰陽師の隠れ里</text>
-      <text class="region-sub" x="522" y="459">沼地の激しい枝道の先</text>
+      <circle class="node" cx="390" cy="400" r="10" fill="var(--proposed)" />
+      <text class="region-label" x="403" y="393" font-size="14">陰陽師の隠れ里</text>
+      <text class="region-sub" x="403" y="409">沼地の先の終着点</text>
 
       <!-- 雪山(保留) -->
       <circle class="node" cx="575" cy="690" r="10" fill="var(--snow)" opacity="0.75" />
@@ -194,9 +194,9 @@
       <text class="region-sub" x="15" y="72">海の最も深い場所</text>
 
       <!-- 黄泉(妄想) -->
-      <circle class="node" cx="425" cy="90" r="11" fill="var(--dream)" />
-      <text class="region-label" x="440" y="82" font-size="15">黄泉</text>
-      <text class="region-sub" x="440" y="98">死者の国、噂だけ先行</text>
+      <circle class="node" cx="315" cy="255" r="11" fill="var(--dream)" />
+      <text class="region-label" x="328" y="248" font-size="15">黄泉</text>
+      <text class="region-sub" x="328" y="264">死者の国、噂だけ先行</text>
     </svg>
   </div>
 
@@ -204,7 +204,11 @@
   <div class="region-list">
     <div class="region-card">
       <span class="name">陰陽師の隠れ里</span><span class="tag proposed">提案</span>
-      <p>沼地からさらに厳しい枝道を進んだ先にある隠れ里。俗世を離れた陰陽師たちの集落。既存の陰陽師という職業と絡めて、専用の強力な札(スキル・お守り)をここでだけ習得・購入できる、みたいな使い方ができそう。</p>
+      <p>沼地の先にある隠れ里。俗世を離れた陰陽師たちの集落。既存の陰陽師という職業と絡めて、専用の強力な札(スキル・お守り)をここでだけ習得・購入できる、みたいな使い方ができそう。沼地ルートの現時点の終着点。</p>
+    </div>
+    <div class="region-card">
+      <span class="name">古城(鍵で封鎖)</span><span class="tag proposed">提案</span>
+      <p>沼地ルートとは無関係になり、廃城下町から分岐する隠し部屋に位置づけを変更。門の鍵など何らかのギミックを解決しないと最初は入れない。見つけて終わりじゃなく、後日鍵を持って出直す前提の場所。</p>
     </div>
   </div>
 
