@@ -104,7 +104,7 @@
   <header>
     <div class="eyebrow">Onsen-Mura Monogatari — 世界地図 v3</div>
     <h1>世界地図(手描き地図をもとに全面更新)</h1>
-    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟)へ、山ルートは森から直接渓流を経て光る竹林と麓の村へ分かれ、麓の村から渓谷→山→山奥の里→雪山へと続く(沼地は序盤すぎるためカット済み)。ショートカットになってしまうため、麓の村と草原は繋げず、2本の道は完全に独立させてある。</p>
+    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟)へ、山ルートは森から直接渓流を経て光る竹林と麓の村へ分かれ、麓の村から山→山奥の里→雪山へと続く(沼地・渓谷はカット済み)。ショートカットになってしまうため、麓の村と草原は繋げず、2本の道は完全に独立させてある。</p>
   </header>
 
   <div class="legend">
@@ -146,10 +146,8 @@
       <path class="path-line proposed" d="M 505 800 L 555 730" />
       <!-- 渓流 -> 麓の村 -->
       <path class="path-line proposed" d="M 495 800 L 530 700" />
-      <!-- 麓の村 -> 渓谷 -->
-      <path class="path-line proposed" d="M 545 660 L 590 590" />
-      <!-- 渓谷 -> 山 -->
-      <path class="path-line proposed" d="M 605 555 L 645 490" />
+      <!-- 麓の村 -> 山(渓谷はカット) -->
+      <path class="path-line proposed" d="M 545 660 L 645 490" />
       <!-- 山 -> 山奥の里 -->
       <path class="path-line proposed" d="M 655 455 L 695 400" />
       <!-- 山奥の里 -> 雪山(内容は保留) -->
@@ -210,9 +208,6 @@
       <circle class="node hub" cx="535" cy="680" r="10" fill="var(--village)" />
       <text class="region-label" x="440" y="670" font-size="12">麓の村</text>
 
-      <circle class="node" cx="598" cy="575" r="8" fill="var(--mountain)" />
-      <text class="region-label" x="608" y="568" font-size="11">渓谷</text>
-
       <circle class="node" cx="650" cy="475" r="9" fill="var(--mountain)" />
       <text class="region-label" x="662" y="468" font-size="12">山</text>
 
@@ -248,13 +243,13 @@
       <p>渓流から分岐する山の麓の集落。海側の草原と繋げるとショートカットになってしまうため、あえて独立したルートのままにしてある。</p>
     </div>
     <div class="region-card">
-      <span class="name">渓谷 → 山 → 山奥の里 → 雪山</span><span class="tag dream">保留</span>
+      <span class="name">山 → 山奥の里 → 雪山</span><span class="tag dream">保留</span>
       <p>麓の村から続く山岳ルート。雪山の中身自体はユーザーが別途検討中のため、ここでは接続経路のみ確定。</p>
     </div>
   </div>
 
   <footer>
-    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→潮)と山ルート(渓流→光る竹林/麓の村→渓谷→山→山奥の里→雪山)は、ショートカットを防ぐためあえて繋げず独立させてある。沼地は序盤すぎる位置だったためカットし、森から直接渓流に繋がる形にした。潮の先と雪山の中身はまだ未定。
+    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→潮)と山ルート(渓流→光る竹林/麓の村→山→山奥の里→雪山)は、ショートカットを防ぐためあえて繋げず独立させてある。沼地・渓谷はカットし、森から直接渓流に繋がる形にした。潮の先と雪山の中身はまだ未定。
   </footer>
 </div>
 </body>
