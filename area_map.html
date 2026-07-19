@@ -64,8 +64,14 @@
   .legend-dot.proposed { border: 2px dashed var(--pending); background: transparent; }
   .legend-dot.hold { border: 2px dotted var(--caption); background: transparent; }
 
+  .callout {
+    background: var(--surface); border: 1px solid var(--gold); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 36px; font-size: 0.85rem;
+  }
+  .callout b { color: var(--gold); }
+
   /* ============ route ============ */
-  .route { position: relative; margin-bottom: 56px; }
+  .route { position: relative; margin-bottom: 40px; }
   .route-title {
     font-family: var(--font-display); font-size: 1.05rem; font-weight: 600;
     display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
@@ -78,7 +84,6 @@
     content: ""; position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2px;
     background: var(--line-color, var(--forest));
   }
-  .line.dashed::before { background: repeating-linear-gradient(to bottom, var(--line-color, var(--pending)) 0 6px, transparent 6px 12px); }
 
   .stop { position: relative; padding: 0 0 26px; }
   .stop:last-child { padding-bottom: 0; }
@@ -107,9 +112,22 @@
     padding: 8px 12px; color: var(--ink); max-width: 56ch;
   }
 
-  /* connector between the two lines */
+  /* fork: two branches side by side under a shared trunk */
+  .fork-label {
+    font-size: 0.72rem; letter-spacing: 0.08em; color: var(--gold); text-transform: uppercase;
+    margin: -8px 0 14px -32px; padding-left: 32px; font-weight: 600;
+  }
+  .fork {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 0 0 26px;
+  }
+  @media (max-width: 640px) { .fork { grid-template-columns: 1fr; } }
+  .branch-title {
+    font-size: 0.75rem; color: var(--caption); margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+
   .merge-note {
-    margin: -20px 0 56px 32px; max-width: 56ch; font-size: 0.83rem; color: var(--caption);
+    margin: 0 0 40px 32px; max-width: 56ch; font-size: 0.83rem; color: var(--caption);
     border-top: 1px dashed var(--border); padding-top: 16px;
   }
   .merge-note b { color: var(--pending); font-weight: 600; }
@@ -124,12 +142,7 @@
   footer li { margin-bottom: 6px; }
 
   @media (prefers-reduced-motion: no-preference) {
-    .stop { animation: rise 0.5s ease both; }
-    .stop:nth-child(1) { animation-delay: 0.02s; }
-    .stop:nth-child(2) { animation-delay: 0.08s; }
-    .stop:nth-child(3) { animation-delay: 0.14s; }
-    .stop:nth-child(4) { animation-delay: 0.2s; }
-    .stop:nth-child(5) { animation-delay: 0.26s; }
+    .stop { animation: rise 0.4s ease both; }
   }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 </style>
@@ -137,83 +150,86 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Onsen-Mura Monogatari — World Map Draft</div>
+    <div class="eyebrow">Onsen-Mura Monogatari — World Map Draft v2</div>
     <h1>エリア接続案</h1>
-    <p class="lede">洞窟の続き先(沼地・廃城下町・古城)をどう線でつなぐか、と海岸ルートの扱いについての叩き台。実線=実装済み、破線=今回の提案、点線=保留の判断待ち。</p>
+    <p class="lede">出発できるのは深淵の森だけ。海岸は温泉村から直接は行けず、森の奥で見つける発見物にする。実線=実装済み、破線=今回合意した新規案、点線=保留。</p>
   </header>
+
+  <div class="callout">
+    <b>今回の一番の変更点</b>：出発画面の選択肢を「深淵の森」だけにする。海岸は独立した行き先ではなく、森→洞窟の先で偶然辿り着く隠しルートになる。これで森と海岸が対等な2本柱だった構造をやめ、世界を1つの入口から広がる1本の物語にする。
+  </div>
 
   <div class="legend">
     <div class="legend-item"><span class="legend-dot solid"></span>確定(実装済み)</div>
-    <div class="legend-item"><span class="legend-dot proposed"></span>提案(今回の新規案)</div>
-    <div class="legend-item"><span class="legend-dot hold"></span>保留(要相談)</div>
+    <div class="legend-item"><span class="legend-dot proposed"></span>提案(今回合意)</div>
+    <div class="legend-item"><span class="legend-dot hold"></span>保留(未着手)</div>
   </div>
 
-  <!-- 森ルート -->
+  <!-- メインルート -->
   <div class="route" style="--line-color: var(--forest);">
-    <div class="route-title"><span class="bar" style="background:var(--forest);"></span>森ルート</div>
-    <div class="route-sub">深淵の森 → 洞窟 → 沼地 → 廃城下町 → 古城</div>
+    <div class="route-title"><span class="bar" style="background:var(--forest);"></span>出発ルート(これしか選べない)</div>
+    <div class="route-sub">温泉村 → 深淵の森(1〜10層)→ 10層目で二手に分かれる</div>
     <div class="line">
       <div class="stop">
         <div class="stop-head"><span class="stop-name">温泉村</span><span class="tag confirmed">確定</span></div>
-        <div class="stop-desc">出発地点。全ルート共通の起点。</div>
+        <div class="stop-desc">唯一の出発地点。出発画面の選択肢は深淵の森のみになる。</div>
       </div>
       <div class="stop">
-        <div class="stop-head"><span class="stop-name">深淵の森</span><span class="tag confirmed">確定</span></div>
-        <div class="stop-desc">メインの探索ルート。10層目に洞窟への分かれ道あり。</div>
-      </div>
-      <div class="stop">
-        <div class="stop-head"><span class="stop-name">洞窟</span><span class="tag confirmed">確定</span></div>
-        <div class="stop-desc">独自1〜15層。現状15層で行き止まり(先は未定のまま止めてある)。</div>
-      </div>
-      <div class="stop proposed" style="--line-color: var(--swamp);">
-        <div class="stop-head"><span class="stop-name">沼地</span><span class="tag proposed">提案</span></div>
-        <div class="stop-desc">洞窟の先を延長。朽ちた城下町が水没した跡、という位置づけ。</div>
-      </div>
-      <div class="stop proposed" style="--line-color: var(--swamp);">
-        <div class="stop-head"><span class="stop-name">廃城下町</span><span class="tag proposed">提案</span></div>
-        <div class="stop-desc">沼に半ば沈んだ、かつての城下の町並み。</div>
-      </div>
-      <div class="stop proposed boss" style="--line-color: var(--swamp);">
-        <div class="stop-head"><span class="stop-name">古城</span><span class="tag proposed">提案・最深部</span></div>
-        <div class="stop-desc">最奥・最高所。洞窟ルート専用の新ボスを置く想定。</div>
-        <div class="stop-note">沼→廃城下町→古城の順は「文明が朽ちていく過程を外側から遡る」流れ。洞窟が単なる寄り道で終わらず、森・海岸に次ぐ第3のキャンペーンになる。</div>
+        <div class="stop-head"><span class="stop-name">深淵の森</span><span class="tag confirmed">確定・1〜10層のみ維持</span></div>
+        <div class="stop-desc">既存の1〜10層はそのまま。11層目以降の旧敵・旧ボス(鬼神・羅刹王など)は全部白紙にする。</div>
       </div>
     </div>
   </div>
 
-  <!-- 海ルート -->
-  <div class="route" style="--line-color: var(--coast);">
-    <div class="route-title"><span class="bar" style="background:var(--coast);"></span>海ルート</div>
-    <div class="route-sub">海岸 → 海妖女王(完結済み)。「村」の先は未着手</div>
-    <div class="line">
-      <div class="stop">
-        <div class="stop-head"><span class="stop-name">温泉村</span><span class="tag confirmed">確定</span></div>
+  <div class="fork-label">10層目の分かれ道 ―― 直進 or 洞窟</div>
+  <div class="fork">
+    <div>
+      <div class="branch-title">直進(メインストリート)</div>
+      <div class="line" style="--line-color: var(--swamp);">
+        <div class="stop proposed" style="--line-color: var(--swamp);">
+          <div class="stop-head"><span class="stop-name">沼地</span><span class="tag proposed">提案</span></div>
+          <div class="stop-desc">完全新規デザイン。旧城下町が水没した跡。</div>
+        </div>
+        <div class="stop proposed" style="--line-color: var(--swamp);">
+          <div class="stop-head"><span class="stop-name">廃城下町</span><span class="tag proposed">提案</span></div>
+          <div class="stop-desc">無人の廃墟。妖怪だけが棲む(復興要素なし)。</div>
+        </div>
+        <div class="stop proposed boss" style="--line-color: var(--swamp);">
+          <div class="stop-head"><span class="stop-name">古城</span><span class="tag proposed">提案・最深部</span></div>
+          <div class="stop-desc">完全新規の固有ボス。ここがこの筋の終着点。</div>
+        </div>
       </div>
-      <div class="stop">
-        <div class="stop-head"><span class="stop-name">海岸</span><span class="tag confirmed">確定</span></div>
-        <div class="stop-desc">tier1〜4+最終ボスまで揃った、独立して完結しているルート。</div>
-      </div>
-      <div class="stop boss">
-        <div class="stop-head"><span class="stop-name">海妖女王</span><span class="tag confirmed">確定・最終ボス</span></div>
-        <div class="stop-desc">既存の海岸ルート最終ボス。これで一区切りついている。</div>
-      </div>
-      <div class="stop hold">
-        <div class="stop-head"><span class="stop-name">村(二つ目の里)</span><span class="tag hold">保留</span></div>
-        <div class="stop-desc">最初のスケッチにあった構想。中身は未検討のまま。</div>
+    </div>
+    <div>
+      <div class="branch-title">寄り道(洞窟経由)</div>
+      <div class="line" style="--line-color: var(--cave);">
+        <div class="stop" style="--line-color: var(--cave);">
+          <div class="stop-head"><span class="stop-name">洞窟</span><span class="tag confirmed">確定・1〜15層</span></div>
+          <div class="stop-desc">既存のまま。15層目に瓦礫の山がある。</div>
+        </div>
+        <div class="stop proposed" style="--line-color: var(--cave);">
+          <div class="stop-head"><span class="stop-name">瓦礫を爆破</span><span class="tag proposed">提案</span></div>
+          <div class="stop-desc">貫通させると短い森を抜け、海の村へ出る。</div>
+        </div>
+        <div class="stop proposed boss" style="--line-color: var(--cave);">
+          <div class="stop-head"><span class="stop-name">海の村</span><span class="tag proposed">提案・発見</span></div>
+          <div class="stop-desc">既に人が住む別集落(廃城下町とは違い復興不要)。</div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="merge-note">
-    <b>合流案(保留)</b>：沼地を「海までつながる汽水域」と設定すれば、村の先から同じ沼地に合流させ、森ルートと海ルートを最終的に古城へ収束させることもできる。ただし海側にも新しい分岐を作る大きめの作業になるため、今回は見送り。村の中身を詰める時に改めて検討。
+    <b>海の村を発見した後</b>：温泉村の出発画面に「渡し船で海の村へ」が追加される。これは町↔町の移動だけで、ダンジョンの深さは一切スキップしない(救出・危険度には無関係)。海の村からは<b>海岸(1〜10層、既存のまま維持)</b>を探索できる ―― これが海岸への唯一の入り口になる。
   </div>
 
   <footer>
-    <h2>次に決めること</h2>
+    <h2>後回しでいいこと</h2>
     <ul>
-      <li>古城の固有ボス(どんな妖怪/存在にするか)</li>
-      <li>沼地・廃城下町それぞれの進路選択(道の名前・敵ラインナップ)</li>
-      <li>森ルートと海ルートを古城で合流させるか、独立のままにするか</li>
+      <li>沼地・廃城下町の道選び(進路の名前)・敵の配置・強さ調整</li>
+      <li>古城の固有ボスの詳細</li>
+      <li>瓦礫を爆破するアイテムの仕様(廃止済みの「爆弾」を専用ギミックとして復活させるか等)</li>
+      <li>雪山(4つ目の入口候補、これは別途ユーザー自身が検討中)</li>
     </ul>
   </footer>
 </div>
