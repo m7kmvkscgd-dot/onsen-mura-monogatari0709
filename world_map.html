@@ -104,14 +104,13 @@
   <header>
     <div class="eyebrow">Onsen-Mura Monogatari — 世界地図 v3</div>
     <h1>世界地図(手描き地図をもとに全面更新)</h1>
-    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟)へ、沼ルートは水道を経て光る竹林と麓の村へ分かれ、麓の村から渓谷→山→山奥の里→雪山へと続く。麓の村と草原は長い連絡路で繋がっており、両ルートが山の麓でも交差する。</p>
+    <p class="lede">ユーザーの手描き地図をもとに大幅拡張。海ルートは海岸のさらに奥(岸壁→鍾乳洞の洞窟)へ、山ルートは森から直接水道を経て光る竹林と麓の村へ分かれ、麓の村から渓谷→山→山奥の里→雪山へと続く(沼地は序盤すぎるためカット済み)。ショートカットになってしまうため、麓の村と草原は繋げず、2本の道は完全に独立させてある。</p>
   </header>
 
   <div class="legend">
     <div class="legend-item"><span class="legend-line confirmed"></span>実装済み</div>
     <div class="legend-item"><span class="legend-line proposed"></span>今回合意した新規案</div>
     <div class="legend-item"><span class="legend-line dream"></span>中身は未定/保留</div>
-    <div class="legend-item"><span class="legend-line link"></span>2ルートを繋ぐ連絡路</div>
   </div>
 
   <div class="map-frame">
@@ -141,10 +140,8 @@
       <!-- 草原 -> 潮(未定) -->
       <path class="path-line dream" d="M 480 250 L 530 210" />
 
-      <!-- 森 -> 沼地(直進) -->
-      <path class="path-line confirmed" d="M 365 1100 L 460 970" />
-      <!-- 沼地 -> 水道 -->
-      <path class="path-line proposed" d="M 470 930 L 495 840" />
+      <!-- 森 -> 水道(直進、沼地はカット) -->
+      <path class="path-line proposed" d="M 365 1100 L 495 840" />
       <!-- 水道 -> 光る竹林 -->
       <path class="path-line proposed" d="M 505 800 L 555 730" />
       <!-- 水道 -> 麓の村 -->
@@ -157,9 +154,6 @@
       <path class="path-line proposed" d="M 655 455 L 695 400" />
       <!-- 山奥の里 -> 雪山(内容は保留) -->
       <path class="path-line dream" d="M 715 370 L 745 320" />
-
-      <!-- 麓の村 <-連絡路-> 草原 -->
-      <path class="path-line link" d="M 525 655 C 490 550, 460 380, 460 275" />
 
       <!-- ============ nodes ============ -->
       <circle class="node hub" cx="400" cy="1300" r="14" fill="var(--gold)" />
@@ -206,10 +200,7 @@
       <text class="region-label" x="552" y="188" font-size="12" opacity="0.8">潮</text>
       <text class="region-sub" x="552" y="203">未定</text>
 
-      <!-- 沼側チェーン -->
-      <circle class="node" cx="465" cy="950" r="9" fill="var(--swamp)" />
-      <text class="region-label" x="478" y="940" font-size="12">沼地</text>
-
+      <!-- 山側チェーン(沼地はカット、森から直接水道へ) -->
       <circle class="node" cx="500" cy="800" r="8" fill="var(--swamp)" />
       <text class="region-label" x="510" y="792" font-size="11">水道</text>
 
@@ -250,11 +241,11 @@
     </div>
     <div class="region-card">
       <span class="name">水道・光る竹林</span><span class="tag proposed">提案</span>
-      <p>沼地の先の水路。「紅葉の小道」という初期案はボツになり光る竹林に変更済み。陰陽師の隠れ里は一旦保留。</p>
+      <p>森10層目の分かれ道からそのまま繋がる水路(沼地はカット、早すぎるため削除済み)。「紅葉の小道」という初期案はボツになり光る竹林に変更済み。陰陽師の隠れ里は一旦保留。</p>
     </div>
     <div class="region-card">
       <span class="name">麓の村</span><span class="tag proposed">提案</span>
-      <p>水道から分岐する山の麓の集落。海側の草原まで長い連絡路で繋がっており、森ルートと海ルートが山の麓で交差する。</p>
+      <p>水道から分岐する山の麓の集落。海側の草原と繋げるとショートカットになってしまうため、あえて独立したルートのままにしてある。</p>
     </div>
     <div class="region-card">
       <span class="name">渓谷 → 山 → 山奥の里 → 雪山</span><span class="tag dream">保留</span>
@@ -263,7 +254,7 @@
   </div>
 
   <footer>
-    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→潮)と沼ルート(沼地→水道→光る竹林/麓の村→渓谷→山→山奥の里→雪山)が麓の村⇔草原の連絡路で交差する、2本の道がゆるく繋がった世界になった。潮の先と雪山の中身はまだ未定。
+    手描き地図をそのままデジタル化。海ルート(海の村→海岸→岸壁→鍾乳洞の洞窟→草原→潮)と山ルート(水道→光る竹林/麓の村→渓谷→山→山奥の里→雪山)は、ショートカットを防ぐためあえて繋げず独立させてある。沼地は序盤すぎる位置だったためカットし、森から直接水道に繋がる形にした。潮の先と雪山の中身はまだ未定。
   </footer>
 </div>
 </body>
