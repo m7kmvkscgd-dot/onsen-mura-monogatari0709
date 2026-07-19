@@ -1041,6 +1041,9 @@ function renderPartySelect() {
   const maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
   document.getElementById("forestMaxFloorLabel").textContent = maxFloorReached.forest > 0 ? `最高${maxFloorReached.forest}層` : "";
   document.getElementById("coastMaxFloorLabel").textContent = maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "";
+  // 海岸への直接出発は廃止(ユーザー指示、2026-07-19)。今後は森→洞窟の先で海の村を発見してから
+  // 辿り着く経路にする予定のため、そのルートができるまで出発画面からは一旦隠す
+  document.getElementById("departCoastBtn").style.display = "none";
   showPartySelectTab("main");
   renderOmikujiTab();
   // 鍛冶屋チップ(村トップから移設)。鍛冶屋を建築するまでは非表示
