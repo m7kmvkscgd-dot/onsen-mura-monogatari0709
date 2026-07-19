@@ -10,12 +10,14 @@ const BG_SETS = {
   // 洞窟の入口/出口だけ、森や海岸と同じく時間帯で絵が変わる(1層目=森との境目、行きは入口/帰りは出口を使う)
   caveEntrance: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
   caveExit: { dawn: "assets/bg/cave_exit_dawn.jpg", asa: "assets/bg/cave_exit_asa.jpg", day: "assets/bg/cave_exit_day.jpg", dusk: "assets/bg/cave_exit_dusk.jpg", night: "assets/bg/cave_exit_night.jpg" },
-  // 廃城下町/門/古城(2026-07-19、下地の歩行テスト用)。まだ専用の背景画像が無いため、暫定的に
-  // 既存画像を流用している(TODO: bg_prompt_generator.htmlで生成した ruins_*.jpg / gate_*.jpg /
-  // castle_*.jpg ができ次第、ここのパスを差し替える)
-  ruins: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
-  gate: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
-  castle: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
+  // 廃城下町/古城(2026-07-19、実際の生成イラストに差し替え済み)
+  ruins: { dawn: "assets/bg/ruins_dawn.jpg", asa: "assets/bg/ruins_asa.jpg", day: "assets/bg/ruins_day.jpg", dusk: "assets/bg/ruins_dusk.jpg", night: "assets/bg/ruins_night.jpg" },
+  castle: { dawn: "assets/bg/castle_dawn.jpg", asa: "assets/bg/castle_asa.jpg", day: "assets/bg/castle_day.jpg", dusk: "assets/bg/castle_dusk.jpg", night: "assets/bg/castle_night.jpg" },
+  // 門はまだ専用の背景画像が無いため、暫定的に廃城下町の画像を流用(TODO: 門用の絵ができ次第差し替え)
+  gate: { dawn: "assets/bg/ruins_dawn.jpg", asa: "assets/bg/ruins_asa.jpg", day: "assets/bg/ruins_day.jpg", dusk: "assets/bg/ruins_dusk.jpg", night: "assets/bg/ruins_night.jpg" },
+  // 渓流/光る竹林(2026-07-19、下地の歩行テスト用)
+  valley: { dawn: "assets/bg/valley_dawn.jpg", asa: "assets/bg/valley_asa.jpg", day: "assets/bg/valley_day.jpg", dusk: "assets/bg/valley_dusk.jpg", night: "assets/bg/valley_night.jpg" },
+  bamboo: { dawn: "assets/bg/bamboo_dawn.jpg", asa: "assets/bg/bamboo_asa.jpg", day: "assets/bg/bamboo_day.jpg", dusk: "assets/bg/bamboo_dusk.jpg", night: "assets/bg/bamboo_night.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
@@ -28,20 +30,26 @@ function caveBgSetForCurrentState() {
   const url = currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
   return { dawn: url, asa: url, day: url, dusk: url, night: url };
 }
-// 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城のどのステージ中かで出し分ける
+// 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城/渓流/光る竹林のどのステージ中かで出し分ける
 function currentAreaBgSet() {
   if (currentStage === "coast") return BG_SETS.coast;
   if (currentStage === "cave") return caveBgSetForCurrentState();
   if (currentStage === "ruins") return BG_SETS.ruins;
   if (currentStage === "gate") return BG_SETS.gate;
   if (currentStage === "castle") return BG_SETS.castle;
+  if (currentStage === "valley") return BG_SETS.valley;
+  if (currentStage === "bamboo") return BG_SETS.bamboo;
   return BG_SETS.dungeon;
 }
 function currentCampBgUrl() {
   if (currentStage === "coast") return "assets/bg/coast_camp.jpg";
   if (currentStage === "cave") return CAVE_CAMP_BG_URL;
-  // 廃城下町/門/古城もbg_prompt_generator.htmlで野営画像を作る想定だが、まだ無いため暫定的に洞窟野営を流用
-  if (currentStage === "ruins" || currentStage === "gate" || currentStage === "castle") return CAVE_CAMP_BG_URL;
+  if (currentStage === "ruins") return "assets/bg/ruins_camp.jpg";
+  if (currentStage === "castle") return "assets/bg/castle_camp.jpg";
+  // 門はまだ専用の野営画像が無いため、暫定的に廃城下町の野営画像を流用
+  if (currentStage === "gate") return "assets/bg/ruins_camp.jpg";
+  if (currentStage === "valley") return "assets/bg/valley_camp.jpg";
+  if (currentStage === "bamboo") return "assets/bg/bamboo_camp.jpg";
   return "assets/bg/camp_night.jpg";
 }
 // 宿泊演出(短時間で夕方/夜など複数の時間帯イラストを連続クロスフェードする)専用に、
@@ -60,6 +68,10 @@ function preloadDungeonImages() {
   Object.values(BG_SETS.caveEntrance).forEach((url) => { const img = new Image(); img.src = url; });
   Object.values(BG_SETS.caveExit).forEach((url) => { const img = new Image(); img.src = url; });
   [CAVE_SHALLOW_BG_URL, CAVE_DEEP_BG_URL, CAVE_CAMP_BG_URL].forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.ruins).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.castle).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.valley).forEach((url) => { const img = new Image(); img.src = url; });
+  Object.values(BG_SETS.bamboo).forEach((url) => { const img = new Image(); img.src = url; });
 }
 // 鬼火の「魂のかけら」ドロップ演出(showTreasurePopup)は最大1.8秒しか表示されないため、
 // 初回遭遇時に画像が未読み込みだと表示されないまま消えてしまう。他の先読みと同様、暇な時に読み込んでおく
