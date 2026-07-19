@@ -47,6 +47,9 @@ function startBattle(enemies, pathDef, encounterText) {
     c.turnStackAtkStacks = 0; // 百戦錬磨など、ターン経過で積み上がる攻撃力バフも戦闘をまたいで持ち越さない
     c.nullifyCounterTurnsLeft = 0; // 心眼の構えなど、このターン限定の無効化反撃も戦闘をまたいで持ち越さない
     c.nullifyCounterMult = null;
+    c.migawariShieldActive = false; // 身代わりの術も戦闘をまたいで持ち越さない
+    c.hasBeenHitThisBattle = false; // 忍足など、初被弾までの回避バフを毎戦闘リセットする
+    c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -732,6 +735,32 @@ function runTreeSkill(actor, skill) {
     }, hits.length * STAGGER_MS + 50);
     return;
   }
+  if (action.kind === "shieldSelf") {
+    playSfx("select");
+    useTreeSkill(actor, actor, skill, blog);
+    renderBattleScreen();
+    finishPlayerAction();
+    return;
+  }
+  // 撒菱など: ターンを消費しないので、行動確定後は普通に行動選択へ戻す(変化の術/鷹を呼ぶと同じ扱い)
+  if (action.kind === "debuffAllNoCost") {
+    playSfx("select");
+    useTreeSkill(actor, null, skill, blog);
+    renderBattleScreen();
+    renderActionButtons(actor);
+    return;
+  }
+  // 影縫いなど: ターンを消費しない単体スタン。対象を選んでから解決する
+  if (action.kind === "stunNoCost") {
+    pickSingleEnemyTarget((target) => {
+      playSfx("guard");
+      const result = useTreeSkill(actor, target, skill, blog);
+      renderBattleScreen();
+      if (result && result.stunned) playAttackVfx(target.instanceId, actor, "skill");
+      renderActionButtons(actor);
+    });
+    return;
+  }
   if (action.kind === "buffSelf") {
     playSfx("select");
     useTreeSkill(actor, actor, skill, blog);
@@ -832,6 +861,11 @@ function runTreeSkill(actor, skill) {
         }, i * STAGGER_MS);
       });
       setTimeout(() => {
+        // 暗殺術など: このスキルでキルした場合はターンを消費せず、もう一度行動できる
+        if (action.extraTurnOnKill && target.hp <= 0) {
+          triggerShootDownEvents(r.shotDown ? [target] : [], () => renderActionButtons(actor));
+          return;
+        }
         triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction(r.crit));
       }, r.hits.length * STAGGER_MS);
       return;
@@ -846,6 +880,11 @@ function runTreeSkill(actor, skill) {
     renderBattleScreen();
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
     if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
+    // 暗殺術など: このスキルでキルした場合はターンを消費せず、もう一度行動できる
+    if (action.extraTurnOnKill && r && r.hit && target.hp <= 0) {
+      triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
+      return;
+    }
     triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction(r && r.crit));
   });
 }

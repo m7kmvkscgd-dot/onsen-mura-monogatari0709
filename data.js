@@ -840,16 +840,16 @@ const SKILL_TREES = {
       right: { name: "心眼の構え", desc: "このターン、敵の単体攻撃を1度だけ完全に無効にし、80%の攻撃力で反撃する。", mp: 1, action: { kind: "guardCounterSelf", mult: 0.8 } },
     },
     5: {
-      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
-      right: { name: "黒曜", desc: "出血、毒、炎上のダメージを半分にする", mp: 0, passive: { dotDamageMult: 0.5 } },
+      left: { name: "疾風斬り", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1〜3を与える。", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, valueMin: 1, valueMax: 3, condition: "targetSlower" } } },
+      right: { name: "黒曜", desc: "自身が出血時、流血ダメージを3分の1にする", mp: 0, passive: { dotDamageMult: 1 / 3 } },
     },
     6: {
-      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
+      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
       right: { name: "百戦錬磨", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
     },
     7: {
-      left: { name: "疾風", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1を与える", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, value: 1, condition: "targetSlower" } } },
-      right: { name: "覇気", desc: "ターン開始時、50%の確率で出血を自動治癒する。", mp: 0, passive: { turnStartCureChance: { type: "bleed", chance: 0.5 } } },
+      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
+      right: { name: "覇気", desc: "ターン開始時、50%の確率で各種状態異常を自動治癒する。", mp: 0, passive: { turnStartCureChance: { type: "all", chance: 0.5 } } },
     },
     8: {
       left: { name: "乱れ斬り", desc: "ランダムな敵へ3回攻撃する。(対象は毎回ランダム)", mp: 3, action: { kind: "damageRandomMulti", mult: 0.65, hits: 3 } },
@@ -866,28 +866,28 @@ const SKILL_TREES = {
   },
   ninja: {
     2: {
-      left: { name: "怯み討ち", desc: "スタン中の敵への会心率+30%", mp: 0, passive: { ailmentCritBonus: { ailment: "stun", addRate: 0.3 } } },
-      right: { name: "毒刃", desc: "通常攻撃時、25%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.25, value: 3 } } },
+      left: { name: "身代わりの術", desc: "次に受ける全ての攻撃を無効化する(全体攻撃を含む)", mp: 1, action: { kind: "shieldSelf" } },
+      right: { name: "毒刃", desc: "通常攻撃時、50%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.5, value: 3 } } },
     },
     3: {
-      left: { name: "変化の術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 4, action: { kind: "transform" } },
-      right: { name: "スタン手裏剣", desc: "敵単体へ70%ダメージ、85%の確率でスタン(1ターン)", mp: 3, rangeType: "ranged", action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      left: { name: "口寄せの術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 4, action: { kind: "transform" } },
+      right: { name: "影分身の術", desc: "後日実装", mp: 0 },
     },
     4: {
-      left: { name: "俊足", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
-      right: { name: "反射神経", desc: "回避に成功すると、次の自分の攻撃が確定会心になる", mp: 0, passive: { evadeCritCounter: true } },
+      left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
+      right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
     },
     5: {
-      left: { name: "暗殺術", desc: "HPが50%以下の敵へのダメージ+30%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.3 } } },
-      right: { name: "忍足", desc: "HPが30%以下の時、回避率+20%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.3, evasionAdd: 0.2 } } },
+      left: { name: "暗殺術", desc: "攻撃力100%で敵を攻撃する。このスキルで敵をキルした場合、ターンが終了せず、再度ターンをプレイできる。", mp: 3, action: { kind: "damage", mult: 1.0, extraTurnOnKill: true } },
+      right: { name: "忍足", desc: "その戦闘で敵に初めに攻撃されるまで回避率＋20%", mp: 0, passive: { preFirstHitEvasionAdd: 0.2 } },
     },
     6: {
-      left: { name: "影分身", desc: "回避に成功すると、次の自分の1ターンだけ攻撃力+20%", mp: 0, passive: { onEvadeSelfBuff: { stat: "atk", mult: 1.2 } } },
-      right: { name: "分身", desc: "戦闘中1回だけ、攻撃を完全に回避する", mp: 0, passive: { onceGuardType: "dodgeOnce" } },
+      left: { name: "影縫い", desc: "敵一体をスタンさせる。ターンを消費しない", mp: 3, action: { kind: "stunNoCost", chance: 1, turns: 1 } },
+      right: { name: "幻影乱舞", desc: "ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。", mp: 5, action: { kind: "damageRandomMulti", mult: 0.5, hits: 5 } },
     },
     7: {
-      left: { name: "修羅刃", desc: "敵を倒すと3ターンの間、攻撃力+20%", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.2 }], turns: 3, maxStacks: 1 } } },
-      right: { name: "幻惑", desc: "通常攻撃が命中した敵の防御力を10%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 1.0, value: 0.1, turns: 3 } } },
+      left: { name: "修羅刃", desc: "敵を倒すと次の攻撃の回避率+50%。値は蓄積しない。", mp: 0, passive: { onKillEvasionBonus: 0.5 } },
+      right: { name: "蝮手裏剣", desc: "75%のダメージを与え、毒4〜6を与える", mp: 2, rangeType: "ranged", action: { kind: "damage", mult: 0.75, inflict: { type: "poison", chance: 1.0, valueMin: 4, valueMax: 6 } } },
     },
     8: {
       left: { name: "乱れ苦無", desc: "敵単体へ4連続攻撃(合計200%ダメージ)", mp: 5, action: { kind: "damage", mult: 2.0, hits: 4 } },
