@@ -79,20 +79,25 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
 };
 
 document.getElementById("umiyadoBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
+// 温泉村の宿屋と同じ「時間帯演出」(現在時刻→夜へクロスフェード→暗転→翌朝フェードイン)を、
+// 背景セットだけ潮風宿(BG_SETS.umiyado)に差し替えて流用する(playLodgingTransition/
+// revealLodgingMorningは2026-07-19に背景セットを引数化済み)。効果自体もuseLodging()を
+// そのまま呼び、温泉村の宿屋と完全に同じ回復量にしてある
 document.getElementById("umiyadoStayBtn").onclick = () => {
   const active = fieldParty.filter((c) => c.status === "active");
   const cost = UMIYADO_COST_PER_PERSON * active.length;
   if (active.length === 0 || state.gold < cost) return;
-  state.gold -= cost;
-  active.forEach((c) => {
-    c.hp = c.maxHp;
-    c.mp = c.maxMp;
-    c.fatigue = Math.max(0, (c.fatigue || 0) - LODGE_FATIGUE_RELIEF);
-  });
-  saveState();
-  playSfx("select");
-  showConfirmModal("一泊し、HP・MPが全回復した。", [{ label: "OK", className: "big" }]);
-  renderUmiYado();
+  playLodgingTransition(() => {
+    state.gold -= cost;
+    active.forEach((c) => useLodging(c));
+    advanceToNextMorning();
+    saveState();
+    revealLodgingMorning(() => {
+      renderUmiYado();
+      playSfx("select");
+      showConfirmModal("一泊し、HP・MPが全回復した。", [{ label: "OK", className: "big" }]);
+    });
+  }, BG_SETS.umiyado);
 };
 
 document.getElementById("umionsenBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };

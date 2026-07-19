@@ -398,9 +398,12 @@ let lodgingTransitionActive = false;
 // 現在時刻→夜へクロスフェード→暗転して「一晩がすぎた…」キャプションが出るところまで進める。
 // 暗転しきったところでonBlackを呼び、回復サマリー画面の表示を呼び出し元(lodgeConfirmBtn)に任せる。
 // 朝への切り替え(森の朝背景+フェードイン)はrevealLodgingMorning側で行う
-function playLodgingTransition(onBlack) {
+// bgSetは省略時BG_SETS.tavern(温泉村の宿屋)。海の村の潮風宿など、他の宿でも同じ演出を
+// 使い回せるよう、2026-07-19に背景セットを引数化した(ユーザー指示: 「流用できるやろ」)
+function playLodgingTransition(onBlack, bgSet) {
   if (lodgingTransitionActive) return;
   lodgingTransitionActive = true;
+  const bg = bgSet || BG_SETS.tavern;
   playLodgingBgm();
   const overlay = document.getElementById("lodgingTransition");
   const fromEl = document.getElementById("lodgingTransitionFrom");
@@ -411,7 +414,7 @@ function playLodgingTransition(onBlack) {
   const INITIAL_HOLD_MS = 2200; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(ユーザー指示で0.3秒短縮)
 
   fromEl.style.opacity = "1";
-  fromEl.style.backgroundImage = `url('${BG_SETS.tavern[state.timeOfDay] || BG_SETS.tavern.night}')`;
+  fromEl.style.backgroundImage = `url('${bg[state.timeOfDay] || bg.night}')`;
   toEl.style.opacity = "0";
   blackEl.style.opacity = "0";
   caption.style.animation = "none";
@@ -424,7 +427,7 @@ function playLodgingTransition(onBlack) {
     if (state.timeOfDay === "night") {
       finale();
     } else {
-      crossfadeBg(fromEl, toEl, BG_SETS.tavern.night, NIGHT_CROSSFADE_MS, finale);
+      crossfadeBg(fromEl, toEl, bg.night, NIGHT_CROSSFADE_MS, finale);
     }
   }
 
@@ -432,7 +435,7 @@ function playLodgingTransition(onBlack) {
     // 夜→暗転(ユーザー指示で暗転まわりの時間はすべて従来の3倍)
     fadeOpacity(blackEl, 0, 1, 2700, () => {
       // 画面が真っ暗な間に背景を朝の絵へ差し替え、キャプションを表示する
-      fromEl.style.backgroundImage = `url('${BG_SETS.tavern.dawn}')`;
+      fromEl.style.backgroundImage = `url('${bg.dawn}')`;
       caption.textContent = pickLodgingNightMessage();
       caption.style.animation = "lodgingCaptionFade 3900ms ease forwards";
       // キャプションが完全に消えてから回復画面を出す(表示時間を0.6秒短縮したのに合わせて
