@@ -9,6 +9,7 @@
     --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
     --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
     --success: #6ea95b; --danger: #c95d54; --info: #7b93b9;
+    --left-accent: #5fb3c9; --right-accent: #d98c5f;
     --radius: 10px;
   }
   * { box-sizing: border-box; }
@@ -18,7 +19,7 @@
   h1 { font-size: 1.05rem; color: var(--title); margin: 0; white-space: nowrap; }
   .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
   input[type="search"] { background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem; width: 180px; }
-  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; }
+  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; -webkit-tap-highlight-color: transparent; }
   button:hover { filter: brightness(1.15); }
   button.danger { background: #5a2e28; }
   button.ghost { background: transparent; }
@@ -29,17 +30,48 @@
   .class-tab.active { background: var(--card-bg); color: var(--title); border-color: var(--gold); }
   .class-tab .tab-edit-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); display: none; }
   .class-tab.has-edits .tab-edit-dot { display: inline-block; }
-  main { max-width: 980px; margin: 0 auto; padding: 16px; }
-  .base-ability { background: var(--surface); border: 1px dashed var(--card-border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; font-size: 0.82rem; color: var(--caption); }
-  .base-ability b { color: var(--gold); }
-  .level-group { margin-bottom: 18px; }
-  .level-label { font-size: 0.78rem; color: var(--caption); letter-spacing: 0.05em; margin: 0 0 6px 2px; text-transform: uppercase; }
-  .level-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 640px) { .level-pair { grid-template-columns: 1fr; } }
-  .skill-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px 12px; position: relative; transition: border-color 0.15s; }
-  .skill-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  main { max-width: 720px; margin: 0 auto; padding: 12px 10px 40px; }
+
+  /* --- ツリー表示 --- */
+  .tree-legend { display: flex; justify-content: center; gap: 16px; font-size: 0.7rem; color: var(--caption); margin: 2px 0 10px; }
+  .tree-legend span { display: flex; align-items: center; gap: 5px; }
+  .tree-legend .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .base-ability { background: var(--surface); border: 1px dashed var(--card-border); border-radius: var(--radius); padding: 10px 14px; margin: 0 auto; font-size: 0.8rem; color: var(--caption); max-width: 460px; text-align: center; }
+  .base-ability b { color: var(--gold); display: block; font-size: 0.85rem; margin-bottom: 2px; }
+  .tree-trunk-line { width: 2px; height: 16px; margin: 0 auto; background: repeating-linear-gradient(to bottom, var(--card-border) 0 4px, transparent 4px 8px); }
+  .tree-track { position: relative; }
+  .tree-track::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--card-border) 0 5px, transparent 5px 10px);
+    transform: translateX(-1px); z-index: 0; pointer-events: none;
+  }
+  .swap-hint { position: sticky; top: 0; z-index: 15; background: #1c3a5e; border: 1px solid #5b9bf0; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 0.82rem; color: #cfe4ff; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .swap-hint button { flex-shrink: 0; }
+
+  .tree-level { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .tree-node { flex: 1 1 0; min-width: 0; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
+  .tree-node[open] { flex-basis: 100%; }
+  .tree-node.side-left { border-left: 3px solid var(--left-accent); }
+  .tree-node.side-right { border-right: 3px solid var(--right-accent); }
+  .tree-node.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .tree-node.swap-selected { border-color: #5b9bf0; box-shadow: 0 0 0 2px #5b9bf0 inset; }
+
+  .tree-node summary { list-style: none; cursor: pointer; padding: 8px 8px; display: flex; align-items: center; gap: 5px; -webkit-tap-highlight-color: transparent; }
+  .tree-node summary::-webkit-details-marker { display: none; }
+  .node-tag { font-size: 0.66rem; font-weight: bold; border-radius: 5px; padding: 2px 5px; flex-shrink: 0; white-space: nowrap; }
+  .side-left .node-tag { color: var(--left-accent); background: rgba(95, 179, 201, 0.15); }
+  .side-right .node-tag { color: var(--right-accent); background: rgba(217, 140, 95, 0.15); }
+  .node-name { flex: 1; min-width: 0; font-size: 0.84rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .node-mp { font-size: 0.66rem; color: var(--info); flex-shrink: 0; }
+  .node-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
+  .tree-node.edited .node-edit-dot { display: inline-block; }
+  .node-swap-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--info); color: var(--info); border-radius: 5px; font-size: 0.7rem; line-height: 1; padding: 3px 4px; }
+  .node-swap-btn.active { background: #5b9bf0; color: #0f1214; border-color: #5b9bf0; }
+  .node-chevron { flex-shrink: 0; color: var(--caption); font-size: 0.65rem; transition: transform 0.15s; }
+  .tree-node[open] .node-chevron { transform: rotate(90deg); }
+
+  .tree-node-body { padding: 8px 10px 10px; border-top: 1px solid rgba(255,255,255,0.06); }
   .skill-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .side-tag { font-size: 0.68rem; color: var(--caption); background: rgba(255,255,255,0.06); border-radius: 4px; padding: 2px 5px; flex-shrink: 0; }
   .skill-name-input { flex: 1; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--title); font-size: 0.95rem; font-weight: bold; padding: 2px 4px; min-width: 0; }
   .skill-name-input:focus { outline: none; border-bottom-color: var(--gold); background: rgba(255,255,255,0.04); }
   .rand-name-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--card-border); border-radius: 6px; padding: 2px 6px; font-size: 0.82rem; cursor: pointer; color: var(--gold); }
@@ -51,19 +83,17 @@
   .skill-desc-input:focus { outline: none; border-color: var(--gold); background: rgba(0,0,0,0.25); }
   .skill-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
   .edited-badge { font-size: 0.68rem; color: var(--gold); display: none; }
-  .skill-card.edited .edited-badge { display: inline; }
+  .tree-node.edited .edited-badge { display: inline; }
   .reset-btn { font-size: 0.68rem; padding: 3px 8px; background: transparent; border-color: var(--card-border); color: var(--caption); display: none; }
-  .skill-card.edited .reset-btn { display: inline-block; }
-  .swap-btn { font-size: 0.68rem; padding: 3px 8px; background: transparent; border-color: var(--info); color: var(--info); }
-  .skill-card.swap-selected { border-color: #5b9bf0; box-shadow: 0 0 0 2px #5b9bf0 inset; }
-  .swap-btn.active { background: #5b9bf0; color: #0f1214; border-color: #5b9bf0; }
-  .swap-hint { position: sticky; top: 0; z-index: 15; background: #1c3a5e; border: 1px solid #5b9bf0; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 0.82rem; color: #cfe4ff; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .swap-hint button { flex-shrink: 0; }
+  .tree-node.edited .reset-btn { display: inline-block; }
   details.mech-detail { margin-top: 6px; }
-  details.mech-detail summary { font-size: 0.68rem; color: var(--caption); cursor: pointer; }
+  details.mech-detail summary { font-size: 0.68rem; color: var(--caption); cursor: pointer; padding: 0; display: block; }
+  details.mech-detail summary::-webkit-details-marker { display: inline; }
   details.mech-detail pre { font-size: 0.68rem; color: var(--caption); background: rgba(0,0,0,0.25); border-radius: 6px; padding: 6px 8px; margin: 4px 0 0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-  .search-result-class { font-size: 0.65rem; color: var(--gold); margin-bottom: 4px; }
+
+  .search-list { display: flex; flex-direction: column; gap: 8px; }
   .empty-hint { color: var(--caption); font-size: 0.85rem; text-align: center; padding: 40px 10px; }
+
   #exportModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   #exportModal.open { display: flex; }
   .export-panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; }
@@ -231,65 +261,88 @@ function handleSwapClick(cid, lvl, side) {
   }
   performSwap(swapSource, here);
 }
-function buildSkillCard(cid, lvl, side, skill, allowSwap) {
+
+// スキルツリー表示の1ノード(<details>)を組み立てる。
+// summaryは折りたたみ時のコンパクトな見た目(Lv・名前・MP・編集ドット・入れ替えボタン)、
+// 本体(tree-node-body)はタップで開いた時だけ表示される編集フォーム一式。
+// opts.classLabel を渡すと検索結果表示用に「職業名・Lv・左右」のタグになる
+function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
+  opts = opts || {};
   const name = currentValue(cid, lvl, side, "name", skill.name);
   const desc = currentValue(cid, lvl, side, "desc", skill.desc);
   const mp = currentValue(cid, lvl, side, "mp", skill.mp);
   const edited = isEditedSkill(cid, lvl, side);
   const isSwapSelected = !!(swapSource && swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side);
   const { name: _n, desc: _d, ...mech } = skill;
-  const card = document.createElement("div");
-  card.className = "skill-card" + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
-  card.innerHTML = `
-    <div class="skill-card-head">
-      <span class="side-tag">${side === "left" ? "左" : "右"}</span>
-      <input class="skill-name-input" data-field="name" value="${escapeHtml(name)}">
-      ${RANDOM_NAME_POOLS[cid] ? `<button class="rand-name-btn" type="button" title="ランダムなかっこいい名前を提案(名前欄を空にしてから押すと分かりやすい)">🎲</button>` : ""}
-      <span class="mp-badge">MP<input class="mp-input" type="number" min="0" data-field="mp" value="${mp}"></span>
-    </div>
-    <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
-    <div class="skill-meta">
-      <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
-      <div style="display:flex; gap:6px;">
-        ${allowSwap ? `<button class="swap-btn${isSwapSelected ? " active" : ""}">⇄ ${isSwapSelected ? "選択中" : "入れ替え"}</button>` : ""}
+  const node = document.createElement("details");
+  node.className = "tree-node side-" + side + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
+  const sideJa = side === "left" ? "左" : "右";
+  const tagText = opts.classLabel ? `${opts.classLabel}・Lv.${lvl}・${sideJa}` : `Lv.${lvl}`;
+  node.innerHTML = `
+    <summary>
+      <span class="node-tag">${escapeHtml(tagText)}</span>
+      <span class="node-name">${escapeHtml(name)}</span>
+      <span class="node-mp">MP${mp}</span>
+      <span class="node-edit-dot"></span>
+      ${allowSwap ? `<button type="button" class="node-swap-btn${isSwapSelected ? " active" : ""}" title="このスキルを入れ替え元/入れ替え先に選ぶ">⇄</button>` : ""}
+      <span class="node-chevron">▶</span>
+    </summary>
+    <div class="tree-node-body">
+      <div class="skill-card-head">
+        <input class="skill-name-input" data-field="name" value="${escapeHtml(name)}">
+        ${RANDOM_NAME_POOLS[cid] ? `<button class="rand-name-btn" type="button" title="ランダムなかっこいい名前を提案(名前欄を空にしてから押すと分かりやすい)">🎲</button>` : ""}
+        <span class="mp-badge">MP<input class="mp-input" type="number" min="0" data-field="mp" value="${mp}"></span>
+      </div>
+      <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
+      <div class="skill-meta">
+        <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
         <button class="reset-btn">↺ 元に戻す</button>
       </div>
+      <details class="mech-detail"><summary>仕組み(実装データ・参考/読み取り専用)</summary><pre>${escapeHtml(JSON.stringify(mech, null, 2))}</pre></details>
     </div>
-    <details class="mech-detail"><summary>仕組み(実装データ・参考/読み取り専用)</summary><pre>${escapeHtml(JSON.stringify(mech, null, 2))}</pre></details>
   `;
-  const nameInput = card.querySelector('[data-field="name"]');
+  const nameInput = node.querySelector('[data-field="name"]');
+  const nodeNameLabel = node.querySelector(".node-name");
+  const nodeMpLabel = node.querySelector(".node-mp");
   nameInput.addEventListener("input", (e) => {
     setEdit(cid, lvl, side, "name", e.target.value, skill.name);
-    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    nodeNameLabel.textContent = e.target.value || "(無題)";
     refreshEditCount();
   });
-  const randBtn = card.querySelector(".rand-name-btn");
+  const randBtn = node.querySelector(".rand-name-btn");
   if (randBtn) {
     randBtn.addEventListener("click", () => {
       const picked = pickRandomSkillName(cid);
       if (!picked) return;
       nameInput.value = picked;
       setEdit(cid, lvl, side, "name", picked, skill.name);
-      card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+      node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+      nodeNameLabel.textContent = picked;
       refreshEditCount();
     });
   }
-  card.querySelector('[data-field="mp"]').addEventListener("input", (e) => {
+  node.querySelector('[data-field="mp"]').addEventListener("input", (e) => {
     const v = e.target.value === "" ? skill.mp : Number(e.target.value);
     setEdit(cid, lvl, side, "mp", v, skill.mp);
-    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    nodeMpLabel.textContent = "MP" + v;
     refreshEditCount();
   });
-  card.querySelector('[data-field="desc"]').addEventListener("input", (e) => {
+  node.querySelector('[data-field="desc"]').addEventListener("input", (e) => {
     setEdit(cid, lvl, side, "desc", e.target.value, skill.desc);
-    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
     refreshEditCount();
   });
-  card.querySelector(".reset-btn").addEventListener("click", () => resetSkill(cid, lvl, side));
+  node.querySelector(".reset-btn").addEventListener("click", () => resetSkill(cid, lvl, side));
   if (allowSwap) {
-    card.querySelector(".swap-btn").addEventListener("click", () => handleSwapClick(cid, lvl, side));
+    node.querySelector(".node-swap-btn").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSwapClick(cid, lvl, side);
+    });
   }
-  return card;
+  return node;
 }
 
 function renderClassTabs() {
@@ -313,35 +366,40 @@ function renderClassView() {
   if (swapSource && swapSource.cid === currentClass) {
     const hint = document.createElement("div");
     hint.className = "swap-hint";
-    hint.innerHTML = `<span>⇄ 入れ替え先のスキルの「入れ替え」ボタンを押してください(同じ職業内のみ)</span><button class="ghost">キャンセル</button>`;
+    hint.innerHTML = `<span>⇄ 入れ替え先のスキルの⇄ボタンを押してください(同じ職業内のみ)</span><button class="ghost">キャンセル</button>`;
     hint.querySelector("button").addEventListener("click", () => { swapSource = null; render(); });
     main.appendChild(hint);
   }
+  const legend = document.createElement("div");
+  legend.className = "tree-legend";
+  legend.innerHTML = `<span><span class="dot" style="background:var(--left-accent);"></span>左の道</span><span><span class="dot" style="background:var(--right-accent);"></span>右の道</span>`;
+  main.appendChild(legend);
   const baseDiv = document.createElement("div");
   baseDiv.className = "base-ability";
-  baseDiv.innerHTML = `<b>初期習得(Lv.1)</b>: ${escapeHtml(cls.base.name)} — ${escapeHtml(cls.base.desc)}<br><span style="opacity:0.7;">※他の職業と共有する基本技のため、このツールでは編集対象外です</span>`;
+  baseDiv.innerHTML = `<b>初期習得(Lv.1)</b>${escapeHtml(cls.base.name)} — ${escapeHtml(cls.base.desc)}<br><span style="opacity:0.7;">※他の職業と共有する基本技のため、このツールでは編集対象外です</span>`;
   main.appendChild(baseDiv);
+  const trunk = document.createElement("div");
+  trunk.className = "tree-trunk-line";
+  main.appendChild(trunk);
+  const track = document.createElement("div");
+  track.className = "tree-track";
   const levels = Object.keys(cls.levels).map(Number).sort((a, b) => a - b);
   levels.forEach((lvl) => {
-    const group = document.createElement("div");
-    group.className = "level-group";
-    const label = document.createElement("div");
-    label.className = "level-label";
-    label.textContent = "Lv." + lvl;
-    group.appendChild(label);
-    const pair = document.createElement("div");
-    pair.className = "level-pair";
-    pair.appendChild(buildSkillCard(currentClass, lvl, "left", cls.levels[lvl].left, true));
-    pair.appendChild(buildSkillCard(currentClass, lvl, "right", cls.levels[lvl].right, true));
-    group.appendChild(pair);
-    main.appendChild(group);
+    const row = document.createElement("div");
+    row.className = "tree-level";
+    row.appendChild(buildSkillCard(currentClass, lvl, "left", cls.levels[lvl].left, true));
+    row.appendChild(buildSkillCard(currentClass, lvl, "right", cls.levels[lvl].right, true));
+    track.appendChild(row);
   });
+  main.appendChild(track);
 }
 
 function renderSearchView() {
   const main = document.getElementById("mainArea");
   main.innerHTML = "";
   const q = searchQuery.trim().toLowerCase();
+  const list = document.createElement("div");
+  list.className = "search-list";
   let found = 0;
   classIds.forEach((cid) => {
     const cls = SKILL_DATA[cid];
@@ -353,20 +411,14 @@ function renderSearchView() {
         const desc = currentValue(cid, lvl, side, "desc", skill.desc);
         if (!name.toLowerCase().includes(q) && !desc.toLowerCase().includes(q)) return;
         found++;
-        const wrap = document.createElement("div");
-        wrap.className = "level-group";
-        wrap.innerHTML = `<div class="search-result-class">${cls.ja} ・ Lv.${lvl}</div>`;
-        const pairWrap = document.createElement("div");
-        pairWrap.className = "level-pair";
-        pairWrap.style.gridTemplateColumns = "1fr";
-        pairWrap.appendChild(buildSkillCard(cid, lvl, side, skill, false));
-        wrap.appendChild(pairWrap);
-        main.appendChild(wrap);
+        list.appendChild(buildSkillCard(cid, lvl, side, skill, false, { classLabel: cls.ja }));
       });
     });
   });
   if (found === 0) {
-    main.innerHTML += '<div class="empty-hint">一致するスキルが見つかりません</div>';
+    main.innerHTML = '<div class="empty-hint">一致するスキルが見つかりません</div>';
+  } else {
+    main.appendChild(list);
   }
 }
 
