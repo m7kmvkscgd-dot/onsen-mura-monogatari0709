@@ -373,7 +373,7 @@ function renderDungeon() {
   // falseへ戻ってしまい、パネルの下でまだ有効なままのadvanceBtnを連打すると
   // showPathChoiceが二重に呼ばれて抽選が上書きされる(選択肢が2回抽選されて変わって見える)
   // 不具合の原因になっていた。選択パネル表示中はここでも解除しないようにして塞ぐ
-  if (!activeCriticalAlert && !autoRetreatActive && !document.body.classList.contains("path-choice-active")) {
+  if (!activeCriticalAlert && !autoRetreatActive && !dungeonMoveTransitionActive && !document.body.classList.contains("path-choice-active")) {
     document.getElementById("advanceBtn").disabled = false;
     document.getElementById("retreatBtn").disabled = false;
   }
@@ -592,6 +592,14 @@ document.getElementById("dungeonToolsBtn").onclick = () => {
 // イベント抽選/画面遷移など、既存のゲームロジックそのまま)を実行してからフェードインする
 const MOVE_ANIM_MS = 750; // ユーザー指示で従来(500ms)の1.5倍に
 const MOVE_FADE_MS = 600;
+// 【不具合修正、2026-07-21】この演出の最中(歩行ズーム開始〜暗転が明けきるまで)はtrueにしておく。
+// playDungeonMoveTransition自体はactualLogic()実行直後ではなくfadeIn.onfinish(暗転が完全に明けた後)
+// まで待ってからボタンを再有効化するが、actualLogic()内で呼ばれるmoveOneFloor()がrenderDungeon()を
+// 呼ぶため、renderDungeon()側の「進む/里に戻るのdisabledを毎回強制解除する自己修復ロジック」が
+// この演出の途中(暗転中)でも無条件にdisabled=falseへ戻してしまい、暗転が明けきる前でも
+// 連打でどんどん先へ進めてしまっていた(山伏の里→温泉村方面の手動帰還で顕著、ユーザー報告)。
+// autoRetreatActiveと同じ扱いでrenderDungeon()の自己修復ロジックに例外として渡す
+let dungeonMoveTransitionActive = false;
 function buildWalkKeyframes(animMs) {
   const totalScale = 0.08; // scale(1.00) -> scale(1.08)
   const totalY = -10; // translateY(0px) -> translateY(-10px)
@@ -620,6 +628,7 @@ function playDungeonMoveTransition(actualLogic) {
   const retreatBtnEl = document.getElementById("retreatBtn");
   advanceBtnEl.disabled = true;
   retreatBtnEl.disabled = true;
+  dungeonMoveTransitionActive = true;
   // 移動演出中はUI一式(メッセージウィンドウ/キャラ表示/HPバー/ボタン/階層表示)を薄くする
   // (背景は対象外、CSSのbody.dungeon-move-active側で不透明度のみtransitionさせる。ユーザー指示、2026-07-21)
   document.body.classList.add("dungeon-move-active");
@@ -651,6 +660,7 @@ function playDungeonMoveTransition(actualLogic) {
         fadeIn.cancel();
         overlay.style.opacity = "0";
         overlay.style.display = "none";
+        dungeonMoveTransitionActive = false;
         advanceBtnEl.disabled = false;
         retreatBtnEl.disabled = false;
       };
