@@ -653,23 +653,27 @@ function critSfxFor(classId) {
     row.appendChild(b);
   }
 })();
-// ポップオーバーはbody直下のposition:fixed要素のため、開くたびにmuteBtnの実際の画面上の位置
-// (getBoundingClientRect)を基準に座標を計算し直す(タブ切り替え等でボタン位置が変わっても追従する)
-document.getElementById("muteBtn").onclick = (e) => {
-  e.stopPropagation();
-  const popover = document.getElementById("volumePopover");
-  if (popover.style.display !== "none") {
-    popover.style.display = "none";
-    return;
-  }
-  const btnRect = e.currentTarget.getBoundingClientRect();
-  popover.style.top = `${Math.round(btnRect.bottom + 8)}px`;
-  popover.style.right = `${Math.round(window.innerWidth - btnRect.right)}px`;
-  popover.style.display = "block";
-};
+// ポップオーバーはbody直下のposition:fixed要素のため、開くたびに押されたボタンの実際の画面上の位置
+// (getBoundingClientRect)を基準に座標を計算し直す(タブ切り替え等でボタン位置が変わっても追従する)。
+// 温泉村だけでなく海の村/山伏の里(今後増える村も含む)にも同じ歯車ボタンを置けるよう、
+// id="muteBtn"固定ではなく.mute-btnクラス全てに配線する(2026-07-21、ユーザー指摘)
+document.querySelectorAll(".mute-btn").forEach((btn) => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const popover = document.getElementById("volumePopover");
+    if (popover.style.display !== "none") {
+      popover.style.display = "none";
+      return;
+    }
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    popover.style.top = `${Math.round(btnRect.bottom + 8)}px`;
+    popover.style.right = `${Math.round(window.innerWidth - btnRect.right)}px`;
+    popover.style.display = "block";
+  };
+});
 document.addEventListener("click", (e) => {
   const popover = document.getElementById("volumePopover");
-  if (popover.style.display !== "none" && !popover.contains(e.target) && e.target.id !== "muteBtn") {
+  if (popover.style.display !== "none" && !popover.contains(e.target) && !e.target.classList.contains("mute-btn")) {
     popover.style.display = "none";
   }
 });
