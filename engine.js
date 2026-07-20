@@ -784,6 +784,10 @@ function initPassives() {
     turnStartCureChance: null, // {type, chance} 自分のターン開始時、この確率で状態異常を自動で治す(type:"bleed"/"poison"/"all"。覇気など)
     preFirstHitEvasionAdd: 0, // その戦闘で初めて敵に攻撃を受けるまで、回避率がこの値だけ上がる(忍足など)
     onKillEvasionBonus: 0, // 敵を倒した直後、次の1回だけ受ける攻撃への回避率がこの値だけ上がる(修羅刃など。蓄積しない)
+    onHitSelfHealPct: 0, // 通常攻撃が敵に命中するたび、自分の最大HPのこの割合だけ回復する(覇気など)
+    onEvadeCounterMult: 0, // 敵の攻撃を回避した瞬間、この攻撃力倍率で反撃する(瞬身の順など)
+    onEvadeMpRestore: 0, // 敵の攻撃を回避した瞬間、MPをこれだけ回復する(空蝉など)
+    guardFreeChance: 0, // かばうを使った時、この確率でMP消費が0になる(鉄壁など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -877,6 +881,10 @@ function applySkillChoice(character, skill, level) {
     if (add.turnStartCureChance) p.turnStartCureChance = add.turnStartCureChance;
     if (add.preFirstHitEvasionAdd) p.preFirstHitEvasionAdd += add.preFirstHitEvasionAdd;
     if (add.onKillEvasionBonus) p.onKillEvasionBonus += add.onKillEvasionBonus;
+    if (add.onHitSelfHealPct) p.onHitSelfHealPct += add.onHitSelfHealPct;
+    if (add.onEvadeCounterMult) p.onEvadeCounterMult = add.onEvadeCounterMult;
+    if (add.onEvadeMpRestore) p.onEvadeMpRestore += add.onEvadeMpRestore;
+    if (add.guardFreeChance) p.guardFreeChance = Math.min(1, p.guardFreeChance + add.guardFreeChance);
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -998,6 +1006,11 @@ function resistedChance(target, baseChance, type) {
 // target: 単体系はentity1体、範囲系(action.aoe)は配列
 function useTreeSkill(actor, target, skill, log) {
   const action = skill.action;
+  // 煙幕など: アイテムを消費して発動する技。MPが足りていても道具が無ければ発動できない(MP消費前に判定する)
+  if (action.kind === "buffPartyConsumeItem" && (state.inventory[action.item] || 0) <= 0) {
+    log(`${actor.label}は${(ITEMS[action.item] && ITEMS[action.item].ja) || "道具"}を持っていない！`);
+    return { failed: true };
+  }
   const cost = skillMpCost(actor, skill.mp);
   if (cost > 0) {
     if (actor.mp < cost) { log(`${actor.label}はMPが足りない！`); return { failed: true }; }
@@ -1051,8 +1064,9 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${target.label}は${actor.label}の${skill.name}をかわした！`);
     return { stunned: false, noCost: true };
   }
-  if (action.kind === "buffSelf" || action.kind === "buffParty") {
-    const targets = action.kind === "buffParty" ? target : [actor];
+  if (action.kind === "buffSelf" || action.kind === "buffParty" || action.kind === "buffPartyConsumeItem") {
+    if (action.kind === "buffPartyConsumeItem") state.inventory[action.item]--;
+    const targets = action.kind === "buffSelf" ? [actor] : target;
     targets.forEach((t) => {
       (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
       if (action.hpRegenPct) applyStatMod(t, "hpRegenPct", action.hpRegenPct, action.turns); // effectiveStatでは使わず、tick時に直接参照する目印として保持
@@ -1707,6 +1721,11 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       }
     });
   }
+  // 覇気など: 通常攻撃が命中するたび、自分の最大HPの一定割合を回復する
+  if (actor && actor.passives && actor.passives.onHitSelfHealPct) {
+    const healAmt = Math.max(1, Math.round(actor.maxHp * actor.passives.onHitSelfHealPct));
+    actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
+  }
   return dmg;
 }
 // 特定の職業基本アビリティ(薙ぎ払い等)がヒットした敵にだけ状態異常を付与する受動効果(旋風薙ぎなど)。
@@ -1768,7 +1787,11 @@ function maybeHawkFollowup(actor, target, log) {
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
 // target: 単体系は対象1体、全体系(...All)は生存中の敵配列、heal/guardはactor自身か味方1体
 function useAbility(actor, target, abilityType, log) {
-  const cost = abilityMpCost(abilityType, actor);
+  let cost = abilityMpCost(abilityType, actor);
+  // 鉄壁など: かばうのMP消費が一定確率で0になる
+  if (abilityType === "guard" && cost > 0 && actor.passives && actor.passives.guardFreeChance > 0 && Math.random() < actor.passives.guardFreeChance) {
+    cost = 0;
+  }
   if (cost > 0) {
     if (actor.mp < cost) {
       log(`${actor.label}はMPが足りない！`);
@@ -1877,11 +1900,21 @@ function findGuardTarget(alive) {
 // 大幅減衰した上で構えを消費する(誰もかばっていない、または5%で守り切れなければランダムに1人を攻撃する)
 // 回避に成功した瞬間、evadeCritCounter持ちなら「次の自分の攻撃は確定会心」フラグを立て(反射神経)、
 // onEvadeSelfBuff持ちなら次の自分の1ターンだけステータスが上がる(影分身)
-function onEvadeSuccess(target) {
+function onEvadeSuccess(target, enemy, log) {
   if (target.passives && target.passives.evadeCritCounter) target.guaranteedCritNext = true;
   if (target.passives && target.passives.onEvadeSelfBuff) {
     const b = target.passives.onEvadeSelfBuff;
     applyStatMod(target, b.stat, b.mult, 2);
+  }
+  // 空蝉など: 回避に成功した瞬間、MPを回復する
+  if (target.passives && target.passives.onEvadeMpRestore) {
+    target.mp = Math.min(target.maxMp, target.mp + target.passives.onEvadeMpRestore);
+  }
+  // 瞬身の順など: 回避に成功した瞬間、指定倍率で反撃する
+  if (target.passives && target.passives.onEvadeCounterMult && enemy && enemy.hp > 0) {
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * target.passives.onEvadeCounterMult - effectiveStat(enemy, "def") * 0.5));
+    enemy.hp = Math.max(0, enemy.hp - counterDmg);
+    log(`${target.label}は${enemy.label}に反撃した！${counterDmg}ダメージ！`);
   }
 }
 // かばうが敵の攻撃を防いだ瞬間に発動する槍士のスキルツリー効果(会心の返し/居合の構え/心眼)。
@@ -1917,12 +1950,12 @@ function enemyAttack(enemy, targets, log) {
   if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
     log(`${target.label}は${enemy.label}の攻撃を完全に見切ってかわした！`);
-    onEvadeSuccess(target);
+    onEvadeSuccess(target, enemy, log);
     return { target, dmg: null, hit: false };
   }
   if (!rollHit(enemy, target)) {
     log(`${target.label}は${enemy.label}の攻撃をかわした！`);
-    onEvadeSuccess(target);
+    onEvadeSuccess(target, enemy, log);
     return { target, dmg: null, hit: false };
   }
   let rawDmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
@@ -2032,12 +2065,12 @@ function enemyBigAttack(enemy, targets, log) {
     if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
       target.passives.onceGuardUsed = true;
       log(`${target.label}は${enemy.label}の大技を完全に見切ってかわした！`);
-      onEvadeSuccess(target);
+      onEvadeSuccess(target, enemy, log);
       return { target, dmg: null, hit: false };
     }
     if (!rollHit(enemy, target)) {
       log(`${target.label}は${enemy.label}の大技をかわした！`);
-      onEvadeSuccess(target);
+      onEvadeSuccess(target, enemy, log);
       return { target, dmg: null, hit: false };
     }
     let rawDmg = Math.round(rollBasicAttack(enemy.atk, effectiveStat(target, "def")) * mult);

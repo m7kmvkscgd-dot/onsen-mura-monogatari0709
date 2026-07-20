@@ -1297,8 +1297,13 @@ function renderActionButtons(actor) {
         const hawkActive = skill.action && skill.action.kind === "summonHawk" && actor.hawkTurnsLeft > 0;
         // 八幡神の御守: 戦闘中最初に使う技はMP消費が0になるため、MP不足でもボタンを押せるようにする
         const hachimanFree = cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman;
-        btn.textContent = skill.name + (hawkActive ? `(滞在中あと${actor.hawkTurnsLeft}T)` : (cost > 0 ? `(MP${cost})` : ""));
-        if (hawkActive || (cost > 0 && actor.mp < cost && !hachimanFree)) btn.disabled = true;
+        // 煙幕など: アイテムを消費する技は所持数が0だと使えない(MPが足りていても不可)
+        const consumeItemId = skill.action && skill.action.kind === "buffPartyConsumeItem" ? skill.action.item : null;
+        const itemCount = consumeItemId ? (state.inventory[consumeItemId] || 0) : null;
+        const itemUnavailable = consumeItemId && itemCount <= 0;
+        const itemLabel = consumeItemId ? `・${ITEMS[consumeItemId].ja}${itemCount}` : "";
+        btn.textContent = skill.name + (hawkActive ? `(滞在中あと${actor.hawkTurnsLeft}T)` : (cost > 0 ? `(MP${cost}${itemLabel})` : (itemLabel ? `(${itemLabel.slice(1)})` : "")));
+        if (hawkActive || itemUnavailable || (cost > 0 && actor.mp < cost && !hachimanFree)) btn.disabled = true;
         btn.onclick = () => {
           if (battleActionLocked) return;
           battleActionLocked = true;
