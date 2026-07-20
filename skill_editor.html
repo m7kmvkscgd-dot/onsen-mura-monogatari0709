@@ -52,6 +52,11 @@
   .skill-card.edited .edited-badge { display: inline; }
   .reset-btn { font-size: 0.68rem; padding: 3px 8px; background: transparent; border-color: var(--card-border); color: var(--caption); display: none; }
   .skill-card.edited .reset-btn { display: inline-block; }
+  .swap-btn { font-size: 0.68rem; padding: 3px 8px; background: transparent; border-color: var(--info); color: var(--info); }
+  .skill-card.swap-selected { border-color: #5b9bf0; box-shadow: 0 0 0 2px #5b9bf0 inset; }
+  .swap-btn.active { background: #5b9bf0; color: #0f1214; border-color: #5b9bf0; }
+  .swap-hint { position: sticky; top: 0; z-index: 15; background: #1c3a5e; border: 1px solid #5b9bf0; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 0.82rem; color: #cfe4ff; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .swap-hint button { flex-shrink: 0; }
   details.mech-detail { margin-top: 6px; }
   details.mech-detail summary { font-size: 0.68rem; color: var(--caption); cursor: pointer; }
   details.mech-detail pre { font-size: 0.68rem; color: var(--caption); background: rgba(0,0,0,0.25); border-radius: 6px; padding: 6px 8px; margin: 4px 0 0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
@@ -155,6 +160,7 @@ function resetSkill(cid, lvl, side) {
 function resetAll() {
   if (!confirm("全ての編集内容を破棄しますか？この操作は取り消せません。")) return;
   edits = {};
+  swapSource = null;
   saveEdits();
   render();
 }
@@ -163,14 +169,46 @@ function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
-function buildSkillCard(cid, lvl, side, skill) {
+// スキル同士の場所(内容)を入れ替える機能。⇄ボタンを押した2枚のカードの間で、
+// 現在表示中の内容(name/desc/mp。仕組み/mechは各スロット固定の実装データのため対象外、
+// 上部details参照)をまるごと入れ替える。入れ替え先は必ずそれぞれの元データと比較して
+// 差分判定するため、入れ替え後も通常の編集(✎編集済み/元に戻す)と同じ仕組みで扱える
+let swapSource = null; // {cid, lvl, side} | null
+function performSwap(a, b) {
+  const skillA = SKILL_DATA[a.cid].levels[a.lvl][a.side];
+  const skillB = SKILL_DATA[b.cid].levels[b.lvl][b.side];
+  const valA = { name: currentValue(a.cid, a.lvl, a.side, "name", skillA.name), desc: currentValue(a.cid, a.lvl, a.side, "desc", skillA.desc), mp: currentValue(a.cid, a.lvl, a.side, "mp", skillA.mp) };
+  const valB = { name: currentValue(b.cid, b.lvl, b.side, "name", skillB.name), desc: currentValue(b.cid, b.lvl, b.side, "desc", skillB.desc), mp: currentValue(b.cid, b.lvl, b.side, "mp", skillB.mp) };
+  ["name", "desc", "mp"].forEach((f) => {
+    setEdit(a.cid, a.lvl, a.side, f, valB[f], skillA[f]);
+    setEdit(b.cid, b.lvl, b.side, f, valA[f], skillB[f]);
+  });
+  swapSource = null;
+  render();
+}
+function handleSwapClick(cid, lvl, side) {
+  const here = { cid, lvl, side };
+  if (!swapSource) {
+    swapSource = here;
+    render();
+    return;
+  }
+  if (swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side) {
+    swapSource = null; // 同じカードをもう一度押したら選択解除
+    render();
+    return;
+  }
+  performSwap(swapSource, here);
+}
+function buildSkillCard(cid, lvl, side, skill, allowSwap) {
   const name = currentValue(cid, lvl, side, "name", skill.name);
   const desc = currentValue(cid, lvl, side, "desc", skill.desc);
   const mp = currentValue(cid, lvl, side, "mp", skill.mp);
   const edited = isEditedSkill(cid, lvl, side);
+  const isSwapSelected = !!(swapSource && swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side);
   const { name: _n, desc: _d, ...mech } = skill;
   const card = document.createElement("div");
-  card.className = "skill-card" + (edited ? " edited" : "");
+  card.className = "skill-card" + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
   card.innerHTML = `
     <div class="skill-card-head">
       <span class="side-tag">${side === "left" ? "左" : "右"}</span>
@@ -180,7 +218,10 @@ function buildSkillCard(cid, lvl, side, skill) {
     <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
     <div class="skill-meta">
       <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
-      <button class="reset-btn">↺ 元に戻す</button>
+      <div style="display:flex; gap:6px;">
+        ${allowSwap ? `<button class="swap-btn${isSwapSelected ? " active" : ""}">⇄ ${isSwapSelected ? "選択中" : "入れ替え"}</button>` : ""}
+        <button class="reset-btn">↺ 元に戻す</button>
+      </div>
     </div>
     <details class="mech-detail"><summary>仕組み(実装データ・参考/読み取り専用)</summary><pre>${escapeHtml(JSON.stringify(mech, null, 2))}</pre></details>
   `;
@@ -201,6 +242,9 @@ function buildSkillCard(cid, lvl, side, skill) {
     refreshEditCount();
   });
   card.querySelector(".reset-btn").addEventListener("click", () => resetSkill(cid, lvl, side));
+  if (allowSwap) {
+    card.querySelector(".swap-btn").addEventListener("click", () => handleSwapClick(cid, lvl, side));
+  }
   return card;
 }
 
@@ -222,6 +266,13 @@ function renderClassView() {
   const main = document.getElementById("mainArea");
   main.innerHTML = "";
   const cls = SKILL_DATA[currentClass];
+  if (swapSource && swapSource.cid === currentClass) {
+    const hint = document.createElement("div");
+    hint.className = "swap-hint";
+    hint.innerHTML = `<span>⇄ 入れ替え先のスキルの「入れ替え」ボタンを押してください(同じ職業内のみ)</span><button class="ghost">キャンセル</button>`;
+    hint.querySelector("button").addEventListener("click", () => { swapSource = null; render(); });
+    main.appendChild(hint);
+  }
   const baseDiv = document.createElement("div");
   baseDiv.className = "base-ability";
   baseDiv.innerHTML = `<b>初期習得(Lv.1)</b>: ${escapeHtml(cls.base.name)} — ${escapeHtml(cls.base.desc)}<br><span style="opacity:0.7;">※他の職業と共有する基本技のため、このツールでは編集対象外です</span>`;
@@ -236,8 +287,8 @@ function renderClassView() {
     group.appendChild(label);
     const pair = document.createElement("div");
     pair.className = "level-pair";
-    pair.appendChild(buildSkillCard(currentClass, lvl, "left", cls.levels[lvl].left));
-    pair.appendChild(buildSkillCard(currentClass, lvl, "right", cls.levels[lvl].right));
+    pair.appendChild(buildSkillCard(currentClass, lvl, "left", cls.levels[lvl].left, true));
+    pair.appendChild(buildSkillCard(currentClass, lvl, "right", cls.levels[lvl].right, true));
     group.appendChild(pair);
     main.appendChild(group);
   });
@@ -264,7 +315,7 @@ function renderSearchView() {
         const pairWrap = document.createElement("div");
         pairWrap.className = "level-pair";
         pairWrap.style.gridTemplateColumns = "1fr";
-        pairWrap.appendChild(buildSkillCard(cid, lvl, side, skill));
+        pairWrap.appendChild(buildSkillCard(cid, lvl, side, skill, false));
         wrap.appendChild(pairWrap);
         main.appendChild(wrap);
       });
