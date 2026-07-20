@@ -497,6 +497,7 @@ function renderVillagePrep(destinations) {
 }
 document.getElementById("vprepShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-village-prep"; renderShop(); showScreen("screen-shop"); };
 document.getElementById("villagePrepBackBtn").onclick = () => { renderFacilityHome(); };
+document.getElementById("villagePrepBackBtnTop").onclick = () => { renderFacilityHome(); };
 
 function statusTagClass(c) {
   if (c.status === "active" && isOnsenLocked(c, absoluteGameMinutes())) return "bathing";

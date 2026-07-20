@@ -106,6 +106,7 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
 };
 
 document.getElementById("umiyadoBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
+document.getElementById("umiyadoBackBtnTop").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
 // 宿泊・雇用のロジックはtown.jsのperformLodging()/wireInnHireButton()に一本化済み(温泉村の宿屋と
 // 完全に同じ確認モーダル→暗転→回復サマリー→翌朝フェードインの流れ)。背景セットだけ潮風宿
 // (BG_SETS.umiyado)に差し替えて流用する
@@ -115,6 +116,7 @@ document.getElementById("umiyadoStayBtn").onclick = () => {
 wireInnHireButton(UMIYADO_INN_IDS, () => state.roster, defaultUmiyadoStatusOnBack);
 
 document.getElementById("umionsenBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
+document.getElementById("umionsenBackBtnTop").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
 
 // ============ 山伏の里(第三の村、2026-07-19)。渓流→光る竹林の先から到達する ============
 // 海の村と同じく、温泉/宿等の仕様は温泉村と完全に同一にする(宿は絵が揃ったため2026-07-21追加)。
@@ -213,8 +215,10 @@ document.getElementById("yamabushiDepartBtn").onclick = () => {
 };
 
 document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
+document.getElementById("yamabushionsenBackBtnTop").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
 
 document.getElementById("yamabushiyadoBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
+document.getElementById("yamabushiyadoBackBtnTop").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
 // 宿泊・雇用のロジックはtown.jsのperformLodging()/wireInnHireButton()に一本化済み(温泉村の宿屋と
 // 完全に同じ確認モーダル→暗転→回復サマリー→翌朝フェードインの流れ)。背景セットだけ霧の宿
 // (BG_SETS.yamabushiyado)に差し替えて流用する

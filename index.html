@@ -148,7 +148,7 @@
       </div>
       <span class="gold town-gold-badge" id="townGold" style="margin-top:0.5rem;">0G</span>
     </div>
-    <div class="body-pad">
+    <div class="body-pad village-top-panel">
       <!-- 商業クラス化(2026-07-18): 施設ボタンを「漆×金カード(メダルアイコン+機能キャプション)」に、
            出発を全幅の主役CTAに変更。idとJSの紐付けは従来のまま(見た目とマークアップ構造のみ変更) -->
       <div class="btn-col village-card-grid">
@@ -680,7 +680,7 @@
       </div>
       <span class="gold town-gold-badge" id="umimuraHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
-    <div class="body-pad">
+    <div class="body-pad village-top-panel">
       <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
            説明カードは温泉村トップに存在しないため削除(ユーザー指摘、2026-07-21) -->
       <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
@@ -704,6 +704,7 @@
       <h1>潮風宿</h1>
     </div>
     <div class="body-pad">
+      <button class="big" id="umiyadoBackBtnTop" style="margin-bottom:0.8rem;">海の村に戻る</button>
       <p class="gold" id="umiyadoGold">0G</p>
 
       <h2>🏮HPとMPを全回復</h2>
@@ -732,8 +733,10 @@
       <h1>湯乃里温泉</h1>
     </div>
     <div class="body-pad">
-      <!-- 売店/神社は温泉村と全村共通(2026-07-20) -->
+      <!-- 売店/神社は温泉村と全村共通(2026-07-20)。戻るボタンは温泉村のonsenBackBtnTopと同じく
+           このチップ列に含める(ユーザー指摘、2026-07-21: 温泉村のUIを踏襲していなかった) -->
       <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;flex-wrap:wrap;">
+        <button class="big" id="umionsenBackBtnTop" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">海の村に戻る</button>
         <button class="big" id="umionsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
         <button class="big" id="umionsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
       </div>
@@ -759,7 +762,7 @@
       </div>
       <span class="gold town-gold-badge" id="yamabushiHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
-    <div class="body-pad">
+    <div class="body-pad village-top-panel">
       <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
            宿は絵が揃ったため2026-07-21に追加(implementation_map.html参照)。説明カードは
            温泉村トップに存在しないため削除(ユーザー指摘、2026-07-21) -->
@@ -784,6 +787,7 @@
       <h1>霧の宿</h1>
     </div>
     <div class="body-pad">
+      <button class="big" id="yamabushiyadoBackBtnTop" style="margin-bottom:0.8rem;">山伏の里に戻る</button>
       <p class="gold" id="yamabushiyadoGold">0G</p>
 
       <h2>🏮HPとMPを全回復</h2>
@@ -812,8 +816,10 @@
       <h1>雲海の湯</h1>
     </div>
     <div class="body-pad">
-      <!-- 売店/神社は温泉村と全村共通(2026-07-20) -->
+      <!-- 売店/神社は温泉村と全村共通(2026-07-20)。戻るボタンは温泉村のonsenBackBtnTopと同じく
+           このチップ列に含める(ユーザー指摘、2026-07-21: 温泉村のUIを踏襲していなかった) -->
       <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;flex-wrap:wrap;">
+        <button class="big" id="yamabushionsenBackBtnTop" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">山伏の里に戻る</button>
         <button class="big" id="yamabushionsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
         <button class="big" id="yamabushionsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
       </div>
@@ -837,6 +843,7 @@
       <h1>出発</h1>
     </div>
     <div class="body-pad">
+      <button class="big" id="villagePrepBackBtnTop" style="margin-bottom:0.8rem;">戻る</button>
       <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:0.8rem;">
         <!-- 温泉村と同じく、鍛冶屋は村トップではなく出発準備画面のチップから開く(ユーザー指示、2026-07-21) -->
         <button class="omikuji-chip-btn" id="vprepShopBtn" style="display:none;">⚒️鍛冶屋</button>

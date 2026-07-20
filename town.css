@@ -94,9 +94,14 @@
     position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
     font-size: 1.6rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); white-space: nowrap;
   }
-  /* 町画面はボタン4つだけで縦にスクロールする必要が無いため、パネルを外して
-     背景がそのまま透けて見える固定配置にする(ボタン自体は不透明のまま) */
-  #screen-town .body-pad {
+  /* 村のトップ画面(温泉村/海の村/山伏の里、今後増える村も含む)はボタン数個だけで縦にスクロール
+     する必要が無いため、パネルを外して背景がそのまま透けて見える固定配置にする(ボタン自体は
+     不透明のまま)。【不具合修正、2026-07-21】以前は#screen-townのidだけを指定していたため、
+     海の村/山伏の里のトップ画面には適用されず、他の画面(名簿・雇用等で縦に長くスクロールする
+     画面)向けの汎用.body-padスタイル(暗いパネル背景+34vhの余白)がそのまま出てしまい、
+     背景画像の下半分が暗いパネルで覆われて見えていた(ユーザー報告、スクリーンショットで確認)。
+     共通クラス.village-top-panelを対象の3画面(および今後増える村)のbody-padに付与する形に変更した */
+  #screen-town .body-pad, .village-top-panel {
     /* 2026-07-18: カード化でボタン群が縦に伸びたため、旧・小ボタン用の「下から243px」のままだと
        画面中央付近まで上がって時刻表示に被っていた。承認済みモックと同じ「画面下部ぴったり」へ変更 */
     position: fixed; bottom: calc(38px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateZ(0);
