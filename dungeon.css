@@ -185,6 +185,12 @@
   body.path-choice-active #dungeonPartyBar, body.path-choice-active .bottom-actions {
     opacity: 0.65; transition: opacity 0.18s ease;
   }
+  /* 「進む」の移動演出中(歩行ズーム→暗転→明転)は、UI一式(メッセージウィンドウ/キャラ表示/HPバー/
+     ボタン/階層表示)を一時的に薄くする。背景(#dungeonBg)はこのセレクタに含めないため不透明のまま
+     (ユーザー指示、2026-07-21)。位置・サイズは変えずopacityのみ変化させる */
+  body.dungeon-move-active #dungeonPartyBar, body.dungeon-move-active .dungeon-content {
+    opacity: 0.3; transition: opacity 0.2s ease;
+  }
   /* ============ 進路選択の演出(木札が縦に連なる「森の分岐」演出) ============
      既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
      残し、ここでは新しいクラス(.path-tags-*)を追加するだけに留めて上書きする。ゲーム性・抽選ロジック・

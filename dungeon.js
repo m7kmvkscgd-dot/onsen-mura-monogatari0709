@@ -572,6 +572,9 @@ function playDungeonMoveTransition(actualLogic) {
   const retreatBtnEl = document.getElementById("retreatBtn");
   advanceBtnEl.disabled = true;
   retreatBtnEl.disabled = true;
+  // 移動演出中はUI一式(メッセージウィンドウ/キャラ表示/HPバー/ボタン/階層表示)を薄くする
+  // (背景は対象外、CSSのbody.dungeon-move-active側で不透明度のみtransitionさせる。ユーザー指示、2026-07-21)
+  document.body.classList.add("dungeon-move-active");
   // 安全策: 帰還の連続ズーム(autoRetreatZoomAnim)がまだ片付けられずに残っていた場合の保険
   // (通常finishRetreat()で片付け済みのはずだが、念のためここでも歩行ズームの開始前に必ず
   // 素の状態にしておく。cancel()と直後のanimate()はどちらも同期処理で描画を挟まないため、
@@ -598,6 +601,7 @@ function playDungeonMoveTransition(actualLogic) {
         overlay.style.display = "none";
         advanceBtnEl.disabled = false;
         retreatBtnEl.disabled = false;
+        document.body.classList.remove("dungeon-move-active");
       };
     };
   }
