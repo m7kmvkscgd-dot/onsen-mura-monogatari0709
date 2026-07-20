@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 世界地図エディタ</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
+    --success: #6ea95b; --danger: #c95d54; --info: #7b93b9;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--body); font-family: "Hiragino Sans", "Yu Gothic", sans-serif; line-height: 1.5; overflow: hidden; }
+  header { position: sticky; top: 0; z-index: 30; background: linear-gradient(180deg, #1c2226 0%, #171b1e 100%); border-bottom: 1px solid var(--card-border); padding: 10px 16px; }
+  .header-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 1.02rem; color: var(--title); margin: 0; white-space: nowrap; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; white-space: nowrap; }
+  button:hover { filter: brightness(1.15); }
+  button.danger { background: #5a2e28; }
+  button.ghost { background: transparent; }
+  button.active { background: #3a6ea5; border-color: #5b9bf0; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.72rem; color: var(--caption); padding: 6px 16px 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-line { width: 18px; height: 0; border-top: 2px solid; }
+  .legend-line.confirmed { border-top-style: solid; border-color: var(--success); }
+  .legend-line.proposed { border-top-style: dashed; border-color: var(--gold); }
+  .legend-line.dream { border-top-style: dotted; border-color: #a897d8; }
+
+  #canvasWrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding-top: 96px; overflow: auto; touch-action: pan-x pan-y; }
+  #canvas { position: relative; width: 2400px; height: 1500px; }
+  #edgeSvg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  #edgeSvg path.edge-hit { pointer-events: stroke; cursor: pointer; }
+  #edgeSvg .edge-label { fill: var(--caption); font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+
+  .node {
+    position: absolute; width: 156px; padding: 9px 11px; background: var(--card-bg);
+    border: 2px solid var(--card-border); border-radius: 10px; cursor: grab; user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4); touch-action: none;
+  }
+  .node.dragging { cursor: grabbing; z-index: 10; box-shadow: 0 6px 16px rgba(0,0,0,0.6); }
+  .node.selected { outline: 2px solid #5b9bf0; outline-offset: 2px; }
+  .node.connect-src { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .node-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+  .node-name { font-weight: bold; color: var(--title); font-size: 0.88rem; }
+  .node-sub { font-size: 0.7rem; color: var(--caption); margin-top: 3px; }
+  .node-floor-badge { display: inline-block; margin-top: 4px; font-size: 0.68rem; color: var(--info); background: rgba(255,255,255,0.06); border-radius: 4px; padding: 1px 6px; }
+
+  #panel {
+    position: fixed; top: 96px; right: 0; bottom: 0; width: 300px; background: var(--surface);
+    border-left: 1px solid var(--card-border); padding: 14px; overflow-y: auto; z-index: 25;
+    transform: translateX(100%); transition: transform 0.15s;
+  }
+  #panel.open { transform: translateX(0); }
+  #panel h2 { font-size: 0.9rem; color: var(--title); margin: 0 0 12px; }
+  #panel label { display: block; font-size: 0.72rem; color: var(--caption); margin: 10px 0 3px; }
+  #panel input[type="text"], #panel input[type="number"], #panel select, #panel textarea {
+    width: 100%; background: #0f1214; color: var(--body); border: 1px solid var(--card-border);
+    border-radius: 6px; padding: 6px 8px; font-size: 0.82rem; font-family: inherit;
+  }
+  #panel textarea { min-height: 60px; resize: vertical; }
+  #panel .checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.78rem; color: var(--body); }
+  #panel .panel-actions { display: flex; gap: 8px; margin-top: 16px; }
+  #panel .panel-actions button { flex: 1; }
+  #panelClose { position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: var(--caption); font-size: 1.1rem; padding: 2px 6px; }
+
+  .hint-bar { position: fixed; left: 16px; bottom: 16px; z-index: 25; background: var(--surface); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: var(--caption); max-width: 60vw; }
+
+  @media (max-width: 640px) {
+    header { padding: 8px 10px; }
+    h1 { font-size: 0.88rem; }
+    .toolbar { gap: 6px; }
+    .toolbar button { padding: 6px 9px; font-size: 0.72rem; }
+    .legend { display: none; }
+    #panel { width: 100%; top: auto; bottom: 0; left: 0; right: 0; height: 65vh; border-left: none; border-top: 1px solid var(--card-border); border-radius: 14px 14px 0 0; transform: translateY(100%); }
+    #panel.open { transform: translateY(0); }
+    .hint-bar { display: none; }
+    #canvasWrap { padding-top: 84px; }
+  }
+
+  #exportModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open { display: flex; }
+  .export-panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; }
+  .export-panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
+  .export-panel textarea { width: 100%; flex: 1; min-height: 300px; background: #0f1214; color: var(--body); border: 1px solid var(--card-border); border-radius: 8px; font-family: monospace; font-size: 0.72rem; padding: 8px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>♨️ 世界地図エディタ</h1>
+    <div class="toolbar">
+      <button id="addNodeBtn">+ エリア追加</button>
+      <button id="connectModeBtn">🔗 接続モード</button>
+      <button id="exportBtn">📋 JSON出力</button>
+      <button id="resetBtn" class="danger ghost">初期状態に戻す</button>
+    </div>
+  </div>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-line confirmed"></span>確定(実装済み)</span>
+    <span class="legend-item"><span class="legend-line proposed"></span>仮(実装済みだが未確定要素あり)</span>
+    <span class="legend-item"><span class="legend-line dream"></span>構想のみ(未実装)</span>
+  </div>
+</header>
+
+<div id="canvasWrap">
+  <div id="canvas">
+    <svg id="edgeSvg"></svg>
+  </div>
+</div>
+
+<div id="panel">
+  <button id="panelClose">✕</button>
+  <div id="panelBody"></div>
+</div>
+
+<div class="hint-bar">ノード: クリックで編集/ドラッグで移動。接続モード中は2つのノードを順にクリックして線を引く。線をクリックすると分岐点や種別を編集できる。</div>
+
+<div id="exportModal">
+  <div class="export-panel">
+    <h2>世界地図データ(JSON)</h2>
+    <p style="font-size:0.78rem;color:var(--caption);margin:0;">この内容をコピーしてClaudeに貼り付けてください。x/yは地図上の配置座標(ゲームデータには使いません)。</p>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyJsonBtn">JSONをコピー</button>
+      <button id="downloadJsonBtn" class="ghost">ダウンロード</button>
+      <button id="closeExportBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "onsenWorldMapEditor_v1";
+
+const CATEGORY_COLORS = {
+  village: "#e0aa4f", forest: "#7fa868", cave: "#9aa3ac", ruins: "#c79e5f",
+  castle: "#a99bc4", coast: "#58b3ac", valley: "#5b93d8", bamboo: "#b8cf73",
+  mountain: "#ab9878", misc: "#a897d8",
+};
+const CATEGORY_LABELS = {
+  village: "村", forest: "森", cave: "洞窟", ruins: "廃墟", castle: "城",
+  coast: "海", valley: "渓流", bamboo: "竹林", mountain: "山", misc: "その他/構想",
+};
+const STATUS_LABELS = { confirmed: "確定", proposed: "仮", dream: "構想のみ" };
+const EDGE_DASH = { confirmed: "0", proposed: "6 4", dream: "1 5" };
+const EDGE_COLOR = { confirmed: "#6ea95b", proposed: "#d7b66f", dream: "#a897d8" };
+
+// 2026-07-20時点のdungeon.js/pipeline実データを元にした初期値。
+// pipeline/areas.jsonに敵デザインはあるがステージ未実装のエリア(岸壁/幽霊船/鍾乳洞の洞窟/草原/廃寺院/千本鳥居/五重塔)は
+// dream状態・未接続のノードとして下段に配置している
+const SEED_DATA = {
+  nodes: [
+    { id: "onsen_mura", name: "温泉村", category: "village", status: "confirmed", floors: null, infinite: false, note: "プレイヤーの拠点村", x: 60, y: 640 },
+    { id: "forest", name: "深淵の森", category: "forest", status: "confirmed", floors: null, infinite: true, note: "62層以降で最終ボス(鬼神・羅刹王)が出現し得る。10層で洞窟、21層で渓流への分かれ道", x: 340, y: 640 },
+    { id: "cave", name: "瓦礫の洞窟", category: "cave", status: "confirmed", floors: 15, infinite: false, note: "", x: 640, y: 440 },
+    { id: "valley", name: "渓流", category: "valley", status: "proposed", floors: 10, infinite: false, note: "仮。専用フィールド曲あり、戦闘用曲は未実装", x: 640, y: 860 },
+    { id: "ruinsforest", name: "少し森", category: "forest", status: "confirmed", floors: 3, infinite: false, note: "瓦礫の洞窟を抜けた先。最深部で廃城下町/海の村に分岐", x: 940, y: 440 },
+    { id: "bamboo", name: "光る竹林", category: "bamboo", status: "proposed", floors: 10, infinite: false, note: "仮。最深部で山伏の里へ自動到着", x: 940, y: 860 },
+    { id: "ruins", name: "廃城下町", category: "ruins", status: "proposed", floors: 12, infinite: false, note: "仮", x: 1240, y: 320 },
+    { id: "umimura", name: "海の村", category: "village", status: "confirmed", floors: null, infinite: false, note: "中継の村。温泉村の施設をフル移植済み", x: 1240, y: 560 },
+    { id: "yamabushi", name: "山伏の里", category: "village", status: "confirmed", floors: null, infinite: false, note: "中継の村。温泉村の施設をフル移植済み", x: 1240, y: 860 },
+    { id: "gate", name: "門", category: "castle", status: "proposed", floors: 1, infinite: false, note: "仮。古城の鍵が無いと通れない固定の行き止まり", x: 1540, y: 320 },
+    { id: "coast", name: "海岸", category: "coast", status: "confirmed", floors: 15, infinite: false, note: "", x: 1540, y: 560 },
+    { id: "shugendo", name: "修験道", category: "mountain", status: "proposed", floors: 10, infinite: false, note: "仮", x: 1540, y: 860 },
+    { id: "castle", name: "古城", category: "castle", status: "proposed", floors: 10, infinite: false, note: "仮。鍵の入手経路が無く実質未到達", x: 1840, y: 320 },
+    { id: "yama", name: "山", category: "mountain", status: "proposed", floors: 20, infinite: false, note: "仮。長め想定、前半/後半で背景切替", x: 1840, y: 860 },
+
+    { id: "area_ganpeki", name: "岸壁", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 60, y: 1180 },
+    { id: "area_yureisen", name: "幽霊船", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 320, y: 1180 },
+    { id: "area_shonyudo", name: "鍾乳洞の洞窟", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 580, y: 1180 },
+    { id: "area_sogen", name: "草原", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 840, y: 1180 },
+    { id: "area_haijiin", name: "廃寺院", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 1100, y: 1180 },
+    { id: "area_senbontorii", name: "千本鳥居", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 1360, y: 1180 },
+    { id: "area_gojunotou", name: "五重塔", category: "misc", status: "dream", floors: null, infinite: false, note: "pipeline/areas.jsonに敵8体分の設計あり、ステージ未実装", x: 1620, y: 1180 },
+  ],
+  edges: [
+    { from: "onsen_mura", to: "forest", type: "confirmed", atFloor: null, label: "" },
+    { from: "forest", to: "cave", type: "confirmed", atFloor: 10, label: "分かれ道" },
+    { from: "forest", to: "valley", type: "proposed", atFloor: 21, label: "分かれ道" },
+    { from: "cave", to: "ruinsforest", type: "confirmed", atFloor: null, label: "" },
+    { from: "ruinsforest", to: "ruins", type: "proposed", atFloor: null, label: "分岐選択" },
+    { from: "ruinsforest", to: "umimura", type: "confirmed", atFloor: null, label: "分岐選択" },
+    { from: "valley", to: "bamboo", type: "proposed", atFloor: null, label: "" },
+    { from: "bamboo", to: "yamabushi", type: "proposed", atFloor: null, label: "自動到着" },
+    { from: "ruins", to: "gate", type: "proposed", atFloor: null, label: "" },
+    { from: "gate", to: "castle", type: "dream", atFloor: null, label: "鍵が必要(入手経路未実装)" },
+    { from: "umimura", to: "coast", type: "confirmed", atFloor: null, label: "" },
+    { from: "yamabushi", to: "shugendo", type: "proposed", atFloor: null, label: "" },
+    { from: "shugendo", to: "yama", type: "proposed", atFloor: null, label: "" },
+  ],
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(SEED_DATA));
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadState();
+let selectedNodeId = null;
+let selectedEdgeIdx = null;
+let connectMode = false;
+let connectSrcId = null;
+
+const canvas = document.getElementById("canvas");
+const edgeSvg = document.getElementById("edgeSvg");
+const panel = document.getElementById("panel");
+const panelBody = document.getElementById("panelBody");
+
+function nodeById(id) { return state.nodes.find((n) => n.id === id); }
+
+function render() {
+  canvas.querySelectorAll(".node").forEach((el) => el.remove());
+  state.nodes.forEach((n) => {
+    const el = document.createElement("div");
+    el.className = "node" + (n.id === selectedNodeId ? " selected" : "") + (n.id === connectSrcId ? " connect-src" : "");
+    el.style.left = n.x + "px";
+    el.style.top = n.y + "px";
+    el.style.borderColor = CATEGORY_COLORS[n.category] || "#5d4d35";
+    const dotColor = n.status === "confirmed" ? "#6ea95b" : n.status === "proposed" ? "#d7b66f" : "#a897d8";
+    el.innerHTML =
+      `<div class="node-name"><span class="node-status-dot" style="background:${dotColor}"></span>${escapeHtml(n.name)}</div>` +
+      `<div class="node-sub">${CATEGORY_LABELS[n.category] || n.category} ・ ${STATUS_LABELS[n.status] || n.status}</div>` +
+      `<div class="node-floor-badge">${n.infinite ? "層数なし(無限)" : n.floors != null ? n.floors + "層" : "―"}</div>`;
+    el.dataset.id = n.id;
+    attachDrag(el, n);
+    canvas.appendChild(el);
+  });
+  renderEdges();
+}
+
+function renderEdges() {
+  let svgContent = "";
+  state.edges.forEach((e, idx) => {
+    const a = nodeById(e.from), b = nodeById(e.to);
+    if (!a || !b) return;
+    const ax = a.x + 78, ay = a.y + 40, bx = b.x + 78, by = b.y + 40;
+    const color = EDGE_COLOR[e.type] || "#888";
+    const dash = EDGE_DASH[e.type] || "0";
+    const midX = (ax + bx) / 2, midY = (ay + by) / 2;
+    let label = e.label || "";
+    if (e.atFloor != null) label = (label ? label + " " : "") + e.atFloor + "層目";
+    svgContent += `<path d="M${ax},${ay} L${bx},${by}" stroke="${color}" stroke-width="${idx === selectedEdgeIdx ? 4 : 2.5}" stroke-dasharray="${dash}" fill="none"/>`;
+    svgContent += `<path class="edge-hit" data-idx="${idx}" d="M${ax},${ay} L${bx},${by}" stroke="transparent" stroke-width="16" fill="none"/>`;
+    if (label) svgContent += `<text class="edge-label" x="${midX}" y="${midY - 6}" text-anchor="middle">${escapeHtml(label)}</text>`;
+  });
+  edgeSvg.innerHTML = svgContent;
+  edgeSvg.querySelectorAll(".edge-hit").forEach((el) => {
+    el.style.pointerEvents = "stroke";
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      selectedEdgeIdx = parseInt(el.dataset.idx, 10);
+      selectedNodeId = null;
+      openEdgePanel(selectedEdgeIdx);
+      render();
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function attachDrag(el, n) {
+  let dragging = false, moved = false, startX, startY, origX, origY;
+  el.addEventListener("pointerdown", (ev) => {
+    if (connectMode) return;
+    dragging = true; moved = false;
+    startX = ev.clientX; startY = ev.clientY; origX = n.x; origY = n.y;
+    el.setPointerCapture(ev.pointerId);
+    el.classList.add("dragging");
+  });
+  el.addEventListener("pointermove", (ev) => {
+    if (!dragging) return;
+    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    n.x = Math.max(0, origX + dx);
+    n.y = Math.max(0, origY + dy);
+    el.style.left = n.x + "px";
+    el.style.top = n.y + "px";
+    renderEdges();
+  });
+  el.addEventListener("pointerup", (ev) => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove("dragging");
+    if (moved) { saveState(); }
+    else { handleNodeClick(n.id); }
+  });
+  el.addEventListener("click", (ev) => { ev.stopPropagation(); });
+}
+
+function handleNodeClick(id) {
+  if (connectMode) {
+    if (!connectSrcId) {
+      connectSrcId = id;
+      render();
+      return;
+    }
+    if (connectSrcId === id) { connectSrcId = null; render(); return; }
+    state.edges.push({ from: connectSrcId, to: id, type: "proposed", atFloor: null, label: "" });
+    saveState();
+    const newIdx = state.edges.length - 1;
+    connectSrcId = null;
+    selectedEdgeIdx = newIdx;
+    selectedNodeId = null;
+    render();
+    openEdgePanel(newIdx);
+    return;
+  }
+  selectedNodeId = id;
+  selectedEdgeIdx = null;
+  render();
+  openNodePanel(id);
+}
+
+function openNodePanel(id) {
+  const n = nodeById(id);
+  if (!n) return;
+  panelBody.innerHTML = `
+    <h2>エリア編集</h2>
+    <label>表示名</label>
+    <input type="text" id="f_name" value="${escapeHtml(n.name)}">
+    <label>ID(半角英数字、dungeon.jsのステージキー候補)</label>
+    <input type="text" id="f_id" value="${escapeHtml(n.id)}">
+    <label>カテゴリ(色分け)</label>
+    <select id="f_category">${Object.keys(CATEGORY_LABELS).map((k) => `<option value="${k}" ${k === n.category ? "selected" : ""}>${CATEGORY_LABELS[k]}</option>`).join("")}</select>
+    <label>状態</label>
+    <select id="f_status">${Object.keys(STATUS_LABELS).map((k) => `<option value="${k}" ${k === n.status ? "selected" : ""}>${STATUS_LABELS[k]}</option>`).join("")}</select>
+    <label>層数</label>
+    <input type="number" id="f_floors" min="1" value="${n.floors != null ? n.floors : ""}" ${n.infinite ? "disabled" : ""}>
+    <div class="checkbox-row"><input type="checkbox" id="f_infinite" ${n.infinite ? "checked" : ""}><label style="margin:0;" for="f_infinite">層数なし(村・無限エリアなど)</label></div>
+    <label>メモ</label>
+    <textarea id="f_note">${escapeHtml(n.note || "")}</textarea>
+    <div class="panel-actions">
+      <button id="applyNodeBtn">適用</button>
+      <button id="deleteNodeBtn" class="danger">削除</button>
+    </div>
+  `;
+  panel.classList.add("open");
+  document.getElementById("f_infinite").addEventListener("change", (ev) => {
+    document.getElementById("f_floors").disabled = ev.target.checked;
+  });
+  document.getElementById("applyNodeBtn").addEventListener("click", () => {
+    const newId = document.getElementById("f_id").value.trim() || n.id;
+    if (newId !== n.id && state.nodes.some((x) => x.id === newId)) { alert("そのIDは既に使われています"); return; }
+    if (newId !== n.id) {
+      state.edges.forEach((e) => { if (e.from === n.id) e.from = newId; if (e.to === n.id) e.to = newId; });
+      n.id = newId;
+    }
+    n.name = document.getElementById("f_name").value.trim() || n.name;
+    n.category = document.getElementById("f_category").value;
+    n.status = document.getElementById("f_status").value;
+    n.infinite = document.getElementById("f_infinite").checked;
+    const fv = document.getElementById("f_floors").value;
+    n.floors = n.infinite ? null : (fv ? parseInt(fv, 10) : null);
+    n.note = document.getElementById("f_note").value;
+    saveState();
+    render();
+  });
+  document.getElementById("deleteNodeBtn").addEventListener("click", () => {
+    if (!confirm(`「${n.name}」を削除しますか?つながる線も削除されます`)) return;
+    state.nodes = state.nodes.filter((x) => x.id !== n.id);
+    state.edges = state.edges.filter((e) => e.from !== n.id && e.to !== n.id);
+    selectedNodeId = null;
+    saveState();
+    closePanel();
+    render();
+  });
+}
+
+function openEdgePanel(idx) {
+  const e = state.edges[idx];
+  if (!e) return;
+  const a = nodeById(e.from), b = nodeById(e.to);
+  panelBody.innerHTML = `
+    <h2>接続編集</h2>
+    <div style="font-size:0.8rem;color:var(--caption);">${escapeHtml(a ? a.name : e.from)} → ${escapeHtml(b ? b.name : e.to)}</div>
+    <label>種別</label>
+    <select id="e_type">${Object.keys(STATUS_LABELS).map((k) => `<option value="${k}" ${k === e.type ? "selected" : ""}>${STATUS_LABELS[k]}</option>`).join("")}</select>
+    <label>分岐する層(無ければ空欄)</label>
+    <input type="number" id="e_atFloor" min="1" value="${e.atFloor != null ? e.atFloor : ""}">
+    <label>ラベル(任意のメモ)</label>
+    <input type="text" id="e_label" value="${escapeHtml(e.label || "")}">
+    <div class="panel-actions">
+      <button id="applyEdgeBtn">適用</button>
+      <button id="deleteEdgeBtn" class="danger">削除</button>
+    </div>
+  `;
+  panel.classList.add("open");
+  document.getElementById("applyEdgeBtn").addEventListener("click", () => {
+    e.type = document.getElementById("e_type").value;
+    const fv = document.getElementById("e_atFloor").value;
+    e.atFloor = fv ? parseInt(fv, 10) : null;
+    e.label = document.getElementById("e_label").value;
+    saveState();
+    render();
+  });
+  document.getElementById("deleteEdgeBtn").addEventListener("click", () => {
+    state.edges.splice(idx, 1);
+    selectedEdgeIdx = null;
+    saveState();
+    closePanel();
+    render();
+  });
+}
+
+function closePanel() {
+  panel.classList.remove("open");
+  selectedNodeId = null;
+  selectedEdgeIdx = null;
+}
+document.getElementById("panelClose").addEventListener("click", () => { closePanel(); render(); });
+
+document.getElementById("canvas").addEventListener("click", (ev) => {
+  if (ev.target.id === "canvas" || ev.target.id === "edgeSvg") { closePanel(); render(); }
+});
+
+document.getElementById("addNodeBtn").addEventListener("click", () => {
+  const wrap = document.getElementById("canvasWrap");
+  const x = wrap.scrollLeft + 200, y = wrap.scrollTop + 200;
+  const id = "area_" + Date.now();
+  state.nodes.push({ id, name: "新エリア", category: "misc", status: "dream", floors: 10, infinite: false, note: "", x, y });
+  saveState();
+  render();
+  handleNodeClick(id);
+});
+
+document.getElementById("connectModeBtn").addEventListener("click", (ev) => {
+  connectMode = !connectMode;
+  connectSrcId = null;
+  ev.target.classList.toggle("active", connectMode);
+  closePanel();
+  render();
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("編集内容をすべて破棄して初期状態に戻しますか?")) return;
+  state = JSON.parse(JSON.stringify(SEED_DATA));
+  saveState();
+  closePanel();
+  render();
+});
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  document.getElementById("exportJson").value = JSON.stringify(state, null, 2);
+  document.getElementById("exportModal").classList.add("open");
+});
+document.getElementById("closeExportBtn").addEventListener("click", () => {
+  document.getElementById("exportModal").classList.remove("open");
+});
+document.getElementById("copyJsonBtn").addEventListener("click", () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  navigator.clipboard && navigator.clipboard.writeText(ta.value).catch(() => document.execCommand("copy"));
+  if (!navigator.clipboard) document.execCommand("copy");
+});
+document.getElementById("downloadJsonBtn").addEventListener("click", () => {
+  const blob = new Blob([document.getElementById("exportJson").value], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "world_map.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+render();
+</script>
+</body>
+</html>
