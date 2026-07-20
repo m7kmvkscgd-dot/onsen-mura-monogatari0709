@@ -205,13 +205,16 @@ function renderBattleScreen() {
         ${hpBarHtml(e)}
       </div>
     `;
-    // 大技の内容はイラストの長押しで確認する(タップ=対象選択という本来の役割と衝突しないよう、
-    // 技ボタンの長押しツールチップ(attachSkillLongPressTooltip)と同じ仕組みを流用する。
-    // 旧・右下📜アイコンのタップ表示方式はユーザー指示により廃止)
+    // 大技の内容はイラストのタップで確認する(状態異常アイコン等と同じタップ表示/他箇所タップで消える
+    // 仕組みに統一。対象選択中(targetable)はタップが「攻撃対象を選ぶ」動作も兼ねるが、そちらは
+    // card.onclick側で別途処理されるため両立する。ユーザー指示、2026-07-21で長押し方式から変更)
     if (!dead) {
       const portraitEl = card.querySelector(".card-portrait-img");
       const bigAttackName = (e.bigAttack && e.bigAttack.name) || "大技";
-      attachSkillLongPressTooltip(portraitEl, `${e.label}の「${bigAttackName}」`, bigAttackSummaryText(e));
+      portraitEl.classList.add("enemy-bigattack-tap");
+      portraitEl.dataset.enemyName = e.label;
+      portraitEl.dataset.bigattackName = bigAttackName;
+      portraitEl.dataset.bigattackDesc = bigAttackSummaryText(e);
     }
     if (targetable) {
       card.onclick = () => {

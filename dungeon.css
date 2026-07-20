@@ -186,13 +186,17 @@
     opacity: 0.65; transition: opacity 0.18s ease;
   }
   /* 「進む」の移動演出中(歩行ズーム→暗転→明転)は、キャライラスト(#dungeonPartyBar)を主役にするため
-     そのまま表示し、テキストボックス(メッセージログ)と階層表示(.dungeon-top、floor-badge/quest系
-     バッジ/dungeonLogを内包)だけ完全に非表示にする。ボタン(.bottom-actions)はそのまま操作感を
-     保つため対象外。位置・サイズは変えずopacityのみ変化させる(display/visibilityは使わない)。
-     テキストボックスはフェードさせると新しいログが一瞬見えてから消えるのが目障りとの指摘を受け、
-     transitionを外して瞬時に消える/戻る形にした(ユーザー指示、2026-07-21) */
-  body.dungeon-move-active .dungeon-top {
+     そのまま表示し、ボタン(.bottom-actions)もそのまま操作感を保つため対象外。位置・サイズは変えず
+     opacityのみ変化させる(display/visibilityは使わない) */
+  /* テキストボックス(メッセージログ)は、フェードさせると新しいログが一瞬見えてから消えるのが
+     目障りとの指摘を受け、transition無しで瞬時に消える/戻る形にした(ユーザー指示、2026-07-21) */
+  body.dungeon-move-active #dungeonLog {
     opacity: 0;
+  }
+  /* 階層表示・時間表示(.dungeon-info-row、floor-badge内のfloorBadgeText/dungeonTimeBadgeと
+     quest系バッジを内包)はこちらは逆にフェードで透過させる(ユーザー指示、2026-07-21) */
+  body.dungeon-move-active .dungeon-info-row {
+    opacity: 0; transition: opacity 0.2s ease;
   }
   /* ============ 進路選択の演出(木札が縦に連なる「森の分岐」演出) ============
      既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
