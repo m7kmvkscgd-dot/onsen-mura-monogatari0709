@@ -268,6 +268,53 @@ function criticalTimeLeftStr(c) {
   return hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
 }
 
+// 温泉の入浴名簿を描画する共通処理。温泉村/海の村/山伏の里(および今後増える村)で全て同じ仕様に
+// するため一本化してある(ユーザー指示、2026-07-21: 中継の村を簡易版のままにせず温泉村と同等にする)。
+// charactersは対象キャラ配列(温泉村は町に置いている状態のstate.roster全員、海の村/山伏の里は
+// 遠征中で物理的にそこにいるfieldPartyのみ)。入浴は即座に疲労を減らさず、useOnsen()で翌朝まで
+// ロック+次の遠征限定バフを付与するだけ(実際の疲労軽減と「リラックスできた！」演出は、次に
+// いずれかの村のホーム画面に戻った時にcheckOnsenReliefPopups()側で行われる)
+function renderOnsenRosterList(containerId, characters) {
+  const list = document.getElementById(containerId);
+  list.innerHTML = "";
+  const bathable = characters.filter((c) => c.status === "active");
+  if (bathable.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">入浴できる仲間がいません。</p>';
+    return;
+  }
+  const now = absoluteGameMinutes();
+  bathable.forEach((c) => {
+    const c2 = CLASSES[c.classId];
+    const cost = onsenCost(c.level);
+    const noFatigue = (c.fatigue || 0) <= 0;
+    const locked = isOnsenLocked(c, now);
+    const disabled = locked || noFatigue || state.gold < cost;
+    let label = `入る(${cost}G)`;
+    if (locked) label = "入浴中";
+    else if (noFatigue) label = "ストレスなし";
+    const row = document.createElement("div");
+    row.className = "roster-row";
+    row.innerHTML = `
+      <img src="${characterPortraitSrc(c)}">
+      <div class="roster-info">
+        <div class="roster-name">${c.name} <span class="status-tag ${locked ? "bathing" : "active"}">Lv.${c.level} ${c2.ja}</span></div>
+        <div class="roster-sub">ストレス ${Math.round(c.fatigue || 0)}</div>
+        <div class="fatigue-track" style="margin-top:0.25rem;"><div class="fatigue-fill" style="width:${Math.round(c.fatigue || 0)}%"></div></div>
+      </div>
+      <button class="big" ${disabled ? "disabled" : ""}>${label}</button>
+    `;
+    row.querySelector("button").onclick = () => {
+      if (isOnsenLocked(c, absoluteGameMinutes())) return; // 二重タップ等での再ロック上書きを保険として防ぐ
+      state.gold -= cost;
+      useOnsen(c, absoluteGameMinutes());
+      saveState();
+      playSfx("onsen");
+      renderOnsenRosterList(containerId, characters);
+    };
+    list.appendChild(row);
+  });
+}
+
 function statusTagClass(c) {
   if (c.status === "active" && isOnsenLocked(c, absoluteGameMinutes())) return "bathing";
   if (c.status === "active" && c.onsenBuffKey) return "onsen-buffed";

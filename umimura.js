@@ -1,10 +1,10 @@
 // ============ umimura.js: 海の村(第二の町、2026-07-19)。廃城下町の出口の分岐から到達する ============
-// 【現状の位置づけ】温泉村の宿屋/温泉ほど作り込まれた画面ではなく、まず「海の村へ実際に
-// たどり着いて、宿と温泉が機能する」下地だけを用意した一次実装。日替わり演出や名簿選択式の
-// 宿泊などは持たせず、稼働中の仲間全員へ即座に効果を適用するだけの簡易版にしてある。
+// 中継の村(海の村/山伏の里、今後増える村も含む)は、温泉村と見た目だけ異なる別画面だが、
+// 仕様(温泉の翌朝ロック+ランダムバフ+リリーフ演出、宿の一泊演出等)は温泉村と完全に同一にする
+// (ユーザー指示、2026-07-21: 簡易版のままにしない)。対象キャラは町にいる名簿全員ではなく、
+// 遠征中で物理的にそこにいるfieldPartyのみになる点だけが温泉村との違い
 
 const UMIYADO_COST_PER_PERSON = LODGE_COST; // 潮風宿の宿代は温泉村の宿屋と同額
-const UMIONSEN_COST_PER_PERSON = ONSEN_FLAT_COST; // 湯乃里温泉の湯代は温泉村の温泉(Lv1相当)と同額
 
 function renderUmiMura() {
   document.getElementById("umimuraHeaderGold").textContent = `${state.gold}G`;
@@ -13,6 +13,9 @@ function renderUmiMura() {
   // 温泉村で解放すればここにもすぐ現れる
   document.getElementById("umimuraMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
+  // 温泉村のrenderTown()と同じく、入浴ロックが明けたキャラがいれば「リラックスできた！」を
+  // ここでも出す(海の村の温泉で入浴した後、温泉村へ戻らずここに留まり続けるケースがあるため)
+  checkOnsenReliefPopups();
 }
 
 function renderUmiYado() {
@@ -28,13 +31,8 @@ function renderUmiYado() {
 
 function renderUmiOnsen() {
   renderDwHeader("umionsen", "湯乃里温泉", () => { renderUmiMura(); showScreen("screen-umimura"); });
-  const activeCount = fieldParty.filter((c) => c.status === "active").length;
-  document.getElementById("umionsenCostText").textContent = UMIONSEN_COST_PER_PERSON;
-  const cost = UMIONSEN_COST_PER_PERSON * activeCount;
-  const btn = document.getElementById("umionsenSoakBtn");
-  btn.textContent = activeCount > 0 ? `湯に浸かる(${activeCount}人・${cost}G)` : "入れる仲間がいません";
-  btn.disabled = activeCount === 0 || state.gold < cost;
   document.getElementById("umionsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  renderOnsenRosterList("umionsenList", fieldParty);
   updateSceneBackgrounds();
 }
 document.getElementById("umionsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-umionsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
@@ -129,40 +127,23 @@ document.getElementById("umiyadoStayBtn").onclick = () => {
 };
 
 document.getElementById("umionsenBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
-document.getElementById("umionsenSoakBtn").onclick = () => {
-  const active = fieldParty.filter((c) => c.status === "active");
-  const cost = UMIONSEN_COST_PER_PERSON * active.length;
-  if (active.length === 0 || state.gold < cost) return;
-  state.gold -= cost;
-  active.forEach((c) => { c.fatigue = Math.max(0, (c.fatigue || 0) - ONSEN_FATIGUE_RELIEF); });
-  saveState();
-  playSfx("select");
-  showConfirmModal("湯に浸かり、疲労が和らいだ。", [{ label: "OK", className: "big" }]);
-  renderUmiOnsen();
-};
 
 // ============ 山伏の里(第三の村、2026-07-19)。渓流→光る竹林の先から到達する ============
-// 【現状の位置づけ】海の村と同じく一次実装。宿はまだ絵が無いため未実装、温泉のみ用意した。
+// 海の村と同じく、温泉/宿等の仕様は温泉村と完全に同一にする(宿はまだ絵が無いため未実装、温泉のみ)。
 // 海の村と違い、この先(修験道→山)へさらに進める「修験道へ進む」ボタンを持つ
-
-const YAMABUSHIONSEN_COST_PER_PERSON = ONSEN_FLAT_COST; // 雲海の湯の湯代は温泉村の温泉(Lv1相当)と同額
 
 function renderYamabushi() {
   document.getElementById("yamabushiHeaderGold").textContent = `${state.gold}G`;
   document.getElementById("yamabushiHeaderTime").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   document.getElementById("yamabushiMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
+  checkOnsenReliefPopups(); // 海の村と同じく、この村のホーム画面に戻った時にも入浴リリーフ演出を出す
 }
 
 function renderYamabushiOnsen() {
   renderDwHeader("yamabushionsen", "雲海の湯", () => { renderYamabushi(); showScreen("screen-yamabushi"); });
-  const activeCount = fieldParty.filter((c) => c.status === "active").length;
-  document.getElementById("yamabushionsenCostText").textContent = YAMABUSHIONSEN_COST_PER_PERSON;
-  const cost = YAMABUSHIONSEN_COST_PER_PERSON * activeCount;
-  const btn = document.getElementById("yamabushionsenSoakBtn");
-  btn.textContent = activeCount > 0 ? `湯に浸かる(${activeCount}人・${cost}G)` : "入れる仲間がいません";
-  btn.disabled = activeCount === 0 || state.gold < cost;
   document.getElementById("yamabushionsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
+  renderOnsenRosterList("yamabushionsenList", fieldParty);
   updateSceneBackgrounds();
 }
 document.getElementById("yamabushionsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-yamabushionsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
@@ -227,14 +208,3 @@ document.getElementById("yamabushiLeaveBtn").onclick = () => {
 };
 
 document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
-document.getElementById("yamabushionsenSoakBtn").onclick = () => {
-  const active = fieldParty.filter((c) => c.status === "active");
-  const cost = YAMABUSHIONSEN_COST_PER_PERSON * active.length;
-  if (active.length === 0 || state.gold < cost) return;
-  state.gold -= cost;
-  active.forEach((c) => { c.fatigue = Math.max(0, (c.fatigue || 0) - ONSEN_FATIGUE_RELIEF); });
-  saveState();
-  playSfx("select");
-  showConfirmModal("湯に浸かり、疲労が和らいだ。", [{ label: "OK", className: "big" }]);
-  renderYamabushiOnsen();
-};
