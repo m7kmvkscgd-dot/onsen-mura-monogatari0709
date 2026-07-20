@@ -238,30 +238,30 @@ const ENEMIES = {
   // bigAttack: 大技(予告→発動)の専用プロファイル。見た目/生態にあわせて威力とデバフを敵ごとに個別設計する
   // (全103体に設定必須。汎用フォールバックは廃止した、2026-07-19)
   yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/yaken.png", hp: 14, atk: 4, def: 2, spd: 6, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 群れで足に食らいつき、動きを鈍らせる
+    bigAttack: { name: "牙噛み", mult: 1.0, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 群れで足に食らいつき、動きを鈍らせる
   inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 18, atk: 5, def: 3, spd: 4, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.62 } }, // 猪突猛進、ただ単純に高威力
+    bigAttack: { name: "猪突猛進", mult: 1.62 } }, // 猪突猛進、ただ単純に高威力
   dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 13, atk: 5, def: 2, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 0.9, debuff: { type: "poison", chance: 1.0, value: 3 } },
+    bigAttack: { name: "毒牙", mult: 0.9, debuff: { type: "poison", chance: 1.0, value: 3 } },
     onHitInflict: { type: "poison", chance: 0.5, value: 3 } }, // 攻撃力を落とす代わりに、通常攻撃でも高確率で毒を注入する
   oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で絡め取り、高確率で行動を封じる
+    bigAttack: { name: "糸搦め", mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で絡め取り、高確率で行動を封じる
   kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 15, atk: 5, def: 2, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18, isPlant: true,
-    bigAttack: { mult: 0.9, debuff: { type: "atkDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 精気を吸い、力を奪う
+    bigAttack: { name: "精気吸い", mult: 0.9, debuff: { type: "atkDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 精気を吸い、力を奪う
   kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 16, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 相撲さながらに組み伏せ、構えを崩す
+    bigAttack: { name: "河童相撲", mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.15, turns: 3 } } }, // 相撲さながらに組み伏せ、構えを崩す
   hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 14, atk: 5, def: 2, spd: 8, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
+    bigAttack: { name: "一つ目睨み", mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 不気味な一つ目で睨まれ、竦んで動きが鈍る
   bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 18, atk: 5, def: 4, spd: 6, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
+    bigAttack: { name: "狸囃子", mult: 0.9, debuff: { type: "silence", chance: 0.45, turns: 2 } } }, // 幻術で惑わし、技を封じる
   onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 12, atk: 5, def: 1, spd: 7, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 18,
     // 燃え盛る炎そのもの。大技は誰か1人を庇っても防ぎきれない燃え広がる炎として、かばう/挑発を無視して
     // 必ず全体を巻き込む(ignoreGuardian)。その代わり単体特化の大技より威力は抑えめ、通常攻撃も
     // 全体攻撃力を20%落とした代わりに、通常攻撃自体にも延焼(30%)を持たせてある
-    bigAttack: { mult: 0.4, ignoreGuardian: true, debuff: { type: "burn", chance: 1.0, turnsMin: 2, turnsMax: 3 } },
+    bigAttack: { name: "鬼火纏い", mult: 0.4, ignoreGuardian: true, debuff: { type: "burn", chance: 1.0, turnsMin: 2, turnsMax: 3 } },
     onHitInflict: { type: "burn", chance: 0.3, turnsMin: 2, turnsMax: 3 } },
   kamaitachi: { id: "kamaitachi", ja: "かまいたち", image: "assets/enemies/kamaitachi.png", hp: 16, atk: 6, def: 2, spd: 10, goldMin: 11, goldMax: 18, xp: 13, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.55, value: 0.2, turns: 3 } } }, // かまいたちの一閃が鎧ごと切り裂く
+    bigAttack: { name: "疾風斬", mult: 1.0, debuff: { type: "defDown", chance: 0.55, value: 0.2, turns: 3 } } }, // かまいたちの一閃が鎧ごと切り裂く
 
   // ---- 序盤の中ボス級(奉行所の依頼専用。questOnly:trueのため通常の階層抽選には出ず、
   //      指名討伐でのみスポーンする) ----
@@ -271,82 +271,82 @@ const ENEMIES = {
   // 槍士の実効防御力想定でHPの8割前後を削る計算)。大技は「構え中(bigAttackPending)にスタンを
   // 入れると完全に潰せる」という既存仕組みをプレイヤーに実地で覚えさせるための、いわば「先生」役の中ボス
   oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 126, atk: 8, def: 6, spd: 3, goldMin: 40, goldMax: 60, xp: 40, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 5.95 } },
+    bigAttack: { name: "大猪突進", mult: 5.95 } },
   q_arakuma: { id: "q_arakuma", ja: "荒熊", image: "assets/enemies/q_arakuma.png", hp: 39, atk: 7, def: 5, spd: 3, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
+    bigAttack: { name: "熊爪薙ぎ", mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 森の主、爪の一薙ぎが鎧を弾き飛ばす
   q_daija: { id: "q_daija", ja: "大蛇", image: "assets/enemies/q_daija.png", hp: 22, atk: 8, def: 4, spd: 7, goldMin: 35, goldMax: 55, xp: 42, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 1.2 },
+    bigAttack: { name: "鎌首の一閃", mult: 1.2 },
     onHitInflict: { type: "poison", chance: 0.4, value: 4 } }, // 川を塞ぐ大蛇、牙に猛毒を宿す
   q_oni: { id: "q_oni", ja: "鬼", image: "assets/enemies/q_oni.png", hp: 270, atk: 9, def: 5, spd: 4, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 1.4 } }, // 山に棲む鬼、棍棒の一撃は防御ごと打ち砕く
+    bigAttack: { name: "金棒一閃", mult: 1.4 } }, // 山に棲む鬼、棍棒の一撃は防御ごと打ち砕く
   q_gashadokuro: { id: "q_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/q_gashadokuro.png", hp: 144, atk: 8, def: 5, spd: 8, goldMin: 38, goldMax: 58, xp: 45, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
-    bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 夜鳴きの怪、骨の震えが敵の足をすくませる
+    bigAttack: { name: "骨鳴らし", mult: 1.0, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 夜鳴きの怪、骨の震えが敵の足をすくませる
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
   ochimusha: { id: "ochimusha", ja: "落武者", image: "assets/enemies/ochimusha.png", hp: 34, atk: 10, def: 6, spd: 8, goldMin: 18, goldMax: 29, xp: 24, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.1, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 恨みを刃に乗せた一閃が深い傷を残す
+    bigAttack: { name: "怨念の一閃", mult: 1.1, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 恨みを刃に乗せた一閃が深い傷を残す
   kamaitachi2: { id: "kamaitachi2", ja: "かまいたち", image: "assets/enemies/kamaitachi2.png", hp: 28, atk: 11, def: 4, spd: 12, goldMin: 20, goldMax: 30, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.15, debuff: { type: "bleed", chance: 0.5, value: 3 } } }, // 上位個体は鎧ごとではなく肉そのものを切り裂く(かまいたちのdefDownとは差別化)
+    bigAttack: { name: "剛鎌風", mult: 1.15, debuff: { type: "bleed", chance: 0.5, value: 3 } } }, // 上位個体は鎧ごとではなく肉そのものを切り裂く(かまいたちのdefDownとは差別化)
   youko: { id: "youko", ja: "妖狐", image: "assets/enemies/youko.png", hp: 26, atk: 12, def: 4, spd: 9, goldMin: 20, goldMax: 30, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.0, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 妖しい幻影で戦意を削ぐ
+    bigAttack: { name: "妖狐の幻", mult: 1.0, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 妖しい幻影で戦意を削ぐ
   rokurokubi: { id: "rokurokubi", ja: "ろくろ首", image: "assets/enemies/rokurokubi.png", hp: 30, atk: 10, def: 5, spd: 8, goldMin: 18, goldMax: 29, xp: 24, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 伸びた首が背後から不意打ちし、竦ませる
+    bigAttack: { name: "首伸ばし", mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 伸びた首が背後から不意打ちし、竦ませる
   yukionna: { id: "yukionna", ja: "雪女", image: "assets/enemies/yukionna.png", hp: 27, atk: 11, def: 5, spd: 8, goldMin: 20, goldMax: 30, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 凍える吐息で体を強張らせる
+    bigAttack: { name: "氷結の息", mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 凍える吐息で体を強張らせる
   yamauba: { id: "yamauba", ja: "山姥", image: "assets/enemies/yamauba.png", hp: 36, atk: 10, def: 6, spd: 6, goldMin: 21, goldMax: 31, xp: 26, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.35 } }, // 怪力に物を言わせた単純な打撃(デバフなし、猪突猛進系と同じ路線)
+    bigAttack: { name: "怪力の一撃", mult: 1.35 } }, // 怪力に物を言わせた単純な打撃(デバフなし、猪突猛進系と同じ路線)
   tsuchigumo: { id: "tsuchigumo", ja: "土蜘蛛", image: "assets/enemies/tsuchigumo.png", hp: 32, atk: 10, def: 5, spd: 7, goldMin: 20, goldMax: 30, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.15, debuff: { type: "spdDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 大蜘蛛(oogumo)のスタン糸とは違い、太い蜘蛛の巣で全身を縛り重く鈍らせる
+    bigAttack: { name: "土蜘蛛の巣", mult: 1.15, debuff: { type: "spdDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 大蜘蛛(oogumo)のスタン糸とは違い、太い蜘蛛の巣で全身を縛り重く鈍らせる
   onryo: { id: "onryo", ja: "怨霊", image: "assets/enemies/onryo.png", hp: 24, atk: 13, def: 3, spd: 9, goldMin: 21, goldMax: 31, xp: 27, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 0.9, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } } }, // 怨嗟の声が呪いをかけ、被ダメージが増える(黄泉の怨霊と同じ呪詛系統)
+    bigAttack: { name: "怨嗟の声", mult: 0.9, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } } }, // 怨嗟の声が呪いをかけ、被ダメージが増える(黄泉の怨霊と同じ呪詛系統)
   oomukade: { id: "oomukade", ja: "大百足", image: "assets/enemies/oomukade.png", hp: 38, atk: 11, def: 6, spd: 6, goldMin: 22, goldMax: 33, xp: 27, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.0, debuff: { type: "poison", chance: 0.6, value: 4 } } }, // 無数の脚と牙で一斉に噛みつき、猛毒を注ぎ込む
+    bigAttack: { name: "百足の乱噛み", mult: 1.0, debuff: { type: "poison", chance: 0.6, value: 4 } } }, // 無数の脚と牙で一斉に噛みつき、猛毒を注ぎ込む
   kasha: { id: "kasha", ja: "火車", image: "assets/enemies/kasha.png", hp: 34, atk: 12, def: 6, spd: 7, goldMin: 23, goldMax: 35, xp: 29, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.4, debuff: { type: "atkDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 死者を攫う業火の恐怖が戦意を折る
+    bigAttack: { name: "業火の相貌", mult: 1.4, debuff: { type: "atkDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 死者を攫う業火の恐怖が戦意を折る
 
   // ---- 後半(Lv26-40 / floor 24-45)、うち2体は中ボス ----
   oni: { id: "oni", ja: "鬼", image: "assets/enemies/oni.png", hp: 58, atk: 18, def: 9, spd: 9, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.4 } }, // 金棒の一撃、デバフなしの純粋な力任せ
+    bigAttack: { name: "鬼の金棒", mult: 1.4 } }, // 金棒の一撃、デバフなしの純粋な力任せ
   karasu_tengu: { id: "karasu_tengu", ja: "烏天狗", image: "assets/enemies/karasu_tengu.png", hp: 48, atk: 17, def: 7, spd: 14, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67, isFlying: true,
     bigAttack: { name: "扇の突風", mult: 0.3, aoe: true, debuff: { type: "stun", chance: 0.9, turns: 1 } } }, // 天狗の大技は全種共通(全体攻撃・低威力・高確率スタン)に統一
   yamauba2: { id: "yamauba2", ja: "山姥", image: "assets/enemies/yamauba2.png", hp: 56, atk: 16, def: 9, spd: 8, goldMin: 23, goldMax: 35, xp: 41, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 山姥(tier2)の力任せに、齢を経た命喰らいの呪いが加わる
+    bigAttack: { name: "命喰らいの呪い", mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 山姥(tier2)の力任せに、齢を経た命喰らいの呪いが加わる
   gyuki: { id: "gyuki", ja: "牛鬼", image: "assets/enemies/gyuki.png", hp: 70, atk: 19, def: 11, spd: 7, goldMin: 28, goldMax: 40, xp: 46, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.0, debuff: { type: "poison", chance: 0.5, value: 4 } } }, // 牛鬼特有の猛毒を角に宿す
+    bigAttack: { name: "牛鬼の角", mult: 1.0, debuff: { type: "poison", chance: 0.5, value: 4 } } }, // 牛鬼特有の猛毒を角に宿す
   nue: { id: "nue", ja: "ぬえ", image: "assets/enemies/nue.png", hp: 52, atk: 18, def: 8, spd: 11, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67, isFlying: true,
-    bigAttack: { mult: 1.15, debuff: { type: "silence", chance: 0.4, turns: 2 } } }, // 不気味な鳴き声で術者の意識を乱す
+    bigAttack: { name: "鵺の鳴き声", mult: 1.15, debuff: { type: "silence", chance: 0.4, turns: 2 } } }, // 不気味な鳴き声で術者の意識を乱す
   wanyudo: { id: "wanyudo", ja: "輪入道", image: "assets/enemies/wanyudo.png", hp: 50, atk: 17, def: 8, spd: 13, goldMin: 25, goldMax: 37, xp: 43, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "stun", chance: 0.35, turns: 1 } } }, // 燃え盛る鬼の顔に睨まれ、竦んで動けなくなる
+    bigAttack: { name: "火輪の相貌", mult: 1.2, debuff: { type: "stun", chance: 0.35, turns: 1 } } }, // 燃え盛る鬼の顔に睨まれ、竦んで動けなくなる
   gaikotsu_musha: { id: "gaikotsu_musha", ja: "骸骨武者", image: "assets/enemies/gaikotsu_musha.png", hp: 54, atk: 18, def: 10, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 骨だけの剛腕から繰り出される連撃が構えを崩す
+    bigAttack: { name: "骸骨の乱撃", mult: 1.3, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 骨だけの剛腕から繰り出される連撃が構えを崩す
   orochi: { id: "orochi", ja: "大蛇", image: "assets/enemies/orochi.png", hp: 62, atk: 18, def: 10, spd: 9, goldMin: 27, goldMax: 39, xp: 45, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.15, debuff: { type: "poison", chance: 0.6, value: 4 } } }, // 巨躯に見合う量の猛毒を叩き込む
+    bigAttack: { name: "大蛇の毒吐き", mult: 1.15, debuff: { type: "poison", chance: 0.6, value: 4 } } }, // 巨躯に見合う量の猛毒を叩き込む
   gashadokuro: { id: "gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/gashadokuro.png", hp: 170, atk: 24, def: 13, spd: 9, goldMin: 90, goldMax: 130, xp: 150, minFloor: 38, maxFloor: 1498, isBoss: true,
-    bigAttack: { mult: 1.6, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 骨の震える音が響き渡り、恐怖で身がすくむ(討伐依頼版q_gashadokuroの上位互換)
+    bigAttack: { name: "がしゃどくろの哭き", mult: 1.6, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 骨の震える音が響き渡り、恐怖で身がすくむ(討伐依頼版q_gashadokuroの上位互換)
   kyubi_no_kitsune: { id: "kyubi_no_kitsune", ja: "九尾の狐", image: "assets/enemies/kyubi_no_kitsune.png", hp: 155, atk: 26, def: 11, spd: 12, goldMin: 95, goldMax: 135, xp: 155, minFloor: 38, maxFloor: 1498, isBoss: true,
-    bigAttack: { mult: 1.5, debuff: { type: "dmgTakenUp", chance: 0.5, value: 0.2, turns: 3 } } }, // 妖狐火に照らされた相手は、以後の一撃が通りやすくなる
+    bigAttack: { name: "九尾の妖火", mult: 1.5, debuff: { type: "dmgTakenUp", chance: 0.5, value: 0.2, turns: 3 } } }, // 妖狐火に照らされた相手は、以後の一撃が通りやすくなる
 
   // ---- 終盤(Lv41-50〜 / floor 38-) ----
   shuten_doji: { id: "shuten_doji", ja: "酒呑童子", image: "assets/enemies/shuten_doji.png", hp: 92, atk: 26, def: 13, spd: 10, goldMin: 40, goldMax: 58, xp: 75, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.5, debuff: { type: "atkDown", chance: 0.5, value: 0.25, turns: 3 } } }, // 鬼の頭領が放つ咆哮、戦意そのものを打ち砕く
+    bigAttack: { name: "鬼哭の咆哮", mult: 1.5, debuff: { type: "atkDown", chance: 0.5, value: 0.25, turns: 3 } } }, // 鬼の頭領が放つ咆哮、戦意そのものを打ち砕く
   ibaraki_doji: { id: "ibaraki_doji", ja: "茨木童子", image: "assets/enemies/ibaraki_doji.png", hp: 98, atk: 28, def: 13, spd: 10, goldMin: 42, goldMax: 60, xp: 78, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.4, debuff: { type: "defDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 羅生門で腕を斬られてなお衰えぬ鉤爪が鎧を切り裂く
+    bigAttack: { name: "鉤爪の一薙ぎ", mult: 1.4, debuff: { type: "defDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 羅生門で腕を斬られてなお衰えぬ鉤爪が鎧を切り裂く
   dai_tengu: { id: "dai_tengu", ja: "大天狗", image: "assets/enemies/dai_tengu.png", hp: 85, atk: 27, def: 12, spd: 15, goldMin: 41, goldMax: 59, xp: 76, minFloor: 56, maxFloor: 1498,
     bigAttack: { name: "扇の突風", mult: 0.3, aoe: true, debuff: { type: "stun", chance: 0.9, turns: 1 } } }, // 天狗の大技は全種共通(全体攻撃・低威力・高確率スタン)に統一
   yamata_no_orochi: { id: "yamata_no_orochi", ja: "八岐大蛇", image: "assets/enemies/yamata_no_orochi.png", hp: 110, atk: 29, def: 14, spd: 8, goldMin: 45, goldMax: 64, xp: 82, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "poison", chance: 0.65, value: 5 } } }, // 八つの頭が一斉に噛みつき、猛毒を注ぎ込む
+    bigAttack: { name: "八岐の乱牙", mult: 1.3, debuff: { type: "poison", chance: 0.65, value: 5 } } }, // 八つの頭が一斉に噛みつき、猛毒を注ぎ込む
   tamamo_no_mae: { id: "tamamo_no_mae", ja: "玉藻前", image: "assets/enemies/tamamo_no_mae.png", hp: 82, atk: 28, def: 11, spd: 12, goldMin: 42, goldMax: 60, xp: 77, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.2, debuff: { type: "atkDown", chance: 0.55, value: 0.3, turns: 3 } } }, // 傾城の美貌で戦意を骨抜きにする
+    bigAttack: { name: "傾国の艶", mult: 1.2, debuff: { type: "atkDown", chance: 0.55, value: 0.3, turns: 3 } } }, // 傾城の美貌で戦意を骨抜きにする
   giou: { id: "giou", ja: "鵺王", image: "assets/enemies/giou.png", hp: 100, atk: 27, def: 15, spd: 11, goldMin: 44, goldMax: 62, xp: 80, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "silence", chance: 0.5, turns: 2 } } }, // ぬえを束ねる王の咆哮、術者を黙らせる
+    bigAttack: { name: "鵺王の咆哮", mult: 1.3, debuff: { type: "silence", chance: 0.5, turns: 2 } } }, // ぬえを束ねる王の咆哮、術者を黙らせる
   kyubi_shin: { id: "kyubi_shin", ja: "九尾の狐(真)", image: "assets/enemies/kyubi_shin.png", hp: 95, atk: 30, def: 12, spd: 13, goldMin: 46, goldMax: 65, xp: 85, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.4, debuff: { type: "burn", chance: 0.6, turnsMin: 2, turnsMax: 3 } } }, // 真の姿の妖狐火は呪いではなく直接体を焼き尽くす(九尾の狐との差別化)
+    bigAttack: { name: "業炎の九尾", mult: 1.4, debuff: { type: "burn", chance: 0.6, turnsMin: 2, turnsMax: 3 } } }, // 真の姿の妖狐火は呪いではなく直接体を焼き尽くす(九尾の狐との差別化)
   gashadokuro_shin: { id: "gashadokuro_shin", ja: "がしゃどくろ(真)", image: "assets/enemies/gashadokuro_shin.png", hp: 120, atk: 28, def: 16, spd: 8, goldMin: 47, goldMax: 66, xp: 86, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.7, debuff: { type: "stun", chance: 0.55, turns: 1 } } }, // がしゃどくろより一段と強い骨鳴りが、より高確率で竦ませる
+    bigAttack: { name: "亡骨の大哭", mult: 1.7, debuff: { type: "stun", chance: 0.55, turns: 1 } } }, // がしゃどくろより一段と強い骨鳴りが、より高確率で竦ませる
   yomi_no_onryo: { id: "yomi_no_onryo", ja: "黄泉の怨霊", image: "assets/enemies/yomi_no_onryo.png", hp: 88, atk: 32, def: 10, spd: 11, goldMin: 48, goldMax: 68, xp: 88, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "dmgTakenUp", chance: 0.55, value: 0.25, turns: 3 } } }, // 黄泉の呪いが深く刻まれ、被ダメージが増える(怨霊系統の最上位)
+    bigAttack: { name: "黄泉の呪詛", mult: 1.3, debuff: { type: "dmgTakenUp", chance: 0.55, value: 0.25, turns: 3 } } }, // 黄泉の呪いが深く刻まれ、被ダメージが増える(怨霊系統の最上位)
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 280, atk: 34, def: 18, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 62, maxFloor: 1498, isBoss: true,
-    bigAttack: { mult: 1.4, ignoreGuardian: true, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 深淵の森の最終決戦、大地ごと薙ぎ払う一撃は誰か1人の盾では防ぎきれない
+    bigAttack: { name: "羅刹の薙ぎ払い", mult: 1.4, ignoreGuardian: true, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 深淵の森の最終決戦、大地ごと薙ぎ払う一撃は誰か1人の盾では防ぎきれない
 
   // 大群系(isSwarm): 通常より小さく表示され、ステータスは同階層帯の通常種平均のおよそ4〜5割に抑えてある。
   // 遭遇時は2体で通常種1体ぶんの「枠」を埋める(pickEncounterForFloor参照)。階層帯は既存の40種と同じ4段階に対応
@@ -354,22 +354,22 @@ const ENEMIES = {
   // かばう/挑発でタンク役が群れの攻撃を全て一身に受けると、複数体分の蓄積が重なって毒がすぐ危険域に達する
   // (槍士の「かばう」に対する天敵として設計。かばわず散らして受ければ1体あたりの蓄積は少ない)
   nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 6, atk: 3, def: 0, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true, isFlying: true,
-    bigAttack: { mult: 0.85, debuff: { type: "stun", chance: 0.3, turns: 1 } }, // 羽ばたきの乱舞でふらつかせる(毒は通常攻撃のonHitInflictで既に担っている)
+    bigAttack: { name: "羽ばたきの乱舞", mult: 0.85, debuff: { type: "stun", chance: 0.3, turns: 1 } }, // 羽ばたきの乱舞でふらつかせる(毒は通常攻撃のonHitInflictで既に担っている)
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
   chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 8, atk: 2, def: 1, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
-    bigAttack: { mult: 0.8, debuff: { type: "spdDown", chance: 0.35, value: 0.15, turns: 2 } } }, // 驚きの灯りをかざして竦ませる
+    bigAttack: { name: "驚きの灯り", mult: 0.8, debuff: { type: "spdDown", chance: 0.35, value: 0.15, turns: 2 } } }, // 驚きの灯りをかざして竦ませる
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 13, atk: 5, def: 2, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 13, maxFloor: 43, isSwarm: true,
-    bigAttack: { mult: 0.9, debuff: { type: "defDown", chance: 0.4, value: 0.15, turns: 3 } } }, // 悪戯な体当たりで構えを崩す
+    bigAttack: { name: "悪戯突き", mult: 0.9, debuff: { type: "defDown", chance: 0.4, value: 0.15, turns: 3 } } }, // 悪戯な体当たりで構えを崩す
   chibi_oni: { id: "chibi_oni", ja: "ちび鬼", image: "assets/enemies/chibi_oni.png", hp: 12, atk: 6, def: 1, spd: 7, goldMin: 10, goldMax: 16, xp: 12, minFloor: 13, maxFloor: 43, isSwarm: true,
-    bigAttack: { mult: 1.0 } }, // 小さくとも鬼の血、単純な力任せ
+    bigAttack: { name: "豆鬼の一撃", mult: 1.0 } }, // 小さくとも鬼の血、単純な力任せ
   karakasa: { id: "karakasa", ja: "からかさ", image: "assets/enemies/karakasa.png", hp: 27, atk: 8, def: 4, spd: 6, goldMin: 13, goldMax: 18, xp: 19, minFloor: 35, maxFloor: 67, isSwarm: true,
-    bigAttack: { mult: 0.95, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 片足で跳びはねて足を引っ掛ける
+    bigAttack: { name: "からかさ跳ね", mult: 0.95, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 片足で跳びはねて足を引っ掛ける
   kogitsune: { id: "kogitsune", ja: "こぎつね", image: "assets/enemies/kogitsune.png", hp: 22, atk: 9, def: 3, spd: 13, goldMin: 13, goldMax: 18, xp: 20, minFloor: 35, maxFloor: 67, isSwarm: true,
-    bigAttack: { mult: 0.95, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } } }, // 幼い妖術でも力を惑わすには十分
+    bigAttack: { name: "子狐の妖術", mult: 0.95, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } } }, // 幼い妖術でも力を惑わすには十分
   warashibe_ningyo: { id: "warashibe_ningyo", ja: "わらしべ人形", image: "assets/enemies/warashibe_ningyo.png", hp: 47, atk: 12, def: 6, spd: 5, goldMin: 22, goldMax: 28, xp: 35, minFloor: 56, maxFloor: 1498, isSwarm: true,
-    bigAttack: { mult: 1.1, debuff: { type: "atkDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 藁人形に込められた呪いが力を奪う
+    bigAttack: { name: "藁人形の呪い", mult: 1.1, debuff: { type: "atkDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 藁人形に込められた呪いが力を奪う
   medama_kozou: { id: "medama_kozou", ja: "目玉こぞう", image: "assets/enemies/medama_kozou.png", hp: 40, atk: 14, def: 5, spd: 6, goldMin: 22, goldMax: 30, xp: 36, minFloor: 56, maxFloor: 1498, isSwarm: true,
-    bigAttack: { mult: 1.1, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 見開いた大きな目に射すくめられる
+    bigAttack: { name: "百目睨み", mult: 1.1, debuff: { type: "spdDown", chance: 0.45, value: 0.2, turns: 3 } } }, // 見開いた大きな目に射すくめられる
 
   // ==== 洞窟ステージ(stage:"cave")。深淵の森10層目の分かれ道から入る独立ルートで、階層は1〜15で
   // 独自にカウントする(森の階層とは別枠、pickEnemyForFloorがstageで絞り込む)。ステータスは仮値
@@ -377,136 +377,136 @@ const ENEMIES = {
   // ぬらりこうもり/鬼火は森の同名個体と別インスタンス(idを分けて画像だけ使い回し、森側の
   // 出現階層・強さには一切影響しない)。====
   cave_tsuchigumo: { id: "cave_tsuchigumo", ja: "土蜘蛛", image: "assets/enemies/tsuchigumo.png", stage: "cave", hp: 24, atk: 7, def: 4, spd: 7, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.2, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 暗闇に潜み、糸で絡め取って完全に動きを封じる(森のtsuchigumoのspdDownとは別個体として差別化)
+    bigAttack: { name: "闇網搦め", mult: 1.2, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 暗闇に潜み、糸で絡め取って完全に動きを封じる(森のtsuchigumoのspdDownとは別個体として差別化)
   cave_oomukade: { id: "cave_oomukade", ja: "大百足", image: "assets/enemies/oomukade.png", stage: "cave", hp: 26, atk: 7, def: 4, spd: 6, goldMin: 10, goldMax: 17, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.15, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 無数の脚で締め上げ、鎧を軋ませる(森のoomukadeの毒とは別個体として差別化)
+    bigAttack: { name: "百足の締め上げ", mult: 1.15, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 無数の脚で締め上げ、鎧を軋ませる(森のoomukadeの毒とは別個体として差別化)
   cave_oogumo: { id: "cave_oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", stage: "cave", hp: 20, atk: 6, def: 3, spd: 7, goldMin: 9, goldMax: 15, xp: 12, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 森の個体と同じく、糸で絡め取り行動を封じる
+    bigAttack: { name: "闇の巣網", mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 森の個体と同じく、糸で絡め取り行動を封じる
   cave_nurarikoumori: { id: "cave_nurarikoumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", stage: "cave", hp: 8, atk: 4, def: 1, spd: 10, goldMin: 4, goldMax: 7, xp: 6, minFloor: 1, maxFloor: 15, isSwarm: true, isFlying: true,
-    bigAttack: { mult: 0.85, debuff: { type: "spdDown", chance: 0.35, value: 0.15, turns: 2 } }, // 暗闇での金切り声混じりの乱舞で方向感覚を奪う(森個体のstunとは差別化)
+    bigAttack: { name: "金切りの乱舞", mult: 0.85, debuff: { type: "spdDown", chance: 0.35, value: 0.15, turns: 2 } }, // 暗闇での金切り声混じりの乱舞で方向感覚を奪う(森個体のstunとは差別化)
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
   cave_onibi: { id: "cave_onibi", ja: "鬼火", image: "assets/enemies/onibi.png", stage: "cave", hp: 16, atk: 6, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.1, debuff: { type: "burn", chance: 0.6, turnsMin: 2, turnsMax: 3 } }, // 森個体(全体・かばう無視)と違い、単体に狙いを定めて纏わりつき焼く
+    bigAttack: { name: "纏わり火", mult: 1.1, debuff: { type: "burn", chance: 0.6, turnsMin: 2, turnsMax: 3 } }, // 森個体(全体・かばう無視)と違い、単体に狙いを定めて纏わりつき焼く
     onHitInflict: { type: "burn", chance: 0.3, turnsMin: 2, turnsMax: 3 } },
   doukutsu_shokujinsou: { id: "doukutsu_shokujinsou", ja: "洞窟食人草", image: "assets/enemies/doukutsu_shokujinsou.png", stage: "cave", hp: 22, atk: 7, def: 3, spd: 4, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15, isPlant: true,
-    bigAttack: { mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } }, // 大きな口で丸呑みにしようと襲いかかり、消化液が力を奪う
+    bigAttack: { name: "食人草の丸呑み", mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } }, // 大きな口で丸呑みにしようと襲いかかり、消化液が力を奪う
     onHitInflict: { type: "poison", chance: 0.3, value: 3 } },
   doukutsu_chouchinbi: { id: "doukutsu_chouchinbi", ja: "洞窟の提灯火", image: "assets/enemies/doukutsu_chouchinbi.png", stage: "cave", hp: 18, atk: 6, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.0, debuff: { type: "silence", chance: 0.4, turns: 2 } } }, // 妖しい灯りに気を取られ、術の集中を乱される
+    bigAttack: { name: "提灯火の幻惑", mult: 1.0, debuff: { type: "silence", chance: 0.4, turns: 2 } } }, // 妖しい灯りに気を取られ、術の集中を乱される
   bake_nezumi: { id: "bake_nezumi", ja: "化け鼠", image: "assets/enemies/bake_nezumi.png", stage: "cave", hp: 9, atk: 4, def: 1, spd: 9, goldMin: 4, goldMax: 7, xp: 6, minFloor: 1, maxFloor: 15, isSwarm: true,
-    bigAttack: { mult: 0.95, debuff: { type: "bleed", chance: 0.4, value: 2 } } }, // 鋭い前歯で何度も噛みつく
+    bigAttack: { name: "鼠の乱噛み", mult: 0.95, debuff: { type: "bleed", chance: 0.4, value: 2 } } }, // 鋭い前歯で何度も噛みつく
   bake_take: { id: "bake_take", ja: "化け茸", image: "assets/enemies/bake_take.png", stage: "cave", hp: 20, atk: 6, def: 3, spd: 4, goldMin: 9, goldMax: 15, xp: 12, minFloor: 1, maxFloor: 15, isPlant: true,
-    bigAttack: { mult: 1.15, debuff: { type: "defDown", chance: 0.45, value: 0.15, turns: 3 } }, // 胞子をまき散らし、体をぬめらせて防御を崩す(毒は通常攻撃のonHitInflictが既に担う)
+    bigAttack: { name: "胞子撒き", mult: 1.15, debuff: { type: "defDown", chance: 0.45, value: 0.15, turns: 3 } }, // 胞子をまき散らし、体をぬめらせて防御を崩す(毒は通常攻撃のonHitInflictが既に担う)
     onHitInflict: { type: "poison", chance: 0.35, value: 3 } },
   doukutsu_bourei: { id: "doukutsu_bourei", ja: "洞窟の亡霊", image: "assets/enemies/doukutsu_bourei.png", stage: "cave", hp: 18, atk: 7, def: 2, spd: 8, goldMin: 10, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.1, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } } }, // 恨みの声が呪いをかけ、被ダメージが増える(森の怨霊系統と同じ呪詛の作法)
+    bigAttack: { name: "亡霊の怨嗟", mult: 1.1, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } } }, // 恨みの声が呪いをかけ、被ダメージが増える(森の怨霊系統と同じ呪詛の作法)
   doukutsu_inoshishi: { id: "doukutsu_inoshishi", ja: "洞窟イノシシ", image: "assets/enemies/doukutsu_inoshishi.png", stage: "cave", hp: 26, atk: 7, def: 4, spd: 4, goldMin: 10, goldMax: 17, xp: 13, minFloor: 1, maxFloor: 15,
-    bigAttack: { mult: 1.5 } }, // 猪と同じく、ただ単純な突進の高威力
+    bigAttack: { name: "洞窟の猛進", mult: 1.5 } }, // 猪と同じく、ただ単純な突進の高威力
 
   // ==== 海岸ステージ(stage:"coast")。森とは別枠のプール(pickEnemyForFloorがstageで絞り込む)。====
   // 甲殻類/貝類は防御力を高めに設計し、森とは違う「硬い敵」の手触りを狙った。
   // 出血(bleed)は牙・刃物・突き技を持つ敵(鮫系・海賊骸骨・磯犬・魚人系)に優先的に持たせてある。
   // ---- 序盤(Lv1-10 / floor 1-12) ----
   iso_gani: { id: "iso_gani", ja: "磯ガニ", image: "assets/enemies/iso_gani.png", stage: "coast", hp: 14, atk: 4, def: 5, spd: 3, goldMin: 5, goldMax: 10, xp: 8, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.3, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } },
+    bigAttack: { name: "大鋏挟み", mult: 1.3, debuff: { type: "atkDown", chance: 0.4, value: 0.15, turns: 3 } },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 大きなハサミで挟み、力を奪う。通常攻撃でも挟まれた傷が残る
   yadokari: { id: "yadokari", ja: "ヤドカリ", image: "assets/enemies/yadokari.png", stage: "coast", hp: 16, atk: 4, def: 5, spd: 4, goldMin: 5, goldMax: 11, xp: 8, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.2 } }, // 貝殻を盾に体当たり
+    bigAttack: { name: "貝殻突撃", mult: 1.2 } }, // 貝殻を盾に体当たり
   isozakana: { id: "isozakana", ja: "磯魚", image: "assets/enemies/isozakana.png", stage: "coast", hp: 7, atk: 2, def: 1, spd: 8, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
-    bigAttack: { mult: 1.3 }, // 群れで行動する小魚。bigAttack未設定だと汎用フォールバックでランダムに毒等が乗ってしまうため明示的に設定(飛び跳ねての体当たりのみ、デバフなし)
+    bigAttack: { name: "跳ね躍り", mult: 1.3 }, // 群れで行動する小魚。bigAttack未設定だと汎用フォールバックでランダムに毒等が乗ってしまうため明示的に設定(飛び跳ねての体当たりのみ、デバフなし)
     onHitInflict: { type: "bleed", chance: 1.0, valueMin: 1, valueMax: 2 } }, // 鋭い歯で噛みつき、通常攻撃で必ず出血1〜2を負わせる
   kurage_bou: { id: "kurage_bou", ja: "くらげ坊", image: "assets/enemies/kurage_bou.png", stage: "coast", hp: 13, atk: 4, def: 1, spd: 5, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 触手でびりびり痺れさせる
+    bigAttack: { name: "痺れ触手", mult: 1.0, debuff: { type: "stun", chance: 0.45, turns: 1 } } }, // 触手でびりびり痺れさせる
   kaiyose: { id: "kaiyose", ja: "貝寄せ", image: "assets/enemies/kaiyose.png", stage: "coast", hp: 13, atk: 4, def: 5, spd: 3, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.3 },
+    bigAttack: { name: "貝閉じの一撃", mult: 1.3 },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 貝殻を閉じて噛みつく。鋭い殻の縁が傷を残す
   hama_tako: { id: "hama_tako", ja: "浜タコ", image: "assets/enemies/hama_tako.png", stage: "coast", hp: 17, atk: 5, def: 3, spd: 6, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足を絡めて動きを封じる
+    bigAttack: { name: "足絡め", mult: 1.0, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足を絡めて動きを封じる
   kaisou_douji: { id: "kaisou_douji", ja: "海藻童子", image: "assets/enemies/kaisou_douji.png", stage: "coast", hp: 14, atk: 5, def: 2, spd: 9, goldMin: 8, goldMax: 14, xp: 10, minFloor: 1, maxFloor: 18, isPlant: true,
-    bigAttack: { mult: 1.1 } }, // しなやかな体で攻め立てる
+    bigAttack: { name: "海藻の鞭", mult: 1.1 } }, // しなやかな体で攻め立てる
   harifugu: { id: "harifugu", ja: "ハリフグ", image: "assets/enemies/harifugu.png", stage: "coast", hp: 15, atk: 6, def: 2, spd: 5, goldMin: 8, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 18,
-    bigAttack: { mult: 1.5 } }, // 膨らんで針だらけの体で突進
+    bigAttack: { name: "針膨れ突進", mult: 1.5 } }, // 膨らんで針だらけの体で突進
   umineko: { id: "umineko", ja: "ウミネコ", image: "assets/enemies/umineko.png", stage: "coast", hp: 13, atk: 5, def: 1, spd: 10, goldMin: 9, goldMax: 15, xp: 11, minFloor: 1, maxFloor: 18, isFlying: true,
-    bigAttack: { mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 高速で急降下し、くちばしでつつく
+    bigAttack: { name: "急降下つつき", mult: 1.0, debuff: { type: "spdDown", chance: 0.4, value: 0.2, turns: 3 } } }, // 高速で急降下し、くちばしでつつく
 
   // ---- 中盤(Lv11-25 / floor 9-29) ----
   kaizoku_gaikotsu: { id: "kaizoku_gaikotsu", ja: "海賊骸骨", image: "assets/enemies/kaizoku_gaikotsu.png", stage: "coast", hp: 30, atk: 11, def: 5, spd: 8, goldMin: 18, goldMax: 29, xp: 24, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.1, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 錆びた刀の一閃が傷を刻む
+    bigAttack: { name: "錆刀の一閃", mult: 1.1, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 錆びた刀の一閃が傷を刻む
   iso_inu: { id: "iso_inu", ja: "磯犬", image: "assets/enemies/iso_inu.png", stage: "coast", hp: 27, atk: 12, def: 4, spd: 11, goldMin: 18, goldMax: 29, xp: 24, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.3, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } }, // 群れで足に食らいつき、動きを鈍らせる(森の野犬(yaken)と同じ犬系の型)
+    bigAttack: { name: "潮風の牙", mult: 1.3, debuff: { type: "spdDown", chance: 0.5, value: 0.2, turns: 3 } }, // 群れで足に食らいつき、動きを鈍らせる(森の野犬(yaken)と同じ犬系の型)
     onHitInflict: { type: "bleed", chance: 0.3, value: 1 } }, // 鋭い牙で何度も噛みつき、徐々に傷を負わせる
   oo_dako_1: { id: "oo_dako_1", ja: "大ダコ", image: "assets/enemies/oo_dako_1.png", stage: "coast", hp: 36, atk: 11, def: 5, spd: 6, goldMin: 20, goldMax: 30, xp: 26, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.2, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足で締め上げ、体勢を崩す
+    bigAttack: { name: "大ダコの締め付け", mult: 1.2, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 足で締め上げ、体勢を崩す
   iwa_gani: { id: "iwa_gani", ja: "岩ガニ", image: "assets/enemies/iwa_gani.png", stage: "coast", hp: 30, atk: 11, def: 9, spd: 5, goldMin: 19, goldMax: 29, xp: 24, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.4 },
+    bigAttack: { name: "岩鋏", mult: 1.4 },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 岩の隙間から大きなハサミで挟み込む
   gyojin: { id: "gyojin", ja: "魚人", image: "assets/enemies/gyojin.png", stage: "coast", hp: 29, atk: 13, def: 5, spd: 9, goldMin: 20, goldMax: 31, xp: 26, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.1, debuff: { type: "bleed", chance: 0.45, value: 2 } } }, // 三叉槍の刺突が深い傷を残す
+    bigAttack: { name: "三叉槍突き", mult: 1.1, debuff: { type: "bleed", chance: 0.45, value: 2 } } }, // 三叉槍の刺突が深い傷を残す
   shell_slime: { id: "shell_slime", ja: "シェルスライム", image: "assets/enemies/shell_slime.png", stage: "coast", hp: 32, atk: 10, def: 8, spd: 4, goldMin: 19, goldMax: 29, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 体当たりの粘液が防具を溶かす
+    bigAttack: { name: "溶蝕の粘液", mult: 1.0, debuff: { type: "defDown", chance: 0.5, value: 0.2, turns: 3 } } }, // 体当たりの粘液が防具を溶かす
   kaisou_no_sei: { id: "kaisou_no_sei", ja: "海藻の精", image: "assets/enemies/kaisou_no_sei.png", stage: "coast", hp: 26, atk: 11, def: 4, spd: 7, goldMin: 18, goldMax: 28, xp: 24, minFloor: 13, maxFloor: 43, isPlant: true,
-    bigAttack: { mult: 1.1, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } }, // 絡みつく海藻が力を奪う(森の木霊(kodama)と同じ植物系の型)
+    bigAttack: { name: "海藻纏い", mult: 1.1, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } }, // 絡みつく海藻が力を奪う(森の木霊(kodama)と同じ植物系の型)
     onHitInflict: { type: "poison", chance: 0.35, value: 2 } }, // 触れた相手からじわじわ体力を奪う
   same: { id: "same", ja: "鮫", image: "assets/enemies/same.png", stage: "coast", hp: 28, atk: 13, def: 4, spd: 13, goldMin: 21, goldMax: 32, xp: 27, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.3, debuff: { type: "bleed", chance: 0.6, value: 2 } } }, // 群れの頂点、鋭い歯で嚙みちぎる
+    bigAttack: { name: "鮫の乱牙", mult: 1.3, debuff: { type: "bleed", chance: 0.6, value: 2 } } }, // 群れの頂点、鋭い歯で嚙みちぎる
   iso_onna_1: { id: "iso_onna_1", ja: "磯女", image: "assets/enemies/iso_onna_1.png", stage: "coast", hp: 25, atk: 13, def: 4, spd: 8, goldMin: 20, goldMax: 31, xp: 26, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.1, debuff: { type: "spdDown", chance: 0.5, value: 0.25, turns: 3 } } }, // 伸びる髪で絡めとる
+    bigAttack: { name: "黒髪縛り", mult: 1.1, debuff: { type: "spdDown", chance: 0.5, value: 0.25, turns: 3 } } }, // 伸びる髪で絡めとる
   oo_kai: { id: "oo_kai", ja: "大貝", image: "assets/enemies/oo_kai.png", stage: "coast", hp: 34, atk: 11, def: 9, spd: 3, goldMin: 20, goldMax: 30, xp: 25, minFloor: 13, maxFloor: 43,
-    bigAttack: { mult: 1.4 },
+    bigAttack: { name: "大貝の圧殺", mult: 1.4 },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 貝殻を閉じて押しつぶす。鋭い殻の縁が傷を残す
 
   // ---- 後半(Lv26-40 / floor 24-45)、大蟹王は中ボス ----
   umibouzu: { id: "umibouzu", ja: "海坊主", image: "assets/enemies/umibouzu.png", stage: "coast", hp: 60, atk: 18, def: 9, spd: 6, goldMin: 25, goldMax: 37, xp: 43, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 0.5, ignoreGuardian: true } }, // 水しぶきが誰か1人の盾では防ぎきれず全体を飲み込む
+    bigAttack: { name: "海坊主の大波", mult: 0.5, ignoreGuardian: true } }, // 水しぶきが誰か1人の盾では防ぎきれず全体を飲み込む
   iso_onna_2: { id: "iso_onna_2", ja: "磯女", image: "assets/enemies/iso_onna_2.png", stage: "coast", hp: 54, atk: 19, def: 8, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "spdDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 積年の怨念、伸びる髪で絡めとる
+    bigAttack: { name: "怨念の黒髪", mult: 1.2, debuff: { type: "spdDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 積年の怨念、伸びる髪で絡めとる
   iwagaki_ou: { id: "iwagaki_ou", ja: "岩ガキ翁", image: "assets/enemies/iwagaki_ou.png", stage: "coast", hp: 58, atk: 16, def: 13, spd: 4, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.3 } }, // 長年生きた殻は鎧のように硬い
+    bigAttack: { name: "老翁の岩殻", mult: 1.3 } }, // 長年生きた殻は鎧のように硬い
   umihebi: { id: "umihebi", ja: "海蛇", image: "assets/enemies/umihebi.png", stage: "coast", hp: 50, atk: 19, def: 8, spd: 12, goldMin: 25, goldMax: 37, xp: 43, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.0, debuff: { type: "poison", chance: 0.6, value: 4 } }, // 巨躯に見合う量の猛毒を打ち込む(森の毒蛇(dokuhebi)と同じ蛇系の型)
+    bigAttack: { name: "海蛇の毒牙", mult: 1.0, debuff: { type: "poison", chance: 0.6, value: 4 } }, // 巨躯に見合う量の猛毒を打ち込む(森の毒蛇(dokuhebi)と同じ蛇系の型)
     onHitInflict: { type: "poison", chance: 0.35, value: 3 } }, // 鋭い牙の一噛みに毒を仕込む
   umigumo: { id: "umigumo", ja: "海蜘蛛", image: "assets/enemies/umigumo.png", stage: "coast", hp: 52, atk: 17, def: 9, spd: 8, goldMin: 24, goldMax: 36, xp: 42, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で動きを完全に封じる
+    bigAttack: { name: "海蜘蛛の縛糸", mult: 1.1, debuff: { type: "stun", chance: 0.5, turns: 1 } } }, // 糸で動きを完全に封じる
   ryuuguu_no_shisha: { id: "ryuuguu_no_shisha", ja: "竜宮の使者", image: "assets/enemies/ryuuguu_no_shisha.png", stage: "coast", hp: 48, atk: 19, def: 8, spd: 13, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 素早い三叉槍の突きが深い傷を刻む
+    bigAttack: { name: "竜宮の穂先", mult: 1.2, debuff: { type: "bleed", chance: 0.5, value: 2 } } }, // 素早い三叉槍の突きが深い傷を刻む
   oo_dako_2: { id: "oo_dako_2", ja: "大ダコ", image: "assets/enemies/oo_dako_2.png", stage: "coast", hp: 62, atk: 18, def: 9, spd: 7, goldMin: 27, goldMax: 39, xp: 45, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "defDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 岩場に潜む巨躯が締め上げる
+    bigAttack: { name: "岩場の抱擁", mult: 1.2, debuff: { type: "defDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 岩場に潜む巨躯が締め上げる
   same_bito: { id: "same_bito", ja: "鮫人", image: "assets/enemies/same_bito.png", stage: "coast", hp: 54, atk: 20, def: 7, spd: 12, goldMin: 27, goldMax: 39, xp: 45, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.25, debuff: { type: "bleed", chance: 0.6, value: 2 } },
+    bigAttack: { name: "鮫人の乱撃", mult: 1.25, debuff: { type: "bleed", chance: 0.6, value: 2 } },
     onHitInflict: { type: "bleed", chance: 0.25, value: 1 } }, // 短剣と牙で敵を引き裂く、海の凶暴な戦士
   shinkai_no_bourei: { id: "shinkai_no_bourei", ja: "深海の亡霊", image: "assets/enemies/shinkai_no_bourei.png", stage: "coast", hp: 46, atk: 20, def: 6, spd: 10, goldMin: 26, goldMax: 38, xp: 44, minFloor: 35, maxFloor: 67,
-    bigAttack: { mult: 1.2, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } }, // 深海の呪いが刻まれ、被ダメージが増える(森の怨霊系統と同じ呪詛の作法)
+    bigAttack: { name: "深海の呪縛", mult: 1.2, debuff: { type: "dmgTakenUp", chance: 0.45, value: 0.15, turns: 3 } }, // 深海の呪いが刻まれ、被ダメージが増える(森の怨霊系統と同じ呪詛の作法)
     onHitInflict: { type: "poison", chance: 0.4, value: 3 } }, // 怨念の呪いが継続的に蝕む
   oo_kani_ou: { id: "oo_kani_ou", ja: "大蟹王", image: "assets/enemies/oo_kani_ou.png", stage: "coast", hp: 165, atk: 25, def: 16, spd: 7, goldMin: 90, goldMax: 130, xp: 150, minFloor: 38, maxFloor: 1498, isBoss: true,
-    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.2, turns: 3 } },
+    bigAttack: { name: "王鋏の一閃", mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.2, turns: 3 } },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 海岸の王、大鋏が鎧ごと粉砕する
 
   // ---- 終盤(Lv41-50 / floor 38〜)、海妖女王が最終ボス ----
   kaima_daiou: { id: "kaima_daiou", ja: "海魔大王", image: "assets/enemies/kaima_daiou.png", stage: "coast", hp: 95, atk: 29, def: 12, spd: 8, goldMin: 48, goldMax: 68, xp: 86, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.4, ignoreGuardian: true } }, // 大槍を薙ぎ払い、庇う相手ごと巻き込む
+    bigAttack: { name: "大槍薙ぎ", mult: 1.4, ignoreGuardian: true } }, // 大槍を薙ぎ払い、庇う相手ごと巻き込む
   youen_na_isoonna: { id: "youen_na_isoonna", ja: "妖艶な磯女", image: "assets/enemies/youen_na_isoonna.png", stage: "coast", hp: 85, atk: 27, def: 9, spd: 11, goldMin: 47, goldMax: 67, xp: 85, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.1, debuff: { type: "atkDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 魅了の歌で敵を弱らせる
+    bigAttack: { name: "魅了の歌声", mult: 1.1, debuff: { type: "atkDown", chance: 0.55, value: 0.25, turns: 3 } } }, // 魅了の歌で敵を弱らせる
   kyokai_no_oodako: { id: "kyokai_no_oodako", ja: "巨海の大ダコ", image: "assets/enemies/kyokai_no_oodako.png", stage: "coast", hp: 105, atk: 28, def: 11, spd: 7, goldMin: 48, goldMax: 68, xp: 87, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "stun", chance: 0.35, turns: 1 } } }, // 八本の足で完全に絡め取る
+    bigAttack: { name: "八腕搦め", mult: 1.3, debuff: { type: "stun", chance: 0.35, turns: 1 } } }, // 八本の足で完全に絡め取る
   oni_harifugu: { id: "oni_harifugu", ja: "鬼ハリフグ", image: "assets/enemies/oni_harifugu.png", stage: "coast", hp: 88, atk: 27, def: 9, spd: 6, goldMin: 47, goldMax: 67, xp: 85, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 0.6, ignoreGuardian: true, debuff: { type: "poison", chance: 0.7, value: 3 } },
+    bigAttack: { name: "毒針乱射", mult: 0.6, ignoreGuardian: true, debuff: { type: "poison", chance: 0.7, value: 3 } },
     onHitInflict: { type: "poison", chance: 0.3, value: 2 } }, // 針を飛ばして毒をばら撒く、巨大化したハリフグ
   oo_kani_shougun: { id: "oo_kani_shougun", ja: "大蟹将軍", image: "assets/enemies/oo_kani_shougun.png", stage: "coast", hp: 100, atk: 28, def: 15, spd: 6, goldMin: 48, goldMax: 68, xp: 86, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.25, turns: 3 } },
+    bigAttack: { name: "将軍鋏", mult: 1.5, debuff: { type: "defDown", chance: 0.4, value: 0.25, turns: 3 } },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 海岸を支配する巨蟹の将、大鋏で叩き潰す
   kairyuu_ou: { id: "kairyuu_ou", ja: "海龍王", image: "assets/enemies/kairyuu_ou.png", stage: "coast", hp: 110, atk: 30, def: 13, spd: 10, goldMin: 50, goldMax: 70, xp: 90, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "stun", chance: 0.4, turns: 1 } },
+    bigAttack: { name: "海龍の雷", mult: 1.3, debuff: { type: "stun", chance: 0.4, turns: 1 } },
     onHitInflict: { type: "bleed", chance: 0.2, value: 2 } }, // 潮を操り、雷撃を放つ海の統べ手。牙も鋭い
   same_no_bujin: { id: "same_no_bujin", ja: "鮫の武人", image: "assets/enemies/same_no_bujin.png", stage: "coast", hp: 92, atk: 30, def: 10, spd: 13, goldMin: 48, goldMax: 68, xp: 86, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.3, debuff: { type: "bleed", chance: 0.65, value: 2 } },
+    bigAttack: { name: "武人の穂先", mult: 1.3, debuff: { type: "bleed", chance: 0.65, value: 2 } },
     onHitInflict: { type: "bleed", chance: 0.3, value: 1 } }, // 鎧を纏った人魚の戦士、鋭い歯と槍で敵を貫く
   umi_no_souryo: { id: "umi_no_souryo", ja: "海の僧侶", image: "assets/enemies/umi_no_souryo.png", stage: "coast", hp: 85, atk: 26, def: 10, spd: 9, goldMin: 47, goldMax: 67, xp: 85, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } },
+    bigAttack: { name: "海僧の呪法", mult: 1.2, debuff: { type: "atkDown", chance: 0.5, value: 0.2, turns: 3 } },
     onHitInflict: { type: "poison", chance: 0.4, value: 3 } }, // 呪詛の法術で敵を弱らせ、蝕む
   uzushio_no_onryou: { id: "uzushio_no_onryou", ja: "渦潮の怨霊", image: "assets/enemies/uzushio_no_onryou.png", stage: "coast", hp: 90, atk: 28, def: 9, spd: 9, goldMin: 47, goldMax: 67, xp: 85, minFloor: 56, maxFloor: 1498,
-    bigAttack: { mult: 0.55, ignoreGuardian: true, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 渦潮に引き寄せ、庇う間もなく飲み込む
+    bigAttack: { name: "渦潮の引き寄せ", mult: 0.55, ignoreGuardian: true, debuff: { type: "stun", chance: 0.4, turns: 1 } } }, // 渦潮に引き寄せ、庇う間もなく飲み込む
   kaiyoujo_ou: { id: "kaiyoujo_ou", ja: "海妖女王", image: "assets/enemies/kaiyoujo_ou.png", stage: "coast", hp: 300, atk: 36, def: 17, spd: 11, goldMin: 230, goldMax: 330, xp: 430, minFloor: 62, maxFloor: 1498, isBoss: true,
-    bigAttack: { mult: 1.3, debuff: { type: "poison", chance: 0.5, value: 3 } },
+    bigAttack: { name: "妖女王の呪詛", mult: 1.3, debuff: { type: "poison", chance: 0.5, value: 3 } },
     onHitInflict: { type: "burn", chance: 0.25, turnsMin: 2, turnsMax: 3 } }, // 海岸の全てを支配する妖怪、強力な呪術で敵を滅ぼす
 };
 

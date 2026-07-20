@@ -198,7 +198,6 @@ function renderBattleScreen() {
         ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>` : ""}
         ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>` : ""}
         ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>` : ""}
-        ${!dead ? `<span class="enemy-bigattack-tap" data-enemy-name="${e.label}" data-bigattack-desc="${bigAttackSummaryText(e)}" style="position:absolute;bottom:2px;right:2px;font-size:18px;z-index:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));cursor:pointer;">📜</span>` : ""}
         ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
         <div class="enemy-debuff-icons">${statusIconsFor(e)}</div>
       </div>
@@ -206,10 +205,14 @@ function renderBattleScreen() {
         ${hpBarHtml(e)}
       </div>
     `;
-    // 📜アイコンのタップがカード全体のonclick(対象選択)まで巻き込まないよう、ここで止める
-    // (対象選択中に「大技を確認したかっただけなのに攻撃対象を選んでしまった」を防ぐ)
-    const bigAttackTapEl = card.querySelector(".enemy-bigattack-tap");
-    if (bigAttackTapEl) bigAttackTapEl.onclick = (ev) => ev.stopPropagation();
+    // 大技の内容はイラストの長押しで確認する(タップ=対象選択という本来の役割と衝突しないよう、
+    // 技ボタンの長押しツールチップ(attachSkillLongPressTooltip)と同じ仕組みを流用する。
+    // 旧・右下📜アイコンのタップ表示方式はユーザー指示により廃止)
+    if (!dead) {
+      const portraitEl = card.querySelector(".card-portrait-img");
+      const bigAttackName = (e.bigAttack && e.bigAttack.name) || "大技";
+      attachSkillLongPressTooltip(portraitEl, `${e.label}の「${bigAttackName}」`, bigAttackSummaryText(e));
+    }
     if (targetable) {
       card.onclick = () => {
         if (!pendingEnemyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)

@@ -2068,7 +2068,7 @@ function bigAttackSummaryText(enemyDef) {
   const p = enemyDef.bigAttack;
   if (!p) return "詳細不明の一撃を放つ。";
   const parts = [];
-  if (p.aoe) parts.push("味方全体を巻き込む");
+  if (p.aoe) parts.push("全体を巻き込む");
   if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
   if (p.debuff) {
     const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;

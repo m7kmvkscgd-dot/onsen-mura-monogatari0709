@@ -840,10 +840,6 @@ function showStatusTooltip(el) {
     const buff = ONSEN_BUFFS.find((b) => b.key === el.dataset.onsenBuff);
     if (!buff) return;
     title = buff.name; desc = buff.desc; iconHtml = "♨️"; category = "温泉効果";
-  } else if (el.classList.contains("enemy-bigattack-tap")) {
-    // 敵カード右下の📜アイコン。予告ターン(bigAttackPending)を待たずいつでも、その敵の大技の
-    // 中身(engine.jsのbigAttackSummaryTextで機械的に生成)を確認できるようにする(ユーザー指示、2026-07-19)
-    title = `${el.dataset.enemyName}の大技`; desc = el.dataset.bigattackDesc; iconHtml = "📜"; category = null;
   } else {
     const info = STATUS_TOOLTIPS[el.dataset.status];
     if (!info) return;
@@ -856,7 +852,7 @@ function hideStatusTooltip() {
   document.getElementById("statusTooltip").style.display = "none";
   statusTooltipShownFor = null;
 }
-const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag, .enemy-bigattack-tap";
+const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag";
 // PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
 // pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
 document.addEventListener("pointerover", (e) => {
