@@ -766,36 +766,43 @@
     .omamori-rare-flash-overlay, .omamori-rare-particle, .omamori-rare-banner { animation: none; opacity: 0; }
     .omamori-rare-result-card { animation: none; }
   }
-  /* ============ 出発準備(#partySelectList)・宿屋(#rosterList)の名簿2列化 ============
-     ユーザー指示(2026-07-18): 仲間が増えると縦スクロールが長くなりすぎるため、この2画面だけ
+  /* ============ 出発準備・宿(温泉村/海の村/山伏の里、今後増える村も含む)の名簿2列化 ============
+     ユーザー指示(2026-07-18): 仲間が増えると縦スクロールが長くなりすぎるため、この画面群だけ
      2列グリッドにする(図鑑/温泉/お守りなど他の.roster-row一覧は従来の1列のまま)。
      アイコンサイズ(60px)は変更しない。行はflex-wrapで折り返し、「詳細」等のボタン列は
-     カード下段に横並びで配置する */
-  #rosterList, #partySelectList {
+     カード下段に横並びで配置する。
+     【不具合修正、2026-07-21】以前は#rosterList/#partySelectListのidを直接指定していたため、
+     海の村/山伏の里の宿の名簿(#umiyadoRosterList等、温泉村の宿と仕様を合わせるため新設)には
+     このスタイルが一切当たらず、レベルメダル画像が原寸のまま巨大に表示される等、表示が
+     崩れていた(ユーザー報告)。共通クラス.roster-list-gridを対象の名簿コンテナ全てに付与する
+     形に変更し、今後村が増えてもこのクラスを付けるだけで同じ見た目になるようにした */
+  #rosterList, #partySelectList, .roster-list-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; align-items: stretch;
   }
-  #rosterList .roster-row, #partySelectList .roster-row {
+  #rosterList .roster-row, #partySelectList .roster-row, .roster-list-grid .roster-row {
     flex-wrap: wrap; align-content: flex-start; padding: 0.45rem;
     background: rgba(20,18,14,0.5); border-color: rgba(255,255,255,0.08);
   }
-  #rosterList .roster-row.selected, #partySelectList .roster-row.selected { border-color: var(--accent); }
+  #rosterList .roster-row.selected, #partySelectList .roster-row.selected, .roster-list-grid .roster-row.selected { border-color: var(--accent); }
   /* 狭い幅で名前・バー・ラベルが潰れないように */
-  #rosterList .roster-info, #partySelectList .roster-info { flex: 1; min-width: 0; }
-  #rosterList .roster-name, #partySelectList .roster-name { font-size: 0.8rem; overflow-wrap: anywhere; }
-  #rosterList .roster-sub, #partySelectList .roster-sub { font-size: 0.66rem; }
-  #rosterList .roster-actions {
+  #rosterList .roster-info, #partySelectList .roster-info, .roster-list-grid .roster-info { flex: 1; min-width: 0; }
+  #rosterList .roster-name, #partySelectList .roster-name, .roster-list-grid .roster-name { font-size: 0.8rem; overflow-wrap: anywhere; }
+  #rosterList .roster-sub, #partySelectList .roster-sub, .roster-list-grid .roster-sub { font-size: 0.66rem; }
+  #rosterList .roster-actions, .roster-list-grid .roster-actions {
     flex-basis: 100%; flex-direction: row; margin-top: 0.35rem;
   }
   #rosterList .roster-actions .detail-btn,
-  #rosterList .roster-actions .skill-pending-btn {
+  #rosterList .roster-actions .skill-pending-btn,
+  .roster-list-grid .roster-actions .detail-btn,
+  .roster-list-grid .roster-actions .skill-pending-btn {
     flex: 1; padding: 0.32rem 0.4rem; font-size: 0.72rem; min-height: auto;
   }
   /* 長い名前の折り返し時、ステータスタグ(待機中/入浴中など)が文字の途中で割れないように
      タグ自体は1かたまりのまま次の行へ送る */
-  #rosterList .status-tag, #partySelectList .status-tag { white-space: nowrap; }
+  #rosterList .status-tag, #partySelectList .status-tag, .roster-list-grid .status-tag { white-space: nowrap; }
   /* レベルメダル(C改レイアウト、2026-07-18): 「Lv.◯」文字の代わりに漢数字メダル+性格を
      HPバーの上の行に表示する。ui.cssの.roster-row img(60px+灰背景)よりも詳細度を上げて上書きする */
-  #rosterList .roster-sub img.lv-badge, #partySelectList .roster-sub img.lv-badge {
+  #rosterList .roster-sub img.lv-badge, #partySelectList .roster-sub img.lv-badge, .roster-list-grid .roster-sub img.lv-badge {
     width: 22px; height: 22px; background: transparent; border-radius: 0;
     vertical-align: -6px; margin-right: 3px;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
@@ -803,14 +810,15 @@
   /* 十だけ装飾(炎+鬼面)が縦に長く、正方形キャンバス内の円が相対的に小さくなるため、
      表示サイズを一回り大きくして他のメダルと円の大きさを揃える(ユーザー指摘2026-07-18) */
   #rosterList .roster-sub img.lv-badge[src$="level_10.png"],
-  #partySelectList .roster-sub img.lv-badge[src$="level_10.png"] {
+  #partySelectList .roster-sub img.lv-badge[src$="level_10.png"],
+  .roster-list-grid .roster-sub img.lv-badge[src$="level_10.png"] {
     width: 26px; height: 26px; vertical-align: -8px; margin-right: 1px;
   }
-  #rosterList .roster-sub, #partySelectList .roster-sub { margin: 0.1rem 0 0.15rem; }
+  #rosterList .roster-sub, #partySelectList .roster-sub, .roster-list-grid .roster-sub { margin: 0.1rem 0 0.15rem; }
   /* レベルアップバッジの改行を「レベルアップ!」と「Lv.◯→◯」の間に固定する
      (2列化した宿屋カードの狭い幅で「レベルアッ/プ!」と単語の途中で折れていた不具合の修正)。
      文字も一回り小さくして、なるべく1行で収まるようにする */
   .levelup-badge-small .nowrap { white-space: nowrap; }
-  #rosterList .levelup-badge-small {
+  #rosterList .levelup-badge-small, .roster-list-grid .levelup-badge-small {
     font-size: 0.6rem; padding: 0.1rem 0.4rem; text-align: center; line-height: 1.35;
   }
