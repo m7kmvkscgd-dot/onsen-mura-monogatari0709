@@ -14,6 +14,10 @@ let currentFloor = 0;
 // rollEncounter()の戦闘率補正に使う(下記PITY_*定数参照)。99は「しばらく戦闘していない」扱いの
 // 初期値(=通常倍率からスタート、いきなり抑制も確定発生もされない)
 let floorsSinceLastBattle = 99;
+// 開発者用デバッグモード。町トップのゴールド表示を4回連続タップすると切り替わる(town.js参照)。
+// 敵ゼロのエリア(廃城下町/門/古城/渓流/光る竹林/修験道/山など)の下地・背景を戦闘無しで
+// 歩いて確認したい時のためのもの。セーブはせず、リロードすれば常にfalseへ戻る
+let debugNoEncounters = false;
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林) | "shugendo"(修験道) | "yama"(山)。
 // forest/coastは町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効。それ以外は
 // STAGE_CHAIN_NEXT(下記)で繋がった中継ステージで、前のステージの最深部から自動的に切り替わり、
@@ -2209,7 +2213,7 @@ function rollEncounter(pathBias) {
   // ただしそのステージの敵データがまだ1体も無い場合(廃城下町/門/古城の下地テスト段階)は、
   // 帰還中の固定値も含めて戦闘発生率を強制的に0にする(pickEncounterForFloorが空を返して
   // クラッシュするのを未然に防ぐための安全策。敵データが揃えば自動的に通常通り機能する)
-  const rawBattleChance = stageHasEnemies(currentStage) ? (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) : 0;
+  const rawBattleChance = (!debugNoEncounters && stageHasEnemies(currentStage)) ? (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) : 0;
   // ピティ制は帰還中には適用しない(シミュレーションの結果、帰還のRETREAT_BATTLE_CHANCEは元々低いため
   // 6階確定発生がむしろ戦闘数を増やす方向に働くと判明。帰還はもともと3連続以上の発生率も低く
   // 導入の必要性が薄いという判断。ユーザー指示、2026-07-21)

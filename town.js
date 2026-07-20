@@ -59,7 +59,7 @@ function renderTown() {
   refillHenHouseEggPouchIfNewDay();
   saveState();
   if (checkGameOver()) return;
-  document.getElementById("townGold").textContent = state.gold + "G";
+  document.getElementById("townGold").textContent = (debugNoEncounters ? "🚫" : "") + state.gold + "G";
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
@@ -2346,6 +2346,23 @@ function buyEquipment(classId, slot) {
 // 鍛冶屋は出発準備画面から開くようになった(2026-07-18)ため、戻り先も出発準備にする
 document.getElementById("shopBackBtn").onclick = () => { renderFacilityHome(); };
 document.getElementById("shopBackBtnTop").onclick = () => { renderFacilityHome(); };
+
+// ============ 開発者用: 町トップのゴールド表示を4回連続タップでエンカウントOFF/ONを切り替え ============
+// 敵データがまだ無いエリア(廃城下町/門/古城等)の下地・背景を戦闘無しで歩いて確認したい時用。
+// debugNoEncountersはdungeon.jsで定義、rollEncounter()側でゲート
+let goldDebugTapCount = 0;
+let goldDebugTapTimer = null;
+document.getElementById("townGold").addEventListener("click", () => {
+  goldDebugTapCount++;
+  clearTimeout(goldDebugTapTimer);
+  goldDebugTapTimer = setTimeout(() => { goldDebugTapCount = 0; }, 1200);
+  if (goldDebugTapCount >= 4) {
+    goldDebugTapCount = 0;
+    debugNoEncounters = !debugNoEncounters;
+    showInfoModal(debugNoEncounters ? "【開発者用】敵エンカウントをOFFにしました" : "【開発者用】敵エンカウントをONに戻しました");
+    renderTown();
+  }
+});
 
 // ============ 初期化 ============
 // ゲームの入口は常にタイトル画面(title.js)。ここでの自動遷移は廃止した。
