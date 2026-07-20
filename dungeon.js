@@ -24,15 +24,25 @@ let debugNoEncounters = false;
 function debugWarpTargets() {
   return Object.keys(VILLAGE_STAGE_DISPLAY_NAME).map((stage) => ({ stage, label: VILLAGE_STAGE_DISPLAY_NAME[stage] }));
 }
+// 【不具合修正、2026-07-21】以前はここで単一階層のダミースタック([{forest,1}]だけ)を積んでいたため、
+// ワープ後に「出発する」で温泉村方面を選ぶと、実際には通っていない洞窟/少し森(または渓流/光る竹林)を
+// 一切経由せずいきなり森1層目まで飛び、そのままstageEntryStackが空になって1回「進む」を押すだけで
+// finishRetreat()が発火し温泉村に着いてしまっていた。実際の道順(森の分かれ道→中継ステージの最深部→
+// 村)と完全に同じ形でスタックを組み直し、ワープ後の帰還/出発フローが実プレイと見分けが付かないようにした
+function debugWarpStageStack(stage) {
+  if (stage === "umimura") return [{ stage: "forest", floor: CAVE_FORK_FLOOR }, { stage: "cave", floor: CAVE_MAX_FLOOR }, { stage: "ruinsforest", floor: RUINSFOREST_MAX_FLOOR }];
+  if (stage === "yamabushi") return [{ stage: "forest", floor: VALLEY_FORK_FLOOR }, { stage: "valley", floor: VALLEY_MAX_FLOOR }, { stage: "bamboo", floor: BAMBOO_MAX_FLOOR }];
+  return [{ stage: "forest", floor: 1 }];
+}
 function debugWarpToVillage(stage) {
   if (!debugNoEncounters) return; // 安全策: モードOFF中は機能させない
   if (state.activePartyIds.length === 0) { showInfoModal("パーティを1人以上選んでから使ってください"); return; }
   enterDungeon(); // 通常の出発と同じ下ごしらえ(fieldParty構築・各種トラッカーのリセット)をそのまま流用
   currentStage = stage;
   currentFloor = 1;
-  // 開発用の簡易スタック: この村から通常の「出発する」を押しても森1層目へ安全に戻れるダミー
-  // (本来の実プレイでは洞窟→少し森…と積まれるが、ワープはあくまで見た目確認用のショートカットのため簡略化)
-  stageEntryStack = [{ stage: "forest", floor: 1 }];
+  stageEntryStack = debugWarpStageStack(stage);
+  // 少し森の分岐(2層目)は既にこの経路で「海の村」を選んだ想定にしておく(退避中に再度は聞かれない)
+  if (stage === "umimura") ruinsforestDestination = "umimura";
   saveState();
   if (stage === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
   else if (stage === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
