@@ -314,8 +314,16 @@ function renderDungeon() {
   // オート帰還中でも「帰還」ボタン(退避時のadvanceBtn)がタップ可能になり、押すたびに
   // stopAutoRetreat()→startAutoRetreat()が連続発火して1tick=1秒のペースを無視した多重進行が
   // 起きてしまう(「オート帰還中に重複して帰還ボタンが押せる」不具合の原因)。startAutoRetreat()/
-  // stopAutoRetreat()自身が既にdisabledを正しく管理しているため、進行中はここで触れない
-  if (!activeCriticalAlert && !autoRetreatActive) {
+  // stopAutoRetreat()自身が既にdisabledを正しく管理しているため、進行中はここで触れない。
+  // 【不具合の根本原因】進路選択(showPathChoice)/茶屋の2択(showTeahouseOffer)/探索イベント
+  // (showDungeonEvent)はいずれも"path-choice-active"をbodyに付けてadvanceBtn等を無効化するが、
+  // このクラス自体はactiveCriticalAlertとは別管理の変数のため、この判定に含まれていなかった。
+  // その結果、選択パネルが開いたまま(まだ選ばれていない)状態でも、何らかの理由でrenderDungeon()が
+  // 再度呼ばれると(道具ボタンの副作用等、277行目のコメント参照)ここで無条件にdisabledが
+  // falseへ戻ってしまい、パネルの下でまだ有効なままのadvanceBtnを連打すると
+  // showPathChoiceが二重に呼ばれて抽選が上書きされる(選択肢が2回抽選されて変わって見える)
+  // 不具合の原因になっていた。選択パネル表示中はここでも解除しないようにして塞ぐ
+  if (!activeCriticalAlert && !autoRetreatActive && !document.body.classList.contains("path-choice-active")) {
     document.getElementById("advanceBtn").disabled = false;
     document.getElementById("retreatBtn").disabled = false;
   }
@@ -1065,16 +1073,7 @@ document.getElementById("floorBadge").addEventListener("touchend", (e) => {
   handleDevFloorBadgeTap();
 }, { passive: false });
 document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
-// 【不具合対策】「進む」を素早く連打(実質的なダブルタップ)すると、まれに進路選択の抽選
-// (showPathChoice内のweightedPickPathKey)が2回走り、表示中の選択肢が別の内容に差し替わって
-// しまうという報告があった。advanceBtn.disabled(ui.jsのtouchend連打抑制もこれを見ている)は
-// showPathChoice/playDungeonMoveTransition側で同期的に立つはずだが、念のためDOM状態に頼らない
-// 独立したガード変数でも二重発火そのものを塞ぐ(400msはui.jsの二重タップ判定より確実に長い値)
-let advanceBtnHandling = false;
 document.getElementById("advanceBtn").onclick = () => {
-  if (advanceBtnHandling) return;
-  advanceBtnHandling = true;
-  setTimeout(() => { advanceBtnHandling = false; }, 400);
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     showInfoModal("行動できる仲間がいません");
     return;
