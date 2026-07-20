@@ -773,6 +773,7 @@ function initPassives() {
     guardCounter: false, // かばうが敵の攻撃を防いだ瞬間、確実に反撃する(会心の返し)
     guardCritCounter: false, // かばうが成功した直後、次の自分の攻撃が確定会心になる(居合の構え)
     guardMpRefund: false, // かばうが成功するとMPが1回復する(心眼)
+    guardTurnFree: false, // かばうを使ってもターンを消費せず、続けて別の行動を選べる(金剛)
     extraGuardMitigation: 1, // かばう成功時の被ダメージにさらに掛かる倍率(1=無効化。金剛など)
     debuffCritBonuses: [], // [{stat, addRate}] 対象の指定ステータス(atk/def/spd)が下がっている時の追加会心率(隙討ち・拍子外し・弱者狩り・衰弱撃ちなど)。
     // 誰がそのデバフを与えたかは問わないため、デバフを持つ別クラスと組み合わせるほど機能する
@@ -849,6 +850,7 @@ function applySkillChoice(character, skill, level) {
     if (add.guardCounter) p.guardCounter = true;
     if (add.guardCritCounter) p.guardCritCounter = true;
     if (add.guardMpRefund) p.guardMpRefund = true;
+    if (add.guardTurnFree) p.guardTurnFree = true;
     if (add.extraGuardMitigation) p.extraGuardMitigation *= add.extraGuardMitigation;
     if (add.onCritSelfBuff) p.onCritSelfBuff = add.onCritSelfBuff;
     if (add.fasterFoeDmgReduction) p.fasterFoeDmgReduction = add.fasterFoeDmgReduction;
@@ -1079,7 +1081,7 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${target.label}は${actor.label}の${skill.name}をかわした！`);
     return { stunned: false, noCost: true };
   }
-  if (action.kind === "buffSelf" || action.kind === "buffParty" || action.kind === "buffPartyConsumeItem") {
+  if (action.kind === "buffSelf" || action.kind === "buffParty" || action.kind === "buffPartyConsumeItem" || action.kind === "buffPartyNoCost") {
     if (action.kind === "buffPartyConsumeItem") state.inventory[action.item]--;
     const targets = action.kind === "buffSelf" ? [actor] : target;
     targets.forEach((t) => {

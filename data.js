@@ -866,7 +866,7 @@ const SKILL_TREES = {
   },
   ninja: {
     2: {
-      left: { name: "煙幕", desc: "煙玉を一つ消費して煙幕をはる。煙幕は２ターンの間、味方全体の回避率を50%向上させる。", mp: 1, action: { kind: "buffPartyConsumeItem", item: "smokeBomb", stats: [{ stat: "evasionAdd", mult: 0.5 }], turns: 2 } },
+      left: { name: "煙幕", desc: "煙玉を一つ消費して煙幕をはる。煙幕は1ターンの間、味方全体の回避率を50%向上させる。", mp: 1, action: { kind: "buffPartyConsumeItem", item: "smokeBomb", stats: [{ stat: "evasionAdd", mult: 0.5 }], turns: 1 } },
       right: { name: "毒刃", desc: "通常攻撃時、50%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.5, value: 3 } } },
     },
     3: {
@@ -883,61 +883,61 @@ const SKILL_TREES = {
     },
     6: {
       left: { name: "暗殺術", desc: "攻撃力100%で敵を攻撃する。このスキルで敵をキルした場合、ターンが終了せず、再度ターンをプレイできる。", mp: 3, action: { kind: "damage", mult: 1.0, extraTurnOnKill: true } },
-      right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
+      right: { name: "空蝉", desc: "敵の攻撃を回避した時、mpを1回復する。", mp: 0, passive: { onEvadeMpRestore: 1 } },
     },
     7: {
-      left: { name: "影縫い", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
-      right: { name: "瞬身の順", desc: "敵の攻撃を回避した時、反撃する。(攻撃威力75%)", mp: 0, passive: { onEvadeCounterMult: 0.75 } },
+      left: { name: "影縫いの術", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      right: { name: "瞬身反撃", desc: "敵の攻撃を回避した時、反撃する。(攻撃威力75%)", mp: 0, passive: { onEvadeCounterMult: 0.75 } },
     },
     8: {
-      left: { name: "幻影乱舞", desc: "ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。", mp: 4, action: { kind: "damageRandomMulti", mult: 0.5, hits: 5 } },
+      left: { name: "幻影乱舞の術", desc: "ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。", mp: 4, action: { kind: "damageRandomMulti", mult: 0.5, hits: 5 } },
       right: { name: "修羅刃", desc: "敵を倒すと次の攻撃の回避率+40%。値は蓄積しない。", mp: 0, passive: { onKillEvasionBonus: 0.4 } },
     },
     9: {
       left: { name: "影縫い", desc: "敵一体をスタンさせる。ターンを消費しない", mp: 3, action: { kind: "stunNoCost", chance: 1, turns: 1 } },
-      right: { name: "空蝉", desc: "敵の攻撃を回避した時、mpを1回復する。", mp: 0, passive: { onEvadeMpRestore: 1 } },
+      right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
     },
     10: {
-      left: { name: "禁忌・影分身の術", desc: "", mp: 0 },
-      right: { name: "朧隠れ", desc: "5ターンの間、回避率+30%", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "evasionAdd", mult: 0.3 }], turns: 5 } },
+      left: { name: "影分身の術", desc: "後日実装", mp: 0 },
+      right: { name: "朧隠れ", desc: "3ターンの間、味方全員の回避率+30%", mp: 3, action: { kind: "buffParty", stats: [{ stat: "evasionAdd", mult: 0.3 }], turns: 3 } },
     },
   },
   spearman: {
     2: {
       left: { name: "貫通突き", desc: "敵単体へ180%ダメージ、防御力20%無視", mp: 2, action: { kind: "damage", mult: 1.8, defPierce: 0.2 } },
-      right: { name: "不動の構え", desc: "敵からダメージを受けるとHPを2%回復する", mp: 0, passive: { onDamagedSelfHealPct: 0.02 } },
+      right: { name: "不動", desc: "敵からダメージを受けるとHPを2%回復する", mp: 0, passive: { onDamagedSelfHealPct: 0.02 } },
     },
     3: {
       left: { name: "貫きの構え", desc: "かばうが成功した直後、次の自分の攻撃が確定会心になる", mp: 0, passive: { guardCritCounter: true } },
       right: { name: "砦の構え", desc: "かばうが敵の攻撃を防いだ瞬間、確実に反撃する", mp: 0, passive: { guardCounter: true } },
     },
     4: {
-      left: { name: "迅雷突き", desc: "敵単体へ240%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)", mp: 4, action: { kind: "damage", mult: 2.4, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 3 } } },
+      left: { name: "迅雷突き", desc: "敵単体へ200%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)", mp: 4, action: { kind: "damage", mult: 2.0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 3 } } },
       right: { name: "守り槍", desc: "敵一体に攻撃をしつつ同時に庇うを発動する", mp: 2, action: { kind: "damage", mult: 1.0, alsoGuard: true } },
     },
     5: {
-      left: { name: "剛槍", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
-      right: { name: "守護陣", desc: "4ターンの間、味方全体の防御力+20%", mp: 3, action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.2 }], turns: 4 } },
+      left: { name: "鎧砕き", desc: "攻撃した敵の防御力を2ターン-20%。(40%まで蓄積する)", mp: 0, action: { kind: "damage", mult: 0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 2 } } },
+      right: { name: "守護陣", desc: "3ターンの間、味方全体の防御力+20%\nターンを消費しない", mp: 3, action: { kind: "buffPartyNoCost", stats: [{ stat: "def", mult: 1.2 }], turns: 3 } },
     },
     6: {
-      left: { name: "阿修羅突き", desc: "HPが満タンの敵に対し、攻撃をすると出血を3〜5付与する", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 1.0, valueMin: 3, valueMax: 5, condition: "targetFullHp" } } },
+      left: { name: "千人力", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
       right: { name: "迎撃", desc: "被弾時、30%の確率で反撃する", mp: 0, passive: { counterChance: 0.3 } },
     },
     7: {
-      left: { name: "城壁の意志", desc: "かばうが成功するとMPが1回復する", mp: 0, passive: { guardMpRefund: true } },
-      right: { name: "鋼の肉体", desc: "HPが50%以下の間、被ダメージ15%減少", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, dmgTakenMult: 0.85 } } },
+      left: { name: "阿修羅突き", desc: "HPが満タンの敵に対し、攻撃をすると出血を3〜5付与する", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 1.0, valueMin: 3, valueMax: 5, condition: "targetFullHp" } } },
+      right: { name: "鋼の肉体", desc: "HPが50%以下の間、被ダメージ20%減少", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, dmgTakenMult: 0.80 } } },
     },
     8: {
-      left: { name: "鎧砕き", desc: "攻撃した敵の防御力を2ターン-20%。(40%まで蓄積する)", mp: 0, action: { kind: "damage", mult: 0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 2 } } },
+      left: { name: "城壁の意志", desc: "かばうが成功するとMPが1回復する", mp: 0, passive: { guardMpRefund: true } },
       right: { name: "不屈", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
     },
     9: {
       left: { name: "槍鬼", desc: "敵を倒すたび攻撃力+12%(最大3回まで重複)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.12 }], turns: 20, maxStacks: 3 } } },
-      right: { name: "金剛", desc: "かばう成功時の被ダメージをさらに20%軽減する", mp: 0, passive: { extraGuardMitigation: 0.8 } },
+      right: { name: "金剛", desc: "かばうがターンを消費しなくなる", mp: 0, passive: { guardTurnFree: true } },
     },
     10: {
-      left: { name: "天穿槍", desc: "敵単体へ290%ダメージ、防御力45%無視", mp: 7, action: { kind: "damage", mult: 2.9, defPierce: 0.45 } },
-      right: { name: "仁王立ち", desc: "5ターンの間、防御力+35%、被ダメージ25%減少、毎ターンHP5%回復", mp: 6, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.35 }, { stat: "dmgTaken", mult: 0.75 }], turns: 5, hpRegenPct: 0.05 } },
+      left: { name: "天穿槍", desc: "敵単体へ290%ダメージ、防御力45%無視", mp: 5, action: { kind: "damage", mult: 2.9, defPierce: 0.45 } },
+      right: { name: "仁王立ち", desc: "5ターンの間、防御力+35%、被ダメージ25%減少、毎ターンHP5%回復", mp: 5, action: { kind: "buffSelf", stats: [{ stat: "def", mult: 1.35 }, { stat: "dmgTaken", mult: 0.75 }], turns: 5, hpRegenPct: 0.05 } },
     },
   },
   naginata: {

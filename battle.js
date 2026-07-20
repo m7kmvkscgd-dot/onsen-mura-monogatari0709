@@ -787,6 +787,14 @@ function runTreeSkill(actor, skill) {
     finishPlayerAction();
     return;
   }
+  // 守護陣など: ターンを消費しない全体バフ(撒菱=debuffAllNoCostの全体バフ版)
+  if (action.kind === "buffPartyNoCost") {
+    playSfx("select");
+    useTreeSkill(actor, aliveField(), skill, blog);
+    renderBattleScreen();
+    renderActionButtons(actor);
+    return;
+  }
   if (action.kind === "summonHawk") {
     // 担ぐ・変身解除と同じく、召喚自体はターンを消費しない(呼び出した後そのまま別の行動を選べる)
     const result = useTreeSkill(actor, actor, skill, blog);
@@ -1248,6 +1256,8 @@ function renderActionButtons(actor) {
             useAbility(actor, actor, "guard", blog);
             maybeSpeakOnGuard(actor);
             renderBattleScreen();
+            // 金剛(guardTurnFree): かばうを使ってもターンを消費せず、続けて別の行動を選べる
+            if (actor.passives && actor.passives.guardTurnFree) { renderActionButtons(actor); return; }
             finishPlayerAction();
             return;
           }
