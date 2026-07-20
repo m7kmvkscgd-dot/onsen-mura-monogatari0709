@@ -37,11 +37,14 @@ function hasAnyNewSupplyFeature() {
 // 建物レベルや依頼は全村共通)を開けるようにするため、title.jsのsettingsReturnScreenId
 // (設定画面をタイトル/町どちらから開いても正しく戻れるようにする仕組み)と同じパターンで、
 // 開く直前の画面を覚えておいて「戻る」がそこへ戻るようにする
-let facilityHomeScreen = "screen-town"; // "screen-town" | "screen-umimura" | "screen-yamabushi" | "screen-party-select"
+let facilityHomeScreen = "screen-town"; // "screen-town" | "screen-umimura" | "screen-yamabushi" | "screen-party-select" | "screen-village-prep"
 function renderFacilityHome() {
   if (facilityHomeScreen === "screen-umimura") { renderUmiMura(); showScreen("screen-umimura"); }
   else if (facilityHomeScreen === "screen-yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
   else if (facilityHomeScreen === "screen-party-select") { renderPartySelect(); showScreen("screen-party-select"); }
+  // screen-village-prep(海の村/山伏の里の出発準備画面)からチップ経由で鍛冶屋等を開いた時の戻り先。
+  // destinations省略で呼んでも直前の行き先ボタンをvillagePrepDestinationsから復元してくれる(ui.js参照)
+  else if (facilityHomeScreen === "screen-village-prep") { renderVillagePrep(); showScreen("screen-village-prep"); }
   else { renderTown(); }
 }
 // 温泉配下の売店/神社も同様(温泉自体は村ごとに専用画面を持つため、温泉村/海の村/山伏の里の

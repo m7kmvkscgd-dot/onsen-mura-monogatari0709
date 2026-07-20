@@ -59,11 +59,12 @@ function arriveAtUmiMura() {
 
 document.getElementById("umimuraYadoBtn").onclick = () => { playSfx("select"); renderUmiYado(); showScreen("screen-umiyado"); };
 document.getElementById("umimuraOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderUmiOnsen(); showScreen("screen-umionsen"); };
-// 奉行所/建築/鍛冶屋は温泉村と全村共通の経済(BUILDING_DEFS/state.magistrateLevel等がグローバル)を
-// 見た目だけ村を変えて開く(town.jsのfacilityHomeScreenで戻り先を覚える仕組み、2026-07-20)
+// 奉行所/建築は温泉村と全村共通の経済(BUILDING_DEFS/state.magistrateLevel等がグローバル)を
+// 見た目だけ村を変えて開く(town.jsのfacilityHomeScreenで戻り先を覚える仕組み、2026-07-20)。
+// 鍛冶屋は温泉村と同じく村トップのカードではなく出発準備画面(screen-village-prep)のチップから開く
+// (ユーザー指摘、2026-07-21: 出発タブに統合するはずが村トップに残っていた)
 document.getElementById("umimuraMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderMagistrateScreen(); };
 document.getElementById("umimuraExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderExtension(); showScreen("screen-extension"); };
-document.getElementById("umimuraShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderShop(); showScreen("screen-shop"); };
 // 「出発」: 温泉村の出発準備画面と同じく、支援物資の購入と行き先選びを1画面(screen-village-prep、
 // renderVillagePrep)にまとめてある(ユーザー指示、2026-07-21: 支度ボタンを独立させず出発の中に統合)。
 // 行き先は廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、新規ルート)の2択。
@@ -172,7 +173,6 @@ document.getElementById("yamabushiOnsenBtn").onclick = () => { playSfx("onsen_en
 // 奉行所/建築/鍛冶屋は温泉村と全村共通の経済を見た目だけ村を変えて開く(umimura.js側と同じ仕組み、2026-07-20)
 document.getElementById("yamabushiMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderMagistrateScreen(); };
 document.getElementById("yamabushiExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderExtension(); showScreen("screen-extension"); };
-document.getElementById("yamabushiShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderShop(); showScreen("screen-shop"); };
 // 「出発」: 海の村と同じく、支援物資の購入と行き先選びを1画面(screen-village-prep、renderVillagePrep)に
 // まとめてある(ユーザー指示、2026-07-21)。行き先は「修験道へ進む」(奥へ進む)と「光る竹林へ」
 // (元来た道を歩いて戻る)の2択。以前は別々のカードだったが、温泉村の出発準備画面と同じ体験にするため統合した

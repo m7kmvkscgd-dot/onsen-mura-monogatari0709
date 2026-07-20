@@ -470,13 +470,19 @@ wireSupplyPurchaseButtons("vprep");
 // 鍛冶屋と同じ「戻り先を動的に覚える」パターンを流用)
 // destinations: [{label, primary(省略可), onClick}] 温泉村の出発準備画面(screen-party-select、
 // 支援物資+出発ボタンが1画面にまとまっている)と同じ体験にするため、支度単独の画面にはせず
-// 「出発」ボタンを押した先でそのまま行き先も選べるようにしてある(ユーザー指示、2026-07-21)
+// 「出発」ボタンを押した先でそのまま行き先も選べるようにしてある(ユーザー指示、2026-07-21)。
+// 鍛冶屋チップから開いた後に戻ってくる時など、destinations省略で呼ばれても直前の内容を
+// 保ったまま再描画できるよう、最後に渡された配列をvillagePrepDestinationsに覚えておく
+let villagePrepDestinations = [];
 function renderVillagePrep(destinations) {
+  if (destinations) villagePrepDestinations = destinations;
   renderDwHeader("villagePrep", "出発", () => { renderFacilityHome(); });
   renderSupplyPurchaseUI("vprep");
+  // 鍛冶屋は温泉村と同じく村トップではなくここ(出発準備画面)のチップから開く
+  document.getElementById("vprepShopBtn").style.display = state.shopLevel ? "" : "none";
   const wrap = document.getElementById("vprepDepartButtons");
   wrap.innerHTML = "";
-  (destinations || []).forEach((d, i) => {
+  villagePrepDestinations.forEach((d, i) => {
     const btn = document.createElement("button");
     btn.className = "big depart-btn" + (d.primary !== false && i === 0 ? " primary" : " depart-coast");
     btn.style.width = "100%";
@@ -486,6 +492,7 @@ function renderVillagePrep(destinations) {
     wrap.appendChild(btn);
   });
 }
+document.getElementById("vprepShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-village-prep"; renderShop(); showScreen("screen-shop"); };
 document.getElementById("villagePrepBackBtn").onclick = () => { renderFacilityHome(); };
 
 function statusTagClass(c) {
