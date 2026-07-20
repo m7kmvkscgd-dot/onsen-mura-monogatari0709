@@ -30,8 +30,11 @@
   .legend-line.proposed { border-top-style: dashed; border-color: var(--gold); }
   .legend-line.dream { border-top-style: dotted; border-color: #a897d8; }
 
-  #canvasWrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding-top: 96px; overflow: auto; touch-action: pan-x pan-y; }
-  #canvas { position: relative; width: 2400px; height: 1500px; }
+  #canvasWrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding-top: 96px; overflow: auto; touch-action: none; }
+  #canvas { position: relative; width: 2400px; height: 1500px; transform-origin: 0 0; }
+  .zoom-controls { position: fixed; right: 16px; bottom: 16px; z-index: 25; display: flex; flex-direction: column; gap: 6px; }
+  .zoom-controls button { width: 40px; height: 40px; font-size: 1.1rem; padding: 0; }
+  .zoom-controls #zoomLevel { text-align: center; font-size: 0.68rem; color: var(--caption); background: var(--surface); border: 1px solid var(--card-border); border-radius: 6px; padding: 3px 0; }
   #edgeSvg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
   #edgeSvg path.edge-hit { pointer-events: stroke; cursor: pointer; }
   #edgeSvg .edge-label { fill: var(--caption); font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
@@ -118,7 +121,14 @@
   <div id="panelBody"></div>
 </div>
 
-<div class="hint-bar">ノード: クリックで編集/ドラッグで移動。接続モード中は2つのノードを順にクリックして線を引く。線をクリックすると分岐点や種別を編集できる。</div>
+<div class="hint-bar">ノード: クリックで編集/ドラッグで移動。接続モード中は2つのノードを順にクリックして線を引く。線をクリックすると分岐点や種別を編集できる。ピンチ、または右下の+/-でズームできる。</div>
+
+<div class="zoom-controls">
+  <button id="zoomInBtn">＋</button>
+  <div id="zoomLevel">100%</div>
+  <button id="zoomOutBtn">－</button>
+  <button id="zoomResetBtn" style="font-size:0.6rem;">100%</button>
+</div>
 
 <div id="exportModal">
   <div class="export-panel">
@@ -213,6 +223,88 @@ const canvas = document.getElementById("canvas");
 const edgeSvg = document.getElementById("edgeSvg");
 const panel = document.getElementById("panel");
 const panelBody = document.getElementById("panelBody");
+const canvasWrap = document.getElementById("canvasWrap");
+
+// ============ ズーム/パン(ピンチ操作対応) ============
+// touch-actionをnoneにしてブラウザのネイティブページズームを止め、代わりにcanvas要素だけを
+// transform:scaleでズームさせる(ヘッダーやパネルまで拡大されるのを防ぐため)。2本指ならピンチズーム、
+// 1本指ならパン(スクロール)として扱う
+let scale = 1;
+const MIN_SCALE = 0.35, MAX_SCALE = 2.5;
+const pointers = new Map(); // pointerId -> {x, y, onNode}
+let pinchState = null; // {initialDist, initialScale, midClientX, midClientY}
+let panState = null; // {startScrollLeft, startScrollTop, startClientX, startClientY}
+let cancelActiveDrag = null; // 2本目の指が触れた瞬間、進行中のノードドラッグを中断するためのコールバック
+
+function setScale(newScale, midClientX, midClientY) {
+  newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+  const contentX = (canvasWrap.scrollLeft + midClientX) / scale;
+  const contentY = (canvasWrap.scrollTop + midClientY) / scale;
+  scale = newScale;
+  canvas.style.transform = `scale(${scale})`;
+  canvasWrap.scrollLeft = contentX * scale - midClientX;
+  canvasWrap.scrollTop = contentY * scale - midClientY;
+  document.getElementById("zoomLevel").textContent = Math.round(scale * 100) + "%";
+}
+
+function isNodeTarget(t) { return !!(t && t.closest && t.closest(".node")); }
+
+canvasWrap.addEventListener("pointerdown", (ev) => {
+  pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, onNode: isNodeTarget(ev.target) });
+  if (pointers.size === 2) {
+    if (cancelActiveDrag) { cancelActiveDrag(); cancelActiveDrag = null; }
+    panState = null;
+    const pts = Array.from(pointers.values());
+    const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    const rect = canvasWrap.getBoundingClientRect();
+    pinchState = {
+      initialDist: dist, initialScale: scale,
+      midClientX: (pts[0].x + pts[1].x) / 2 - rect.left,
+      midClientY: (pts[0].y + pts[1].y) / 2 - rect.top,
+    };
+  } else if (pointers.size === 1 && !isNodeTarget(ev.target)) {
+    panState = { startScrollLeft: canvasWrap.scrollLeft, startScrollTop: canvasWrap.scrollTop, startClientX: ev.clientX, startClientY: ev.clientY };
+  }
+});
+canvasWrap.addEventListener("pointermove", (ev) => {
+  if (!pointers.has(ev.pointerId)) return;
+  const p = pointers.get(ev.pointerId);
+  p.x = ev.clientX; p.y = ev.clientY;
+  if (pointers.size === 2 && pinchState) {
+    const pts = Array.from(pointers.values());
+    const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    setScale(pinchState.initialScale * (dist / pinchState.initialDist), pinchState.midClientX, pinchState.midClientY);
+  } else if (pointers.size === 1 && panState) {
+    canvasWrap.scrollLeft = panState.startScrollLeft - (ev.clientX - panState.startClientX);
+    canvasWrap.scrollTop = panState.startScrollTop - (ev.clientY - panState.startClientY);
+  }
+});
+function releasePointer(ev) {
+  pointers.delete(ev.pointerId);
+  if (pointers.size < 2) pinchState = null;
+  if (pointers.size < 1) panState = null;
+}
+canvasWrap.addEventListener("pointerup", releasePointer);
+canvasWrap.addEventListener("pointercancel", releasePointer);
+canvasWrap.addEventListener("wheel", (ev) => {
+  if (!ev.ctrlKey) return; // 通常のホイールスクロールは邪魔しない(トラックパッドのピンチ/Ctrl+ホイールの時だけズーム)
+  ev.preventDefault();
+  const rect = canvasWrap.getBoundingClientRect();
+  setScale(scale * (1 - ev.deltaY * 0.01), ev.clientX - rect.left, ev.clientY - rect.top);
+}, { passive: false });
+
+document.getElementById("zoomInBtn").addEventListener("click", () => {
+  const rect = canvasWrap.getBoundingClientRect();
+  setScale(scale * 1.2, rect.width / 2, rect.height / 2);
+});
+document.getElementById("zoomOutBtn").addEventListener("click", () => {
+  const rect = canvasWrap.getBoundingClientRect();
+  setScale(scale / 1.2, rect.width / 2, rect.height / 2);
+});
+document.getElementById("zoomResetBtn").addEventListener("click", () => {
+  const rect = canvasWrap.getBoundingClientRect();
+  setScale(1, rect.width / 2, rect.height / 2);
+});
 
 function nodeById(id) { return state.nodes.find((n) => n.id === id); }
 
@@ -269,17 +361,23 @@ function escapeHtml(s) {
 }
 
 function attachDrag(el, n) {
-  let dragging = false, moved = false, startX, startY, origX, origY;
+  let dragging = false, moved = false, startX, startY, origX, origY, pointerId = null;
+  const abort = () => {
+    dragging = false;
+    el.classList.remove("dragging");
+    if (pointerId != null) { try { el.releasePointerCapture(pointerId); } catch (e) {} }
+  };
   el.addEventListener("pointerdown", (ev) => {
-    if (connectMode) return;
-    dragging = true; moved = false;
+    if (connectMode || pointers.size >= 1) return; // 2本指目が既に来ている(ピンチ中)場合はドラッグ開始しない
+    dragging = true; moved = false; pointerId = ev.pointerId;
     startX = ev.clientX; startY = ev.clientY; origX = n.x; origY = n.y;
     el.setPointerCapture(ev.pointerId);
     el.classList.add("dragging");
+    cancelActiveDrag = abort;
   });
   el.addEventListener("pointermove", (ev) => {
     if (!dragging) return;
-    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    const dx = (ev.clientX - startX) / scale, dy = (ev.clientY - startY) / scale;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
     n.x = Math.max(0, origX + dx);
     n.y = Math.max(0, origY + dy);
@@ -290,11 +388,15 @@ function attachDrag(el, n) {
   el.addEventListener("pointerup", (ev) => {
     if (!dragging) return;
     dragging = false;
+    cancelActiveDrag = null;
     el.classList.remove("dragging");
     if (moved) { saveState(); }
     else { handleNodeClick(n.id); }
   });
-  el.addEventListener("click", (ev) => { ev.stopPropagation(); });
+  el.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    if (connectMode) handleNodeClick(n.id); // 接続モード中はドラッグ判定が働かないため、クリックで直接処理する
+  });
 }
 
 function handleNodeClick(id) {
