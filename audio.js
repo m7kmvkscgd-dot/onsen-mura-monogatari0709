@@ -534,7 +534,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", onsen_enter: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", footstep_valley: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3", title_tap: "mp3", hawk_summon: "mp3", omikuji_normal: "mp3", omikuji_daikichi: "mp3", onsen_relief: "mp3", rest_heal: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", onsen_enter: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", footstep_valley: "mp3", footstep_coast: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3", title_tap: "mp3", hawk_summon: "mp3", omikuji_normal: "mp3", omikuji_daikichi: "mp3", onsen_relief: "mp3", rest_heal: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -563,12 +563,14 @@ function hitTakenSfxFor(dmg, maxHp, isSwarm) {
   if (ratio < 0.7) return "hit_taken_3";
   return "hit_taken_4";
 }
-// 渓流ステージだけ足音を専用SE(footstep_valley)に差し替える(ユーザー提供音源、2026-07-20)。他の
-// ステージは従来通りfootstepのまま。playDungeonMoveTransition/performAutoRetreatFloorMoveの
-// どちらも「移動が確定した直後、currentStageがまだ切り替わる前」に呼んでいるため、渓流から
-// 隣接ステージへ抜ける最後の一歩まで正しく渓流側の足音になる
+// 渓流/海岸ステージだけ足音を専用SE(footstep_valley/footstep_coast)に差し替える(ユーザー提供音源、
+// 2026-07-20)。他のステージは従来通りfootstepのまま。playDungeonMoveTransition/
+// performAutoRetreatFloorMoveのどちらも「移動が確定した直後、currentStageがまだ切り替わる前」に
+// 呼んでいるため、各ステージから隣接ステージへ抜ける最後の一歩まで正しくそのステージの足音になる
 function footstepSfxName() {
-  return currentStage === "valley" ? "footstep_valley" : "footstep";
+  if (currentStage === "valley") return "footstep_valley";
+  if (currentStage === "coast") return "footstep_coast";
+  return "footstep";
 }
 function playSfx(name) {
   if (masterBgmVolume === 0) return;
