@@ -867,6 +867,22 @@ function moveOneFloor(pathBias, enterTeahouse) {
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+    // 【不具合対策】海の村/山伏の里は温泉村ではない「中継の村」だが、以前はここでの判定が
+    // manualRetreatMode(村の画面から明示的に「歩いて引き返す」を選んだ場合)専用だったため、
+    // 修験道/山/海岸など村の奥から普通に(退避モードの)「里に戻る」を押した場合はこの村を
+    // 素通りし、stageEntryStackを最後までポップし続けて温泉村までノンストップで帰ってしまっていた。
+    // manualRetreatModeかどうかに関わらず、ポップした先が中継の村ならここで必ず一度足を止める
+    if (VILLAGE_STAGE_DISPLAY_NAME[currentStage]) {
+      retreating = false;
+      manualRetreatMode = false;
+      manualRetreatHomeVillage = null;
+      stopAutoRetreat();
+      saveState();
+      dlog(`${VILLAGE_STAGE_DISPLAY_NAME[currentStage]}に戻ってきた。`);
+      if (currentStage === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
+      else if (currentStage === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
+      return;
+    }
     if (currentFloor <= 0) {
       saveState();
       finishRetreat();
@@ -1049,7 +1065,16 @@ document.getElementById("floorBadge").addEventListener("touchend", (e) => {
   handleDevFloorBadgeTap();
 }, { passive: false });
 document.getElementById("floorBadge").addEventListener("click", handleDevFloorBadgeTap);
+// 【不具合対策】「進む」を素早く連打(実質的なダブルタップ)すると、まれに進路選択の抽選
+// (showPathChoice内のweightedPickPathKey)が2回走り、表示中の選択肢が別の内容に差し替わって
+// しまうという報告があった。advanceBtn.disabled(ui.jsのtouchend連打抑制もこれを見ている)は
+// showPathChoice/playDungeonMoveTransition側で同期的に立つはずだが、念のためDOM状態に頼らない
+// 独立したガード変数でも二重発火そのものを塞ぐ(400msはui.jsの二重タップ判定より確実に長い値)
+let advanceBtnHandling = false;
 document.getElementById("advanceBtn").onclick = () => {
+  if (advanceBtnHandling) return;
+  advanceBtnHandling = true;
+  setTimeout(() => { advanceBtnHandling = false; }, 400);
   if (fieldParty.every((c) => c.hp <= 0 || c.status !== "active")) {
     showInfoModal("行動できる仲間がいません");
     return;
