@@ -245,6 +245,8 @@ function enterDungeon() {
   bgmPositions.coast = 0;
   bgmPositions.coast_night = 0;
   bgmPositions.coast_battle = 0;
+  bgmPositions.valley = 0;
+  bgmPositions.valley_night = 0;
   stopTownBgm();
   showScreen("screen-dungeon");
   renderDungeon();
@@ -289,7 +291,7 @@ function renderDungeon() {
   playAmbientBgm();
   // 中ボス/ボスから逃げて追いかけられている間はボス曲を鳴らし続けたいため、その間は
   // 探索用BGMへ上書きし直さない(isBossBgmActive、shouldKeepBossBgmOnFleeと同じ仕組み)
-  if (currentStage === "coast" && !isBossBgmActive()) playExplorationAreaBgm();
+  if ((currentStage === "coast" || currentStage === "valley") && !isBossBgmActive()) playExplorationAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
   // 村からの手動帰還中(manualRetreatMode)は、通常の「帰還」ラベルではなく引き続き「進む」の
   // ままにする(ユーザー指示: あくまで進むという操作感のまま)。里に戻るボタンも隠さず、
@@ -575,7 +577,7 @@ function playDungeonMoveTransition(actualLogic) {
   // 素の状態にしておく。cancel()と直後のanimate()はどちらも同期処理で描画を挟まないため、
   // 途中経過が一瞬見えることはない)
   if (autoRetreatZoomAnim) { autoRetreatZoomAnim.cancel(); autoRetreatZoomAnim = null; }
-  playSfx("footstep");
+  playSfx(footstepSfxName());
   const moveAnim = bg.animate(buildWalkKeyframes(animMs), { duration: animMs, easing: "ease-in-out", fill: "forwards" });
   let proceeded = false;
   function proceedToNext() {
@@ -703,7 +705,7 @@ function scheduleNextAutoRetreatTick() {
 function performAutoRetreatFloorMove(enterTeahouse) {
   const prevTimeOfDay = state.timeOfDay;
   lastFloorMoveOutcome = null;
-  playSfx("footstep");
+  playSfx(footstepSfxName());
   moveOneFloor(null, enterTeahouse);
   if (!autoRetreatActive) return; // queueCriticalAlerts側等で既に停止済み
   if (!retreating) return; // 0階層に到達しfinishRetreat()済み(stopAutoRetreatもそちらで呼ばれる)
@@ -861,9 +863,11 @@ function moveOneFloor(pathBias, enterTeahouse) {
       // 中継ステージの出口(0階層)を抜けて、直前のステージ・階層へ戻る(洞窟→森、廃城下町→洞窟、
       // 門→廃城下町、古城→門、の各リンクで共通)。帰還自体はまだ終わっておらず、そのまま
       // 手前のステージ側のカウントダウンが続く(retreatingフラグは維持したまま)
+      const leavingValley = currentStage === "valley"; // 渓流専用フィールド曲(bgmAudio)を抜ける瞬間に止めるため
       const prev = stageEntryStack.pop();
       currentStage = prev.stage;
       currentFloor = prev.floor;
+      if (leavingValley) stopValleyAreaBgm();
       // 村からの手動帰還中(manualRetreatMode)は、1回popした時点で「村の直前のステージまで
       // 戻ってきた」=目的地に到着したとみなし、以後は通常の探索(自由に進む/オート帰還)に戻す
       if (manualRetreatMode) {
@@ -885,6 +889,13 @@ function moveOneFloor(pathBias, enterTeahouse) {
       manualRetreatMode = false;
       manualRetreatHomeVillage = null;
       stopAutoRetreat();
+      // 【不具合対策】この村の直前が海岸/渓流だった場合、それぞれの探索用フィールド曲(bgmAudio)が
+      // 流れっぱなしのままだった(元々はここで足を止めずfinishRetreat()まで素通りしていたため
+      // stopCoastAreaBgm()が確実に呼ばれていたが、村で足を止めるようになった今はここでも
+      // 明示的に止めないと村の画面の裏で鳴り続けてしまう)
+      stopAmbientBgm();
+      stopCoastAreaBgm();
+      stopValleyAreaBgm();
       saveState();
       dlog(`${VILLAGE_STAGE_DISPLAY_NAME[currentStage]}に戻ってきた。`);
       if (currentStage === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
@@ -920,6 +931,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
     } else if (currentFloor >= (STAGE_CHAIN_MAX[currentStage] || Infinity) && STAGE_CHAIN_NEXT[currentStage]) {
       // 中継ステージの最深部からの自動継続(洞窟→少し森→廃城下町→門、渓流→光る竹林)。選択の余地の
       // ない一本道のため、showPathChoiceは経由せず、advanceBtn.onclick側からここへ直接来る
+      if (currentStage === "valley") stopValleyAreaBgm(); // 渓流専用フィールド曲を、光る竹林へ抜ける瞬間に止める
       stageEntryStack.push({ stage: currentStage, floor: currentFloor });
       currentStage = STAGE_CHAIN_NEXT[currentStage];
       currentFloor = 1;

@@ -152,13 +152,17 @@
     background: rgba(24,18,12,.5); border: 1px solid rgba(214,178,96,.3);
     border-radius: 999px; color: #b3a582; font-size: 13.5px; box-shadow: none;
   }
-  /* ============ 町の施設ボタン: 商業クラスカード(2026-07-18) ============
+  /* ============ 施設ボタン: 商業クラスカード(2026-07-18町、2026-07-20海の村/山伏の里へ拡張) ============
      旧「2x2の文字数依存サイズ+茶ベタボタン」から、モック承認済みの
-     「漆×金カード(丸メダルアイコン+機能キャプション)+出発の全幅CTA」に刷新 */
-  #screen-town .btn-col {
+     「漆×金カード(丸メダルアイコン+機能キャプション)+出発の全幅CTA」に刷新。
+     元は#screen-town専用スコープだったが、.btn-col自体はcomponents.cssで全画面共通の
+     縦積みレイアウトとして使われているため素で外すと無関係な画面が壊れる。
+     .village-card-grid(screen-town/screen-umimura/screen-yamabushiの.btn-colに付与)という
+     追加クラスでスコープすることで、他の.btn-col利用画面に影響せず村ごとに使い回せるようにしてある */
+  .village-card-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 0;
   }
-  #screen-town .btn-col button.town-card {
+  .village-card-grid button.town-card {
     position: relative; justify-content: flex-start; text-align: left;
     gap: 11px; padding: 10px 12px; min-height: 56px; border-radius: 16px;
     white-space: nowrap;
@@ -172,11 +176,12 @@
   }
   .town-medal img { height: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
   .town-medal-gold { background: radial-gradient(circle at 34% 28%, #fff3cf, #e0bd6c 72%); border-color: rgba(120,84,20,.4); }
+  .town-medal-emoji { font-size: 22px; line-height: 1; }
   .town-card-tx { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
   .town-card-nm { font-size: 15px; font-weight: 800; letter-spacing: .1em; line-height: 1.2; }
   .town-card-cp { font-size: 10px; font-weight: 600; color: #a3906c; margin-top: 3px; letter-spacing: .03em; }
   /* 出発CTA: 2列をまたぐ全幅の金ボタン。キャプション色はprimaryの暗色系に合わせる */
-  #screen-town .btn-col button.town-depart {
+  .village-card-grid button.town-depart {
     grid-column: 1 / -1; position: relative; justify-content: flex-start; text-align: left;
     gap: 12px; padding: 10px 14px; min-height: 58px; border-radius: 17px; white-space: nowrap;
   }
@@ -184,7 +189,7 @@
   .town-depart .town-card-cp { color: #6d5622; }
   .town-depart-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #55400f; }
   /* NEWバッジはカードの右上角に載せる(ボタンがposition:relativeなのでそのまま絶対配置できる) */
-  #screen-town .btn-col .new-badge { position: absolute; top: -7px; right: -4px; }
+  .village-card-grid .new-badge { position: absolute; top: -7px; right: -4px; }
   /* ============ ステータス詳細画面(商業クラス版: 立ち絵ショーケース+漆×金) ============
      heroの見えている帯(body-padの上端=34vhまで)を立ち絵ショーケースとして使う。
      ショーケースはheroの子なのでfixed基準の背景に張り付き、body-padがその上をスクロールで覆う

@@ -9,6 +9,9 @@ const UMIONSEN_COST_PER_PERSON = ONSEN_FLAT_COST; // 湯乃里温泉の湯代は
 function renderUmiMura() {
   document.getElementById("umimuraHeaderGold").textContent = `${state.gold}G`;
   document.getElementById("umimuraHeaderTime").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
+  // 奉行所は温泉村と同じ解禁条件(state.magistrateLevel、建築で解放)。全村共通の経済のため
+  // 温泉村で解放すればここにもすぐ現れる
+  document.getElementById("umimuraMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
 }
 
@@ -31,8 +34,11 @@ function renderUmiOnsen() {
   const btn = document.getElementById("umionsenSoakBtn");
   btn.textContent = activeCount > 0 ? `湯に浸かる(${activeCount}人・${cost}G)` : "入れる仲間がいません";
   btn.disabled = activeCount === 0 || state.gold < cost;
+  document.getElementById("umionsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   updateSceneBackgrounds();
 }
+document.getElementById("umionsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-umionsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
+document.getElementById("umionsenShrineBtn").onclick = () => { playSfx("select"); enterOnsenShrine("screen-umionsen"); };
 
 // 廃城下町の出口の分岐で「海の村」を選んだ時に呼ぶ。moveOneFloor()の往路分岐と同様の
 // 最低限のブックキーピング(疲労・時計・セーブ)だけ行い、通常のダンジョン画面ではなく
@@ -53,8 +59,13 @@ function arriveAtUmiMura() {
   showScreen("screen-umimura");
 }
 
-document.getElementById("umimuraYadoBtn").onclick = () => { renderUmiYado(); showScreen("screen-umiyado"); };
-document.getElementById("umimuraOnsenBtn").onclick = () => { renderUmiOnsen(); showScreen("screen-umionsen"); };
+document.getElementById("umimuraYadoBtn").onclick = () => { playSfx("select"); renderUmiYado(); showScreen("screen-umiyado"); };
+document.getElementById("umimuraOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderUmiOnsen(); showScreen("screen-umionsen"); };
+// 奉行所/建築/鍛冶屋は温泉村と全村共通の経済(BUILDING_DEFS/state.magistrateLevel等がグローバル)を
+// 見た目だけ村を変えて開く(town.jsのfacilityHomeScreenで戻り先を覚える仕組み、2026-07-20)
+document.getElementById("umimuraMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderMagistrateScreen(); };
+document.getElementById("umimuraExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderExtension(); showScreen("screen-extension"); };
+document.getElementById("umimuraShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderShop(); showScreen("screen-shop"); };
 // 「出発する」: 廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、
 // 新規ルート)の2択(ユーザー指示、2026-07-19)。
 // 「廃城下町へ」はオート帰還ではなく、普通の探索と同じ1階層ずつの手動歩行にする
@@ -139,6 +150,7 @@ const YAMABUSHIONSEN_COST_PER_PERSON = ONSEN_FLAT_COST; // 雲海の湯の湯代
 function renderYamabushi() {
   document.getElementById("yamabushiHeaderGold").textContent = `${state.gold}G`;
   document.getElementById("yamabushiHeaderTime").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
+  document.getElementById("yamabushiMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
 }
 
@@ -150,8 +162,11 @@ function renderYamabushiOnsen() {
   const btn = document.getElementById("yamabushionsenSoakBtn");
   btn.textContent = activeCount > 0 ? `湯に浸かる(${activeCount}人・${cost}G)` : "入れる仲間がいません";
   btn.disabled = activeCount === 0 || state.gold < cost;
+  document.getElementById("yamabushionsenShrineBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
   updateSceneBackgrounds();
 }
+document.getElementById("yamabushionsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-yamabushionsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
+document.getElementById("yamabushionsenShrineBtn").onclick = () => { playSfx("select"); enterOnsenShrine("screen-yamabushionsen"); };
 
 // 光る竹林の最深部に到達した時に呼ぶ(廃城下町→海の村と同じ「1階層だけの中継ステージ」の扱い)
 function arriveAtYamabushi() {
@@ -169,7 +184,11 @@ function arriveAtYamabushi() {
   showScreen("screen-yamabushi");
 }
 
-document.getElementById("yamabushiOnsenBtn").onclick = () => { renderYamabushiOnsen(); showScreen("screen-yamabushionsen"); };
+document.getElementById("yamabushiOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderYamabushiOnsen(); showScreen("screen-yamabushionsen"); };
+// 奉行所/建築/鍛冶屋は温泉村と全村共通の経済を見た目だけ村を変えて開く(umimura.js側と同じ仕組み、2026-07-20)
+document.getElementById("yamabushiMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderMagistrateScreen(); };
+document.getElementById("yamabushiExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderExtension(); showScreen("screen-extension"); };
+document.getElementById("yamabushiShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderShop(); showScreen("screen-shop"); };
 // 「修験道へ進む」: 海の村には無い、山伏の里だけの選択肢。stageEntryStackにさらに1段積んで
 // (山伏の里, 1階層目)を記録し、通常のダンジョン探索画面へ戻って修験道1層目から再開する。
 // 深く潜ってから帰還すれば、山伏の里→光る竹林→渓流→森→町の順で正しく橋渡しされる

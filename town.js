@@ -31,6 +31,28 @@ function hasAnyNewSupplyFeature() {
 
 // チュートリアル機能は2026-07-18のユーザー指示で全削除した(作り直し前提の一時撤去)
 
+// ============ 施設(建築/奉行所/鍛冶屋、温泉の売店/神社)の戻り先を動的に覚える仕組み ============
+// 建築(screen-extension)/奉行所(screen-magistrate)/鍛冶屋(screen-shop)は元々温泉村(または
+// 出発準備画面)専用で、戻る先が常に固定だった。海の村/山伏の里からも同じ画面(=同じ経済、
+// 建物レベルや依頼は全村共通)を開けるようにするため、title.jsのsettingsReturnScreenId
+// (設定画面をタイトル/町どちらから開いても正しく戻れるようにする仕組み)と同じパターンで、
+// 開く直前の画面を覚えておいて「戻る」がそこへ戻るようにする
+let facilityHomeScreen = "screen-town"; // "screen-town" | "screen-umimura" | "screen-yamabushi" | "screen-party-select"
+function renderFacilityHome() {
+  if (facilityHomeScreen === "screen-umimura") { renderUmiMura(); showScreen("screen-umimura"); }
+  else if (facilityHomeScreen === "screen-yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
+  else if (facilityHomeScreen === "screen-party-select") { renderPartySelect(); showScreen("screen-party-select"); }
+  else { renderTown(); }
+}
+// 温泉配下の売店/神社も同様(温泉自体は村ごとに専用画面を持つため、温泉村/海の村/山伏の里の
+// 温泉のうちどこから開かれたかを覚える)
+let facilityHomeOnsenScreen = "screen-onsen"; // "screen-onsen" | "screen-umionsen" | "screen-yamabushionsen"
+function renderFacilityHomeOnsen() {
+  if (facilityHomeOnsenScreen === "screen-umionsen") { renderUmiOnsen(); showScreen("screen-umionsen"); }
+  else if (facilityHomeOnsenScreen === "screen-yamabushionsen") { renderYamabushiOnsen(); showScreen("screen-yamabushionsen"); }
+  else { renderOnsen(); showScreen("screen-onsen"); }
+}
+
 function renderTown() {
   // HP/MPは町では自動回復しない(宿屋で宿泊した仲間だけが回復する)
   pruneActiveParty();
@@ -262,7 +284,7 @@ function isClassUnlocked(classId) {
   return (state[stateKey] || 0) > 0;
 }
 document.getElementById("toTavernBtn").onclick = () => { playSfx("select"); renderTavern(); showScreen("screen-tavern"); };
-document.getElementById("toShopBtn").onclick = () => { playSfx("select"); renderShop(); showScreen("screen-shop"); };
+document.getElementById("toShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-party-select"; renderShop(); showScreen("screen-shop"); };
 document.getElementById("toOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderOnsen(); showScreen("screen-onsen"); };
 document.getElementById("toDungeonBtn").onclick = () => {
   playSfx("select");
@@ -1537,9 +1559,9 @@ document.getElementById("buyTakigyoBtn").onclick = () => {
   playSfx("coin");
   renderOnsenShop();
 };
-document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); renderOnsenShop(); showScreen("screen-onsen-shop"); };
-document.getElementById("onsenShopBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
-document.getElementById("onsenShopBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
+document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-onsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
+document.getElementById("onsenShopBackBtn").onclick = () => { renderFacilityHomeOnsen(); };
+document.getElementById("onsenShopBackBtnTop").onclick = () => { renderFacilityHomeOnsen(); };
 
 // ============ 温泉の神社(奉納祈願: お守りガチャ+装備) ============
 function omamoriRarityLabel(tier) {
@@ -1686,10 +1708,14 @@ document.getElementById("shrineSpecialOfferBtn").onclick = () => {
   else playSfx("skill_confirm");
   renderOnsenShrine();
 };
-document.getElementById("toOnsenShrineBtn").onclick = () => {
-  playSfx("select");
+// 神社への入場処理(初回訪問特典/NEWバッジ解除)。温泉村/海の村/山伏の里いずれの温泉からも
+// 全村共通の同じ神社(state.shrineFirstVisitRewardGiven等)を開けるよう、戻り先だけ引数化した
+// (2026-07-20)。NEWバッジは温泉村の温泉画面にしか無いため、無い場合は触らない
+function enterOnsenShrine(homeScreen) {
+  facilityHomeOnsenScreen = homeScreen;
   state.seenShrineTab = true;
-  document.getElementById("onsenShrineTabNewBadge").style.display = "none";
+  const newBadge = document.getElementById("onsenShrineTabNewBadge");
+  if (newBadge) newBadge.style.display = "none";
   document.getElementById("shrineDrawResult").style.display = "none";
   if (!state.shrineFirstVisitRewardGiven) {
     state.shrineFirstVisitRewardGiven = true;
@@ -1699,9 +1725,10 @@ document.getElementById("toOnsenShrineBtn").onclick = () => {
   }
   renderOnsenShrine();
   showScreen("screen-onsen-shrine");
-};
-document.getElementById("onsenShrineBackBtn").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
-document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderOnsen(); showScreen("screen-onsen"); };
+}
+document.getElementById("toOnsenShrineBtn").onclick = () => { playSfx("select"); enterOnsenShrine("screen-onsen"); };
+document.getElementById("onsenShrineBackBtn").onclick = () => { renderFacilityHomeOnsen(); };
+document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderFacilityHomeOnsen(); };
 
 // ============ 増築 ============
 // ============ 建築(増築画面の施設一覧) ============
@@ -1875,9 +1902,11 @@ document.getElementById("buildingDetailCloseBtn").onclick = () => {
   document.getElementById("buildingDetailOverlay").style.display = "none";
 };
 function renderExtension() {
-  playTownAreaBgm();
+  // 温泉村から開いた時だけ町のBGMへ切り替える(海の村/山伏の里から開いた場合はその村で
+  // 鳴っていた音をそのまま邪魔しない。村自体のBGM設計は今回のスコープ外)
+  if (facilityHomeScreen === "screen-town") playTownAreaBgm();
   updateSceneBackgrounds();
-  renderDwHeader("extension", "増築", () => { renderTown(); });
+  renderDwHeader("extension", "増築", () => { renderFacilityHome(); });
   document.getElementById("extensionGold").textContent = state.gold + "G";
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
@@ -2038,10 +2067,10 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   renderExtension();
   showBuildCompleteForUpgrade("houseLevel", state.houseLevel, [`仲間上限 ${capBefore}→${rosterCapacity()}人`]);
 };
-document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); renderExtension(); showScreen("screen-extension"); };
-document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); renderMagistrateScreen(); };
-document.getElementById("extensionBackBtn").onclick = () => { renderTown(); };
-document.getElementById("extensionBackBtnTop").onclick = () => { renderTown(); };
+document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderExtension(); showScreen("screen-extension"); };
+document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderMagistrateScreen(); };
+document.getElementById("extensionBackBtn").onclick = () => { renderFacilityHome(); };
+document.getElementById("extensionBackBtnTop").onclick = () => { renderFacilityHome(); };
 
 // ============ 奉行所: 討伐依頼(日替わり・受注制) ============
 // 全10件を一度に出さず、最大QUEST_BOARD_SIZE件だけ毎日ランダムに選び直す。dayCountが変わるまでは
@@ -2115,9 +2144,9 @@ function acceptRescueQuest() {
   renderMagistrateScreen();
 }
 function renderMagistrateScreen() {
-  playTownAreaBgm();
+  if (facilityHomeScreen === "screen-town") playTownAreaBgm();
   updateSceneBackgrounds();
-  renderDwHeader("magistrate", "奉行所", () => { renderTown(); });
+  renderDwHeader("magistrate", "奉行所", () => { renderFacilityHome(); });
   refreshMagistrateQuestsIfNeeded();
   saveState();
   const list = document.getElementById("magistrateQuestList");
@@ -2225,8 +2254,8 @@ function abandonQuest() {
   saveState();
   renderMagistrateScreen();
 }
-document.getElementById("magistrateBackBtnTop").onclick = () => { renderTown(); };
-document.getElementById("magistrateBackBtn").onclick = () => { renderTown(); };
+document.getElementById("magistrateBackBtnTop").onclick = () => { renderFacilityHome(); };
+document.getElementById("magistrateBackBtn").onclick = () => { renderFacilityHome(); };
 document.getElementById("magistrateTab1Btn").onclick = () => { playSfx("select"); state.magistrateQuestTab = 1; renderMagistrateScreen(); };
 document.getElementById("magistrateTab2Btn").onclick = () => { playSfx("select"); state.magistrateQuestTab = 2; renderMagistrateScreen(); };
 
@@ -2238,9 +2267,9 @@ document.getElementById("gameoverRestartBtn").onclick = () => {
 
 // ============ 道具屋 ============
 function renderShop() {
-  playTownAreaBgm();
+  if (facilityHomeScreen === "screen-town") playTownAreaBgm();
   updateSceneBackgrounds();
-  renderDwHeader("shop", "鍛冶屋", () => { renderTown(); });
+  renderDwHeader("shop", "鍛冶屋", () => { renderFacilityHome(); });
   document.getElementById("shopGold").textContent = state.gold + "G";
   renderEquipmentList();
 }
@@ -2315,8 +2344,8 @@ function buyEquipment(classId, slot) {
   if (purchasedImg) retriggerEntryAnim(purchasedImg, "purchase-glint");
 }
 // 鍛冶屋は出発準備画面から開くようになった(2026-07-18)ため、戻り先も出発準備にする
-document.getElementById("shopBackBtn").onclick = () => { renderPartySelect(); showScreen("screen-party-select"); };
-document.getElementById("shopBackBtnTop").onclick = () => { renderPartySelect(); showScreen("screen-party-select"); };
+document.getElementById("shopBackBtn").onclick = () => { renderFacilityHome(); };
+document.getElementById("shopBackBtnTop").onclick = () => { renderFacilityHome(); };
 
 // ============ 初期化 ============
 // ゲームの入口は常にタイトル画面(title.js)。ここでの自動遷移は廃止した。

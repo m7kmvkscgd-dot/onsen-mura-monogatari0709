@@ -146,7 +146,7 @@
     <div class="body-pad">
       <!-- 商業クラス化(2026-07-18): 施設ボタンを「漆×金カード(メダルアイコン+機能キャプション)」に、
            出発を全幅の主役CTAに変更。idとJSの紐付けは従来のまま(見た目とマークアップ構造のみ変更) -->
-      <div class="btn-col">
+      <div class="btn-col village-card-grid">
         <!-- 並び(2026-07-18ユーザー指示): 上段=毎回寄る施設(旅の宿・奉行所)、下段=必要な時に寄る施設(温泉・建築)。グリッドは行優先 -->
         <button class="big town-card" id="toTavernBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">旅の宿</span></span><span class="new-badge" id="tavernNewBadge" style="display:none;">NEW</span></button>
         <button class="big town-card" id="toMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
@@ -671,9 +671,15 @@
         <div class="roster-name">見知らぬ湊町</div>
         <div class="roster-sub" style="margin-top:0.3rem;">廃城下町を抜けた先にある、海沿いの村にたどり着いた。</div>
       </div>
-      <button class="big primary" id="umimuraYadoBtn" style="margin-top:0.8rem;">宿(潮風宿)へ</button>
-      <button class="big primary" id="umimuraOnsenBtn" style="margin-top:0.6rem;">温泉(湯乃里温泉)へ</button>
-      <button class="big" id="umimuraLeaveBtn" style="margin-top:1rem;">出発する</button>
+      <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え) -->
+      <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
+        <button class="big town-card" id="umimuraYadoBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">潮風宿</span></span></button>
+        <button class="big town-card" id="umimuraMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
+        <button class="big town-card" id="umimuraOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">湯乃里温泉</span></span></button>
+        <button class="big town-card" id="umimuraExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
+        <button class="big town-card" id="umimuraShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
+        <button class="big primary town-depart" id="umimuraLeaveBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span></button>
+      </div>
     </div>
   </div>
 
@@ -713,6 +719,11 @@
         <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員の疲労がしっかり和らぐ(1人<span id="umionsenCostText"></span>G)</div>
         <button class="big primary" id="umionsenSoakBtn" style="margin-top:0.6rem;"></button>
       </div>
+      <!-- 売店/神社は温泉村と全村共通(2026-07-20) -->
+      <div style="display:flex;gap:0.6rem;margin-top:0.8rem;flex-wrap:wrap;">
+        <button class="big" id="umionsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
+        <button class="big" id="umionsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
+      </div>
       <button class="big" id="umionsenBackBtn" style="margin-top:1rem;">海の村に戻る</button>
     </div>
   </div>
@@ -731,9 +742,16 @@
         <div class="roster-name">霧の晴れ間の集落</div>
         <div class="roster-sub" style="margin-top:0.3rem;">光る竹林を抜けた先、山霧に包まれた修験者たちの里にたどり着いた。</div>
       </div>
-      <button class="big primary" id="yamabushiOnsenBtn" style="margin-top:0.8rem;">温泉へ</button>
-      <button class="big primary" id="yamabushiContinueBtn" style="margin-top:0.6rem;">修験道へ進む</button>
-      <button class="big" id="yamabushiLeaveBtn" style="margin-top:1rem;">光る竹林へ出発する</button>
+      <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
+           宿はまだ未実装のため対象外(implementation_map.html参照) -->
+      <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
+        <button class="big town-card" id="yamabushiMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
+        <button class="big town-card" id="yamabushiOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">雲海の湯</span></span></button>
+        <button class="big town-card" id="yamabushiExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
+        <button class="big town-card" id="yamabushiShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
+        <button class="big primary town-depart" id="yamabushiContinueBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">修験道へ進む</span></span><span class="town-depart-arrow">▶</span></button>
+        <button class="big town-card" id="yamabushiLeaveBtn"><span class="town-medal"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">光る竹林へ</span></span></button>
+      </div>
     </div>
   </div>
 
@@ -752,6 +770,11 @@
         <div class="roster-name">湯に浸かる</div>
         <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員の疲労がしっかり和らぐ(1人<span id="yamabushionsenCostText"></span>G)</div>
         <button class="big primary" id="yamabushionsenSoakBtn" style="margin-top:0.6rem;"></button>
+      </div>
+      <!-- 売店/神社は温泉村と全村共通(2026-07-20) -->
+      <div style="display:flex;gap:0.6rem;margin-top:0.8rem;flex-wrap:wrap;">
+        <button class="big" id="yamabushionsenShopBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;">🛍️売店</button>
+        <button class="big" id="yamabushionsenShrineBtn" style="width:auto;padding-left:1.1rem;padding-right:1.1rem;display:none;">⛩️神社</button>
       </div>
       <button class="big" id="yamabushionsenBackBtn" style="margin-top:1rem;">山伏の里に戻る</button>
     </div>
