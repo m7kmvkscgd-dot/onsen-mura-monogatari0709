@@ -9,6 +9,11 @@
     width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
   }
+  /* 帰還方向の時は探索背景(.dungeon-bg)と同じく水平反転させる(ユーザー指示、2026-07-21)。
+     会心の画面揺れ(--crit-shake-x/y)はそのまま維持し、scaleX(-1)を末尾に追加するだけ */
+  #battleBg.bg-flipped {
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px)) scaleX(-1);
+  }
   .battle-bg::after {
     content: ''; position: absolute; inset: 0;
     /* 敵表示の背後だけ淡く明るいスポットライト状のビネットを重ね、視線を敵に誘導する

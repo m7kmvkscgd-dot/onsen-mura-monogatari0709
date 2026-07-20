@@ -52,6 +52,12 @@
     width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; z-index: 0;
   }
+  /* 帰還方向(温泉村へ向かっている)の時は、行きと同じ絵のままだと片側にある海/川などの
+     ランドマークの左右が矛盾するため、水平反転させる(ユーザー指示、2026-07-21)。
+     既存のtranslateX(-50%)センタリングは維持したままscaleX(-1)を末尾に追加するだけ */
+  #dungeonBg.bg-flipped {
+    transform: translateX(-50%) translateZ(0) scaleX(-1);
+  }
   /* 探索背景への極弱の環境アニメーション(霧+木漏れ日)。既存の暗いグラデーションと同じ::afterに
      レイヤーとして重ね、position:absoluteの重なり順を追加せずに済ませている(新規要素は増やさない)。
      動きは50秒超の非常にゆっくりした往復のみ、不透明度もごく薄く、背景が主張しすぎないようにしてある */

@@ -128,6 +128,12 @@ function updateSceneBackgrounds() {
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("dungeonBgInner").style.backgroundImage = `url('${currentAreaBgSet()[tod]}')`;
   document.getElementById("battleBg").style.backgroundImage = `url('${currentAreaBgSet()[tod]}')`;
+  // 帰還方向(温泉村へ向かっている)の時は背景を水平反転する。「進む/帰還」ボタンの表示ラベルではなく
+  // 実際にretreatingかどうか(山伏の里/海の村からの「元来た道を歩いて戻る」中も含め、常に家へ
+  // 向かっているかを表す)を見る(ユーザー指示、2026-07-21)
+  const bgFlipped = typeof retreating !== "undefined" && !!retreating;
+  document.getElementById("dungeonBg").classList.toggle("bg-flipped", bgFlipped);
+  document.getElementById("battleBg").classList.toggle("bg-flipped", bgFlipped);
   document.getElementById("onsenHero").style.backgroundImage = `url('${BG_SETS.onsen[dayLike]}')`;
   document.getElementById("shopHero").style.backgroundImage = `url('${BG_SETS.town[tod]}')`;
   document.getElementById("partySelectHeroInner").style.backgroundImage = `url('${BG_SETS.departure[tod]}')`;
