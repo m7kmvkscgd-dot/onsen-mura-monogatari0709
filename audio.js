@@ -46,6 +46,11 @@ function isContinuingBossChase() {
   return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit);
 }
 function playBattleBgm() {
+  // 洞窟内は戦闘BGMをミュートする(ユーザー指示、2026-07-21)。cave_ambient(環境音)は戦闘中も鳴り続ける
+  if (currentStage === "cave") {
+    if (currentBgmKey) stopBattleBgm();
+    return;
+  }
   const continuingChase = isContinuingBossChase();
   // 天狗の腕試し(イベント戦)専用BGM。追跡戦は存在しないので毎回頭から再生する
   if (battle && battle.enemies && battle.enemies.some((e) => e.id === "tengu_shiren")) {
@@ -392,11 +397,16 @@ let currentAmbientKey = null;
 function ambientKeyForTimeOfDay(tod) {
   return tod === "dawn" || tod === "asa" || tod === "day" ? "day" : "night";
 }
+// 洞窟1層目は深淵の森から地続きの入り口という位置づけのため、洞窟専用の音(cave_ambient)ではなく
+// 森の環境音(虫の声)のままにする(ユーザー指示、2026-07-21)。2層目以降で洞窟の音に切り替わる
+const CAVE_AMBIENT_VOLUME_RATIO = 0.8; // 洞窟内の音量は通常の環境音の80%(ユーザー指示)
 function playAmbientBgm(forceKey) {
-  const key = currentStage === "coast" ? "coast" : currentStage === "cave" ? "cave" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
+  const useCaveAmbient = currentStage === "cave" && currentFloor > 1;
+  const key = currentStage === "coast" ? "coast" : useCaveAmbient ? "cave" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
   if (currentAmbientKey === key) return;
   currentAmbientKey = key;
   ambientBgmAudio.src = key === "coast" ? COAST_AMBIENT_TRACK : key === "cave" ? CAVE_AMBIENT_TRACK : AMBIENT_BGM_TRACKS[key];
+  ambientBgmAudio.volume = key === "cave" ? AMBIENT_BGM_VOLUME * CAVE_AMBIENT_VOLUME_RATIO : AMBIENT_BGM_VOLUME;
   ambientBgmAudio.currentTime = 0;
   if (audioUnlocked) ambientBgmAudio.play().catch(() => {});
 }
