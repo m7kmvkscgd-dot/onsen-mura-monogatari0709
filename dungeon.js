@@ -18,6 +18,25 @@ let floorsSinceLastBattle = 99;
 // 敵ゼロのエリア(廃城下町/門/古城/渓流/光る竹林/修験道/山など)の下地・背景を戦闘無しで
 // 歩いて確認したい時のためのもの。セーブはせず、リロードすれば常にfalseへ戻る
 let debugNoEncounters = false;
+// 開発者用: debugNoEncountersがONの間だけ、設定画面(screen-settings)から中継の村へワープできる。
+// 対象はVILLAGE_STAGE_DISPLAY_NAMEに登録済みの村(現状: 海の村/山伏の里)を自動的に拾うため、
+// 今後村が増えてそちらに1行追記するだけで自動的にワープ対象になる(title.js renderSettingsScreen参照)
+function debugWarpTargets() {
+  return Object.keys(VILLAGE_STAGE_DISPLAY_NAME).map((stage) => ({ stage, label: VILLAGE_STAGE_DISPLAY_NAME[stage] }));
+}
+function debugWarpToVillage(stage) {
+  if (!debugNoEncounters) return; // 安全策: モードOFF中は機能させない
+  if (state.activePartyIds.length === 0) { showInfoModal("パーティを1人以上選んでから使ってください"); return; }
+  enterDungeon(); // 通常の出発と同じ下ごしらえ(fieldParty構築・各種トラッカーのリセット)をそのまま流用
+  currentStage = stage;
+  currentFloor = 1;
+  // 開発用の簡易スタック: この村から通常の「出発する」を押しても森1層目へ安全に戻れるダミー
+  // (本来の実プレイでは洞窟→少し森…と積まれるが、ワープはあくまで見た目確認用のショートカットのため簡略化)
+  stageEntryStack = [{ stage: "forest", floor: 1 }];
+  saveState();
+  if (stage === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
+  else if (stage === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
+}
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林) | "shugendo"(修験道) | "yama"(山)。
 // forest/coastは町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効。それ以外は
 // STAGE_CHAIN_NEXT(下記)で繋がった中継ステージで、前のステージの最深部から自動的に切り替わり、

@@ -317,6 +317,23 @@ function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
   soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
   soundBtn.classList.toggle("is-on", masterBgmVolume > 0);
+  renderSettingsDebugWarpSection();
+}
+// 開発者用: 敵無しモード(debugNoEncounters、町のゴールド表示4回タップ)がONの間だけ、
+// 中継の村へのワープボタンを設定画面に表示する(debugWarpTargets/debugWarpToVillageはdungeon.js参照)
+function renderSettingsDebugWarpSection() {
+  const section = document.getElementById("settingsDebugWarpSection");
+  section.style.display = debugNoEncounters ? "" : "none";
+  if (!debugNoEncounters) return;
+  const list = document.getElementById("settingsDebugWarpList");
+  list.innerHTML = "";
+  debugWarpTargets().forEach(({ stage, label }) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${label}へワープ`;
+    btn.onclick = () => { playSfx("select"); debugWarpToVillage(stage); };
+    list.appendChild(btn);
+  });
 }
 document.getElementById("settingsSoundToggle").onclick = () => {
   toggleMute();
