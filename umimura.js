@@ -133,8 +133,10 @@ document.getElementById("umiyadoStayBtn").onclick = () => {
 document.getElementById("umionsenBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
 
 // ============ 山伏の里(第三の村、2026-07-19)。渓流→光る竹林の先から到達する ============
-// 海の村と同じく、温泉/宿等の仕様は温泉村と完全に同一にする(宿はまだ絵が無いため未実装、温泉のみ)。
+// 海の村と同じく、温泉/宿等の仕様は温泉村と完全に同一にする(宿は絵が揃ったため2026-07-21追加)。
 // 海の村と違い、この先(修験道→山)へさらに進める「修験道へ進む」ボタンを持つ
+
+const YAMABUSHIYADO_COST_PER_PERSON = LODGE_COST; // 霧の宿の宿代は温泉村の宿屋と同額
 
 function renderYamabushi() {
   document.getElementById("yamabushiHeaderGold").textContent = `${state.gold}G`;
@@ -142,6 +144,17 @@ function renderYamabushi() {
   document.getElementById("yamabushiMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
   checkOnsenReliefPopups(); // 海の村と同じく、この村のホーム画面に戻った時にも入浴リリーフ演出を出す
+}
+
+function renderYamabushiYado() {
+  renderDwHeader("yamabushiyado", "霧の宿", () => { renderYamabushi(); showScreen("screen-yamabushi"); });
+  const activeCount = fieldParty.filter((c) => c.status === "active").length;
+  document.getElementById("yamabushiyadoCostText").textContent = YAMABUSHIYADO_COST_PER_PERSON;
+  const cost = YAMABUSHIYADO_COST_PER_PERSON * activeCount;
+  const btn = document.getElementById("yamabushiyadoStayBtn");
+  btn.textContent = activeCount > 0 ? `一泊する(${activeCount}人・${cost}G)` : "泊まれる仲間がいません";
+  btn.disabled = activeCount === 0 || state.gold < cost;
+  updateSceneBackgrounds();
 }
 
 function renderYamabushiOnsen() {
@@ -169,6 +182,7 @@ function arriveAtYamabushi() {
   showScreen("screen-yamabushi");
 }
 
+document.getElementById("yamabushiYadoBtn").onclick = () => { playSfx("select"); renderYamabushiYado(); showScreen("screen-yamabushiyado"); };
 document.getElementById("yamabushiOnsenBtn").onclick = () => { playSfx("onsen_enter"); renderYamabushiOnsen(); showScreen("screen-yamabushionsen"); };
 // 奉行所/建築/鍛冶屋は温泉村と全村共通の経済を見た目だけ村を変えて開く(umimura.js側と同じ仕組み、2026-07-20)
 document.getElementById("yamabushiMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderMagistrateScreen(); };
@@ -218,3 +232,24 @@ document.getElementById("yamabushiDepartBtn").onclick = () => {
 };
 
 document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
+
+document.getElementById("yamabushiyadoBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
+// 海の村の潮風宿と同じ「時間帯演出」(現在時刻→夜へクロスフェード→暗転→翌朝フェードイン)を、
+// 背景セットだけ霧の宿(BG_SETS.yamabushiyado)に差し替えて流用する。効果自体もuseLodging()を
+// そのまま呼び、温泉村/海の村の宿と完全に同じ回復量にしてある
+document.getElementById("yamabushiyadoStayBtn").onclick = () => {
+  const active = fieldParty.filter((c) => c.status === "active");
+  const cost = YAMABUSHIYADO_COST_PER_PERSON * active.length;
+  if (active.length === 0 || state.gold < cost) return;
+  playLodgingTransition(() => {
+    state.gold -= cost;
+    active.forEach((c) => useLodging(c));
+    advanceToNextMorning();
+    saveState();
+    revealLodgingMorning(() => {
+      renderYamabushiYado();
+      playSfx("select");
+      showConfirmModal("一泊し、HP・MPが全回復した。", [{ label: "OK", className: "big" }]);
+    });
+  }, BG_SETS.yamabushiyado);
+};

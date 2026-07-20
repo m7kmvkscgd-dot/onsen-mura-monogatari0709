@@ -26,8 +26,9 @@ const BG_SETS = {
   shugendo: { dawn: "assets/bg/shugendo_dawn.jpg", asa: "assets/bg/shugendo_asa.jpg", day: "assets/bg/shugendo_day.jpg", dusk: "assets/bg/shugendo_dusk.jpg", night: "assets/bg/shugendo_night.jpg" },
   yama: { dawn: "assets/bg/yama_dawn.jpg", asa: "assets/bg/yama_asa.jpg", day: "assets/bg/yama_day.jpg", dusk: "assets/bg/yama_dusk.jpg", night: "assets/bg/yama_night.jpg" },
   yama2: { dawn: "assets/bg/yama2_dawn.jpg", asa: "assets/bg/yama2_asa.jpg", day: "assets/bg/yama2_day.jpg", dusk: "assets/bg/yama2_dusk.jpg", night: "assets/bg/yama2_night.jpg" },
-  // 山伏の里(渓流→光る竹林の先にある第三の村、2026-07-19)。本体/温泉の2画面分(宿はまだ無い)
+  // 山伏の里(渓流→光る竹林の先にある第三の村、2026-07-19)。本体/宿/温泉の3画面分(宿は2026-07-21追加)
   yamabushi: { dawn: "assets/bg/yamabushi_dawn.jpg", asa: "assets/bg/yamabushi_asa.jpg", day: "assets/bg/yamabushi_day.jpg", dusk: "assets/bg/yamabushi_dusk.jpg", night: "assets/bg/yamabushi_night.jpg" },
+  yamabushiyado: { dawn: "assets/bg/yamabushiyado_dawn.jpg", asa: "assets/bg/yamabushiyado_asa.jpg", day: "assets/bg/yamabushiyado_day.jpg", dusk: "assets/bg/yamabushiyado_dusk.jpg", night: "assets/bg/yamabushiyado_night.jpg" },
   yamabushionsen: { dawn: "assets/bg/yamabushionsen_dawn.jpg", asa: "assets/bg/yamabushionsen_asa.jpg", day: "assets/bg/yamabushionsen_day.jpg", dusk: "assets/bg/yamabushionsen_dusk.jpg", night: "assets/bg/yamabushionsen_night.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
@@ -153,9 +154,11 @@ function updateSceneBackgrounds() {
   if (umiyadoHero) umiyadoHero.style.backgroundImage = `url('${BG_SETS.umiyado[tod]}')`;
   const umionsenHero = document.getElementById("umionsenHero");
   if (umionsenHero) umionsenHero.style.backgroundImage = `url('${BG_SETS.umionsen[tod]}')`;
-  // 山伏の里(第三の村、2026-07-19)
+  // 山伏の里(第三の村、2026-07-19。宿は2026-07-21追加)
   const yamabushiHero = document.getElementById("yamabushiHero");
   if (yamabushiHero) yamabushiHero.style.backgroundImage = `url('${BG_SETS.yamabushi[tod]}')`;
+  const yamabushiyadoHero = document.getElementById("yamabushiyadoHero");
+  if (yamabushiyadoHero) yamabushiyadoHero.style.backgroundImage = `url('${BG_SETS.yamabushiyado[tod]}')`;
   const yamabushionsenHero = document.getElementById("yamabushionsenHero");
   if (yamabushionsenHero) yamabushionsenHero.style.backgroundImage = `url('${BG_SETS.yamabushionsen[tod]}')`;
 }

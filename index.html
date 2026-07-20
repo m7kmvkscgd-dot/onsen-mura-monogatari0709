@@ -760,13 +760,34 @@
         <div class="roster-sub" style="margin-top:0.3rem;">光る竹林を抜けた先、山霧に包まれた修験者たちの里にたどり着いた。</div>
       </div>
       <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
-           宿はまだ未実装のため対象外(implementation_map.html参照) -->
+           宿は絵が揃ったため2026-07-21に追加(implementation_map.html参照) -->
       <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
+        <button class="big town-card" id="yamabushiYadoBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">霧の宿</span></span></button>
         <button class="big town-card" id="yamabushiMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
         <button class="big town-card" id="yamabushiOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">雲海の湯</span></span></button>
         <button class="big town-card" id="yamabushiExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
         <button class="big primary town-depart" id="yamabushiDepartBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span></button>
       </div>
+    </div>
+  </div>
+
+  <!-- 山伏の里の宿(2026-07-21、画像が揃ったため追加。海の村の潮風宿と完全に同仕様) -->
+  <div class="screen" id="screen-yamabushiyado">
+    <div class="hero has-dw-header" id="yamabushiyadoHero">
+      <div class="dw-header">
+        <button class="dw-header-back" id="yamabushiyadoHeaderBack"></button>
+        <div class="dw-header-title" id="yamabushiyadoHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="yamabushiyadoHeaderGold"></span><span class="dw-header-time" id="yamabushiyadoHeaderTime"></span></div>
+      </div>
+      <h1>霧の宿</h1>
+    </div>
+    <div class="body-pad">
+      <div class="card">
+        <div class="roster-name">一泊する</div>
+        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員のHP・MPが全回復し、疲労が少し和らぐ(1人<span id="yamabushiyadoCostText"></span>G)</div>
+        <button class="big primary" id="yamabushiyadoStayBtn" style="margin-top:0.6rem;"></button>
+      </div>
+      <button class="big" id="yamabushiyadoBackBtn" style="margin-top:1rem;">山伏の里に戻る</button>
     </div>
   </div>
 
