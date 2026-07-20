@@ -50,6 +50,9 @@ function yamaBgSetForCurrentState() {
 function currentAreaBgSet() {
   if (currentStage === "coast") return BG_SETS.coast;
   if (currentStage === "cave") return caveBgSetForCurrentState();
+  // 少し森の1層目は洞窟を抜けた直後の場面のため、廃城下町/海の村どちらへ向かう場合も
+  // 洞窟出口のイラストを使う(2層目以降は通常の森の絵に戻る)
+  if (currentStage === "ruinsforest" && currentFloor <= 1) return BG_SETS.caveExit;
   if (currentStage === "ruins") return BG_SETS.ruins;
   if (currentStage === "gate") return BG_SETS.gate;
   if (currentStage === "castle") return BG_SETS.castle;

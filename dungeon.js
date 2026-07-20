@@ -52,6 +52,7 @@ function collectExpeditionSnapshot() {
     stageEntryStack,
     retreating,
     floorsSinceLastBattle,
+    ruinsforestDestination,
     inBattle: typeof battle !== "undefined" && !!battle,
     fieldPartyIds: fieldParty.map((c) => c.id),
     reserveId: reserveFieldMember ? reserveFieldMember.id : null,
@@ -80,6 +81,7 @@ function resumeExpeditionFromSave() {
   stageEntryStack = Array.isArray(snap.stageEntryStack) ? snap.stageEntryStack : [];
   retreating = !!snap.retreating;
   floorsSinceLastBattle = snap.floorsSinceLastBattle != null ? snap.floorsSinceLastBattle : 99;
+  ruinsforestDestination = snap.ruinsforestDestination || null;
   fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
   // 稼働できる仲間が誰も居ない(全員瀕死/ロスト)なら再開のしようがないので、諦めて町へ
@@ -223,6 +225,7 @@ function clearOmikujiExpeditionEffect() {
 function enterDungeon() {
   currentFloor = 1;
   retreating = false;
+  ruinsforestDestination = null;
   recordBossWoundIfPursuing(); // 通常はfinishRetreat()で既に処理済みのはずだが、念のための保険
   recordMaxFloorReached();
   pruneActiveParty();
@@ -949,6 +952,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
       // 中継ステージの最深部からの自動継続(洞窟→少し森→廃城下町→門、渓流→光る竹林)。選択の余地の
       // ない一本道のため、showPathChoiceは経由せず、advanceBtn.onclick側からここへ直接来る
       if (currentStage === "valley") stopValleyAreaBgm(); // 渓流専用フィールド曲を、光る竹林へ抜ける瞬間に止める
+      if (currentStage === "cave") ruinsforestDestination = null; // 少し森へ入り直すたび、行き先の選択をまっさらに戻す
       stageEntryStack.push({ stage: currentStage, floor: currentFloor });
       currentStage = STAGE_CHAIN_NEXT[currentStage];
       currentFloor = 1;
@@ -1132,22 +1136,38 @@ document.getElementById("advanceBtn").onclick = () => {
     playDungeonMoveTransition(() => arriveAtYamabushi());
     return;
   }
-  // 瓦礫の洞窟を抜けた先の「少し森」の最深部は一本道ではなく、ここで「廃城下町へ」/「海の村へ」の
-  // 2択に分かれる(手描き地図の指示、2026-07-19: 洞窟を抜けてからの分岐をこの図の通りに変更)
-  if (currentStage === "ruinsforest" && targetFloor > STAGE_CHAIN_MAX.ruinsforest) {
+  // 瓦礫の洞窟を抜けた先の「少し森」の2層目で、「廃城下町へ」/「海の村へ」の2択に分かれる
+  // (世界地図エディタのJSONで確定、2026-07-21: 最深部ではなく2層目に分岐点を前倒しし、
+  // 選んだ後は残りの層を普通に歩き切った先で自動到着する形に変更)
+  if (currentStage === "ruinsforest" && targetFloor === RUINSFOREST_FORK_FLOOR && !ruinsforestDestination) {
     showConfirmModal("道が分かれている。どちらへ向かう？", [
       {
         label: "廃城下町へ", className: "big primary",
         onClick: () => {
-          dlog("🏚️廃城下町へ足を踏み入れた。");
-          playDungeonMoveTransition(() => moveOneFloor(RUINSFOREST_TO_RUINS_KEY));
+          ruinsforestDestination = "ruins";
+          dlog("🏚️廃城下町へ続く道を進むことにした。");
+          playDungeonMoveTransition(() => moveOneFloor(null));
         },
       },
       {
         label: "海の村へ", className: "big primary",
-        onClick: () => { playDungeonMoveTransition(() => arriveAtUmiMura()); },
+        onClick: () => {
+          ruinsforestDestination = "umimura";
+          dlog("⛵海の村へ続く道を進むことにした。");
+          playDungeonMoveTransition(() => moveOneFloor(null));
+        },
       },
     ], null, "scene-fork-panel");
+    return;
+  }
+  // 少し森の最深部: 2層目で選んだ行き先へ、選択肢を出さず自動的に到着する
+  if (currentStage === "ruinsforest" && targetFloor > STAGE_CHAIN_MAX.ruinsforest) {
+    if (ruinsforestDestination === "umimura") {
+      playDungeonMoveTransition(() => arriveAtUmiMura());
+    } else {
+      dlog("🏚️廃城下町へ足を踏み入れた。");
+      playDungeonMoveTransition(() => moveOneFloor(RUINSFOREST_TO_RUINS_KEY));
+    }
     return;
   }
   // 中継ステージ(洞窟/少し森/廃城下町/渓流/光る竹林/修験道)の最深部へ進もうとした場合は、
@@ -1442,6 +1462,11 @@ const CAVE_MAX_FLOOR = 15;
 // 瓦礫の洞窟→少し森(3層)→ここで廃城下町/海の村に分岐、という形に変更。廃城下町自体は
 // 内部で分岐しない一本道になり、最深部で門(古城方向)へ自動的に突き当たる)
 const RUINSFOREST_TO_RUINS_KEY = "__ruinsforest_to_ruins__";
+// 少し森の2層目で「廃城下町へ/海の村へ」を選ばせ、残りの層を歩き切った先で選んだ方に自動到着する
+// 方式に変更(ユーザー指示、2026-07-21: 世界地図エディタのJSONで「2層目で分岐」に確定)。
+// ここで選んだ行き先を覚えておく番人値。cave→ruinsforestへ切り替わるたび・新しい遠征の開始時にnullへ戻す
+let ruinsforestDestination = null; // null | "ruins" | "umimura"
+const RUINSFOREST_FORK_FLOOR = 2;
 // 洞窟→少し森→(分岐)→廃城下町→門、渓流→光る竹林の中継チェーン(2026-07-19)。各ステージの
 // 最深部に到達すると、選択の余地なく自動的に次のステージへ切り替わる(森からの分かれ道のような
 // player choice ではない)。階層数は敵データがまだ揃っていない段階の仮決め(下地の歩行テスト用)。
@@ -1449,7 +1474,7 @@ const RUINSFOREST_TO_RUINS_KEY = "__ruinsforest_to_ruins__";
 const RUINS_MAX_FLOOR = 12; // 廃城下町(仮)
 const GATE_MAX_FLOOR = 1; // 門(仮。古城の鍵が無いと通れない固定の行き止まり)
 const CASTLE_MAX_FLOOR = 10; // 古城(仮。鍵の入手経路ができるまでは実質未到達)
-const RUINSFOREST_MAX_FLOOR = 3; // 瓦礫の洞窟を抜けた先の「少し森」(3層だけ続く道、ここで廃城下町/海の村に分岐)
+const RUINSFOREST_MAX_FLOOR = 4; // 瓦礫の洞窟を抜けた先の「少し森」(4層。2層目で廃城下町/海の村に分岐し、残りを歩き切った先で自動到着)
 const VALLEY_MAX_FLOOR = 10; // 渓流(仮)
 const BAMBOO_MAX_FLOOR = 10; // 光る竹林(仮。最深部で山伏の里(村)へ自動到着する)
 const SHUGENDO_MAX_FLOOR = 10; // 修験道(仮)
