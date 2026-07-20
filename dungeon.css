@@ -194,9 +194,10 @@
     opacity: 0;
   }
   /* 階層表示・時間表示(.dungeon-info-row、floor-badge内のfloorBadgeText/dungeonTimeBadgeと
-     quest系バッジを内包)はこちらは逆にフェードで透過させる(ユーザー指示、2026-07-21) */
+     quest系バッジを内包)は完全に消すのではなく、半透明(30%)までフェードさせる
+     (ユーザー指示、2026-07-21。「透明」=完全に消すではなく薄く透ける状態という指摘を受けて訂正) */
   body.dungeon-move-active .dungeon-info-row {
-    opacity: 0; transition: opacity 0.2s ease;
+    opacity: 0.3; transition: opacity 0.2s ease;
   }
   /* ============ 進路選択の演出(木札が縦に連なる「森の分岐」演出) ============
      既存の.path-choice-panel/.path-choice-cards/.path-cardはそのまま(横並びカード用の土台として)
