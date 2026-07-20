@@ -1573,7 +1573,7 @@ function anyOtherAllyGuarding(entity) {
 }
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName) {
   logSuffix = logSuffix || "";
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
   if (actor && actor.instanceId !== undefined && target.__allies) {
@@ -1674,34 +1674,37 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 阿修羅突きなど: 「HPが満タンの敵」の判定はダメージを引く前の時点で見る(このダメージ自体で減った後では
   // 満タンでなくなってしまい絶対に発動しなくなるため)
   const wasFullHpBeforeThisHit = target.hp >= target.maxHp;
+  // 大技のダメージ行は「Aの技名！Bは◯ダメージ！」の1行にまとめる(以前は「Aが技名を放った！」を
+  // 別行で先に出していたが、ユーザー指示により統合した)。通常攻撃/技はこれまで通り「AはBに◯ダメージ！」のまま
+  const dmgLine = bigAttackName ? `${actorLabel}の${bigAttackName}！${target.label}は${dmg}ダメージ${logSuffix}！` : `${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`;
   // おみくじ「大吉」: パーティ全員で共有する1回だけの致命傷耐え(同じオブジェクト参照を
   // 全員のpassivesに配っておくことで、誰が最初に致命傷を受けても消費は1回だけになる)
   if (lethal && target.passives && target.passives.sharedSurviveFatal && !target.passives.sharedSurviveFatal.used) {
     target.passives.sharedSurviveFatal.used = true;
     target.hp = 1;
-    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(dmgLine);
     log(`${target.label}はお守りの力で致命傷をこらえた！`);
   } else if (lethal && target.passives && target.passives.omamoriSharedSurviveFatal && !target.passives.omamoriSharedSurviveFatal.used) {
     // 須佐之男命の御守: おみくじ大吉(sharedSurviveFatal、遠征単位)とは別枠の、戦闘単位の共有致命傷耐え
     target.passives.omamoriSharedSurviveFatal.used = true;
     target.hp = 1;
-    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(dmgLine);
     log(`${target.label}は須佐之男命の御守の加護で致命傷をこらえた！`);
   } else if (lethal && typeof jizoBlessingActive !== "undefined" && jizoBlessingActive && fieldParty.includes(target)) {
     // 探索イベント「苔むしたお地蔵さま」の加護: 賽銭を納めていると、遠征中1回だけ味方の致命傷をHP1でこらえる。
     // おみくじ大吉/須佐之男の御守とはスロットを共有しない独立の枠(passivesの単一スロットを奪い合わないための別変数方式)
     jizoBlessingActive = false;
     target.hp = 1;
-    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(dmgLine);
     log(`${target.label}はお地蔵さまの加護で致命傷をこらえた！`);
   } else if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
     target.hp = 1;
-    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(dmgLine);
     log(`${target.label}は致命傷を気迫でこらえた！`);
   } else {
     target.hp = Math.max(0, target.hp - dmg);
-    log(`${actorLabel}は${target.label}に${dmg}ダメージ${logSuffix}！`);
+    log(dmgLine);
   }
   // かばう中(logSuffix==="(かばう)")かつ「会心の返し」(guardCounter、100%確定反撃)持ちの場合は、
   // ここでの汎用「迎撃」(counterChance、被弾時の確率反撃)を重ねて発動させない。
@@ -2100,15 +2103,16 @@ function enemyBigAttack(enemy, targets, log) {
   const hitTargets = profile.aoe ? alive : [singleTarget];
   let mult = profile.mult;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
+  const bigAttackName = (profile.name) || "大技";
   return hitTargets.map((target) => {
     if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
       target.passives.onceGuardUsed = true;
-      log(`${target.label}は${enemy.label}の大技を完全に見切ってかわした！`);
+      log(`${target.label}は${enemy.label}の${bigAttackName}を完全に見切ってかわした！`);
       onEvadeSuccess(target, enemy, log);
       return { target, dmg: null, hit: false };
     }
     if (!rollHit(enemy, target)) {
-      log(`${target.label}は${enemy.label}の大技をかわした！`);
+      log(`${target.label}は${enemy.label}の${bigAttackName}をかわした！`);
       onEvadeSuccess(target, enemy, log);
       return { target, dmg: null, hit: false };
     }
@@ -2121,7 +2125,7 @@ function enemyBigAttack(enemy, targets, log) {
       if (target.guardProtectCount >= GUARD_MAX_PROTECT_COUNT || Math.random() >= GUARD_CONTINUE_CHANCE) target.guarding = false; // 50%で構え継続、50%で解除。ただし2人守ったら強制解除
       suffix = "(かばう)";
     }
-    const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix);
+    const dmg = applyDamageToTarget(target, rawDmg, log, enemy.label, enemy, suffix, null, bigAttackName);
     const guardCounterDmg = suffix === "(かばう)" ? handleGuardSynergyPassives(target, enemy, log) : null;
     const wentDown = target.hp <= 0;
     const stressGain = damageStress(wentDown ? target.maxHp : dmg, target.maxHp);

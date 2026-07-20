@@ -346,8 +346,8 @@ function processNext() {
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = false;
         actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
-        // 専用プロファイルに技名があればそれを表示する(例: 天狗「扇の突風」)。無ければ従来どおり「大技」
-        blog(`${actor.label}が${actor.bigAttack && actor.bigAttack.name ? actor.bigAttack.name : "大技"}を放った！`);
+        // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
+        // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
         const hpBeforeBig = {};
         alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
         const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;
@@ -400,7 +400,9 @@ function processNext() {
       }
       if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = true;
-        blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
+        // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
+        // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)
+        if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
         triggerWarningFlash();
         playSfx("big_attack_warning");
       }
