@@ -10,6 +10,10 @@ let manualRetreatMode = false;
 let manualRetreatHomeVillage = null; // "umimura" | "yamabushi" など、引き返す先の村のcurrentStage名
 const VILLAGE_STAGE_DISPLAY_NAME = { umimura: "海の村", yamabushi: "山伏の里" };
 let currentFloor = 0;
+// 連続戦闘のストレス軽減(ピティ制)用カウンター。直近の戦闘から何階層経過したかを数え、
+// rollEncounter()の戦闘率補正に使う(下記PITY_*定数参照)。99は「しばらく戦闘していない」扱いの
+// 初期値(=通常倍率からスタート、いきなり抑制も確定発生もされない)
+let floorsSinceLastBattle = 99;
 let currentStage = "forest"; // "forest"(深淵の森) | "coast"(海岸) | "cave"(洞窟) | "ruins"(廃城下町) | "gate"(門) | "castle"(古城) | "valley"(渓流) | "bamboo"(光る竹林) | "shugendo"(修験道) | "yama"(山)。
 // forest/coastは町の出発ボタンで選び、enterDungeon()〜帰還/全滅まで有効。それ以外は
 // STAGE_CHAIN_NEXT(下記)で繋がった中継ステージで、前のステージの最深部から自動的に切り替わり、
@@ -43,6 +47,7 @@ function collectExpeditionSnapshot() {
     floor: currentFloor,
     stageEntryStack,
     retreating,
+    floorsSinceLastBattle,
     inBattle: typeof battle !== "undefined" && !!battle,
     fieldPartyIds: fieldParty.map((c) => c.id),
     reserveId: reserveFieldMember ? reserveFieldMember.id : null,
@@ -70,6 +75,7 @@ function resumeExpeditionFromSave() {
   currentFloor = Math.max(1, snap.floor || 1);
   stageEntryStack = Array.isArray(snap.stageEntryStack) ? snap.stageEntryStack : [];
   retreating = !!snap.retreating;
+  floorsSinceLastBattle = snap.floorsSinceLastBattle != null ? snap.floorsSinceLastBattle : 99;
   fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
   // 稼働できる仲間が誰も居ない(全員瀕死/ロスト)なら再開のしようがないので、諦めて町へ
@@ -2158,9 +2164,31 @@ function deliverCarriedAllies() {
 }
 
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率・財宝発見率を下げる(固定値)
-const RETREAT_BATTLE_CHANCE = 0.18; // ユーザー指示で19%→18%に1%下げた
+const RETREAT_BATTLE_CHANCE = 0.18; // ユーザー指示で19%・18%に1%下げた
 const RETREAT_GOLD_CHANCE = 0.10;
+// 連続戦闘のストレス軽減(ピティ制、2026-07-21)。「進む→戦闘→進む→また戦闘」が連続すると
+// 実際のプレイ体験としては「運が悪い」ではなく「戦闘が多すぎるゲーム」という印象になりやすい、
+// というユーザー提案を受けて導入。戦闘直後は戦闘率を大きく下げ、階層を経るごとに通常倍率へ戻し、
+// 一定階層経っても戦闘が無ければ確定発生させる。パラメータは実データ(PATH_DEFS等)でのシミュレーション
+// (30層/15層想定、複数案を比較)を経てユーザーが選んだ「案E」の数値。総戦闘数は現行比-13〜18%程度に
+// 抑えつつ、3連続以上の発生率を現行の40〜65%程度から10〜20%程度まで削減する
+const PITY_MIN_MULT = 0.45; // 戦闘直後の戦闘率倍率
+const PITY_RAMP_FLOORS = 3; // この階数で通常倍率(1.0)まで回復する
+const PITY_GUARANTEE_FLOORS = 6; // この階数、戦闘が無いまま経過したら確定発生させる
+function pityBattleChanceMultiplier() {
+  if (floorsSinceLastBattle >= PITY_GUARANTEE_FLOORS) return Infinity; // 確定発生の目印
+  if (floorsSinceLastBattle >= PITY_RAMP_FLOORS) return 1;
+  return PITY_MIN_MULT + (1 - PITY_MIN_MULT) * (floorsSinceLastBattle / PITY_RAMP_FLOORS);
+}
+function applyEncounterPity(baseChance) {
+  const mult = pityBattleChanceMultiplier();
+  return mult === Infinity ? 1 : Math.min(1, baseChance * mult);
+}
 function rollEncounter(pathBias) {
+  // ここでの1回の呼び出しが「1階層分の抽選」に対応するため、まず経過階層を進めておく。
+  // 実際に戦闘が発生した場合はstartBattle()側で0にリセットされる(このrollEncounter内の
+  // どの分岐から戦闘が始まっても、呼び出し元を問わず必ず通る単一の戦闘開始関数のため確実)
+  floorsSinceLastBattle++;
   // 神隠しの道(森)/幻の島(海岸)は選ぶと確定で魂のかけらを2つ手に入れる特別な道(戦闘/財宝抽選はしない)
   if (pathBias === "kamikakushi") {
     lastFloorMoveOutcome = "kamikakushi"; // オート帰還の一時停止判定用(実際にはpathBiasが常にnullなので帰還中は通らない)
@@ -2181,7 +2209,11 @@ function rollEncounter(pathBias) {
   // ただしそのステージの敵データがまだ1体も無い場合(廃城下町/門/古城の下地テスト段階)は、
   // 帰還中の固定値も含めて戦闘発生率を強制的に0にする(pickEncounterForFloorが空を返して
   // クラッシュするのを未然に防ぐための安全策。敵データが揃えば自動的に通常通り機能する)
-  const battleChance = stageHasEnemies(currentStage) ? (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) : 0;
+  const rawBattleChance = stageHasEnemies(currentStage) ? (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) : 0;
+  // ピティ制は帰還中には適用しない(シミュレーションの結果、帰還のRETREAT_BATTLE_CHANCEは元々低いため
+  // 6階確定発生がむしろ戦闘数を増やす方向に働くと判明。帰還はもともと3連続以上の発生率も低く
+  // 導入の必要性が薄いという判断。ユーザー指示、2026-07-21)
+  const battleChance = rawBattleChance > 0 ? (retreating ? rawBattleChance : applyEncounterPity(rawBattleChance)) : 0;
   // 座敷わらしの幸運(イベント): この遠征中は財宝発見率1.5倍(戦闘率は不変、合計が1を超えないよう上限あり)
   const goldChance = retreating ? RETREAT_GOLD_CHANCE : Math.min(baseGold * (warashiLuckActive ? 1.5 : 1), Math.max(0, 1 - battleChance));
   // 探索イベントの取り分(静寂の枠から削る。帰還中・進路選択なし(依頼対象接近等)の時は出ない)

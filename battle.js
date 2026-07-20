@@ -16,6 +16,9 @@ let battleActionLocked = false;
 // 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
 function startBattle(enemies, pathDef, encounterText) {
   markEnemiesSeen(enemies); // 図鑑: 遭遇した敵を記録する(倒す必要はなく、出会った時点で登録される)
+  // 連続戦闘のストレス軽減(ピティ制)用カウンターを、どの経路から始まった戦闘でも必ずここでリセットする
+  // (通常のrollEncounter経由はもちろん、討伐依頼の強制遭遇/ボス追跡/イベント戦なども全てstartBattle経由のため)
+  floorsSinceLastBattle = 0;
   // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる。この戦闘で使い切る(2戦目以降には持ち越さない)
   const omikujiGuaranteedCrits = state.omikujiGuaranteedCritsLeft || 0;
   if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
