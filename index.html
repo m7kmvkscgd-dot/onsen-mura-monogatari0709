@@ -664,13 +664,20 @@
 
   <!-- 海の村(第二の町、2026-07-19。廃城下町の出口の分岐から到達する) -->
   <div class="screen" id="screen-umimura">
-    <div class="hero has-dw-header" id="umimuraHero">
-      <div class="dw-header">
-        <button class="mute-btn" id="umimuraMuteBtn" style="flex:0 0 auto;">⚙️</button>
-        <div class="dw-header-title">海の村</div>
-        <div class="dw-header-right"><span class="dw-header-gold" id="umimuraHeaderGold"></span><span class="dw-header-time" id="umimuraHeaderTime"></span></div>
+    <!-- 温泉村(screen-town)の村トップと完全に同じレイアウトにしてある(ユーザー指摘、2026-07-21:
+         dw-header(小さい帯にまとめる汎用ヘッダー、他の中身画面と共通)ではなく、村のトップ画面自体は
+         温泉村と同じ「歯車は右上に独立/タイトルは大きく左寄せ/金額はその下」という専用レイアウトに統一する -->
+    <div class="hero" id="umimuraHero">
+      <div class="topbar" style="justify-content:flex-end;">
+        <button class="mute-btn" id="umimuraMuteBtn">⚙️</button>
       </div>
-      <h1>海の村</h1>
+      <div class="hero-title-row">
+        <h1>海の村</h1>
+      </div>
+      <div class="hero-title-row" style="margin-top:0.2rem;">
+        <span class="time-of-day-label" id="umimuraHeaderTime"></span>
+      </div>
+      <span class="gold town-gold-badge" id="umimuraHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
       <div class="card">
@@ -732,13 +739,18 @@
 
   <!-- 山伏の里(渓流→光る竹林の先にある第三の村、2026-07-19) -->
   <div class="screen" id="screen-yamabushi">
-    <div class="hero has-dw-header" id="yamabushiHero">
-      <div class="dw-header">
-        <button class="mute-btn" id="yamabushiMuteBtn" style="flex:0 0 auto;">⚙️</button>
-        <div class="dw-header-title">山伏の里</div>
-        <div class="dw-header-right"><span class="dw-header-gold" id="yamabushiHeaderGold"></span><span class="dw-header-time" id="yamabushiHeaderTime"></span></div>
+    <!-- 温泉村(screen-town)の村トップと完全に同じレイアウト(海の村と同じ理由、2026-07-21) -->
+    <div class="hero" id="yamabushiHero">
+      <div class="topbar" style="justify-content:flex-end;">
+        <button class="mute-btn" id="yamabushiMuteBtn">⚙️</button>
       </div>
-      <h1>山伏の里</h1>
+      <div class="hero-title-row">
+        <h1>山伏の里</h1>
+      </div>
+      <div class="hero-title-row" style="margin-top:0.2rem;">
+        <span class="time-of-day-label" id="yamabushiHeaderTime"></span>
+      </div>
+      <span class="gold town-gold-badge" id="yamabushiHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
       <div class="card">

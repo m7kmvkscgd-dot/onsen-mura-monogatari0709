@@ -18,11 +18,13 @@ let floorsSinceLastBattle = 99;
 // 敵ゼロのエリア(廃城下町/門/古城/渓流/光る竹林/修験道/山など)の下地・背景を戦闘無しで
 // 歩いて確認したい時のためのもの。セーブはせず、リロードすれば常にfalseへ戻る
 let debugNoEncounters = false;
-// 開発者用: debugNoEncountersがONの間だけ、設定画面(screen-settings)から中継の村へワープできる。
-// 対象はVILLAGE_STAGE_DISPLAY_NAMEに登録済みの村(現状: 海の村/山伏の里)を自動的に拾うため、
-// 今後村が増えてそちらに1行追記するだけで自動的にワープ対象になる(title.js renderSettingsScreen参照)
+// 開発者用: debugNoEncountersがONの間だけ、設定画面(screen-settings)から村へワープできる。
+// 温泉村(拠点、"onsen_mura"固定)+VILLAGE_STAGE_DISPLAY_NAMEに登録済みの中継の村(現状: 海の村/山伏の里)を
+// 自動的に拾うため、今後中継の村が増えてそちらに1行追記するだけで自動的にワープ対象になる
+// (title.js renderSettingsScreen参照、2026-07-21ユーザー指示で温泉村も対象に追加)
 function debugWarpTargets() {
-  return Object.keys(VILLAGE_STAGE_DISPLAY_NAME).map((stage) => ({ stage, label: VILLAGE_STAGE_DISPLAY_NAME[stage] }));
+  const relayTargets = Object.keys(VILLAGE_STAGE_DISPLAY_NAME).map((stage) => ({ stage, label: VILLAGE_STAGE_DISPLAY_NAME[stage] }));
+  return [{ stage: "onsen_mura", label: "温泉村" }, ...relayTargets];
 }
 // 【不具合修正、2026-07-21】以前はここで単一階層のダミースタック([{forest,1}]だけ)を積んでいたため、
 // ワープ後に「出発する」で温泉村方面を選ぶと、実際には通っていない洞窟/少し森(または渓流/光る竹林)を
@@ -36,6 +38,18 @@ function debugWarpStageStack(stage) {
 }
 function debugWarpToVillage(stage) {
   if (!debugNoEncounters) return; // 安全策: モードOFF中は機能させない
+  // 温泉村(拠点)は中継ステージではなく、遠征そのものを終わらせて町へ戻るだけの特別枠。
+  // finishRetreat()の演出(バナー/リザルト画面等)は挟まず、開発用に即座に町画面へ切り替える
+  if (stage === "onsen_mura") {
+    clearExpeditionSnapshot();
+    retreating = false;
+    manualRetreatMode = false;
+    manualRetreatHomeVillage = null;
+    saveState();
+    renderTown();
+    showScreen("screen-town");
+    return;
+  }
   if (state.activePartyIds.length === 0) { showInfoModal("パーティを1人以上選んでから使ってください"); return; }
   enterDungeon(); // 通常の出発と同じ下ごしらえ(fieldParty構築・各種トラッカーのリセット)をそのまま流用
   currentStage = stage;
