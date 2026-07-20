@@ -41,6 +41,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.statusImmuneTurns = 0;
     c.tauntTurns = 0;
     c.statMods = [];
+    c.stackCounters = {}; // 迅雷突き/鎧砕き/剛槍など蓄積型の一時ステータス変化も戦闘をまたいで持ち越さない
     c.reloading = false; // 砲術士の装填クールダウンも戦闘をまたいで持ち越さない
     c.hawkTurnsLeft = 0; // 狩人「鷹を呼ぶ」も戦闘をまたいで持ち越さない
     c.hawkGuardTargetId = null;

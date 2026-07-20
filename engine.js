@@ -403,6 +403,15 @@ function applyStatMod(entity, stat, mult, turns) {
   if (existing) { existing.mult = mult; existing.turns = turns; }
   else entity.statMods.push({ stat, mult, turns });
 }
+// 蓄積型の一時ステータス変化(迅雷突き/鎧砕きの防御デバフ、剛槍の攻撃バフなど)。使うたびにkey別のスタックを
+// 1増やし(maxStacksで頭打ち)、そのスタック数×perStackぶんの変化量でapplyStatModを呼ぶ(期間は毎回リセット)。
+// perStackは符号付き(デバフなら負の値、バフなら正の値)
+function applyStackingStatMod(entity, key, stat, perStack, maxStacks, turns) {
+  entity.stackCounters = entity.stackCounters || {};
+  const stacks = Math.min(maxStacks, (entity.stackCounters[key] || 0) + 1);
+  entity.stackCounters[key] = stacks;
+  applyStatMod(entity, stat, 1 + perStack * stacks, turns);
+}
 // 自分のターンが来るたびに残りターン数を1減らし、0になったものは消す
 function tickStatMods(entity) {
   if (!entity.statMods || !entity.statMods.length) return;
@@ -784,10 +793,13 @@ function initPassives() {
     turnStartCureChance: null, // {type, chance} 自分のターン開始時、この確率で状態異常を自動で治す(type:"bleed"/"poison"/"all"。覇気など)
     preFirstHitEvasionAdd: 0, // その戦闘で初めて敵に攻撃を受けるまで、回避率がこの値だけ上がる(忍足など)
     onKillEvasionBonus: 0, // 敵を倒した直後、次の1回だけ受ける攻撃への回避率がこの値だけ上がる(修羅刃など。蓄積しない)
-    onHitSelfHealPct: 0, // 通常攻撃が敵に命中するたび、自分の最大HPのこの割合だけ回復する(覇気など)
+    onHitSelfHealPct: 0, // 通常攻撃が敵に命中するたび、自分の最大HPのこの割合だけ回復する(未使用、汎用フックとして残置)
     onEvadeCounterMult: 0, // 敵の攻撃を回避した瞬間、この攻撃力倍率で反撃する(瞬身の順など)
     onEvadeMpRestore: 0, // 敵の攻撃を回避した瞬間、MPをこれだけ回復する(空蝉など)
-    guardFreeChance: 0, // かばうを使った時、この確率でMP消費が0になる(鉄壁など)
+    guardFreeChance: 0, // かばうを使った時、この確率でMP消費が0になる(未使用、汎用フックとして残置)
+    onHitLifestealPct: 0, // 通常攻撃で与えたダメージのこの割合だけ自分のHPを回復する(覇気など)
+    onDamagedSelfHealPct: 0, // 敵からダメージを受けるたび、自分の最大HPのこの割合だけ回復する(不動の構えなど)
+    onHitSelfStackBuff: null, // {stat, perStack, maxStacks, turns} 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる(剛槍など)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -885,6 +897,9 @@ function applySkillChoice(character, skill, level) {
     if (add.onEvadeCounterMult) p.onEvadeCounterMult = add.onEvadeCounterMult;
     if (add.onEvadeMpRestore) p.onEvadeMpRestore += add.onEvadeMpRestore;
     if (add.guardFreeChance) p.guardFreeChance = Math.min(1, p.guardFreeChance + add.guardFreeChance);
+    if (add.onHitLifestealPct) p.onHitLifestealPct += add.onHitLifestealPct;
+    if (add.onDamagedSelfHealPct) p.onDamagedSelfHealPct += add.onDamagedSelfHealPct;
+    if (add.onHitSelfStackBuff) p.onHitSelfStackBuff = add.onHitSelfStackBuff;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -1123,6 +1138,8 @@ function useTreeSkill(actor, target, skill, log) {
   // selfReload: 砲術士の一部の技(貫通弾・一斉砲撃など)は、命中/回避に関わらず撃てば次の自分のターンは
   // 装填で動けなくなる(cannonShotと同じ仕様)。大威力の代わりに手数が落ちる、というトレードオフの表現
   if (action.selfReload) actor.reloading = true;
+  // 守り槍など: 攻撃と同時に自分もかばう体勢に入る
+  if (action.alsoGuard) { actor.guarding = true; actor.guardProtectCount = 0; }
   // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
   const targets = action.aoe ? target : [target];
   const skillRange = skillRangeType(actor, skill);
@@ -1187,6 +1204,8 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.inflict.type === "defDown") applyStatMod(t, "def", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
       if (action.inflict.type === "spdDown") applyStatMod(t, "spd", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
       if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
+      // 迅雷突き/鎧砕きなど: 使うたびに防御デバフが蓄積する(maxStacksで頭打ち)
+      if (action.inflict.type === "defDownStack") applyStackingStatMod(t, "spearDefDownStack", "def", -(action.inflict.value || 0.2), action.inflict.maxStacks || 2, action.inflict.turns || 3);
     }
     const shotDown = maybeShootDown(actor, t);
     return { hit: true, dmg: totalDmg, shotDown, crit: anyCrit, hawkTargetId: hawkTargetIds[0] || null, hits: hitsList, hawkTargetIds };
@@ -1652,6 +1671,9 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 忍足など: 実際にダメージを受けた(=無効化されなかった)時点で「初めて攻撃を受けた」扱いにする
   if (actor && dmg > 0) target.hasBeenHitThisBattle = true;
   const lethal = target.hp - dmg <= 0;
+  // 阿修羅突きなど: 「HPが満タンの敵」の判定はダメージを引く前の時点で見る(このダメージ自体で減った後では
+  // 満タンでなくなってしまい絶対に発動しなくなるため)
+  const wasFullHpBeforeThisHit = target.hp >= target.maxHp;
   // おみくじ「大吉」: パーティ全員で共有する1回だけの致命傷耐え(同じオブジェクト参照を
   // 全員のpassivesに配っておくことで、誰が最初に致命傷を受けても消費は1回だけになる)
   if (lethal && target.passives && target.passives.sharedSurviveFatal && !target.passives.sharedSurviveFatal.used) {
@@ -1710,6 +1732,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     actor.passives.onHitInflicts.forEach((oh) => {
       // targetSlower条件つき(疾風の出血付与など): 対象が自分より素早さが遅い時だけ判定する
       if (oh.condition === "targetSlower" && !(effectiveStat(actor, "spd") > effectiveStat(target, "spd"))) return;
+      // targetFullHp条件つき(阿修羅突きなど): このダメージを受ける前の時点で対象のHPが満タンだった時だけ判定する
+      if (oh.condition === "targetFullHp" && !wasFullHpBeforeThisHit) return;
       if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
         if (oh.type === "poison") applyPoison(target, (oh.value || 3) + izanamiBoost);
@@ -1721,10 +1745,25 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       }
     });
   }
-  // 覇気など: 通常攻撃が命中するたび、自分の最大HPの一定割合を回復する
+  // 通常攻撃が命中するたび、自分の最大HPの一定割合を回復する(汎用フック、現状未使用)
   if (actor && actor.passives && actor.passives.onHitSelfHealPct) {
     const healAmt = Math.max(1, Math.round(actor.maxHp * actor.passives.onHitSelfHealPct));
     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
+  }
+  // 覇気など: 通常攻撃で与えたダメージの一定割合だけ自分のHPを回復する
+  if (actor && actor.passives && actor.passives.onHitLifestealPct && dmg > 0) {
+    const healAmt = Math.max(1, Math.round(dmg * actor.passives.onHitLifestealPct));
+    actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
+  }
+  // 剛槍など: 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる
+  if (actor && actor.passives && actor.passives.onHitSelfStackBuff) {
+    const b = actor.passives.onHitSelfStackBuff;
+    applyStackingStatMod(actor, "onHitSelfStackBuff", b.stat, b.perStack, b.maxStacks, b.turns);
+  }
+  // 不動の構えなど: 敵からダメージを受けるたび、自分の最大HPの一定割合を回復する
+  if (target && target.passives && target.passives.onDamagedSelfHealPct && target.hp > 0) {
+    const healAmt = Math.max(1, Math.round(target.maxHp * target.passives.onDamagedSelfHealPct));
+    target.hp = Math.min(target.maxHp, target.hp + healAmt);
   }
   return dmg;
 }
