@@ -681,11 +681,8 @@
       <span class="gold town-gold-badge" id="umimuraHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
-      <div class="card">
-        <div class="roster-name">見知らぬ湊町</div>
-        <div class="roster-sub" style="margin-top:0.3rem;">廃城下町を抜けた先にある、海沿いの村にたどり着いた。</div>
-      </div>
-      <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え) -->
+      <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
+           説明カードは温泉村トップに存在しないため削除(ユーザー指摘、2026-07-21) -->
       <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
         <button class="big town-card" id="umimuraYadoBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">潮風宿</span></span></button>
         <button class="big town-card" id="umimuraMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
@@ -707,11 +704,19 @@
       <h1>潮風宿</h1>
     </div>
     <div class="body-pad">
-      <div class="card">
-        <div class="roster-name">一泊する</div>
-        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員のHP・MPが全回復し、疲労が少し和らぐ(1人<span id="umiyadoCostText"></span>G)</div>
-        <button class="big primary" id="umiyadoStayBtn" style="margin-top:0.6rem;"></button>
-      </div>
+      <p class="gold" id="umiyadoGold">0G</p>
+
+      <h2>🏮HPとMPを全回復</h2>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">「宿泊する」を押すと仲間全員が宿に泊まります(1人10G)。</p>
+      <div id="umiyadoRosterList"></div>
+      <button class="big primary" id="umiyadoStayBtn" style="margin-top:0.5rem;width:100%;">宿泊する</button>
+
+      <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
+      <input type="text" id="umiyadoNewCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
+      <div class="class-grid" id="umiyadoClassGrid"></div>
+      <p id="umiyadoClassDescArea" style="font-size:13px;color:var(--dw-caption-color);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
+      <button class="big primary" id="umiyadoCreateCharBtn" style="margin-top:0.5rem;">仲間にする(30G)</button>
+
       <button class="big" id="umiyadoBackBtn" style="margin-top:1rem;">海の村に戻る</button>
     </div>
   </div>
@@ -755,12 +760,9 @@
       <span class="gold town-gold-badge" id="yamabushiHeaderGold" style="margin-top:0.5rem;">0G</span>
     </div>
     <div class="body-pad">
-      <div class="card">
-        <div class="roster-name">霧の晴れ間の集落</div>
-        <div class="roster-sub" style="margin-top:0.3rem;">光る竹林を抜けた先、山霧に包まれた修験者たちの里にたどり着いた。</div>
-      </div>
       <!-- 温泉村と同じ商業クラスカード(2026-07-20、施設は全村共通の経済のため見た目だけ村ごとに差し替え)。
-           宿は絵が揃ったため2026-07-21に追加(implementation_map.html参照) -->
+           宿は絵が揃ったため2026-07-21に追加(implementation_map.html参照)。説明カードは
+           温泉村トップに存在しないため削除(ユーザー指摘、2026-07-21) -->
       <div class="btn-col village-card-grid" style="margin-top:0.8rem;">
         <button class="big town-card" id="yamabushiYadoBtn"><span class="town-medal"><img src="assets/icons/town_yadoya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">霧の宿</span></span></button>
         <button class="big town-card" id="yamabushiMagistrateBtn" style="display:none;"><span class="town-medal"><img src="assets/icons/town_bugyosho.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">奉行所</span></span></button>
@@ -782,11 +784,19 @@
       <h1>霧の宿</h1>
     </div>
     <div class="body-pad">
-      <div class="card">
-        <div class="roster-name">一泊する</div>
-        <div class="roster-sub" style="margin-top:0.3rem;">稼働中の仲間全員のHP・MPが全回復し、疲労が少し和らぐ(1人<span id="yamabushiyadoCostText"></span>G)</div>
-        <button class="big primary" id="yamabushiyadoStayBtn" style="margin-top:0.6rem;"></button>
-      </div>
+      <p class="gold" id="yamabushiyadoGold">0G</p>
+
+      <h2>🏮HPとMPを全回復</h2>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">「宿泊する」を押すと仲間全員が宿に泊まります(1人10G)。</p>
+      <div id="yamabushiyadoRosterList"></div>
+      <button class="big primary" id="yamabushiyadoStayBtn" style="margin-top:0.5rem;width:100%;">宿泊する</button>
+
+      <h2 style="margin-top:1.2rem;">新しい仲間を雇う</h2>
+      <input type="text" id="yamabushiyadoNewCharName" placeholder="名前を入力(空欄でランダムな名前になります)" maxlength="8">
+      <div class="class-grid" id="yamabushiyadoClassGrid"></div>
+      <p id="yamabushiyadoClassDescArea" style="font-size:13px;color:var(--dw-caption-color);margin:0.4rem 0 0.5rem;min-height:2.4em;"></p>
+      <button class="big primary" id="yamabushiyadoCreateCharBtn" style="margin-top:0.5rem;">仲間にする(30G)</button>
+
       <button class="big" id="yamabushiyadoBackBtn" style="margin-top:1rem;">山伏の里に戻る</button>
     </div>
   </div>

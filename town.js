@@ -318,42 +318,7 @@ document.getElementById("toDungeonBtn").onclick = () => {
 // ワクワク感を出すためのユーザー指示)。CLASSES本来のキー順(侍/忍/槍士/薙刀士/狩人/砲術士/陰陽師/僧侶、
 // 解禁済みと未解禁が交互)のままだと表示も交互になり見た目が揃わないため、解禁済み4人を上段、
 // 未解禁4人を下段にまとめて並ぶよう並び替える
-function renderClassGrid() {
-  const grid = document.getElementById("classGrid");
-  grid.innerHTML = "";
-  const descArea = document.getElementById("classDescArea");
-  descArea.textContent = CLASS_DESC[selectedClass] || "";
-  let anyNewlySeen = false;
-  const orderedClassIds = [...Object.keys(CLASSES).filter(isClassUnlocked), ...Object.keys(CLASSES).filter((id) => !isClassUnlocked(id))];
-  orderedClassIds.forEach((classId) => {
-    const c = CLASSES[classId];
-    const div = document.createElement("div");
-    if (!isClassUnlocked(classId)) {
-      div.className = "class-pick locked";
-      const buildingName = (FACILITY_DISPLAY[CLASS_UNLOCK_BUILDING[classId]] || {}).name || "";
-      // filter:brightness(0)は不透明ピクセルを問答無用で黒(0,0,0)にし、アルファ(=キャラの輪郭)だけ
-      // 残す「本物のシルエット」の作り方…のはずだったが、CSSのfilterは要素全体の描画結果(画像+その
-      // 要素自身のbackground-color)に一括で掛かる。imgに直接background:#353a44(.class-pick img
-      // の共通ルール)が付いたままフィルターを掛けると、その背景色ごと真っ黒に潰れてしまい、
-      // キャラの輪郭と背景の区別が付かない「ただの黒い長方形」になっていた(実機で発覚)。
-      // フィルターを掛けない親要素(.class-pick-locked-portrait)側に背景色を持たせ、imgの背景は
-      // 透明にすることで、暗くなった輪郭だけがフィルターを通さない背景の上に浮かぶようにした
-      div.innerHTML = `<div class="class-pick-locked-portrait"><img src="${c.image}"></div><span class="class-pick-locked-label">🔒${buildingName}建築で解禁</span>`;
-      grid.appendChild(div);
-      return;
-    }
-    div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
-    const isNew = !!CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId];
-    div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>${isNew ? '<span class="new-badge">NEW</span>' : ""}`;
-    if (isNew) { state.seenUnlockedClasses[classId] = true; anyNewlySeen = true; }
-    div.onclick = () => { selectedClass = classId; renderClassGrid(); };
-    // カーソルを乗せている間だけそのクラスの説明を表示し、離れたら選択中のクラスの説明に戻す
-    div.onmouseenter = () => { descArea.textContent = CLASS_DESC[classId] || ""; };
-    div.onmouseleave = () => { descArea.textContent = CLASS_DESC[selectedClass] || ""; };
-    grid.appendChild(div);
-  });
-  if (anyNewlySeen) saveState();
-}
+// クラス選択グリッド本体はrenderInnClassGrid(ids)に一本化済み(温泉村/海の村/山伏の里共通)
 let selectedClass = "samurai";
 
 // 宿屋の名簿一覧。宿泊は選択式ではなく「宿泊する」で稼働中の仲間全員が一括で泊まる
@@ -363,15 +328,19 @@ function lodgeableMembers() {
   return state.roster.filter((c) => c.status === "active");
 }
 
-function renderRosterList() {
-  const list = document.getElementById("rosterList");
+// ============ 宿(名簿+宿泊+雇用UI)の共通処理 ============
+// 温泉村の宿屋だけでなく、海の村/山伏の里(今後増える村も含む)の宿でも全く同じ仕様にするため
+// 一本化してある(ユーザー指示、2026-07-21: 「温泉村と同じにして」)。
+// membersFn: 名簿に表示する対象キャラ配列を返す関数。温泉村は()=>state.roster(名簿全員、
+// 家で待機中の仲間も含む)、海の村/山伏の里は()=>fieldParty(その遠征で物理的にそこにいる
+// メンバーのみ)を渡す。ids: { rosterList, lodgeBtn, classGrid, classDesc, nameInput, createBtn, gold }
+function renderInnRosterList(ids, membersFn, onBack) {
+  const list = document.getElementById(ids.rosterList);
+  const members = membersFn();
   list.innerHTML = "";
-  if (state.roster.length === 0) {
-    list.innerHTML = "";
-    return;
-  }
+  if (members.length === 0) return;
   const now = absoluteGameMinutes();
-  state.roster.forEach((c) => {
+  members.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
@@ -401,16 +370,16 @@ function renderRosterList() {
         ${hasPendingSkill ? `<button class="skill-pending-btn">🎓スキル選択</button>` : ""}
       </div>
     `;
-    // 戻り先(defaultStatusOnBack=宿屋)を明示して渡す。renderStatusScreenのstatusScreenOnBackは
-    // 「前回の戻り先を使い回す」仕様(スキルツリー往復などで文脈を保つため)なので、ここで明示しないと
-    // 直前に出発準備画面から詳細を開いていた場合に、宿屋から開いたのに「戻る」で出発タブへ
-    // 飛ばされるバグになる(ユーザー報告2026-07-18)
+    // 戻り先(onBack)を明示して渡す。renderStatusScreenのstatusScreenOnBackは「前回の戻り先を
+    // 使い回す」仕様(スキルツリー往復などで文脈を保つため)なので、ここで明示しないと直前に
+    // 別画面から詳細を開いていた場合に、この宿から開いたのに違う画面へ飛ばされるバグになる
+    // (温泉村の宿屋で2026-07-18に発生した不具合と同種)
     row.querySelector(".detail-btn").onclick = (e) => {
       e.stopPropagation();
-      renderStatusScreen(c.id, defaultStatusOnBack);
+      renderStatusScreen(c.id, onBack);
       showScreen("screen-status");
     };
-    // 宿屋の名簿ではアイコン写真タップでの詳細遷移はしない(ユーザー指示2026-07-18で無効化。
+    // 宿の名簿ではアイコン写真タップでの詳細遷移はしない(ユーザー指示2026-07-18で無効化。
     // 詳細を見たい時は「詳細」ボタンから。出発準備画面のアイコンタップも2026-07-19に同様に無効化した)
     const skillBtn = row.querySelector(".skill-pending-btn");
     if (skillBtn) {
@@ -422,11 +391,96 @@ function renderRosterList() {
     // 宿泊の全員一括化(2026-07-18)に伴い、行タップでの宿泊選択トグルは廃止した
     list.appendChild(row);
   });
-  const targets = lodgeableMembers();
+  const targets = members.filter((c) => c.status === "active");
   const cost = LODGE_COST * targets.length;
-  const confirmBtn = document.getElementById("lodgeConfirmBtn");
+  const confirmBtn = document.getElementById(ids.lodgeBtn);
   confirmBtn.textContent = targets.length > 0 ? `宿泊する(${targets.length}人・${cost}G)` : "宿泊する";
   confirmBtn.disabled = targets.length === 0 || state.gold < cost;
+}
+// クラス選択グリッド(雇用UI)の共通処理。selectedClassは画面をまたいだ単一のモジュール変数のため、
+// 複数の宿を同時に開くことはない(1画面ずつしか表示されない)前提で問題なく共有できる
+function renderInnClassGrid(ids) {
+  const grid = document.getElementById(ids.classGrid);
+  grid.innerHTML = "";
+  const descArea = document.getElementById(ids.classDesc);
+  descArea.textContent = CLASS_DESC[selectedClass] || "";
+  let anyNewlySeen = false;
+  const orderedClassIds = [...Object.keys(CLASSES).filter(isClassUnlocked), ...Object.keys(CLASSES).filter((id) => !isClassUnlocked(id))];
+  orderedClassIds.forEach((classId) => {
+    const c = CLASSES[classId];
+    const div = document.createElement("div");
+    if (!isClassUnlocked(classId)) {
+      div.className = "class-pick locked";
+      const buildingName = (FACILITY_DISPLAY[CLASS_UNLOCK_BUILDING[classId]] || {}).name || "";
+      div.innerHTML = `<div class="class-pick-locked-portrait"><img src="${c.image}"></div><span class="class-pick-locked-label">🔒${buildingName}建築で解禁</span>`;
+      grid.appendChild(div);
+      return;
+    }
+    div.className = "class-pick" + (selectedClass === classId ? " selected" : "");
+    const isNew = !!CLASS_UNLOCK_BUILDING[classId] && !state.seenUnlockedClasses[classId];
+    div.innerHTML = `<img src="${c.image}"><span>${c.ja}</span>${isNew ? '<span class="new-badge">NEW</span>' : ""}`;
+    if (isNew) { state.seenUnlockedClasses[classId] = true; anyNewlySeen = true; }
+    div.onclick = () => { selectedClass = classId; renderInnClassGrid(ids); };
+    div.onmouseenter = () => { descArea.textContent = CLASS_DESC[classId] || ""; };
+    div.onmouseleave = () => { descArea.textContent = CLASS_DESC[selectedClass] || ""; };
+    grid.appendChild(div);
+  });
+  document.getElementById(ids.createBtn).disabled = state.gold < HIRE_COST || state.roster.length >= rosterCapacity();
+  if (anyNewlySeen) saveState();
+}
+// 雇用ボタンの配線(画面ごとに1度だけ呼ぶ)。雇った直後はその場でmembersFn/onBackを使って名簿を再描画する
+function wireInnHireButton(ids, membersFn, onBack) {
+  document.getElementById(ids.createBtn).onclick = () => {
+    const nameInput = document.getElementById(ids.nameInput);
+    const name = nameInput.value.trim() || randomFemaleName();
+    if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
+    if (state.gold < HIRE_COST) { showInfoModal(`お金が足りません(${HIRE_COST}G必要)`); return; }
+    state.gold -= HIRE_COST;
+    const c = createCharacter(name, selectedClass, state.classUpgrades);
+    c.personality = pickNonDuplicatePersonality();
+    state.roster.unshift(c); // 新しく雇った仲間が名簿の一番上に来るようにする
+    nameInput.value = "";
+    saveState();
+    playSfx("select");
+    renderInnRosterList(ids, membersFn, onBack);
+    renderInnClassGrid(ids);
+    document.getElementById(ids.gold).textContent = state.gold + "G";
+  };
+}
+// 宿泊の確定〜演出〜完了までの共通フロー(確認モーダル→暗転→回復サマリー→翌朝フェードイン)。
+// bgSetは省略時BG_SETS.tavern(温泉村)、海の村/山伏の里は各宿のBG_SETSを渡す
+function performLodging(targets, bgSet, onDone) {
+  if (targets.length === 0) return;
+  const cost = LODGE_COST * targets.length;
+  showConfirmModal(`宿泊しますか？(${targets.length}人・${cost}G)`, [
+    {
+      label: "はい",
+      className: "big primary",
+      onClick: () => {
+        playLodgingTransition(() => {
+          state.gold -= cost;
+          // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
+          // キャラの残量バーが今まで一度も描画されたことがなくても確実に回復アニメーションが出るよう、
+          // 宿泊前の値を明示的に記録しておく(野営の回復サマリーと同じ対策)
+          const beforeSnapshot = targets.map((c) => {
+            c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
+            c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
+            return { id: c.id, fatigueBefore: c.fatigue || 0 };
+          });
+          targets.forEach((c) => useLodging(c));
+          advanceToNextMorning();
+          saveState();
+          showLodgingRestSummary(beforeSnapshot, () => {
+            revealLodgingMorning(() => {
+              if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
+              onDone();
+            });
+          });
+        }, bgSet);
+      },
+    },
+    { label: "いいえ", className: "big" },
+  ]);
 }
 
 // 宿泊時の演出。現在の時間帯から朝を迎えるまでの残りの時間帯(例: 朝スタートなら昼→夕→夜)を
@@ -517,50 +571,18 @@ function showLodgingRestSummary(beforeSnapshot, onNext) {
 }
 
 document.getElementById("lodgeConfirmBtn").onclick = () => {
-  // 稼働中の仲間全員が一括で宿泊する(選択式は廃止、ユーザー指示2026-07-18)
-  const targets = lodgeableMembers();
-  if (targets.length === 0) return;
-  const cost = LODGE_COST * targets.length;
-  showConfirmModal(`宿泊しますか？(${targets.length}人・${cost}G)`, [
-    {
-      label: "はい",
-      className: "big primary",
-      onClick: () => {
-        playLodgingTransition(() => {
-          state.gold -= cost;
-          // hpBarHtml/mpBarHtmlの回復トレイルは「前回表示した残量」との比較で発火するため、この
-          // キャラの残量バーが今まで一度も描画されたことがなくても確実に回復アニメーションが出るよう、
-          // 宿泊前の値を明示的に記録しておく(野営の回復サマリーと同じ対策)
-          const beforeSnapshot = targets.map((c) => {
-            c.__hpDisplayRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
-            c.__mpDisplayRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-            return { id: c.id, fatigueBefore: c.fatigue || 0 };
-          });
-          targets.forEach((c) => useLodging(c));
-          advanceToNextMorning();
-          saveState();
-          showLodgingRestSummary(beforeSnapshot, () => {
-            revealLodgingMorning(() => {
-              if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
-              renderTavern();
-            });
-          });
-        });
-      },
-    },
-    { label: "いいえ", className: "big" },
-  ]);
+  performLodging(lodgeableMembers(), BG_SETS.tavern, renderTavern);
 };
 
+const TAVERN_INN_IDS = { rosterList: "rosterList", lodgeBtn: "lodgeConfirmBtn", classGrid: "classGrid", classDesc: "classDescArea", nameInput: "newCharName", createBtn: "createCharBtn", gold: "tavernGold" };
 function renderTavern() {
   pruneActiveParty();
   renderDwHeader("tavern", "宿屋", () => { renderTown(); });
   document.getElementById("tavernGold").textContent = state.gold + "G";
   updateKeeperLine("tavernKeeperLinePeriod", "tavernKeeperLineIndex", TAVERN_KEEPER_LINES, "tavernKeeperBubble");
   showKeeperCharacter("tavernKeeperWrap");
-  renderRosterList();
-  renderClassGrid();
-  document.getElementById("createCharBtn").disabled = state.gold < HIRE_COST || state.roster.length >= rosterCapacity();
+  renderInnRosterList(TAVERN_INN_IDS, () => state.roster, defaultStatusOnBack);
+  renderInnClassGrid(TAVERN_INN_IDS);
   playTownAreaBgm();
   updateSceneBackgrounds();
 }
@@ -908,21 +930,7 @@ function pickNonDuplicatePersonality() {
   if (available.length === 0) return ACTIVE_PERSONALITIES[Math.floor(Math.random() * ACTIVE_PERSONALITIES.length)];
   return available[Math.floor(Math.random() * available.length)];
 }
-document.getElementById("createCharBtn").onclick = () => {
-  const nameInput = document.getElementById("newCharName");
-  const name = nameInput.value.trim() || randomFemaleName();
-  if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
-  if (state.gold < HIRE_COST) { showInfoModal(`お金が足りません(${HIRE_COST}G必要)`); return; }
-  state.gold -= HIRE_COST;
-  const c = createCharacter(name, selectedClass, state.classUpgrades);
-  c.personality = pickNonDuplicatePersonality();
-  state.roster.unshift(c); // 新しく雇った仲間が名簿の一番上に来るようにする
-  nameInput.value = "";
-  saveState();
-  playSfx("select");
-  renderRosterList();
-  document.getElementById("tavernGold").textContent = state.gold + "G";
-};
+wireInnHireButton(TAVERN_INN_IDS, () => state.roster, defaultStatusOnBack);
 document.getElementById("tavernBackBtn").onclick = () => { renderTown(); };
 document.getElementById("tavernBackBtnTop").onclick = () => { renderTown(); };
 

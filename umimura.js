@@ -1,10 +1,8 @@
 // ============ umimura.js: 海の村(第二の町、2026-07-19)。廃城下町の出口の分岐から到達する ============
 // 中継の村(海の村/山伏の里、今後増える村も含む)は、温泉村と見た目だけ異なる別画面だが、
-// 仕様(温泉の翌朝ロック+ランダムバフ+リリーフ演出、宿の一泊演出等)は温泉村と完全に同一にする
-// (ユーザー指示、2026-07-21: 簡易版のままにしない)。対象キャラは町にいる名簿全員ではなく、
-// 遠征中で物理的にそこにいるfieldPartyのみになる点だけが温泉村との違い
-
-const UMIYADO_COST_PER_PERSON = LODGE_COST; // 潮風宿の宿代は温泉村の宿屋と同額
+// 仕様は完全に同一にする(ユーザー指示、2026-07-21: 「温泉村と同じにして」)。宿は名簿(state.roster、
+// 温泉村と同じく在宅中の仲間も含む名簿全員)+雇用まで含めてtown.jsのrenderInnRosterList等を再利用する。
+// 温泉/支度は遠征中で物理的にそこにいるfieldPartyが対象(既存の実装のまま)
 
 function renderUmiMura() {
   document.getElementById("umimuraHeaderGold").textContent = `${state.gold}G`;
@@ -18,14 +16,13 @@ function renderUmiMura() {
   checkOnsenReliefPopups();
 }
 
+const UMIYADO_INN_IDS = { rosterList: "umiyadoRosterList", lodgeBtn: "umiyadoStayBtn", classGrid: "umiyadoClassGrid", classDesc: "umiyadoClassDescArea", nameInput: "umiyadoNewCharName", createBtn: "umiyadoCreateCharBtn", gold: "umiyadoGold" };
+function defaultUmiyadoStatusOnBack() { renderUmiYado(); showScreen("screen-umiyado"); }
 function renderUmiYado() {
   renderDwHeader("umiyado", "潮風宿", () => { renderUmiMura(); showScreen("screen-umimura"); });
-  const activeCount = fieldParty.filter((c) => c.status === "active").length;
-  document.getElementById("umiyadoCostText").textContent = UMIYADO_COST_PER_PERSON;
-  const cost = UMIYADO_COST_PER_PERSON * activeCount;
-  const btn = document.getElementById("umiyadoStayBtn");
-  btn.textContent = activeCount > 0 ? `一泊する(${activeCount}人・${cost}G)` : "泊まれる仲間がいません";
-  btn.disabled = activeCount === 0 || state.gold < cost;
+  document.getElementById("umiyadoGold").textContent = state.gold + "G";
+  renderInnRosterList(UMIYADO_INN_IDS, () => state.roster, defaultUmiyadoStatusOnBack);
+  renderInnClassGrid(UMIYADO_INN_IDS);
   updateSceneBackgrounds();
 }
 
@@ -109,34 +106,19 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
 };
 
 document.getElementById("umiyadoBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
-// 温泉村の宿屋と同じ「時間帯演出」(現在時刻→夜へクロスフェード→暗転→翌朝フェードイン)を、
-// 背景セットだけ潮風宿(BG_SETS.umiyado)に差し替えて流用する(playLodgingTransition/
-// revealLodgingMorningは2026-07-19に背景セットを引数化済み)。効果自体もuseLodging()を
-// そのまま呼び、温泉村の宿屋と完全に同じ回復量にしてある
+// 宿泊・雇用のロジックはtown.jsのperformLodging()/wireInnHireButton()に一本化済み(温泉村の宿屋と
+// 完全に同じ確認モーダル→暗転→回復サマリー→翌朝フェードインの流れ)。背景セットだけ潮風宿
+// (BG_SETS.umiyado)に差し替えて流用する
 document.getElementById("umiyadoStayBtn").onclick = () => {
-  const active = fieldParty.filter((c) => c.status === "active");
-  const cost = UMIYADO_COST_PER_PERSON * active.length;
-  if (active.length === 0 || state.gold < cost) return;
-  playLodgingTransition(() => {
-    state.gold -= cost;
-    active.forEach((c) => useLodging(c));
-    advanceToNextMorning();
-    saveState();
-    revealLodgingMorning(() => {
-      renderUmiYado();
-      playSfx("select");
-      showConfirmModal("一泊し、HP・MPが全回復した。", [{ label: "OK", className: "big" }]);
-    });
-  }, BG_SETS.umiyado);
+  performLodging(state.roster.filter((c) => c.status === "active"), BG_SETS.umiyado, renderUmiYado);
 };
+wireInnHireButton(UMIYADO_INN_IDS, () => state.roster, defaultUmiyadoStatusOnBack);
 
 document.getElementById("umionsenBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
 
 // ============ 山伏の里(第三の村、2026-07-19)。渓流→光る竹林の先から到達する ============
 // 海の村と同じく、温泉/宿等の仕様は温泉村と完全に同一にする(宿は絵が揃ったため2026-07-21追加)。
 // 海の村と違い、この先(修験道→山)へさらに進める「修験道へ進む」ボタンを持つ
-
-const YAMABUSHIYADO_COST_PER_PERSON = LODGE_COST; // 霧の宿の宿代は温泉村の宿屋と同額
 
 function renderYamabushi() {
   document.getElementById("yamabushiHeaderGold").textContent = `${state.gold}G`;
@@ -146,14 +128,13 @@ function renderYamabushi() {
   checkOnsenReliefPopups(); // 海の村と同じく、この村のホーム画面に戻った時にも入浴リリーフ演出を出す
 }
 
+const YAMABUSHIYADO_INN_IDS = { rosterList: "yamabushiyadoRosterList", lodgeBtn: "yamabushiyadoStayBtn", classGrid: "yamabushiyadoClassGrid", classDesc: "yamabushiyadoClassDescArea", nameInput: "yamabushiyadoNewCharName", createBtn: "yamabushiyadoCreateCharBtn", gold: "yamabushiyadoGold" };
+function defaultYamabushiyadoStatusOnBack() { renderYamabushiYado(); showScreen("screen-yamabushiyado"); }
 function renderYamabushiYado() {
   renderDwHeader("yamabushiyado", "霧の宿", () => { renderYamabushi(); showScreen("screen-yamabushi"); });
-  const activeCount = fieldParty.filter((c) => c.status === "active").length;
-  document.getElementById("yamabushiyadoCostText").textContent = YAMABUSHIYADO_COST_PER_PERSON;
-  const cost = YAMABUSHIYADO_COST_PER_PERSON * activeCount;
-  const btn = document.getElementById("yamabushiyadoStayBtn");
-  btn.textContent = activeCount > 0 ? `一泊する(${activeCount}人・${cost}G)` : "泊まれる仲間がいません";
-  btn.disabled = activeCount === 0 || state.gold < cost;
+  document.getElementById("yamabushiyadoGold").textContent = state.gold + "G";
+  renderInnRosterList(YAMABUSHIYADO_INN_IDS, () => state.roster, defaultYamabushiyadoStatusOnBack);
+  renderInnClassGrid(YAMABUSHIYADO_INN_IDS);
   updateSceneBackgrounds();
 }
 
@@ -234,22 +215,10 @@ document.getElementById("yamabushiDepartBtn").onclick = () => {
 document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
 
 document.getElementById("yamabushiyadoBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };
-// 海の村の潮風宿と同じ「時間帯演出」(現在時刻→夜へクロスフェード→暗転→翌朝フェードイン)を、
-// 背景セットだけ霧の宿(BG_SETS.yamabushiyado)に差し替えて流用する。効果自体もuseLodging()を
-// そのまま呼び、温泉村/海の村の宿と完全に同じ回復量にしてある
+// 宿泊・雇用のロジックはtown.jsのperformLodging()/wireInnHireButton()に一本化済み(温泉村の宿屋と
+// 完全に同じ確認モーダル→暗転→回復サマリー→翌朝フェードインの流れ)。背景セットだけ霧の宿
+// (BG_SETS.yamabushiyado)に差し替えて流用する
 document.getElementById("yamabushiyadoStayBtn").onclick = () => {
-  const active = fieldParty.filter((c) => c.status === "active");
-  const cost = YAMABUSHIYADO_COST_PER_PERSON * active.length;
-  if (active.length === 0 || state.gold < cost) return;
-  playLodgingTransition(() => {
-    state.gold -= cost;
-    active.forEach((c) => useLodging(c));
-    advanceToNextMorning();
-    saveState();
-    revealLodgingMorning(() => {
-      renderYamabushiYado();
-      playSfx("select");
-      showConfirmModal("一泊し、HP・MPが全回復した。", [{ label: "OK", className: "big" }]);
-    });
-  }, BG_SETS.yamabushiyado);
+  performLodging(state.roster.filter((c) => c.status === "active"), BG_SETS.yamabushiyado, renderYamabushiYado);
 };
+wireInnHireButton(YAMABUSHIYADO_INN_IDS, () => state.roster, defaultYamabushiyadoStatusOnBack);
