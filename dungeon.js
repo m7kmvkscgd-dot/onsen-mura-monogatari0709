@@ -780,19 +780,20 @@ document.getElementById("screen-dungeon").addEventListener("pointerdown", () => 
 
 // 「里に戻る」を押すと、確認後すぐにオート帰還が始まる(以後は0階層に着くまで無操作で進み続ける。
 // 戦闘/財宝発見/茶屋/瀕死発見が起きた時と、任意のタイミングでの画面タップだけが一時停止のきっかけになる)
-// 村からの手動帰還中(manualRetreatMode)は、確認モーダルを挟まずその場で村へ引き返す
-// (ユーザー指示、2026-07-19: 「帰還するを押したら海の村に戻る」)
+// 村からの手動帰還中(manualRetreatMode)にこのボタンを押した時は、瞬間ワープではなく「向きを
+// 変えて村への道を通常探索と同じように歩き直す」形にする(ユーザー指示、2026-07-21: 海の村は
+// 温泉村と対等な拠点であり、そこへ向かう道も戦闘等が発生する通常の探索そのものであるべき)。
+// stageEntryStack/currentStage/currentFloorはそのまま(その場で向きを変えるだけ)、進む方向が
+// 元の中継チェーン(少し森の分岐は既に選んだ行き先(ruinsforestDestination)を覚えているため
+// 再度は聞かれない、光る竹林の最深部は自動到着)を辿って自然に村へ着く
 function returnToManualRetreatVillage() {
-  stageEntryStack.push({ stage: currentStage, floor: currentFloor });
+  const villageName = VILLAGE_STAGE_DISPLAY_NAME[manualRetreatHomeVillage] || "村";
   retreating = false;
-  const village = manualRetreatHomeVillage;
   manualRetreatMode = false;
   manualRetreatHomeVillage = null;
-  currentStage = village;
-  currentFloor = 1;
   saveState();
-  if (village === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
-  else if (village === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
+  dlog(`向きを変えて、${villageName}へ向けて歩き出した。`);
+  renderDungeon();
 }
 document.getElementById("retreatBtn").onclick = () => {
   if (manualRetreatMode) {
