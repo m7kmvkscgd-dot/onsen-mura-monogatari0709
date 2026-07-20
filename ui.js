@@ -315,6 +315,165 @@ function renderOnsenRosterList(containerId, characters) {
   });
 }
 
+// 支援物資(回復薬/煙玉/野営具)購入UIの共通処理。温泉村の出発準備画面(パーティ編成タブ内、
+// prefix "supplies")と、海の村/山伏の里(および今後増える村)共通の支度画面(prefix "vprep")の
+// 両方で使う(ユーザー指示、2026-07-21: 中継の村を簡易版のままにせず温泉村と同等にする)。
+// 2画面はDOM要素のidが異なるだけで中身(所持数・価格・上限・売却)は完全に同一の仕様
+const SUPPLY_UI_IDS = {
+  supplies: {
+    count: "suppliesCount", capLabel: "suppliesCapLabel", gold: "suppliesGold",
+    eggPouchInfo: "henHouseEggPouchInfo", eggPouchCount: "henHouseEggPouchCountLabel", eggPouchCap: "henHouseEggPouchCapLabel",
+    ownedIcons: "ownedSupplyIcons",
+    potionOwned: "potionOwned", buyPotionBtn: "buyPotionSupplyBtn",
+    smokeBombOwned: "smokeBombOwned", buySmokeBombBtn: "buySmokeBombBtn",
+    campingKitSection: "campingKitSection", campingKitCap: "campingKitCapLabel", campingKitOwned: "campingKitOwned", campingKitNewBadge: "campingKitNewBadge", buyCampingKitBtn: "buyCampingKitBtn",
+    bombSection: "bombSection", buyBombBtn: "buyBombBtn",
+  },
+  vprep: {
+    count: "vprepCount", capLabel: "vprepCapLabel", gold: "vprepGold",
+    eggPouchInfo: "vprepEggPouchInfo", eggPouchCount: "vprepEggPouchCountLabel", eggPouchCap: "vprepEggPouchCapLabel",
+    ownedIcons: "vprepOwnedSupplyIcons",
+    potionOwned: "vprepPotionOwned", buyPotionBtn: "vprepBuyPotionBtn",
+    smokeBombOwned: "vprepSmokeBombOwned", buySmokeBombBtn: "vprepBuySmokeBombBtn",
+    campingKitSection: "vprepCampingKitSection", campingKitCap: "vprepCampingKitCapLabel", campingKitOwned: "vprepCampingKitOwned", campingKitNewBadge: "vprepCampingKitNewBadge", buyCampingKitBtn: "vprepBuyCampingKitBtn",
+    bombSection: "vprepBombSection", buyBombBtn: "vprepBuyBombBtn",
+  },
+};
+function renderSupplyPurchaseUI(prefix) {
+  const ids = SUPPLY_UI_IDS[prefix];
+  const total = supplyItemTotal();
+  document.getElementById(ids.gold).textContent = state.gold + "G";
+  document.getElementById(ids.count).textContent = `(${total}/${supplyCap()})`;
+  document.getElementById(ids.capLabel).textContent = supplyCap();
+  // 鶏小屋の卵ポーチ: 支援物資の上限には含まれない別枠のため、混同されないよう専用の1行で
+  // 小さく表示する(鶏小屋未建築の間は行ごと非表示)
+  const eggPouchInfo = document.getElementById(ids.eggPouchInfo);
+  const eggPouchCap = henHouseEggPouchCapacity();
+  eggPouchInfo.style.display = eggPouchCap > 0 ? "" : "none";
+  if (eggPouchCap > 0) {
+    document.getElementById(ids.eggPouchCount).textContent = state.inventory.onsenEggPouch || 0;
+    document.getElementById(ids.eggPouchCap).textContent = eggPouchCap;
+  }
+  document.getElementById(ids.potionOwned).textContent = state.inventory.potion || 0;
+  document.getElementById(ids.smokeBombOwned).textContent = state.inventory.smokeBomb || 0;
+  document.getElementById(ids.buyPotionBtn).textContent = `購入(${ITEMS.potion.price}G)`;
+  document.getElementById(ids.buyPotionBtn).disabled = total >= supplyCap() || state.gold < ITEMS.potion.price;
+  document.getElementById(ids.buySmokeBombBtn).textContent = `購入(${ITEMS.smokeBomb.price}G)`;
+  document.getElementById(ids.buySmokeBombBtn).disabled = total >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
+  // 野営具は旅支度屋を建築するまでラインナップされない
+  document.getElementById(ids.campingKitSection).style.display = state.travelPrepShopLevel ? "" : "none";
+  if (state.travelPrepShopLevel) {
+    document.getElementById(ids.campingKitCap).textContent = CAMPING_KIT_CAP;
+    document.getElementById(ids.campingKitOwned).textContent = state.inventory.campingKit || 0;
+    document.getElementById(ids.buyCampingKitBtn).textContent = `購入(${ITEMS.campingKit.price}G)`;
+    document.getElementById(ids.buyCampingKitBtn).disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
+    document.getElementById(ids.campingKitNewBadge).style.display = !state.seenCampingKitSupply ? "" : "none";
+    if (!state.seenCampingKitSupply) { state.seenCampingKitSupply = true; saveState(); }
+  }
+  // 爆弾の購入効果はユーザー指示により廃止した(火薬庫は砲術士解禁のみの建物になった)。
+  // 既存セーブで爆弾を所持している場合に備え、購入UI自体は常に非表示にするだけで
+  // inventory.bomb自体やバトル中の使用(items.js)には手を付けていない
+  document.getElementById(ids.bombSection).style.display = "none";
+  renderOwnedSupplyIcons(prefix);
+}
+// 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
+// (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)。
+// タップすると1個売却できる(売値は購入価格の半額、端数切り捨て)
+function renderOwnedSupplyIcons(prefix) {
+  const ids = SUPPLY_UI_IDS[prefix];
+  const wrap = document.getElementById(ids.ownedIcons);
+  let html = "";
+  // image(画像)が用意されているものはimg、無いもの(絵文字のみ、爆弾など)はemojiをそのまま文字表示する
+  const addIcons = (itemId, count) => {
+    const item = ITEMS[itemId];
+    for (let i = 0; i < count; i++) {
+      html += item.image
+        ? `<img src="${item.image}" alt="${item.ja}" data-item-id="${itemId}">`
+        : `<span class="supply-icon-emoji" title="${item.ja}" data-item-id="${itemId}">${item.emoji || ""}</span>`;
+    }
+  };
+  addIcons("campingKit", state.inventory.campingKit || 0);
+  addIcons("potion", state.inventory.potion || 0);
+  addIcons("smokeBomb", state.inventory.smokeBomb || 0);
+  addIcons("onsenEgg", state.inventory.onsenEgg || 0);
+  addIcons("bomb", state.inventory.bomb || 0);
+  TEAHOUSE_SNACK_IDS.forEach((id) => addIcons(id, state.inventory[id] || 0));
+  wrap.innerHTML = html;
+  wrap.querySelectorAll("[data-item-id]").forEach((el) => {
+    el.onclick = () => confirmSellSupplyItem(el.dataset.itemId, prefix);
+  });
+}
+function confirmSellSupplyItem(itemId, prefix) {
+  const item = ITEMS[itemId];
+  const sellPrice = Math.floor(item.price / 2);
+  showConfirmModal(`${item.ja}を${sellPrice}Gで売りますか？`, [
+    {
+      label: "売る", className: "big primary", onClick: () => {
+        if ((state.inventory[itemId] || 0) <= 0) return;
+        state.inventory[itemId]--;
+        state.gold += sellPrice;
+        saveState();
+        playSfx("coin");
+        renderSupplyPurchaseUI(prefix);
+      },
+    },
+    { label: "やめる", className: "big" },
+  ]);
+}
+// 支援物資の購入ボタン群を、指定したprefixのDOM要素に一度だけ配線する(温泉村側/vprep側の2回呼ぶ)
+function wireSupplyPurchaseButtons(prefix) {
+  const ids = SUPPLY_UI_IDS[prefix];
+  document.getElementById(ids.buyPotionBtn).onclick = () => {
+    const total = supplyItemTotal();
+    if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+    if (state.gold < ITEMS.potion.price) { showInfoModal("お金が足りません"); return; }
+    state.gold -= ITEMS.potion.price;
+    state.inventory.potion = (state.inventory.potion || 0) + 1;
+    saveState();
+    playSfx("coin");
+    renderSupplyPurchaseUI(prefix);
+  };
+  document.getElementById(ids.buySmokeBombBtn).onclick = () => {
+    const total = supplyItemTotal();
+    if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+    if (state.gold < ITEMS.smokeBomb.price) { showInfoModal("お金が足りません"); return; }
+    state.gold -= ITEMS.smokeBomb.price;
+    state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
+    saveState();
+    playSfx("coin");
+    renderSupplyPurchaseUI(prefix);
+  };
+  document.getElementById(ids.buyCampingKitBtn).onclick = () => {
+    if ((state.inventory.campingKit || 0) >= CAMPING_KIT_CAP) { showInfoModal(`野営具は最大${CAMPING_KIT_CAP}個までしか持てません`); return; }
+    if (state.gold < ITEMS.campingKit.price) { showInfoModal("お金が足りません"); return; }
+    state.gold -= ITEMS.campingKit.price;
+    state.inventory.campingKit = (state.inventory.campingKit || 0) + 1;
+    saveState();
+    playSfx("coin");
+    renderSupplyPurchaseUI(prefix);
+  };
+  document.getElementById(ids.buyBombBtn).onclick = () => {
+    const total = supplyItemTotal();
+    if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
+    if (state.gold < ITEMS.bomb.price) { showInfoModal("お金が足りません"); return; }
+    state.gold -= ITEMS.bomb.price;
+    state.inventory.bomb = (state.inventory.bomb || 0) + 1;
+    saveState();
+    playSfx("coin");
+    renderSupplyPurchaseUI(prefix);
+  };
+}
+wireSupplyPurchaseButtons("supplies");
+wireSupplyPurchaseButtons("vprep");
+// 中継の村(海の村/山伏の里、今後増える村も含む)共通の支度画面。facilityHomeScreen(town.js)に
+// 開く直前の村を記録しておき、戻るボタンは renderFacilityHome() でその村へ戻す(奉行所/建築/
+// 鍛冶屋と同じ「戻り先を動的に覚える」パターンを流用)
+function renderVillagePrep() {
+  renderDwHeader("villagePrep", "支度", () => { renderFacilityHome(); });
+  renderSupplyPurchaseUI("vprep");
+}
+document.getElementById("villagePrepBackBtn").onclick = () => { renderFacilityHome(); };
+
 function statusTagClass(c) {
   if (c.status === "active" && isOnsenLocked(c, absoluteGameMinutes())) return "bathing";
   if (c.status === "active" && c.onsenBuffKey) return "onsen-buffed";

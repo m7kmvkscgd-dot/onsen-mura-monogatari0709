@@ -64,6 +64,9 @@ document.getElementById("umimuraOnsenBtn").onclick = () => { playSfx("onsen_ente
 document.getElementById("umimuraMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderMagistrateScreen(); };
 document.getElementById("umimuraExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("umimuraShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderShop(); showScreen("screen-shop"); };
+// 支度(支援物資購入): 温泉村の出発準備画面と同仕様の共通画面(renderVillagePrep、ui.js)を、戻り先を
+// 海の村として開く(ユーザー指示、2026-07-21: 中継の村でも回復薬等を買えるようにする)
+document.getElementById("umimuraPrepBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderVillagePrep(); showScreen("screen-village-prep"); };
 // 「出発する」: 廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、
 // 新規ルート)の2択(ユーザー指示、2026-07-19)。
 // 「廃城下町へ」はオート帰還ではなく、普通の探索と同じ1階層ずつの手動歩行にする
@@ -170,6 +173,7 @@ document.getElementById("yamabushiOnsenBtn").onclick = () => { playSfx("onsen_en
 document.getElementById("yamabushiMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderMagistrateScreen(); };
 document.getElementById("yamabushiExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("yamabushiShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderShop(); showScreen("screen-shop"); };
+document.getElementById("yamabushiPrepBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderVillagePrep(); showScreen("screen-village-prep"); };
 // 「修験道へ進む」: 海の村には無い、山伏の里だけの選択肢。stageEntryStackにさらに1段積んで
 // (山伏の里, 1階層目)を記録し、通常のダンジョン探索画面へ戻って修験道1層目から再開する。
 // 深く潜ってから帰還すれば、山伏の里→光る竹林→渓流→森→町の順で正しく橋渡しされる

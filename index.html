@@ -678,6 +678,7 @@
         <button class="big town-card" id="umimuraOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">湯乃里温泉</span></span></button>
         <button class="big town-card" id="umimuraExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
         <button class="big town-card" id="umimuraShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
+        <button class="big town-card" id="umimuraPrepBtn"><span class="town-medal"><img src="assets/items/camping_kit.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">支度</span></span></button>
         <button class="big primary town-depart" id="umimuraLeaveBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span></button>
       </div>
     </div>
@@ -746,6 +747,7 @@
         <button class="big town-card" id="yamabushiOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">雲海の湯</span></span></button>
         <button class="big town-card" id="yamabushiExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
         <button class="big town-card" id="yamabushiShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
+        <button class="big town-card" id="yamabushiPrepBtn"><span class="town-medal"><img src="assets/items/camping_kit.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">支度</span></span></button>
         <button class="big primary town-depart" id="yamabushiContinueBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">修験道へ進む</span></span><span class="town-depart-arrow">▶</span></button>
         <button class="big town-card" id="yamabushiLeaveBtn"><span class="town-medal"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">光る竹林へ</span></span></button>
       </div>
@@ -771,6 +773,68 @@
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">温泉でストレスを癒します。入浴中のキャラは翌朝まで出発できません。</p>
       <div id="yamabushionsenList"></div>
       <button class="big" id="yamabushionsenBackBtn" style="margin-top:1rem;">山伏の里に戻る</button>
+    </div>
+  </div>
+
+  <!-- 中継の村(海の村/山伏の里、今後増える村も含む)共通の出発準備(支度)画面。
+       温泉村の出発準備画面(screen-party-select)の支援物資購入部分と全く同じ仕様・同じrenderSupplyPurchaseUI()を
+       使うが、パーティは遠征中で固定のため編成タブは持たず、支援物資の購入のみを行う(ユーザー指示、2026-07-21) -->
+  <div class="screen" id="screen-village-prep">
+    <div class="hero has-dw-header" id="villagePrepHero">
+      <div class="hero-bg-inner" style="background-image:url('assets/bg/departure_gate.jpg');"></div>
+      <div class="dw-header">
+        <button class="dw-header-back" id="villagePrepHeaderBack"></button>
+        <div class="dw-header-title" id="villagePrepHeaderTitle"></div>
+        <div class="dw-header-right"><span class="dw-header-gold" id="villagePrepHeaderGold"></span><span class="dw-header-time" id="villagePrepHeaderTime"></span></div>
+      </div>
+      <h1>支度</h1>
+    </div>
+    <div class="body-pad">
+      <h2>支援物資 <span id="vprepCount"></span></h2>
+      <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;">合計で最大<span id="vprepCapLabel"></span>個まで持っていけます。</p>
+      <p class="gold" id="vprepGold">0G</p>
+      <p id="vprepEggPouchInfo" style="display:none;font-size:12px;color:var(--dw-caption-color);margin:0 0 0.5rem;">🥚卵ポーチ <span id="vprepEggPouchCountLabel"></span>/<span id="vprepEggPouchCapLabel"></span>個(この上限には含まれません)</p>
+      <div id="vprepOwnedSupplyIcons" class="owned-supply-icons"></div>
+      <div class="card">
+        <div class="shop-item">
+          <div>
+            <div><strong>回復薬</strong> <span id="vprepPotionOwned">0</span>個</div>
+            <div class="desc">HPを少し回復する</div>
+          </div>
+          <button class="big" id="vprepBuyPotionBtn">購入</button>
+        </div>
+        <div class="shop-item" style="margin-top:0.6rem;">
+          <div>
+            <div><strong>煙玉</strong> <span id="vprepSmokeBombOwned">0</span>個</div>
+            <div class="desc">その戦闘から即座に逃げる</div>
+          </div>
+          <button class="big" id="vprepBuySmokeBombBtn">購入</button>
+        </div>
+      </div>
+      <div id="vprepCampingKitSection">
+        <p style="font-size:13px;color:var(--dw-caption-color);margin:0.8rem 0 0.5rem;">野営具は最大<span id="vprepCampingKitCapLabel"></span>つまで持てます。</p>
+        <div class="card">
+          <div class="shop-item">
+            <div>
+              <div><strong>野営具</strong> <span id="vprepCampingKitOwned">0</span>個<span class="new-badge" id="vprepCampingKitNewBadge" style="display:none;">NEW</span></div>
+              <div class="desc">簡易宿泊キット。夜を越すことができる</div>
+            </div>
+            <button class="big" id="vprepBuyCampingKitBtn">購入</button>
+          </div>
+        </div>
+      </div>
+      <div id="vprepBombSection">
+        <div class="card" style="margin-top:0.6rem;">
+          <div class="shop-item">
+            <div>
+              <div><strong>爆弾</strong> <span id="vprepBombOwned">0</span>個</div>
+              <div class="desc">敵全体にダメージ</div>
+            </div>
+            <button class="big" id="vprepBuyBombBtn">購入</button>
+          </div>
+        </div>
+      </div>
+      <button class="big" id="villagePrepBackBtn" style="margin-top:1rem;">戻る</button>
     </div>
   </div>
 

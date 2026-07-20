@@ -1123,128 +1123,13 @@ function renderPartySelect() {
   activateHpTrails(list);
 }
 
-// 支援物資(回復薬+煙玉)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠
+// 支援物資(回復薬+煙玉+野営具)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠。
+// 実処理はui.jsのrenderSupplyPurchaseUI()に一本化済み(海の村/山伏の里の支度画面と共通)
 function renderSupplies() {
-  const total = supplyItemTotal();
-  document.getElementById("suppliesGold").textContent = state.gold + "G";
-  document.getElementById("suppliesCount").textContent = `(${total}/${supplyCap()})`;
-  document.getElementById("suppliesCapLabel").textContent = supplyCap();
-  // 鶏小屋の卵ポーチ: 支援物資の上限には含まれない別枠のため、混同されないよう専用の1行で
-  // 小さく表示する(鶏小屋未建築の間は行ごと非表示)
-  const eggPouchInfo = document.getElementById("henHouseEggPouchInfo");
-  const eggPouchCap = henHouseEggPouchCapacity();
-  eggPouchInfo.style.display = eggPouchCap > 0 ? "" : "none";
-  if (eggPouchCap > 0) {
-    document.getElementById("henHouseEggPouchCountLabel").textContent = state.inventory.onsenEggPouch || 0;
-    document.getElementById("henHouseEggPouchCapLabel").textContent = eggPouchCap;
-  }
-  document.getElementById("potionOwned").textContent = state.inventory.potion || 0;
-  document.getElementById("smokeBombOwned").textContent = state.inventory.smokeBomb || 0;
-  document.getElementById("buyPotionSupplyBtn").textContent = `購入(${ITEMS.potion.price}G)`;
-  document.getElementById("buyPotionSupplyBtn").disabled = total >= supplyCap() || state.gold < ITEMS.potion.price;
-  document.getElementById("buySmokeBombBtn").textContent = `購入(${ITEMS.smokeBomb.price}G)`;
-  document.getElementById("buySmokeBombBtn").disabled = total >= supplyCap() || state.gold < ITEMS.smokeBomb.price;
-  // 野営具は旅支度屋を建築するまで出発画面にラインナップされない
-  document.getElementById("campingKitSection").style.display = state.travelPrepShopLevel ? "" : "none";
-  if (state.travelPrepShopLevel) {
-    document.getElementById("campingKitCapLabel").textContent = CAMPING_KIT_CAP;
-    document.getElementById("campingKitOwned").textContent = state.inventory.campingKit || 0;
-    document.getElementById("buyCampingKitBtn").textContent = `購入(${ITEMS.campingKit.price}G)`;
-    document.getElementById("buyCampingKitBtn").disabled = (state.inventory.campingKit || 0) >= CAMPING_KIT_CAP || state.gold < ITEMS.campingKit.price;
-    // 旅支度屋を建てて初めてこの画面(支度タブ)を見た時だけNEWを出し、見た瞬間に記録して消す
-    document.getElementById("campingKitNewBadge").style.display = !state.seenCampingKitSupply ? "" : "none";
-    if (!state.seenCampingKitSupply) { state.seenCampingKitSupply = true; saveState(); }
-  }
-  // 爆弾の購入効果はユーザー指示により廃止した(火薬庫は砲術士解禁のみの建物になった)。
-  // 既存セーブで爆弾を所持している場合に備え、購入UI自体は常に非表示にするだけで
-  // inventory.bomb自体やバトル中の使用(items.js)には手を付けていない
-  document.getElementById("bombSection").style.display = "none";
+  renderSupplyPurchaseUI("supplies");
   const maxHint = document.getElementById("partySelectMaxHint");
   if (maxHint) maxHint.textContent = `タップで出発パーティに入れる(最大${maxActivePartySize()}人)`;
-  renderOwnedSupplyIcons();
 }
-// 所持中の支援物資を、野営具→回復薬→煙玉→温泉卵の順で1個ずつ小さいアイコンとして並べる
-// (背景画像の上に直接表示するため、個数分そのままアイコンを並べる方式にしてある)。
-// タップすると1個売却できる(売値は購入価格の半額、端数切り捨て)
-function renderOwnedSupplyIcons() {
-  const wrap = document.getElementById("ownedSupplyIcons");
-  let html = "";
-  // image(画像)が用意されているものはimg、無いもの(絵文字のみ、爆弾など)はemojiをそのまま文字表示する
-  const addIcons = (itemId, count) => {
-    const item = ITEMS[itemId];
-    for (let i = 0; i < count; i++) {
-      html += item.image
-        ? `<img src="${item.image}" alt="${item.ja}" data-item-id="${itemId}">`
-        : `<span class="supply-icon-emoji" title="${item.ja}" data-item-id="${itemId}">${item.emoji || ""}</span>`;
-    }
-  };
-  addIcons("campingKit", state.inventory.campingKit || 0);
-  addIcons("potion", state.inventory.potion || 0);
-  addIcons("smokeBomb", state.inventory.smokeBomb || 0);
-  addIcons("onsenEgg", state.inventory.onsenEgg || 0);
-  addIcons("bomb", state.inventory.bomb || 0);
-  TEAHOUSE_SNACK_IDS.forEach((id) => addIcons(id, state.inventory[id] || 0));
-  wrap.innerHTML = html;
-  wrap.querySelectorAll("[data-item-id]").forEach((el) => {
-    el.onclick = () => confirmSellSupplyItem(el.dataset.itemId);
-  });
-}
-function confirmSellSupplyItem(itemId) {
-  const item = ITEMS[itemId];
-  const sellPrice = Math.floor(item.price / 2);
-  showConfirmModal(`${item.ja}を${sellPrice}Gで売りますか？`, [
-    {
-      label: "売る", className: "big primary", onClick: () => {
-        if ((state.inventory[itemId] || 0) <= 0) return;
-        state.inventory[itemId]--;
-        state.gold += sellPrice;
-        saveState();
-        playSfx("coin");
-        renderSupplies();
-      },
-    },
-    { label: "やめる", className: "big" },
-  ]);
-}
-document.getElementById("buyPotionSupplyBtn").onclick = () => {
-  const total = supplyItemTotal();
-  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.potion.price) { showInfoModal("お金が足りません"); return; }
-  state.gold -= ITEMS.potion.price;
-  state.inventory.potion = (state.inventory.potion || 0) + 1;
-  saveState();
-  playSfx("coin");
-  renderSupplies();
-};
-document.getElementById("buySmokeBombBtn").onclick = () => {
-  const total = supplyItemTotal();
-  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.smokeBomb.price) { showInfoModal("お金が足りません"); return; }
-  state.gold -= ITEMS.smokeBomb.price;
-  state.inventory.smokeBomb = (state.inventory.smokeBomb || 0) + 1;
-  saveState();
-  playSfx("coin");
-  renderSupplies();
-};
-document.getElementById("buyCampingKitBtn").onclick = () => {
-  if ((state.inventory.campingKit || 0) >= CAMPING_KIT_CAP) { showInfoModal(`野営具は最大${CAMPING_KIT_CAP}個までしか持てません`); return; }
-  if (state.gold < ITEMS.campingKit.price) { showInfoModal("お金が足りません"); return; }
-  state.gold -= ITEMS.campingKit.price;
-  state.inventory.campingKit = (state.inventory.campingKit || 0) + 1;
-  saveState();
-  playSfx("coin");
-  renderSupplies();
-};
-document.getElementById("buyBombBtn").onclick = () => {
-  const total = supplyItemTotal();
-  if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
-  if (state.gold < ITEMS.bomb.price) { showInfoModal("お金が足りません"); return; }
-  state.gold -= ITEMS.bomb.price;
-  state.inventory.bomb = (state.inventory.bomb || 0) + 1;
-  saveState();
-  playSfx("coin");
-  renderSupplies();
-};
 document.getElementById("partySelectBackBtn").onclick = () => { renderTown(); };
 document.getElementById("partySelectBackBtnTop").onclick = () => { renderTown(); };
 
