@@ -11,6 +11,11 @@ function renderUmiMura() {
   // 温泉村で解放すればここにもすぐ現れる
   document.getElementById("umimuraMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
+  // 温泉村のrenderTown()と全く同じBGM(playTownAreaBgm、時間帯で town/town_dawn/town_night を
+  // 出し分ける)を使う(ユーザー指示、2026-07-21: 「温泉村のbgmと全く同じにしといて」)。
+  // これが無いと、森等から遠征でたどり着いた直後は虫の声の環境音(ambientBgmAudio、別チャンネル)が
+  // 鳴りっぱなしのまま止まらなかった
+  playTownAreaBgm();
   // 温泉村のrenderTown()と同じく、入浴ロックが明けたキャラがいれば「リラックスできた！」を
   // ここでも出す(海の村の温泉で入浴した後、温泉村へ戻らずここに留まり続けるケースがあるため)
   checkOnsenReliefPopups();
@@ -48,6 +53,11 @@ function arriveAtUmiMura() {
   recordMaxFloorReached();
   healPartyOnFloorMove();
   advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+  // 森/洞窟等の環境音(虫の声など、ambientBgmAudioは探索用BGMとは別チャンネルのため個別に止める
+  // 必要がある)が鳴りっぱなしにならないよう、村へ着いた時点で明示的に止める(ユーザー報告)
+  stopAmbientBgm();
+  stopCoastAreaBgm();
+  stopValleyAreaBgm();
   dlog("⛵海の村にたどり着いた。");
   saveState();
   renderUmiMura();
@@ -127,6 +137,7 @@ function renderYamabushi() {
   document.getElementById("yamabushiHeaderTime").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   document.getElementById("yamabushiMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   updateSceneBackgrounds();
+  playTownAreaBgm(); // 海の村と同じく、温泉村と全く同じBGMにする(ユーザー指示、2026-07-21)
   checkOnsenReliefPopups(); // 海の村と同じく、この村のホーム画面に戻った時にも入浴リリーフ演出を出す
 }
 
@@ -159,6 +170,10 @@ function arriveAtYamabushi() {
   recordMaxFloorReached();
   healPartyOnFloorMove();
   advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
+  // 海の村と同じく、環境音(虫の声など)が鳴りっぱなしにならないよう明示的に止める(ユーザー報告)
+  stopAmbientBgm();
+  stopCoastAreaBgm();
+  stopValleyAreaBgm();
   dlog("⛩️山伏の里にたどり着いた。");
   saveState();
   renderYamabushi();

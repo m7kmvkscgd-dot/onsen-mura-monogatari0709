@@ -58,6 +58,9 @@ function debugWarpToVillage(stage) {
   // 少し森の分岐(2層目)は既にこの経路で「海の村」を選んだ想定にしておく(退避中に再度は聞かれない)
   if (stage === "umimura") ruinsforestDestination = "umimura";
   saveState();
+  stopAmbientBgm();
+  stopCoastAreaBgm();
+  stopValleyAreaBgm();
   if (stage === "umimura") { renderUmiMura(); showScreen("screen-umimura"); }
   else if (stage === "yamabushi") { renderYamabushi(); showScreen("screen-yamabushi"); }
 }
