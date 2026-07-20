@@ -178,11 +178,33 @@ function devSetCharacterLevel(character, targetLevel) {
 }
 
 // ============ 時間を進める(⌛️) ============
-// 町の時計の横から、30分刻み・最長12時間まで時間を早送りできる。1時間ごとに1秒かけて進め、
-// 時間帯(朝/昼/夕/夜)の境界を跨いだ時だけ町の背景をフェードで自然に切り替える
+// 各村の時計の横から、30分刻み・最長12時間まで時間を早送りできる。1時間ごとに1秒かけて進め、
+// 時間帯(朝/昼/夕/夜)の境界を跨いだ時だけ背景をフェードで自然に切り替える。
+// オーバーレイ自体は全画面共通の1つを使い回すため、どの村から開いたかをtimeSkipVillageに覚えておき、
+// 背景クロスフェードに使うBG_SETSのキー(village名と一致させてある)と、完了後に戻す描画関数を
+// TIME_SKIP_RETURN_FNから引く(ユーザー指摘、2026-07-21: 海の村/山伏の里にこのボタンが無かった)
 const TIME_SKIP_STEP_MIN = 30;
 const TIME_SKIP_MAX_MIN = 12 * 60;
 let timeSkipSelectedMin = 60;
+let timeSkipVillage = "town"; // "town" | "umimura" | "yamabushi"。BG_SETSのキー名と一致させてある
+// renderUmiMura/renderYamabushiはumimura.js側の定義(town.jsより後に読み込まれる)のため、
+// ここをconstのオブジェクトリテラルにして即座に参照すると読み込み時点でReferenceErrorになる。
+// 呼び出し時(=全スクリプト読み込み後)まで評価を遅らせるため、関数越しに引く形にしてある
+function timeSkipReturnFn(village) {
+  if (village === "umimura") return renderUmiMura;
+  if (village === "yamabushi") return renderYamabushi;
+  return renderTown;
+}
+function openTimeSkipPicker(village) {
+  timeSkipVillage = village || "town";
+  timeSkipSelectedMin = 60;
+  renderTimeSkipPicker();
+  const tag = document.querySelector(".time-skip-tag");
+  if (tag) tag.classList.remove("pressed");
+  document.getElementById("timeSkipPickerView").style.display = "block";
+  document.getElementById("timeSkipAnimView").style.display = "none";
+  document.getElementById("timeSkipOverlay").style.display = "block";
+}
 function formatTimeSkipDuration(min) {
   const h = Math.floor(min / 60), m = min % 60;
   if (h === 0) return `${m}分`;
@@ -204,15 +226,9 @@ function renderTimeSkipPicker() {
   document.getElementById("timeSkipAfterPhase").textContent = TIME_PHASE_LABEL[afterPhase];
   document.getElementById("timeSkipAfterLabel").textContent = formatClockTime(afterMinutes);
 }
-document.getElementById("timeSkipBtn").onclick = () => {
-  timeSkipSelectedMin = 60;
-  renderTimeSkipPicker();
-  const tag = document.querySelector(".time-skip-tag");
-  if (tag) tag.classList.remove("pressed");
-  document.getElementById("timeSkipPickerView").style.display = "block";
-  document.getElementById("timeSkipAnimView").style.display = "none";
-  document.getElementById("timeSkipOverlay").style.display = "block";
-};
+document.getElementById("timeSkipBtn").onclick = () => openTimeSkipPicker("town");
+document.getElementById("umimuraTimeSkipBtn").onclick = () => openTimeSkipPicker("umimura");
+document.getElementById("yamabushiTimeSkipBtn").onclick = () => openTimeSkipPicker("yamabushi");
 document.getElementById("timeSkipMinusBtn").onclick = () => {
   timeSkipSelectedMin = Math.max(TIME_SKIP_STEP_MIN, timeSkipSelectedMin - TIME_SKIP_STEP_MIN);
   renderTimeSkipPicker();
@@ -237,7 +253,7 @@ function startTimeSkipAnimation(totalMin) {
   const toEl = document.getElementById("timeSkipBgTo");
   const clockEl = document.getElementById("timeSkipClockDisplay");
   fromEl.style.opacity = "1";
-  fromEl.style.backgroundImage = `url('${BG_SETS.town[state.timeOfDay]}')`;
+  fromEl.style.backgroundImage = `url('${BG_SETS[timeSkipVillage][state.timeOfDay]}')`;
   toEl.style.opacity = "0";
   const updateClockDisplay = () => {
     clockEl.textContent = `${TIME_PHASE_LABEL[state.timeOfDay]} ${formatClockTime(state.clockMinutes)}`;
@@ -258,14 +274,14 @@ function startTimeSkipAnimation(totalMin) {
       pruneActiveParty();
       saveState();
       document.getElementById("timeSkipOverlay").style.display = "none";
-      renderTown();
+      timeSkipReturnFn(timeSkipVillage)();
       return;
     }
     const beforePhase = state.timeOfDay;
     advanceExplorationClock(steps[i]);
     updateClockDisplay();
     if (state.timeOfDay !== beforePhase) {
-      crossfadeBg(fromEl, toEl, BG_SETS.town[state.timeOfDay], 1000, () => runStep(i + 1));
+      crossfadeBg(fromEl, toEl, BG_SETS[timeSkipVillage][state.timeOfDay], 1000, () => runStep(i + 1));
     } else {
       setTimeout(() => runStep(i + 1), 1000);
     }
