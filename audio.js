@@ -656,7 +656,10 @@ function critSfxFor(classId) {
 // ポップオーバーはbody直下のposition:fixed要素のため、開くたびに押されたボタンの実際の画面上の位置
 // (getBoundingClientRect)を基準に座標を計算し直す(タブ切り替え等でボタン位置が変わっても追従する)。
 // 温泉村だけでなく海の村/山伏の里(今後増える村も含む)にも同じ歯車ボタンを置けるよう、
-// id="muteBtn"固定ではなく.mute-btnクラス全てに配線する(2026-07-21、ユーザー指摘)
+// id="muteBtn"固定ではなく.mute-btnクラス全てに配線する(2026-07-21、ユーザー指摘)。
+// 【不具合対策】温泉村のボタンは画面右寄りだったため常にrightで位置決めしていたが、海の村/
+// 山伏の里のボタンは左寄りに置いたため、同じ計算式だとポップオーバーが画面左端からはみ出して
+// 見切れてしまっていた。ボタンの位置に応じてleft/rightどちらで固定するかを都度判定するよう修正
 document.querySelectorAll(".mute-btn").forEach((btn) => {
   btn.onclick = (e) => {
     e.stopPropagation();
@@ -667,8 +670,18 @@ document.querySelectorAll(".mute-btn").forEach((btn) => {
     }
     const btnRect = e.currentTarget.getBoundingClientRect();
     popover.style.top = `${Math.round(btnRect.bottom + 8)}px`;
-    popover.style.right = `${Math.round(window.innerWidth - btnRect.right)}px`;
+    // 幅を測るためvisibility:hiddenのまま先に表示し、実測してからleft/rightを決める
+    popover.style.visibility = "hidden";
+    popover.style.left = "auto";
+    popover.style.right = "auto";
     popover.style.display = "block";
+    const popoverWidth = popover.offsetWidth;
+    if (btnRect.left + popoverWidth <= window.innerWidth - 8) {
+      popover.style.left = `${Math.round(btnRect.left)}px`;
+    } else {
+      popover.style.right = `${Math.round(Math.max(8, window.innerWidth - btnRect.right))}px`;
+    }
+    popover.style.visibility = "visible";
   };
 });
 document.addEventListener("click", (e) => {
