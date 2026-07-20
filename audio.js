@@ -19,12 +19,11 @@ const BGM_TRACKS = {
   // 敵データが未実装のため戦闘自体が発生しない。実装され次第dungeon/dungeon_nightと同じ扱いを検討)
   valley: "assets/bgm/valley_bgm.mp3",
   valley_night: "assets/bgm/valley_night_bgm.mp3",
-  // ユーザー指示によりボス/中ボス/討伐依頼対象、いずれの戦闘も同じ曲(quest_target_battle_bgm.mp3)に統一。
-  // キー自体は分けたまま(bgmPositions/stopBattleBgmのフェード対象リストなど既存の分岐に影響を出さないため)、
-  // 参照先のファイルパスだけ揃えている
+  // ボス/中ボスは共通曲(quest_target_battle_bgm.mp3)のまま。討伐依頼対象(🎯、ボス/中ボス以外)のみ
+  // 2026-07-20にユーザー提供曲(quest_target_only_battle_bgm.mp3)へ分離
   boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
   mid_boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
-  quest_target_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用。ただし中ボス/ボスの方が優先度が高い
+  quest_target_battle: "assets/bgm/quest_target_only_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用(中ボス/ボスを除く)。ただし中ボス/ボスの方が優先度が高い
   tengu_battle: "assets/bgm/tengu_battle_bgm.mp3", // 天狗の腕試し(イベント戦)専用(ユーザー提供曲、2026-07-18追加)
 };
 // 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
