@@ -857,6 +857,10 @@ document.getElementById("retreatBtn").onclick = () => {
     showInfoModal("行動できる仲間がいません");
     return;
   }
+  // 【不具合修正、2026-07-21】少し森の分岐モーダルと同じ抜け穴: このモーダル表示中も「進む」等の
+  // 下部ボタンがdisabledになっておらず、モーダルの下でまだ押せてしまっていた。表示中は無効化し、
+  // 「いいえ」で閉じた場合はrenderDungeon()の自己修復ロジックに正しい状態への復帰を任せる
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
   showConfirmModal("里に戻りますか？", [
     {
       label: "はい",
@@ -879,7 +883,7 @@ document.getElementById("retreatBtn").onclick = () => {
         playAutoRetreatCutFade(() => {}, () => { startAutoRetreat(); });
       },
     },
-    { label: "いいえ", className: "big" },
+    { label: "いいえ", className: "big", onClick: () => { renderDungeon(); } },
   ]);
 };
 
@@ -1205,6 +1209,11 @@ document.getElementById("advanceBtn").onclick = () => {
   // (世界地図エディタのJSONで確定、2026-07-21: 最深部ではなく2層目に分岐点を前倒しし、
   // 選んだ後は残りの層を普通に歩き切った先で自動到着する形に変更)
   if (currentStage === "ruinsforest" && targetFloor === RUINSFOREST_FORK_FLOOR && !ruinsforestDestination) {
+    // 【不具合修正、2026-07-21】showPathChoice()と違い、この分岐モーダルは表示中に進む/里に戻る等の
+    // ボタンをdisabledにしていなかったため、モーダルが出ている最中でも「進む」を押せてしまい、
+    // 選択肢が出たまま何度でも(実質)再抽選できてしまっていた。他の進路選択と同じくモーダル表示中は
+    // 下部ボタンを無効化する(選んだ後はplayDungeonMoveTransition自身が改めて管理する)
+    DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
     showConfirmModal("道が分かれている。どちらへ向かう？", [
       {
         label: "廃城下町へ", className: "big primary",
