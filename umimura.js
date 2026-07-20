@@ -82,7 +82,7 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
         retreating = true;
         manualRetreatMode = true;
         manualRetreatHomeVillage = "umimura";
-        dlog("引き返すことにした。ここから階層を下って廃城下町へ戻る。");
+        dlog("🏚️廃城下町へ向けて歩き出した。");
         saveState();
         showScreen("screen-dungeon");
         renderDungeon();
@@ -206,7 +206,7 @@ document.getElementById("yamabushiContinueBtn").onclick = () => {
 // オート帰還ではなく普通の探索と同じ1階層ずつの手動歩行にする(manualRetreatMode、
 // ユーザー指示2026-07-19)
 document.getElementById("yamabushiLeaveBtn").onclick = () => {
-  showConfirmModal("光る竹林へ引き返しますか？(そこから渓流・森を通って歩いて帰ります)", [
+  showConfirmModal("光る竹林へ向かいますか？(そこから渓流・森を通って歩いて進みます)", [
     {
       label: "はい", className: "big danger",
       onClick: () => {
@@ -216,7 +216,7 @@ document.getElementById("yamabushiLeaveBtn").onclick = () => {
         retreating = true;
         manualRetreatMode = true;
         manualRetreatHomeVillage = "yamabushi";
-        dlog("引き返すことにした。ここから階層を下って光る竹林へ戻る。");
+        dlog("🎋光る竹林へ向けて歩き出した。");
         saveState();
         showScreen("screen-dungeon");
         renderDungeon();

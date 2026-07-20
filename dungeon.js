@@ -53,6 +53,8 @@ function collectExpeditionSnapshot() {
     retreating,
     floorsSinceLastBattle,
     ruinsforestDestination,
+    manualRetreatMode,
+    manualRetreatHomeVillage,
     inBattle: typeof battle !== "undefined" && !!battle,
     fieldPartyIds: fieldParty.map((c) => c.id),
     reserveId: reserveFieldMember ? reserveFieldMember.id : null,
@@ -82,6 +84,8 @@ function resumeExpeditionFromSave() {
   retreating = !!snap.retreating;
   floorsSinceLastBattle = snap.floorsSinceLastBattle != null ? snap.floorsSinceLastBattle : 99;
   ruinsforestDestination = snap.ruinsforestDestination || null;
+  manualRetreatMode = !!snap.manualRetreatMode;
+  manualRetreatHomeVillage = snap.manualRetreatHomeVillage || null;
   fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
   // 稼働できる仲間が誰も居ない(全員瀕死/ロスト)なら再開のしようがないので、諦めて町へ
@@ -226,6 +230,8 @@ function enterDungeon() {
   currentFloor = 1;
   retreating = false;
   ruinsforestDestination = null;
+  manualRetreatMode = false;
+  manualRetreatHomeVillage = null;
   recordBossWoundIfPursuing(); // 通常はfinishRetreat()で既に処理済みのはずだが、念のための保険
   recordMaxFloorReached();
   pruneActiveParty();
@@ -825,6 +831,11 @@ document.getElementById("retreatBtn").onclick = () => {
 
 function finishRetreat() {
   stopAutoRetreat(); // オート帰還中に0階層へ到達した場合のクリーンアップ(タイマー解除・ボタン再有効化)
+  // manualRetreatModeは村を出てから温泉村に着くまで維持されるため(2026-07-21修正)、
+  // 帰還完了のここで確実に解除しておかないと次の遠征の頭から「◯◯に戻る」ボタンが
+  // 誤って出たままになってしまう
+  manualRetreatMode = false;
+  manualRetreatHomeVillage = null;
   // 【不具合対策】帰還の連続ズーム(autoRetreatZoomAnim)はstopAutoRetreat()では意図的にpause()の
   // みで止める(手動キャンセル時に一瞬縮んで見えるのを防ぐため)。しかし帰還そのものが完了した
   // 今はもう不要なので、ここでcancel()して背景の変形を完全にリセットする。これをしないと、
@@ -888,13 +899,13 @@ function moveOneFloor(pathBias, enterTeahouse) {
       currentStage = prev.stage;
       currentFloor = prev.floor;
       if (leavingValley) stopValleyAreaBgm();
-      // 村からの手動帰還中(manualRetreatMode)は、1回popした時点で「村の直前のステージまで
-      // 戻ってきた」=目的地に到着したとみなし、以後は通常の探索(自由に進む/オート帰還)に戻す
-      if (manualRetreatMode) {
-        manualRetreatMode = false;
-        manualRetreatHomeVillage = null;
-        retreating = false;
-      }
+      // 【不具合修正、2026-07-21】村からの手動帰還中(manualRetreatMode)は、以前は1回popした
+      // 時点で「目的地に到着した」と誤判定してmanualRetreatMode/retreatingを解除していたが、
+      // 海の村→少し森→洞窟→森→温泉村のように中継ステージが複数挟まる経路では、まだ道の
+      // 途中(洞窟に入っただけ)なのに解除されてしまい、「海の村に戻る」ボタンが消えて
+      // 「里に戻る」に化けたり、進むボタンが強制的にオート帰還へ切り替わったりしていた。
+      // manualRetreatMode/manualRetreatHomeVillageは、実際に温泉村へ帰り着く(finishRetreat)
+      // か、道中で別の中継の村に足を止める(直後のVILLAGE_STAGE_DISPLAY_NAME判定)まで維持する
     }
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     healPartyOnFloorMove();
