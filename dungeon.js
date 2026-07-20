@@ -1475,7 +1475,8 @@ function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, o
     const extraSlots = (offerTeahouse ? 1 : 0) + (offerCaveFork ? 1 : 0) + (offerValleyFork ? 1 : 0);
     const normalPickCount = Math.max(0, count - extraSlots);
     for (let i = 0; i < normalPickCount; i++) picked.push(weightedPickPathKey(weights));
-    if (offerCaveFork) picked.unshift(CAVE_FORK_KEY);
+    // 洞窟の選択肢だけはカードの右側(配列の末尾、グリッドの最後の列)に出るようにする(ユーザー指示、2026-07-21)
+    if (offerCaveFork) picked.push(CAVE_FORK_KEY);
     if (offerValleyFork) picked.unshift(VALLEY_FORK_KEY);
     if (offerTeahouse) picked.unshift(TEAHOUSE_PATH_KEY);
   }
