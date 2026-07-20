@@ -64,18 +64,18 @@ document.getElementById("umimuraOnsenBtn").onclick = () => { playSfx("onsen_ente
 document.getElementById("umimuraMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderMagistrateScreen(); };
 document.getElementById("umimuraExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("umimuraShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderShop(); showScreen("screen-shop"); };
-// 支度(支援物資購入): 温泉村の出発準備画面と同仕様の共通画面(renderVillagePrep、ui.js)を、戻り先を
-// 海の村として開く(ユーザー指示、2026-07-21: 中継の村でも回復薬等を買えるようにする)
-document.getElementById("umimuraPrepBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-umimura"; renderVillagePrep(); showScreen("screen-village-prep"); };
-// 「出発する」: 廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、
-// 新規ルート)の2択(ユーザー指示、2026-07-19)。
+// 「出発」: 温泉村の出発準備画面と同じく、支援物資の購入と行き先選びを1画面(screen-village-prep、
+// renderVillagePrep)にまとめてある(ユーザー指示、2026-07-21: 支度ボタンを独立させず出発の中に統合)。
+// 行き先は廃城下町(元来た道を歩いて戻る)と海岸(既存の海岸ステージを15層に縮めて流用、新規ルート)の2択。
 // 「廃城下町へ」はオート帰還ではなく、普通の探索と同じ1階層ずつの手動歩行にする
 // (manualRetreatMode、advanceBtn.onclick/renderDungeon側で挙動を分岐)。海の村自体は
 // 「1階層だけの中継ステージ」として扱っているため、stageEntryStackのpopは他のステージと同じ形になる
 document.getElementById("umimuraLeaveBtn").onclick = () => {
-  showConfirmModal("どちらへ出発しますか？", [
+  playSfx("select");
+  facilityHomeScreen = "screen-umimura";
+  renderVillagePrep([
     {
-      label: "廃城下町へ(歩いて戻る)", className: "big primary",
+      label: "廃城下町へ(歩いて戻る)",
       onClick: () => {
         const prev = stageEntryStack.pop();
         currentStage = prev.stage;
@@ -90,7 +90,7 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
       },
     },
     {
-      label: "海岸へ(新ルート)", className: "big primary",
+      label: "海岸へ(新ルート)",
       onClick: () => {
         stageEntryStack.push({ stage: "umimura", floor: 1 });
         currentStage = "coast";
@@ -103,8 +103,8 @@ document.getElementById("umimuraLeaveBtn").onclick = () => {
         renderDungeon();
       },
     },
-    { label: "やめる", className: "big" },
   ]);
+  showScreen("screen-village-prep");
 };
 
 document.getElementById("umiyadoBackBtn").onclick = () => { renderUmiMura(); showScreen("screen-umimura"); };
@@ -173,28 +173,34 @@ document.getElementById("yamabushiOnsenBtn").onclick = () => { playSfx("onsen_en
 document.getElementById("yamabushiMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderMagistrateScreen(); };
 document.getElementById("yamabushiExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("yamabushiShopBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderShop(); showScreen("screen-shop"); };
-document.getElementById("yamabushiPrepBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-yamabushi"; renderVillagePrep(); showScreen("screen-village-prep"); };
-// 「修験道へ進む」: 海の村には無い、山伏の里だけの選択肢。stageEntryStackにさらに1段積んで
-// (山伏の里, 1階層目)を記録し、通常のダンジョン探索画面へ戻って修験道1層目から再開する。
-// 深く潜ってから帰還すれば、山伏の里→光る竹林→渓流→森→町の順で正しく橋渡しされる
-document.getElementById("yamabushiContinueBtn").onclick = () => {
-  stageEntryStack.push({ stage: "yamabushi", floor: 1 });
-  currentStage = "shugendo";
-  currentFloor = 1;
-  saveState();
-  recordMaxFloorReached();
-  dlog("⛰️修験道へ足を踏み入れた。");
-  showScreen("screen-dungeon");
-  renderDungeon();
-};
-// 「光る竹林へ」: 海の村と同じく、直前地点(光る竹林)へstageEntryStackを1つpopして戻すが、
-// オート帰還ではなく普通の探索と同じ1階層ずつの手動歩行にする(manualRetreatMode、
-// ユーザー指示2026-07-19)
-document.getElementById("yamabushiLeaveBtn").onclick = () => {
-  showConfirmModal("光る竹林へ向かいますか？(そこから渓流・森を通って歩いて進みます)", [
+// 「出発」: 海の村と同じく、支援物資の購入と行き先選びを1画面(screen-village-prep、renderVillagePrep)に
+// まとめてある(ユーザー指示、2026-07-21)。行き先は「修験道へ進む」(奥へ進む)と「光る竹林へ」
+// (元来た道を歩いて戻る)の2択。以前は別々のカードだったが、温泉村の出発準備画面と同じ体験にするため統合した
+document.getElementById("yamabushiDepartBtn").onclick = () => {
+  playSfx("select");
+  facilityHomeScreen = "screen-yamabushi";
+  renderVillagePrep([
     {
-      label: "はい", className: "big danger",
+      label: "修験道へ進む",
       onClick: () => {
+        // stageEntryStackにさらに1段積んで(山伏の里, 1階層目)を記録し、通常のダンジョン探索画面へ
+        // 戻って修験道1層目から再開する。深く潜ってから帰還すれば、山伏の里→光る竹林→渓流→森→町の
+        // 順で正しく橋渡しされる
+        stageEntryStack.push({ stage: "yamabushi", floor: 1 });
+        currentStage = "shugendo";
+        currentFloor = 1;
+        saveState();
+        recordMaxFloorReached();
+        dlog("⛰️修験道へ足を踏み入れた。");
+        showScreen("screen-dungeon");
+        renderDungeon();
+      },
+    },
+    {
+      label: "光る竹林へ(歩いて戻る)",
+      onClick: () => {
+        // 海の村と同じく、直前地点(光る竹林)へstageEntryStackを1つpopして戻すが、オート帰還ではなく
+        // 普通の探索と同じ1階層ずつの手動歩行にする(manualRetreatMode、ユーザー指示2026-07-19)
         const prev = stageEntryStack.pop();
         currentStage = prev.stage;
         currentFloor = prev.floor;
@@ -207,8 +213,8 @@ document.getElementById("yamabushiLeaveBtn").onclick = () => {
         renderDungeon();
       },
     },
-    { label: "いいえ", className: "big" },
   ]);
+  showScreen("screen-village-prep");
 };
 
 document.getElementById("yamabushionsenBackBtn").onclick = () => { renderYamabushi(); showScreen("screen-yamabushi"); };

@@ -683,7 +683,6 @@
         <button class="big town-card" id="umimuraOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">湯乃里温泉</span></span></button>
         <button class="big town-card" id="umimuraExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
         <button class="big town-card" id="umimuraShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
-        <button class="big town-card" id="umimuraPrepBtn"><span class="town-medal"><img src="assets/items/camping_kit.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">支度</span></span></button>
         <button class="big primary town-depart" id="umimuraLeaveBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span></button>
       </div>
     </div>
@@ -752,9 +751,7 @@
         <button class="big town-card" id="yamabushiOnsenBtn"><span class="town-medal"><img src="assets/icons/town_onsen.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">雲海の湯</span></span></button>
         <button class="big town-card" id="yamabushiExtensionBtn"><span class="town-medal"><img src="assets/icons/town_kenchiku.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">建築</span></span></button>
         <button class="big town-card" id="yamabushiShopBtn"><span class="town-medal"><img src="assets/icons/town_kajiya.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">鍛冶屋</span></span></button>
-        <button class="big town-card" id="yamabushiPrepBtn"><span class="town-medal"><img src="assets/items/camping_kit.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">支度</span></span></button>
-        <button class="big primary town-depart" id="yamabushiContinueBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">修験道へ進む</span></span><span class="town-depart-arrow">▶</span></button>
-        <button class="big town-card" id="yamabushiLeaveBtn"><span class="town-medal"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">光る竹林へ</span></span></button>
+        <button class="big primary town-depart" id="yamabushiDepartBtn"><span class="town-medal town-medal-gold"><img src="assets/icons/town_shuppatsu.png" alt=""></span><span class="town-card-tx"><span class="town-card-nm">出発</span></span><span class="town-depart-arrow">▶</span></button>
       </div>
     </div>
   </div>
@@ -792,7 +789,7 @@
         <div class="dw-header-title" id="villagePrepHeaderTitle"></div>
         <div class="dw-header-right"><span class="dw-header-gold" id="villagePrepHeaderGold"></span><span class="dw-header-time" id="villagePrepHeaderTime"></span></div>
       </div>
-      <h1>支度</h1>
+      <h1>出発</h1>
     </div>
     <div class="body-pad">
       <h2>支援物資 <span id="vprepCount"></span></h2>
@@ -839,7 +836,10 @@
           </div>
         </div>
       </div>
-      <button class="big" id="villagePrepBackBtn" style="margin-top:1rem;">戻る</button>
+      <hr class="dw-divider">
+      <h2>行き先を選ぶ</h2>
+      <div id="vprepDepartButtons"></div>
+      <button class="big" id="villagePrepBackBtn" style="margin-top:0.9rem;">戻る</button>
     </div>
   </div>
 
