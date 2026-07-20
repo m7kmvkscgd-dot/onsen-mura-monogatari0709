@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 実装状況ビューア</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
+    --success: #6ea95b; --danger: #c95d54; --warn: #d99a5b; --info: #7b93b9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--body); font-family: "Hiragino Sans", "Yu Gothic", sans-serif; line-height: 1.55; padding: 16px 14px 60px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 1.15rem; color: var(--title); margin: 0 0 4px; }
+  .lede { font-size: 0.8rem; color: var(--caption); margin: 0 0 16px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  button, a.btn { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.78rem; cursor: pointer; text-decoration: none; display: inline-block; }
+  button.ghost, a.btn.ghost { background: transparent; }
+  #status { font-size: 0.8rem; color: var(--caption); margin-bottom: 14px; }
+  #status.error { color: var(--danger); }
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .summary-card { background: var(--surface); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 14px; font-size: 0.78rem; color: var(--caption); flex: 1; min-width: 120px; }
+  .summary-card .num { font-size: 1.3rem; color: var(--title); font-weight: bold; display: block; }
+  .group { margin-bottom: 22px; }
+  .group-title { font-size: 0.85rem; color: var(--gold); font-weight: bold; margin-bottom: 8px; letter-spacing: 0.03em; }
+  .row {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .row.mismatch { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
+  .row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .row-name { font-weight: bold; color: var(--title); font-size: 0.92rem; }
+  .badge { font-size: 0.66rem; padding: 2px 7px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+  .badge.ok { color: var(--success); border-color: var(--success); }
+  .badge.no { color: var(--caption); border-color: var(--card-border); }
+  .badge.warn { color: var(--warn); border-color: var(--warn); }
+  .badge.skip { color: var(--info); border-color: var(--info); }
+  .row-detail { font-size: 0.74rem; color: var(--caption); }
+  .row-note { font-size: 0.72rem; color: var(--caption); font-style: italic; }
+  .mismatch-msg { font-size: 0.74rem; color: var(--danger); font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔍 実装状況ビューア(自動照合)</h1>
+  <p class="lede">世界地図エディタのデータを、実際のコード(dungeon.js/umimura.js)とpipeline/areas.jsonに照らし合わせて自動チェックする。手書きドキュメントのメンテ忘れによる食い違いを防ぐためのツール。<br>※ file://で直接開くと取得に失敗するので、ローカルサーバー経由か本番URLで開くこと。</p>
+  <div class="toolbar">
+    <button id="reloadBtn">🔄 再取得</button>
+    <a class="btn ghost" href="world_map_editor.html">🗺️ 世界地図エディタへ</a>
+  </div>
+  <div id="status">読み込み中...</div>
+  <div id="summary" class="summary"></div>
+  <div id="groups"></div>
+</div>
+
+<script>
+const STATUS_LABELS = { confirmed: "確定", proposed: "仮", dream: "構想のみ" };
+// 世界地図エディタの凡例定義上、confirmed/proposedは「実装済み」、dreamのみ「未実装」を意味する
+const STATUS_IMPLIES_CODE = { confirmed: true, proposed: true, dream: false };
+const VILLAGE_CHECK = { umimura: "renderUmiMura", yamabushi: "renderYamabushi" };
+
+async function loadWorldMapData() {
+  // 1) 同一オリジンでworld_map_editor.htmlを開いた履歴があれば、そのlocalStorageの最新編集内容を優先する
+  try {
+    const raw = localStorage.getItem("onsenWorldMapEditor_v1");
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  // 2) 無ければworld_map_editor.html内に埋め込まれたSEED_DATA(直近でこちらに反映済みの状態)を読む
+  const res = await fetch("world_map_editor.html");
+  const html = await res.text();
+  const m = html.match(/const SEED_DATA = ({[\s\S]*?\n};)/);
+  if (!m) throw new Error("world_map_editor.htmlからSEED_DATAを抽出できなかった");
+  return new Function("return " + m[1].replace(/;$/, ""))();
+}
+
+async function main() {
+  const statusEl = document.getElementById("status");
+  try {
+    const [worldData, dungeonJs, umimuraJs, areasJson] = await Promise.all([
+      loadWorldMapData(),
+      fetch("dungeon.js").then((r) => r.text()),
+      fetch("umimura.js").then((r) => r.text()),
+      fetch("pipeline/areas.json").then((r) => r.json()).catch(() => []),
+    ]);
+
+    const validStagesMatch = dungeonJs.match(/const VALID_STAGES = (\[[^\]]*\])/);
+    const validStages = validStagesMatch ? JSON.parse(validStagesMatch[1]) : [];
+    const areaNames = new Set(areasJson.map((a) => a.area));
+    const areaEnemyCount = {};
+    areasJson.forEach((a) => { areaEnemyCount[a.area] = (a.enemies || []).length; });
+
+    const results = worldData.nodes.map((n) => {
+      let codeWired = null, codeSource = "";
+      if (n.id === "onsen_mura") {
+        codeWired = null; codeSource = "拠点(index.html本体、判定対象外)";
+      } else if (validStages.includes(n.id)) {
+        codeWired = true; codeSource = "dungeon.js VALID_STAGES";
+      } else if (VILLAGE_CHECK[n.id]) {
+        codeWired = umimuraJs.includes(VILLAGE_CHECK[n.id]);
+        codeSource = "umimura.js " + VILLAGE_CHECK[n.id] + "()";
+      } else {
+        codeWired = false; codeSource = "dungeon.js VALID_STAGESに無し";
+      }
+      const enemyReady = areaNames.has(n.name);
+      const enemyCount = areaEnemyCount[n.name] || 0;
+
+      let mismatch = null;
+      if (codeWired !== null) {
+        const expectsCode = STATUS_IMPLIES_CODE[n.status];
+        if (expectsCode && !codeWired) mismatch = `ステータス「${STATUS_LABELS[n.status]}」は実装済みの意味だが、コード上に見つからない`;
+        else if (!expectsCode && codeWired) mismatch = `ステータス「${STATUS_LABELS[n.status]}」は未実装の意味だが、コード上に実装が見つかった`;
+      }
+      return { ...n, codeWired, codeSource, enemyReady, enemyCount, mismatch };
+    });
+
+    const groups = { confirmed: [], proposed: [], dream: [] };
+    results.forEach((r) => { (groups[r.status] || groups.dream).push(r); });
+
+    const mismatchCount = results.filter((r) => r.mismatch).length;
+    document.getElementById("summary").innerHTML = `
+      <div class="summary-card"><span class="num">${results.length}</span>登録エリア数</div>
+      <div class="summary-card"><span class="num">${results.filter((r) => r.codeWired).length}</span>コード実装確認済み</div>
+      <div class="summary-card"><span class="num">${results.filter((r) => r.enemyReady).length}</span>敵デザインあり</div>
+      <div class="summary-card" style="${mismatchCount ? "border-color:var(--danger);" : ""}"><span class="num" style="${mismatchCount ? "color:var(--danger);" : ""}">${mismatchCount}</span>⚠️ 要確認</div>
+    `;
+
+    const groupsEl = document.getElementById("groups");
+    groupsEl.innerHTML = "";
+    ["confirmed", "proposed", "dream"].forEach((statusKey) => {
+      const list = groups[statusKey];
+      if (!list.length) return;
+      const section = document.createElement("div");
+      section.className = "group";
+      section.innerHTML = `<div class="group-title">${STATUS_LABELS[statusKey]}(${list.length})</div>`;
+      list.forEach((r) => {
+        const row = document.createElement("div");
+        row.className = "row" + (r.mismatch ? " mismatch" : "");
+        const codeBadge = r.codeWired === null
+          ? `<span class="badge skip">対象外</span>`
+          : r.codeWired ? `<span class="badge ok">コードあり</span>` : `<span class="badge no">コード未確認</span>`;
+        const enemyBadge = r.enemyReady ? `<span class="badge ok">敵${r.enemyCount}体設計済み</span>` : `<span class="badge no">敵デザイン無し</span>`;
+        row.innerHTML = `
+          <div class="row-head">
+            <span class="row-name">${escapeHtml(r.name)}</span>
+            ${codeBadge}
+            ${enemyBadge}
+            ${r.floors != null ? `<span class="badge skip">${r.floors}層</span>` : r.infinite ? `<span class="badge skip">層数なし</span>` : ""}
+          </div>
+          <div class="row-detail">照合元: ${escapeHtml(r.codeSource)}</div>
+          ${r.note ? `<div class="row-note">${escapeHtml(r.note)}</div>` : ""}
+          ${r.mismatch ? `<div class="mismatch-msg">⚠️ ${escapeHtml(r.mismatch)}</div>` : ""}
+        `;
+        section.appendChild(row);
+      });
+      groupsEl.appendChild(section);
+    });
+
+    statusEl.textContent = `照合完了(${new Date().toLocaleString("ja-JP")})`;
+    statusEl.classList.remove("error");
+  } catch (e) {
+    statusEl.textContent = "取得エラー: " + e.message + "(file://で開いていないか確認。ローカルサーバーか本番URLで開いてください)";
+    statusEl.classList.add("error");
+  }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+document.getElementById("reloadBtn").addEventListener("click", main);
+main();
+</script>
+</body>
+</html>
