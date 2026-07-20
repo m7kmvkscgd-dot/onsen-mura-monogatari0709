@@ -594,6 +594,10 @@ function playDungeonMoveTransition(actualLogic) {
       moveAnim.cancel();
       bg.style.transform = ""; // 暗転しきったところで背景の変形をリセット(新しい背景はactualLogic内のrenderDungeon等が反映する)
       actualLogic();
+      // UIの薄さは画面が真っ黒な間(見えない状態)に解除を開始する。fadeMs(600ms)>UI側のopacity
+      // transition(200ms)のため、暗転画面が明けきる頃には確実にUIが完全な不透明へ戻っている
+      // (ユーザー指示: 「暗転画面があけたらもうUIの透明完全に解除しといて」)
+      document.body.classList.remove("dungeon-move-active");
       const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeMs, easing: "ease", fill: "forwards" });
       fadeIn.onfinish = () => {
         fadeIn.cancel();
@@ -601,7 +605,6 @@ function playDungeonMoveTransition(actualLogic) {
         overlay.style.display = "none";
         advanceBtnEl.disabled = false;
         retreatBtnEl.disabled = false;
-        document.body.classList.remove("dungeon-move-active");
       };
     };
   }
