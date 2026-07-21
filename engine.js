@@ -1223,23 +1223,23 @@ function useTreeSkill(actor, target, skill, log) {
 }
 
 // 現在のフロアに応じて敵を1体抽選する(内部用)。深さによる強さの違いはENEMIESの4段階ティア
-// (序盤/中盤/後半/終盤)に任せており、階層に応じて変動する倍率は持たない(ENEMY_SCALEは常に一定、
-// 防御力は既にENEMIES側でロール別の固定%として直接持っている)。
+// (序盤/中盤/後半/終盤)に任せており、階層に応じて変動する倍率は持たない。hp/atk/defは
+// 全てENEMIES側に実戦でそのまま使う最終値として直接書かれている。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
-// ENEMIESカタログの素の1体(pick)から、実際の戦闘インスタンス(スケーリング済みステータス+instanceId)を作る。
+// ENEMIESカタログの素の1体(pick)から、実際の戦闘インスタンス(instanceId付与)を作る。
+// hp/atk/defは全てENEMIES側に「実戦でそのまま使う最終値」として直接書かれているため、
+// ここでの追加スケーリングは一切行わない(旧ENEMY_SCALE等の倍率は廃止し、生値へ織り込み済み)。
 // 通常抽選(pickEnemyForFloor)と、緊急依頼専用の狙い撃ちスポーン(instantiateEnemyById)の両方から使う共通処理
 function instantiateEnemy(pick) {
-  const hp = Math.round(pick.hp * ENEMY_SCALE * (pick.isSwarm ? 1 : ENEMY_HP_MULT));
+  const hp = pick.hp;
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,
     maxHp: hp,
-    atk: Math.round(pick.atk * ENEMY_SCALE * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
-    def: pick.def, // 防御%直接方式のため、追加のスケーリングは行わずENEMIES側の値をそのまま使う
     // 大技サイクルの開始位置を0〜2からランダムにずらす(複数体が同時に予告/発動しないようにするため)
     bigAttackCounter: Math.floor(Math.random() * (BIG_ATTACK_CYCLE_LENGTH - 1)),
     bigAttackPending: false,
