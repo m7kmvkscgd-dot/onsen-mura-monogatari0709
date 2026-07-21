@@ -347,11 +347,8 @@ function processNext() {
       // 大技サイクル: 敵ごとのbigAttackCountdownが0になったターンに大技発動、残り1で予告(このターンは
       // 通常攻撃のまま)。間隔(平均何ターンに一度か/ばらつき/即効)は敵ごとのbigAttackCycleで個別指定でき、
       // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
-      // 毒弱点②(ENEMY_WEAKNESS)を持つ敵は、毒状態の間は予告も発動もできず通常攻撃のみになる
-      // (発動タイミングが毒で潰れた場合は、そのチャンスは流れて新しい間隔から仕切り直す)
-      const poisonBlocksBigAttack = (actor.poison || 0) > 0 && !!enemyWeaknessType(actor, "poison") && enemyWeaknessType(actor, "poison").tier === 2;
       const bigAttackDue = (actor.bigAttackCountdown || 0) <= 0;
-      if (bigAttackDue && !poisonBlocksBigAttack) {
+      if (bigAttackDue) {
         actor.bigAttackPending = false;
         actor.bigAttackCountdown = rollBigAttackCountdown(actor);
         // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
@@ -406,9 +403,7 @@ function processNext() {
         offerReserveSwapIfNeeded(newlyCriticalBig, continueAfterBig);
         return;
       }
-      if (bigAttackDue && poisonBlocksBigAttack) {
-        actor.bigAttackCountdown = rollBigAttackCountdown(actor); // 毒で大技のチャンスが潰れた。新しい間隔から仕切り直す
-      } else if (actor.bigAttackCountdown === 1 && !poisonBlocksBigAttack) {
+      if (actor.bigAttackCountdown === 1) {
         actor.bigAttackPending = true;
         // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
         // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる

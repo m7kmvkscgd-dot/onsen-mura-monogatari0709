@@ -342,12 +342,12 @@ function effectiveStat(entity, key) {
   // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
   if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
   if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
-  // 出血中は常時攻撃力-10%(敵/味方どちらにも適用)
+  // 出血中は常時攻撃力-10%(敵/味方どちらにも適用、弱点の有無を問わない)
   if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
-  // 出血弱点②(ENEMY_WEAKNESS)を持つ敵は、出血中さらに防御力-30%が乗る
-  if (key === "def" && (entity.bleed || 0) > 0) {
-    const w = enemyWeaknessType(entity, "bleed");
-    if (w && w.tier === 2) result = Math.max(1, Math.round(result * 0.7));
+  // 弱点属性(bleed/poison/burn)のeffects(atkDown/defDown/spdDown、図鑑エディタで設定)による継続デバフ。
+  // 対応するDOTが現在アクティブな間だけ-30%が乗る(旧tier1/2システムの後継、2026-07-21)
+  if ((key === "atk" || key === "def" || key === "spd") && weaknessEffectActive(entity, key + "Down")) {
+    result = Math.max(1, Math.round(result * WEAKNESS_EFFECT_STAT_MULT));
   }
   // スキルツリーの一時バフ/デバフ(statMods)を乗算で適用。敵side/味方side問わず(デバフ技が敵にも掛かるため)適用する
   if (entity.statMods && entity.statMods.length) {
@@ -438,6 +438,17 @@ function enemyWeaknessType(entity, type) {
   const w = ENEMY_WEAKNESS[entity.id];
   return w && w.type === type ? w : null;
 }
+// bleed/poison/burnのうち、現在アクティブなDOT側の弱点定義にeffects(atkDown/defDown/spdDown、
+// 図鑑エディタのチェックボックス)がstatKeyを含んでいれば true。旧tier1/2システムの後継
+const WEAKNESS_EFFECT_STAT_MULT = 0.7; // -30%
+function weaknessEffectActive(entity, statKey) {
+  const checks = [
+    { active: (entity.bleed || 0) > 0, w: enemyWeaknessType(entity, "bleed") },
+    { active: (entity.poison || 0) > 0, w: enemyWeaknessType(entity, "poison") },
+    { active: (entity.burnTurns || 0) > 0, w: enemyWeaknessType(entity, "burn") },
+  ];
+  return checks.some(({ active, w }) => active && w && w.effects && w.effects.includes(statKey));
+}
 const SPIRIT_WEAKNESS_DMG_MULT = 1.5; // 霊力弱点(ENEMY_WEAKNESS type:"spirit")を持つ敵の被ダメージ倍率
 const POISON_MAX_STACKS = 6; // (旧)毒蓄積の上限。2026-07-18ユーザー指示で天井撤廃済み、現在はどこも参照しない(module.exports互換のため定義だけ残置)
 // ボス保険: 毒/出血の天井撤廃(2026-07-18)に伴い、ボス級だけはDOTで溶けないよう
@@ -454,12 +465,9 @@ function applyPoison(entity, stacks) {
   // 2026-07-18ユーザー指示: 「最大値で上書き・上限6」から「加算式・天井なし」へ変更。
   // 暴走対策はボス級への1ティック上限(dotTickBossCap)側で行う
   entity.poison = (entity.poison || 0) + stacks;
-  // 毒弱点②: 詠唱・予告中(大技の構え)に毒を受けると、その大技は中断される
-  const w = enemyWeaknessType(entity, "poison");
-  if (w && w.tier === 2 && entity.bigAttackPending) entity.bigAttackPending = false;
 }
 // 毒: 自分のターンが来るたびに蓄積値分のダメージを受け、蓄積値が1減る(ダーケストダンジョン方式)。
-// 毒弱点(bleed/burnと同じくENEMY_WEAKNESS)を持つ敵はダメージ2倍(tier1/2共通)
+// 毒弱点(bleed/burnと同じくENEMY_WEAKNESS)を持つ敵はダメージ2倍
 function tickPoison(entity, log) {
   if (!entity.poison || entity.poison <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "poison");
@@ -486,7 +494,7 @@ function applyBleed(entity, stacks) {
   // 2026-07-18ユーザー指示: 上限5を撤廃して天井なしの加算式に(毒と同じ扱い)
   entity.bleed = (entity.bleed || 0) + stacks;
 }
-// 出血弱点を持つ敵はダメージ2倍(tier1/2共通)。防御力低下(tier2)はeffectiveStat側で別途処理する
+// 出血弱点を持つ敵はダメージ2倍。effectsで指定した継続ステータスデバフはeffectiveStat側で別途処理する
 function tickBleed(entity, log) {
   if (!entity.bleed || entity.bleed <= 0) return 0;
   const weak = !!enemyWeaknessType(entity, "bleed");
@@ -562,7 +570,7 @@ function tickBurn(entity, log) {
   const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * (w ? 2 : 1)));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は炎上で${dmg}ダメージ！${w ? "(炎上は弱点！)" : ""}`);
-  if (!(w && w.tier === 2)) entity.burnTurns--;
+  entity.burnTurns--;
   return dmg;
 }
 function applyStun(entity, turns) {
