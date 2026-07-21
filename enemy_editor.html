@@ -102,8 +102,8 @@
   .search-list { display: flex; flex-direction: column; gap: 8px; }
   .empty-hint { color: var(--caption); font-size: 0.85rem; text-align: center; padding: 30px 10px; }
 
-  #exportModal, #addModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  #exportModal.open, #addModal.open { display: flex; }
+  #exportModal, #addModal, #pickModal, #saveCheckpointModal, #loadCheckpointModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open, #addModal.open, #pickModal.open, #saveCheckpointModal.open, #loadCheckpointModal.open { display: flex; }
   .panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
   .panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
   .panel textarea { width: 100%; flex: 1; min-height: 200px; background: #0f1214; color: var(--body); border: 1px solid var(--card-border); border-radius: 8px; font-family: monospace; font-size: 0.72rem; padding: 8px; }
@@ -131,6 +131,8 @@
     <div class="toolbar">
       <input type="search" id="searchBox" placeholder="妖怪名で検索...">
       <span id="editCount">編集: 0件</span>
+      <button id="saveCheckpointBtn" class="ghost">💾 一時保存</button>
+      <button id="loadCheckpointBtn" class="ghost">📥 読込</button>
       <button id="exportBtn">📋 エクスポート</button>
       <button id="resetAllBtn" class="danger ghost">全て元に戻す</button>
     </div>
@@ -174,6 +176,31 @@
     <div class="modal-actions">
       <button id="copyJsonBtn">JSONをコピー</button>
       <button id="closeExportBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="saveCheckpointModal">
+  <div class="panel">
+    <h2>編集内容の一時保存</h2>
+    <p style="font-size:0.8rem; color:var(--caption); margin:0;">下のJSONをコピーして、メモアプリ等に貼り付けて保管してください。あとで「📥 読込」からこの内容を貼り戻せば、編集を再開できます(まだ実データには反映されていません)。</p>
+    <textarea id="checkpointJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyCheckpointBtn">JSONをコピー</button>
+      <button id="closeCheckpointBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="loadCheckpointModal">
+  <div class="panel">
+    <h2>編集内容の読み込み</h2>
+    <p style="font-size:0.8rem; color:var(--caption); margin:0;">「💾 一時保存」で保存しておいたJSONを貼り付けてください。現在の編集内容に上書き合成されます(削除はされません)。</p>
+    <textarea id="checkpointImportInput" placeholder="ここにJSONを貼り付け"></textarea>
+    <div id="checkpointImportStatus" style="font-size:0.8rem; min-height:1.2em;"></div>
+    <div class="modal-actions">
+      <button id="applyCheckpointBtn">読み込む</button>
+      <button id="closeLoadCheckpointBtn" class="ghost">閉じる</button>
     </div>
   </div>
 </div>
@@ -946,6 +973,62 @@ document.getElementById("copyJsonBtn").addEventListener("click", () => {
     btn.textContent = "コピーしました！";
     setTimeout(() => { btn.textContent = orig; }, 1500);
   }).catch(() => { document.execCommand("copy"); });
+});
+
+// ==== 一時保存(チェックポイント)。Claude向けエクスポートとは別に、編集途中の状態を
+// そのまま(edits生データとして)テキストで持ち出し/読み込みできるようにする。
+// iOS Safariはローカルストレージを7日操作が無いと自動削除することがあるため、
+// 作業を中断する際の個人的なバックアップ手段として使う想定 ====
+document.getElementById("saveCheckpointBtn").addEventListener("click", () => {
+  document.getElementById("checkpointJson").value = JSON.stringify(edits, null, 2);
+  document.getElementById("saveCheckpointModal").classList.add("open");
+});
+document.getElementById("closeCheckpointBtn").addEventListener("click", () => document.getElementById("saveCheckpointModal").classList.remove("open"));
+document.getElementById("copyCheckpointBtn").addEventListener("click", () => {
+  const ta = document.getElementById("checkpointJson");
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById("copyCheckpointBtn");
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました！";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }).catch(() => { document.execCommand("copy"); });
+});
+
+document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
+  document.getElementById("checkpointImportInput").value = "";
+  document.getElementById("checkpointImportStatus").textContent = "";
+  document.getElementById("loadCheckpointModal").classList.add("open");
+});
+document.getElementById("closeLoadCheckpointBtn").addEventListener("click", () => document.getElementById("loadCheckpointModal").classList.remove("open"));
+// 現在のeditsに、読み込んだeditsを上書き合成する(同じ妖怪の同じ項目は読み込んだ方が勝つ、
+// それ以外は両方とも残る)。全く別々に編集した2つのチェックポイントを合わせて読み込んでも
+// 破綻しないようにするための合成方式
+function mergeEdits(base, incoming) {
+  const merged = {
+    fields: Object.assign({}, base.fields),
+    newEnemies: Object.assign({}, base.newEnemies),
+    removed: Object.assign({}, base.removed),
+  };
+  Object.keys(incoming.fields || {}).forEach((id) => {
+    merged.fields[id] = Object.assign({}, merged.fields[id], incoming.fields[id]);
+  });
+  Object.keys(incoming.newEnemies || {}).forEach((id) => { merged.newEnemies[id] = incoming.newEnemies[id]; });
+  Object.keys(incoming.removed || {}).forEach((id) => { merged.removed[id] = true; });
+  return merged;
+}
+document.getElementById("applyCheckpointBtn").addEventListener("click", () => {
+  const statusEl = document.getElementById("checkpointImportStatus");
+  const raw = document.getElementById("checkpointImportInput").value.trim();
+  if (!raw) { statusEl.textContent = "JSONを貼り付けてください。"; return; }
+  let incoming;
+  try { incoming = JSON.parse(raw); } catch (e) { statusEl.textContent = "JSONの読み込みに失敗しました。貼り付けた内容を確認してください。"; return; }
+  if (typeof incoming !== "object" || incoming === null) { statusEl.textContent = "JSONの形式が正しくありません。"; return; }
+  edits = mergeEdits(edits, incoming);
+  saveEdits();
+  render();
+  statusEl.textContent = "読み込みました。編集: " + countEdits() + "件になりました。";
+  statusEl.style.color = "var(--success)";
 });
 
 render();
