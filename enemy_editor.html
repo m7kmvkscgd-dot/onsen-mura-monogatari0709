@@ -116,6 +116,16 @@
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
   .panel label.form-label { font-size: 0.78rem; color: var(--caption); display: block; margin-bottom: 3px; }
   .panel input[type="text"] { width: 100%; margin-bottom: 10px; }
+  .panel input[type="search"] { width: 100%; margin-bottom: 10px; }
+  .pick-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
+  .pick-row { display: flex; align-items: center; gap: 8px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .pick-row:active { border-color: var(--gold); }
+  .pick-row img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+  .pick-row-main { flex: 1; min-width: 0; }
+  .pick-row-name { font-size: 0.85rem; color: var(--title); }
+  .pick-row-sub { font-size: 0.68rem; color: var(--caption); }
+  .also-appears { font-size: 0.7rem; color: var(--info); margin: 4px 0; }
+  .also-appears-badge { font-size: 0.62rem; color: var(--info); background: rgba(123,147,185,0.18); border-radius: 5px; padding: 1px 5px; }
 </style>
 </head>
 <body>
@@ -145,6 +155,17 @@
     <div class="modal-actions">
       <button id="addConfirmBtn">追加する</button>
       <button id="addCancelBtn" class="ghost">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="pickModal">
+  <div class="panel">
+    <h2>既存の妖怪から複製して配置</h2>
+    <input type="search" id="pickSearchBox" placeholder="妖怪名で検索...">
+    <div id="pickList" class="pick-list"></div>
+    <div class="modal-actions">
+      <button id="pickCancelBtn" class="ghost">キャンセル</button>
     </div>
   </div>
 </div>
@@ -284,6 +305,20 @@ function enemiesForStage(stageId) {
     .sort((a, b) => (a.e.minFloor || 0) - (b.e.minFloor || 0));
 }
 
+// 同じ画像(=同じ見た目の妖怪)を使っている他の妖怪が、どのエリアに配置されているかを調べる。
+// data.js内の既存の慣習(例: 洞窟のcave_tsuchigumoは森のtsuchigumoと同じ画像を使い回している)を
+// そのまま手がかりにして「他エリアにも同じ妖怪がいるかどうか」を検出する
+function otherStagesForImage(image, excludeId) {
+  if (!image) return [];
+  const stageIds = new Set();
+  allEnemyIds().forEach((id) => {
+    if (id === excludeId) return;
+    const e = getEnemy(id);
+    if (e.image === image) stageIds.add(effectiveStage(id));
+  });
+  return STAGES.filter((s) => stageIds.has(s.id));
+}
+
 // ==== 道の出現確率アクセサ ====
 function getPathValue(stageId, pathKey, field) {
   const override = edits.pathFields[stageId] && edits.pathFields[stageId][pathKey] && edits.pathFields[stageId][pathKey][field];
@@ -329,6 +364,48 @@ function createBlankEnemy(id, ja, stageId) {
 function idExists(id) { return !!ENEMY_DATA[id] || !!edits.newEnemies[id]; }
 function validId(id) { return /^[a-z][a-z0-9_]*$/.test(id); }
 
+// ==== 既存の妖怪プールから選んで複製配置するピッカー ====
+let pickTargetStage = null;
+function openPickModal(targetStageId) {
+  pickTargetStage = targetStageId;
+  document.getElementById("pickSearchBox").value = "";
+  renderPickList("");
+  document.getElementById("pickModal").classList.add("open");
+  document.getElementById("pickSearchBox").focus();
+}
+function renderPickList(query) {
+  const listEl = document.getElementById("pickList");
+  const q = query.trim().toLowerCase();
+  listEl.innerHTML = "";
+  const ids = allEnemyIds()
+    .map((id) => ({ id, e: getEnemy(id) }))
+    .filter(({ id, e }) => !q || e.ja.toLowerCase().includes(q) || id.toLowerCase().includes(q))
+    .sort((a, b) => STAGES.findIndex((s) => s.id === effectiveStage(a.id)) - STAGES.findIndex((s) => s.id === effectiveStage(b.id)) || (a.e.minFloor || 0) - (b.e.minFloor || 0));
+  if (ids.length === 0) {
+    listEl.innerHTML = '<div class="empty-hint">一致する妖怪が見つかりません</div>';
+    return;
+  }
+  ids.forEach(({ id, e }) => {
+    const row = document.createElement("div");
+    row.className = "pick-row";
+    const stage = STAGE_MAP[effectiveStage(id)];
+    row.innerHTML = `
+      <img src="${escapeHtml(e.image || "")}" onerror="this.style.display='none'">
+      <div class="pick-row-main">
+        <div class="pick-row-name">${escapeHtml(e.ja)} <span class="pick-row-sub">(${escapeHtml(id)})</span></div>
+        <div class="pick-row-sub">${stage.icon} ${stage.ja}・階${e.minFloor}-${e.maxFloor}・HP${e.hp} 攻${e.atk}</div>
+      </div>
+    `;
+    row.addEventListener("click", () => {
+      document.getElementById("pickModal").classList.remove("open");
+      openAddModal(pickTargetStage, id);
+    });
+    listEl.appendChild(row);
+  });
+}
+document.getElementById("pickSearchBox").addEventListener("input", (ev) => renderPickList(ev.target.value));
+document.getElementById("pickCancelBtn").addEventListener("click", () => document.getElementById("pickModal").classList.remove("open"));
+
 let addModalStage = null;
 let addModalDuplicateFrom = null;
 function openAddModal(stageId, duplicateFromId) {
@@ -336,7 +413,7 @@ function openAddModal(stageId, duplicateFromId) {
   addModalDuplicateFrom = duplicateFromId || null;
   document.getElementById("addModalTitle").textContent = duplicateFromId ? "妖怪を複製して追加" : "新しい妖怪を配置";
   document.getElementById("addIdInput").value = "";
-  document.getElementById("addNameInput").value = duplicateFromId ? (getEnemy(duplicateFromId).ja + "・改") : "";
+  document.getElementById("addNameInput").value = duplicateFromId ? getEnemy(duplicateFromId).ja : "";
   document.getElementById("addModal").classList.add("open");
   document.getElementById("addIdInput").focus();
 }
@@ -351,7 +428,7 @@ document.getElementById("addConfirmBtn").addEventListener("click", () => {
   if (addModalDuplicateFrom) {
     const src = getEnemy(addModalDuplicateFrom);
     obj = JSON.parse(JSON.stringify(src));
-    obj.id = id; obj.ja = ja; obj.image = "assets/enemies/" + id + ".png"; obj.stage = addModalStage;
+    obj.id = id; obj.ja = ja; obj.stage = addModalStage; // imageは複製元と同じ絵を維持する(他エリアへの再配置は「同じ見た目の妖怪が別の場所にも出る」という既存データの慣習(例: 洞窟のcave_tsuchigumoは森のtsuchigumoと同じ画像)に合わせる。別の絵にしたい場合は保存後にJSONを書き出して手動で差し替える
     delete obj.questOnly; // 複製で依頼専用個体を誤って通常抽選外にしないよう外す(必要なら手動で戻す)
   } else {
     obj = createBlankEnemy(id, ja, addModalStage);
@@ -633,6 +710,8 @@ function buildEnemyCard(id, opts) {
   if (enemy.isPlant) badges.push('<span class="enemy-badge">植物</span>');
   if (enemy.questOnly) badges.push('<span class="enemy-badge">依頼専用</span>');
   const stageTag = opts.showStageTag ? `<span class="enemy-badge">${STAGE_MAP[effectiveStage(id)].ja}</span>` : "";
+  const otherStages = otherStagesForImage(enemy.image, id);
+  const otherStagesBadge = otherStages.length > 0 ? `<span class="also-appears-badge" title="他エリアにも同じ絵の妖怪が配置されています">🔁${otherStages.length}</span>` : "";
   card.innerHTML = `
     <summary>
       <img class="enemy-thumb" src="${escapeHtml(enemy.image || "")}" onerror="this.style.display='none'" alt="">
@@ -640,13 +719,20 @@ function buildEnemyCard(id, opts) {
         <div class="enemy-summary-name">${escapeHtml(enemy.ja)}</div>
         <div class="enemy-summary-sub"><span>HP${enemy.hp} 攻${enemy.atk} 防${enemy.def} 速${enemy.spd}</span><span>階${enemy.minFloor}-${enemy.maxFloor}</span></div>
       </div>
-      <div class="enemy-badges">${stageTag}${badges.join("")}</div>
+      <div class="enemy-badges">${stageTag}${otherStagesBadge}${badges.join("")}</div>
       <span class="enemy-edit-dot"></span>
       <span class="enemy-chevron">▶</span>
     </summary>
     <div class="enemy-body"></div>
   `;
   const bodyEl = card.querySelector(".enemy-body");
+
+  if (otherStages.length > 0) {
+    const alsoDiv = document.createElement("div");
+    alsoDiv.className = "also-appears";
+    alsoDiv.textContent = "🔁 同じ絵の妖怪が他エリアにも配置されています: " + otherStages.map((s) => s.icon + s.ja).join("、");
+    bodyEl.appendChild(alsoDiv);
+  }
 
   // 名前
   const nameRow = document.createElement("div");
@@ -710,7 +796,7 @@ function buildEnemyCard(id, opts) {
     ${isEditedEnemy(id) ? '<button type="button" class="small ghost reset-btn">↺ 元に戻す</button>' : ""}
     <button type="button" class="small danger del-btn">削除</button>
   `;
-  actions.querySelector(".dup-btn").addEventListener("click", (ev) => { ev.preventDefault(); openAddModal(effectiveStage(id), id); });
+  actions.querySelector(".dup-btn").addEventListener("click", (ev) => { ev.preventDefault(); openAddModal(currentStage, id); });
   actions.querySelector(".del-btn").addEventListener("click", (ev) => { ev.preventDefault(); deleteEnemy(id); });
   const resetBtn = actions.querySelector(".reset-btn");
   if (resetBtn) resetBtn.addEventListener("click", (ev) => { ev.preventDefault(); resetEnemy(id); });
@@ -747,9 +833,15 @@ function renderStageView() {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "add-enemy-btn";
-  addBtn.textContent = "+ このエリアに新しい妖怪を配置";
+  addBtn.textContent = "+ このエリアに新しい妖怪を配置(空欄から)";
   addBtn.addEventListener("click", () => openAddModal(currentStage, null));
   section.appendChild(addBtn);
+  const pickBtn = document.createElement("button");
+  pickBtn.type = "button";
+  pickBtn.className = "add-enemy-btn ghost";
+  pickBtn.textContent = "📋 既存の妖怪(全" + allEnemyIds().length + "体)から複製して配置";
+  pickBtn.addEventListener("click", () => openPickModal(currentStage));
+  section.appendChild(pickBtn);
   main.appendChild(section);
 }
 
