@@ -131,16 +131,21 @@ function xpToNext(level) {
 // 成長率はダクソン/XCOM的に「Lv10でも2倍未満」に収まるよう抑えてある(旧0.1=Lv10で2.0倍から、
 // 序盤の階層で装備済みの高レベルキャラが無双しすぎるという指摘を受けさらに緩和。Lv10で1.75倍)。
 // 防御力はレベルでは一切伸ばさず、常に職業の基礎値のまま固定する(装備(甲冑)だけが伸びしろになる)
+// HPのレベル成長を、全職業共通の固定加算テーブルに変更(旧: 基礎HP×1.75の掛け算式)。
+// 掛け算だと素のHPが多い職業(槍士等)ほど伸びる絶対量も大きくなり、レベルが上がるほど
+// タンクと脆い職のHP差が開いていってしまっていたため、Lv10到達時点で全職業共通+20になる
+// 加算式に統一した(職業間のHP差は常に一定のまま)
+const HP_LEVEL_BONUS = { 2: 2, 3: 4, 4: 7, 5: 9, 6: 11, 7: 13, 8: 16, 9: 18, 10: 20 };
 function levelUp(character, log) {
   if (character.level >= MAX_LEVEL) return;
   character.level++;
   const c = CLASSES[character.classId];
-  const growth = 1 + character.level * 0.075; // Lv10で1.75倍
+  const growth = 1 + character.level * 0.075; // Lv10で1.75倍。攻撃力/魔力は引き続きこの掛け算式で成長する
   const oldMaxHp = character.maxHp;
-  character.maxHp = Math.round(c.hp * growth);
+  character.maxHp = c.hp + (HP_LEVEL_BONUS[character.level] || 0);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
   character.atk = Math.round(c.atk * growth);
-  character.def = c.def; // レベルによるdef成長は廃止(装備でのみ伸びる)
+  character.def = c.def; // レベルによるdef成長は廃止(装備でのみ伸びる)。defは今や固定%そのものの値
   character.spd = Math.round(c.spd * (1 + character.level * 0.05));
   character.mag = Math.round(c.mag * growth); // 魔法威力/治癒量は引き続き伸びる。MPの上限だけはレベルで伸ばさない(maxMp/mpは据え置き)
   log(`${character.label}はレベル${character.level}になった！`);
@@ -701,12 +706,19 @@ function grantXp(character, amount, log) {
   if (character.level >= MAX_LEVEL) character.xp = 0;
 }
 
-// 防御力による軽減率(割合軽減式)。K/(K+def)で、defが増えるほど軽減率は上がるが常に伸びが緩やかになり、
-// どれだけ防御力を積んでも生ダメージが0になることはない(旧: atk - def×係数 という引き算式は、
-// 防御力を積むほど直線的に効きが増して「攻撃がほぼ通らない」状態を作れてしまっていたため、割合式に全面刷新した)。
-// Kが小さいほど防御力の影響を強く受ける(=防御貫通しやすい/軽減されにくい)技になる
+// 防御力による軽減率。defは「そのキャラ/敵の被ダメ軽減%」を直接表す固定値(旧: K/(K+def)の
+// 逓減式だったが、防御力が数値なのか%なのか直感的に分からないという問題があったため、
+// 「防御力30」=「30%軽減」とそのまま読める方式に全面刷新した)。
+// Kは技ごとの防御貫通性(旧式の名残)。通常攻撃で使うK=18を新基準(貫通0%=defがそのまま軽減%になる)
+// とし、それより大きいK(貫通しやすい技)はプラスの貫通%に、それより小さいK(スキルツリーの大半の
+// 技が使うK=15など、通常攻撃より防御に弱い技)はマイナスの貫通%(=軽減が通常よりきつく効く)に
+// 自動変換される。ただし会心の一撃/会心の一矢/呪符ノ術の3つだけは「防御に弱すぎる」という違和感が
+// あったユーザー指示によりK=18(貫通0%)を強制し、代わりに各技のmult側で威力を再調整して
+// 黄金バランスを維持した(engine.js内の各roll関数のコメント参照)
 function mitigation(def, K) {
-  return K / (K + Math.max(0, def));
+  const defPierce = 1 - 18 / K;
+  const reduction = Math.min(0.9, Math.max(0, Math.max(0, def) / 100 * (1 - defPierce)));
+  return 1 - reduction;
 }
 // 命中した際の最終ダメージにランダムな幅(±pct)を掛ける。割合式では加算乱数より掛け算の方が自然
 function withVariance(value, pct) {
@@ -715,23 +727,18 @@ function withVariance(value, pct) {
 function rollBasicAttack(atk, def) {
   return Math.max(1, Math.round(withVariance(atk * mitigation(def, 18), 0.15)));
 }
-// 魔法の防御貫通は、序盤の低防御力の敵(だいたい防御力3以下、floor1-8相当)に対しては防御力を
-// MAGIC_MIN_EFFECTIVE_DEFとして扱い、必要以上に貫通しすぎないようにする(=序盤の陰陽師が
-// 他職と比べて突出して強くなりすぎる問題への対処)。中盤(floor9〜、防御力9相当)以降の敵は
-// 元々この値を上回るため、この下限は一切効かず、中〜終盤のダメージ計算は完全に従来通り
-const MAGIC_MIN_EFFECTIVE_DEF = 4;
 function rollMagicAttack(mag, def) {
-  return Math.max(1, Math.round(withVariance(mag * 1.8 * mitigation(Math.max(def, MAGIC_MIN_EFFECTIVE_DEF), 8), 0.12)));
+  return Math.max(1, Math.round(withVariance(mag * 1.41 * mitigation(def, 18), 0.12))); // 防御%直接方式への移行時、通常攻撃と同じ貫通0%を強制し(旧K8=防御に弱すぎる違和感の解消)、旧K8相当の強さを維持するようmultを1.8→1.41に再調整。旧MAGIC_MIN_EFFECTIVE_DEF(序盤の低防御力の敵への過剰貫通対策)は不要になったため廃止
 }
 function rollPowerAttack(atk, def) {
   return Math.max(1, Math.round(withVariance(atk * 1.6 * mitigation(def, 22), 0.15)));
 }
 function rollCritAttack(atk, def) {
-  return Math.max(1, Math.round(withVariance(atk * 1.56 * mitigation(def, 12), 0.15))); // ユーザー指示で威力を1.2倍(1.3→1.56)
+  return Math.max(1, Math.round(withVariance(atk * 1.47 * mitigation(def, 18), 0.15))); // 防御%直接方式への移行時、通常攻撃と同じ貫通0%を強制し、旧K12相当の強さを維持するようmultを1.56→1.47に再調整
 }
 // 狩人の会心の一矢。会心の一撃と同じ防御貫通の性質(弓は鎧の隙間を狙う)
 function rollPreciseShot(atk, def) {
-  return Math.max(1, Math.round(withVariance(atk * 1.485 * mitigation(def, 12), 0.15)));
+  return Math.max(1, Math.round(withVariance(atk * 1.40 * mitigation(def, 18), 0.15))); // 防御%直接方式への移行時、通常攻撃と同じ貫通0%を強制し、旧K12相当の強さを維持するようmultを1.485→1.40に再調整
 }
 // 砲術士の砲撃。渾身の一撃よりさらに重いが、使うと次のターンは装填で動けなくなる(呼び出し側で処理)
 function rollCannonShot(atk, def) {
@@ -1216,8 +1223,8 @@ function useTreeSkill(actor, target, skill, log) {
 }
 
 // 現在のフロアに応じて敵を1体抽選する(内部用)。深さによる強さの違いはENEMIESの4段階ティア
-// (序盤/中盤/後半/終盤、ティアごとに素の平均ステータスが約1.6〜2.1倍ずつ伸びる設計)に任せており、
-// 階層に応じて変動する倍率は持たない(ENEMY_SCALE/ENEMY_DEF_SCALEは常に一定)。
+// (序盤/中盤/後半/終盤)に任せており、階層に応じて変動する倍率は持たない(ENEMY_SCALEは常に一定、
+// 防御力は既にENEMIES側でロール別の固定%として直接持っている)。
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
@@ -1232,7 +1239,7 @@ function instantiateEnemy(pick) {
     hp,
     maxHp: hp,
     atk: Math.round(pick.atk * ENEMY_SCALE * ENEMY_ATK_MULT * (pick.isSwarm ? ENEMY_SWARM_ATK_MULT : 1)),
-    def: Math.round(pick.def * ENEMY_DEF_SCALE),
+    def: pick.def, // 防御%直接方式のため、追加のスケーリングは行わずENEMIES側の値をそのまま使う
     // 大技サイクルの開始位置を0〜2からランダムにずらす(複数体が同時に予告/発動しないようにするため)
     bigAttackCounter: Math.floor(Math.random() * (BIG_ATTACK_CYCLE_LENGTH - 1)),
     bigAttackPending: false,
