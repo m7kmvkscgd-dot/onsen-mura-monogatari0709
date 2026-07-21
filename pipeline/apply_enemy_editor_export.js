@@ -74,6 +74,7 @@ function serializeEnemy(id, e) {
   ENEMY_FLAG_KEYS.forEach((k) => { if (e[k]) parts.push(`${k}: true`); });
   const extraLines = [];
   if (e.bigAttack) extraLines.push(`bigAttack: ${jsLit(e.bigAttack)}`);
+  if (e.extraBigAttacks && e.extraBigAttacks.length) extraLines.push(`extraBigAttacks: ${jsLit(e.extraBigAttacks)}`);
   if (e.bigAttackCycle) extraLines.push(`bigAttackCycle: ${jsLit(e.bigAttackCycle)}`);
   if (e.onHitInflict) extraLines.push(`onHitInflict: ${jsLit(e.onHitInflict)}`);
   if (e.statusImmune && e.statusImmune.length) extraLines.push(`statusImmune: ${jsLit(e.statusImmune)}`);

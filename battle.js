@@ -213,7 +213,7 @@ function renderBattleScreen() {
     // card.onclick側で別途処理されるため両立する。ユーザー指示、2026-07-21で長押し方式から変更)
     if (!dead) {
       const portraitEl = card.querySelector(".card-portrait-img");
-      const bigAttackName = (e.bigAttack && e.bigAttack.name) || "大技";
+      const bigAttackName = bigAttackPool(e).map((p) => p.name || "大技").join("/");
       portraitEl.classList.add("enemy-bigattack-tap");
       portraitEl.dataset.enemyName = e.label;
       portraitEl.dataset.bigattackName = bigAttackName;
@@ -411,8 +411,9 @@ function processNext() {
       } else if (actor.bigAttackCountdown === 1 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = true;
         // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
-        // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)
-        if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
+        // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる
+        // (extraBigAttacksでローテーションする敵は、予告時点で次の技が確定しているため先出しできる)
+        if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
         triggerWarningFlash();
         playSfx("big_attack_warning");
         actor.bigAttackCountdown -= 1;

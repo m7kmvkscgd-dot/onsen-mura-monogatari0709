@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>温泉村物語 敵配置・敵データエディタ</title>
 <style>
+  /* ボタン類の連打でSafariのダブルタップズームが誤発火しないようにする */
+  button, .stepper, .step-btn, .step-value, summary, .flag-chip {
+    touch-action: manipulation;
+  }
   :root {
     --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
     --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
@@ -596,11 +600,11 @@ function buildDebuffFields(prefix, current, onChange) {
   return box;
 }
 
-function renderBigAttackSub(id, enemy) {
-  const det = document.createElement("details");
-  det.className = "sub-detail";
-  const ba = enemy.bigAttack || {};
-  det.innerHTML = `<summary>大技(bigAttack) <span class="sub-summary-text">${escapeHtml(ba.name || "未設定")} ×${ba.mult !== undefined ? ba.mult : "?"}</span></summary>`;
+// 大技1件ぶんの編集欄(技名/倍率/全体攻撃/かばう無視/デバフ)を作る共通部品。
+// 単一のbigAttack(全敵必須)と、ボス/中ボス専用の追加大技(extraBigAttacks)の両方から使う。
+// onChangeには編集後のプロファイルオブジェクトがそのまま渡る(呼び出し側でsetFieldする)
+function buildBigAttackProfileFields(profile, onChange) {
+  const ba = profile || {};
   const body = document.createElement("div");
   body.className = "sub-body";
   body.innerHTML = `
@@ -622,9 +626,7 @@ function renderBigAttackSub(id, enemy) {
     if (aoe) out.aoe = true;
     if (ignoreGuardian) out.ignoreGuardian = true;
     if (debuff) out.debuff = debuff;
-    setField(id, "bigAttack", out);
-    det.querySelector("summary").innerHTML = `大技(bigAttack) <span class="sub-summary-text">${escapeHtml(name || "未設定")} ×${mult}</span>`;
-    onAnyFieldChanged(id);
+    onChange(out);
   }
   let debuffFieldGetter = () => ba.debuff;
   const debuffBox = buildDebuffFields("bigAttack", ba.debuff, (val) => { debuffFieldGetter = () => val; commit(); });
@@ -633,6 +635,84 @@ function renderBigAttackSub(id, enemy) {
   body.querySelector('[data-f="name"]').addEventListener("input", commit);
   wireStepper(body.querySelector('.stepper[data-f="mult"]'), commit);
   body.querySelectorAll('[data-f="aoe"], [data-f="ignoreGuardian"]').forEach((inp) => inp.addEventListener("change", commit));
+  return body;
+}
+
+function renderBigAttackSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const ba = enemy.bigAttack || {};
+  det.innerHTML = `<summary>大技(bigAttack) <span class="sub-summary-text">${escapeHtml(ba.name || "未設定")} ×${ba.mult !== undefined ? ba.mult : "?"}</span></summary>`;
+  const body = buildBigAttackProfileFields(ba, (out) => {
+    setField(id, "bigAttack", out);
+    det.querySelector("summary").innerHTML = `大技(bigAttack) <span class="sub-summary-text">${escapeHtml(out.name || "未設定")} ×${out.mult}</span>`;
+    onAnyFieldChanged(id);
+  });
+  det.appendChild(body);
+  return det;
+}
+
+// 追加の大技(ボス/中ボス専用): bigAttack(1つ目)に加えてここに足した分だけ、大技発動のたびに
+// 順番にローテーションで使うようになる(engine.jsのpickBigAttackProfile参照)。
+// isBoss/isMidBossの敵にだけ呼び出し側(buildEnemyCard)で表示する
+function renderExtraBigAttacksSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const summaryOf = (n) => (n ? `+${n}種(計${n + 1}種をローテーション)` : "なし(bigAttack1種のみ)");
+  det.innerHTML = `<summary>追加の大技(ローテーション) <span class="sub-summary-text">${summaryOf((enemy.extraBigAttacks || []).length)}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  const listWrap = document.createElement("div");
+  body.appendChild(listWrap);
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "small ghost";
+  addBtn.style.marginTop = "6px";
+  addBtn.textContent = "+ 大技を追加";
+  body.appendChild(addBtn);
+
+  function commitList(arr) {
+    setField(id, "extraBigAttacks", arr.length ? arr : undefined);
+    det.querySelector("summary").innerHTML = `追加の大技(ローテーション) <span class="sub-summary-text">${summaryOf(arr.length)}</span>`;
+    onAnyFieldChanged(id);
+  }
+  function render() {
+    const arr = getEnemy(id).extraBigAttacks || [];
+    listWrap.innerHTML = "";
+    arr.forEach((profile, idx) => {
+      const itemDet = document.createElement("details");
+      itemDet.className = "sub-detail";
+      itemDet.style.marginTop = "6px";
+      itemDet.innerHTML = `<summary>大技${idx + 2} <span class="sub-summary-text">${escapeHtml(profile.name || "未設定")} ×${profile.mult !== undefined ? profile.mult : "?"}</span></summary>`;
+      const fieldsBody = buildBigAttackProfileFields(profile, (out) => {
+        const newArr = (getEnemy(id).extraBigAttacks || []).slice();
+        newArr[idx] = out;
+        commitList(newArr);
+        itemDet.querySelector("summary").innerHTML = `大技${idx + 2} <span class="sub-summary-text">${escapeHtml(out.name || "未設定")} ×${out.mult}</span>`;
+      });
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "small danger";
+      delBtn.style.marginTop = "6px";
+      delBtn.textContent = "この大技を削除";
+      delBtn.addEventListener("click", () => {
+        const newArr = (getEnemy(id).extraBigAttacks || []).slice();
+        newArr.splice(idx, 1);
+        commitList(newArr);
+        render();
+      });
+      fieldsBody.appendChild(delBtn);
+      itemDet.appendChild(fieldsBody);
+      listWrap.appendChild(itemDet);
+    });
+  }
+  addBtn.addEventListener("click", () => {
+    const arr = (getEnemy(id).extraBigAttacks || []).slice();
+    arr.push({ name: "新しい大技", mult: 1 });
+    commitList(arr);
+    render();
+  });
+  render();
   det.appendChild(body);
   return det;
 }
@@ -901,6 +981,14 @@ function buildEnemyCard(id, opts) {
   });
 
   // フラグ
+  // 追加の大技セクションはボス/中ボスだけに出す。フラグを後から付け外しした時にも
+  // 表示/非表示が追従するよう、要素自体は常に作っておいてdisplayだけ切り替える
+  let extraBigAttackDet;
+  function syncExtraBigAttackVisibility() {
+    if (!extraBigAttackDet) return;
+    const e = getEnemy(id);
+    extraBigAttackDet.style.display = (e.isBoss || e.isMidBoss) ? "" : "none";
+  }
   const flagRow = document.createElement("div");
   flagRow.className = "flag-row";
   flagRow.innerHTML = FLAG_FIELDS.map((f) => `<label class="flag-chip"><input type="checkbox" data-f="${f.key}" ${enemy[f.key] ? "checked" : ""}> ${f.label}</label>`).join("");
@@ -909,6 +997,7 @@ function buildEnemyCard(id, opts) {
     flagRow.querySelector(`[data-f="${f.key}"]`).addEventListener("change", (ev) => {
       setField(id, f.key, ev.target.checked ? true : undefined);
       card.classList.toggle("edited", isEditedEnemy(id));
+      syncExtraBigAttackVisibility();
       refreshEditCount();
     });
   });
@@ -928,6 +1017,9 @@ function buildEnemyCard(id, opts) {
   });
 
   bodyEl.appendChild(renderBigAttackSub(id, enemy));
+  extraBigAttackDet = renderExtraBigAttacksSub(id, enemy);
+  bodyEl.appendChild(extraBigAttackDet);
+  syncExtraBigAttackVisibility();
   bodyEl.appendChild(renderBigAttackCycleSub(id, enemy));
   bodyEl.appendChild(renderOnHitSub(id, enemy));
   bodyEl.appendChild(renderWeaknessSub(id, enemy));

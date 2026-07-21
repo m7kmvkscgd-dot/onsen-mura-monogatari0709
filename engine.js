@@ -1253,6 +1253,10 @@ function instantiateEnemy(pick) {
   // (同種の敵が複数体並んだ時に全員が同時に予告/発動して見えるのを防ぐため)
   const instant = pick.bigAttackCycle && pick.bigAttackCycle.instant;
   const initialCountdown = instant ? 0 : Math.floor(Math.random() * (rollBigAttackCountdown(pick) + 1));
+  // extraBigAttacksを持つボス/中ボスは、初手のローテーション位置もランダムにする
+  // (同じボスと何度戦っても毎回同じ技から始まる単調さを避けるため)
+  const extraCount = pick.extraBigAttacks ? pick.extraBigAttacks.length : 0;
+  const initialBigAttackIndex = extraCount > 0 ? Math.floor(Math.random() * (extraCount + 1)) : 0;
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
@@ -1261,6 +1265,7 @@ function instantiateEnemy(pick) {
     maxHp: hp,
     bigAttackCountdown: initialCountdown,
     bigAttackPending: false,
+    bigAttackIndex: initialBigAttackIndex,
   };
 }
 // 緊急依頼の対象など、通常の階層抽選を経由せず特定の種族idを名指しでスポーンさせる時に使う
@@ -2092,35 +2097,64 @@ function resolveDebuffEffect(target, type, params, log) {
 // debuff.typeの文字列がSTATUS_TOOLTIPSのキーと1対1でない箇所だけの変換表(spdDownは表示上「束縛」の
 // tangleアイコンに相乗りしているため、キー名がズレている)
 const DEBUFF_TYPE_TOOLTIP_KEY = { spdDown: "tangle" };
+// bigAttack(1つ目、全敵必須)とextraBigAttacks(ボス/中ボス専用、任意の追加分)を合わせた
+// 「その敵が使う大技」の一覧。順番はローテーション順そのもの(1つ目→追加分を順に)
+function bigAttackPool(enemyDef) {
+  const pool = [enemyDef.bigAttack];
+  if (enemyDef.extraBigAttacks && enemyDef.extraBigAttacks.length) pool.push(...enemyDef.extraBigAttacks);
+  return pool.filter(Boolean);
+}
+// 大技が発動する時、実際に使うプロファイルを選ぶ。プールが1つだけなら常にそれ(従来通り)。
+// 2つ以上あるボス/中ボスは、bigAttackIndexを毎回進めながら順番に回す(ランダム抽選ではなく固定巡回)
+function pickBigAttackProfile(enemy) {
+  const pool = bigAttackPool(enemy);
+  if (pool.length <= 1) return pool[0];
+  const idx = (enemy.bigAttackIndex || 0) % pool.length;
+  enemy.bigAttackIndex = idx + 1;
+  return pool[idx];
+}
+// 予告(bigAttackPending)の時点で「次に来る技」の名前だけを覗き見る(インデックスは進めない)
+function peekNextBigAttackName(enemy) {
+  const pool = bigAttackPool(enemy);
+  if (!pool.length) return "大技";
+  const idx = pool.length <= 1 ? 0 : (enemy.bigAttackIndex || 0) % pool.length;
+  return (pool[idx] && pool[idx].name) || "大技";
+}
 // 敵カード上の📜アイコンをタップした時に出す、その敵の大技の説明文。予告ターン(bigAttackPending)を
 // 待たずにいつでも確認できるようにするため、data.js側の手書きテキストではなくbigAttackプロファイル
-// (mult/debuff/aoe/ignoreGuardian)から機械的に組み立てる(全103体を漏れなくカバーできる)
+// (mult/debuff/aoe/ignoreGuardian)から機械的に組み立てる(全103体を漏れなくカバーできる)。
+// extraBigAttacksを持つボス/中ボスは、技ごとに名前付きで列挙する
 function bigAttackSummaryText(enemyDef) {
-  const p = enemyDef.bigAttack;
-  if (!p) return "詳細不明の一撃を放つ。";
-  const parts = [];
-  if (p.aoe) parts.push("全体を巻き込む");
-  if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
-  if (p.debuff) {
-    const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
-    const info = STATUS_TOOLTIPS[tooltipKey];
-    const name = info ? info.title : p.debuff.type;
-    const chancePct = Math.round((p.debuff.chance != null ? p.debuff.chance : 1) * 100);
-    parts.push(`命中時${chancePct}%の確率で【${name}】を与える`);
-  } else {
-    parts.push("状態異常は伴わない、純粋な一撃");
-  }
-  return parts.join("。") + "。";
+  const pool = bigAttackPool(enemyDef);
+  if (!pool.length) return "詳細不明の一撃を放つ。";
+  const describeOne = (p) => {
+    const parts = [];
+    if (p.aoe) parts.push("全体を巻き込む");
+    if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
+    if (p.debuff) {
+      const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
+      const info = STATUS_TOOLTIPS[tooltipKey];
+      const name = info ? info.title : p.debuff.type;
+      const chancePct = Math.round((p.debuff.chance != null ? p.debuff.chance : 1) * 100);
+      parts.push(`命中時${chancePct}%の確率で【${name}】を与える`);
+    } else {
+      parts.push("状態異常は伴わない、純粋な一撃");
+    }
+    return parts.join("。") + "。";
+  };
+  if (pool.length === 1) return describeOne(pool[0]);
+  return pool.map((p) => `【${p.name || "大技"}】${describeOne(p)}`).join("\n");
 }
 
 // enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
 // 生存中の味方全員に襲いかかる。全敵がbigAttackプロファイル(見た目/生態に合わせた専用の威力+デバフ)を
-// 持っている前提(data.js ENEMIES、汎用フォールバックは廃止済み、2026-07-19)。
+// 持っている前提(data.js ENEMIES、汎用フォールバックは廃止済み、2026-07-19)。ボス/中ボスはextraBigAttacksで
+// 複数の大技をローテーション巡回できる(pickBigAttackProfile参照)。
 // 敵自身が毒/炎上状態なら威力がさらに下がる(削る対抗策)。結果は対象ごとの配列で返す
 function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return [];
-  const profile = enemy.bigAttack;
+  const profile = pickBigAttackProfile(enemy);
   // 大技は敵1体につき1人だけを狙う(以前は「かばう中の人がいなければ全員に当たる」実質AOEに
   // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。
@@ -2260,7 +2294,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect, rollBigAttackCountdown, applyGroupNerf,
+    pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect, rollBigAttackCountdown, applyGroupNerf, bigAttackPool, pickBigAttackProfile, peekNextBigAttackName, bigAttackSummaryText,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
