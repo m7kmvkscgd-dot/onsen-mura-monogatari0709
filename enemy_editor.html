@@ -87,7 +87,8 @@
   .stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; background: var(--surface); flex-shrink: 0; }
   .stepper .step-btn { background: #7b5d36; color: var(--title); border: none; width: 30px; font-size: 1rem; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
   .stepper .step-btn:active { filter: brightness(1.3); }
-  .stepper .step-value { min-width: 42px; text-align: center; font-size: 0.82rem; padding: 0 4px; color: var(--body); align-self: center; }
+  .stepper .step-value { min-width: 42px; text-align: center; font-size: 0.82rem; padding: 0 4px; color: var(--body); align-self: center; cursor: pointer; border-bottom: 1px dotted rgba(255,255,255,0.35); }
+  .stepper .step-input { min-width: 42px; width: 58px; text-align: center; font-size: 0.82rem; padding: 0 4px; color: var(--body); align-self: center; background: var(--surface); border: none; border-bottom: 1px solid var(--title); outline: none; }
   .sub-field-row .stepper { flex: 1; justify-content: center; }
   .stat-field .stepper { width: 100%; justify-content: space-between; }
   .sub-field-row textarea { flex: 1; min-width: 100%; padding: 5px 6px; font-size: 0.76rem; background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 6px; font-family: inherit; resize: vertical; min-height: 40px; }
@@ -294,19 +295,8 @@ function wireStepper(el, onChange) {
   const max = el.dataset.max === "" ? Infinity : Number(el.dataset.max);
   const allowEmpty = el.dataset.empty === "1";
   const valEl = el.querySelector(".step-value");
-  function apply(dir) {
-    const wasEmpty = valEl.textContent === "―";
-    if (wasEmpty) {
-      if (dir < 0) return; // 空の状態からさらに減らすことはできない
-      const start = min !== -Infinity ? Math.max(min, step) : step;
-      valEl.textContent = formatStepNum(start, decimals);
-      onChange(start);
-      return;
-    }
-    const cur = Number(valEl.textContent);
-    let v = cur + dir * step;
-    const floor = min !== -Infinity ? min : step;
-    if (allowEmpty && dir < 0 && v < floor) {
+  function commitValue(v) {
+    if (v === undefined) {
       valEl.textContent = "―";
       onChange(undefined);
       return;
@@ -316,8 +306,51 @@ function wireStepper(el, onChange) {
     valEl.textContent = formatStepNum(v, decimals);
     onChange(v);
   }
+  function apply(dir) {
+    const activeInput = el.querySelector(".step-input");
+    if (activeInput) activeInput.blur(); // 直接入力中に+/-を押したら、入力中の値を確定させてから増減する
+    const wasEmpty = valEl.textContent === "―";
+    if (wasEmpty) {
+      if (dir < 0) return; // 空の状態からさらに減らすことはできない
+      commitValue(min !== -Infinity ? Math.max(min, step) : step);
+      return;
+    }
+    const cur = Number(valEl.textContent);
+    const v = cur + dir * step;
+    const floor = min !== -Infinity ? min : step;
+    if (allowEmpty && dir < 0 && v < floor) { commitValue(undefined); return; }
+    commitValue(v);
+  }
   el.querySelector(".step-minus").addEventListener("click", () => apply(-1));
   el.querySelector(".step-plus").addEventListener("click", () => apply(1));
+  // 数値部分をタップすると直接テキスト入力できる(+/-連打がだるい大きい値向け)
+  valEl.addEventListener("click", () => {
+    if (el.querySelector(".step-input")) return; // 既に編集中
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = decimals > 0 ? "decimal" : "numeric";
+    input.className = "step-input";
+    const curText = valEl.textContent;
+    input.value = curText === "―" ? "" : curText;
+    valEl.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      const raw = input.value.trim();
+      input.replaceWith(valEl);
+      if (raw === "") { if (allowEmpty) commitValue(undefined); return; }
+      const num = Number(raw);
+      if (!Number.isNaN(num)) commitValue(num);
+    }
+    input.addEventListener("blur", finish);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") { input.value = curText === "―" ? "" : curText; input.blur(); }
+    });
+  });
 }
 // stepperの現在値を読む(「―」なら未設定=undefined)
 function stepperGetValue(el) {
