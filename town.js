@@ -532,10 +532,10 @@ function playLodgingTransition(onBlack, bgSet) {
       // 画面が真っ暗な間に背景を朝の絵へ差し替え、キャプションを表示する
       fromEl.style.backgroundImage = `url('${bg.dawn}')`;
       caption.textContent = pickLodgingNightMessage();
-      caption.style.animation = "lodgingCaptionFade 3900ms ease forwards";
+      caption.style.animation = "lodgingCaptionFade 2500ms ease forwards";
       // キャプションが完全に消えてから回復画面を出す(表示時間を0.6秒短縮したのに合わせて
-      // 回復画面が出るタイミングも同じだけ早める)
-      setTimeout(onBlack, 3900);
+      // 回復画面が出るタイミングも同じだけ早める。2026-07-21にユーザー指示で3900ms→2500msへ再短縮)
+      setTimeout(onBlack, 2500);
     });
   }
 
