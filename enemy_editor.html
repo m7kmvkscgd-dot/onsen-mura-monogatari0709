@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 敵配置・敵データエディタ</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
+    --success: #6ea95b; --danger: #c95d54; --info: #7b93b9; --warn: #d9a25f;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--body); font-family: "Hiragino Sans", "Yu Gothic", sans-serif; line-height: 1.5; }
+  header { position: sticky; top: 0; z-index: 20; background: linear-gradient(180deg, #1c2226 0%, #171b1e 100%); border-bottom: 1px solid var(--card-border); padding: 10px 16px; }
+  .header-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 1.0rem; color: var(--title); margin: 0; white-space: nowrap; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  input[type="search"], input[type="text"], input[type="number"] { background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem; }
+  input[type="search"] { width: 160px; }
+  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; -webkit-tap-highlight-color: transparent; }
+  button:hover { filter: brightness(1.15); }
+  button.danger { background: #5a2e28; }
+  button.ghost { background: transparent; }
+  button.small { padding: 4px 8px; font-size: 0.72rem; }
+  #editCount { color: var(--gold); font-weight: bold; font-size: 0.8rem; white-space: nowrap; }
+  nav#stageTabs { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px 0; }
+  .stage-tab { flex-shrink: 0; display: flex; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--card-border); border-bottom: none; border-radius: 10px 10px 0 0; padding: 7px 12px; cursor: pointer; color: var(--caption); font-size: 0.82rem; white-space: nowrap; }
+  .stage-tab.active { background: var(--card-bg); color: var(--title); border-color: var(--gold); }
+  .stage-tab .count-badge { font-size: 0.68rem; color: var(--caption); background: rgba(255,255,255,0.08); border-radius: 8px; padding: 1px 6px; }
+  .stage-tab.empty-stage .count-badge { color: #fff; background: var(--danger); }
+  .stage-tab .tab-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); display: none; }
+  .stage-tab.has-edits .tab-edit-dot { display: inline-block; }
+  main { max-width: 720px; margin: 0 auto; padding: 12px 10px 40px; }
+
+  .empty-banner { background: #3a2a1c; border: 1px solid var(--warn); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; font-size: 0.78rem; color: #f0d9b5; }
+  .empty-banner b { color: var(--warn); }
+
+  section.block { margin-bottom: 16px; }
+  .block-title { font-size: 0.85rem; color: var(--gold); font-weight: bold; margin: 4px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .block-hint { font-size: 0.7rem; color: var(--caption); font-weight: normal; }
+
+  /* --- 道の出現確率テーブル --- */
+  .path-list { display: flex; flex-direction: column; gap: 6px; }
+  .path-row { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 9px; }
+  .path-row.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .path-row-head { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .path-row-head input[type="text"] { flex: 1; min-width: 0; font-size: 0.8rem; padding: 4px 6px; }
+  .path-row-head .path-icon-input { width: 40px; text-align: center; flex: none; }
+  .path-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .path-field { display: flex; flex-direction: column; gap: 2px; }
+  .path-field label { font-size: 0.62rem; color: var(--caption); }
+  .path-field input { width: 100%; font-size: 0.78rem; padding: 4px 5px; }
+
+  /* --- 敵カード --- */
+  .enemy-list { display: flex; flex-direction: column; gap: 8px; }
+  .enemy-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; }
+  .enemy-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .enemy-card.is-new { border-color: var(--success); box-shadow: 0 0 0 1px var(--success) inset; }
+  .enemy-card > summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; align-items: center; gap: 8px; -webkit-tap-highlight-color: transparent; }
+  .enemy-card > summary::-webkit-details-marker { display: none; }
+  .enemy-thumb { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: rgba(255,255,255,0.05); flex-shrink: 0; }
+  .enemy-summary-main { flex: 1; min-width: 0; }
+  .enemy-summary-name { font-size: 0.88rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .enemy-summary-sub { font-size: 0.68rem; color: var(--caption); display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1px; }
+  .enemy-badges { display: flex; gap: 3px; flex-shrink: 0; }
+  .enemy-badge { font-size: 0.62rem; border-radius: 5px; padding: 1px 5px; background: rgba(255,255,255,0.08); color: var(--caption); }
+  .enemy-badge.boss { background: rgba(201,93,84,0.25); color: #f0a89f; }
+  .enemy-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
+  .enemy-card.edited .enemy-edit-dot, .enemy-card.is-new .enemy-edit-dot { display: inline-block; }
+  .enemy-card.is-new .enemy-edit-dot { background: var(--success); }
+  .enemy-chevron { flex-shrink: 0; color: var(--caption); font-size: 0.65rem; transition: transform 0.15s; }
+  .enemy-card[open] .enemy-chevron { transform: rotate(90deg); }
+
+  .enemy-body { padding: 4px 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .field-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .field-row label { font-size: 0.72rem; color: var(--caption); flex-shrink: 0; width: 62px; }
+  .field-row input[type="text"] { flex: 1; }
+  .id-caption { font-size: 0.68rem; color: var(--caption); font-family: monospace; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0 10px; }
+  .stat-field { display: flex; flex-direction: column; gap: 2px; }
+  .stat-field label { font-size: 0.64rem; color: var(--caption); }
+  .stat-field input { width: 100%; padding: 5px 6px; font-size: 0.8rem; }
+
+  .flag-row { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0 10px; }
+  .flag-chip { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--caption); }
+  .flag-chip input { width: 14px; height: 14px; }
+
+  details.sub-detail { background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin: 6px 0; }
+  details.sub-detail > summary { cursor: pointer; padding: 7px 9px; font-size: 0.76rem; color: var(--info); list-style: none; display: flex; justify-content: space-between; -webkit-tap-highlight-color: transparent; }
+  details.sub-detail > summary::-webkit-details-marker { display: none; }
+  details.sub-detail > summary .sub-summary-text { color: var(--caption); font-weight: normal; }
+  .sub-body { padding: 4px 9px 10px; }
+  .sub-field-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
+  .sub-field-row label { font-size: 0.68rem; color: var(--caption); width: 58px; flex-shrink: 0; }
+  .sub-field-row input[type="text"], .sub-field-row input[type="number"], .sub-field-row select { flex: 1; min-width: 70px; padding: 5px 6px; font-size: 0.76rem; }
+  .sub-field-row textarea { flex: 1; min-width: 100%; padding: 5px 6px; font-size: 0.76rem; background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 6px; font-family: inherit; resize: vertical; min-height: 40px; }
+  .enable-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--gold); margin-bottom: 4px; }
+
+  .card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+
+  .add-enemy-btn { width: 100%; margin-top: 10px; padding: 10px; font-size: 0.82rem; }
+
+  .search-list { display: flex; flex-direction: column; gap: 8px; }
+  .empty-hint { color: var(--caption); font-size: 0.85rem; text-align: center; padding: 30px 10px; }
+
+  #exportModal, #addModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open, #addModal.open { display: flex; }
+  .panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
+  .panel textarea { width: 100%; flex: 1; min-height: 200px; background: #0f1214; color: var(--body); border: 1px solid var(--card-border); border-radius: 8px; font-family: monospace; font-size: 0.72rem; padding: 8px; }
+  .export-summary { font-size: 0.8rem; background: #0f1214; border-radius: 8px; padding: 8px 10px; border: 1px solid var(--card-border); }
+  .export-summary div { margin-bottom: 4px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .panel label.form-label { font-size: 0.78rem; color: var(--caption); display: block; margin-bottom: 3px; }
+  .panel input[type="text"] { width: 100%; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>♨️ 敵配置・敵データエディタ</h1>
+    <div class="toolbar">
+      <input type="search" id="searchBox" placeholder="妖怪名で検索...">
+      <span id="editCount">編集: 0件</span>
+      <button id="exportBtn">📋 エクスポート</button>
+      <button id="resetAllBtn" class="danger ghost">全て元に戻す</button>
+    </div>
+  </div>
+  <nav id="stageTabs"></nav>
+</header>
+<main id="mainArea"></main>
+
+<div id="addModal">
+  <div class="panel">
+    <h2 id="addModalTitle">新しい妖怪を配置</h2>
+    <div>
+      <label class="form-label">ID(半角英数字とアンダースコアのみ。後から変更不可)</label>
+      <input type="text" id="addIdInput" placeholder="例: kawa_uso">
+      <label class="form-label">名前(表示名)</label>
+      <input type="text" id="addNameInput" placeholder="例: 川獺">
+    </div>
+    <div class="modal-actions">
+      <button id="addConfirmBtn">追加する</button>
+      <button id="addCancelBtn" class="ghost">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="exportModal">
+  <div class="panel">
+    <h2>編集内容のエクスポート</h2>
+    <div id="exportSummary" class="export-summary"></div>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyJsonBtn">JSONをコピー</button>
+      <button id="closeExportBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ENEMY_DATA = {"yaken":{"id":"yaken","ja":"野犬","image":"assets/enemies/yaken.png","hp":14,"atk":4,"def":2,"spd":6,"goldMin":5,"goldMax":11,"xp":8,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"牙噛み","mult":1,"debuff":{"type":"spdDown","chance":0.45,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":2,"flavor":"深手を負うと獰猛さを失い、防御が大きく低下する。"}},"inoshishi":{"id":"inoshishi","ja":"猪","image":"assets/enemies/inoshishi.png","hp":18,"atk":5,"def":3,"spd":4,"goldMin":6,"goldMax":12,"xp":9,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"猪突猛進","mult":1.62},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと勢いが鈍り、防御が大きく低下する。"}},"dokuhebi":{"id":"dokuhebi","ja":"毒蛇","image":"assets/enemies/dokuhebi.png","hp":13,"atk":5,"def":2,"spd":7,"goldMin":6,"goldMax":12,"xp":9,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"毒牙","mult":0.9,"debuff":{"type":"poison","chance":1,"value":3}},"onHitInflict":{"type":"poison","chance":0.5,"value":3},"weakness":{"type":"bleed","tier":1,"flavor":"傷口から体力を失いやすい。"}},"oogumo":{"id":"oogumo","ja":"大蜘蛛","image":"assets/enemies/oogumo.png","hp":17,"atk":5,"def":3,"spd":6,"goldMin":8,"goldMax":14,"xp":10,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"糸搦め","mult":1.1,"debuff":{"type":"stun","chance":0.5,"turns":1}},"weakness":{"type":"burn","tier":1,"flavor":"巣や糸は炎に弱く、激しく燃え広がる。"}},"kodama":{"id":"kodama","ja":"木霊","image":"assets/enemies/kodama.png","hp":15,"atk":5,"def":2,"spd":5,"goldMin":6,"goldMax":12,"xp":9,"minFloor":1,"maxFloor":18,"isPlant":true,"bigAttack":{"name":"精気吸い","mult":0.9,"debuff":{"type":"atkDown","chance":0.5,"value":0.15,"turns":3}},"weakness":{"type":"burn","tier":2,"flavor":"依代である木が燃えると、その力を維持できない。"}},"kappa":{"id":"kappa","ja":"河童","image":"assets/enemies/kappa.png","hp":16,"atk":5,"def":3,"spd":6,"goldMin":8,"goldMax":14,"xp":10,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"河童相撲","mult":1,"debuff":{"type":"defDown","chance":0.5,"value":0.15,"turns":3}},"weakness":{"type":"poison","tier":1,"flavor":"人に近い身体を持つため、毒がよく効く。"}},"hitotsume_kozo":{"id":"hitotsume_kozo","ja":"一つ目小僧","image":"assets/enemies/hitotsume_kozo.png","hp":14,"atk":5,"def":2,"spd":8,"goldMin":8,"goldMax":14,"xp":10,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"一つ目睨み","mult":1,"debuff":{"type":"spdDown","chance":0.4,"value":0.2,"turns":3}},"weakness":{"type":"poison","tier":2,"flavor":"妖力は体調に左右されやすく、毒で術が乱れる。"}},"bake_danuki":{"id":"bake_danuki","ja":"化け狸","image":"assets/enemies/bake_danuki.png","hp":18,"atk":5,"def":4,"spd":6,"goldMin":9,"goldMax":15,"xp":11,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"狸囃子","mult":0.9,"debuff":{"type":"silence","chance":0.45,"turns":2}},"weakness":{"type":"bleed","tier":1,"flavor":"傷を負うと化ける力が不安定になる。"}},"onibi":{"id":"onibi","ja":"鬼火","image":"assets/enemies/onibi.png","hp":12,"atk":5,"def":1,"spd":7,"goldMin":9,"goldMax":15,"xp":11,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"鬼火纏い","mult":0.4,"ignoreGuardian":true,"debuff":{"type":"burn","chance":1,"turnsMin":2,"turnsMax":3}},"onHitInflict":{"type":"burn","chance":0.3,"turnsMin":2,"turnsMax":3},"weakness":{"type":"spirit","flavor":"霊力に非常に弱い。"}},"kamaitachi":{"id":"kamaitachi","ja":"かまいたち","image":"assets/enemies/kamaitachi.png","hp":16,"atk":6,"def":2,"spd":10,"goldMin":11,"goldMax":18,"xp":13,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"疾風斬","mult":1,"debuff":{"type":"defDown","chance":0.55,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと俊敏さを失い、防御が大きく低下する。"}},"oo_inoshishi":{"id":"oo_inoshishi","ja":"大猪","image":"assets/enemies/oo_inoshishi.png","hp":126,"atk":8,"def":6,"spd":3,"goldMin":40,"goldMax":60,"xp":40,"minFloor":1,"maxFloor":18,"isBoss":true,"questOnly":true,"isMidBoss":true,"bigAttack":{"name":"大猪突進","mult":5.95},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと勢いが鈍り、防御が大きく低下する。"}},"q_arakuma":{"id":"q_arakuma","ja":"荒熊","image":"assets/enemies/q_arakuma.png","hp":39,"atk":7,"def":5,"spd":3,"goldMin":35,"goldMax":55,"xp":42,"minFloor":1,"maxFloor":18,"isBoss":true,"questOnly":true,"isMidBoss":true,"bigAttack":{"name":"熊爪薙ぎ","mult":1.3,"debuff":{"type":"defDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":2,"flavor":"深手を負うと獰猛さを失い、防御が大きく低下する。"}},"q_daija":{"id":"q_daija","ja":"大蛇","image":"assets/enemies/q_daija.png","hp":22,"atk":8,"def":4,"spd":7,"goldMin":35,"goldMax":55,"xp":42,"minFloor":1,"maxFloor":18,"isBoss":true,"questOnly":true,"isMidBoss":true,"bigAttack":{"name":"鎌首の一閃","mult":1.2},"onHitInflict":{"type":"poison","chance":0.4,"value":4},"weakness":{"type":"bleed","tier":1,"flavor":"傷口から体力を失いやすい。"}},"q_oni":{"id":"q_oni","ja":"鬼","image":"assets/enemies/q_oni.png","hp":270,"atk":9,"def":5,"spd":4,"goldMin":38,"goldMax":58,"xp":45,"minFloor":1,"maxFloor":18,"isBoss":true,"questOnly":true,"isMidBoss":true,"bigAttack":{"name":"金棒一閃","mult":1.4},"weakness":{"type":"poison","tier":1,"flavor":"巨体でも毒の侵食には抗えない。"}},"q_gashadokuro":{"id":"q_gashadokuro","ja":"がしゃどくろ","image":"assets/enemies/q_gashadokuro.png","hp":144,"atk":8,"def":5,"spd":8,"goldMin":38,"goldMax":58,"xp":45,"minFloor":1,"maxFloor":18,"isBoss":true,"questOnly":true,"isMidBoss":true,"bigAttack":{"name":"骨鳴らし","mult":1,"debuff":{"type":"stun","chance":0.4,"turns":1}},"weakness":{"type":"spirit","flavor":"骨だけの体は霊力に強く侵される。"}},"ochimusha":{"id":"ochimusha","ja":"落武者","image":"assets/enemies/ochimusha.png","hp":34,"atk":10,"def":6,"spd":8,"goldMin":18,"goldMax":29,"xp":24,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"怨念の一閃","mult":1.1,"debuff":{"type":"bleed","chance":0.5,"value":2}},"weakness":{"type":"poison","tier":2,"flavor":"生前と同じ肉体を宿しているため、毒で怨念が乱れる。"}},"kamaitachi2":{"id":"kamaitachi2","ja":"かまいたち","image":"assets/enemies/kamaitachi2.png","hp":28,"atk":11,"def":4,"spd":12,"goldMin":20,"goldMax":30,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"剛鎌風","mult":1.15,"debuff":{"type":"bleed","chance":0.5,"value":3}},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと素早さを失い、防御が大きく低下する。"}},"youko":{"id":"youko","ja":"妖狐","image":"assets/enemies/youko.png","hp":26,"atk":12,"def":4,"spd":9,"goldMin":20,"goldMax":30,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"妖狐の幻","mult":1,"debuff":{"type":"atkDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":1,"flavor":"傷を負うと幻術への集中が乱れやすい。"}},"rokurokubi":{"id":"rokurokubi","ja":"ろくろ首","image":"assets/enemies/rokurokubi.png","hp":30,"atk":10,"def":5,"spd":8,"goldMin":18,"goldMax":29,"xp":24,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"首伸ばし","mult":1,"debuff":{"type":"stun","chance":0.45,"turns":1}},"weakness":{"type":"poison","tier":2,"flavor":"妖力は体調に左右されやすく、毒で術が乱れる。"}},"yukionna":{"id":"yukionna","ja":"雪女","image":"assets/enemies/yukionna.png","hp":27,"atk":11,"def":5,"spd":8,"goldMin":20,"goldMax":30,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"氷結の息","mult":1,"debuff":{"type":"spdDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"burn","tier":2,"flavor":"冷気の妖力は炎に弱く、燃え続ける炎を嫌う。"}},"yamauba":{"id":"yamauba","ja":"山姥","image":"assets/enemies/yamauba.png","hp":36,"atk":10,"def":6,"spd":6,"goldMin":21,"goldMax":31,"xp":26,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"怪力の一撃","mult":1.35},"weakness":{"type":"poison","tier":2,"flavor":"老いた身体は毒に侵されると妖力を維持できない。"}},"tsuchigumo":{"id":"tsuchigumo","ja":"土蜘蛛","image":"assets/enemies/tsuchigumo.png","hp":32,"atk":10,"def":5,"spd":7,"goldMin":20,"goldMax":30,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"土蜘蛛の巣","mult":1.15,"debuff":{"type":"spdDown","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"burn","tier":1,"flavor":"巨大な巣は炎で簡単に焼き払われる。"}},"onryo":{"id":"onryo","ja":"怨霊","image":"assets/enemies/onryo.png","hp":24,"atk":13,"def":3,"spd":9,"goldMin":21,"goldMax":31,"xp":27,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"怨嗟の声","mult":0.9,"debuff":{"type":"dmgTakenUp","chance":0.45,"value":0.15,"turns":3}},"weakness":{"type":"spirit","flavor":"実体を持たず、霊力に強く侵される。"}},"oomukade":{"id":"oomukade","ja":"大百足","image":"assets/enemies/oomukade.png","hp":38,"atk":11,"def":6,"spd":6,"goldMin":22,"goldMax":33,"xp":27,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"百足の乱噛み","mult":1,"debuff":{"type":"poison","chance":0.6,"value":4}},"weakness":{"type":"burn","tier":1,"flavor":"硬い甲殻を持つが、炎には弱い。"}},"kasha":{"id":"kasha","ja":"火車","image":"assets/enemies/kasha.png","hp":34,"atk":12,"def":6,"spd":7,"goldMin":23,"goldMax":35,"xp":29,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"業火の相貌","mult":1.4,"debuff":{"type":"atkDown","chance":0.45,"value":0.2,"turns":3}},"weakness":{"type":"spirit","flavor":"妖火をまとう体は、霊力には抗えない。"}},"oni":{"id":"oni","ja":"鬼","image":"assets/enemies/oni.png","hp":58,"atk":18,"def":9,"spd":9,"goldMin":24,"goldMax":36,"xp":42,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"鬼の金棒","mult":1.4},"weakness":{"type":"poison","tier":1,"flavor":"巨体でも毒の侵食には抗えない。"}},"karasu_tengu":{"id":"karasu_tengu","ja":"烏天狗","image":"assets/enemies/karasu_tengu.png","hp":48,"atk":17,"def":7,"spd":14,"goldMin":24,"goldMax":36,"xp":42,"minFloor":35,"maxFloor":67,"isFlying":true,"bigAttack":{"name":"扇の突風","mult":0.3,"aoe":true,"debuff":{"type":"stun","chance":0.9,"turns":1}},"weakness":{"type":"flying"}},"yamauba2":{"id":"yamauba2","ja":"山姥","image":"assets/enemies/yamauba2.png","hp":56,"atk":16,"def":9,"spd":8,"goldMin":23,"goldMax":35,"xp":41,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"命喰らいの呪い","mult":1.2,"debuff":{"type":"atkDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"poison","tier":2,"flavor":"老いた身体は毒に侵されると妖力が乱れる。"}},"gyuki":{"id":"gyuki","ja":"牛鬼","image":"assets/enemies/gyuki.png","hp":70,"atk":19,"def":11,"spd":7,"goldMin":28,"goldMax":40,"xp":46,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"牛鬼の角","mult":1,"debuff":{"type":"poison","chance":0.5,"value":4}},"weakness":{"type":"bleed","tier":2,"flavor":"深い傷を負うと巨体を支えられず、防御が大きく低下する。"}},"nue":{"id":"nue","ja":"ぬえ","image":"assets/enemies/nue.png","hp":52,"atk":18,"def":8,"spd":11,"goldMin":26,"goldMax":38,"xp":44,"minFloor":35,"maxFloor":67,"isFlying":true,"bigAttack":{"name":"鵺の鳴き声","mult":1.15,"debuff":{"type":"silence","chance":0.4,"turns":2}},"weakness":{"type":"flying"}},"wanyudo":{"id":"wanyudo","ja":"輪入道","image":"assets/enemies/wanyudo.png","hp":50,"atk":17,"def":8,"spd":13,"goldMin":25,"goldMax":37,"xp":43,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"火輪の相貌","mult":1.2,"debuff":{"type":"stun","chance":0.35,"turns":1}},"weakness":{"type":"burn","tier":1,"flavor":"燃え盛る炎は逆に制御を乱し、力を暴走させる。"}},"gaikotsu_musha":{"id":"gaikotsu_musha","ja":"骸骨武者","image":"assets/enemies/gaikotsu_musha.png","hp":54,"atk":18,"def":10,"spd":10,"goldMin":26,"goldMax":38,"xp":44,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"骸骨の乱撃","mult":1.3,"debuff":{"type":"defDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"spirit","flavor":"肉体を持たず、霊力に強く侵される。"}},"orochi":{"id":"orochi","ja":"大蛇","image":"assets/enemies/orochi.png","hp":62,"atk":18,"def":10,"spd":9,"goldMin":27,"goldMax":39,"xp":45,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"大蛇の毒吐き","mult":1.15,"debuff":{"type":"poison","chance":0.6,"value":4}},"weakness":{"type":"bleed","tier":1,"flavor":"傷口から体力を失いやすい。"}},"gashadokuro":{"id":"gashadokuro","ja":"がしゃどくろ","image":"assets/enemies/gashadokuro.png","hp":170,"atk":24,"def":13,"spd":9,"goldMin":90,"goldMax":130,"xp":150,"minFloor":38,"maxFloor":1498,"isBoss":true,"bigAttack":{"name":"がしゃどくろの哭き","mult":1.6,"debuff":{"type":"stun","chance":0.5,"turns":1}},"weakness":{"type":"spirit","flavor":"無数の骨が集う体は、霊力に強く侵される。"}},"kyubi_no_kitsune":{"id":"kyubi_no_kitsune","ja":"九尾の狐","image":"assets/enemies/kyubi_no_kitsune.png","hp":155,"atk":26,"def":11,"spd":12,"goldMin":95,"goldMax":135,"xp":155,"minFloor":38,"maxFloor":1498,"isBoss":true,"bigAttack":{"name":"九尾の妖火","mult":1.5,"debuff":{"type":"dmgTakenUp","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと妖力への集中が乱れ、防御が大きく低下する。"}},"shuten_doji":{"id":"shuten_doji","ja":"酒呑童子","image":"assets/enemies/shuten_doji.png","hp":92,"atk":26,"def":13,"spd":10,"goldMin":40,"goldMax":58,"xp":75,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"鬼哭の咆哮","mult":1.5,"debuff":{"type":"atkDown","chance":0.5,"value":0.25,"turns":3}},"weakness":{"type":"poison","tier":1,"flavor":"豪胆な鬼でも、毒は確実に身体を蝕む。"}},"ibaraki_doji":{"id":"ibaraki_doji","ja":"茨木童子","image":"assets/enemies/ibaraki_doji.png","hp":98,"atk":28,"def":13,"spd":10,"goldMin":42,"goldMax":60,"xp":78,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"鉤爪の一薙ぎ","mult":1.4,"debuff":{"type":"defDown","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"poison","tier":1,"flavor":"強靭な肉体も毒の侵食には抗えない。"}},"dai_tengu":{"id":"dai_tengu","ja":"大天狗","image":"assets/enemies/dai_tengu.png","hp":85,"atk":27,"def":12,"spd":15,"goldMin":41,"goldMax":59,"xp":76,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"扇の突風","mult":0.3,"aoe":true,"debuff":{"type":"stun","chance":0.9,"turns":1}},"weakness":{"type":"poison","tier":2,"flavor":"強大な妖術ほど毒の影響を受けやすい。"}},"yamata_no_orochi":{"id":"yamata_no_orochi","ja":"八岐大蛇","image":"assets/enemies/yamata_no_orochi.png","hp":110,"atk":29,"def":14,"spd":8,"goldMin":45,"goldMax":64,"xp":82,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"八岐の乱牙","mult":1.3,"debuff":{"type":"poison","chance":0.65,"value":5}},"weakness":{"type":"bleed","tier":1,"flavor":"巨大な身体ほど傷口から力を失いやすい。"}},"tamamo_no_mae":{"id":"tamamo_no_mae","ja":"玉藻前","image":"assets/enemies/tamamo_no_mae.png","hp":82,"atk":28,"def":11,"spd":12,"goldMin":42,"goldMax":60,"xp":77,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"傾国の艶","mult":1.2,"debuff":{"type":"atkDown","chance":0.55,"value":0.3,"turns":3}},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと妖力への集中が乱れ、防御が大きく低下する。"}},"giou":{"id":"giou","ja":"鵺王","image":"assets/enemies/giou.png","hp":100,"atk":27,"def":15,"spd":11,"goldMin":44,"goldMax":62,"xp":80,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"鵺王の咆哮","mult":1.3,"debuff":{"type":"silence","chance":0.5,"turns":2}},"weakness":{"type":"bleed","tier":2,"flavor":"巨体ゆえに深手を負うと動きが鈍り、防御が大きく低下する。"}},"kyubi_shin":{"id":"kyubi_shin","ja":"九尾の狐(真)","image":"assets/enemies/kyubi_shin.png","hp":95,"atk":30,"def":12,"spd":13,"goldMin":46,"goldMax":65,"xp":85,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"業炎の九尾","mult":1.4,"debuff":{"type":"burn","chance":0.6,"turnsMin":2,"turnsMax":3}},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと妖力への集中が乱れ、防御が大きく低下する。"}},"gashadokuro_shin":{"id":"gashadokuro_shin","ja":"がしゃどくろ(真)","image":"assets/enemies/gashadokuro_shin.png","hp":120,"atk":28,"def":16,"spd":8,"goldMin":47,"goldMax":66,"xp":86,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"亡骨の大哭","mult":1.7,"debuff":{"type":"stun","chance":0.55,"turns":1}},"weakness":{"type":"spirit","flavor":"骨だけで構成された巨体は、霊力に強く侵される。"}},"yomi_no_onryo":{"id":"yomi_no_onryo","ja":"黄泉の怨霊","image":"assets/enemies/yomi_no_onryo.png","hp":88,"atk":32,"def":10,"spd":11,"goldMin":48,"goldMax":68,"xp":88,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"黄泉の呪詛","mult":1.3,"debuff":{"type":"dmgTakenUp","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"spirit","flavor":"肉体を持たず、霊力に強く侵される。"}},"kishin_rasetsuo":{"id":"kishin_rasetsuo","ja":"鬼神・羅刹王","image":"assets/enemies/kishin_rasetsuo.png","hp":280,"atk":34,"def":18,"spd":12,"goldMin":220,"goldMax":320,"xp":420,"minFloor":62,"maxFloor":1498,"isBoss":true,"bigAttack":{"name":"羅刹の薙ぎ払い","mult":1.4,"ignoreGuardian":true,"debuff":{"type":"stun","chance":0.45,"turns":1}},"weakness":{"type":"spirit","flavor":"鬼神の肉体も、霊力の前では無力に近い。"}},"nurari_koumori":{"id":"nurari_koumori","ja":"ぬらりこうもり","image":"assets/enemies/nurari_koumori.png","hp":6,"atk":3,"def":0,"spd":9,"goldMin":3,"goldMax":5,"xp":5,"minFloor":1,"maxFloor":18,"isSwarm":true,"isFlying":true,"bigAttack":{"name":"羽ばたきの乱舞","mult":0.85,"debuff":{"type":"stun","chance":0.3,"turns":1}},"onHitInflict":{"type":"poison","chance":0.4,"value":2,"stacking":true},"weakness":{"type":"flying"}},"chochin_obake":{"id":"chochin_obake","ja":"提灯おばけ","image":"assets/enemies/chochin_obake.png","hp":8,"atk":2,"def":1,"spd":5,"goldMin":3,"goldMax":6,"xp":5,"minFloor":1,"maxFloor":18,"isSwarm":true,"bigAttack":{"name":"驚きの灯り","mult":0.8,"debuff":{"type":"spdDown","chance":0.35,"value":0.15,"turns":2}},"weakness":{"type":"burn","tier":1,"flavor":"提灯の紙と竹は炎に弱い。"}},"kawappa":{"id":"kawappa","ja":"かわっぱ","image":"assets/enemies/kawappa.png","hp":13,"atk":5,"def":2,"spd":6,"goldMin":10,"goldMax":14,"xp":11,"minFloor":13,"maxFloor":43,"isSwarm":true,"bigAttack":{"name":"悪戯突き","mult":0.9,"debuff":{"type":"defDown","chance":0.4,"value":0.15,"turns":3}},"weakness":{"type":"poison","tier":1,"flavor":"子供の河童はまだ毒への耐性が乏しい。"}},"chibi_oni":{"id":"chibi_oni","ja":"ちび鬼","image":"assets/enemies/chibi_oni.png","hp":12,"atk":6,"def":1,"spd":7,"goldMin":10,"goldMax":16,"xp":12,"minFloor":13,"maxFloor":43,"isSwarm":true,"bigAttack":{"name":"豆鬼の一撃","mult":1},"weakness":{"type":"poison","tier":1,"flavor":"幼い鬼はまだ毒への耐性が弱い。"}},"karakasa":{"id":"karakasa","ja":"からかさ","image":"assets/enemies/karakasa.png","hp":27,"atk":8,"def":4,"spd":6,"goldMin":13,"goldMax":18,"xp":19,"minFloor":35,"maxFloor":67,"isSwarm":true,"bigAttack":{"name":"からかさ跳ね","mult":0.95,"debuff":{"type":"spdDown","chance":0.4,"value":0.2,"turns":3}},"weakness":{"type":"burn","tier":1,"flavor":"古い傘の紙と骨は炎に弱い。"}},"kogitsune":{"id":"kogitsune","ja":"こぎつね","image":"assets/enemies/kogitsune.png","hp":22,"atk":9,"def":3,"spd":13,"goldMin":13,"goldMax":18,"xp":20,"minFloor":35,"maxFloor":67,"isSwarm":true,"bigAttack":{"name":"子狐の妖術","mult":0.95,"debuff":{"type":"atkDown","chance":0.4,"value":0.15,"turns":3}},"weakness":{"type":"bleed","tier":1,"flavor":"幼い狐は傷を負うと動きが乱れやすい。"}},"warashibe_ningyo":{"id":"warashibe_ningyo","ja":"わらしべ人形","image":"assets/enemies/warashibe_ningyo.png","hp":47,"atk":12,"def":6,"spd":5,"goldMin":22,"goldMax":28,"xp":35,"minFloor":56,"maxFloor":1498,"isSwarm":true,"bigAttack":{"name":"藁人形の呪い","mult":1.1,"debuff":{"type":"atkDown","chance":0.4,"value":0.2,"turns":3}},"weakness":{"type":"burn","tier":1,"flavor":"藁でできた体は炎に非常に弱い。"}},"medama_kozou":{"id":"medama_kozou","ja":"目玉こぞう","image":"assets/enemies/medama_kozou.png","hp":40,"atk":14,"def":5,"spd":6,"goldMin":22,"goldMax":30,"xp":36,"minFloor":56,"maxFloor":1498,"isSwarm":true,"bigAttack":{"name":"百目睨み","mult":1.1,"debuff":{"type":"spdDown","chance":0.45,"value":0.2,"turns":3}},"weakness":{"type":"poison","tier":1,"flavor":"小さな体は毒の影響を受けやすい。"}},"cave_tsuchigumo":{"id":"cave_tsuchigumo","ja":"土蜘蛛","image":"assets/enemies/tsuchigumo.png","stage":"cave","hp":24,"atk":7,"def":4,"spd":7,"goldMin":10,"goldMax":16,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"闇網搦め","mult":1.2,"debuff":{"type":"stun","chance":0.45,"turns":1}}},"cave_oomukade":{"id":"cave_oomukade","ja":"大百足","image":"assets/enemies/oomukade.png","stage":"cave","hp":26,"atk":7,"def":4,"spd":6,"goldMin":10,"goldMax":17,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"百足の締め上げ","mult":1.15,"debuff":{"type":"defDown","chance":0.5,"value":0.2,"turns":3}}},"cave_oogumo":{"id":"cave_oogumo","ja":"大蜘蛛","image":"assets/enemies/oogumo.png","stage":"cave","hp":20,"atk":6,"def":3,"spd":7,"goldMin":9,"goldMax":15,"xp":12,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"闇の巣網","mult":1.1,"debuff":{"type":"stun","chance":0.5,"turns":1}}},"cave_nurarikoumori":{"id":"cave_nurarikoumori","ja":"ぬらりこうもり","image":"assets/enemies/nurari_koumori.png","stage":"cave","hp":8,"atk":4,"def":1,"spd":10,"goldMin":4,"goldMax":7,"xp":6,"minFloor":1,"maxFloor":15,"isSwarm":true,"isFlying":true,"bigAttack":{"name":"金切りの乱舞","mult":0.85,"debuff":{"type":"spdDown","chance":0.35,"value":0.15,"turns":2}},"onHitInflict":{"type":"poison","chance":0.4,"value":2,"stacking":true}},"cave_onibi":{"id":"cave_onibi","ja":"鬼火","image":"assets/enemies/onibi.png","stage":"cave","hp":16,"atk":6,"def":2,"spd":8,"goldMin":10,"goldMax":16,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"纏わり火","mult":1.1,"debuff":{"type":"burn","chance":0.6,"turnsMin":2,"turnsMax":3}},"onHitInflict":{"type":"burn","chance":0.3,"turnsMin":2,"turnsMax":3}},"doukutsu_shokujinsou":{"id":"doukutsu_shokujinsou","ja":"洞窟食人草","image":"assets/enemies/doukutsu_shokujinsou.png","stage":"cave","hp":22,"atk":7,"def":3,"spd":4,"goldMin":10,"goldMax":16,"xp":13,"minFloor":1,"maxFloor":15,"isPlant":true,"bigAttack":{"name":"食人草の丸呑み","mult":1.2,"debuff":{"type":"atkDown","chance":0.5,"value":0.2,"turns":3}},"onHitInflict":{"type":"poison","chance":0.3,"value":3}},"doukutsu_chouchinbi":{"id":"doukutsu_chouchinbi","ja":"洞窟の提灯火","image":"assets/enemies/doukutsu_chouchinbi.png","stage":"cave","hp":18,"atk":6,"def":2,"spd":8,"goldMin":10,"goldMax":16,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"提灯火の幻惑","mult":1,"debuff":{"type":"silence","chance":0.4,"turns":2}}},"bake_nezumi":{"id":"bake_nezumi","ja":"化け鼠","image":"assets/enemies/bake_nezumi.png","stage":"cave","hp":9,"atk":4,"def":1,"spd":9,"goldMin":4,"goldMax":7,"xp":6,"minFloor":1,"maxFloor":15,"isSwarm":true,"bigAttack":{"name":"鼠の乱噛み","mult":0.95,"debuff":{"type":"bleed","chance":0.4,"value":2}}},"bake_take":{"id":"bake_take","ja":"化け茸","image":"assets/enemies/bake_take.png","stage":"cave","hp":20,"atk":6,"def":3,"spd":4,"goldMin":9,"goldMax":15,"xp":12,"minFloor":1,"maxFloor":15,"isPlant":true,"bigAttack":{"name":"胞子撒き","mult":1.15,"debuff":{"type":"defDown","chance":0.45,"value":0.15,"turns":3}},"onHitInflict":{"type":"poison","chance":0.35,"value":3}},"doukutsu_bourei":{"id":"doukutsu_bourei","ja":"洞窟の亡霊","image":"assets/enemies/doukutsu_bourei.png","stage":"cave","hp":18,"atk":7,"def":2,"spd":8,"goldMin":10,"goldMax":16,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"亡霊の怨嗟","mult":1.1,"debuff":{"type":"dmgTakenUp","chance":0.45,"value":0.15,"turns":3}}},"doukutsu_inoshishi":{"id":"doukutsu_inoshishi","ja":"洞窟イノシシ","image":"assets/enemies/doukutsu_inoshishi.png","stage":"cave","hp":26,"atk":7,"def":4,"spd":4,"goldMin":10,"goldMax":17,"xp":13,"minFloor":1,"maxFloor":15,"bigAttack":{"name":"洞窟の猛進","mult":1.5}},"iso_gani":{"id":"iso_gani","ja":"磯ガニ","image":"assets/enemies/iso_gani.png","stage":"coast","hp":14,"atk":4,"def":5,"spd":3,"goldMin":5,"goldMax":10,"xp":8,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"大鋏挟み","mult":1.3,"debuff":{"type":"atkDown","chance":0.4,"value":0.15,"turns":3}},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":2,"flavor":"殻に傷が入ると、防御が大きく低下する。"}},"yadokari":{"id":"yadokari","ja":"ヤドカリ","image":"assets/enemies/yadokari.png","stage":"coast","hp":16,"atk":4,"def":5,"spd":4,"goldMin":5,"goldMax":11,"xp":8,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"貝殻突撃","mult":1.2},"weakness":{"type":"bleed","tier":1,"flavor":"殻から出た柔らかい体は傷つきやすい。"}},"isozakana":{"id":"isozakana","ja":"磯魚","image":"assets/enemies/isozakana.png","stage":"coast","hp":7,"atk":2,"def":1,"spd":8,"goldMin":3,"goldMax":6,"xp":5,"minFloor":1,"maxFloor":18,"isSwarm":true,"bigAttack":{"name":"跳ね躍り","mult":1.3},"onHitInflict":{"type":"bleed","chance":1,"valueMin":1,"valueMax":2},"weakness":{"type":"bleed","tier":1,"flavor":"小さな体は傷を負うと弱りやすい。"}},"kurage_bou":{"id":"kurage_bou","ja":"くらげ坊","image":"assets/enemies/kurage_bou.png","stage":"coast","hp":13,"atk":4,"def":1,"spd":5,"goldMin":6,"goldMax":12,"xp":9,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"痺れ触手","mult":1,"debuff":{"type":"stun","chance":0.45,"turns":1}},"weakness":{"type":"bleed","tier":1,"flavor":"傷つくと体液を失い、力が抜ける。"}},"kaiyose":{"id":"kaiyose","ja":"貝寄せ","image":"assets/enemies/kaiyose.png","stage":"coast","hp":13,"atk":4,"def":5,"spd":3,"goldMin":6,"goldMax":12,"xp":9,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"貝閉じの一撃","mult":1.3},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":1,"flavor":"殻の隙間から傷を負いやすい。"}},"hama_tako":{"id":"hama_tako","ja":"浜タコ","image":"assets/enemies/hama_tako.png","stage":"coast","hp":17,"atk":5,"def":3,"spd":6,"goldMin":8,"goldMax":14,"xp":10,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"足絡め","mult":1,"debuff":{"type":"spdDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":1,"flavor":"柔らかい体は傷に弱い。"}},"kaisou_douji":{"id":"kaisou_douji","ja":"海藻童子","image":"assets/enemies/kaisou_douji.png","stage":"coast","hp":14,"atk":5,"def":2,"spd":9,"goldMin":8,"goldMax":14,"xp":10,"minFloor":1,"maxFloor":18,"isPlant":true,"bigAttack":{"name":"海藻の鞭","mult":1.1},"weakness":{"type":"burn","tier":1,"flavor":"海藻の体は乾くと燃えやすい。"}},"harifugu":{"id":"harifugu","ja":"ハリフグ","image":"assets/enemies/harifugu.png","stage":"coast","hp":15,"atk":6,"def":2,"spd":5,"goldMin":8,"goldMax":15,"xp":11,"minFloor":1,"maxFloor":18,"bigAttack":{"name":"針膨れ突進","mult":1.5},"weakness":{"type":"bleed","tier":1,"flavor":"針の下の柔らかい体は傷に弱い。"}},"umineko":{"id":"umineko","ja":"ウミネコ","image":"assets/enemies/umineko.png","stage":"coast","hp":13,"atk":5,"def":1,"spd":10,"goldMin":9,"goldMax":15,"xp":11,"minFloor":1,"maxFloor":18,"isFlying":true,"bigAttack":{"name":"急降下つつき","mult":1,"debuff":{"type":"spdDown","chance":0.4,"value":0.2,"turns":3}},"weakness":{"type":"flying"}},"kaizoku_gaikotsu":{"id":"kaizoku_gaikotsu","ja":"海賊骸骨","image":"assets/enemies/kaizoku_gaikotsu.png","stage":"coast","hp":30,"atk":11,"def":5,"spd":8,"goldMin":18,"goldMax":29,"xp":24,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"錆刀の一閃","mult":1.1,"debuff":{"type":"bleed","chance":0.5,"value":2}},"weakness":{"type":"spirit","flavor":"白骨の体は、霊力に強く侵される。"}},"iso_inu":{"id":"iso_inu","ja":"磯犬","image":"assets/enemies/iso_inu.png","stage":"coast","hp":27,"atk":12,"def":4,"spd":11,"goldMin":18,"goldMax":29,"xp":24,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"潮風の牙","mult":1.3,"debuff":{"type":"spdDown","chance":0.5,"value":0.2,"turns":3}},"onHitInflict":{"type":"bleed","chance":0.3,"value":1},"weakness":{"type":"bleed","tier":2,"flavor":"傷を負うと獰猛さを失い、防御が大きく低下する。"}},"oo_dako_1":{"id":"oo_dako_1","ja":"大ダコ","image":"assets/enemies/oo_dako_1.png","stage":"coast","hp":36,"atk":11,"def":5,"spd":6,"goldMin":20,"goldMax":30,"xp":26,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"大ダコの締め付け","mult":1.2,"debuff":{"type":"defDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"bleed","tier":1,"flavor":"柔らかい体は傷に弱い。"}},"iwa_gani":{"id":"iwa_gani","ja":"岩ガニ","image":"assets/enemies/iwa_gani.png","stage":"coast","hp":30,"atk":11,"def":9,"spd":5,"goldMin":19,"goldMax":29,"xp":24,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"岩鋏","mult":1.4},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":2,"flavor":"岩のような殻も、傷が入れば防御が大きく低下する。"}},"gyojin":{"id":"gyojin","ja":"魚人","image":"assets/enemies/gyojin.png","stage":"coast","hp":29,"atk":13,"def":5,"spd":9,"goldMin":20,"goldMax":31,"xp":26,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"三叉槍突き","mult":1.1,"debuff":{"type":"bleed","chance":0.45,"value":2}},"weakness":{"type":"poison","tier":1,"flavor":"人に近い体を持つため、毒がよく効く。"}},"shell_slime":{"id":"shell_slime","ja":"シェルスライム","image":"assets/enemies/shell_slime.png","stage":"coast","hp":32,"atk":10,"def":8,"spd":4,"goldMin":19,"goldMax":29,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"溶蝕の粘液","mult":1,"debuff":{"type":"defDown","chance":0.5,"value":0.2,"turns":3}},"weakness":{"type":"spirit","flavor":"液状の体は、霊力に強く侵される。"}},"kaisou_no_sei":{"id":"kaisou_no_sei","ja":"海藻の精","image":"assets/enemies/kaisou_no_sei.png","stage":"coast","hp":26,"atk":11,"def":4,"spd":7,"goldMin":18,"goldMax":28,"xp":24,"minFloor":13,"maxFloor":43,"isPlant":true,"bigAttack":{"name":"海藻纏い","mult":1.1,"debuff":{"type":"atkDown","chance":0.5,"value":0.2,"turns":3}},"onHitInflict":{"type":"poison","chance":0.35,"value":2},"weakness":{"type":"burn","tier":2,"flavor":"依代の海藻が燃えると、その力を維持できない。"}},"same":{"id":"same","ja":"鮫","image":"assets/enemies/same.png","stage":"coast","hp":28,"atk":13,"def":4,"spd":13,"goldMin":21,"goldMax":32,"xp":27,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"鮫の乱牙","mult":1.3,"debuff":{"type":"bleed","chance":0.6,"value":2}},"weakness":{"type":"bleed","tier":2,"flavor":"手負いになると狩りの精度を欠き、防御が大きく低下する。"}},"iso_onna_1":{"id":"iso_onna_1","ja":"磯女","image":"assets/enemies/iso_onna_1.png","stage":"coast","hp":25,"atk":13,"def":4,"spd":8,"goldMin":20,"goldMax":31,"xp":26,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"黒髪縛り","mult":1.1,"debuff":{"type":"spdDown","chance":0.5,"value":0.25,"turns":3}},"weakness":{"type":"poison","tier":2,"flavor":"妖力は体調に左右されやすく、毒で術が乱れる。"}},"oo_kai":{"id":"oo_kai","ja":"大貝","image":"assets/enemies/oo_kai.png","stage":"coast","hp":34,"atk":11,"def":9,"spd":3,"goldMin":20,"goldMax":30,"xp":25,"minFloor":13,"maxFloor":43,"bigAttack":{"name":"大貝の圧殺","mult":1.4},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":2,"flavor":"殻を閉じる力も、傷を負えば大きく落ちる。"}},"umibouzu":{"id":"umibouzu","ja":"海坊主","image":"assets/enemies/umibouzu.png","stage":"coast","hp":60,"atk":18,"def":9,"spd":6,"goldMin":25,"goldMax":37,"xp":43,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"海坊主の大波","mult":0.5,"ignoreGuardian":true},"weakness":{"type":"spirit","flavor":"得体の知れない体は、霊力に強く侵される。"}},"iso_onna_2":{"id":"iso_onna_2","ja":"磯女","image":"assets/enemies/iso_onna_2.png","stage":"coast","hp":54,"atk":19,"def":8,"spd":10,"goldMin":26,"goldMax":38,"xp":44,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"怨念の黒髪","mult":1.2,"debuff":{"type":"spdDown","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"poison","tier":2,"flavor":"積年の妖力は毒で大きく乱れる。"}},"iwagaki_ou":{"id":"iwagaki_ou","ja":"岩ガキ翁","image":"assets/enemies/iwagaki_ou.png","stage":"coast","hp":58,"atk":16,"def":13,"spd":4,"goldMin":24,"goldMax":36,"xp":42,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"老翁の岩殻","mult":1.3},"weakness":{"type":"bleed","tier":2,"flavor":"長年の殻も、傷が入れば防御が大きく低下する。"}},"umihebi":{"id":"umihebi","ja":"海蛇","image":"assets/enemies/umihebi.png","stage":"coast","hp":50,"atk":19,"def":8,"spd":12,"goldMin":25,"goldMax":37,"xp":43,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"海蛇の毒牙","mult":1,"debuff":{"type":"poison","chance":0.6,"value":4}},"onHitInflict":{"type":"poison","chance":0.35,"value":3},"weakness":{"type":"bleed","tier":1,"flavor":"傷口から体力を失いやすい。"}},"umigumo":{"id":"umigumo","ja":"海蜘蛛","image":"assets/enemies/umigumo.png","stage":"coast","hp":52,"atk":17,"def":9,"spd":8,"goldMin":24,"goldMax":36,"xp":42,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"海蜘蛛の縛糸","mult":1.1,"debuff":{"type":"stun","chance":0.5,"turns":1}},"weakness":{"type":"burn","tier":1,"flavor":"糸は炎に弱く、激しく燃え広がる。"}},"ryuuguu_no_shisha":{"id":"ryuuguu_no_shisha","ja":"竜宮の使者","image":"assets/enemies/ryuuguu_no_shisha.png","stage":"coast","hp":48,"atk":19,"def":8,"spd":13,"goldMin":26,"goldMax":38,"xp":44,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"竜宮の穂先","mult":1.2,"debuff":{"type":"bleed","chance":0.5,"value":2}},"weakness":{"type":"poison","tier":2,"flavor":"妖力は毒に大きく乱される。"}},"oo_dako_2":{"id":"oo_dako_2","ja":"大ダコ","image":"assets/enemies/oo_dako_2.png","stage":"coast","hp":62,"atk":18,"def":9,"spd":7,"goldMin":27,"goldMax":39,"xp":45,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"岩場の抱擁","mult":1.2,"debuff":{"type":"defDown","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"bleed","tier":1,"flavor":"柔らかい体は傷に弱い。"}},"same_bito":{"id":"same_bito","ja":"鮫人","image":"assets/enemies/same_bito.png","stage":"coast","hp":54,"atk":20,"def":7,"spd":12,"goldMin":27,"goldMax":39,"xp":45,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"鮫人の乱撃","mult":1.25,"debuff":{"type":"bleed","chance":0.6,"value":2}},"onHitInflict":{"type":"bleed","chance":0.25,"value":1},"weakness":{"type":"poison","tier":2,"flavor":"人に近い体ほど、毒の影響を強く受ける。"}},"shinkai_no_bourei":{"id":"shinkai_no_bourei","ja":"深海の亡霊","image":"assets/enemies/shinkai_no_bourei.png","stage":"coast","hp":46,"atk":20,"def":6,"spd":10,"goldMin":26,"goldMax":38,"xp":44,"minFloor":35,"maxFloor":67,"bigAttack":{"name":"深海の呪縛","mult":1.2,"debuff":{"type":"dmgTakenUp","chance":0.45,"value":0.15,"turns":3}},"onHitInflict":{"type":"poison","chance":0.4,"value":3},"weakness":{"type":"spirit","flavor":"実体を持たず、霊力に強く侵される。"}},"oo_kani_ou":{"id":"oo_kani_ou","ja":"大蟹王","image":"assets/enemies/oo_kani_ou.png","stage":"coast","hp":165,"atk":25,"def":16,"spd":7,"goldMin":90,"goldMax":130,"xp":150,"minFloor":38,"maxFloor":1498,"isBoss":true,"bigAttack":{"name":"王鋏の一閃","mult":1.5,"debuff":{"type":"defDown","chance":0.4,"value":0.2,"turns":3}},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":2,"flavor":"巨大な鋏も、傷が入れば防御が大きく低下する。"}},"kaima_daiou":{"id":"kaima_daiou","ja":"海魔大王","image":"assets/enemies/kaima_daiou.png","stage":"coast","hp":95,"atk":29,"def":12,"spd":8,"goldMin":48,"goldMax":68,"xp":86,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"大槍薙ぎ","mult":1.4,"ignoreGuardian":true},"weakness":{"type":"poison","tier":1,"flavor":"王としての誇りも、毒には抗えない。"}},"youen_na_isoonna":{"id":"youen_na_isoonna","ja":"妖艶な磯女","image":"assets/enemies/youen_na_isoonna.png","stage":"coast","hp":85,"atk":27,"def":9,"spd":11,"goldMin":47,"goldMax":67,"xp":85,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"魅了の歌声","mult":1.1,"debuff":{"type":"atkDown","chance":0.55,"value":0.25,"turns":3}},"weakness":{"type":"poison","tier":2,"flavor":"妖艶な力ほど、毒に乱されやすい。"}},"kyokai_no_oodako":{"id":"kyokai_no_oodako","ja":"巨海の大ダコ","image":"assets/enemies/kyokai_no_oodako.png","stage":"coast","hp":105,"atk":28,"def":11,"spd":7,"goldMin":48,"goldMax":68,"xp":87,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"八腕搦め","mult":1.3,"debuff":{"type":"stun","chance":0.35,"turns":1}},"weakness":{"type":"bleed","tier":1,"flavor":"巨躯でも柔らかい体は傷に弱い。"}},"oni_harifugu":{"id":"oni_harifugu","ja":"鬼ハリフグ","image":"assets/enemies/oni_harifugu.png","stage":"coast","hp":88,"atk":27,"def":9,"spd":6,"goldMin":47,"goldMax":67,"xp":85,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"毒針乱射","mult":0.6,"ignoreGuardian":true,"debuff":{"type":"poison","chance":0.7,"value":3}},"onHitInflict":{"type":"poison","chance":0.3,"value":2},"weakness":{"type":"bleed","tier":1,"flavor":"針の下の体は傷に弱い。"}},"oo_kani_shougun":{"id":"oo_kani_shougun","ja":"大蟹将軍","image":"assets/enemies/oo_kani_shougun.png","stage":"coast","hp":100,"atk":28,"def":15,"spd":6,"goldMin":48,"goldMax":68,"xp":86,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"将軍鋏","mult":1.5,"debuff":{"type":"defDown","chance":0.4,"value":0.25,"turns":3}},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":2,"flavor":"将としての威厳も、傷を負えば防御が大きく低下する。"}},"kairyuu_ou":{"id":"kairyuu_ou","ja":"海龍王","image":"assets/enemies/kairyuu_ou.png","stage":"coast","hp":110,"atk":30,"def":13,"spd":10,"goldMin":50,"goldMax":70,"xp":90,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"海龍の雷","mult":1.3,"debuff":{"type":"stun","chance":0.4,"turns":1}},"onHitInflict":{"type":"bleed","chance":0.2,"value":2},"weakness":{"type":"bleed","tier":1,"flavor":"巨躯の龍でも、傷口から力を失う。"}},"same_no_bujin":{"id":"same_no_bujin","ja":"鮫の武人","image":"assets/enemies/same_no_bujin.png","stage":"coast","hp":92,"atk":30,"def":10,"spd":13,"goldMin":48,"goldMax":68,"xp":86,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"武人の穂先","mult":1.3,"debuff":{"type":"bleed","chance":0.65,"value":2}},"onHitInflict":{"type":"bleed","chance":0.3,"value":1},"weakness":{"type":"poison","tier":2,"flavor":"人に近い体を持つ武人ほど、毒がよく効く。"}},"umi_no_souryo":{"id":"umi_no_souryo","ja":"海の僧侶","image":"assets/enemies/umi_no_souryo.png","stage":"coast","hp":85,"atk":26,"def":10,"spd":9,"goldMin":47,"goldMax":67,"xp":85,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"海僧の呪法","mult":1.2,"debuff":{"type":"atkDown","chance":0.5,"value":0.2,"turns":3}},"onHitInflict":{"type":"poison","chance":0.4,"value":3},"weakness":{"type":"poison","tier":2,"flavor":"人としての肉体は、毒の影響を色濃く受ける。"}},"uzushio_no_onryou":{"id":"uzushio_no_onryou","ja":"渦潮の怨霊","image":"assets/enemies/uzushio_no_onryou.png","stage":"coast","hp":90,"atk":28,"def":9,"spd":9,"goldMin":47,"goldMax":67,"xp":85,"minFloor":56,"maxFloor":1498,"bigAttack":{"name":"渦潮の引き寄せ","mult":0.55,"ignoreGuardian":true,"debuff":{"type":"stun","chance":0.4,"turns":1}},"weakness":{"type":"spirit","flavor":"実体を持たず、霊力に強く侵される。"}},"kaiyoujo_ou":{"id":"kaiyoujo_ou","ja":"海妖女王","image":"assets/enemies/kaiyoujo_ou.png","stage":"coast","hp":300,"atk":36,"def":17,"spd":11,"goldMin":230,"goldMax":330,"xp":430,"minFloor":62,"maxFloor":1498,"isBoss":true,"bigAttack":{"name":"妖女王の呪詛","mult":1.3,"debuff":{"type":"poison","chance":0.5,"value":3}},"onHitInflict":{"type":"burn","chance":0.25,"turnsMin":2,"turnsMax":3},"weakness":{"type":"poison","tier":2,"flavor":"女王としての誇り高き妖力も、毒には抗えない。"}}};
+const PATH_DATA = {"forest":{"rindou":{"icon":"🌲","label":"林道","battle":0.35,"gold":0.2},"kemono":{"icon":"🐾","label":"獣道","battle":0.6,"gold":0.15},"kurai":{"icon":"🌑","label":"暗い道","battle":0.7,"gold":0.1,"ambushChance":0.5,"goldMult":1.5},"shizuka":{"icon":"🍃","label":"静かな道","battle":0.1,"gold":0.25},"komorebi":{"icon":"🌿","label":"木漏れ日の道","battle":0.15,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る道","battle":0.1,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な道","battle":1,"gold":0},"kamikakushi":{"icon":"✨","label":"神隠しの道","battle":0,"gold":0}},"cave":{"rindou":{"icon":"🕳️","label":"広い坑道","battle":0.35,"gold":0.2},"kemono":{"icon":"🪨","label":"岩肌の道","battle":0.6,"gold":0.15},"kurai":{"icon":"🌑","label":"闇だまり","battle":0.7,"gold":0.1,"ambushChance":0.5,"goldMult":1.5},"shizuka":{"icon":"💧","label":"水音のする道","battle":0.1,"gold":0.25},"komorebi":{"icon":"🍄","label":"光る苔の道","battle":0.15,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る道","battle":0.1,"gold":0.9},"fuon":{"icon":"👁️","label":"獣の唸る道","battle":1,"gold":0},"kamikakushi":{"icon":"✨","label":"涸れた縦穴","battle":0,"gold":0}},"coast":{"rindou":{"icon":"🏝️","label":"砂浜","battle":0.35,"gold":0.2},"kemono":{"icon":"🪨","label":"岩場","battle":0.6,"gold":0.15},"kurai":{"icon":"🌊","label":"波打ち際","battle":0.7,"gold":0.1,"ambushChance":0.5,"goldMult":1.5},"shizuka":{"icon":"🐚","label":"静かな砂浜","battle":0.1,"gold":0.25},"komorebi":{"icon":"🐟","label":"潮溜まり","battle":0.15,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る道","battle":0.1,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な砂浜","battle":1,"gold":0},"kamikakushi":{"icon":"✨","label":"幻の島","battle":0,"gold":0}},"ruins":{"rindou":{"icon":"🏘️","label":"表通り","battle":0,"gold":0.2},"kemono":{"icon":"🚪","label":"路地裏","battle":0,"gold":0.15},"kurai":{"icon":"🏚️","label":"崩れた屋敷","battle":0,"gold":0.1},"shizuka":{"icon":"🍂","label":"静かな中庭","battle":0,"gold":0.25},"komorebi":{"icon":"🌿","label":"苔むした石段","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る蔵","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な路地","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた辻","battle":0,"gold":0}},"gate":{"rindou":{"icon":"⛩️","label":"正門前","battle":0,"gold":0.2},"kemono":{"icon":"🚪","label":"脇道","battle":0,"gold":0.15},"kurai":{"icon":"🔒","label":"閉ざされた小門","battle":0,"gold":0.1},"shizuka":{"icon":"🍂","label":"静かな門前","battle":0,"gold":0.25},"komorebi":{"icon":"🌿","label":"苔むした門柱","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る門番所","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な門","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた門","battle":0,"gold":0}},"castle":{"rindou":{"icon":"🏯","label":"大広間","battle":0,"gold":0.2},"kemono":{"icon":"🚪","label":"廊下","battle":0,"gold":0.15},"kurai":{"icon":"🌑","label":"暗い座敷","battle":0,"gold":0.1},"shizuka":{"icon":"🍂","label":"静かな庭","battle":0,"gold":0.25},"komorebi":{"icon":"🌿","label":"障子の間","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る宝物庫","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な部屋","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた回廊","battle":0,"gold":0}},"valley":{"rindou":{"icon":"🏞️","label":"広い川辺","battle":0,"gold":0.2},"kemono":{"icon":"🪨","label":"岩伝いの道","battle":0,"gold":0.15},"kurai":{"icon":"🌊","label":"深い淵","battle":0,"gold":0.1},"shizuka":{"icon":"💧","label":"静かな瀬","battle":0,"gold":0.25},"komorebi":{"icon":"🌿","label":"苔むした岩場","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る淵","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な水音","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた瀬","battle":0,"gold":0}},"bamboo":{"rindou":{"icon":"🎋","label":"広い竹の道","battle":0,"gold":0.2},"kemono":{"icon":"🌱","label":"細い竹林の道","battle":0,"gold":0.15},"kurai":{"icon":"🌑","label":"光の届かぬ茂み","battle":0,"gold":0.1},"shizuka":{"icon":"🍃","label":"静まり返った竹林","battle":0,"gold":0.25},"komorebi":{"icon":"✨","label":"淡く光る竹の道","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る竹林","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な竹のざわめき","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた竹の道","battle":0,"gold":0}},"shugendo":{"rindou":{"icon":"⛩️","label":"広い参道","battle":0,"gold":0.2},"kemono":{"icon":"🪨","label":"岩場の細道","battle":0,"gold":0.15},"kurai":{"icon":"🌑","label":"崖沿いの難路","battle":0,"gold":0.1},"shizuka":{"icon":"💧","label":"滝の見える小道","battle":0,"gold":0.25},"komorebi":{"icon":"🌿","label":"苔むした石段","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る祠","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な行者道","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた参道","battle":0,"gold":0}},"yama":{"rindou":{"icon":"⛰️","label":"広い尾根道","battle":0,"gold":0.2},"kemono":{"icon":"🐾","label":"獣道","battle":0,"gold":0.15},"kurai":{"icon":"🌑","label":"険しい崖道","battle":0,"gold":0.1},"shizuka":{"icon":"🍃","label":"静かな稜線","battle":0,"gold":0.25},"komorebi":{"icon":"🌲","label":"巨木の並ぶ道","battle":0,"gold":0.3},"hikaru":{"icon":"💰","label":"何かが光る岩陰","battle":0,"gold":0.9},"fuon":{"icon":"👁️","label":"不穏な山道","battle":0,"gold":0},"kamikakushi":{"icon":"✨","label":"消えた尾根道","battle":0,"gold":0}}};
+
+// ステージ一覧。varNameはエクスポート時、dungeon.js側の実際の変数名に対応させるためのラベル
+const STAGES = [
+  { id: "forest", ja: "深淵の森", icon: "🌲", varName: "PATH_DEFS" },
+  { id: "cave", ja: "洞窟", icon: "🕳️", varName: "CAVE_PATH_DEFS" },
+  { id: "coast", ja: "海岸(海の村ルート)", icon: "🏖️", varName: "COAST_PATH_DEFS" },
+  { id: "ruins", ja: "廃城下町", icon: "🏚️", varName: "RUINS_PATH_DEFS" },
+  { id: "gate", ja: "門", icon: "🚪", varName: "GATE_PATH_DEFS" },
+  { id: "castle", ja: "古城", icon: "🏯", varName: "CASTLE_PATH_DEFS" },
+  { id: "valley", ja: "渓流", icon: "🏞️", varName: "VALLEY_PATH_DEFS" },
+  { id: "bamboo", ja: "光る竹林", icon: "🎋", varName: "BAMBOO_PATH_DEFS" },
+  { id: "shugendo", ja: "修験道", icon: "⛩️", varName: "SHUGENDO_PATH_DEFS" },
+  { id: "yama", ja: "山", icon: "⛰️", varName: "YAMA_PATH_DEFS" },
+];
+const STAGE_MAP = {};
+STAGES.forEach((s) => { STAGE_MAP[s.id] = s; });
+
+const STAT_FIELDS = [
+  { key: "hp", label: "HP" }, { key: "atk", label: "攻撃" }, { key: "def", label: "防御" },
+  { key: "spd", label: "素早さ" }, { key: "goldMin", label: "最小金" }, { key: "goldMax", label: "最大金" },
+  { key: "xp", label: "経験値" }, { key: "minFloor", label: "最小階層" }, { key: "maxFloor", label: "最大階層" },
+];
+const FLAG_FIELDS = [
+  { key: "isBoss", label: "ボス" }, { key: "isMidBoss", label: "中ボス" }, { key: "isSwarm", label: "大群" },
+  { key: "isFlying", label: "飛行" }, { key: "isPlant", label: "植物" }, { key: "questOnly", label: "依頼専用" },
+];
+const DEBUFF_TYPES = ["spdDown", "poison", "stun", "atkDown", "defDown", "silence", "burn", "bleed", "dmgTakenUp"];
+const DEBUFF_TYPE_LABELS = { spdDown: "素早さ低下", poison: "毒", stun: "スタン", atkDown: "攻撃低下", defDown: "防御低下", silence: "沈黙", burn: "炎上", bleed: "出血", dmgTakenUp: "被ダメ増加" };
+const ONHIT_TYPES = ["poison", "burn", "bleed"];
+const ONHIT_TYPE_LABELS = { poison: "毒", burn: "炎上", bleed: "出血" };
+const WEAKNESS_TYPES = ["bleed", "poison", "burn", "flying", "spirit"];
+const WEAKNESS_TYPE_LABELS = { bleed: "出血🩸", poison: "毒☠️", burn: "炎上🔥", flying: "飛行🪽", spirit: "霊力☯️" };
+const PATH_FIELD_LABELS = { battle: "戦闘率", gold: "財宝率", ambushChance: "奇襲率", goldMult: "金倍率" };
+
+const STORAGE_KEY = "onsenEnemyEditor_v1";
+let edits = { fields: {}, newEnemies: {}, removed: {}, pathFields: {} };
+try {
+  const loaded = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+  if (loaded) edits = Object.assign({ fields: {}, newEnemies: {}, removed: {}, pathFields: {} }, loaded);
+} catch (e) { /* keep defaults */ }
+
+let currentStage = STAGES[0].id;
+let searchQuery = "";
+
+function saveEdits() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
+
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== typeof b) return false;
+  if (a && b && typeof a === "object") {
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    return ka.every((k) => deepEqual(a[k], b[k]));
+  }
+  return false;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ==== 敵データのアクセサ ====
+function isNewEnemy(id) { return !!edits.newEnemies[id]; }
+function isRemoved(id) { return !!edits.removed[id]; }
+function baseEnemy(id) { return isNewEnemy(id) ? edits.newEnemies[id] : ENEMY_DATA[id]; }
+function getEnemy(id) {
+  const base = baseEnemy(id);
+  if (!base) return null;
+  if (isNewEnemy(id)) return base; // 新規追加分はedits.newEnemies自体が現在値
+  const overrides = edits.fields[id] || {};
+  return Object.assign({}, base, overrides);
+}
+function effectiveStage(id) { const e = getEnemy(id); return (e && e.stage) || "forest"; }
+
+function setField(id, field, value) {
+  if (isNewEnemy(id)) {
+    if (value === undefined) delete edits.newEnemies[id][field];
+    else edits.newEnemies[id][field] = value;
+    saveEdits();
+    return;
+  }
+  const original = ENEMY_DATA[id][field];
+  if (deepEqual(value, original) || (value === undefined && original === undefined)) {
+    if (edits.fields[id]) {
+      delete edits.fields[id][field];
+      if (Object.keys(edits.fields[id]).length === 0) delete edits.fields[id];
+    }
+  } else {
+    edits.fields[id] = edits.fields[id] || {};
+    edits.fields[id][field] = value;
+  }
+  saveEdits();
+}
+function isEditedEnemy(id) {
+  if (isNewEnemy(id)) return true;
+  return !!(edits.fields[id] && Object.keys(edits.fields[id]).length > 0);
+}
+function countEnemyEdits() {
+  let n = 0;
+  Object.values(edits.fields).forEach((f) => { n += Object.keys(f).length; });
+  n += Object.keys(edits.newEnemies).length;
+  n += Object.keys(edits.removed).length;
+  return n;
+}
+function countPathEdits() {
+  let n = 0;
+  Object.values(edits.pathFields).forEach((paths) => Object.values(paths).forEach((f) => { n += Object.keys(f).length; }));
+  return n;
+}
+function countEdits() { return countEnemyEdits() + countPathEdits(); }
+
+function allEnemyIds() {
+  return Object.keys(ENEMY_DATA).filter((id) => !isRemoved(id)).concat(Object.keys(edits.newEnemies));
+}
+function enemiesForStage(stageId) {
+  return allEnemyIds().filter((id) => effectiveStage(id) === stageId)
+    .map((id) => ({ id, e: getEnemy(id) }))
+    .sort((a, b) => (a.e.minFloor || 0) - (b.e.minFloor || 0));
+}
+
+// ==== 道の出現確率アクセサ ====
+function getPathValue(stageId, pathKey, field) {
+  const override = edits.pathFields[stageId] && edits.pathFields[stageId][pathKey] && edits.pathFields[stageId][pathKey][field];
+  if (override !== undefined) return override.v;
+  return PATH_DATA[stageId][pathKey][field];
+}
+function setPathField(stageId, pathKey, field, value) {
+  const original = PATH_DATA[stageId][pathKey][field];
+  edits.pathFields[stageId] = edits.pathFields[stageId] || {};
+  edits.pathFields[stageId][pathKey] = edits.pathFields[stageId][pathKey] || {};
+  if (deepEqual(value, original)) {
+    delete edits.pathFields[stageId][pathKey][field];
+    if (Object.keys(edits.pathFields[stageId][pathKey]).length === 0) delete edits.pathFields[stageId][pathKey];
+    if (Object.keys(edits.pathFields[stageId]).length === 0) delete edits.pathFields[stageId];
+  } else {
+    edits.pathFields[stageId][pathKey][field] = { v: value };
+  }
+  saveEdits();
+}
+function isEditedPathRow(stageId, pathKey) {
+  return !!(edits.pathFields[stageId] && edits.pathFields[stageId][pathKey] && Object.keys(edits.pathFields[stageId][pathKey]).length > 0);
+}
+function stageHasPathEdits(stageId) { return !!(edits.pathFields[stageId] && Object.keys(edits.pathFields[stageId]).length > 0); }
+
+// ==== 新規追加・複製・削除 ====
+function generateDefaultFloorRange(stageId) {
+  // 未実装ステージはまず1〜10階想定の下限値で置く。既存の敵があれば最大maxFloorに揃える
+  const list = enemiesForStage(stageId);
+  if (list.length === 0) return { minFloor: 1, maxFloor: 10 };
+  const maxF = Math.max(...list.map((x) => x.e.maxFloor || 10));
+  return { minFloor: 1, maxFloor: maxF };
+}
+function createBlankEnemy(id, ja, stageId) {
+  const range = generateDefaultFloorRange(stageId);
+  return {
+    id, ja, image: "assets/enemies/" + id + ".png",
+    hp: 20, atk: 8, def: 4, spd: 6, goldMin: 10, goldMax: 18, xp: 12,
+    minFloor: range.minFloor, maxFloor: range.maxFloor,
+    stage: stageId,
+    bigAttack: { name: "大技", mult: 1.0 },
+  };
+}
+function idExists(id) { return !!ENEMY_DATA[id] || !!edits.newEnemies[id]; }
+function validId(id) { return /^[a-z][a-z0-9_]*$/.test(id); }
+
+let addModalStage = null;
+let addModalDuplicateFrom = null;
+function openAddModal(stageId, duplicateFromId) {
+  addModalStage = stageId;
+  addModalDuplicateFrom = duplicateFromId || null;
+  document.getElementById("addModalTitle").textContent = duplicateFromId ? "妖怪を複製して追加" : "新しい妖怪を配置";
+  document.getElementById("addIdInput").value = "";
+  document.getElementById("addNameInput").value = duplicateFromId ? (getEnemy(duplicateFromId).ja + "・改") : "";
+  document.getElementById("addModal").classList.add("open");
+  document.getElementById("addIdInput").focus();
+}
+document.getElementById("addCancelBtn").addEventListener("click", () => document.getElementById("addModal").classList.remove("open"));
+document.getElementById("addConfirmBtn").addEventListener("click", () => {
+  const id = document.getElementById("addIdInput").value.trim();
+  const ja = document.getElementById("addNameInput").value.trim();
+  if (!id || !validId(id)) { alert("IDは半角小文字英字で始まり、英数字とアンダースコアのみ使えます。"); return; }
+  if (idExists(id)) { alert("そのIDは既に使われています。"); return; }
+  if (!ja) { alert("名前を入力してください。"); return; }
+  let obj;
+  if (addModalDuplicateFrom) {
+    const src = getEnemy(addModalDuplicateFrom);
+    obj = JSON.parse(JSON.stringify(src));
+    obj.id = id; obj.ja = ja; obj.image = "assets/enemies/" + id + ".png"; obj.stage = addModalStage;
+    delete obj.questOnly; // 複製で依頼専用個体を誤って通常抽選外にしないよう外す(必要なら手動で戻す)
+  } else {
+    obj = createBlankEnemy(id, ja, addModalStage);
+  }
+  edits.newEnemies[id] = obj;
+  saveEdits();
+  document.getElementById("addModal").classList.remove("open");
+  render();
+});
+
+function deleteEnemy(id) {
+  const e = getEnemy(id);
+  if (!confirm(`「${e.ja}」(${id})を削除しますか？\n討伐依頼などから参照されている場合、不具合の原因になることがあります。`)) return;
+  if (isNewEnemy(id)) {
+    delete edits.newEnemies[id];
+  } else {
+    edits.removed[id] = true;
+    delete edits.fields[id];
+  }
+  saveEdits();
+  render();
+}
+function resetEnemy(id) {
+  if (isNewEnemy(id)) { delete edits.newEnemies[id]; }
+  else { delete edits.fields[id]; delete edits.removed[id]; }
+  saveEdits();
+  render();
+}
+function resetAll() {
+  if (!confirm("全ての編集内容を破棄しますか？この操作は取り消せません。")) return;
+  edits = { fields: {}, newEnemies: {}, removed: {}, pathFields: {} };
+  saveEdits();
+  render();
+}
+
+// ==== レンダリング: 道の出現確率 ====
+function renderPathSection(stageId) {
+  const wrap = document.createElement("section");
+  wrap.className = "block";
+  const title = document.createElement("div");
+  title.className = "block-title";
+  title.innerHTML = `道の出現確率 <span class="block-hint">(戦闘率0%の道では絶対に敵と遭遇しません)</span>`;
+  wrap.appendChild(title);
+  const list = document.createElement("div");
+  list.className = "path-list";
+  Object.keys(PATH_DATA[stageId]).forEach((pathKey) => {
+    const row = document.createElement("div");
+    row.className = "path-row" + (isEditedPathRow(stageId, pathKey) ? " edited" : "");
+    const icon = getPathValue(stageId, pathKey, "icon");
+    const label = getPathValue(stageId, pathKey, "label");
+    const battle = getPathValue(stageId, pathKey, "battle");
+    const gold = getPathValue(stageId, pathKey, "gold");
+    const ambush = getPathValue(stageId, pathKey, "ambushChance");
+    const goldMult = getPathValue(stageId, pathKey, "goldMult");
+    row.innerHTML = `
+      <div class="path-row-head">
+        <input type="text" class="path-icon-input" data-f="icon" value="${escapeHtml(icon)}">
+        <input type="text" data-f="label" value="${escapeHtml(label)}">
+      </div>
+      <div class="path-fields">
+        <div class="path-field"><label>戦闘率%</label><input type="number" min="0" max="100" data-f="battle" value="${Math.round(battle * 100)}"></div>
+        <div class="path-field"><label>財宝率%</label><input type="number" min="0" max="100" data-f="gold" value="${Math.round(gold * 100)}"></div>
+        <div class="path-field"><label>奇襲率%</label><input type="number" min="0" max="100" data-f="ambushChance" value="${ambush === undefined ? "" : Math.round(ambush * 100)}"></div>
+        <div class="path-field"><label>金倍率</label><input type="number" step="0.1" min="0" data-f="goldMult" value="${goldMult === undefined ? "" : goldMult}"></div>
+      </div>
+    `;
+    row.querySelector('[data-f="icon"]').addEventListener("input", (ev) => { setPathField(stageId, pathKey, "icon", ev.target.value); row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount(); });
+    row.querySelector('[data-f="label"]').addEventListener("input", (ev) => { setPathField(stageId, pathKey, "label", ev.target.value); row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount(); });
+    row.querySelector('[data-f="battle"]').addEventListener("input", (ev) => { const v = ev.target.value === "" ? 0 : Math.max(0, Math.min(100, Number(ev.target.value))) / 100; setPathField(stageId, pathKey, "battle", Math.round(v * 10000) / 10000); row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount(); });
+    row.querySelector('[data-f="gold"]').addEventListener("input", (ev) => { const v = ev.target.value === "" ? 0 : Math.max(0, Math.min(100, Number(ev.target.value))) / 100; setPathField(stageId, pathKey, "gold", Math.round(v * 10000) / 10000); row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount(); });
+    row.querySelector('[data-f="ambushChance"]').addEventListener("input", (ev) => {
+      if (ev.target.value === "") { setPathField(stageId, pathKey, "ambushChance", undefined); }
+      else { const v = Math.max(0, Math.min(100, Number(ev.target.value))) / 100; setPathField(stageId, pathKey, "ambushChance", Math.round(v * 10000) / 10000); }
+      row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount();
+    });
+    row.querySelector('[data-f="goldMult"]').addEventListener("input", (ev) => {
+      if (ev.target.value === "") { setPathField(stageId, pathKey, "goldMult", undefined); }
+      else { setPathField(stageId, pathKey, "goldMult", Number(ev.target.value)); }
+      row.classList.toggle("edited", isEditedPathRow(stageId, pathKey)); refreshEditCount();
+    });
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+  return wrap;
+}
+
+// ==== レンダリング: 大技/追加効果/弱点のサブセクション ====
+function buildDebuffFields(prefix, current, onChange) {
+  const box = document.createElement("div");
+  const type = (current && current.type) || "";
+  box.innerHTML = `
+    <div class="sub-field-row">
+      <label>種類</label>
+      <select data-f="type">
+        <option value="">なし</option>
+        ${DEBUFF_TYPES.map((t) => `<option value="${t}"${t === type ? " selected" : ""}>${DEBUFF_TYPE_LABELS[t]}</option>`).join("")}
+      </select>
+    </div>
+    <div class="debuff-detail-fields" style="${type ? "" : "display:none;"}">
+      <div class="sub-field-row"><label>確率</label><input type="number" step="0.05" min="0" max="1" data-f="chance" value="${current && current.chance !== undefined ? current.chance : ""}"></div>
+      <div class="sub-field-row"><label>値</label><input type="number" step="0.01" data-f="value" value="${current && current.value !== undefined ? current.value : ""}"></div>
+      <div class="sub-field-row"><label>ターン</label><input type="number" min="0" data-f="turns" value="${current && current.turns !== undefined ? current.turns : ""}"></div>
+      <div class="sub-field-row"><label>ターン最小</label><input type="number" min="0" data-f="turnsMin" value="${current && current.turnsMin !== undefined ? current.turnsMin : ""}"></div>
+      <div class="sub-field-row"><label>ターン最大</label><input type="number" min="0" data-f="turnsMax" value="${current && current.turnsMax !== undefined ? current.turnsMax : ""}"></div>
+    </div>
+  `;
+  function collect() {
+    const t = box.querySelector('[data-f="type"]').value;
+    if (!t) return undefined;
+    const out = { type: t };
+    ["chance", "value", "turns", "turnsMin", "turnsMax"].forEach((f) => {
+      const v = box.querySelector(`[data-f="${f}"]`).value;
+      if (v !== "") out[f] = Number(v);
+    });
+    return out;
+  }
+  box.querySelector('[data-f="type"]').addEventListener("change", (ev) => {
+    box.querySelector(".debuff-detail-fields").style.display = ev.target.value ? "" : "none";
+    onChange(collect());
+  });
+  box.querySelectorAll(".debuff-detail-fields input").forEach((inp) => inp.addEventListener("input", () => onChange(collect())));
+  return box;
+}
+
+function renderBigAttackSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const ba = enemy.bigAttack || {};
+  det.innerHTML = `<summary>大技(bigAttack) <span class="sub-summary-text">${escapeHtml(ba.name || "未設定")} ×${ba.mult !== undefined ? ba.mult : "?"}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  body.innerHTML = `
+    <div class="sub-field-row"><label>技名</label><input type="text" data-f="name" value="${escapeHtml(ba.name || "")}"></div>
+    <div class="sub-field-row"><label>倍率</label><input type="number" step="0.01" min="0" data-f="mult" value="${ba.mult !== undefined ? ba.mult : 1}"></div>
+    <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="aoe" ${ba.aoe ? "checked" : ""}> 全体攻撃</label></div>
+    <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="ignoreGuardian" ${ba.ignoreGuardian ? "checked" : ""}> かばう無視</label></div>
+  `;
+  const debuffWrap = document.createElement("div");
+  debuffWrap.style.marginTop = "6px";
+  debuffWrap.innerHTML = `<div class="sub-field-row" style="margin-bottom:2px;"><label>デバフ</label></div>`;
+  function commit() {
+    const name = body.querySelector('[data-f="name"]').value;
+    const mult = Number(body.querySelector('[data-f="mult"]').value || 0);
+    const aoe = body.querySelector('[data-f="aoe"]').checked;
+    const ignoreGuardian = body.querySelector('[data-f="ignoreGuardian"]').checked;
+    const debuff = debuffFieldGetter();
+    const out = { name, mult };
+    if (aoe) out.aoe = true;
+    if (ignoreGuardian) out.ignoreGuardian = true;
+    if (debuff) out.debuff = debuff;
+    setField(id, "bigAttack", out);
+    det.querySelector("summary").innerHTML = `大技(bigAttack) <span class="sub-summary-text">${escapeHtml(name || "未設定")} ×${mult}</span>`;
+    onAnyFieldChanged(id);
+  }
+  let debuffFieldGetter = () => ba.debuff;
+  const debuffBox = buildDebuffFields("bigAttack", ba.debuff, (val) => { debuffFieldGetter = () => val; commit(); });
+  debuffWrap.appendChild(debuffBox);
+  body.appendChild(debuffWrap);
+  body.querySelectorAll('[data-f="name"], [data-f="mult"]').forEach((inp) => inp.addEventListener("input", commit));
+  body.querySelectorAll('[data-f="aoe"], [data-f="ignoreGuardian"]').forEach((inp) => inp.addEventListener("change", commit));
+  det.appendChild(body);
+  return det;
+}
+
+function renderOnHitSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const oh = enemy.onHitInflict || null;
+  det.innerHTML = `<summary>通常攻撃の追加効果(onHitInflict) <span class="sub-summary-text">${oh ? ONHIT_TYPE_LABELS[oh.type] + " " + Math.round((oh.chance || 0) * 100) + "%" : "なし"}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  body.innerHTML = `<div class="enable-toggle"><input type="checkbox" id="oh-enable-${id}" ${oh ? "checked" : ""}> 通常攻撃時に状態異常を付与する</div><div class="oh-fields" style="${oh ? "" : "display:none;"}"></div>`;
+  const fieldsBox = body.querySelector(".oh-fields");
+  function buildFields(cur) {
+    fieldsBox.innerHTML = `
+      <div class="sub-field-row"><label>種類</label><select data-f="type">${ONHIT_TYPES.map((t) => `<option value="${t}"${cur && cur.type === t ? " selected" : ""}>${ONHIT_TYPE_LABELS[t]}</option>`).join("")}</select></div>
+      <div class="sub-field-row"><label>確率</label><input type="number" step="0.05" min="0" max="1" data-f="chance" value="${cur && cur.chance !== undefined ? cur.chance : 0.3}"></div>
+      <div class="sub-field-row"><label>値</label><input type="number" step="1" data-f="value" value="${cur && cur.value !== undefined ? cur.value : ""}"></div>
+      <div class="sub-field-row"><label>値最小</label><input type="number" step="1" data-f="valueMin" value="${cur && cur.valueMin !== undefined ? cur.valueMin : ""}"></div>
+      <div class="sub-field-row"><label>値最大</label><input type="number" step="1" data-f="valueMax" value="${cur && cur.valueMax !== undefined ? cur.valueMax : ""}"></div>
+      <div class="sub-field-row"><label>ターン最小</label><input type="number" step="1" data-f="turnsMin" value="${cur && cur.turnsMin !== undefined ? cur.turnsMin : ""}"></div>
+      <div class="sub-field-row"><label>ターン最大</label><input type="number" step="1" data-f="turnsMax" value="${cur && cur.turnsMax !== undefined ? cur.turnsMax : ""}"></div>
+      <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="stacking" ${cur && cur.stacking ? "checked" : ""}> 蓄積型(stacking)</label></div>
+    `;
+    fieldsBox.querySelectorAll("input, select").forEach((inp) => inp.addEventListener("input", commit));
+  }
+  function collect() {
+    const type = fieldsBox.querySelector('[data-f="type"]').value;
+    const out = { type };
+    ["chance", "value", "valueMin", "valueMax", "turnsMin", "turnsMax"].forEach((f) => {
+      const v = fieldsBox.querySelector(`[data-f="${f}"]`).value;
+      if (v !== "") out[f] = Number(v);
+    });
+    if (fieldsBox.querySelector('[data-f="stacking"]').checked) out.stacking = true;
+    return out;
+  }
+  function commit() {
+    const enabled = body.querySelector(`#oh-enable-${id}`).checked;
+    const out = enabled ? collect() : undefined;
+    setField(id, "onHitInflict", out);
+    det.querySelector("summary").innerHTML = `通常攻撃の追加効果(onHitInflict) <span class="sub-summary-text">${out ? ONHIT_TYPE_LABELS[out.type] + " " + Math.round((out.chance || 0) * 100) + "%" : "なし"}</span>`;
+    onAnyFieldChanged(id);
+  }
+  body.querySelector(`#oh-enable-${id}`).addEventListener("change", (ev) => {
+    fieldsBox.style.display = ev.target.checked ? "" : "none";
+    if (ev.target.checked && !fieldsBox.hasChildNodes()) buildFields(null);
+    commit();
+  });
+  if (oh) buildFields(oh);
+  det.appendChild(body);
+  return det;
+}
+
+function renderWeaknessSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const w = enemy.weakness || null;
+  det.innerHTML = `<summary>弱点(図鑑表示) <span class="sub-summary-text">${w ? WEAKNESS_TYPE_LABELS[w.type] : "未設定"}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  body.innerHTML = `<div class="enable-toggle"><input type="checkbox" id="wk-enable-${id}" ${w ? "checked" : ""}> 弱点を設定する</div><div class="wk-fields" style="${w ? "" : "display:none;"}"></div>`;
+  const fieldsBox = body.querySelector(".wk-fields");
+  function buildFields(cur) {
+    const type = (cur && cur.type) || "bleed";
+    const showTier = type !== "flying" && type !== "spirit";
+    fieldsBox.innerHTML = `
+      <div class="sub-field-row"><label>種類</label><select data-f="type">${WEAKNESS_TYPES.map((t) => `<option value="${t}"${type === t ? " selected" : ""}>${WEAKNESS_TYPE_LABELS[t]}</option>`).join("")}</select></div>
+      <div class="sub-field-row tier-row" style="${showTier ? "" : "display:none;"}"><label>段階</label><select data-f="tier"><option value="1"${cur && cur.tier === 1 ? " selected" : ""}>tier1</option><option value="2"${cur && cur.tier === 2 ? " selected" : ""}>tier2</option></select></div>
+      <div class="sub-field-row"><label>説明文</label><textarea data-f="flavor">${escapeHtml((cur && cur.flavor) || "")}</textarea></div>
+    `;
+    fieldsBox.querySelector('[data-f="type"]').addEventListener("change", (ev) => {
+      const t = ev.target.value;
+      fieldsBox.querySelector(".tier-row").style.display = (t !== "flying" && t !== "spirit") ? "" : "none";
+      commit();
+    });
+    fieldsBox.querySelectorAll('[data-f="tier"], [data-f="flavor"]').forEach((inp) => inp.addEventListener("input", commit));
+  }
+  function collect() {
+    const type = fieldsBox.querySelector('[data-f="type"]').value;
+    const out = { type };
+    if (type !== "flying" && type !== "spirit") out.tier = Number(fieldsBox.querySelector('[data-f="tier"]').value);
+    const flavor = fieldsBox.querySelector('[data-f="flavor"]').value;
+    if (flavor) out.flavor = flavor;
+    return out;
+  }
+  function commit() {
+    const enabled = body.querySelector(`#wk-enable-${id}`).checked;
+    const out = enabled ? collect() : undefined;
+    setField(id, "weakness", out);
+    det.querySelector("summary").innerHTML = `弱点(図鑑表示) <span class="sub-summary-text">${out ? WEAKNESS_TYPE_LABELS[out.type] : "未設定"}</span>`;
+    onAnyFieldChanged(id);
+  }
+  body.querySelector(`#wk-enable-${id}`).addEventListener("change", (ev) => {
+    fieldsBox.style.display = ev.target.checked ? "" : "none";
+    if (ev.target.checked && !fieldsBox.hasChildNodes()) buildFields(null);
+    commit();
+  });
+  if (w) buildFields(w);
+  det.appendChild(body);
+  return det;
+}
+
+function onAnyFieldChanged(id) {
+  refreshEditCount();
+}
+
+// ==== レンダリング: 敵カード ====
+function buildEnemyCard(id, opts) {
+  opts = opts || {};
+  const enemy = getEnemy(id);
+  const isNew = isNewEnemy(id);
+  const card = document.createElement("details");
+  card.className = "enemy-card" + (isEditedEnemy(id) ? " edited" : "") + (isNew ? " is-new" : "");
+  const badges = [];
+  if (enemy.isBoss) badges.push('<span class="enemy-badge boss">ボス</span>');
+  if (enemy.isMidBoss) badges.push('<span class="enemy-badge">中ボス</span>');
+  if (enemy.isSwarm) badges.push('<span class="enemy-badge">大群</span>');
+  if (enemy.isFlying) badges.push('<span class="enemy-badge">飛行</span>');
+  if (enemy.isPlant) badges.push('<span class="enemy-badge">植物</span>');
+  if (enemy.questOnly) badges.push('<span class="enemy-badge">依頼専用</span>');
+  const stageTag = opts.showStageTag ? `<span class="enemy-badge">${STAGE_MAP[effectiveStage(id)].ja}</span>` : "";
+  card.innerHTML = `
+    <summary>
+      <img class="enemy-thumb" src="${escapeHtml(enemy.image || "")}" onerror="this.style.display='none'" alt="">
+      <div class="enemy-summary-main">
+        <div class="enemy-summary-name">${escapeHtml(enemy.ja)}</div>
+        <div class="enemy-summary-sub"><span>HP${enemy.hp} 攻${enemy.atk} 防${enemy.def} 速${enemy.spd}</span><span>階${enemy.minFloor}-${enemy.maxFloor}</span></div>
+      </div>
+      <div class="enemy-badges">${stageTag}${badges.join("")}</div>
+      <span class="enemy-edit-dot"></span>
+      <span class="enemy-chevron">▶</span>
+    </summary>
+    <div class="enemy-body"></div>
+  `;
+  const bodyEl = card.querySelector(".enemy-body");
+
+  // 名前
+  const nameRow = document.createElement("div");
+  nameRow.className = "field-row";
+  nameRow.innerHTML = `<label>名前</label><input type="text" data-f="ja" value="${escapeHtml(enemy.ja)}"><span class="id-caption">${escapeHtml(id)}</span>`;
+  bodyEl.appendChild(nameRow);
+  nameRow.querySelector("input").addEventListener("input", (ev) => {
+    setField(id, "ja", ev.target.value);
+    card.querySelector(".enemy-summary-name").textContent = ev.target.value;
+    card.classList.toggle("edited", isEditedEnemy(id));
+    refreshEditCount();
+  });
+
+  // 配置エリア(ステージ)
+  const stageRow = document.createElement("div");
+  stageRow.className = "field-row";
+  stageRow.innerHTML = `<label>配置エリア</label><select data-f="stage" style="flex:1;">${STAGES.map((s) => `<option value="${s.id}"${effectiveStage(id) === s.id ? " selected" : ""}>${s.icon} ${s.ja}</option>`).join("")}</select>`;
+  bodyEl.appendChild(stageRow);
+  stageRow.querySelector("select").addEventListener("change", (ev) => {
+    setField(id, "stage", ev.target.value === "forest" ? undefined : ev.target.value);
+    refreshEditCount();
+    render();
+  });
+
+  // フラグ
+  const flagRow = document.createElement("div");
+  flagRow.className = "flag-row";
+  flagRow.innerHTML = FLAG_FIELDS.map((f) => `<label class="flag-chip"><input type="checkbox" data-f="${f.key}" ${enemy[f.key] ? "checked" : ""}> ${f.label}</label>`).join("");
+  bodyEl.appendChild(flagRow);
+  FLAG_FIELDS.forEach((f) => {
+    flagRow.querySelector(`[data-f="${f.key}"]`).addEventListener("change", (ev) => {
+      setField(id, f.key, ev.target.checked ? true : undefined);
+      card.classList.toggle("edited", isEditedEnemy(id));
+      refreshEditCount();
+    });
+  });
+
+  // ステータス
+  const statGrid = document.createElement("div");
+  statGrid.className = "stat-grid";
+  statGrid.innerHTML = STAT_FIELDS.map((f) => `<div class="stat-field"><label>${f.label}</label><input type="number" data-f="${f.key}" value="${enemy[f.key]}"></div>`).join("");
+  bodyEl.appendChild(statGrid);
+  STAT_FIELDS.forEach((f) => {
+    statGrid.querySelector(`[data-f="${f.key}"]`).addEventListener("input", (ev) => {
+      const v = ev.target.value === "" ? 0 : Number(ev.target.value);
+      setField(id, f.key, v);
+      card.classList.toggle("edited", isEditedEnemy(id));
+      card.querySelector(".enemy-summary-sub").innerHTML = `<span>HP${getEnemy(id).hp} 攻${getEnemy(id).atk} 防${getEnemy(id).def} 速${getEnemy(id).spd}</span><span>階${getEnemy(id).minFloor}-${getEnemy(id).maxFloor}</span>`;
+      refreshEditCount();
+    });
+  });
+
+  bodyEl.appendChild(renderBigAttackSub(id, enemy));
+  bodyEl.appendChild(renderOnHitSub(id, enemy));
+  bodyEl.appendChild(renderWeaknessSub(id, enemy));
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+  actions.innerHTML = `
+    <button type="button" class="small ghost dup-btn">複製</button>
+    ${isEditedEnemy(id) ? '<button type="button" class="small ghost reset-btn">↺ 元に戻す</button>' : ""}
+    <button type="button" class="small danger del-btn">削除</button>
+  `;
+  actions.querySelector(".dup-btn").addEventListener("click", (ev) => { ev.preventDefault(); openAddModal(effectiveStage(id), id); });
+  actions.querySelector(".del-btn").addEventListener("click", (ev) => { ev.preventDefault(); deleteEnemy(id); });
+  const resetBtn = actions.querySelector(".reset-btn");
+  if (resetBtn) resetBtn.addEventListener("click", (ev) => { ev.preventDefault(); resetEnemy(id); });
+  bodyEl.appendChild(actions);
+
+  return card;
+}
+
+// ==== レンダリング: ステージタブ全体 ====
+const EMPTY_HINT_STAGES = ["ruins", "gate", "castle", "valley", "bamboo", "shugendo", "yama"];
+function renderStageView() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  const stage = STAGE_MAP[currentStage];
+  const list = enemiesForStage(currentStage);
+  if (list.length === 0 && EMPTY_HINT_STAGES.includes(currentStage)) {
+    const banner = document.createElement("div");
+    banner.className = "empty-banner";
+    banner.innerHTML = `<b>${stage.ja}にはまだ妖怪が配置されていません。</b><br>ここに妖怪を追加するだけでは戦闘は発生しません。下の「道の出現確率」で戦闘率を0%より上げる必要もあります(道側が0%だと、敵がいても絶対に遭遇しません)。`;
+    main.appendChild(banner);
+  }
+  main.appendChild(renderPathSection(currentStage));
+
+  const section = document.createElement("section");
+  section.className = "block";
+  const title = document.createElement("div");
+  title.className = "block-title";
+  title.innerHTML = `敵一覧 <span class="block-hint">(${list.length}体・最小階層順)</span>`;
+  section.appendChild(title);
+  const enemyList = document.createElement("div");
+  enemyList.className = "enemy-list";
+  list.forEach(({ id }) => enemyList.appendChild(buildEnemyCard(id)));
+  section.appendChild(enemyList);
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "add-enemy-btn";
+  addBtn.textContent = "+ このエリアに新しい妖怪を配置";
+  addBtn.addEventListener("click", () => openAddModal(currentStage, null));
+  section.appendChild(addBtn);
+  main.appendChild(section);
+}
+
+function renderSearchView() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  const q = searchQuery.trim().toLowerCase();
+  const list = document.createElement("div");
+  list.className = "search-list";
+  let found = 0;
+  allEnemyIds().forEach((id) => {
+    const e = getEnemy(id);
+    if (!e.ja.toLowerCase().includes(q) && !id.toLowerCase().includes(q)) return;
+    found++;
+    list.appendChild(buildEnemyCard(id, { showStageTag: true }));
+  });
+  if (found === 0) main.innerHTML = '<div class="empty-hint">一致する妖怪が見つかりません</div>';
+  else main.appendChild(list);
+}
+
+function renderStageTabs() {
+  const nav = document.getElementById("stageTabs");
+  nav.innerHTML = "";
+  STAGES.forEach((s) => {
+    const count = enemiesForStage(s.id).length;
+    const hasEdits = enemiesForStage(s.id).some((x) => isEditedEnemy(x.id)) || stageHasPathEdits(s.id);
+    const tab = document.createElement("div");
+    tab.className = "stage-tab" + (s.id === currentStage ? " active" : "") + (hasEdits ? " has-edits" : "") + (count === 0 ? " empty-stage" : "");
+    tab.innerHTML = `<span>${s.icon} ${s.ja}</span><span class="count-badge">${count}</span><span class="tab-edit-dot"></span>`;
+    tab.addEventListener("click", () => { currentStage = s.id; searchQuery = ""; document.getElementById("searchBox").value = ""; render(); });
+    nav.appendChild(tab);
+  });
+}
+
+function refreshEditCount() {
+  document.getElementById("editCount").textContent = "編集: " + countEdits() + "件";
+  renderStageTabs();
+}
+
+function render() {
+  renderStageTabs();
+  refreshEditCount();
+  if (searchQuery.trim()) renderSearchView();
+  else renderStageView();
+}
+
+document.getElementById("searchBox").addEventListener("input", (ev) => { searchQuery = ev.target.value; render(); });
+document.getElementById("resetAllBtn").addEventListener("click", resetAll);
+
+// ==== エクスポート ====
+function buildExportText() {
+  const enemiesOut = {};
+  Object.keys(ENEMY_DATA).forEach((id) => { if (!isRemoved(id)) enemiesOut[id] = getEnemy(id); });
+  Object.keys(edits.newEnemies).forEach((id) => { enemiesOut[id] = getEnemy(id); });
+  const weaknessOut = {};
+  const enemiesFinal = {};
+  Object.keys(enemiesOut).forEach((id) => {
+    const e = Object.assign({}, enemiesOut[id]);
+    if (e.weakness) { weaknessOut[id] = e.weakness; delete e.weakness; }
+    enemiesFinal[id] = e;
+  });
+
+  let out = "";
+  out += `// ENEMIES (data.js の同名constを置き換え) — 全${Object.keys(enemiesFinal).length}体\n`;
+  out += `const ENEMIES = ${JSON.stringify(enemiesFinal, null, 2)};\n\n`;
+  out += `// ENEMY_WEAKNESS (data.js の同名constを置き換え)\n`;
+  out += `const ENEMY_WEAKNESS = ${JSON.stringify(weaknessOut, null, 2)};\n\n`;
+  out += `// 道の出現確率(dungeon.js)。ステージごとに対応する変数名に反映してください\n`;
+  STAGES.forEach((s) => {
+    const pathOut = {};
+    Object.keys(PATH_DATA[s.id]).forEach((pk) => {
+      const row = {};
+      ["icon", "label", "battle", "gold", "ambushChance", "goldMult"].forEach((f) => {
+        const v = getPathValue(s.id, pk, f);
+        if (v !== undefined) row[f] = v;
+      });
+      pathOut[pk] = row;
+    });
+    out += `// ${s.ja}\nconst ${s.varName} = ${JSON.stringify(pathOut, null, 2)};\n\n`;
+  });
+  return out;
+}
+function buildExportSummary() {
+  const added = Object.keys(edits.newEnemies).length;
+  const editedEnemies = Object.keys(edits.fields).length;
+  const removed = Object.keys(edits.removed).length;
+  const pathStages = Object.keys(edits.pathFields).filter((s) => Object.keys(edits.pathFields[s]).length > 0);
+  const lines = [];
+  lines.push(`<div>新規追加: <b>${added}体</b></div>`);
+  lines.push(`<div>ステータス/技等を編集: <b>${editedEnemies}体</b></div>`);
+  lines.push(`<div>削除: <b>${removed}体</b></div>`);
+  lines.push(`<div>道の確率を編集したエリア: <b>${pathStages.length > 0 ? pathStages.map((s) => STAGE_MAP[s].ja).join("、") : "なし"}</b></div>`);
+  return lines.join("");
+}
+document.getElementById("exportBtn").addEventListener("click", () => {
+  document.getElementById("exportSummary").innerHTML = buildExportSummary();
+  document.getElementById("exportJson").value = buildExportText();
+  document.getElementById("exportModal").classList.add("open");
+});
+document.getElementById("closeExportBtn").addEventListener("click", () => document.getElementById("exportModal").classList.remove("open"));
+document.getElementById("copyJsonBtn").addEventListener("click", () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById("copyJsonBtn");
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました！";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }).catch(() => { document.execCommand("copy"); });
+});
+
+render();
+</script>
+</body>
+</html>
