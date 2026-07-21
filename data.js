@@ -981,11 +981,11 @@ const SKILL_TREES = {
   hunter: {
     2: {
       left: { name: "狙撃", desc: "敵単体へ170%ダメージ、3ターンの間その敵の被ダメージ+10%(パーティ全員に有効)", mp: 3, action: { kind: "damage", mult: 1.7, inflict: { type: "dmgTakenUp", chance: 1.0, value: 0.1, turns: 3 } } },
-      right: { name: "急所への一撃", desc: "通常攻撃で25%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.25, valueMin: 1, valueMax: 3 } } },
+      right: { name: "急所への一撃", desc: "通常攻撃で50%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.25, valueMin: 1, valueMax: 3 } } },
     },
     3: {
       left: { name: "二連射", desc: "敵単体へ2連続攻撃(合計180%ダメージ)", mp: 3, comboTag: "rapidFire", action: { kind: "damage", mult: 1.8, hits: 2 } },
-      right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.95, turns: 1 } } },
+      right: { name: "血痕追跡", desc: "出血中の敵から攻撃を受ける際、回避＋30%", mp: 0, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.95, turns: 1 } } },
     },
     4: {
       left: { name: "貫き矢", desc: "通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 0, passive: { overkillPierce: true } },
@@ -993,11 +993,11 @@ const SKILL_TREES = {
     },
     5: {
       left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
-      right: { name: "追い討ち", desc: "出血中の敵を通常攻撃すると、相手に出血スタックを3付与する", mp: 0, passive: { bleedFollowupOnHit: true } },
+      right: { name: "追い討ち", desc: "出血中の敵へのダメージが、出血1蓄積しているごとに5%上がる。最大50%", mp: 0, passive: { bleedFollowupOnHit: true } },
     },
     6: {
       left: { name: "狙撃術", desc: "HPが90%以上の敵への会心率+15%", mp: 0, passive: { executeCritBonus: { belowPct: 0.9, addRate: 0.15, cmp: "gte" } } },
-      right: { name: "捕縛", desc: "通常攻撃が命中した敵の素早さを20%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
+      right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 3, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
     },
     7: {
       left: { name: "連射の心得", desc: "二連射を使った直後、次の自分の1ターンだけ攻撃力+20%", mp: 0, passive: { comboFollowup: { tag: "rapidFire", stat: "atk", mult: 1.2 } } },
