@@ -752,6 +752,8 @@ function renderBigAttackCycleSub(id, enemy) {
   return det;
 }
 
+// 有効/無効の切り替えボタンは置かない(種類の選択肢に「なし」を含めることで、それ自体が
+// 有効/無効を兼ねる。他の種類選択欄と同じパターン。ユーザー指摘、2026-07-21)
 function renderOnHitSub(id, enemy) {
   const det = document.createElement("details");
   det.className = "sub-detail";
@@ -759,25 +761,33 @@ function renderOnHitSub(id, enemy) {
   det.innerHTML = `<summary>通常攻撃の追加効果(onHitInflict) <span class="sub-summary-text">${oh ? ONHIT_TYPE_LABELS[oh.type] + " " + Math.round((oh.chance || 0) * 100) + "%" : "なし"}</span></summary>`;
   const body = document.createElement("div");
   body.className = "sub-body";
-  body.innerHTML = `<div class="enable-toggle"><input type="checkbox" id="oh-enable-${id}" ${oh ? "checked" : ""}> 通常攻撃時に状態異常を付与する</div><div class="oh-fields" style="${oh ? "" : "display:none;"}"></div>`;
-  const fieldsBox = body.querySelector(".oh-fields");
+  const fieldsBox = document.createElement("div");
+  fieldsBox.className = "oh-fields";
+  body.appendChild(fieldsBox);
   function buildFields(cur) {
+    const type = (cur && cur.type) || "";
     fieldsBox.innerHTML = `
-      <div class="sub-field-row"><label>種類</label><select data-f="type">${ONHIT_TYPES.map((t) => `<option value="${t}"${cur && cur.type === t ? " selected" : ""}>${ONHIT_TYPE_LABELS[t]}</option>`).join("")}</select></div>
-      <div class="sub-field-row"><label>確率</label>${stepperHtml("chance", cur && cur.chance !== undefined ? cur.chance : 0.3, { step: 0.05, decimals: 2, min: 0, max: 1 })}</div>
-      <div class="sub-field-row"><label>値</label>${stepperHtml("value", cur && cur.value, { step: 1, allowEmpty: true })}</div>
-      <div class="sub-field-row"><label>値最小</label>${stepperHtml("valueMin", cur && cur.valueMin, { step: 1, allowEmpty: true })}</div>
-      <div class="sub-field-row"><label>値最大</label>${stepperHtml("valueMax", cur && cur.valueMax, { step: 1, allowEmpty: true })}</div>
-      <div class="sub-field-row"><label>ターン最小</label>${stepperHtml("turnsMin", cur && cur.turnsMin, { step: 1, min: 0, allowEmpty: true })}</div>
-      <div class="sub-field-row"><label>ターン最大</label>${stepperHtml("turnsMax", cur && cur.turnsMax, { step: 1, min: 0, allowEmpty: true })}</div>
-      <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="stacking" ${cur && cur.stacking ? "checked" : ""}> 蓄積型(stacking)</label></div>
+      <div class="sub-field-row"><label>種類</label><select data-f="type"><option value="">なし</option>${ONHIT_TYPES.map((t) => `<option value="${t}"${type === t ? " selected" : ""}>${ONHIT_TYPE_LABELS[t]}</option>`).join("")}</select></div>
+      <div class="oh-detail-fields" style="${type ? "" : "display:none;"}">
+        <div class="sub-field-row"><label>確率</label>${stepperHtml("chance", cur && cur.chance !== undefined ? cur.chance : 0.3, { step: 0.05, decimals: 2, min: 0, max: 1 })}</div>
+        <div class="sub-field-row"><label>値</label>${stepperHtml("value", cur && cur.value, { step: 1, allowEmpty: true })}</div>
+        <div class="sub-field-row"><label>値最小</label>${stepperHtml("valueMin", cur && cur.valueMin, { step: 1, allowEmpty: true })}</div>
+        <div class="sub-field-row"><label>値最大</label>${stepperHtml("valueMax", cur && cur.valueMax, { step: 1, allowEmpty: true })}</div>
+        <div class="sub-field-row"><label>ターン最小</label>${stepperHtml("turnsMin", cur && cur.turnsMin, { step: 1, min: 0, allowEmpty: true })}</div>
+        <div class="sub-field-row"><label>ターン最大</label>${stepperHtml("turnsMax", cur && cur.turnsMax, { step: 1, min: 0, allowEmpty: true })}</div>
+        <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="stacking" ${cur && cur.stacking ? "checked" : ""}> 蓄積型(stacking)</label></div>
+      </div>
     `;
-    fieldsBox.querySelector('[data-f="type"]').addEventListener("input", commit);
-    fieldsBox.querySelector('[data-f="stacking"]').addEventListener("input", commit);
+    fieldsBox.querySelector('[data-f="type"]').addEventListener("change", (ev) => {
+      fieldsBox.querySelector(".oh-detail-fields").style.display = ev.target.value ? "" : "none";
+      commit();
+    });
+    fieldsBox.querySelector('[data-f="stacking"]').addEventListener("change", commit);
     fieldsBox.querySelectorAll(".stepper").forEach((el) => wireStepper(el, commit));
   }
   function collect() {
     const type = fieldsBox.querySelector('[data-f="type"]').value;
+    if (!type) return undefined;
     const out = { type };
     ["chance", "value", "valueMin", "valueMax", "turnsMin", "turnsMax"].forEach((f) => {
       const v = stepperGetValue(fieldsBox.querySelector(`.stepper[data-f="${f}"]`));
@@ -787,49 +797,49 @@ function renderOnHitSub(id, enemy) {
     return out;
   }
   function commit() {
-    const enabled = body.querySelector(`#oh-enable-${id}`).checked;
-    const out = enabled ? collect() : undefined;
+    const out = collect();
     setField(id, "onHitInflict", out);
     det.querySelector("summary").innerHTML = `通常攻撃の追加効果(onHitInflict) <span class="sub-summary-text">${out ? ONHIT_TYPE_LABELS[out.type] + " " + Math.round((out.chance || 0) * 100) + "%" : "なし"}</span>`;
     onAnyFieldChanged(id);
   }
-  body.querySelector(`#oh-enable-${id}`).addEventListener("change", (ev) => {
-    fieldsBox.style.display = ev.target.checked ? "" : "none";
-    if (ev.target.checked && !fieldsBox.hasChildNodes()) buildFields(null);
-    commit();
-  });
-  if (oh) buildFields(oh);
+  buildFields(oh);
   det.appendChild(body);
   return det;
 }
 
+// 有効/無効の切り替えボタンは置かない(種類の選択肢に「なし」を含めることで、それ自体が
+// 有効/無効を兼ねる。ユーザー指摘、2026-07-21)
 function renderWeaknessSub(id, enemy) {
   const det = document.createElement("details");
   det.className = "sub-detail";
   const w = enemy.weakness || null;
-  det.innerHTML = `<summary>弱点(図鑑表示) <span class="sub-summary-text">${w ? WEAKNESS_TYPE_LABELS[w.type] : "未設定"}</span></summary>`;
+  det.innerHTML = `<summary>弱点(図鑑表示) <span class="sub-summary-text">${w ? WEAKNESS_TYPE_LABELS[w.type] : "なし"}</span></summary>`;
   const body = document.createElement("div");
   body.className = "sub-body";
-  body.innerHTML = `<div class="enable-toggle"><input type="checkbox" id="wk-enable-${id}" ${w ? "checked" : ""}> 弱点を設定する</div><div class="wk-fields" style="${w ? "" : "display:none;"}"></div>`;
-  const fieldsBox = body.querySelector(".wk-fields");
+  const fieldsBox = document.createElement("div");
+  fieldsBox.className = "wk-fields";
+  body.appendChild(fieldsBox);
   function buildFields(cur) {
-    const type = (cur && cur.type) || "bleed";
-    const showExtra = type !== "flying" && type !== "spirit"; // 飛行/霊力は「状態異常を受けている間」という前提が無いため追加効果の対象外
+    const type = (cur && cur.type) || "";
+    const showExtra = type && type !== "spirit"; // 霊力は「状態異常を受けている間」という前提が無いため追加効果の対象外
     const effects = (cur && cur.effects) || [];
     const customChecked = !!(cur && cur.customEffect);
     fieldsBox.innerHTML = `
-      <div class="sub-field-row"><label>種類</label><select data-f="type">${WEAKNESS_TYPES.map((t) => `<option value="${t}"${type === t ? " selected" : ""}>${WEAKNESS_TYPE_LABELS[t]}</option>`).join("")}</select></div>
-      <div class="extra-effect-block" style="${showExtra ? "" : "display:none;"}">
-        <div class="sub-field-row" style="margin-bottom:2px;"><label style="width:auto;">状態異常を受けている間(常時ダメージ2倍に加えて)</label></div>
-        ${WEAKNESS_EXTRA_EFFECTS.map((f) => `<label class="flag-chip" style="display:flex;"><input type="checkbox" data-effect="${f}" ${effects.includes(f) ? "checked" : ""}> ${WEAKNESS_EXTRA_EFFECT_LABELS[f]}</label>`).join("")}
-        <label class="flag-chip" style="display:flex;"><input type="checkbox" data-effect="custom" ${customChecked ? "checked" : ""}> その他</label>
-        <textarea data-f="customEffect" placeholder="自由記入(例: 毒状態の間、大技が使えなくなる)" style="${customChecked ? "" : "display:none;"}">${escapeHtml((cur && cur.customEffect) || "")}</textarea>
+      <div class="sub-field-row"><label>種類</label><select data-f="type"><option value="">なし</option>${WEAKNESS_TYPES.map((t) => `<option value="${t}"${type === t ? " selected" : ""}>${WEAKNESS_TYPE_LABELS[t]}</option>`).join("")}</select></div>
+      <div class="wk-detail-fields" style="${type ? "" : "display:none;"}">
+        <div class="extra-effect-block" style="${showExtra ? "" : "display:none;"}">
+          <div class="sub-field-row" style="margin-bottom:2px;"><label style="width:auto;">状態異常を受けている間(常時ダメージ2倍に加えて)</label></div>
+          ${WEAKNESS_EXTRA_EFFECTS.map((f) => `<label class="flag-chip" style="display:flex;"><input type="checkbox" data-effect="${f}" ${effects.includes(f) ? "checked" : ""}> ${WEAKNESS_EXTRA_EFFECT_LABELS[f]}</label>`).join("")}
+          <label class="flag-chip" style="display:flex;"><input type="checkbox" data-effect="custom" ${customChecked ? "checked" : ""}> その他</label>
+          <textarea data-f="customEffect" placeholder="自由記入(例: 毒状態の間、大技が使えなくなる)" style="${customChecked ? "" : "display:none;"}">${escapeHtml((cur && cur.customEffect) || "")}</textarea>
+        </div>
+        <div class="sub-field-row"><label>説明文</label><textarea data-f="flavor">${escapeHtml((cur && cur.flavor) || "")}</textarea></div>
       </div>
-      <div class="sub-field-row"><label>説明文</label><textarea data-f="flavor">${escapeHtml((cur && cur.flavor) || "")}</textarea></div>
     `;
     fieldsBox.querySelector('[data-f="type"]').addEventListener("change", (ev) => {
       const t = ev.target.value;
-      fieldsBox.querySelector(".extra-effect-block").style.display = (t !== "flying" && t !== "spirit") ? "" : "none";
+      fieldsBox.querySelector(".wk-detail-fields").style.display = t ? "" : "none";
+      fieldsBox.querySelector(".extra-effect-block").style.display = (t && t !== "spirit") ? "" : "none";
       commit();
     });
     fieldsBox.querySelectorAll('[data-effect]').forEach((cb) => cb.addEventListener("change", (ev) => {
@@ -840,8 +850,9 @@ function renderWeaknessSub(id, enemy) {
   }
   function collect() {
     const type = fieldsBox.querySelector('[data-f="type"]').value;
+    if (!type) return undefined;
     const out = { type };
-    if (type !== "flying" && type !== "spirit") {
+    if (type !== "spirit") {
       const effects = WEAKNESS_EXTRA_EFFECTS.filter((f) => fieldsBox.querySelector(`[data-effect="${f}"]`).checked);
       if (effects.length) out.effects = effects;
       const customOn = fieldsBox.querySelector('[data-effect="custom"]').checked;
@@ -853,18 +864,12 @@ function renderWeaknessSub(id, enemy) {
     return out;
   }
   function commit() {
-    const enabled = body.querySelector(`#wk-enable-${id}`).checked;
-    const out = enabled ? collect() : undefined;
+    const out = collect();
     setField(id, "weakness", out);
-    det.querySelector("summary").innerHTML = `弱点(図鑑表示) <span class="sub-summary-text">${out ? WEAKNESS_TYPE_LABELS[out.type] : "未設定"}</span>`;
+    det.querySelector("summary").innerHTML = `弱点(図鑑表示) <span class="sub-summary-text">${out ? WEAKNESS_TYPE_LABELS[out.type] : "なし"}</span>`;
     onAnyFieldChanged(id);
   }
-  body.querySelector(`#wk-enable-${id}`).addEventListener("change", (ev) => {
-    fieldsBox.style.display = ev.target.checked ? "" : "none";
-    if (ev.target.checked && !fieldsBox.hasChildNodes()) buildFields(null);
-    commit();
-  });
-  if (w) buildFields(w);
+  buildFields(w);
   det.appendChild(body);
   return det;
 }
