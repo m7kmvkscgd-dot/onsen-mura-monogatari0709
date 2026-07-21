@@ -790,7 +790,7 @@ const SKILL_TREES = {
       right: { name: "黒曜", desc: "自身が出血時の流血ダメージを3分の1にする", mp: 0, passive: { dotDamageMult: 1 / 3 } },
     },
     6: {
-      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
+      left: { name: "鬼神化", desc: "HPが30%以下の時、攻撃力+30%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.3, statMult: [{ stat: "atk", mult: 1.3 }] } } },
       right: { name: "百戦錬磨", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
     },
     7: {
@@ -821,7 +821,7 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
-      right: { name: "影分身の術", desc: "後日実装", mp: 4 },
+      right: { name: "影分身の術", desc: "分身を身代わりにして次の攻撃を無効化し、攻撃した相手を毒にする(蓄積2〜4)", mp: 4, action: { kind: "shieldSelf", poisonCounter: { valueMin: 2, valueMax: 4 } } },
     },
     5: {
       left: { name: "身代わりの術", desc: "次に受ける全ての攻撃を1度だけ無効化する(全体攻撃を含む)", mp: 1, action: { kind: "shieldSelf" } },
@@ -844,7 +844,7 @@ const SKILL_TREES = {
       right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
     },
     10: {
-      left: { name: "影分身の術", desc: "後日実装", mp: 0 },
+      left: { name: "禁忌・影分身の術", desc: "分身と共に一斉攻撃。敵単体へ110%の一撃を3回、合計330%のダメージを与える", mp: 6, action: { kind: "damage", mult: 3.3, hits: 3 } },
       right: { name: "朧隠れ", desc: "3ターンの間、味方全員の回避率+30%", mp: 3, action: { kind: "buffParty", stats: [{ stat: "evasionAdd", mult: 0.3 }], turns: 3 } },
     },
   },

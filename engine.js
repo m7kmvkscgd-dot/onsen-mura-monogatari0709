@@ -1100,9 +1100,12 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は${skill.name}を構えた！`);
     return { buffed: true };
   }
-  // 身代わりの術: 次に受ける攻撃を(全体攻撃を含め)完全に無効化する(applyDamageToTarget側で消費・処理する)
+  // 身代わりの術: 次に受ける攻撃を(全体攻撃を含め)完全に無効化する(applyDamageToTarget側で消費・処理する)。
+  // 影分身の術はaction.poisonCounterを指定することで同じ無効化に「無効化した相手を毒にする」効果を上乗せする
+  // (身代わりの術自体はpoisonCounterを持たないため、既存の身代わりの術の挙動には影響しない)
   if (action.kind === "shieldSelf") {
     actor.migawariShieldActive = true;
+    actor.migawariPoisonCounter = action.poisonCounter || null;
     log(`${actor.label}は${skill.name}を唱えた！`);
     return { buffed: true };
   }
@@ -1639,10 +1642,17 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       return 0;
     }
   }
-  // 身代わりの術: 次に受ける攻撃を(全体攻撃を含め)完全に無効化する。反撃は無い、心眼の構えとは別枠
+  // 身代わりの術: 次に受ける攻撃を(全体攻撃を含め)完全に無効化する。反撃は無い、心眼の構えとは別枠。
+  // 影分身の術(migawariPoisonCounter付き)の場合、無効化に加えて攻撃してきた相手を毒状態にする
   if (actor && target.migawariShieldActive) {
     target.migawariShieldActive = false;
     log(`${target.label}は${actorLabel}の攻撃を身代わりの術で無効化した！`);
+    if (target.migawariPoisonCounter) {
+      const stacks = resolveValue(target.migawariPoisonCounter, 3);
+      target.migawariPoisonCounter = null;
+      applyPoison(actor, stacks);
+      log(`${actorLabel}は分身に触れて毒を浴びた！`);
+    }
     return 0;
   }
   // 心眼の構えなど: 「このターン」限定で、敵の攻撃を1度だけ完全に無効化してその場で反撃する
