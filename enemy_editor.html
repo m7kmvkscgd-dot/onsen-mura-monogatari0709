@@ -46,12 +46,17 @@
   .enemy-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; }
   .enemy-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
   .enemy-card.is-new { border-color: var(--success); box-shadow: 0 0 0 1px var(--success) inset; }
-  .enemy-card > summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; align-items: center; gap: 8px; -webkit-tap-highlight-color: transparent; }
+  .enemy-card > summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; flex-direction: column; gap: 8px; -webkit-tap-highlight-color: transparent; }
   .enemy-card > summary::-webkit-details-marker { display: none; }
+  .enemy-summary-top { display: flex; align-items: center; gap: 8px; }
   .enemy-thumb { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: rgba(255,255,255,0.05); flex-shrink: 0; }
   .enemy-summary-main { flex: 1; min-width: 0; }
   .enemy-summary-name { font-size: 0.88rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .enemy-summary-sub { font-size: 0.68rem; color: var(--caption); display: flex; gap: 6px; flex-wrap: wrap; margin-top: 1px; }
+  .enemy-summary-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .summary-stat-field { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 6px 4px 8px; }
+  .summary-stat-field label { font-size: 0.72rem; color: var(--caption); flex-shrink: 0; }
+  .summary-stat-field .stepper { flex-shrink: 0; }
   .enemy-badges { display: flex; gap: 3px; flex-shrink: 0; }
   .enemy-badge { font-size: 0.62rem; border-radius: 5px; padding: 1px 5px; background: rgba(255,255,255,0.08); color: var(--caption); }
   .enemy-badge.boss { background: rgba(201,93,84,0.25); color: #f0a89f; }
@@ -231,6 +236,9 @@ const STAT_FIELDS = [
   { key: "xp", label: "経験値" }, { key: "minFloor", label: "最小階層" }, { key: "maxFloor", label: "最大階層" },
 ];
 const STAT_FIELD_STEP = { hp: 1, atk: 1, def: 1, spd: 1, goldMin: 5, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 1 };
+// HP/攻撃/防御/素早さは敵カードの折りたたみ行(summary)に直接ステッパーを出すようになったため、
+// 詳細側のステータス欄はそれ以外(金・経験値・階層)だけにする
+const DETAIL_STAT_FIELDS = STAT_FIELDS.filter((f) => !["hp", "atk", "def", "spd"].includes(f.key));
 const FLAG_FIELDS = [
   { key: "isBoss", label: "ボス" }, { key: "isMidBoss", label: "中ボス" }, { key: "isSwarm", label: "大群" },
   { key: "isFlying", label: "飛行" }, { key: "isPlant", label: "植物" }, { key: "questOnly", label: "依頼専用" },
@@ -295,6 +303,9 @@ function wireStepper(el, onChange) {
   const max = el.dataset.max === "" ? Infinity : Number(el.dataset.max);
   const allowEmpty = el.dataset.empty === "1";
   const valEl = el.querySelector(".step-value");
+  // ステッパーが<summary>(敵カードの折りたたみ行)の中に置かれるケースがあるため、
+  // ここでのクリックが親のdetails開閉トグルまで届かないようにまとめて止める
+  el.addEventListener("click", (ev) => { ev.preventDefault(); ev.stopPropagation(); });
   function commitValue(v) {
     if (v === undefined) {
       valEl.textContent = "―";
@@ -830,18 +841,34 @@ function buildEnemyCard(id, opts) {
   const otherStagesBadge = otherStages.length > 0 ? `<span class="also-appears-badge" title="他エリアにも同じ絵の妖怪が配置されています">🔁${otherStages.length}</span>` : "";
   card.innerHTML = `
     <summary>
-      <img class="enemy-thumb" src="${escapeHtml(enemy.image || "")}" onerror="this.style.display='none'" alt="">
-      <div class="enemy-summary-main">
-        <div class="enemy-summary-name">${escapeHtml(enemy.ja)}</div>
-        <div class="enemy-summary-sub"><span>HP${enemy.hp} 攻${enemy.atk} 防${enemy.def} 速${enemy.spd}</span><span>階${enemy.minFloor}-${enemy.maxFloor}</span></div>
+      <div class="enemy-summary-top">
+        <img class="enemy-thumb" src="${escapeHtml(enemy.image || "")}" onerror="this.style.display='none'" alt="">
+        <div class="enemy-summary-main">
+          <div class="enemy-summary-name">${escapeHtml(enemy.ja)}</div>
+          <div class="enemy-summary-sub"><span>階${enemy.minFloor}-${enemy.maxFloor}</span></div>
+        </div>
+        <div class="enemy-badges">${stageTag}${otherStagesBadge}${badges.join("")}</div>
+        <span class="enemy-edit-dot"></span>
+        <span class="enemy-chevron">▶</span>
       </div>
-      <div class="enemy-badges">${stageTag}${otherStagesBadge}${badges.join("")}</div>
-      <span class="enemy-edit-dot"></span>
-      <span class="enemy-chevron">▶</span>
+      <div class="enemy-summary-stats">
+        <div class="summary-stat-field"><label>HP</label>${stepperHtml("hp", enemy.hp, { step: 1, min: 0 })}</div>
+        <div class="summary-stat-field"><label>攻撃</label>${stepperHtml("atk", enemy.atk, { step: 1, min: 0 })}</div>
+        <div class="summary-stat-field"><label>防御%</label>${stepperHtml("def", enemy.def, { step: 1, min: 0 })}</div>
+        <div class="summary-stat-field"><label>素早さ</label>${stepperHtml("spd", enemy.spd, { step: 1, min: 0 })}</div>
+      </div>
     </summary>
     <div class="enemy-body"></div>
   `;
   const bodyEl = card.querySelector(".enemy-body");
+  const summaryStatsEl = card.querySelector(".enemy-summary-stats");
+  ["hp", "atk", "def", "spd"].forEach((key) => {
+    wireStepper(summaryStatsEl.querySelector(`.stepper[data-f="${key}"]`), (v) => {
+      setField(id, key, v);
+      card.classList.toggle("edited", isEditedEnemy(id));
+      refreshEditCount();
+    });
+  });
 
   if (otherStages.length > 0) {
     const alsoDiv = document.createElement("div");
@@ -886,16 +913,16 @@ function buildEnemyCard(id, opts) {
     });
   });
 
-  // ステータス
+  // ステータス(HP/攻撃/防御/素早さは折りたたみ行に移動済みなので、ここは金・経験値・階層のみ)
   const statGrid = document.createElement("div");
   statGrid.className = "stat-grid";
-  statGrid.innerHTML = STAT_FIELDS.map((f) => `<div class="stat-field"><label>${f.label}</label>${stepperHtml(f.key, enemy[f.key], { step: STAT_FIELD_STEP[f.key], min: 0 })}</div>`).join("");
+  statGrid.innerHTML = DETAIL_STAT_FIELDS.map((f) => `<div class="stat-field"><label>${f.label}</label>${stepperHtml(f.key, enemy[f.key], { step: STAT_FIELD_STEP[f.key], min: 0 })}</div>`).join("");
   bodyEl.appendChild(statGrid);
-  STAT_FIELDS.forEach((f) => {
+  DETAIL_STAT_FIELDS.forEach((f) => {
     wireStepper(statGrid.querySelector(`[data-f="${f.key}"]`), (v) => {
       setField(id, f.key, v);
       card.classList.toggle("edited", isEditedEnemy(id));
-      card.querySelector(".enemy-summary-sub").innerHTML = `<span>HP${getEnemy(id).hp} 攻${getEnemy(id).atk} 防${getEnemy(id).def} 速${getEnemy(id).spd}</span><span>階${getEnemy(id).minFloor}-${getEnemy(id).maxFloor}</span>`;
+      card.querySelector(".enemy-summary-sub").innerHTML = `<span>階${getEnemy(id).minFloor}-${getEnemy(id).maxFloor}</span>`;
       refreshEditCount();
     });
   });
