@@ -1139,7 +1139,7 @@ function useTreeSkill(actor, target, skill, log) {
       }
       const def = effectiveStat(t, "def") * (1 - (action.defPierce || 0));
       const rawHit = Math.max(1, Math.round(withVariance(atkStat * action.mult * mitigation(def, 15), 0.15)));
-      const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor);
+      const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor, null, null, null, action.useMag);
       randomHits.push({ target: t, hit: true, dmg, crit: lastHitWasCrit });
     }
     return { randomHits };
@@ -1193,7 +1193,7 @@ function useTreeSkill(actor, target, skill, log) {
       if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawHit = Math.round(rawHit * action.executeBonus.mult);
       const hitLogLines = [];
       const hitLog = deferHitLog ? (msg) => hitLogLines.push(msg) : log;
-      const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor);
+      const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor, null, null, null, action.useMag);
       const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後のデバフ付与処理はlastHitWasCritに影響しない)
       if (crit) anyCrit = true;
       totalDmg += dmg;
@@ -1458,20 +1458,20 @@ function rollHit(actor, target, rangeType) {
 
 // ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す。rangeTypeは"melee"/"ranged"(飛行の敵への
 // 命中率補正・撃ち落としの判定に使う)。shotDown: 狩人/砲術士が飛行の敵に命中させた時、確率で🪽を解除する
-function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType) {
+function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType, isMagic) {
   if (!rollHit(actor, target, rangeType)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
     const hawkTarget = maybeHawkFollowup(actor, target, log); // 本体の攻撃が外れても鷹は独立して追撃する
     return { hit: false, dmg: null, crit: false, hawkTargetId: hawkTarget ? hawkTarget.instanceId : null };
   }
-  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate);
+  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate, null, isMagic);
   const crit = lastHitWasCrit; // このヒット固有の会心判定(直後にshotDown等の別処理でlastHitWasCritが上書きされる前に確保する)
   const shotDown = maybeShootDown(actor, target);
   const hawkTarget = maybeHawkFollowup(actor, target, log); // 対象を倒していれば、鷹は別の生存中の敵をランダムに狙う
   return { hit: true, dmg, shotDown, crit, hawkTargetId: hawkTarget ? hawkTarget.instanceId : null };
 }
 // 範囲技共通: 対象ごとに個別に命中判定する
-function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
+function rollAoeAttack(actor, targets, rollFn, log, rangeType, isMagic) {
   const hits = [];
   const dmgs = [];
   const shotDowns = [];
@@ -1485,7 +1485,7 @@ function rollAoeAttack(actor, targets, rollFn, log, rangeType) {
       crits.push(false);
       return;
     }
-    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor);
+    const dmg = applyDamageToTarget(t, rollFn(t), log, actor.label, actor, null, null, null, isMagic);
     hits.push(true);
     dmgs.push(dmg);
     crits.push(lastHitWasCrit); // 対象ごとに個別記録(AOEの各ヒットで会心の有無が異なりうるため)
@@ -1582,7 +1582,7 @@ function anyOtherAllyGuarding(entity) {
 }
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName, isMagic) {
   logSuffix = logSuffix || "";
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
   if (actor && actor.instanceId !== undefined && target.__allies) {
@@ -1615,8 +1615,9 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     dmg = Math.round(dmg * (1 + actor.passives.firstAttackBonusMult));
     actor.passives.firstAttackUsed = true;
   }
-  // 霊力弱点(ENEMY_WEAKNESS type:"spirit"): 実体を持たない敵は、通常攻撃・技問わず全ての被ダメージが1.5倍になる
-  if (enemyWeaknessType(target, "spirit")) dmg = Math.round(dmg * SPIRIT_WEAKNESS_DMG_MULT);
+  // 霊力弱点(ENEMY_WEAKNESS type:"spirit"): 実体を持たない敵は、魔力によるダメージ(陰陽師の呪符系・
+  // useMag指定のスキル)にだけ被ダメージが1.5倍になる。物理攻撃には乗らない
+  if (isMagic && enemyWeaknessType(target, "spirit")) dmg = Math.round(dmg * SPIRIT_WEAKNESS_DMG_MULT);
   // 常時発動の低HP追撃系の受動効果(暗殺術など): 対象のHPが閾値以下なら全ての攻撃にダメージ加算がかかる
   if (actor && actor.passives && actor.passives.executeBonus) {
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
@@ -1857,10 +1858,10 @@ function useAbility(actor, target, abilityType, log) {
     return { guard: true };
   }
   if (abilityType === "magicAttack") {
-    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack);
+    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack, true);
   }
   if (abilityType === "magicAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.66)), log, ABILITY_RANGE_TYPE.magicAttackAll);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.66)), log, ABILITY_RANGE_TYPE.magicAttackAll, true);
   }
   if (abilityType === "physicalAttackAll") {
     return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
