@@ -33,6 +33,12 @@
   .camp-rest-info .nm { font-size: 0.78rem; font-weight: 700; margin-bottom: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .camp-rest-stat-label { font-size: 0.62rem; color: var(--text-muted); }
   .camp-rest-stress { font-size: 0.66rem; color: #9fd8ff; margin-top: 0.25rem; }
+  /* 回復サマリーのMPバーはactivateHpTrails()のWeb Animations APIで伸びるアニメーションを制御しているが、
+     .mpbar-fill自体には(戦闘中の味方バーで滑らかに見せるための)`transition: width 0.4s ease`がui.css側で
+     ついたままだったため、JSのanimate()とCSS transitionの両方が同時に反応してMPだけ回復アニメーションが
+     二重に再生されて見えるバグがあった(HP側は元からwidthのtransitionを持たないため発生しない)。
+     回復サマリー内(.camp-rest-info)に限ってCSS側のwidth transitionを無効化し、JSのanimate()だけに一本化する */
+  .camp-rest-info .mpbar-fill { transition: none; }
   #campRestNextBtn { margin-top: 0.5rem; width: 100%; max-width: 420px; }
   .camp-actions {
     /* topはJSで味方表示の実測位置から毎回計算して設定する(.bottom-actions/.battle-actionsと同じ仕組み) */
