@@ -626,6 +626,51 @@ function renderBigAttackSub(id, enemy) {
   return det;
 }
 
+function renderBigAttackCycleSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const bc = enemy.bigAttackCycle || null;
+  const summaryOf = (v) => (v ? `平均${v.avg}${v.variance ? "±" + v.variance : ""}ターン${v.instant ? "・即効" : ""}` : "デフォルト(4ターン)");
+  det.innerHTML = `<summary>大技サイクル(何ターンに一度か) <span class="sub-summary-text">${escapeHtml(summaryOf(bc))}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  body.innerHTML = `<div class="enable-toggle"><input type="checkbox" id="bc-enable-${id}" ${bc ? "checked" : ""}> この敵だけ個別に間隔を設定する</div><div class="bc-fields" style="${bc ? "" : "display:none;"}"></div>`;
+  const fieldsBox = body.querySelector(".bc-fields");
+  function buildFields(cur) {
+    fieldsBox.innerHTML = `
+      <div class="sub-field-row"><label>平均ターン数</label>${stepperHtml("avg", cur && cur.avg !== undefined ? cur.avg : 4, { step: 1, min: 1 })}</div>
+      <div class="sub-field-row"><label>ばらつき(±)</label>${stepperHtml("variance", cur && cur.variance !== undefined ? cur.variance : 0, { step: 1, min: 0 })}</div>
+      <div class="sub-field-row"><label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="instant" ${cur && cur.instant ? "checked" : ""}> 即効(遭遇後、最初のターンにいきなり大技が来る)</label></div>
+    `;
+    fieldsBox.querySelector('[data-f="instant"]').addEventListener("change", commit);
+    fieldsBox.querySelectorAll(".stepper").forEach((el) => wireStepper(el, commit));
+  }
+  function collect() {
+    const avg = stepperGetValue(fieldsBox.querySelector('.stepper[data-f="avg"]'));
+    const variance = stepperGetValue(fieldsBox.querySelector('.stepper[data-f="variance"]'));
+    const instant = fieldsBox.querySelector('[data-f="instant"]').checked;
+    const out = { avg: avg !== undefined ? avg : 4 };
+    if (variance) out.variance = variance;
+    if (instant) out.instant = true;
+    return out;
+  }
+  function commit() {
+    const enabled = body.querySelector(`#bc-enable-${id}`).checked;
+    const out = enabled ? collect() : undefined;
+    setField(id, "bigAttackCycle", out);
+    det.querySelector("summary").innerHTML = `大技サイクル(何ターンに一度か) <span class="sub-summary-text">${escapeHtml(summaryOf(out))}</span>`;
+    onAnyFieldChanged(id);
+  }
+  body.querySelector(`#bc-enable-${id}`).addEventListener("change", (ev) => {
+    fieldsBox.style.display = ev.target.checked ? "" : "none";
+    if (ev.target.checked && !fieldsBox.hasChildNodes()) buildFields(bc);
+    commit();
+  });
+  if (bc) buildFields(bc);
+  det.appendChild(body);
+  return det;
+}
+
 function renderOnHitSub(id, enemy) {
   const det = document.createElement("details");
   det.className = "sub-detail";
@@ -856,6 +901,7 @@ function buildEnemyCard(id, opts) {
   });
 
   bodyEl.appendChild(renderBigAttackSub(id, enemy));
+  bodyEl.appendChild(renderBigAttackCycleSub(id, enemy));
   bodyEl.appendChild(renderOnHitSub(id, enemy));
   bodyEl.appendChild(renderWeaknessSub(id, enemy));
   bodyEl.appendChild(renderStatusImmuneSub(id, enemy));

@@ -344,14 +344,16 @@ function processNext() {
       return;
     }
     setTimeout(() => {
-      // 大技サイクル: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、を繰り返す。
+      // 大技サイクル: 敵ごとのbigAttackCountdownが0になったターンに大技発動、残り1で予告(このターンは
+      // 通常攻撃のまま)。間隔(平均何ターンに一度か/ばらつき/即効)は敵ごとのbigAttackCycleで個別指定でき、
+      // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
       // 毒弱点②(ENEMY_WEAKNESS)を持つ敵は、毒状態の間は予告も発動もできず通常攻撃のみになる
-      // (サイクルのカウント自体は進め続け、毒が切れれば続きから再開する)
-      const cyclePos = (actor.bigAttackCounter || 0) % BIG_ATTACK_CYCLE_LENGTH;
+      // (発動タイミングが毒で潰れた場合は、そのチャンスは流れて新しい間隔から仕切り直す)
       const poisonBlocksBigAttack = (actor.poison || 0) > 0 && !!enemyWeaknessType(actor, "poison") && enemyWeaknessType(actor, "poison").tier === 2;
-      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 1 && !poisonBlocksBigAttack) {
+      const bigAttackDue = (actor.bigAttackCountdown || 0) <= 0;
+      if (bigAttackDue && !poisonBlocksBigAttack) {
         actor.bigAttackPending = false;
-        actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
+        actor.bigAttackCountdown = rollBigAttackCountdown(actor);
         // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
         // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
         const hpBeforeBig = {};
@@ -404,15 +406,19 @@ function processNext() {
         offerReserveSwapIfNeeded(newlyCriticalBig, continueAfterBig);
         return;
       }
-      if (cyclePos === BIG_ATTACK_CYCLE_LENGTH - 2 && !poisonBlocksBigAttack) {
+      if (bigAttackDue && poisonBlocksBigAttack) {
+        actor.bigAttackCountdown = rollBigAttackCountdown(actor); // 毒で大技のチャンスが潰れた。新しい間隔から仕切り直す
+      } else if (actor.bigAttackCountdown === 1 && !poisonBlocksBigAttack) {
         actor.bigAttackPending = true;
         // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
         // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)
         if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技だ！`);
         triggerWarningFlash();
         playSfx("big_attack_warning");
+        actor.bigAttackCountdown -= 1;
+      } else {
+        actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);
       }
-      actor.bigAttackCounter = (actor.bigAttackCounter || 0) + 1;
       const hpBeforeAtk = {};
       alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
       const result = enemyAttack(actor, alive, blog);

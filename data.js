@@ -1417,9 +1417,11 @@ const MIN_HIT_CHANCE = 0.75;
 const STUN_RESIST_TURNS = 3;
 const STUN_RESIST_MULT = 0.2;
 
-// 敵の「大技」システム: 通常攻撃を2回→3回目は予告(通常攻撃はする)→4回目で大技発動、のサイクルを
-// 繰り返す。複数体が同時に予告/発動しないよう、戦闘開始時に各敵の開始位置を0〜2からランダムにずらす
-// (BIG_ATTACK_CYCLE_LENGTH-1=予告ターン、以降は0からのカウントで割った余りで判定)。
+// 敵の「大技」システム: 各敵はbigAttackCountdown(残りターン数)を持ち、残り1で予告(このターンは
+// 通常攻撃のまま)→残り0で大技発動、を繰り返す(engine.jsのrollBigAttackCountdown参照)。
+// 間隔は敵ごとにENEMIES[id].bigAttackCycle: {avg, variance, instant}で個別指定でき(enemy_editor.htmlで編集可)、
+// 未設定の敵はこのBIG_ATTACK_CYCLE_LENGTH(平均何ターンに一度か)を固定間隔(ばらつき0)として使う。
+// 複数体が同時に予告/発動しないよう、戦闘開始時に各敵の初期位相をランダムにずらしている。
 // 威力・デバフの中身は敵ごとにENEMIES[id].bigAttackで個別設計する(全103体に設定済み、
 // 汎用フォールバックは廃止した。2026-07-19)
 const BIG_ATTACK_CYCLE_LENGTH = 4;

@@ -577,10 +577,11 @@ function applyStun(entity, turns) {
   // スタンした相手には一定ターン、スタン抵抗(resistedChance側で参照)を大幅に付与する。
   // 連続でスタンし続けられる「スタンロック」を防ぐための措置(通常のstatusResistMultとは別枠)
   entity.stunResistTurns = Math.max(entity.stunResistTurns || 0, STUN_RESIST_TURNS);
-  // 大技の構え中(bigAttackPending)にスタンが入ると、構え自体を完全に潰す(止める対抗策)
+  // 大技の構え中(bigAttackPending)にスタンが入ると、構え自体を完全に潰す(止める対抗策)。
+  // 新しい間隔を1回抽選し直し、また一から仕切り直しにする
   if (entity.bigAttackPending) {
     entity.bigAttackPending = false;
-    entity.bigAttackCounter = 0;
+    entity.bigAttackCountdown = rollBigAttackCountdown(entity);
   }
 }
 function applySilence(entity, turns) {
@@ -1228,20 +1229,37 @@ function useTreeSkill(actor, target, skill, log) {
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
+// 大技が来るまでの残りターン数を、敵ごとの間隔設定(bigAttackCycle: {avg, variance, instant}、
+// data.js側で敵ごとに個別指定。未設定なら全敵共通デフォルトBIG_ATTACK_CYCLE_LENGTHの固定間隔)から
+// 1回分だけ抽選する。avg±variance(最低1)の範囲でランダムな間隔を選び、そこから「発動ターン自体」の
+// 1を引いた値がカウントダウンの初期値になる(残り1で予告、残り0で発動)
+function rollBigAttackCountdown(def) {
+  const cfg = def && def.bigAttackCycle;
+  const avg = cfg && cfg.avg != null ? cfg.avg : BIG_ATTACK_CYCLE_LENGTH;
+  const variance = (cfg && cfg.variance) || 0;
+  const lo = Math.max(1, avg - variance);
+  const hi = Math.max(lo, avg + variance);
+  const interval = lo + Math.floor(Math.random() * (hi - lo + 1));
+  return interval - 1;
+}
 // ENEMIESカタログの素の1体(pick)から、実際の戦闘インスタンス(instanceId付与)を作る。
 // hp/atk/defは全てENEMIES側に「実戦でそのまま使う最終値」として直接書かれているため、
 // ここでの追加スケーリングは一切行わない(旧ENEMY_SCALE等の倍率は廃止し、生値へ織り込み済み)。
 // 通常抽選(pickEnemyForFloor)と、緊急依頼専用の狙い撃ちスポーン(instantiateEnemyById)の両方から使う共通処理
 function instantiateEnemy(pick) {
   const hp = pick.hp;
+  // bigAttackCycle.instant指定の敵は、遭遇後いきなり最初のターンで大技が来る(予告無しの奇襲)。
+  // それ以外は通常通りサイクル間隔を1回抽選し、さらにその中でランダムな初期位相にずらす
+  // (同種の敵が複数体並んだ時に全員が同時に予告/発動して見えるのを防ぐため)
+  const instant = pick.bigAttackCycle && pick.bigAttackCycle.instant;
+  const initialCountdown = instant ? 0 : Math.floor(Math.random() * (rollBigAttackCountdown(pick) + 1));
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,
     maxHp: hp,
-    // 大技サイクルの開始位置を0〜2からランダムにずらす(複数体が同時に予告/発動しないようにするため)
-    bigAttackCounter: Math.floor(Math.random() * (BIG_ATTACK_CYCLE_LENGTH - 1)),
+    bigAttackCountdown: initialCountdown,
     bigAttackPending: false,
   };
 }
@@ -2242,7 +2260,7 @@ function simulateBattleMulti(party, enemies, log) {
 if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
-    pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect,
+    pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect, rollBigAttackCountdown, applyGroupNerf,
     markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
