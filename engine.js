@@ -764,7 +764,7 @@ function initPassives() {
     atkMult: 1, defMult: 1, spdMult: 1, // hpMultは適用時に直接maxHpへ反映するのでここでは保持しない
     critRateAdd: 0, critDmgAdd: 0, accuracyAdd: 0, evasionAdd: 0,
     statusResistMult: 0, dodgeChance: 0, counterChance: 0, counterMult: 1,
-    mpDiscountPct: 0, mpRefundChance: 0,
+    mpDiscountPct: 0, mpDiscountFlat: 0, mpRefundChance: 0, // mpDiscountFlat: 技のMP消費から固定値を引く(%割引のmpDiscountPctとは別枠、加算式。陰陽極意など)
     onceGuardType: null, onceGuardUsed: false,
     firstAttackBonusMult: 0, firstAttackUsed: false,
     onKill: null, // {statMult:[{stat,mult}], turns, maxStacks}
@@ -817,6 +817,7 @@ function initPassives() {
     onHitLifestealPct: 0, // 通常攻撃で与えたダメージのこの割合だけ自分のHPを回復する(覇気など)
     onDamagedSelfHealPct: 0, // 敵からダメージを受けるたび、自分の最大HPのこの割合だけ回復する(不動の構えなど)
     onHitSelfStackBuff: null, // {stat, perStack, maxStacks, turns} 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる(剛槍など)
+    flyingBonus: null, // {mult} 対象がisFlyingの間、与ダメージ倍率(隼落としなど)
   };
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -852,6 +853,7 @@ function applySkillChoice(character, skill, level) {
     if (add.dodgeChance) p.dodgeChance = Math.min(0.6, p.dodgeChance + add.dodgeChance);
     if (add.counterChance) { p.counterChance = Math.min(0.6, p.counterChance + add.counterChance); p.counterMult = add.counterMult || p.counterMult; }
     if (add.mpDiscountPct) p.mpDiscountPct = Math.min(0.6, p.mpDiscountPct + add.mpDiscountPct);
+    if (add.mpDiscountFlat) p.mpDiscountFlat += add.mpDiscountFlat;
     if (add.mpRefundChance) p.mpRefundChance = Math.min(0.6, p.mpRefundChance + add.mpRefundChance);
     if (add.onceGuardType) p.onceGuardType = add.onceGuardType;
     if (add.firstAttackBonusMult) p.firstAttackBonusMult = add.firstAttackBonusMult;
@@ -861,6 +863,7 @@ function applySkillChoice(character, skill, level) {
     if (add.executeBonus) p.executeBonus = add.executeBonus;
     if (add.executeCritBonus) p.executeCritBonus.push(add.executeCritBonus);
     if (add.woundBonus) p.woundBonuses.push(add.woundBonus);
+    if (add.flyingBonus) p.flyingBonus = add.flyingBonus;
     if (add.flagMod) p.flagMods.push(add.flagMod);
     if (add.evadeCritCounter) p.evadeCritCounter = true;
     if (add.guardCounter) p.guardCounter = true;
@@ -1021,7 +1024,8 @@ function skillMpCost(actor, baseMp) {
     const d = actor.passives.discountWhileFlag;
     if (actor.statMods.some((m) => m.stat === d.statModName)) discount += d.pct;
   }
-  return Math.max(0, Math.round(baseMp * (1 - discount)));
+  const flat = (actor.passives && actor.passives.mpDiscountFlat) || 0;
+  return Math.max(0, Math.round(baseMp * (1 - discount)) - flat);
 }
 // 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する。
 // typeが"stun"かつ対象がスタン抵抗中(stunResistTurns>0、直近でスタンされた直後)の場合は、
@@ -1035,6 +1039,28 @@ function resistedChance(target, baseChance, type) {
   return chance;
 }
 
+// スキルツリー技のaction.inflict1件ぶんを判定して適用する。action.inflictは単一オブジェクトでも
+// 配列(複数の状態異常を同時に付与、水遁符など)でも渡せる。会心/毒/出血の値・炎上のターン数は
+// value/turnsの固定値だけでなくvalueMin/valueMax・turnsMin/turnsMaxのランダム範囲にも対応する
+function applyTreeInflict(t, inflict, actor) {
+  if (!inflict) return;
+  const list = Array.isArray(inflict) ? inflict : [inflict];
+  const izanamiBoost = list.some((inf) => inf.type === "poison" || inf.type === "bleed") && consumeOmamoriIzanami(actor) ? 2 : 0;
+  list.forEach((inf) => {
+    if (Math.random() >= resistedChance(t, inf.chance, inf.type)) return;
+    if (inf.type === "poison") applyPoison(t, resolveValue(inf, 3) + izanamiBoost);
+    if (inf.type === "bleed") applyBleed(t, resolveValue(inf, 2) + izanamiBoost);
+    if (inf.type === "burn") applyBurn(t, resolveTurns(inf));
+    if (inf.type === "stun") applyStun(t, inf.turns || 1);
+    if (inf.type === "silence") applySilence(t, inf.turns || 2);
+    if (inf.type === "atkDown") applyStatMod(t, "atk", 1 - (inf.value || 0.2), inf.turns || 3);
+    if (inf.type === "defDown") applyStatMod(t, "def", 1 - (inf.value || 0.2), inf.turns || 3);
+    if (inf.type === "spdDown") applyStatMod(t, "spd", 1 - (inf.value || 0.2), inf.turns || 3);
+    if (inf.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (inf.value || 0.1), inf.turns || 3);
+    // 迅雷突き/鎧砕きなど: 使うたびに防御デバフが蓄積する(maxStacksで頭打ち)
+    if (inf.type === "defDownStack") applyStackingStatMod(t, "spearDefDownStack", "def", -(inf.value || 0.2), inf.maxStacks || 2, inf.turns || 3);
+  });
+}
 // スキルツリーの能動スキル(単体/範囲攻撃、バフ、回復など)を実行する汎用リゾルバ。
 // target: 単体系はentity1体、範囲系(action.aoe)は配列
 function useTreeSkill(actor, target, skill, log) {
@@ -1149,6 +1175,7 @@ function useTreeSkill(actor, target, skill, log) {
       const def = effectiveStat(t, "def") * (1 - (action.defPierce || 0));
       const rawHit = Math.max(1, Math.round(withVariance(atkStat * action.mult * mitigation(def, 15), 0.15)));
       const dmg = applyDamageToTarget(t, rawHit, log, actor.label, actor, null, null, null, action.useMag);
+      applyTreeInflict(t, action.inflict, actor);
       randomHits.push({ target: t, hit: true, dmg, crit: lastHitWasCrit });
     }
     return { randomHits };
@@ -1211,20 +1238,7 @@ function useTreeSkill(actor, target, skill, log) {
       hitsList.push({ dmg, crit, logLines: hitLogLines });
       if (hawkTarget) hawkTargetIds.push(hawkTarget.instanceId);
     }
-    if (action.inflict && Math.random() < resistedChance(t, action.inflict.chance, action.inflict.type)) {
-      const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
-      if (action.inflict.type === "poison") applyPoison(t, resolveValue(action.inflict, 3) + izanamiBoost);
-      if (action.inflict.type === "bleed") applyBleed(t, resolveValue(action.inflict, 2) + izanamiBoost);
-      if (action.inflict.type === "burn") applyBurn(t, action.inflict.turns || 3);
-      if (action.inflict.type === "stun") applyStun(t, action.inflict.turns || 1);
-      if (action.inflict.type === "silence") applySilence(t, action.inflict.turns || 2);
-      if (action.inflict.type === "atkDown") applyStatMod(t, "atk", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
-      if (action.inflict.type === "defDown") applyStatMod(t, "def", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
-      if (action.inflict.type === "spdDown") applyStatMod(t, "spd", 1 - (action.inflict.value || 0.2), action.inflict.turns || 3);
-      if (action.inflict.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (action.inflict.value || 0.1), action.inflict.turns || 3);
-      // 迅雷突き/鎧砕きなど: 使うたびに防御デバフが蓄積する(maxStacksで頭打ち)
-      if (action.inflict.type === "defDownStack") applyStackingStatMod(t, "spearDefDownStack", "def", -(action.inflict.value || 0.2), action.inflict.maxStacks || 2, action.inflict.turns || 3);
-    }
+    applyTreeInflict(t, action.inflict, actor);
     const shotDown = maybeShootDown(actor, t);
     return { hit: true, dmg: totalDmg, shotDown, crit: anyCrit, hawkTargetId: hawkTargetIds[0] || null, hits: hitsList, hawkTargetIds };
   });
@@ -1661,6 +1675,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       if (hasSpecificAilment(target, wb.ailment)) dmg = Math.round(dmg * wb.mult);
     });
   }
+  // 飛行の敵への追加ダメージ倍率(隼落としなど)
+  if (actor && actor.passives && actor.passives.flyingBonus && target.isFlying) {
+    dmg = Math.round(dmg * actor.passives.flyingBonus.mult);
+  }
   // 複合デバフ系の受動効果: 対象に乗っている状態異常の「種類数」に応じてダメージが伸びる(百鬼断・急所連撃・気枯らしの術など)
   if (actor && actor.passives && actor.passives.stackedWoundBonusPerAilment > 0) {
     const ailmentCount = countDistinctAilments(target);
@@ -1780,7 +1798,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       if (oh.condition === "targetFullHp" && !wasFullHpBeforeThisHit) return;
       if (Math.random() < resistedChance(target, oh.chance, oh.type)) {
         const izanamiBoost = consumeOmamoriIzanami(actor) ? 2 : 0;
-        if (oh.type === "poison") applyPoison(target, (oh.value || 3) + izanamiBoost);
+        if (oh.type === "poison") applyPoison(target, resolveValue(oh, 3) + izanamiBoost);
         if (oh.type === "bleed") applyBleed(target, resolveValue(oh, 2) + izanamiBoost);
         if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
