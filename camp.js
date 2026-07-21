@@ -89,20 +89,30 @@ function playCampSleepTransition(onBlack) {
 }
 // 回復サマリーの「次へ」が押された後に呼ぶ: 暗転から森の朝背景へフェードインして演出を終える
 function revealCampMorning(onDone) {
-  let revealDone = false;
+  let finished = false;
   function finish() {
-    if (revealDone) return;
-    revealDone = true;
+    if (finished) return;
+    finished = true;
     clearTimeout(safetyTimer);
     overlay.style.display = "none";
+    overlay.style.opacity = "1"; // 次回の野営演出のためにリセットしておく
     campSleepTransitionActive = false;
-    onDone();
   }
-  const safetyTimer = setTimeout(finish, 30000);
+  // 宿泊と同様、黒(blackEl)が明けた直後はまだオーバーレイ自体が画面を覆っているので、その裏で
+  // 実画面(onDone)を先に最新状態へ描画してからオーバーレイ全体をフェードアウトする(display:none
+  // による瞬時切り替えだと画面が「ドン」と唐突に切り替わって見えるため。ユーザー報告2026-07-21)
+  let revealed = false;
+  function revealRealScreen() {
+    if (revealed) return;
+    revealed = true;
+    onDone();
+    fadeOpacity(overlay, 1, 0, 600, finish);
+  }
+  const safetyTimer = setTimeout(() => { revealRealScreen(); finish(); }, 30000);
   const overlay = document.getElementById("campTransition");
   const blackEl = document.getElementById("campTransitionBlack");
   setTimeout(() => {
-    fadeOpacity(blackEl, 1, 0, 1500, finish);
+    fadeOpacity(blackEl, 1, 0, 1500, revealRealScreen);
   }, 300);
 }
 // 回復サマリー画面の共通実装(野営/宿泊どちらも使う)。暗転中に対象キャラごとの

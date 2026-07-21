@@ -506,7 +506,7 @@ function playLodgingTransition(onBlack, bgSet) {
   const blackEl = document.getElementById("lodgingTransitionBlack");
   const caption = document.getElementById("lodgingTransitionCaption");
   const NIGHT_CROSSFADE_MS = 2000; // 現在時刻→夜へのクロスフェード時間(ユーザー指示で従来より少し長め)
-  const INITIAL_HOLD_MS = 1700; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(2026-07-21にユーザー指示で2.2秒→1.7秒に再短縮)
+  const INITIAL_HOLD_MS = 1500; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(2026-07-21にユーザー指示で2.2秒→1.7秒→1.5秒に再短縮)
 
   fromEl.style.opacity = "1";
   fromEl.style.backgroundImage = `url('${bg[state.timeOfDay] || bg.night}')`;
@@ -553,15 +553,26 @@ function revealLodgingMorning(onDone) {
     lodgingFinished = true;
     clearTimeout(safetyTimer);
     overlay.style.display = "none";
+    overlay.style.opacity = "1"; // 次回の宿泊演出のためにリセットしておく
     lodgingTransitionActive = false;
-    onDone();
   }
-  const safetyTimer = setTimeout(finishLodging, 30000);
+  // 黒(blackEl)が明けきった時点ではまだ演出オーバーレイ自体が画面を覆ったままなので、その裏で
+  // 実際の宿屋画面(onDone=renderTavern)を先に最新状態へ描画してから、オーバーレイ全体をフェード
+  // アウトして継ぎ目なく見せる。従来はここでoverlay.style.display="none"により実画面へ瞬時に
+  // 切り替えていたため、更新前→更新後の画面が「ドン」と唐突に切り替わって見えていた(ユーザー報告2026-07-21)
+  let revealed = false;
+  function revealRealScreen() {
+    if (revealed) return;
+    revealed = true;
+    onDone();
+    fadeOpacity(overlay, 1, 0, 600, finishLodging);
+  }
+  const safetyTimer = setTimeout(() => { revealRealScreen(); finishLodging(); }, 30000);
   const overlay = document.getElementById("lodgingTransition");
   const blackEl = document.getElementById("lodgingTransitionBlack");
   // 朝のイラストが見え始めるこのタイミングで専用の効果音を一度だけ鳴らす
   playSfx("morning_chime");
-  fadeOpacity(blackEl, 1, 0, 3300, finishLodging);
+  fadeOpacity(blackEl, 1, 0, 3300, revealRealScreen);
 }
 
 // 野営開始時の演出: 現在の背景(1.5秒静止)→夜の森へクロスフェード(既に夜ならスキップ)→

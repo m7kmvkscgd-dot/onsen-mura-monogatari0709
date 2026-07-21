@@ -2873,18 +2873,28 @@ function playTeahouseRestTransition(onBlack) {
   fadeOpacity(blackEl, 0, 1, 1200, reachBlack);
 }
 function revealTeahouseRest(onDone) {
-  let revealDone = false;
+  let finished = false;
   function finish() {
-    if (revealDone) return;
-    revealDone = true;
+    if (finished) return;
+    finished = true;
     clearTimeout(safetyTimer);
     overlay.style.display = "none";
+    overlay.style.opacity = "1"; // 次回の一休み演出のためにリセットしておく
     teahouseRestTransitionActive = false;
-    onDone();
   }
-  const safetyTimer = setTimeout(finish, 30000);
+  // 宿泊/野営と同様、黒(blackEl)が明けた直後はまだオーバーレイ自体が画面を覆っているので、その裏で
+  // 実画面(onDone)を先に最新状態へ描画してからオーバーレイ全体をフェードアウトする(display:none
+  // による瞬時切り替えだと画面が「ドン」と唐突に切り替わって見えるため。ユーザー報告2026-07-21)
+  let revealed = false;
+  function revealRealScreen() {
+    if (revealed) return;
+    revealed = true;
+    onDone();
+    fadeOpacity(overlay, 1, 0, 600, finish);
+  }
+  const safetyTimer = setTimeout(() => { revealRealScreen(); finish(); }, 30000);
   const overlay = document.getElementById("teahouseRestTransition");
   const blackEl = document.getElementById("teahouseRestBlack");
-  setTimeout(() => { fadeOpacity(blackEl, 1, 0, 1000, finish); }, 200);
+  setTimeout(() => { fadeOpacity(blackEl, 1, 0, 1000, revealRealScreen); }, 200);
 }
 
