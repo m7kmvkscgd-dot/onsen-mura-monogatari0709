@@ -2857,10 +2857,10 @@ function playTeahouseRestTransition(onBlack) {
     if (blackDone) return;
     blackDone = true;
     clearTimeout(safetyTimer);
-    // 宿泊/野営と表示時間を揃える(2026-07-21にユーザー指示で3900ms→2500msへ短縮)
+    // 宿泊/野営と表示時間を揃える(2026-07-21にユーザー指示で3900ms→2500ms→2700msへ調整)
     caption.textContent = pickTeahouseRestMessage();
-    caption.style.animation = "lodgingCaptionFade 2500ms ease forwards";
-    setTimeout(onBlack, 2500);
+    caption.style.animation = "lodgingCaptionFade 2700ms ease forwards";
+    setTimeout(onBlack, 2700);
   }
   const safetyTimer = setTimeout(reachBlack, 30000);
   const overlay = document.getElementById("teahouseRestTransition");

@@ -506,7 +506,7 @@ function playLodgingTransition(onBlack, bgSet) {
   const blackEl = document.getElementById("lodgingTransitionBlack");
   const caption = document.getElementById("lodgingTransitionCaption");
   const NIGHT_CROSSFADE_MS = 2000; // 現在時刻→夜へのクロスフェード時間(ユーザー指示で従来より少し長め)
-  const INITIAL_HOLD_MS = 2200; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(ユーザー指示で0.3秒短縮)
+  const INITIAL_HOLD_MS = 1700; // 宿泊開始直後、現在時刻の絵を止めたまま表示しておく時間(2026-07-21にユーザー指示で2.2秒→1.7秒に再短縮)
 
   fromEl.style.opacity = "1";
   fromEl.style.backgroundImage = `url('${bg[state.timeOfDay] || bg.night}')`;
@@ -532,10 +532,10 @@ function playLodgingTransition(onBlack, bgSet) {
       // 画面が真っ暗な間に背景を朝の絵へ差し替え、キャプションを表示する
       fromEl.style.backgroundImage = `url('${bg.dawn}')`;
       caption.textContent = pickLodgingNightMessage();
-      caption.style.animation = "lodgingCaptionFade 2500ms ease forwards";
+      caption.style.animation = "lodgingCaptionFade 2700ms ease forwards";
       // キャプションが完全に消えてから回復画面を出す(表示時間を0.6秒短縮したのに合わせて
-      // 回復画面が出るタイミングも同じだけ早める。2026-07-21にユーザー指示で3900ms→2500msへ再短縮)
-      setTimeout(onBlack, 2500);
+      // 回復画面が出るタイミングも同じだけ早める。2026-07-21にユーザー指示で3900ms→2500ms→2700msへ調整)
+      setTimeout(onBlack, 2700);
     });
   }
 

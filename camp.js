@@ -65,10 +65,10 @@ function playCampSleepTransition(onBlack) {
     clearTimeout(safetyTimer);
     fromEl.style.backgroundImage = `url('${currentAreaBgSet().dawn}')`;
     // 宿泊演出と同様、キャプションを表示して完全に消えてから回復画面(onBlack)を呼ぶ
-    // (2026-07-21にユーザー指示で表示時間を3900ms→2500msへ短縮)
+    // (2026-07-21にユーザー指示で表示時間を3900ms→2500ms→2700msへ調整)
     caption.textContent = pickCampNightMessage();
-    caption.style.animation = "lodgingCaptionFade 2500ms ease forwards";
-    setTimeout(onBlack, 2500);
+    caption.style.animation = "lodgingCaptionFade 2700ms ease forwards";
+    setTimeout(onBlack, 2700);
   }
   const safetyTimer = setTimeout(reachBlack, 30000);
   const overlay = document.getElementById("campTransition");
