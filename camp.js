@@ -4,6 +4,7 @@ function playCampTransition(onDone) {
   if (campTransitionActive) return;
   campTransitionActive = true;
   revertAllTransforms(); // 野営を始めたら変化の術は強制解除
+  fieldParty = fieldParty.filter((c) => !c.isShikigami); // 野営をすると式神は消滅する
   playCampBgm();
   playAmbientBgm("night"); // 野営は演出上常に夜になるため、実際のtimeOfDayに関わらず虫の声も夜側に固定する
   let campTransFinished = false;

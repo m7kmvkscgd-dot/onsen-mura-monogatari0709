@@ -412,6 +412,9 @@ function renderDungeon() {
   // 交代: 控え(reserveFieldMember)が健在(瀕死でない)の時だけ表示。探索中はいつでも無償で交代できる
   const swapBtn = document.getElementById("dungeonSwapBtn");
   swapBtn.style.display = reserveFieldMember && reserveFieldMember.status === "active" ? "" : "none";
+  // 式神帰還: 陰陽師が式神を出している間、探索中もいつでも呼び戻せる(戦闘パートの同名ボタンと同じ関数)
+  const activeShikigami = fieldParty.find((c) => c.isShikigami);
+  document.getElementById("dungeonShikigamiRecallBtn").style.display = activeShikigami ? "" : "none";
   positionActionsBelowPartyBar("dungeonPartyBar", ".bottom-actions");
 }
 
@@ -441,7 +444,7 @@ function swapReserveMember(activeMember, log) {
 // 誰かを担いでいる最中のキャラは交代候補から除外する(担いでいる相手の行き場が無くなるため)
 document.getElementById("dungeonSwapBtn").onclick = () => {
   if (!reserveFieldMember || reserveFieldMember.status !== "active") return;
-  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.carryingId);
+  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.carryingId && !c.isClone && !c.isShikigami);
   if (targets.length === 0) { showInfoModal("交代できる仲間がいません(全員ふさがっています)"); return; }
   pendingAllyPick = (t) => {
     pendingAllyPick = null;
@@ -544,6 +547,17 @@ document.getElementById("dungeonHealBtn").onclick = () => {
     saveState();
     renderDungeon();
   });
+};
+// 式神帰還: MP消費0・ターン消費0で式神を送り返す(戦闘パートの同名ボタンと同じ関数)。探索中はいつでも使える
+document.getElementById("dungeonShikigamiRecallBtn").onclick = () => {
+  const shikigami = fieldParty.find((c) => c.isShikigami);
+  if (!shikigami) return;
+  const owner = fieldParty.find((c) => c.id === shikigami.ownerId);
+  if (!owner) return;
+  recallShikigami(owner);
+  dlog(`${owner.name}は式神を送り返した。`);
+  saveState();
+  renderDungeon();
 };
 
 // 探索中の「道具」ボタン: 野営具(野営を始める)/温泉卵/所持中の茶屋の菓子(誰か1人がその場で回復)を
@@ -2823,6 +2837,7 @@ document.getElementById("teaHouseBuySmokeBombBtn").onclick = () => {
 };
 document.getElementById("teaHouseRestBtn").onclick = () => {
   if (!teahouseIsOpen() || state.gold < TEAHOUSE_REST_COST) return;
+  fieldParty = fieldParty.filter((c) => !c.isShikigami); // 茶屋の一休みをすると式神は消滅する
   state.gold -= TEAHOUSE_REST_COST;
   saveState();
   playSfx("select");

@@ -821,7 +821,7 @@ const SKILL_TREES = {
     },
     4: {
       left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
-      right: { name: "影分身の術", desc: "後日実装", mp: 4 },
+      right: { name: "影分身の術", desc: "自分の分身(HP75%/MP0、通常攻撃のみ)を呼び出し、5人目として並んで戦わせる。分身は状態異常にならず回復も不可、瀕死になると消え、戦闘が終わると自動で消滅する", mp: 4, action: { kind: "summonClone" } },
     },
     5: {
       left: { name: "身代わりの術", desc: "次に受ける全ての攻撃を1度だけ無効化する(全体攻撃を含む)", mp: 1, action: { kind: "shieldSelf" } },
@@ -1019,7 +1019,7 @@ const SKILL_TREES = {
     },
     6: {
       left: { name: "陰陽融合", desc: "炎上している敵への魔法ダメージ+15%", mp: 0, passive: { woundBonus: { mult: 1.15, ailment: "burn" } } },
-      right: { name: "六芒陣", desc: "", mp: 0, passive: { comboFollowup: { tag: "kekkai", stat: "mag", mult: 1.15 } } },
+      right: { name: "式神召喚", desc: "式神を呼び出し、5人目として並んで戦わせる。式神は自律的に敵を攻撃し、戦闘が終わっても消えず、回復も可能", mp: 6, action: { kind: "summonShikigami" } },
     },
     7: {
       left: { name: "天地鳴動", desc: "敵全体へ110%の魔法ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.1, useMag: true } },

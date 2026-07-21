@@ -438,6 +438,51 @@ function processNext() {
       };
       offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
     }, enemyActionDelay);
+  } else if (actor.isShikigami) {
+    // 式神: プレイヤー操作不要で自動的に生存中の敵からランダムに1体を選んで通常攻撃する
+    if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
+    battle.actingId = actor.id;
+    document.getElementById("actionGrid").innerHTML = "";
+    renderBattleScreen();
+    const dot = tickTurnStartEffects(actor, blog);
+    if (dot.total > 0) {
+      popupOn(actor.id, `-${dot.total}`, "dmg");
+      popupDotStack(actor.id, dot, "burn");
+      const newlyCriticalDot = handleFieldDeaths();
+      renderBattleScreen();
+      if (actor.hp <= 0 || actor.status !== "active") {
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        return;
+      }
+    }
+    if (actor.stunTurns > 0) {
+      actor.stunTurns--;
+      blog(`${actor.label}はスタンして動けない！`);
+      popupOn(actor.id, "💫スタン", "stun");
+      renderBattleScreen();
+      battle.orderIndex++;
+      setTimeout(processNext, 500);
+      return;
+    }
+    setTimeout(() => {
+      const targets = targetableEnemies();
+      if (targets.length === 0) { battle.orderIndex++; processNext(); return; }
+      const target = targets[Math.floor(Math.random() * targets.length)];
+      const result = performAttack(actor, target, blog);
+      if (result.hit) {
+        popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+        playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
+        if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
+      } else {
+        playSfx("evade");
+      }
+      renderBattleScreen();
+      if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
+      triggerShootDownEvents(result.shotDown ? [target] : [], () => {
+        battle.orderIndex++;
+        setTimeout(processNext, 500);
+      });
+    }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
     battle.actingId = actor.id;
@@ -505,6 +550,16 @@ function handleFieldDeaths() {
   // 以前は確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ1つ手前のフロアで
   // 救助できる特例があったが、ユーザー指示で廃止。敵がいたフロアにそのまま取り残す通常仕様に統一する
   const newlyCritical = [];
+  // 影分身/式神はHPが0になっても瀕死(要救出)にはならず、その場で消滅するだけ。
+  // 通常の瀕死化ロジックには一切乗せないよう、forEachの一番最初で処理してreturnする
+  const vanishIds = [];
+  fieldParty.forEach((c) => {
+    if ((c.isClone || c.isShikigami) && c.hp <= 0 && c.status === "active") {
+      blog(`${c.name}は力尽きて消えた...`);
+      vanishIds.push(c.id);
+    }
+  });
+  if (vanishIds.length) fieldParty = fieldParty.filter((c) => !vanishIds.includes(c.id));
   fieldParty.forEach((c) => {
     // 変身中に致命傷級のダメージを受けても瀕死にはならず、変身が強制解除されて人間の姿(変身前のHP)に
     // 戻るだけで済む(「変身が身代わりになる」仕様)
@@ -809,7 +864,7 @@ function runTreeSkill(actor, skill) {
   if (action.kind === "heal") {
     if (action.aoe) {
       playSfx("heal");
-      const targets = fieldParty.filter((c) => !c.transformForm && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
+      const targets = fieldParty.filter((c) => !c.transformForm && !c.isClone && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
       const result = useTreeSkill(actor, targets, skill, blog);
       if (result && result.healed) {
         result.healed.forEach((h) => {
@@ -916,7 +971,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
   battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
-  aliveField().filter((target) => !target.transformForm).forEach((target) => {
+  aliveField().filter((target) => !target.transformForm && !target.isClone).forEach((target) => {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
@@ -1200,6 +1255,9 @@ function renderActionButtons(actor) {
     };
     grid.appendChild(atkBtn);
 
+    // 影分身は通常攻撃のみ使用可能(技/道具/担ぐ/交代/逃げる、いずれも不可)
+    if (actor.isClone) return;
+
     // 変化の術で変身中は、通常の職業アビリティ/スキルツリー技の代わりに専用の行動(カラスのかばう、
     // ガマ/ヘビのform専用スキル)だけを出す。MPの概念が無くなるため沈黙判定も無関係になる
     if (actor.transformForm) {
@@ -1413,6 +1471,22 @@ function renderActionButtons(actor) {
     grid.appendChild(revertBtn);
   }
 
+  // 式神帰還: 陰陽師が自分の式神を出している間だけ表示。MP消費0・ターン消費0で、押した瞬間に
+  // 式神を消してMPを1回復し、そのまま行動選択に戻る(変身解除と同じ「無消費の意思決定」パターン)
+  if (actor.classId === "onmyoji" && fieldParty.some((c) => c.isShikigami && c.ownerId === actor.id)) {
+    const recallBtn = document.createElement("button");
+    recallBtn.className = "big";
+    recallBtn.textContent = "式神帰還";
+    recallBtn.onclick = () => {
+      if (battleActionLocked) return;
+      recallShikigami(actor);
+      blog(`${actor.name}は式神を送り返した。`);
+      renderBattleScreen();
+      renderActionButtons(actor);
+    };
+    grid.appendChild(recallBtn);
+  }
+
   const itemBtn = document.createElement("button");
   itemBtn.className = "big";
   itemBtn.textContent = "道具";
@@ -1501,7 +1575,9 @@ function renderAllyTargets(actor, kind) {
   // pickSingleEnemyTargetと同じ理由: 対象選択中はまだ何も確定していないため、いったんロックを解除して
   // 「戻る」(cancelBattleSubMenu)が確実に効くようにする。対象を選んだ瞬間に再度trueへ戻す
   battleActionLocked = false;
-  const targets = aliveField().filter((c) => !c.transformForm);
+  // 影分身は回復薬/式神を守れ以外の対象になれない(呪文/アイテムいずれの回復も不可のため)。
+  // hawkGuardだけは回復ではない(鷹の身代わり)ので対象から外さない
+  const targets = aliveField().filter((c) => !c.transformForm && !(c.isClone && kind !== "hawkGuard"));
   pendingAllyPick = (t) => { pendingAllyPick = null; battleActionLocked = true; resolveAllyTarget(actor, kind, t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
@@ -1557,6 +1633,8 @@ function afterPlayerAction() {
 }
 
 function victory() {
+  // 影分身は戦闘が終わると自動で消滅する(式神は逆に生きていれば持ち越されるので、ここでは除去しない)
+  fieldParty = fieldParty.filter((c) => !c.isClone);
   stopBattleBgm();
   playSfx("victory");
   unlockPeaceDialogueAfterVictory(); // 平和な掛け合い: この勝利をもって次に条件を満たした時1回だけ発火できるようにする
@@ -1763,6 +1841,7 @@ function updateBossPursuitHpIfFled() {
   }
 }
 function escapeBattle() {
+  fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   markQuestChasingIfFled();
   updateBossPursuitHpIfFled();
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
@@ -1793,6 +1872,7 @@ function escapeBattle() {
 // 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
 // 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
 function defeat() {
+  fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   updateBossPursuitHpIfFled(); // 追撃モードの再戦中に全滅した場合、その時点のダメージを反映してから記録する
   recordBossWoundIfPursuing(); // 全滅で追撃を続けられなくなった場合も「見送った」扱いで手負いのHPを記録する
   stopBattleBgm();

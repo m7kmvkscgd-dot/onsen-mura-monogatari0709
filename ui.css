@@ -97,6 +97,10 @@
      iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
      再描画・位置取得が更新されなくなる不具合の原因になっていた可能性が高いため外した */
   .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: var(--radius-sm); padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+  /* 影分身/式神で5人目が出ている間だけ、幅の狭いスマホでも5枚が収まるよう一回り小さくする
+     (茶屋の回復サマリー画面で既に使っているcamp-rest-manyと同じ「人数で切り替える」パターン) */
+  .party-bar-five .party-member { flex-basis: 76px; max-width: 76px; }
+  .party-bar-five .nm { font-size: 0.72rem; }
   /* 行動中のキャラ表示(商業JRPG基準のブラッシュアップ、2026-07-15)。
      従来は「常時ふわふわ浮遊+発光パルス」のループだったが、①瞬間移動的で品質が低く見える
      ②毎ターン何百回も目にするためループ演出はくどい、という指摘を受けて全面的に作り直した。
@@ -139,6 +143,10 @@
   }
   .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
+  /* 式神(サンプル実装)の仮アイコン。本物のポートレート絵が来るまでは絵文字で代用し、
+     .card-portrait-img(<img>)と同じ箱サイズ(正方形/背景色/角丸)だけ再現する */
+  .shikigami-emoji-portrait { width: 100%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; background: #353a44; border-radius: var(--radius-xs); font-size: 2.2rem; line-height: 1; }
+  .party-member.dead .shikigami-emoji-portrait { filter: grayscale(1) brightness(0.4); }
   /* 状態異常アイコンを立ち絵に重ねて表示するためのラッパー(敵カードの.enemy-debuff-iconsと同じ方式) */
   .party-portrait-wrap { position: relative; }
   /* 毘沙門天の御守: バリアを張っている味方のイラストをぐるっと囲む発光(ユーザー提供素材)。

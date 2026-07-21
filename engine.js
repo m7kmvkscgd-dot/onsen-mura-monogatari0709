@@ -2,6 +2,8 @@
 
 let __idSeq = 1;
 let __enemySeq = 1;
+let __cloneSeq = 1;
+let __shikigamiSeq = 1;
 function nextId() {
   return "c" + __idSeq++;
 }
@@ -703,6 +705,7 @@ function abilityMpCost(abilityType, actor) {
 }
 
 function grantXp(character, amount, log) {
+  if (character.isClone || character.isShikigami) return; // 分身/式神は経験値を受け取らない(分身はclassIdを持つがCLASSES参照は意味を持たない一時オブジェクト、式神はclassId自体を持たない)
   if (character.status !== "active") return;
   if (character.level >= MAX_LEVEL) return; // 上限到達後は経験値を受け取らない(溜まり続けるのを防ぐ)
   character.xp += amount;
@@ -819,6 +822,78 @@ function initPassives() {
     onHitSelfStackBuff: null, // {stat, perStack, maxStacks, turns} 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる(剛槍など)
     flyingBonus: null, // {mult} 対象がisFlyingの間、与ダメージ倍率(隼落としなど)
   };
+}
+
+// ============ 5人目の枠(影分身/式神)============
+// fieldPartyは通常4人までだが、忍者「影分身の術」・陰陽師「式神召喚」だけは一時的に5人目を追加できる。
+// 同時に存在できるのはどちらか1体まで(isClone/isShikigamiのどちらかが既にいたら新規召喚は弾く)。
+// 忍者の隣に並ぶよう、pushではなく召喚者のすぐ後ろにspliceで挿入する
+function insertNextToOwner(entity, owner) {
+  const idx = fieldParty.indexOf(owner);
+  fieldParty.splice(idx >= 0 ? idx + 1 : fieldParty.length, 0, entity);
+}
+// 影分身: HPは本体の最大HPの75%、MPは0(通常攻撃しか使わないため）。atk/def/spd/magは本体の「素の値」を
+// そのままコピーし、passivesも本体のものを丸ごと複製することで、effectiveStat()側の通常の計算経路
+// (statMods/passives.atkMult/conditionalMods等)がそのまま働き、本体が選んだ忍者のパッシブ全てが
+// 分身にも正しく乗る(二重計上を避けるため、ここではeffectiveStat後の「実効値」ではなく素の値を渡す)。
+// statusImmuneTurnsを非常に大きい値にすることで、既存の状態異常付与処理(apply系関数はどれも
+// entity.statusImmuneTurns>0なら早期returnする)を素通りさせずに全て弾く
+function makeCloneFor(actor) {
+  const maxHp = Math.max(1, Math.round(actor.maxHp * 0.75));
+  return {
+    id: "clone" + (__cloneSeq++),
+    isClone: true,
+    ownerId: actor.id,
+    classId: actor.classId,
+    name: `${actor.name}の分身`,
+    label: `${actor.name}の分身`,
+    status: "active", fleeState: null,
+    level: actor.level,
+    maxHp, hp: maxHp,
+    maxMp: 0, mp: 0,
+    atk: actor.atk, def: actor.def, spd: actor.spd, mag: actor.mag,
+    passives: Object.assign(initPassives(), JSON.parse(JSON.stringify(actor.passives || {}))),
+    statMods: [], poison: 0, bleed: 0, burnTurns: 0, stunTurns: 0, silenceTurns: 0,
+    statusImmuneTurns: 9999,
+    fatigue: 0,
+  };
+}
+// 式神(サンプル実装): 本物のステータス/アイコンは絵が届いてから差し替える前提の仮データ。
+// 絵文字アイコン(emojiフィールド)はcharacterPortraitSrc側で早期returnして使う想定
+function makeSampleShikigami(actor) {
+  const growth = 1 + actor.level * 0.075;
+  const maxHp = Math.max(1, Math.round((14 + actor.mag * 0.5) * growth));
+  return {
+    id: "skg" + (__shikigamiSeq++),
+    isShikigami: true,
+    ownerId: actor.id,
+    name: "式神(仮)",
+    label: "式神(仮)",
+    emoji: "🐾",
+    status: "active", fleeState: null,
+    level: actor.level,
+    maxHp, hp: maxHp,
+    maxMp: 0, mp: 0,
+    atk: Math.max(1, Math.round((4 + actor.mag * 0.3) * growth)),
+    def: 3,
+    spd: Math.round(13 * (1 + actor.level * 0.05)),
+    mag: 0,
+    passives: initPassives(),
+    statMods: [], poison: 0, bleed: 0, burnTurns: 0, stunTurns: 0, silenceTurns: 0,
+    fatigue: 0,
+  };
+}
+// 式神帰還: 戦闘中・探索中どちらからでも呼べる。MP消費0・ターン消費0で式神を消し、
+// 陰陽師のMPを1回復する(「式神を使うことでMPを1回復する」というユーザー指定の仕様)。
+// battle.order(その場の手番リスト)がまだこの式神を参照していても、statusを"recalled"にしてから
+// spliceすることで、同じ参照先オブジェクトのstatusチェック(processNext側)が手番を正しくスキップする
+function recallShikigami(owner) {
+  const idx = fieldParty.findIndex((c) => c.isShikigami && c.ownerId === owner.id);
+  if (idx === -1) return false;
+  fieldParty[idx].status = "recalled";
+  fieldParty.splice(idx, 1);
+  owner.mp = Math.min(owner.maxMp, owner.mp + 1);
+  return true;
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
 const BASE_CRIT_DMG_MULT = 1.55; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)。
@@ -1093,6 +1168,19 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は鷹を呼び出した！`);
     return { summonedHawk: true };
   }
+  // 影分身の術(忍者)/式神召喚(陰陽師): 5人目の枠はどちらか1体まで(既に出ていたら弾く)
+  if (action.kind === "summonClone") {
+    if (fieldParty.some((c) => c.isClone || c.isShikigami)) { log(`これ以上仲間を呼び出せない！`); return { failed: true }; }
+    insertNextToOwner(makeCloneFor(actor), actor);
+    log(`${actor.label}は${skill.name}を唱えた！`);
+    return { summoned: true };
+  }
+  if (action.kind === "summonShikigami") {
+    if (fieldParty.some((c) => c.isClone || c.isShikigami)) { log(`これ以上仲間を呼び出せない！`); return { failed: true }; }
+    insertNextToOwner(makeSampleShikigami(actor), actor);
+    log(`${actor.label}は${skill.name}を唱えた！`);
+    return { summoned: true };
+  }
   // 心眼の構えなど: このターン限定で、敵の単体攻撃を1度だけ完全に無効化して反撃する(applyDamageToTarget側で消費・処理する)
   if (action.kind === "guardCounterSelf") {
     actor.nullifyCounterMult = action.mult || 0.8;
@@ -1142,6 +1230,8 @@ function useTreeSkill(actor, target, skill, log) {
   if (action.kind === "heal") {
     const targets = action.aoe ? target : [target];
     const heals = targets.map((t) => {
+      // 影分身はいずれの方法でも回復不可(呪文/アイテム共通の安全弁。UI側の対象一覧でも別途除外済み)
+      if (t.isClone) { log(`${t.label}は分身のため回復できない！`); return { target: t, heal: 0 }; }
       const bonusMult = healBonusMultiplier(actor, t, !!action.cleanse);
       const heal = Math.round(applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct))) * bonusMult);
       if (t.status === "critical" && action.reviveHpPct) {
@@ -2108,6 +2198,11 @@ function resolveValue(params, fallback) {
 // デバフ種別ごとの適用処理を共通化(大技の専用プロファイル・汎用ランダムプール・通常攻撃時デバフの
 // いずれからも呼ぶ)。paramsはvalue(またはvalueMin/valueMaxの範囲指定)/turns(またはturnsMin/turnsMaxの範囲指定)を持つinflict設定オブジェクト
 function resolveDebuffEffect(target, type, params, log) {
+  // atkDown/defDown/spdDown/dmgTakenUpはapplyStatModを直接呼ぶため、他の状態異常(poison/bleed/burn/
+  // stun/silence)と違いstatusImmuneTurnsのチェックを個別に持っていなかった(既存の抜け穴)。分身の
+  // 「状態異常にならない」を正しく機能させるため、ここで一括してガードする(天恵の祈り等の既存の
+  // 状態異常無効バフにもこの4種が今後正しく効くようになる、望ましい副次効果)
+  if (target.statusImmuneTurns > 0) return;
   params = params || {};
   if (type === "atkDown") { applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は攻撃力が下がった！`); }
   if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }

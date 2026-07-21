@@ -818,6 +818,8 @@ function renderPartyBar(elId, combatants, actingCharId) {
   const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
   lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
   bar.innerHTML = "";
+  // 影分身/式神で5人目が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする
+  bar.classList.toggle("party-bar-five", combatants.filter((c) => !c.carriedBy).length >= 5);
   // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
   combatants.filter((c) => !c.carriedBy).forEach((c) => {
     const dead = c.hp <= 0 || c.status !== "active";
@@ -835,12 +837,14 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
     // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
     const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
-    const portraitSrc = transformDef ? transformDef.image : characterPortraitSrc(c);
+    // 式神(サンプル実装)は本物のポートレート絵がまだ無いため絵文字アイコンで代用する。
+    // classIdを持たないのでcharacterPortraitSrc(CLASSES[c.classId]を前提とする)は呼べない
+    const portraitSrc = c.isShikigami ? null : (transformDef ? transformDef.image : characterPortraitSrc(c));
     // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
       <div class="party-portrait-wrap">
-        <img class="card-portrait-img" src="${portraitSrc}">
+        ${c.isShikigami ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
         ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
       </div>
