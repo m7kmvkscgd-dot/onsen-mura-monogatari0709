@@ -866,7 +866,7 @@ const SKILL_TREES = {
       right: { name: "守護陣", desc: "3ターンの間、味方全体の防御力+20%\nターンを消費しない", mp: 3, action: { kind: "buffPartyNoCost", stats: [{ stat: "def", mult: 1.2 }], turns: 3 } },
     },
     6: {
-      left: { name: "蜻蛉切り", desc: "で", mp: 2 },
+      left: { name: "蜻蛉切り", desc: "飛行の敵に命中ペナルティなしで100%ダメージ。撃ち落とし判定もある", mp: 2, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
       right: { name: "迎撃", desc: "被弾時、30%の確率で反撃する", mp: 0, passive: { counterChance: 0.3 } },
     },
     7: {
