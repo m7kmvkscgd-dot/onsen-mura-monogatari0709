@@ -161,6 +161,7 @@
     transition: background var(--dw-t-btn) ease-out, color var(--dw-t-btn) ease-out;
   }
   .title-toggle-btn.is-on { background: var(--dw-gold); color: #2a2015; border-color: var(--dw-gold); }
+  .title-setting-caption { margin: -4px 0 0; padding: 0 4px 10px; font-size: 11px; line-height: 1.5; color: var(--dw-caption-color); text-align: left; }
   .title-sub-back-btn { width: 100%; margin-top: 6px; }
 
   /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============

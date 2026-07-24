@@ -2329,7 +2329,9 @@ function rollEncounter(pathBias) {
   // ただしそのステージの敵データがまだ1体も無い場合(廃城下町/門/古城の下地テスト段階)は、
   // 帰還中の固定値も含めて戦闘発生率を強制的に0にする(pickEncounterForFloorが空を返して
   // クラッシュするのを未然に防ぐための安全策。敵データが揃えば自動的に通常通り機能する)
-  const rawBattleChance = (!debugNoEncounters && stageHasEnemies(currentStage)) ? (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) : 0;
+  // 設定画面の「高遭遇モード」ON時は遭遇確率を1.5倍にする(帰還中/通常どちらの基準値にも一律で掛ける)
+  const encounterModeMult = state.highEncounterMode ? 1.5 : 1;
+  const rawBattleChance = (!debugNoEncounters && stageHasEnemies(currentStage)) ? Math.min(1, (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) * encounterModeMult) : 0;
   // ピティ制は帰還中には適用しない(シミュレーションの結果、帰還のRETREAT_BATTLE_CHANCEは元々低いため
   // 6階確定発生がむしろ戦闘数を増やす方向に働くと判明。帰還はもともと3連続以上の発生率も低く
   // 導入の必要性が薄いという判断。ユーザー指示、2026-07-21)

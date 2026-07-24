@@ -80,6 +80,8 @@ function defaultState() {
     seenCampingKitSupply: false, // 旅支度屋解禁後、出発準備画面(支度タブ=野営具の購入欄)を見たか
     seenBombSupply: false, // 火薬庫解禁後、出発準備画面(支度タブ=爆弾の購入欄)を見たか
     maxFloorReached: { forest: 0, coast: 0 }, // ステージごとの最高到達階層(出発準備画面のボタン横に表示)。moveOneFloor()の前進時にのみ更新する
+    instadeathMode: false, // 設定画面のトグル。ONの間は戦闘不能=瀕死(担いで救出可能)を経由せず、即座にロスト(完全消滅)する
+    highEncounterMode: false, // 設定画面のトグル。ONの間は敵との遭遇確率が通常の1.5倍になる(rollEncounter参照)
   };
 }
 

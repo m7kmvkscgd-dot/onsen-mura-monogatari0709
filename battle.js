@@ -570,19 +570,31 @@ function handleFieldDeaths() {
       return;
     }
     if (c.hp <= 0 && c.status === "active") {
-      // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされ、このフロアに瀕死のまま取り残される
+      // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされる。即死モードでは
+      // 瀕死という状態自体が発生しないため、担がれていた側もそのままロストする
       const carried = fieldParty.find((x) => x.carriedBy === c.id);
       if (carried) {
-        markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
+        if (state.instadeathMode) {
+          carried.status = "lost";
+          blog(`${c.name}が倒れ、担がれていた${carried.name}もそのまま帰らぬ人となった...(即死モード)`);
+        } else {
+          markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
+          blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
+        }
         carried.carriedBy = null;
         c.carryingId = null;
-        blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
       }
       // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
       c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 30);
       popupOn(c.id, "30", "stress");
-      markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
-      blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
+      // 即死モード: 瀕死(担いで救出可能)を経由せず、その場でロスト(完全消滅)する
+      if (state.instadeathMode) {
+        c.status = "lost";
+        blog(`${c.name}は倒れた...即死モードによりそのまま帰らぬ人となった。`);
+      } else {
+        markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
+        blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
+      }
       newlyCritical.push(c);
       // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
@@ -607,7 +619,8 @@ function handleFieldDeaths() {
 // 「はい」なら瀕死のキャラを控え枠に下げ、控えだったキャラをその場に迎える(ターン進行はonDoneで続ける)。
 // 「いいえ」、または控えがいない/既に控えが瀕死等で交代できない場合は即座にonDoneを呼んで通常通り進む
 function offerReserveSwapIfNeeded(newlyCritical, onDone) {
-  const candidate = newlyCritical.find((c) => c.status === "critical");
+  // 即死モードでは瀕死("critical")を経由せず直接ロスト("lost")になるため、両方を交代候補として扱う
+  const candidate = newlyCritical.find((c) => c.status === "critical" || c.status === "lost");
   if (!candidate || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
   showConfirmModal(`控えの${reserveFieldMember.name}と交代しますか？`, [
     {
@@ -1884,7 +1897,9 @@ function defeat() {
   clearOmamoriIwanagaBonus(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
-  blog(`パーティは全滅した...瀕死の仲間を${currentStageName()}に残し、町に戻った。別の仲間で助けに向かおう。`);
+  blog(state.instadeathMode
+    ? `パーティは全滅した...即死モードのため、誰も助けられなかった。町に戻った。`
+    : `パーティは全滅した...瀕死の仲間を${currentStageName()}に残し、町に戻った。別の仲間で助けに向かおう。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     stopAmbientBgm();

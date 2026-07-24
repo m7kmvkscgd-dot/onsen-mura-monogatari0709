@@ -317,6 +317,12 @@ function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
   soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
   soundBtn.classList.toggle("is-on", masterBgmVolume > 0);
+  const instadeathBtn = document.getElementById("settingsInstadeathToggle");
+  instadeathBtn.textContent = state.instadeathMode ? "ON" : "OFF";
+  instadeathBtn.classList.toggle("is-on", state.instadeathMode);
+  const highEncounterBtn = document.getElementById("settingsHighEncounterToggle");
+  highEncounterBtn.textContent = state.highEncounterMode ? "ON" : "OFF";
+  highEncounterBtn.classList.toggle("is-on", state.highEncounterMode);
   renderSettingsDebugWarpSection();
 }
 // 開発者用: 敵無しモード(debugNoEncounters、町のゴールド表示4回タップ)がONの間だけ、
@@ -337,6 +343,18 @@ function renderSettingsDebugWarpSection() {
 }
 document.getElementById("settingsSoundToggle").onclick = () => {
   toggleMute();
+  renderSettingsScreen();
+};
+document.getElementById("settingsInstadeathToggle").onclick = () => {
+  state.instadeathMode = !state.instadeathMode;
+  saveState();
+  playSfx("select");
+  renderSettingsScreen();
+};
+document.getElementById("settingsHighEncounterToggle").onclick = () => {
+  state.highEncounterMode = !state.highEncounterMode;
+  saveState();
+  playSfx("select");
   renderSettingsScreen();
 };
 document.getElementById("settingsBackBtn").onclick = () => {
