@@ -131,7 +131,7 @@ function xpToNext(level) {
 // レベルアップ時、職業ごとの基礎値にレベル依存の成長率をかけて再計算する。
 // HPは全快させず、最大値が増えた分だけ現在値に上乗せする(戦闘中の連続レベルアップが実質全回復になっていたバグの修正)。
 // 成長率はダクソン/XCOM的に「Lv10でも2倍未満」に収まるよう抑えてある(旧0.1=Lv10で2.0倍から、
-// 序盤の階層で装備済みの高レベルキャラが無双しすぎるという指摘を受けさらに緩和。Lv10で1.75倍)。
+// 序盤の階層で装備済みの高レベルキャラが無双しすぎるという指摘を受けさらに緩和。Lv10で1.675倍、下記参照)。
 // 防御力はレベルでは一切伸ばさず、常に職業の基礎値のまま固定する(装備(甲冑)だけが伸びしろになる)
 // HPのレベル成長を、全職業共通の固定加算テーブルに変更(旧: 基礎HP×1.75の掛け算式)。
 // 掛け算だと素のHPが多い職業(槍士等)ほど伸びる絶対量も大きくなり、レベルが上がるほど
@@ -142,7 +142,9 @@ function levelUp(character, log) {
   if (character.level >= MAX_LEVEL) return;
   character.level++;
   const c = CLASSES[character.classId];
-  const growth = 1 + character.level * 0.075; // Lv10で1.75倍。攻撃力/魔力は引き続きこの掛け算式で成長する
+  // Lv1(素の値、成長率1.0)からLv2への伸びだけ突出して大きくなっていた継ぎ目のズレを解消するため、
+  // (レベル-1)を使う式に変更。Lv2の成長率がLv1の1.0から地続きになり、Lv10到達時は1.75倍→1.675倍になる
+  const growth = 1 + (character.level - 1) * 0.075;
   const oldMaxHp = character.maxHp;
   character.maxHp = c.hp + (HP_LEVEL_BONUS[character.level] || 0);
   character.hp = Math.min(character.maxHp, character.hp + (character.maxHp - oldMaxHp));
