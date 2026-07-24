@@ -433,7 +433,7 @@ function wireInnHireButton(ids, membersFn, onBack) {
   document.getElementById(ids.createBtn).onclick = () => {
     const nameInput = document.getElementById(ids.nameInput);
     const name = nameInput.value.trim() || randomFemaleName();
-    if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人。増築で上限を増やせます)`); return; }
+    if (state.roster.length >= rosterCapacity()) { showInfoModal(`仲間がいっぱいです(最大${rosterCapacity()}人)`); return; }
     if (state.gold < HIRE_COST) { showInfoModal(`お金が足りません(${HIRE_COST}G必要)`); return; }
     state.gold -= HIRE_COST;
     const c = createCharacter(name, selectedClass, state.classUpgrades);
@@ -1791,8 +1791,7 @@ function renderExtension() {
   document.getElementById("extensionGold").textContent = state.gold + "G";
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
-  document.getElementById("extensionCapacity").textContent = rosterCapacity();
-  document.getElementById("extensionDesc").innerHTML = "仲間を雇える上限が増えます。<br>（冒険に出発できる人数は最大4人です。）";
+  document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人です。）";
   // 次の家レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
   const nextLevel = level + 1;
   const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
@@ -1801,18 +1800,14 @@ function renderExtension() {
   const nextSection = document.getElementById("extensionNextSection");
   if (level >= HOUSE_MAX_LEVEL) {
     // これ以上増築できない=「次」が存在しないので、次の増築セクション自体を非表示にする
-    // (「現在」の情報だけが残り、混乱の元になる「次」の空欄を見せない)
     nextSection.style.display = "none";
     btn.textContent = "これ以上は増築できません(上限)";
     btn.disabled = true;
     reasonEl.style.display = "none";
   } else {
-    nextSection.style.display = "";
+    // 解放される施設が無いレベルは増築の意味が無いため、次のセクションごと隠す
+    nextSection.style.display = unlocksAtNextLevel.length > 0 ? "" : "none";
     document.getElementById("extensionNextLabel").innerHTML = `次の増築（<span class="house-next-level">Lv${nextLevel}</span>）`;
-    document.getElementById("extensionNextCapacity").textContent = rosterCapacity() + 1;
-    // 解放される施設が無いレベルでは「新施設」の見出しだけ浮くのを避けるため、このブロックごと隠す
-    const facilityBlock = document.getElementById("extensionFacilityBlock");
-    facilityBlock.style.display = unlocksAtNextLevel.length > 0 ? "" : "none";
     document.getElementById("extensionNextUnlockList").innerHTML = unlocksAtNextLevel
       .map((name) => `<div class="house-status-unlock">・${name}</div>`).join("");
     const cost = houseUpgradeCost(level);
@@ -1941,12 +1936,13 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   if (level >= HOUSE_MAX_LEVEL) return;
   const cost = houseUpgradeCost(level);
   if (state.gold < cost) return;
-  const capBefore = rosterCapacity();
+  const nextLevel = level + 1;
+  const unlockedNames = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => `${def.name} 解禁`);
   state.gold -= cost;
-  state.houseLevel = level + 1;
+  state.houseLevel = nextLevel;
   saveState();
   renderExtension();
-  showBuildCompleteForUpgrade("houseLevel", state.houseLevel, [`仲間上限 ${capBefore}→${rosterCapacity()}人`]);
+  showBuildCompleteForUpgrade("houseLevel", state.houseLevel, unlockedNames);
 };
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderMagistrateScreen(); };

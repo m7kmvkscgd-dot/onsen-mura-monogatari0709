@@ -21,7 +21,7 @@ function defaultState() {
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
     dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
-    houseLevel: 1, // 増築で上がる家のレベル(1=名簿上限3人、以降1レベルごとに+1人、最大10人)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
+    houseLevel: 1, // 増築で上がる家のレベル。仲間を雇える上限とは無関係で、他の施設の建築解禁の基準にのみ使う(rosterCapacity参照)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
     magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
@@ -83,14 +83,16 @@ function defaultState() {
   };
 }
 
-const HOUSE_MAX_LEVEL = 9; // レベル9で名簿上限10人に達し、それ以上は増築できない
+const HOUSE_MAX_LEVEL = 7; // 家レベルを基準に解禁される施設のうち最も高い要求値(馬屋/渡し船=7)に合わせた上限。それ以上は建物の解禁に使い道が無いため増築できない
 function houseUpgradeCost(level) {
   if (level === 1) return 30; // レベル1→2(ユーザー指示2026-07-18で90→30に引き下げ)
   if (level === 2) return 200; // レベル2→3
   return 250 + (level - 2) * 100; // レベル3以降は1レベルごとに250Gから+100Gずつ上がる(レベル3→4=350G、4→5=450G…)
 }
+const ROSTER_CAPACITY = 8; // 仲間を雇える上限。以前は家レベルに連動して3→10人まで伸びる仕組みだったが、
+// ユーザー指示により家レベルとは完全に切り離し、初期から固定で8人雇えるようにした(家レベルは施設解禁専用)
 function rosterCapacity() {
-  return Math.min(10, (state.houseLevel || 1) + 2);
+  return ROSTER_CAPACITY;
 }
 const DOJO_LEVEL1_COST = 10; // 道場レベル1の建築費用
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用

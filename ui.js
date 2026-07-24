@@ -506,9 +506,9 @@ function statusTagClass(c) {
 }
 
 // 名簿の全員が稼働不能(瀕死/ロスト)になり、かつ新しく雇う手段も残っていなければ、もう手詰まりなのでゲームオーバーにする。
-// 「新しく雇う手段」は所持金(HIRE_COST以上)だけでなく名簿の空き枠(rosterCapacity())も両方必要。
-// 家レベル1のうちはrosterCapacity()が2人しかないため、その2人とも稼働不能になった時点で所持金が
-// いくらあっても新規雇用の枠自体が無く実質詰みになる(旧実装は所持金しか見ておらずこのケースを見逃していた)。
+// 「新しく雇う手段」は所持金(HIRE_COST以上)だけでなく名簿の空き枠(rosterCapacity()、固定8人)も両方必要。
+// 名簿が8人とも稼働不能になった時点で所持金がいくらあっても新規雇用の枠自体が無く実質詰みになる
+// (旧実装は所持金しか見ておらずこのケースを見逃していた)。
 // trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
 function checkGameOver() {
   if (state.roster.length === 0) return false;
@@ -670,7 +670,7 @@ function fadeOpacity(el, from, to, durationMs, callback) {
 function showRestSummary(panelId, listId, nextBtnId, beforeSnapshot, onNext, showStress = true, playHealSfx = true) {
   const panel = document.getElementById(panelId);
   const list = document.getElementById(listId);
-  // 7人以上(宿泊の全員一括化で名簿上限10人まで並び得る)はコンパクト4列表示にする(camp.css参照)。
+  // 7人以上(宿泊の全員一括化で名簿上限8人まで並び得る)はコンパクト4列表示にする(camp.css参照)。
   // 4人ちょうどは3+1の端数を出さず2×2で組む(ユーザー指示)
   list.classList.toggle("camp-rest-many", beforeSnapshot.length > 6);
   list.classList.toggle("camp-rest-four", beforeSnapshot.length === 4);

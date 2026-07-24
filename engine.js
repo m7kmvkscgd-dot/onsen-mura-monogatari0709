@@ -690,7 +690,7 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 // 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える。
 // MPはレベルアップで伸びなくなった(下記levelUp参照)ため、一度の遠征で4〜5回使える程度を目安に
 // guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
-const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 6, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
+const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 4, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
 function abilityMpCost(abilityType, actor) {
   // 変化の術で変身中はMPの概念が無くなる(かばう等も無料で使える)
   if (actor && actor.transformForm) return 0;
@@ -2000,7 +2000,7 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack, true);
   }
   if (abilityType === "magicAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.66)), log, ABILITY_RANGE_TYPE.magicAttackAll, true);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.561)), log, ABILITY_RANGE_TYPE.magicAttackAll, true);
   }
   if (abilityType === "physicalAttackAll") {
     return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
@@ -2012,8 +2012,8 @@ function useAbility(actor, target, abilityType, log) {
     return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.critAttack);
   }
   if (abilityType === "preciseShot") {
-    // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+45%を上乗せし、合計50%で急所を突く
-    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.45, ABILITY_RANGE_TYPE.preciseShot);
+    // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+20%を上乗せし、合計25%で急所を突く
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.20, ABILITY_RANGE_TYPE.preciseShot);
   }
   if (abilityType === "cannonShot") {
     actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる

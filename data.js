@@ -17,8 +17,8 @@ const CLASSES = {
   naginata: { ja: "薙刀士", image: "assets/class_naginata.png", hp: 33, atk: 12, def: 30, spd: 11, mag: 0, accuracy: 0.95, abilities: ["physicalAttackAll"] },
   hunter: { ja: "狩人", image: "assets/class_hunter.png", hp: 27, atk: 11, def: 28, spd: 12, mag: 0, accuracy: 0.99, abilities: ["preciseShot"] },
   gunner: { ja: "砲術士", image: "assets/class_gunner.png", hp: 29, atk: 16, def: 25, spd: 4, mag: 0, accuracy: 0.95, abilities: ["cannonShot"] },
-  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 20, spd: 9, mag: 17, maxMp: 25, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
-  priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 25, spd: 8, mag: 13, accuracy: 0.95, abilities: ["heal"] },
+  onmyoji: { ja: "陰陽師", image: "assets/class_onmyoji.png", hp: 25, atk: 5, def: 20, spd: 9, mag: 17, maxMp: 10, accuracy: 0.95, abilities: ["magicAttack", "magicAttackAll"] },
+  priest: { ja: "僧侶", image: "assets/class_priest.png", hp: 27, atk: 6, def: 25, spd: 8, mag: 13, maxMp: 10, accuracy: 0.95, abilities: ["heal"] },
 };
 
 // ステータス詳細画面(renderStatusScreen)専用の「ストレス無し時」立ち絵。

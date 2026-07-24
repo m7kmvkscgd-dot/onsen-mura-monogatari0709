@@ -114,7 +114,7 @@ function loadState() {
       delete loaded.halfDayStep; // 瀕死ロスト判定を実時間ベースに移行したため廃止(criticalExpireMinutes参照)
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
-      if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、元々の名簿上限だった10人を維持できるよう最大レベル扱いにする
+      if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、家レベルで解禁される施設を再度お金を払わず使えるよう最大レベル扱いにする
       if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
       if (loaded.magistrateQuestDate == null) loaded.magistrateQuestDate = 0; // 旧セーブ用の初期値(依頼未生成)

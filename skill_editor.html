@@ -63,6 +63,12 @@
   .side-right .node-tag { color: var(--right-accent); background: rgba(217, 140, 95, 0.15); }
   .node-name { flex: 1; min-width: 0; font-size: 0.84rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .node-mp { font-size: 0.66rem; color: var(--info); flex-shrink: 0; }
+  .type-badge { font-size: 0.62rem; font-weight: bold; border-radius: 5px; padding: 1px 5px; flex-shrink: 0; white-space: nowrap; }
+  .type-badge.passive { color: #9fd88a; background: rgba(110, 169, 91, 0.18); }
+  .type-badge.action { color: #d9a45f; background: rgba(217, 140, 95, 0.15); }
+  .type-badge.unset { color: var(--caption); background: rgba(255,255,255,0.06); }
+  .passive-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--caption); margin-top: 6px; }
+  .passive-toggle input { width: 15px; height: 15px; }
   .node-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
   .tree-node.edited .node-edit-dot { display: inline-block; }
   .node-swap-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--info); color: var(--info); border-radius: 5px; font-size: 0.7rem; line-height: 1; padding: 3px 4px; }
@@ -274,6 +280,15 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
   const edited = isEditedSkill(cid, lvl, side);
   const isSwapSelected = !!(swapSource && swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side);
   const { name: _n, desc: _d, ...mech } = skill;
+  // このスキルが「パッシブ(常時発動)」か「アクション(選んで使う技)」かを表示するバッジ。
+  // 実装データ(skill.passive/skill.action)から自動判定するが、両方とも無い未実装プレースホルダー
+  // (「鬼神化」「影分身の術」等、desc:後日設定/後日実装)だけは判定できないため、
+  // isPassiveOverride編集フィールドで手動指定できるようにする(実際のゲーム挙動には影響しない、
+  // このエディタ上のメモ用途)
+  const hasMech = !!skill.passive || !!skill.action;
+  const override = currentValue(cid, lvl, side, "isPassive", undefined);
+  const kind = hasMech ? (skill.passive ? "passive" : "action") : (override === true ? "passive" : override === false ? "action" : "unset");
+  const kindLabel = kind === "passive" ? "パッシブ" : kind === "action" ? "アクション" : "未設定";
   const node = document.createElement("details");
   node.className = "tree-node side-" + side + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
   const sideJa = side === "left" ? "左" : "右";
@@ -282,6 +297,7 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
     <summary>
       <span class="node-tag">${escapeHtml(tagText)}</span>
       <span class="node-name">${escapeHtml(name)}</span>
+      <span class="type-badge ${kind}">${kindLabel}</span>
       <span class="node-mp">MP${mp}</span>
       <span class="node-edit-dot"></span>
       ${allowSwap ? `<button type="button" class="node-swap-btn${isSwapSelected ? " active" : ""}" title="このスキルを入れ替え元/入れ替え先に選ぶ">⇄</button>` : ""}
@@ -294,6 +310,11 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
         <span class="mp-badge">MP<input class="mp-input" type="number" min="0" data-field="mp" value="${mp}"></span>
       </div>
       <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
+      ${!hasMech ? `
+      <label class="passive-toggle">
+        <input type="checkbox" data-field="isPassive" ${override === true ? "checked" : ""}>
+        パッシブスキルとして指定する(まだ実装データが無いスキル専用のメモ。チェックを外すとアクション扱い)
+      </label>` : ""}
       <div class="skill-meta">
         <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
         <button class="reset-btn">↺ 元に戻す</button>
@@ -334,6 +355,17 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
     node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
     refreshEditCount();
   });
+  const passiveToggle = node.querySelector('[data-field="isPassive"]');
+  if (passiveToggle) {
+    const typeBadge = node.querySelector(".type-badge");
+    passiveToggle.addEventListener("change", (e) => {
+      setEdit(cid, lvl, side, "isPassive", e.target.checked, undefined);
+      node.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+      typeBadge.className = "type-badge " + (e.target.checked ? "passive" : "action");
+      typeBadge.textContent = e.target.checked ? "パッシブ" : "アクション";
+      refreshEditCount();
+    });
+  }
   node.querySelector(".reset-btn").addEventListener("click", () => resetSkill(cid, lvl, side));
   if (allowSwap) {
     node.querySelector(".node-swap-btn").addEventListener("click", (e) => {
@@ -461,8 +493,10 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   } else {
     listEl.innerHTML = diffs.map((d) => {
       const fieldLines = Object.keys(d.fields).map((f) => {
-        const label = f === "name" ? "名前" : f === "desc" ? "効果" : "MP";
-        return `<div class="diff-field">${label}: <del>${escapeHtml(String(d.original[f]))}</del> → <ins>${escapeHtml(String(d.fields[f]))}</ins></div>`;
+        const label = f === "name" ? "名前" : f === "desc" ? "効果" : f === "mp" ? "MP" : "パッシブ指定";
+        const fromVal = f === "isPassive" ? "(未設定)" : String(d.original[f]);
+        const toVal = f === "isPassive" ? (d.fields[f] ? "パッシブ" : "アクション") : String(d.fields[f]);
+        return `<div class="diff-field">${label}: <del>${escapeHtml(fromVal)}</del> → <ins>${escapeHtml(toVal)}</ins></div>`;
       }).join("");
       return `<div class="diff-item"><div class="diff-title">[${d.cja}] Lv.${d.lvl} ${d.side === "left" ? "左" : "右"}: ${escapeHtml(d.original.name)}</div>${fieldLines}</div>`;
     }).join("");
