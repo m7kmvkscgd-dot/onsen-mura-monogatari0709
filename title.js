@@ -323,6 +323,9 @@ function renderSettingsScreen() {
   const highEncounterBtn = document.getElementById("settingsHighEncounterToggle");
   highEncounterBtn.textContent = state.highEncounterMode ? "ON" : "OFF";
   highEncounterBtn.classList.toggle("is-on", state.highEncounterMode);
+  const highDurabilityBtn = document.getElementById("settingsHighDurabilityToggle");
+  highDurabilityBtn.textContent = state.highDurabilityMode ? "ON" : "OFF";
+  highDurabilityBtn.classList.toggle("is-on", state.highDurabilityMode);
   renderSettingsDebugWarpSection();
 }
 // 開発者用: 敵無しモード(debugNoEncounters、町のゴールド表示4回タップ)がONの間だけ、
@@ -353,6 +356,12 @@ document.getElementById("settingsInstadeathToggle").onclick = () => {
 };
 document.getElementById("settingsHighEncounterToggle").onclick = () => {
   state.highEncounterMode = !state.highEncounterMode;
+  saveState();
+  playSfx("select");
+  renderSettingsScreen();
+};
+document.getElementById("settingsHighDurabilityToggle").onclick = () => {
+  state.highDurabilityMode = !state.highDurabilityMode;
   saveState();
   playSfx("select");
   renderSettingsScreen();

@@ -207,6 +207,7 @@ function loadState() {
       if (loaded.maxFloorReached == null) loaded.maxFloorReached = { forest: 0, coast: 0 }; // 旧セーブ用の初期値(この機能追加以前は記録していないため0から)
       if (loaded.instadeathMode == null) loaded.instadeathMode = false; // 旧セーブ用の初期値(即死モード実装以前はOFF扱い)
       if (loaded.highEncounterMode == null) loaded.highEncounterMode = false; // 旧セーブ用の初期値(高遭遇モード実装以前はOFF扱い)
+      if (loaded.highDurabilityMode == null) loaded.highDurabilityMode = false; // 旧セーブ用の初期値(高耐久モード実装以前はOFF扱い)
       // 新チュートリアル導線も、旧セーブ(既にある程度進んでいるプレイヤー)にいきなり降ってこないよう、
       // 既存のセーブは全て「見た」扱いにする(defaultStateでは新規プレイヤーのみfalseスタート)
       delete loaded.worldStep;

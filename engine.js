@@ -1369,12 +1369,19 @@ function instantiateEnemy(pick) {
   // (同じボスと何度戦っても毎回同じ技から始まる単調さを避けるため)
   const extraCount = pick.extraBigAttacks ? pick.extraBigAttacks.length : 0;
   const initialBigAttackIndex = extraCount > 0 ? Math.floor(Math.random() * (extraCount + 1)) : 0;
+  // 設定画面の「高耐久モード」ON時、敵の防御力+20%・攻撃力-20%にする(お試し高難易度化設定)。
+  // atk/defは全ての戦闘計算式がenemy.atk/target.defとして生値のまま直接参照するため、
+  // effectiveStat側ではなくここ(スポーン時点)で織り込むのが確実
+  const atk = state.highDurabilityMode ? Math.max(1, Math.round(pick.atk * 0.8)) : pick.atk;
+  const def = state.highDurabilityMode ? Math.round(pick.def * 1.2) : pick.def;
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,
     maxHp: hp,
+    atk,
+    def,
     bigAttackCountdown: initialCountdown,
     bigAttackPending: false,
     bigAttackIndex: initialBigAttackIndex,
