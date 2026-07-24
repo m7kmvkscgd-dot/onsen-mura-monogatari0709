@@ -107,10 +107,15 @@
       </div>
       <p class="title-setting-caption">ONの間は敵との遭遇確率が通常の1.5倍になります。</p>
       <div class="title-setting-row">
-        <span>高耐久モード</span>
-        <button class="title-toggle-btn" id="settingsHighDurabilityToggle"></button>
+        <span>高耐久モード(防御力アップ)</span>
+        <select class="title-select" id="settingsHighDurabilityDefSelect"></select>
       </div>
-      <p class="title-setting-caption">ONの間は敵の防御力が+20%、攻撃力が-20%になります。</p>
+      <p class="title-setting-caption">0%以外を選ぶと、敵の防御力にその数値を直接加算します(掛け算ではありません。例: 防御15%カットの敵に+20%を選ぶと35%カットになります)。</p>
+      <div class="title-setting-row">
+        <span>高耐久モード(攻撃力ダウン)</span>
+        <select class="title-select" id="settingsHighDurabilityAtkSelect"></select>
+      </div>
+      <p class="title-setting-caption">0%以外を選ぶと、敵の攻撃力にその割合を掛けて下げます(例: 20%を選ぶと攻撃力は元の80%になります)。</p>
       <!-- 開発者用: 町のゴールド表示4回タップの敵無しモード中だけ表示。中継の村へワープできる(下地確認用) -->
       <div id="settingsDebugWarpSection" style="display:none;margin-top:1rem;">
         <p style="font-size:12px;color:var(--dw-caption-color);margin:0 0 0.4rem;">開発者用(敵無しモード中のみ)</p>

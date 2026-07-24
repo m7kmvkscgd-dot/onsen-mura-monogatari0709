@@ -207,7 +207,12 @@ function loadState() {
       if (loaded.maxFloorReached == null) loaded.maxFloorReached = { forest: 0, coast: 0 }; // 旧セーブ用の初期値(この機能追加以前は記録していないため0から)
       if (loaded.instadeathMode == null) loaded.instadeathMode = false; // 旧セーブ用の初期値(即死モード実装以前はOFF扱い)
       if (loaded.highEncounterMode == null) loaded.highEncounterMode = false; // 旧セーブ用の初期値(高遭遇モード実装以前はOFF扱い)
-      if (loaded.highDurabilityMode == null) loaded.highDurabilityMode = false; // 旧セーブ用の初期値(高耐久モード実装以前はOFF扱い)
+      // 高耐久モードはON/OFFトグル(bool)から、防御力アップ幅・攻撃力ダウン幅をそれぞれ選ぶ
+      // ドロップダウン(0〜100%、独立)に仕様変更した。旧セーブでONだった場合は、以前の固定値だった
+      // 防御+20%/攻撃-20%を両方引き継ぐ(OFFなら両方0のまま)
+      if (loaded.highDurabilityDefBonusPct == null) loaded.highDurabilityDefBonusPct = loaded.highDurabilityMode ? 20 : 0;
+      if (loaded.highDurabilityAtkReductionPct == null) loaded.highDurabilityAtkReductionPct = loaded.highDurabilityMode ? 20 : 0;
+      delete loaded.highDurabilityMode;
       // 新チュートリアル導線も、旧セーブ(既にある程度進んでいるプレイヤー)にいきなり降ってこないよう、
       // 既存のセーブは全て「見た」扱いにする(defaultStateでは新規プレイヤーのみfalseスタート)
       delete loaded.worldStep;

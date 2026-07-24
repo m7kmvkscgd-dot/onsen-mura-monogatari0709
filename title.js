@@ -323,10 +323,24 @@ function renderSettingsScreen() {
   const highEncounterBtn = document.getElementById("settingsHighEncounterToggle");
   highEncounterBtn.textContent = state.highEncounterMode ? "ON" : "OFF";
   highEncounterBtn.classList.toggle("is-on", state.highEncounterMode);
-  const highDurabilityBtn = document.getElementById("settingsHighDurabilityToggle");
-  highDurabilityBtn.textContent = state.highDurabilityMode ? "ON" : "OFF";
-  highDurabilityBtn.classList.toggle("is-on", state.highDurabilityMode);
+  populateHighDurabilitySelects();
+  document.getElementById("settingsHighDurabilityDefSelect").value = String(state.highDurabilityDefBonusPct || 0);
+  document.getElementById("settingsHighDurabilityAtkSelect").value = String(state.highDurabilityAtkReductionPct || 0);
   renderSettingsDebugWarpSection();
+}
+// 高耐久モードの2つのドロップダウン(防御力アップ/攻撃力ダウン)に0〜100%・5%刻みの選択肢を並べる。
+// 初回だけ中身を作ればよいので、既に選択肢がある場合は作り直さない(選択中の値がリセットされるのを防ぐ)
+function populateHighDurabilitySelects() {
+  [["settingsHighDurabilityDefSelect", "+"], ["settingsHighDurabilityAtkSelect", "-"]].forEach(([id, sign]) => {
+    const select = document.getElementById(id);
+    if (select.options.length > 0) return;
+    for (let pct = 0; pct <= 100; pct += 5) {
+      const opt = document.createElement("option");
+      opt.value = String(pct);
+      opt.textContent = pct === 0 ? "OFF" : `${sign}${pct}%`;
+      select.appendChild(opt);
+    }
+  });
 }
 // 開発者用: 敵無しモード(debugNoEncounters、町のゴールド表示4回タップ)がONの間だけ、
 // 中継の村へのワープボタンを設定画面に表示する(debugWarpTargets/debugWarpToVillageはdungeon.js参照)
@@ -360,11 +374,15 @@ document.getElementById("settingsHighEncounterToggle").onclick = () => {
   playSfx("select");
   renderSettingsScreen();
 };
-document.getElementById("settingsHighDurabilityToggle").onclick = () => {
-  state.highDurabilityMode = !state.highDurabilityMode;
+document.getElementById("settingsHighDurabilityDefSelect").onchange = (e) => {
+  state.highDurabilityDefBonusPct = Number(e.target.value) || 0;
   saveState();
   playSfx("select");
-  renderSettingsScreen();
+};
+document.getElementById("settingsHighDurabilityAtkSelect").onchange = (e) => {
+  state.highDurabilityAtkReductionPct = Number(e.target.value) || 0;
+  saveState();
+  playSfx("select");
 };
 document.getElementById("settingsBackBtn").onclick = () => {
   if (settingsReturnScreenId) {

@@ -1371,11 +1371,16 @@ function instantiateEnemy(pick) {
   // (同じボスと何度戦っても毎回同じ技から始まる単調さを避けるため)
   const extraCount = pick.extraBigAttacks ? pick.extraBigAttacks.length : 0;
   const initialBigAttackIndex = extraCount > 0 ? Math.floor(Math.random() * (extraCount + 1)) : 0;
-  // 設定画面の「高耐久モード」ON時、敵の防御力+20%・攻撃力-20%にする(お試し高難易度化設定)。
+  // 設定画面の「高耐久モード」: 防御力アップ(defBonusPct)は敵の防御力にその値を直接加算し(乗算ではない。
+  // 例: def15の敵にdefBonusPct20を選ぶとdef35になる。defは被ダメ軽減%そのものの値のため)、
+  // 攻撃力ダウン(atkReductionPct)は敵の攻撃力にその割合を掛けて減らす(乗算。例: 20を選ぶと攻撃力×0.8)。
+  // 2つは独立した設定で、どちらも0なら無効(お試し高難易度/低難易度化設定)。
   // atk/defは全ての戦闘計算式がenemy.atk/target.defとして生値のまま直接参照するため、
   // effectiveStat側ではなくここ(スポーン時点)で織り込むのが確実
-  const atk = state.highDurabilityMode ? Math.max(1, Math.round(pick.atk * 0.8)) : pick.atk;
-  const def = state.highDurabilityMode ? Math.round(pick.def * 1.2) : pick.def;
+  const defBonusPct = state.highDurabilityDefBonusPct || 0;
+  const atkReductionPct = state.highDurabilityAtkReductionPct || 0;
+  const atk = atkReductionPct > 0 ? Math.max(1, Math.round(pick.atk * (1 - atkReductionPct / 100))) : pick.atk;
+  const def = defBonusPct > 0 ? pick.def + defBonusPct : pick.def;
   return {
     ...pick,
     instanceId: "e" + __enemySeq++,

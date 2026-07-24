@@ -162,6 +162,11 @@
   }
   .title-toggle-btn.is-on { background: var(--dw-gold); color: #2a2015; border-color: var(--dw-gold); }
   .title-setting-caption { margin: -4px 0 0; padding: 0 4px 10px; font-size: 11px; line-height: 1.5; color: var(--dw-caption-color); text-align: left; }
+  .title-select {
+    min-width: 64px; height: 32px; border-radius: var(--radius-pill); border: 1px solid var(--dw-card-border);
+    background: rgba(0,0,0,0.3); color: var(--dw-body-color); font-size: 13px; font-weight: 700;
+    text-align: center; text-align-last: center; padding: 0 6px;
+  }
   .title-sub-back-btn { width: 100%; margin-top: 6px; }
 
   /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============

@@ -82,7 +82,11 @@ function defaultState() {
     maxFloorReached: { forest: 0, coast: 0 }, // ステージごとの最高到達階層(出発準備画面のボタン横に表示)。moveOneFloor()の前進時にのみ更新する
     instadeathMode: false, // 設定画面のトグル。ONの間は戦闘不能=瀕死(担いで救出可能)を経由せず、即座にロスト(完全消滅)する
     highEncounterMode: false, // 設定画面のトグル。ONの間は敵との遭遇確率が通常の1.5倍になる(rollEncounter参照)
-    highDurabilityMode: false, // 設定画面のトグル。ONの間は敵の防御力+20%・攻撃力-20%になる(instantiateEnemy参照)
+    // 設定画面のドロップダウン(各0〜100%、5%刻み、独立)。防御力アップは敵の防御力にこの値を直接加算
+    // (乗算ではない。例: def15の敵に+20を選ぶとdef35になる)、攻撃力ダウンは敵の攻撃力にこの割合を
+    // 掛けて減らす(乗算。例: 20を選ぶと攻撃力×0.8)。どちらも0=OFF(instantiateEnemy参照)
+    highDurabilityDefBonusPct: 0,
+    highDurabilityAtkReductionPct: 0,
   };
 }
 
