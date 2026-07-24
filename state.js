@@ -285,6 +285,12 @@ function advanceToNextMorning() {
 function getRosterChar(id) {
   return state.roster.find((c) => c.id === id);
 }
+// ロストしたキャラは名簿(state.roster)から完全に削除する(パーマデスで戻ってこないため、
+// 一覧に「ロスト」表示のまま残し続けず、枠を新しい仲間の雇用に開放する)
+function removeFromRoster(id) {
+  const idx = state.roster.findIndex((c) => c.id === id);
+  if (idx !== -1) state.roster.splice(idx, 1);
+}
 
 // 旅団旗を建築していれば、出発パーティの上限が4人→5人になる(5人目は交代要員扱い)
 function maxActivePartySize() {

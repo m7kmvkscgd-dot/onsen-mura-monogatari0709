@@ -576,6 +576,7 @@ function handleFieldDeaths() {
       if (carried) {
         if (state.instadeathMode) {
           carried.status = "lost";
+          removeFromRoster(carried.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
           blog(`${c.name}が倒れ、担がれていた${carried.name}もそのまま帰らぬ人となった...(即死モード)`);
         } else {
           markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
@@ -590,6 +591,7 @@ function handleFieldDeaths() {
       // 即死モード: 瀕死(担いで救出可能)を経由せず、その場でロスト(完全消滅)する
       if (state.instadeathMode) {
         c.status = "lost";
+        removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
         blog(`${c.name}は倒れた...即死モードによりそのまま帰らぬ人となった。`);
       } else {
         markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);

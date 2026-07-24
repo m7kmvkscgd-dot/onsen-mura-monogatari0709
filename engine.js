@@ -2362,11 +2362,16 @@ function markCritical(character, floor, absoluteMinutes, stage) {
 // 期限切れの瀕死キャラをロストにする。ただし既に誰かに担がれている間は「救出済みで運搬中」
 // なので、カウントダウンを進めない(ロストしない)
 function tickCriticalExpiry(characters, absoluteMinutes) {
+  // characters(呼び出し元は常にstate.roster自身)をforEachで回している最中にsplice(removeFromRoster)
+  // すると要素の読み飛ばしが起きるため、対象のidだけ集めてforEach完了後にまとめて削除する
+  const expiredIds = [];
   characters.forEach((c) => {
     if (c.status === "critical" && !c.carriedBy && absoluteMinutes > c.criticalExpireMinutes) {
       c.status = "lost";
+      expiredIds.push(c.id);
     }
   });
+  expiredIds.forEach((id) => removeFromRoster(id)); // 名簿からも完全に削除する(ロストは戻ってこないため)
 }
 
 // 瀕死の仲間を救出する(HP半分で復活)。呼び出し側でその冒険を終了させて町に戻す

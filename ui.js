@@ -509,9 +509,12 @@ function statusTagClass(c) {
 // 「新しく雇う手段」は所持金(HIRE_COST以上)だけでなく名簿の空き枠(rosterCapacity()、固定8人)も両方必要。
 // 名簿が8人とも稼働不能になった時点で所持金がいくらあっても新規雇用の枠自体が無く実質詰みになる
 // (旧実装は所持金しか見ておらずこのケースを見逃していた)。
+// ロストしたキャラは名簿から完全に削除される(removeFromRoster)ため、全滅した末に名簿が0人に
+// なるケースもここを通る。roster.length===0は[].every()が常にtrueを返す(空配列は「全員非activeで
+// ある」を満たす)ため特別扱いは不要で、canStillHireの判定だけで「新規に1人目を雇えるなら詰みではない」
+// を正しく表現できる(即死モードOFFのゲーム開始直後は所持金50・HIRE_COST20なので誤検出しない)
 // trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
 function checkGameOver() {
-  if (state.roster.length === 0) return false;
   const noActive = state.roster.every((c) => c.status !== "active");
   if (!noActive) return false;
   const canStillHire = state.gold >= HIRE_COST && state.roster.length < rosterCapacity();
