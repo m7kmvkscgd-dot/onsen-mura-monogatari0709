@@ -6,3 +6,12 @@
 
 /implementation_status.html
   Cache-Control: no-cache, must-revalidate
+
+/enemy_editor.html
+  Cache-Control: no-cache, must-revalidate
+
+/building_editor.html
+  Cache-Control: no-cache, must-revalidate
+
+/quest_editor.html
+  Cache-Control: no-cache, must-revalidate
