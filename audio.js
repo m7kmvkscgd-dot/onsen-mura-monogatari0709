@@ -593,7 +593,7 @@ function stopCampBgm(onDone) {
 // 起動時に全SEをfetch+decodeAudioData()でAudioBufferとして事前デコードしておき、再生のたびに
 // 新規のAudioBufferSourceNodeを使い捨てで生成して即座に鳴らす方式に変更した。BGM(bgmAudio/
 // lodgingBgmAudio)は既存の<audio>要素のまま一切変更していない(このAudioContextはSE専用)
-const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", onsen_enter: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", footstep_valley: "mp3", footstep_coast: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3", title_tap: "mp3", hawk_summon: "mp3", shikigami_summon: "mp3", encounter_alert: "mp3", omikuji_normal: "mp3", omikuji_daikichi: "mp3", onsen_relief: "mp3", rest_heal: "mp3" };
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", attack_hunter: "mp3", attack_samurai: "mp3", attack_caster: "mp3", attack_gunner: "mp3", attack_spearman: "mp3", attack_naginata: "mp3", attack_ninja: "mp3", hit_taken_1: "mp3", hit_taken_2: "mp3", hit_taken_3: "mp3", hit_taken_4: "mp3", onsen: "mp3", onsen_enter: "mp3", evade: "mp3", guard: "mp3", flee: "mp3", extension_build: "mp3", skill_confirm: "mp3", smoke_bomb: "mp3", morning_chime: "mp3", footstep: "mp3", footstep_valley: "mp3", footstep_coast: "mp3", departure: "mp3", result: "mp3", big_attack_warning: "mp3", carry: "mp3", shoot_down: "mp3", transform: "mp3", crit_slash: "mp3", crit_ninja: "mp3", crit_caster: "mp3", crit_hunter: "mp3", crit_gunner: "mp3", quest_accept: "mp3", title_tap: "mp3", hawk_summon: "mp3", shikigami_summon: "mp3", encounter_alert: "mp3", omikuji_normal: "mp3", omikuji_daikichi: "mp3", onsen_relief: "mp3", rest_heal: "mp3", swish_sharp_1: "mp3", swish_sharp_2: "mp3", swish_sharp_3: "mp3", swish_heavy_1: "mp3", swish_heavy_2: "mp3" };
 // ごく稀にAudioContext自体が存在しない/生成に失敗する環境があっても、ゲーム全体の初期化が
 // 止まってしまわないようtry/catchで保護する(その場合はsfxAudioCtxがnullのままとなり、
 // 以降のloadSfxBuffer/playSfxは何もしない安全側に倒す)
@@ -694,6 +694,25 @@ function attackSfxFor(classId) {
 const CLASS_CRIT_SFX = { samurai: "crit_slash", naginata: "crit_slash", spearman: "crit_slash", ninja: "crit_ninja", priest: "crit_caster", onmyoji: "crit_caster", hunter: "crit_hunter", gunner: "crit_gunner" };
 function critSfxFor(classId) {
   return CLASS_CRIT_SFX[classId] || "crit_slash";
+}
+// ============ 打撃音の二層化(ユーザー提供の風切り音、2026-07-26) ============
+// 近接職の攻撃を「振る音(ヒュッ)→一瞬の間→着弾音」の二層にして一撃の重みを出す。
+// 風切りは音色分析の結果で2系統に分け(鋭い系3種=周波数重心約3000Hz・短い/重い系2種=低め・長め)、
+// 系統内からランダムに選んで単調さを消す(足音と同じ考え方)。
+// 遠隔・術系(狩人/砲術士/僧侶/陰陽師)は「振る」動作が無いため従来通り着弾音のみ
+const SWISH_SFX_BY_CLASS = {
+  samurai: ["swish_sharp_1", "swish_sharp_2", "swish_sharp_3"],
+  ninja: ["swish_sharp_1", "swish_sharp_2", "swish_sharp_3"],
+  spearman: ["swish_heavy_1", "swish_heavy_2"],
+  naginata: ["swish_heavy_1", "swish_heavy_2"],
+};
+const SWISH_TO_IMPACT_MS = 90; // 振ってから着弾音までの間
+function playAttackSfxWithSwish(classId) {
+  const impact = attackSfxFor(classId);
+  const pool = SWISH_SFX_BY_CLASS[classId];
+  if (!pool) { playSfx(impact); return; }
+  playSfx(pool[Math.floor(Math.random() * pool.length)]);
+  setTimeout(() => playSfx(impact), SWISH_TO_IMPACT_MS);
 }
 
 // スピーカーアイコンをタップすると音量調整のポップオーバーを開閉する。実機で<input type="range">の

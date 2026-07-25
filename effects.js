@@ -142,7 +142,7 @@ function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     blog(`${spearman.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
     popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
-    playSfx(attackSfxFor(spearman.classId));
+    playAttackSfxWithSwish(spearman.classId);
     renderBattleScreen();
     playAttackVfx(enemy.instanceId, spearman, "normal");
     const card = findVisibleCard(spearman.id);
@@ -177,7 +177,7 @@ function playHawkAttackVfx(hunterActor, targetId) {
       setTimeout(() => card.classList.remove(...shakeClasses), 400);
     }
     playAttackVfx(targetId, { classId: "hawk" }, "normal");
-    playSfx(attackSfxFor("samurai"));
+    playAttackSfxWithSwish("samurai");
   };
   // 飛翔中(往路〜復路)は、飛んでいる本体と紛らわしいため狩人ポートレートの鷹バッジを一時的に隠す。
   // hawkFlightActiveフラグはrenderPartyBar側の表示条件にも効くので、飛翔中にrenderBattleScreen()が

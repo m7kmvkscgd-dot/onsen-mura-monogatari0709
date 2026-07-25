@@ -482,7 +482,7 @@ function processNext() {
       // 式神にはclassIdが無いため、actor.classIdをそのまま渡すとattackSfxFor/CLASS_ATTACK_VFXの
       // 参照先が見つからず攻撃音・斬撃VFXが一切出ない不具合があった。鷹を呼ぶの追撃(playHawkAttackVfx)
       // と同じ手法で、侍の通常攻撃と全く同じ音・エフェクトを明示的に流用する(ユーザー指示2026-07-25)
-      if (result.kind === "attack" || result.kind === "multiAttack") playSfx(attackSfxFor("samurai"));
+      if (result.kind === "attack" || result.kind === "multiAttack") playAttackSfxWithSwish("samurai");
       hits.forEach((h) => {
         if (h.hit === false) return;
         popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(false));
@@ -787,7 +787,7 @@ function runCritFollowupAttack(actor, onDone) {
   blog(`${actor.label}は会心の勢いのまま、もう一度斬りかかった！`);
   pickFollowupTarget((target) => {
     if (!target) { onDone(); return; }
-    playSfx(attackSfxFor(actor.classId));
+    playAttackSfxWithSwish(actor.classId);
     const result = performAttack(actor, target, blog);
     if (result.hit) playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
     if (result.hit) {
@@ -842,7 +842,7 @@ function runTreeSkill(actor, skill) {
     return;
   }
   if (action.kind === "damageRandomMulti") {
-    playSfx(attackSfxFor(actor.classId));
+    playAttackSfxWithSwish(actor.classId);
     const result = useTreeSkill(actor, null, skill, blog);
     const hits = (result && result.randomHits) || [];
     document.getElementById("actionGrid").innerHTML = "";
@@ -973,7 +973,7 @@ function runTreeSkill(actor, skill) {
   }
   // ダメージ系
   if (action.aoe) {
-    playSfx(attackSfxFor(actor.classId));
+    playAttackSfxWithSwish(actor.classId);
     if (action.onceFlag) actor[action.onceFlag] = true; // 怒声など: 戦闘中一度きりのスキルはここで使用済みにする
     const targetsList = targetableEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
@@ -1004,7 +1004,7 @@ function runTreeSkill(actor, skill) {
     return;
   }
   pickSingleEnemyTarget((target) => {
-    playSfx(attackSfxFor(actor.classId));
+    playAttackSfxWithSwish(actor.classId);
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
     if (r && r.hit && r.hits && r.hits.length > 1) {
@@ -1272,7 +1272,7 @@ function runFormSkill(actor, skillKey) {
     return;
   }
   if (skillKey === "dokueki") {
-    playSfx(attackSfxFor(actor.classId));
+    playAttackSfxWithSwish(actor.classId);
     actor.formCooldowns[skillKey] = skill.cooldown;
     blog(`${actor.name}は毒液を撒き散らした！`);
     targetableEnemies().forEach((e) => {
@@ -1364,7 +1364,7 @@ function renderActionButtons(actor) {
       if (battleActionLocked) return;
       battleActionLocked = true;
       pickSingleEnemyTarget((target) => {
-        playSfx(attackSfxFor(actor.classId));
+        playAttackSfxWithSwish(actor.classId);
         // 武甕槌命の御守: 戦闘中、最初の通常攻撃が確定で会心になる
         const takemikazuchi2Active = hasOmamori("takemikazuchi2") && !battle.omamoriUsed.takemikazuchi2;
         if (takemikazuchi2Active) { actor.guaranteedCritNext = true; battle.omamoriUsed.takemikazuchi2 = true; }
@@ -1490,7 +1490,7 @@ function renderActionButtons(actor) {
             return;
           }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-            playSfx(attackSfxFor(actor.classId));
+            playAttackSfxWithSwish(actor.classId);
             const targetsList = targetableEnemies();
             const result = useAbility(actor, targetsList, ability, blog);
             const shotDownTargets = [];
@@ -1520,7 +1520,7 @@ function renderActionButtons(actor) {
           }
           // 単体系(会心の一撃/奇襲/呪符ノ術など)
           pickSingleEnemyTarget((target) => {
-            playSfx(attackSfxFor(actor.classId));
+            playAttackSfxWithSwish(actor.classId);
             const result = useAbility(actor, target, ability, blog);
             if (result && result.hit) {
               popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
