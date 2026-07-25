@@ -131,11 +131,18 @@
   #homecomingBg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   #homecomingSpeech {
     position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%);
-    max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0;
+    max-width: 92%; opacity: 0;
+    display: flex; align-items: center; gap: 0.55rem;
     color: #fff; font-size: 0.95rem; text-shadow: 0 1px 0 #000, 0 2px 8px rgba(0,0,0,0.8);
     background: rgba(10,8,6,0.55); border: 1px solid rgba(217,196,154,0.6); border-radius: var(--radius-pill);
-    padding: 0.5rem 1.1rem;
+    padding: 0.4rem 1rem 0.4rem 0.45rem;
   }
+  /* 発言者の顔(ストレス段階に応じた立ち絵がそのまま入る) */
+  .homecoming-speaker-img {
+    width: 50px; height: 50px; flex-shrink: 0; object-fit: contain;
+    background: #353a44; border-radius: 50%; border: 1px solid rgba(217,196,154,0.5);
+  }
+  .homecoming-speech-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .homecoming-speaker { color: #d9c49a; margin-right: 0.5em; font-size: 0.85em; }
   /* 帰還成功バナーに舞う金の粒子(playVictoryBannerがJSで生成) */
   .result-banner-particle {

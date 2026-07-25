@@ -599,7 +599,11 @@ function playHomecomingSequence(onDone) {
     const alive = fieldParty.filter((c) => c.status === "active" && c.hp > 0 && !c.isShikigami);
     const speaker = alive.length > 0 ? alive[Math.floor(Math.random() * alive.length)] : null;
     if (speaker) {
-      speech.innerHTML = `<span class="homecoming-speaker">${speaker.name}</span>${HOMECOMING_LINES[Math.floor(Math.random() * HOMECOMING_LINES.length)]}`;
+      // 発言者のイラスト付き(ユーザー指示2026-07-26)。characterPortraitSrc()はストレス段階に応じた
+      // 立ち絵(平常/軽度/重度/発狂)を返すため、疲れて帰ってきた顔がそのまま出る
+      speech.innerHTML = `
+        <img class="homecoming-speaker-img" src="${characterPortraitSrc(speaker)}">
+        <span class="homecoming-speech-text"><span class="homecoming-speaker">${speaker.name}</span>${HOMECOMING_LINES[Math.floor(Math.random() * HOMECOMING_LINES.length)]}</span>`;
       setTimeout(() => fadeOpacity(speech, 0, 1, 500), 700);
     }
     setTimeout(() => {
@@ -654,7 +658,12 @@ function renderResultScreen(onContinue, isDefeat) {
   // 戦績行(踏破/討伐/全員生還)。カウンタはdungeon.js/battle.jsが遠征中に集計している
   const statsEl = document.getElementById("resultStatsLine");
   statsEl.classList.remove("reveal-in");
-  const allAlive = !isDefeat && !advCriticalHappened;
+  // 「全員生還！」は今回の遠征中に瀕死が出ていない(advCriticalHappened)ことに加えて、帰還時点の
+  // 顔ぶれに瀕死/離脱者がいないことも確認する(瀕死の仲間を担いで帰ってきた場合や、遠征の途中で
+  // この集計機能が入ってフラグが立っていない場合でも「全員無事」と言い張らないように。ユーザー報告2026-07-26)
+  const anyNotActive = fieldParty.some((c) => !c.isShikigami && (c.status !== "active" || c.hp <= 0)) ||
+    state.roster.some((c) => c.status === "critical" && (advXpGained[c.id] || 0) > 0);
+  const allAlive = !isDefeat && !advCriticalHappened && !anyNotActive;
   statsEl.innerHTML = `踏破 ${advMaxFloor || 0}層 ・ 討伐 ${advEnemiesDefeated || 0}体${allAlive ? ' ・ <span class="result-all-alive">全員生還！</span>' : ""}`;
   const stampEl = document.getElementById("resultRankStamp");
   stampEl.classList.remove("stamp-in");
