@@ -2576,12 +2576,12 @@ function predictBigAttackDamage(enemy, target, profile) {
   const base = enemy.atk * mitigation(effectiveStat(target, "def"), 18) * mult;
   return { mid: Math.max(1, Math.round(base)), max: Math.max(1, Math.round(base * 1.15)) };
 }
-// HP警告(⚠️)判定: 予告中の大技を(未かばう想定で)受けた場合、上振れの見積もりでHPが最大maxHpの
-// 20%以下まで落ち込む可能性があるかどうか。falseでも実際にダメージが乱数で上振れれば致死級になり得るため、
-// あくまで「可能性が高い」ことを知らせる目安であることに注意
+// HP警告(⚠️)判定: 予告中の大技を(未かばう想定で)受けた場合、上振れの見積もりで戦闘不能(HP0)に
+// なる可能性があるかどうか。20%以下に落ち込む程度では出さず、実際に上振れで死にうる場合だけに絞った
+// (ユーザー指示、2026-07-25)。falseでも乱数次第では実際に致死級になり得るため、あくまで目安であることに注意
 function isBigAttackLethalRisk(enemy, target, profile) {
   const predicted = predictBigAttackDamage(enemy, target, profile);
-  return (target.hp - predicted.max) <= target.maxHp * 0.2;
+  return (target.hp - predicted.max) <= 0;
 }
 // 予告中の大技でこのallyId(味方)が狙われているかどうかを調べる(ui.js側のカード描画から呼ぶ)。
 // 該当する敵が複数いる場合は最初に見つかったものを返す(同時に複数体から単体大技の予告を受ける状況は稀)
