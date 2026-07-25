@@ -712,8 +712,6 @@ function renderResultScreen(onContinue, isDefeat) {
     list.appendChild(row);
   });
   updateSceneBackgrounds();
-  // 探索していたエリアの背景をぼかして敷く(黒一色の事務的な見た目をやめる。2026-07-26)
-  document.getElementById("resultBgLayer").style.backgroundImage = `url('${currentAreaBgSet()[state.timeOfDay || "day"]}')`;
   // リザルト画面ではBGMを止める(currentBgmKeyもリセットし、続ける押下後の
   // playTownAreaBgm()が同じキーでも確実に再開できるようにする)
   bgmAudio.pause();

@@ -43,16 +43,11 @@
   #screen-result.is-defeat #resultGold { color: var(--dw-caption-color, #b6b0a2) !important; }
   #screen-result.is-defeat #resultHeroTitle { color: #cfc9bd; }
 
-  /* ============ 2026-07-26 リザルト刷新(商業作品風): 背景・額装・戦績・朱印・カウントアップ ============ */
-  /* 探索していたエリアの背景をぼかして暗めに敷く(真っ黒背景の事務的な見た目をやめる) */
-  #screen-result { position: relative; }
-  #resultBgLayer {
-    position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background-size: cover; background-position: center;
-    filter: blur(6px) brightness(0.4);
-    transform: scale(1.05); /* blurで縁が透けるのを外へ逃がす */
-  }
-  #screen-result .hero, #screen-result .body-pad { position: relative; z-index: 1; }
+  /* ============ 2026-07-26 リザルト刷新(商業作品風): 額装・戦績・朱印・カウントアップ ============ */
+  /* 【重要な教訓(2026-07-26の不具合)】.heroは全画面共通で「position:fixedの固定背景レイヤー」であり、
+     ここに position:relative を上書きした結果、100dvhの巨大ブロックとして通常フローに入り込み、
+     .body-pad(リザルト本体)が画面1枚分下へ押し出されて「スクロールしないとリザルトが見えない」
+     状態になっていた。リザルトの背景はhero(updateSceneBackgrounds)に任せ、上書きしないこと */
   /* 漆の枠+金箔ラインの額装パネル(戦闘テキストボックスと同系の和風意匠) */
   #resultScrollPanel {
     position: relative;
