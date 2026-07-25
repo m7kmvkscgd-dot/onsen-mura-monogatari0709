@@ -1385,6 +1385,10 @@ document.getElementById("onsenBackBtnTop").onclick = () => { renderTown(); };
 
 // ============ 温泉の売店(温泉卵) ============
 const ONSEN_EGG_DAILY_STOCK = 2; // 売店の温泉卵は1日2個まで。翌朝(dayCountが変わったタイミング)に仕入れ直す
+// 鶏小屋(レベル1以上)を建てていると毎日の在庫が1つ増える(建築エディタ2026-07-26のdesc仕様)
+function onsenEggDailyStock() {
+  return ONSEN_EGG_DAILY_STOCK + ((state.henHouseLevel || 0) > 0 ? 1 : 0);
+}
 // dayCountが前回リセット時と変わっていたら、本日の販売数をリセットする(翌朝の仕入れ直し)
 function resetOnsenEggStockIfNewDay() {
   if (state.onsenEggDailyDate !== state.dayCount) {
@@ -1407,7 +1411,7 @@ function renderOnsenShop() {
   document.getElementById("onsenEggOwned").textContent = state.inventory.onsenEgg || 0;
   document.getElementById("takigyoOwned").textContent = state.inventory.takigyo || 0;
   const total = supplyItemTotal();
-  const remaining = Math.max(0, ONSEN_EGG_DAILY_STOCK - (state.onsenEggDailyCount || 0));
+  const remaining = Math.max(0, onsenEggDailyStock() - (state.onsenEggDailyCount || 0));
   const buyBtn = document.getElementById("buyOnsenEggBtn");
   if (remaining <= 0) {
     buyBtn.textContent = "本日売り切れ";
@@ -1421,7 +1425,7 @@ function renderOnsenShop() {
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
-  if ((state.onsenEggDailyCount || 0) >= ONSEN_EGG_DAILY_STOCK) { showInfoModal("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
+  if ((state.onsenEggDailyCount || 0) >= onsenEggDailyStock()) { showInfoModal("温泉卵は本日売り切れです(翌朝また仕入れます)"); return; }
   const total = supplyItemTotal();
   if (total >= supplyCap()) { showInfoModal(`支援物資は最大${supplyCap()}個までしか持てません`); return; }
   if (state.gold < ITEMS.onsenEgg.price) { showInfoModal("お金が足りません"); return; }
@@ -1646,8 +1650,8 @@ const BUILDING_DEFS = [
     unlock: WATCHTOWER_UNLOCK_HOUSE_LEVEL, costs: [WATCHTOWER_COST],
     desc: "(詳細は未定)" },
   { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
-    unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_COST, HEN_HOUSE_COST],
-    desc: "(詳細は未定)" },
+    unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_LEVEL1_COST, HEN_HOUSE_LEVEL2_COST],
+    desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。" },
   { key: "shrine", levelField: "shrineLevel", name: "神社", icon: "⛩️", iconImg: "assets/icons/buildings/shrine.png",
     unlock: SHRINE_UNLOCK_HOUSE_LEVEL, costs: [SHRINE_COST], classUnlock: "priest",
     desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。" },
@@ -1666,7 +1670,7 @@ const BUILDING_DEFS = [
   { key: "beeFarm", levelField: "beeFarmLevel", name: "養蜂場", icon: "🐝", iconImg: "assets/icons/buildings/beeFarm.png",
     unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL, costs: Array(BEE_FARM_MAX_LEVEL).fill(BEE_FARM_COST),
     desc: "回復薬の回復量が段階ごとに上がります。",
-    levelEffectLabel: "回復薬", levelEffect: (lv) => `+${Math.round(BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * lv)}%` },
+    levelEffectLabel: "回復薬", levelEffect: (lv) => `+${parseFloat((BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * lv).toFixed(1))}%` }, // 1.5%/段階になったのでMath.roundだと表示が狂う(1.5→2%)。小数1桁まで正確に出す
   { key: "ferry", levelField: "ferryLevel", name: "渡し船", icon: "⛴️", iconImg: "assets/icons/buildings/ferry.png",
     unlock: FERRY_UNLOCK_HOUSE_LEVEL, costs: [FERRY_COST],
     desc: "(詳細は未定)" },

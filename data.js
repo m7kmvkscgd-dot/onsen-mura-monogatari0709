@@ -731,11 +731,11 @@ const TEAHOUSE_SNACK_IDS = ["amadango", "sanshokudango", "sakuramochi", "kusamoc
 // 火薬庫で購入できる爆弾: 敵全体に防御無視の固定ダメージ(猪の実HP約62の6割=約37を基準に設定)
 const BOMB_FLAT_DAMAGE = 37;
 const POTION_HEAL_RATIO = 0.38;
-const BEE_FARM_POTION_BONUS_PER_LEVEL = 0.02; // 養蜂場は1段階につき回復薬の回復量+2%(最大5段階で+10%)
+const BEE_FARM_POTION_BONUS_PER_LEVEL = 0.015; // 養蜂場は1段階につき回復薬の回復量+1.5%(最大5段階で+7.5%。建築エディタ2026-07-26で0.02→0.015)
 // 温泉卵: 使ってもターンを消費しない自分専用の回復アイテム(仲間には使えない)。回復薬/煙玉と
 // 同じ支援物資の共有枠(SUPPLY_CAP_BASE)を消費する
 const ONSEN_EGG_HEAL_RATIO = 0.25;
-const HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL = 0.05; // 鶏小屋は1段階につき温泉卵の回復量+5%(最大2段階で+10%)
+const HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL = 0.02; // 鶏小屋は1段階につき温泉卵の回復量+2%(最大2段階で+4%。建築エディタ2026-07-26のdesc仕様に合わせて0.05→0.02)
 // 野営具は回復薬/煙玉とは別枠で、最大CAMPING_KIT_CAP個までしか持てない(高価な特別アイテムのため)
 const CAMPING_KIT_CAP = 1;
 // 野営(野営具を使った時の休息)の効果: HP/MPを割合回復、ストレスを固定量回復

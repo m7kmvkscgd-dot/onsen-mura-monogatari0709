@@ -34,14 +34,14 @@ function defaultState() {
     magistrateQuestClearedOn: {}, // { questId: dayCount } 直近で達成した日。同じ日のうちは同じ依頼を再受注できないようにする(acceptQuest/renderMagistrateScreen参照)
     rescueQuestAccepted: false, // 破綻寸前パーティ救済クエスト(薬草摘み)を受注中かどうか
     rescueQuestItemObtained: false, // 森の対象階層で薬草を入手済みかどうか(受注中のみ意味を持つ)
-    travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル3で解禁)。出発画面で野営具を購入できるようになる
+    travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル4で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
     ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。家レベル6で解禁)。出発パーティの上限が4人→5人になる(5人目は交代要員、旧「助っ人の札」の後継)
     stableLevel: 0, // 増築の1つ、馬小屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
-    henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。効果は未定(建物のみ)
+    henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1〜2=建築済み。家レベル5で解禁)。温泉卵の回復量+2%/段階+売店の毎日の在庫+1
     teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。深淵の森15層の進路選択に「茶屋」が必ず現れ、一休み(HP/MP回復)や買い物ができるようになる
-    hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。効果は未定(建物のみ)
+    hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。温泉のストレス回復量が50→70に上がる
     beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。家レベル8で解禁)。効果は未定(建物のみ)
     shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。家レベル4で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
     gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。家レベル4で解禁)。砲術士が雇えるようになる(旧: 出発画面で爆弾を購入できる効果はユーザー指示により廃止)
@@ -91,10 +91,11 @@ function defaultState() {
 }
 
 const HOUSE_MAX_LEVEL = 7; // 家レベルを基準に解禁される施設のうち最も高い要求値(馬屋/渡し船=7)に合わせた上限。それ以上は建物の解禁に使い道が無いため増築できない
+// [0]=レベル1→2、[1]=2→3、…、[5]=6→7。建築エディタのdiff反映(2026-07-26)で計算式から配列直書きに変更
+const HOUSE_UPGRADE_COSTS = [30, 100, 350, 450, 550, 800];
 function houseUpgradeCost(level) {
-  if (level === 1) return 30; // レベル1→2(ユーザー指示2026-07-18で90→30に引き下げ)
-  if (level === 2) return 200; // レベル2→3
-  return 250 + (level - 2) * 100; // レベル3以降は1レベルごとに250Gから+100Gずつ上がる(レベル3→4=350G、4→5=450G…)
+  const cost = HOUSE_UPGRADE_COSTS[level - 1];
+  return cost != null ? cost : HOUSE_UPGRADE_COSTS[HOUSE_UPGRADE_COSTS.length - 1];
 }
 const ROSTER_CAPACITY = 8; // 仲間を雇える上限。以前は家レベルに連動して3→10人まで伸びる仕組みだったが、
 // ユーザー指示により家レベルとは完全に切り離し、初期から固定で8人雇えるようにした(家レベルは施設解禁専用)
@@ -116,11 +117,11 @@ const MAGISTRATE_COST = 10;
 const SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const SHOP_COST = 10;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
-const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 3;
+const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const TRAVEL_PREP_SHOP_COST = 30;
-// 鞄屋: 道場と同じ多段階建築。1レベルにつき支援物資の所持上限が1増える(レベル1=75G/レベル2=100G/レベル3=200G)
-const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4;
-const BAG_SHOP_LEVEL1_COST = 75;
+// 鞄屋: 道場と同じ多段階建築。1レベルにつき支援物資の所持上限が1増える(レベル1=30G/レベル2=100G/レベル3=200G)
+const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 5;
+const BAG_SHOP_LEVEL1_COST = 30;
 const BAG_SHOP_LEVEL2_COST = 100;
 const BAG_SHOP_LEVEL3_COST = 200;
 const BAG_SHOP_MAX_LEVEL = 3;
@@ -136,7 +137,7 @@ function supplyItemTotal() {
   return total;
 }
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
-const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 5;
+const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 6;
 const WATCHTOWER_COST = 200;
 // 旅団旗: 建築すると出発パーティの上限が4人→5人になる(5人目は交代要員)。旧アイテム「助っ人の札」の後継
 const RYODANKI_UNLOCK_HOUSE_LEVEL = 6;
@@ -144,17 +145,19 @@ const RYODANKI_COST = 100;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
 const STABLE_COST = 200;
-// 鶏小屋: 道場と同じ多段階建築(建築/増築の枠組みのみ残置)。旧効果(卵ポーチ+毎日の温泉卵無料補充)は
-// ユーザー指示により一旦完全に廃止した(engine.jsのhenHouseEggPouchCapacity()が常に0を返す)。
-// 建物・段階建築のシステム自体は後日別の効果で作り直す前提でそのまま残している
-const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 4;
-const HEN_HOUSE_COST = 200;
+// 鶏小屋: 道場と同じ多段階建築。効果は建築エディタのdiff反映(2026-07-26)で復活: 1段階につき
+// 温泉卵の回復量+2%(HEN_HOUSE_ONSEN_EGG_BONUS_PER_LEVEL、data.js)+建築済みなら売店の温泉卵の
+// 毎日の在庫が1つ増える(town.js onsenEggDailyStock)。旧効果の卵ポーチ(無料補充)は廃止のまま
+// (engine.jsのhenHouseEggPouchCapacity()が常に0を返す)
+const HEN_HOUSE_UNLOCK_HOUSE_LEVEL = 5;
+const HEN_HOUSE_LEVEL1_COST = 100;
+const HEN_HOUSE_LEVEL2_COST = 200;
 const HEN_HOUSE_MAX_LEVEL = 2;
 // 茶屋: 効果は未定(建物のみ、未実装)
-const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 5;
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
 const TEA_HOUSE_COST = 250;
 // 湯守屋: 建築すると温泉のストレス回復量が50→70に上がる(実際に効果があるレベル1の施設)
-const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 4;
+const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 5;
 const HOT_SPRING_KEEPER_COST = 200;
 // 火薬庫: 建築すると砲術士が雇えるようになる。旧効果(出発画面で爆弾を購入できる)はユーザー指示で廃止した
 const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 4;
