@@ -294,12 +294,13 @@
     filter: drop-shadow(0 2px 10px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(217,50,40,0.8));
     animation: encounterCuePop 1s cubic-bezier(0.22, 1.6, 0.4, 1) forwards; /* 表示時間+0.3秒(ユーザー指示、2026-07-26)。戦闘開始までの一拍(ENCOUNTER_CUE_HOLD_MS)も+300して同期 */
   }
-  /* 回転(rotate)は「傾きが引っかかる」というユーザー指摘(2026-07-26)で除去し、真っ直ぐなまま拡縮だけのポップにした */
+  /* 「引っかかる」というユーザー指摘の正体は消える直前に一瞬縮む動き(1.25→0.96の着地バウンス)だった
+     (2026-07-26)。回転は元のまま残し、ポップ後はサイズを保って最後はわずかに膨らみながら消える形に変更 */
   @keyframes encounterCuePop {
-    0% { opacity: 0; transform: scale(0.2); }
-    55% { opacity: 1; transform: scale(1.25); }
-    75% { opacity: 1; transform: scale(0.96); }
-    100% { opacity: 0; transform: scale(1.05); }
+    0% { opacity: 0; transform: scale(0.2) rotate(-8deg); }
+    55% { opacity: 1; transform: scale(1.25) rotate(3deg); }
+    75% { opacity: 1; transform: scale(1.25) rotate(-1deg); }
+    100% { opacity: 0; transform: scale(1.3) rotate(0deg); }
   }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
