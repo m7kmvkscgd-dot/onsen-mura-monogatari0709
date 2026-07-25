@@ -322,8 +322,12 @@ const COAST_BGM_VOLUME_MULT = 1.7;
 // 村の「town」キー(早朝/夜以外、朝・昼・夕方に使われる)だけ、他のBGMと独立して音量を下げる。
 // bgmAudioはGainNode経由の音量制御に移行済みのため、iOS実機でも実際に反映される
 const TOWN_DAY_BGM_VOLUME_MULT = 0.7;
+// 普通の雑魚敵との戦闘BGM(森の戦闘専用曲dungeon/dungeon_night)だけ1.2倍(ユーザー指示、2026-07-25)。
+// 海岸の雑魚戦(coast_battle)は既にCOAST_BGM_VOLUME_MULT(1.7倍)で上限(1.0)に張り付いているため対象外
+const NORMAL_BATTLE_BGM_VOLUME_MULT = 1.2;
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
+  if (key === "dungeon" || key === "dungeon_night") return Math.min(1, BGM_BASE_VOLUME * NORMAL_BATTLE_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
   return BGM_BASE_VOLUME;
 }
