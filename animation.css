@@ -115,19 +115,3 @@
     animation: hitSquashPortraitStrong 220ms ease-out;
   }
   @keyframes pathDimIn { from { opacity: 0; } to { opacity: 1; } }
-
-  /* 式神召喚の演出。新しく出た式神のカード中央に、金色の魔法陣画像(ComfyUI生成+輝度をアルファに
-     変換する加算光式の透過処理、assets/vfx/shikigami_summon.png)を一度だけ大きく出す。
-     カード自体はrenderPartyBar()のたびに作り直されるため、他の使い切りVFXと同じく
-     「今表示されているカードに追加→アニメーション完了で自分で消える」方式にしてある */
-  @keyframes shikigamiSummonBurst {
-    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-15deg); }
-    35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(5deg); }
-    60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.0) rotate(0deg); }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
-  }
-  .shikigami-summon-vfx {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 220%; height: 220%; object-fit: contain; pointer-events: none; z-index: 5;
-    animation: shikigamiSummonBurst 900ms ease-out forwards;
-  }
