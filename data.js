@@ -823,9 +823,7 @@ const SKILL_TREES = {
     8: {
       // 覇気はLv7左から移動(内容はそのまま、連斬と入れ替え)
       left: { name: "覇気", desc: "会心が発動するたびに、会心率が＋3%。", mp: 0, passive: { onCritSelfStackCritRate: 0.03 } },
-      // desc変更(スキルエディタの差分反映): 燕返し(反撃会心率up)の枠に、黒曜(Lv7右から移動)を効果拡張して
-      // 差し替えた。天衣無縫(Lv10右、反撃ダメージ+50%)が前提としていたcounterChance系の反撃発生源が
-      // ツリーから無くなった形になるため、天衣無縫は現状どのビルドでも実質発動しない状態。要確認
+      // desc変更(スキルエディタの差分反映): 燕返し(反撃会心率up)の枠に、黒曜(Lv7右から移動)を効果拡張して差し替えた
       right: { name: "黒曜", desc: "出血ダメージと、攻撃力低下を受けなくなる", mp: 0, passive: { dotDamageMult: 0, debuffImmuneStats: ["atk"] } },
     },
     9: {
@@ -837,7 +835,9 @@ const SKILL_TREES = {
       // 旧・神速抜刀(320%ダメージ)から全面刷新
       left: { name: "神速抜刀", desc: "35%の威力で敵を攻撃。ターンを消費しない。", mp: 1, action: { kind: "damage", mult: 0.35, noCost: true } },
       // desc変更(スキルエディタの差分反映): 旧・百戦錬磨(ターン経過で攻撃力up)から「反撃ダメージ+50%」の
-      // 固定バフに全面差し替え。燕返しのcounterMultとは別枠で加算されるcounterDamageBonusとして実装
+      // 固定バフに全面差し替え。心眼(guardCounterSelf)/見切り・瞬身の順(onEvadeCounterMult)双方の
+      // 反撃ダメージに加算で乗る、反撃全般の共通強化として実装(counterChance系の燕返しが今のツリーに
+      // 無くても、心眼・見切りが機能源になるので死にスキルにはならない)
       right: { name: "天衣無縫", desc: "反撃ダメージ+50%", mp: 0, passive: { counterDamageBonus: 0.5 } },
     },
   },

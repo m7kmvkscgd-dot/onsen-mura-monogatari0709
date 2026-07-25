@@ -1829,7 +1829,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   }
   // 心眼の構えなど: 「このターン」限定で、敵の攻撃を1度だけ完全に無効化してその場で反撃する
   if (actor && target.nullifyCounterTurnsLeft > 0) {
-    const counterMult = target.nullifyCounterMult || 0.8;
+    // 天衣無縫(counterDamageBonus)など: 反撃系スキル全般に加算で乗る想定のため、心眼の反撃倍率にもここで足す
+    const counterMult = (target.nullifyCounterMult || 0.8) + (target.passives && target.passives.counterDamageBonus || 0);
     target.nullifyCounterTurnsLeft = 0;
     target.nullifyCounterMult = null;
     const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterMult - effectiveStat(actor, "def") * 0.5));
@@ -2238,7 +2239,9 @@ function onEvadeSuccess(target, enemy, log) {
   }
   // 瞬身の順など: 回避に成功した瞬間、指定倍率で反撃する
   if (target.passives && target.passives.onEvadeCounterMult && enemy && enemy.hp > 0) {
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * target.passives.onEvadeCounterMult - effectiveStat(enemy, "def") * 0.5));
+    // 天衣無縫(counterDamageBonus)など: 見切り/瞬身の順の回避反撃にも加算で乗る
+    const evadeCounterMult = target.passives.onEvadeCounterMult + (target.passives.counterDamageBonus || 0);
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * evadeCounterMult - effectiveStat(enemy, "def") * 0.5));
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     log(`${target.label}は${enemy.label}に反撃した！${counterDmg}ダメージ！`);
   }
