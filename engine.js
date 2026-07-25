@@ -368,11 +368,14 @@ function effectiveStat(entity, key) {
     if (permMult !== 1) result = Math.max(1, Math.round(result * permMult));
   }
   // HP割合条件つきの受動効果(武士道など、HP◯%以下で攻撃力/防御力up、といったもの)
+  // 複数段が同時に発動していても複利(掛け算の重ねがけ)にならないよう、差分(mult-1)を合算してから1回だけ乗算する
   if (entity.passives && entity.passives.conditionalMods && entity.passives.conditionalMods.length && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
+    let totalDelta = 0;
     activeConditionalMods(entity).forEach((m) => {
       if (!m.statMult) return;
-      m.statMult.forEach((sm) => { if (sm.stat === key) result = Math.max(1, Math.round(result * sm.mult)); });
+      m.statMult.forEach((sm) => { if (sm.stat === key) totalDelta += (sm.mult - 1); });
     });
+    if (totalDelta !== 0) result = Math.max(1, Math.round(result * (1 + totalDelta)));
   }
   // 状態フラグ条件つきの受動効果(挑発中/装填中/かばう中など、entity自身の一時状態を見て乗算する汎用フック)
   if (entity.passives && entity.passives.flagMods && entity.passives.flagMods.length && (key === "atk" || key === "mag" || key === "def" || key === "spd")) {
