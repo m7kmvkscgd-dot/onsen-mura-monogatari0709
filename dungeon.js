@@ -721,6 +721,7 @@ function stopAutoRetreat() {
   if (autoRetreatZoomAnim) autoRetreatZoomAnim.pause();
   document.getElementById("advanceBtn").disabled = false;
   document.getElementById("retreatBtn").disabled = false;
+  document.getElementById("dungeonLog").style.visibility = ""; // オート帰還中に消していたテキストボックスを戻す
 }
 // 暗転→(黒目の間にafterBlackを実行)→明転、という「区切り」の演出。財宝発見/時刻変化/茶屋/瀕死発見で使う。
 // 通常のplayDungeonMoveTransitionと違い歩行ズームは伴わない(ズームは呼び出し元が別途管理しているため)
@@ -770,7 +771,19 @@ function playEncounterCueThenStartBattle() {
   pendingEncounterBattle = null;
   playSfx("encounter_alert");
   const el = document.getElementById("encounterCue");
-  el.innerHTML = `<div class="encounter-cue-ring"></div><div class="encounter-cue-mark">‼️</div>`;
+  const logEl = document.getElementById("dungeonLog");
+  // ‼️はテキストボックス(#dungeonLog)の位置に出す(ユーザー指示、2026-07-25のスクショによる位置指定)。
+  // 合図の間はテキストボックス自体を非表示にし、空いたその場所へ‼️を重ねる。非表示がdisplayではなく
+  // visibilityなのはレイアウト(位置測定の基準)を保つため。オート帰還中は既にstartAutoRetreat()が
+  // 同じ方式で非表示にしているが、visibilityでもgetBoundingClientRectは正しい位置を返すので両立する
+  const logRect = logEl.getBoundingClientRect();
+  el.innerHTML = `<div class="encounter-cue-anchor"><div class="encounter-cue-ring"></div><div class="encounter-cue-mark">‼️</div></div>`;
+  if (logRect.height > 0) {
+    const anchor = el.firstElementChild;
+    anchor.style.top = `${logRect.top}px`;
+    anchor.style.height = `${logRect.height}px`;
+  }
+  logEl.style.visibility = "hidden";
   el.style.display = "flex";
   // 合図〜戦闘開始までの一拍の間だけ、画面全体のタップをこのオーバーレイで遮断する(平常時のCSSは
   // pointer-events:none)。オート帰還ルートではstopAutoRetreat()が進む/里に戻るボタンを再有効化して
@@ -778,6 +791,7 @@ function playEncounterCueThenStartBattle() {
   el.style.pointerEvents = "auto";
   setTimeout(() => {
     dungeonMoveTransitionActive = false; // 進む経由の場合、明転後もボタン無効のまま維持していたフラグをここで解除(戦闘後のrenderDungeon()の自己修復でボタンも復活する)
+    logEl.style.visibility = ""; // 戦闘開始と同時にテキストボックスを戻す(戦闘画面側は#battleLogが最初から出ている)
     startBattle(p.enemies, p.pathDef, p.encounterText);
     if (p.after) p.after();
     el.style.display = "none";
@@ -875,6 +889,10 @@ function startAutoRetreat() {
   autoRetreatStartFloor = currentFloor;
   document.getElementById("advanceBtn").disabled = true;
   document.getElementById("retreatBtn").disabled = true;
+  // オート帰還中はテキストボックスを消して景色だけにする(ユーザー指示、2026-07-25。財宝取得は
+  // ポップアップ(+○○G)だけで伝わるためログ表示は不要になった)。visibilityなのはレイアウトを保ち、
+  // 遭遇合図(playEncounterCueThenStartBattle)の位置測定を狂わせないため
+  document.getElementById("dungeonLog").style.visibility = "hidden";
   startAutoRetreatZoomAnimation();
   runAutoRetreatTick();
 }
@@ -2396,7 +2414,8 @@ function rollEncounter(pathBias) {
     state.gold += g;
     advGoldEarned += g; // リザルト画面の「収穫」にも反映されるよう、戦闘報酬と同じ集計に加算する
     saveState();
-    dlog(`${g}Gの財宝を見つけた！`);
+    // 財宝取得はテキストボックスに書かず、ポップアップの「+○○G」表示だけで完結させる
+    // (ユーザー指示、2026-07-25。光る道の宝箱演出も元々+○○G表示を持っている)
     renderDungeon();
     // 「何かが光る道」で見つけた財宝だけは特別な宝箱演出(SFXも演出側が鳴らす)。それ以外は従来のポップアップ
     if (!retreating && pathBias === "hikaru") {
@@ -2709,8 +2728,12 @@ function showTreasurePopup(amount, extraImageSrc) {
   const popup = document.getElementById("treasurePopup");
   const img = document.getElementById("treasurePopupImg");
   const extraImg = document.getElementById("treasurePopupExtraImg");
+  const amountEl = document.getElementById("treasurePopupAmount");
   img.style.display = amount > 0 ? "" : "none";
   if (amount > 0) img.src = `assets/gold/${treasureTierImage(amount)}.png`;
+  // 取得額はテキストボックスに書かない方針(ユーザー指示、2026-07-25)のため、アイコンの上に黄色文字で見せる
+  amountEl.style.display = amount > 0 ? "" : "none";
+  if (amount > 0) amountEl.textContent = `+${amount}G`;
   if (extraImageSrc) {
     extraImg.src = extraImageSrc;
     extraImg.style.display = "";
@@ -2718,7 +2741,7 @@ function showTreasurePopup(amount, extraImageSrc) {
     extraImg.style.display = "none";
   }
   popup.style.display = "flex";
-  [img, extraImg].forEach((el) => {
+  [img, extraImg, amountEl].forEach((el) => {
     if (el.style.display === "none") return;
     el.style.animation = "none";
     void el.offsetWidth; // 再生中に連続で発見した時もアニメーションを最初から再生し直すためのリフロー強制

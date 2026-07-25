@@ -272,6 +272,12 @@
      pointer-events:noneが平常時の値で、合図中だけJS側がinlineでautoに切り替えてタップを遮断する */
   #encounterCue {
     position: fixed; inset: 0; z-index: 35; pointer-events: none;
+  }
+  /* ‼️と赤い輪を置く帯。JS側が#dungeonLog(テキストボックス)の実際の位置(getBoundingClientRect)を
+     top/heightにインラインで上書きし、非表示にしたテキストボックスの場所へ重なるようにする
+     (ユーザー指示、2026-07-25のスクショによる位置指定。下記のtop/heightはフォールバック値) */
+  .encounter-cue-anchor {
+    position: absolute; left: 0; right: 0; top: 28%; height: 120px;
     display: flex; align-items: center; justify-content: center;
   }
   .encounter-cue-ring {

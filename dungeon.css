@@ -445,6 +445,22 @@
     78% { opacity: 1; transform: scale(1); }
     100% { opacity: 0; transform: scale(1.05); }
   }
+  /* 取得額(+25G)を金貨アイコンの上に重ねる黄色文字(ユーザー指示、2026-07-25: 財宝取得はログに
+     書かず、このポップアップだけで完結させる)。色・縁取りは光る道の.hikaru-amountと同系。
+     専用keyframesなのはtreasurePopのtransform:scaleが中央寄せのtranslateX(-50%)を潰してしまうため */
+  #treasurePopupAmount {
+    position: absolute; left: 50%; bottom: 100%; margin-bottom: 6px; transform: translateX(-50%);
+    font-size: 1.5rem; font-weight: 800; white-space: nowrap; color: #ffd76a;
+    text-shadow: 0 2px 0 #7a5200, 0 0 14px rgba(255,200,80,0.55), 0 4px 14px rgba(0,0,0,0.85);
+    animation: treasureAmountPop 1.8s ease forwards;
+  }
+  @keyframes treasureAmountPop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.7); }
+    12% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1); }
+    78% { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1.05); }
+  }
   /* 神隠しの道を抜けた時だけの特別演出(playKamikakushiEffect、dungeon.js)。画面全体を
      紫〜白の幻想的な光でフラッシュさせ、光の粒が画面各所からふわっと浮かび上がって消える。
      通常の財宝発見(.treasure-popup)より一段大掛かりな一度きりの演出という位置づけ */
