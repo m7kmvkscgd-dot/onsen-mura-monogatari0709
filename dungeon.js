@@ -765,7 +765,7 @@ function playAutoRetreatCutFade(afterBlack, onFullyDone) {
 // 保留〜開始までの一拍はstartBattle()内のsaveState(inBattle)より前になるため、理屈の上では
 // 「‼️を見て1秒以内にリロード」で遭遇を消せるが、スマホのリロード操作はこの窓より遅いため実害なしと判断
 let pendingEncounterBattle = null; // {enemies, pathDef, encounterText, after}
-const ENCOUNTER_CUE_HOLD_MS = 1000; // ‼️+SEが出てから戦闘画面へ切り替わるまでの「一拍」(‼️自体の演出0.7秒+余白0.3秒)
+const ENCOUNTER_CUE_HOLD_MS = 1300; // ‼️+SEが出てから戦闘画面へ切り替わるまでの「一拍」(‼️自体の演出1秒+余白0.3秒。ユーザー指示2026-07-26で+0.3秒)
 function queueEncounterBattle(enemies, pathDef, encounterText, after) {
   pendingEncounterBattle = { enemies, pathDef, encounterText, after: after || null };
   if (!dungeonMoveTransitionActive && !autoRetreatActive) playEncounterCueThenStartBattle();
