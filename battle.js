@@ -57,6 +57,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
     c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする
     c.nextSkillFreeMp = false; // 残心: キル直後の次技無償化フラグも毎戦闘リセットする
+    c.dosayUsed = false; // 怒声: 戦闘中一度きりの使用制限も毎戦闘リセットする
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -786,6 +787,18 @@ function runCritFollowupAttack(actor, onDone) {
 // スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
 function runTreeSkill(actor, skill) {
   const action = skill.action;
+  // 怒声など: HP割合条件/戦闘中一度きりの使用制限を持つ技は、MPを一切消費させずにその場で弾く
+  // (MP減算はこの関数のもっと後ろで行われるため、ここで早期returnすれば無駄打ちにならない)
+  if (action.hpBelowPct != null && actor.hp / actor.maxHp > action.hpBelowPct) {
+    blog(`${actor.label}はまだ十分に消耗していない！`);
+    renderActionButtons(actor);
+    return;
+  }
+  if (action.onceFlag && actor[action.onceFlag]) {
+    blog(`${actor.label}は${skill.name}を既に使い切っている！`);
+    renderActionButtons(actor);
+    return;
+  }
   // 八幡神の御守: 戦闘中最初に使う技のMP消費が0になる(消費前にコスト分を先に補充しておき、
   // useTreeSkill内の通常の減算と相殺させることで実質無償化する)
   const cost = skillMpCost(actor, skill.mp);
@@ -936,6 +949,7 @@ function runTreeSkill(actor, skill) {
   // ダメージ系
   if (action.aoe) {
     playSfx(attackSfxFor(actor.classId));
+    if (action.onceFlag) actor[action.onceFlag] = true; // 怒声など: 戦闘中一度きりのスキルはここで使用済みにする
     const targetsList = targetableEnemies();
     const result = useTreeSkill(actor, targetsList, skill, blog);
     const shotDownTargets = [];

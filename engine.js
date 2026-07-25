@@ -412,6 +412,8 @@ function useCampRest(character) {
 
 // 一時的なステータス修正(バフ/デバフ)を付与する。同じstatへの既存の修正は上書き(重ね掛けで際限なく増えないように)
 function applyStatMod(entity, stat, mult, turns) {
+  // 黒曜など: 特定ステータスへのデバフを完全に無効化する(誰が与えたデバフでも一律で弾く)
+  if (mult < 1 && entity.passives && entity.passives.debuffImmuneStats && entity.passives.debuffImmuneStats.includes(stat)) return;
   entity.statMods = entity.statMods || [];
   const existing = entity.statMods.find((m) => m.stat === stat);
   if (existing) { existing.mult = mult; existing.turns = turns; }
@@ -842,6 +844,7 @@ function initPassives() {
     evasionVsAilmentAdd: [], // [{ailment, add}] 特定の状態異常を負っている敵から攻撃される時、回避率がこの値だけ上がる(血痕追跡など)
     noCostSummonShikigami: false, // 式神召喚を使ってもターンを消費しない(神速召喚)。summonShikigami自体のaction.noCostは
     // 誰でも無条件になってしまうため付けず、battle.js側でこのフラグを見て個別に分岐する
+    debuffImmuneStats: [], // ["atk"|"def"|"spd"] このステータスへのデバフを完全に無効化する(applyStatMod側で弾く。黒曜など)
   };
 }
 
@@ -1030,6 +1033,7 @@ function applySkillChoice(character, skill, level) {
     if (add.bigAttackPendingDmgBonus) p.bigAttackPendingDmgBonus += add.bigAttackPendingDmgBonus;
     if (add.evasionVsAilmentAdd) p.evasionVsAilmentAdd.push(add.evasionVsAilmentAdd);
     if (add.noCostSummonShikigami) p.noCostSummonShikigami = true;
+    if (add.debuffImmuneStats) add.debuffImmuneStats.forEach((s) => { if (!p.debuffImmuneStats.includes(s)) p.debuffImmuneStats.push(s); });
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -1168,6 +1172,8 @@ function applyTreeInflict(t, inflict, actor) {
     if (inf.type === "defDown") applyStatMod(t, "def", 1 - (inf.value || 0.2), inf.turns || 3);
     if (inf.type === "spdDown") applyStatMod(t, "spd", 1 - (inf.value || 0.2), inf.turns || 3);
     if (inf.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (inf.value || 0.1), inf.turns || 3);
+    // 水月(改)など: この攻撃を受けた敵1体だけを、一定ターンの間ずっとactor(術者)に狙わせる
+    if (inf.type === "forceTarget") { t.forcedTargetId = actor.id; t.forcedTargetTurns = inf.turns || 2; }
     // 迅雷突き/鎧砕きなど: 使うたびに防御デバフが蓄積する(maxStacksで頭打ち)
     if (inf.type === "defDownStack") applyStackingStatMod(t, "spearDefDownStack", "def", -(inf.value || 0.2), inf.maxStacks || 2, inf.turns || 3);
   });
@@ -1951,8 +1957,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   } else if (lethal && target.passives && target.passives.onceGuardType === "surviveAtHp1" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
     target.hp = 1;
+    // 覚悟: HP1でこらえるのに加え、状態異常も全て解除する(浄化などと同じ範囲、statMods=デバフには触れない)
+    target.poison = 0; target.burnTurns = 0; target.bleed = 0; target.stunTurns = 0; target.silenceTurns = 0;
     log(dmgLine);
-    log(`${target.label}は致命傷を気迫でこらえた！`);
+    log(`${target.label}は覚悟を決めて致命傷をこらえた！`);
   } else {
     target.hp = Math.max(0, target.hp - dmg);
     log(dmgLine);
@@ -2204,6 +2212,16 @@ function poolExcludingShikigamiProtected(alive) {
   const filtered = alive.filter((t) => !(t.passives && t.passives.shikigamiProtect && fieldParty.some((c) => c.isShikigami && c.ownerId === t.id && c.status === "active")));
   return filtered.length ? filtered : alive;
 }
+// 水月(改)など: この敵が一定ターンの間だけ特定の術者に狙いを固定されている場合、その相手を返す。
+// findGuardTarget(挑発/かばう)より優先度が高い。呼び出すたびに1ターン分消費するので、単体攻撃/大技どちらでも
+// 「この敵が1回行動した」タイミングで自然に減っていく(対象が既に戦闘不能などでいなければ null を返し通常選択に戻す)
+function resolveForcedTarget(enemy, alive) {
+  if (!enemy.forcedTargetId || !(enemy.forcedTargetTurns > 0)) return null;
+  const id = enemy.forcedTargetId;
+  enemy.forcedTargetTurns--;
+  if (enemy.forcedTargetTurns <= 0) enemy.forcedTargetId = null;
+  return alive.find((t) => t.id === id) || null;
+}
 // enemy一体がtargets(生存中の味方)を攻撃する。かばう中の仲間がいれば、タンクとして95%の確率で身代わりになって
 // 大幅減衰した上で構えを消費する(誰もかばっていない、または5%で守り切れなければランダムに1人を攻撃する)
 // 回避に成功した瞬間、evadeCritCounter持ちなら「次の自分の攻撃は確定会心」フラグを立て(反射神経)、
@@ -2252,7 +2270,7 @@ function handleGuardSynergyPassives(target, enemy, log) {
 function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
-  const guardian = findGuardTarget(alive);
+  const guardian = resolveForcedTarget(enemy, alive) || findGuardTarget(alive);
   const pickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
   const target = guardian || pickPool[Math.floor(Math.random() * pickPool.length)];
   // 戦闘中1回だけ確実に攻撃を回避する受動(分身など)。dodgeChance(確率式)とは別枠の確定回避
@@ -2399,7 +2417,7 @@ function enemyBigAttack(enemy, targets, log) {
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。
   // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
   // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)
-  const guardian = profile.ignoreGuardian ? null : findGuardTarget(alive);
+  const guardian = resolveForcedTarget(enemy, alive) || (profile.ignoreGuardian ? null : findGuardTarget(alive));
   const bigPickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
   const singleTarget = guardian || bigPickPool[Math.floor(Math.random() * bigPickPool.length)];
   const hitTargets = profile.aoe ? alive : [singleTarget];

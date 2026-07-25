@@ -801,8 +801,9 @@ const SKILL_TREES = {
     },
     5: {
       left: { name: "疾風斬り", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1〜3を与える。", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, valueMin: 1, valueMax: 3, condition: "targetSlower" } } },
-      // 新規スキル(旧・黒曜を置き換え)
-      right: { name: "水月", desc: "威力50%で攻撃し、敵のステータス強化を全て解除する。", mp: 1, action: { kind: "damage", mult: 0.5, dispelTargetBuffs: true } },
+      // desc変更(スキルエディタの差分反映): 敵バフ解除から、命中した敵を2ターン自分に引きつける効果に全面差し替え。
+      // 新設のforceTarget(inflict)機構で実装。挑発/かばうより優先度が高く、対象がいなくなれば通常選択に戻る
+      right: { name: "水月", desc: "威力90%で攻撃し、これを受けた敵は2ターンの間、自分を狙うようになる。", mp: 1, action: { kind: "damage", mult: 0.9, inflict: { type: "forceTarget", chance: 1, turns: 2 } } },
     },
     6: {
       // 鬼神化は過去に無断実装してユーザー指示でrevertした経緯があるため、今回も仕組みは実装せずテキストのみ反映(2026-07-25引き継ぎ参照、要確認)
@@ -813,23 +814,24 @@ const SKILL_TREES = {
       right: { name: "明鏡止水", desc: "5ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 5, noCost: true } },
     },
     7: {
-      // 新規スキル(旧・闘志の名前枠を置き換え、闘志自体はLv3左へ移動)
-      left: { name: "覇気", desc: "会心が発動するたびに、会心率が＋3%。", mp: 0, passive: { onCritSelfStackCritRate: 0.03 } },
-      // 黒曜はLv5右から移動、効果を「流血ダメージ1/3」→「流血ダメージ無効」に強化
-      right: { name: "黒曜", desc: "出血ダメージを受けなくなる", mp: 0, passive: { dotDamageMult: 0 } },
+      // 連斬はLv8左から移動(内容はそのまま、覇気と入れ替え)
+      left: { name: "連斬", desc: "会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.25 } },
+      // 新規スキル(燕返しの抜けた枠、実質は旧Lv9右にあった「覚悟」の再登場)。onceGuardType:"surviveAtHp1"は
+      // 元々あった仕組みだが、これまでどのスキルからも参照されていなかった(未使用の汎用フック)
+      right: { name: "覚悟", desc: "戦闘中に1度だけ、瀕死になる攻撃を受けた時、状態異常を全て回復し、HP1で持ち堪える。", mp: 0, passive: { onceGuardType: "surviveAtHp1" } },
     },
     8: {
-      // 連斬はLv3左から移動(内容はそのまま)
-      left: { name: "連斬", desc: "会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.25 } },
-      // desc変更(スキルエディタの差分反映、要確認): 新descは「反撃時会心率+20%」のみで元の発生率25%/威力110%への
-      // 言及が消えているが、それらの数値自体を変更する指示は無かったため、既存passiveはそのまま維持し
-      // counterCritRateAddだけ追加した(descが仕様の全文なのか、単なる追記のつもりだったのか要確認)
-      right: { name: "燕返し", desc: "反撃時会心率+20%", mp: 0, passive: { counterChance: 0.25, counterMult: 1.1, counterCritRateAdd: 0.2 } },
+      // 覇気はLv7左から移動(内容はそのまま、連斬と入れ替え)
+      left: { name: "覇気", desc: "会心が発動するたびに、会心率が＋3%。", mp: 0, passive: { onCritSelfStackCritRate: 0.03 } },
+      // desc変更(スキルエディタの差分反映): 燕返し(反撃会心率up)の枠に、黒曜(Lv7右から移動)を効果拡張して
+      // 差し替えた。天衣無縫(Lv10右、反撃ダメージ+50%)が前提としていたcounterChance系の反撃発生源が
+      // ツリーから無くなった形になるため、天衣無縫は現状どのビルドでも実質発動しない状態。要確認
+      right: { name: "黒曜", desc: "出血ダメージと、攻撃力低下を受けなくなる", mp: 0, passive: { dotDamageMult: 0, debuffImmuneStats: ["atk"] } },
     },
     9: {
       left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%\n(重複しない)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
-      // 新規スキル(旧・覚悟を置き換え)
-      right: { name: "残心", desc: "敵を倒すと次のターンに使うスキルのmpを0にする", mp: 3, passive: { onKillNextSkillFree: true } },
+      // mp変更(スキルエディタの差分反映): 3→0
+      right: { name: "残心", desc: "敵を倒すと次のターンに使うスキルのmpを0にする", mp: 0, passive: { onKillNextSkillFree: true } },
     },
     10: {
       // 旧・神速抜刀(320%ダメージ)から全面刷新
@@ -895,9 +897,13 @@ const SKILL_TREES = {
       right: { name: "守り槍", desc: "敵一体に攻撃をしつつ同時に庇うを発動する", mp: 2, action: { kind: "damage", mult: 1.0, alsoGuard: true } },
     },
     5: {
-      // 剛槍はLv8左の旧・千人力と同内容、名前だけ変更して移動(鎧砕きと入れ替え)
-      left: { name: "剛槍", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
-      right: { name: "守護陣", desc: "4ターンの間、味方全体の防御力+20%", mp: 3, action: { kind: "buffPartyNoCost", stats: [{ stat: "def", mult: 1.2 }], turns: 4 } },
+      // desc/mp変更(スキルエディタの差分反映): 蜻蛉切りがLv7左から移動してきた(剛槍とはLv7左へ入れ替え。
+      // 明示指定は無かったが、蜻蛉切りが抜けた後のLv7左の行き先が示されていなかったため、剛槍をそちらへ
+      // 移すのが最も自然と判断した。要確認)。mp2→1
+      left: { name: "蜻蛉切り", desc: "飛行の敵に対する命中率ペナルティを受けずに攻撃する。打ち落としも発生する。", mp: 1, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
+      // 新規スキル(旧・守護陣を置き換え)。戦闘中1回・HP25%以下限定の緊急脱出技。onceFlag/hpBelowPctは
+      // 今回新設した汎用フック(runTreeSkill側でMP消費前にチェックする)
+      right: { name: "怒声", desc: "戦闘中に一度だけ、HP25%以下の時にだけ使える。敵全員をスタンさせる。", mp: 2, action: { kind: "damage", aoe: true, mult: 0, hitChance: 1, inflict: { type: "stun", chance: 1, turns: 1 }, hpBelowPct: 0.25, onceFlag: "dosayUsed" } },
     },
     6: {
       // 阿修羅突きはLv7左から移動(内容はそのまま)
@@ -905,9 +911,8 @@ const SKILL_TREES = {
       right: { name: "迎撃", desc: "被弾時、30%の確率で反撃する", mp: 0, passive: { counterChance: 0.3 } },
     },
     7: {
-      // 阿修羅突きの抜けた枠。「城壁の意志」に改名する指示だけ受け取り、効果文の更新前にデータが失われたため、
-      // 元々ここにあった蜻蛉切りの内容(名前以外)を暫定的に残している。要確認(2026-07-25引き継ぎ参照)
-      left: { name: "城壁の意志", desc: "飛行の敵に命中ペナルティなしで100%ダメージ。撃ち落とし判定もある", mp: 2, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
+      // 蜻蛉切りがLv5左へ移動したため、剛槍(旧Lv5左)をこちらへ入れ替えた(要確認、詳細はLv5左のコメント参照)
+      left: { name: "剛槍", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
       right: { name: "城壁の意志", desc: "かばうが成功するとMPが1回復する", mp: 0, passive: { guardMpRefund: true } },
     },
     8: {
