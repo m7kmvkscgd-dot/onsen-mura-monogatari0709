@@ -1409,6 +1409,13 @@ function pickCampNightMessage() {
 // 実際のコストは選んだ式神の種類ごとにここで個別に持たせる=「召喚MPは式神によって変わる」という仕様のため)。
 // hp/atk/spdの各Fromは術者(陰陽師本人)の現在ステータスを基準にした相対値として設計してある。
 // ai/basicHits/special/onSummon/turnRegenPctの意味はengine.jsのresolveShikigamiAction参照
+// 同レベル帯の指定職業(生まれ持った基礎atk×レベル成長率、engine.jsのlevelUpと同じ式)の攻撃力を返す。
+// 式神の攻撃力は陰陽師本人のmagを直接参照すると魔力が高すぎて破綻する(ユーザー指摘)ため、
+// 全タイプこの「他職業の同レベル帯攻撃力を基準にした相対値」で統一してある(紙人形だけは例外的に
+// 陰陽師本人のatkを直接使う、これは指定通り)
+function sameLevelClassAtk(classId, level) {
+  return Math.round(CLASSES[classId].atk * (1 + (level - 1) * 0.075));
+}
 const SHIKIGAMI_DEFS = {
   kamiNingyo: {
     name: "紙人形", emoji: "📜", iconImg: "assets/icons/shikigami/kamiNingyo.png", unlockLevel: null, mp: 2,
@@ -1420,21 +1427,21 @@ const SHIKIGAMI_DEFS = {
   youko: {
     name: "妖狐", emoji: "🦊", iconImg: "assets/icons/shikigami/youko.png", unlockLevel: 2, mp: 3,
     hpFrom: (owner) => owner.maxHp,
-    atkFrom: (owner) => owner.mag,
+    atkFrom: (owner) => sameLevelClassAtk("hunter", owner.level) - 2,
     spdFrom: (owner) => Math.round(CLASSES.ninja.spd * (1 + owner.level * 0.05)),
     special: { cooldown: 4, kind: "singleAttack", mult: 1.0, inflict: { type: "burn", turns: 2 }, name: "狐火" },
   },
   hakuzuru: {
     name: "白鶴", emoji: "🕊️", iconImg: "assets/icons/shikigami/hakuzuru.png", unlockLevel: 4, mp: 5, isFlying: true,
     hpFrom: (owner) => owner.maxHp,
-    atkFrom: (owner) => Math.round(owner.mag * 0.9),
+    atkFrom: (owner) => sameLevelClassAtk("hunter", owner.level) - 3,
     spdFrom: (owner) => Math.round(owner.spd * 0.85),
     special: { cooldown: 4, kind: "healLowestAllyIfBelow", healPct: 0.4, allyHpBelowPct: 0.5, name: "癒しの舞" },
   },
   komainu: {
     name: "狛犬", emoji: "🐕", iconImg: "assets/icons/shikigami/komainu.png", unlockLevel: 5, mp: 6,
     hpFrom: (owner) => owner.maxHp + 10,
-    atkFrom: (owner) => owner.atk,
+    atkFrom: (owner) => sameLevelClassAtk("hunter", owner.level) - 1,
     spdFrom: (owner) => Math.round(owner.spd * 1.15),
     basicHits: 2, // 通常攻撃がランダムな敵2体への連撃になる(1体に2連続の場合もある)
     special: { cooldown: 4, kind: "shieldLowestAllyIfBelow", barrierPct: 0.5, allyHpBelowPct: 0.3, name: "護りの結界" },
@@ -1442,7 +1449,7 @@ const SHIKIGAMI_DEFS = {
   kirin: {
     name: "麒麟", emoji: "🦄", iconImg: "assets/icons/shikigami/kirin.png", unlockLevel: 7, mp: 7,
     hpFrom: (owner) => owner.maxHp + 10,
-    atkFrom: (owner) => Math.round(CLASSES.samurai.atk * (1 + (owner.level - 1) * 0.075) * 0.9),
+    atkFrom: (owner) => sameLevelClassAtk("samurai", owner.level) - 1,
     spdFrom: (owner) => Math.round(CLASSES.hunter.spd * (1 + owner.level * 0.05)),
     onSummon: { kind: "aoeAttack", mult: 0.3, stunChance: 0.35, name: "麒麟の一喝" },
     special: { cooldown: 5, kind: "stunSingleAttack", mult: 1.0, name: "破魔の蹄" },
@@ -1450,7 +1457,7 @@ const SHIKIGAMI_DEFS = {
   ryujin: {
     name: "龍神", emoji: "🐉", iconImg: "assets/icons/shikigami/ryujin.png", unlockLevel: 9, mp: 9, isFlying: true,
     hpFrom: (owner) => owner.maxHp + 20,
-    atkFrom: (owner) => Math.round(SHIKIGAMI_DEFS.kirin.atkFrom(owner) * 0.9),
+    atkFrom: (owner) => sameLevelClassAtk("spearman", owner.level),
     spdFrom: (owner) => owner.spd,
     onSummon: { kind: "partySpdBuff", mult: 0.3, turns: 2, name: "龍神の加護" },
     special: { cooldown: 4, kind: "aoeSilence", mult: 0.3, turns: 1, name: "龍の咆哮" },
