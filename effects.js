@@ -125,6 +125,20 @@ function playAttackVfx(targetId, actor, kind, startFrame) {
     img.src = `${cfg.prefix}${frame}.png`;
   }, ATTACK_VFX_FRAME_MS);
 }
+// 式神召喚の演出。新しく出た式神のカードに金色の魔法陣画像(assets/vfx/shikigami_summon.png)を
+// 一度だけ大きく表示する(CSSのshikigamiSummonBurstアニメーションで拡大縮小+回転+フェード、
+// 使い切りでアニメーション完了後に自分で消える。カード自体はrenderPartyBar()で毎回作り直されるため、
+// slash-vfxと同じく「今表示されているカードに追加するだけ」の方式にしてある)
+const SHIKIGAMI_SUMMON_VFX_MS = 900;
+function playShikigamiSummonVfx(targetId) {
+  const el = findVisibleCard(targetId);
+  if (!el) return;
+  const img = document.createElement("img");
+  img.className = "shikigami-summon-vfx";
+  img.src = "assets/vfx/shikigami_summon.png";
+  el.appendChild(img);
+  setTimeout(() => img.remove(), SHIKIGAMI_SUMMON_VFX_MS);
+}
 // かばう反撃(会心の返し)の演出。ダメージ計算自体はengine.js側で敵の攻撃と同時に処理されているが、
 // 見た目上は「敵の攻撃を受ける→一呼吸置いてから槍士が実際に反撃する」という2段構えに分けたいという
 // ユーザー指示のため、呼び出し元(battle.js)で敵の攻撃演出を出した直後にこの関数を呼び、

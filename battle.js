@@ -1129,11 +1129,11 @@ function renderShikigamiTypePicker(actor, skill) {
       const result = useTreeSkill(actor, typeKey, skill, blog);
       renderBattleScreen();
       if (result && result.failed) { playSfx("select"); renderActionButtons(actor); return; }
-      // 召喚演出: 陰陽師の呪符技と同じ紫の術式エフェクト(impact_onmyoji_)を新しく出た式神のカードに重ねる+
-      // 鷹を呼ぶと同じ「仲間を呼び出す」SEを流用する(専用素材が無いため、既存の中から一番近いものを当てる)
+      // 召喚演出: 専用の金色の魔法陣画像(assets/vfx/shikigami_summon.png、ComfyUI生成)を新しく出た
+      // 式神のカードに重ねる+鷹を呼ぶと同じ「仲間を呼び出す」SEを流用する
       if (result && result.shikigami) {
         playSfx("hawk_summon");
-        playAttackVfx(result.shikigami.id, actor, "skill");
+        playShikigamiSummonVfx(result.shikigami.id);
       } else {
         playSfx("select");
       }
