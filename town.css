@@ -2,8 +2,13 @@
   /* 温泉の湯守りキャラクター。ヒーロー画像(全画面固定背景)の右下に重ねて表示し、入室のたびに
      ランダムな一言を吹き出しで喋る(renderOnsen参照)。.hero > *がposition:relativeを強制するため、
      絶対配置で右下に固定したいこの要素だけpositionを明示的に上書きする */
+  /* 【2026-07-26修正】以前のbottom: calc(34vh + 67px)は「ヒーロー(100dvh)の下端から34vh上」で、
+     コンテンツパネル(.body-padのmargin-top:34vh=画面上から34vh)の上端よりずっと下になり、
+     店員の下半身がパネルに隠れていた(CSS/JSのno-cache化で古いキャッシュ表示が剥がれて表面化)。
+     パネルの開始位置と同じ「上から34vh」を基準に、translateY(-100%)で足元をパネル上端に乗せる
+     (+8pxはわずかに重ねて接地感を出すぶん)。3体(湯守り・女将・売店)共通 */
   .onsen-keeper-wrap {
-    position: absolute !important; right: calc(4% + 40px); bottom: calc(34vh + 67px); z-index: 2;
+    position: absolute !important; right: calc(4% + 40px); top: calc(34vh + 8px); bottom: auto; transform: translateY(-100%); z-index: 2;
     display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
     pointer-events: none;
   }
