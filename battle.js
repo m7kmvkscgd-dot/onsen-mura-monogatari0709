@@ -479,6 +479,10 @@ function processNext() {
       if (result.regen > 0) popupOn(actor.id, `+${result.regen}`, "heal");
       // ダメージ系(attack/multiAttack)だけがtarget.instanceId/dmgを持つ。heal/shield/guard/noneはここでは扱わない
       const hits = result.kind === "multiAttack" ? result.hits : (result.kind === "attack" ? [result] : []);
+      // 式神にはclassIdが無いため、actor.classIdをそのまま渡すとattackSfxFor/CLASS_ATTACK_VFXの
+      // 参照先が見つからず攻撃音・斬撃VFXが一切出ない不具合があった。鷹を呼ぶの追撃(playHawkAttackVfx)
+      // と同じ手法で、侍の通常攻撃と全く同じ音・エフェクトを明示的に流用する(ユーザー指示2026-07-25)
+      if (result.kind === "attack" || result.kind === "multiAttack") playSfx(attackSfxFor("samurai"));
       hits.forEach((h) => {
         if (h.hit === false) return;
         popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(false));
@@ -490,7 +494,7 @@ function processNext() {
       if (result.kind === "shield") { popupOn(result.target.id, `結界+${result.barrierHp}`, "heal"); playSfx("select"); }
       if (result.kind === "guard") playSfx("guard");
       renderBattleScreen();
-      hits.forEach((h) => { if (h.hit !== false) playAttackVfx(h.target.instanceId, actor, "normal"); });
+      hits.forEach((h) => { if (h.hit !== false) playAttackVfx(h.target.instanceId, { classId: "samurai" }, "normal"); });
       const newlyCriticalAction = handleFieldDeaths();
       renderBattleScreen();
       const advanceTurn = () => { battle.orderIndex++; processNext(); };
@@ -1132,9 +1136,10 @@ function renderShikigamiTypePicker(actor, skill) {
       renderBattleScreen();
       if (result && result.failed) { playSfx("select"); renderActionButtons(actor); return; }
       // 召喚演出: 陰陽師の呪符技と同じ紫の術式エフェクト(impact_onmyoji_)を新しく出た式神のカードに重ねる+
-      // 鷹を呼ぶと同じ「仲間を呼び出す」SEを流用する(専用素材が無いため、既存の中から一番近いものを当てる)
+      // 式神召喚専用SE(ユーザー提供音源、2026-07-25)。以前は鷹を呼ぶと同じSEを流用していたが
+      // 「鷹の声はいらない」との指示で専用素材に差し替えた
       if (result && result.shikigami) {
-        playSfx("hawk_summon");
+        playSfx("shikigami_summon");
         playAttackVfx(result.shikigami.id, actor, "skill");
       } else {
         playSfx("select");
