@@ -667,6 +667,8 @@ function renderResultScreen(onContinue, isDefeat) {
   if (participants.length === 0) {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">今回は経験値を得られなかった。</p>';
   }
+  // 1画面完結(スクロール不要)のため、道場の分け前などで参加者が5人以上に膨らむ時は2列で畳む
+  list.classList.toggle("result-xp-grid-2", participants.length > 4);
   const animQueue = []; // 勝利時のバー演出({row, segs})。画面が出てから順次再生する
   participants.forEach((c) => {
     const c2 = CLASSES[c.classId];

@@ -111,6 +111,19 @@
     100% { opacity: 1; transform: rotate(-12deg) scale(1); }
   }
 
+  /* ============ リザルトは1画面完結(スクロール不要、ユーザー指示2026-07-26) ============
+     上部の景色はヘッダー下に少し見える程度まで詰め、下部ナビ用の共通余白(padding-bottomの+80px)も
+     外し、経験値行をコンパクト化。参加者が5人以上(道場の分け前で最大8人)の時は2列グリッドで畳む */
+  #screen-result .body-pad { margin-top: 64px; padding-bottom: 1rem; }
+  #resultGold { margin: 0.2rem 0 0; font-size: 1.3rem; }
+  #resultXpHeading { margin: 0.6rem 0 0.45rem; font-size: 1rem; }
+  #resultQuestCard { padding: 8px 12px; margin-bottom: 0.5rem; }
+  #resultXpList { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
+  #resultXpList.result-xp-grid-2 { grid-template-columns: 1fr 1fr; }
+  #resultXpList .result-xp-row { margin-bottom: 0; padding: 8px 10px; }
+  .result-xp-portrait { width: 32px; height: 32px; } /* 上の44px指定をコンパクト版で上書き */
+  .result-xp-row strong { font-size: 0.82rem; }
+
   /* ============ 村到着シークエンス(1→0層、ui.js playHomecomingSequence) ============ */
   /* 白明転(黒の暗転と使い分ける「森を抜けた」開放感の演出)。バナー(z96)より下、他UIより上 */
   #homecomingWhite { position: fixed; inset: 0; z-index: 90; background: #fff; opacity: 0; pointer-events: none; }
