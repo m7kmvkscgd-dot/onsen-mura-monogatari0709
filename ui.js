@@ -747,8 +747,14 @@ const ICONS = {
 // 緑の位置までゆっくり追いついて消えていく。entity.__hpDisplayRatioに前回表示分を記憶しておく。
 // 回復時(前回より残量が増えた時)は、赤ゲージとは別に淡いシアンの回復用トレイルも重ねて出し、
 // 回復前の残量から緑の位置まで追いついたら非表示にする(ダメージ用の赤ゲージの挙動は変更しない)
+// 陰陽師「結界術」の数値シールド(barrierHp)は専用の別バーではなく、HPバーの中に紫の区画として
+// 統合して描く(ユーザー指示、2026-07-26)。緑=今のHP、その右に紫=結界の耐久値、が1本のバーに同居する。
+// 「HP満タン+結界」のように合計が最大HPを超える場合は、バー全体を合計値のスケールに切り替えて
+// 緑を圧縮し、はみ出した結界ぶんが必ず紫として見えるようにする(オーバーシールド式)
 function hpBarHtml(entity) {
-  const ratio = entity.maxHp > 0 ? Math.max(0, entity.hp / entity.maxHp) * 100 : 0;
+  const barrier = entity.barrierHp > 0 ? entity.barrierHp : 0;
+  const denom = Math.max(entity.maxHp, Math.max(0, entity.hp) + barrier);
+  const ratio = denom > 0 ? Math.max(0, entity.hp / denom) * 100 : 0;
   const prevRatio = entity.__hpDisplayRatio != null ? entity.__hpDisplayRatio : ratio;
   entity.__hpDisplayRatio = ratio;
   const lowClass = ratio < 30 ? " low" : "";
@@ -756,17 +762,9 @@ function hpBarHtml(entity) {
   const healTrailHtml = isHeal
     ? `<div class="hpbar-heal-trail" data-hp-heal-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div>`
     : "";
-  return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill${lowClass}" style="width:${ratio}%"></div>${healTrailHtml}</div>`;
-}
-// 陰陽師「結界術」の数値シールド(barrierHp)専用バー。HPバーの直下に重ねて表示し、
-// バリアが残っている間だけ描画する(barrierHp<=0ならui.js側の呼び出し元がそもそも呼ばない)。
-// data-hp-trailはhpBarHtmlと同じ属性名を使うことで、activateHpTrails()が汎用的に
-// このバーも一緒に拾ってアニメーションさせてくれる(専用の実装を増やさずに済む)
-function barrierBarHtml(entity) {
-  const ratio = entity.barrierMaxHp > 0 ? Math.max(0, entity.barrierHp / entity.barrierMaxHp) * 100 : 0;
-  const prevRatio = entity.__barrierDisplayRatio != null ? entity.__barrierDisplayRatio : ratio;
-  entity.__barrierDisplayRatio = ratio;
-  return `<div class="barrierbar-track"><div class="barrierbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="barrierbar-fill" style="width:${ratio}%"></div></div>`;
+  const barrierRatio = denom > 0 ? Math.min(100 - ratio, (barrier / denom) * 100) : 0;
+  const barrierHtml = barrier > 0 ? `<div class="hpbar-barrier-fill" style="left:${ratio}%;width:${barrierRatio}%"></div>` : "";
+  return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill${lowClass}" style="width:${ratio}%"></div>${barrierHtml}${healTrailHtml}</div>`;
 }
 // 描画直後の赤ゲージ/回復用シアンゲージを、記録しておいた目標値までアニメーションさせて追いつかせる。
 // CSS transitionを「別のタイミングでinline styleを書き換えて発火させる」方式は、環境によっては
@@ -879,7 +877,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
-      ${c.barrierHp > 0 ? barrierBarHtml(c) : ""}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>
