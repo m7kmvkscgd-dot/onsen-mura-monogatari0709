@@ -58,6 +58,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする
     c.nextSkillFreeMp = false; // 残心: キル直後の次技無償化フラグも毎戦闘リセットする
     c.dosayUsed = false; // 怒声: 戦闘中一度きりの使用制限も毎戦闘リセットする
+    c.__usedShikigamiTypes = new Set(); // 式神: 帰還/消滅したタイプの再召喚禁止も戦闘をまたいで持ち越さない
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -443,9 +444,12 @@ function processNext() {
       offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
     }, enemyActionDelay);
   } else if (actor.isShikigami) {
-    // 式神: プレイヤー操作不要で自動的に生存中の敵からランダムに1体を選んで通常攻撃する
+    // 式神: プレイヤー操作不要で自動的に行動する(resolveShikigamiAction参照。タイプごとに通常攻撃/連撃/
+    // 特技(狐火・回復・結界・スタン・沈黙等)/庇うを使い分ける)
     if (actor.hp <= 0 || actor.status !== "active") { battle.orderIndex++; processNext(); return; }
     battle.actingId = actor.id;
+    actor.guarding = false;
+    actor.guardProtectCount = 0;
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
     const dot = tickTurnStartEffects(actor, blog);
@@ -469,23 +473,26 @@ function processNext() {
       return;
     }
     setTimeout(() => {
-      const targets = targetableEnemies();
-      if (targets.length === 0) { battle.orderIndex++; processNext(); return; }
-      const target = targets[Math.floor(Math.random() * targets.length)];
-      const result = performAttack(actor, target, blog);
-      if (result.hit) {
-        popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-        playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
-        if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
-      } else {
-        playSfx("evade");
-      }
-      renderBattleScreen();
-      if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
-      triggerShootDownEvents(result.shotDown ? [target] : [], () => {
-        battle.orderIndex++;
-        setTimeout(processNext, 500);
+      const result = resolveShikigamiAction(actor, blog);
+      if (result.regen > 0) popupOn(actor.id, `+${result.regen}`, "heal");
+      // ダメージ系(attack/multiAttack)だけがtarget.instanceId/dmgを持つ。heal/shield/guard/noneはここでは扱わない
+      const hits = result.kind === "multiAttack" ? result.hits : (result.kind === "attack" ? [result] : []);
+      hits.forEach((h) => {
+        if (h.hit === false) return;
+        popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(false));
+        playSfx(hitTakenSfxFor(h.dmg, h.target.maxHp, h.target.isSwarm));
+        if (h.crit) playCritEffects(h.target.instanceId, actor, h.dmg);
       });
+      if (result.kind === "attack" && result.hit === false) playSfx("evade");
+      if (result.kind === "heal") { popupOn(result.target.id, `+${result.heal}`, "heal"); playSfx("heal"); }
+      if (result.kind === "shield") { popupOn(result.target.id, `結界+${result.barrierHp}`, "heal"); playSfx("select"); }
+      if (result.kind === "guard") playSfx("guard");
+      renderBattleScreen();
+      hits.forEach((h) => { if (h.hit !== false) playAttackVfx(h.target.instanceId, actor, "normal"); });
+      const newlyCriticalAction = handleFieldDeaths();
+      renderBattleScreen();
+      const advanceTurn = () => { battle.orderIndex++; processNext(); };
+      offerReserveSwapIfNeeded(newlyCriticalAction, () => setTimeout(advanceTurn, 500));
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
@@ -564,6 +571,11 @@ function handleFieldDeaths() {
       // 魂養術: 式神が力尽きた瞬間、味方全員のHPを一定割合回復する(分身には効果を紐付けていない)
       if (c.isShikigami) {
         const owner = fieldParty.find((p) => p.id === c.ownerId);
+        // 消滅したタイプはこの戦闘中もう召喚できないようにする(帰還時の記録はrecallShikigami参照)
+        if (owner && c.shikigamiType) {
+          owner.__usedShikigamiTypes = owner.__usedShikigamiTypes || new Set();
+          owner.__usedShikigamiTypes.add(c.shikigamiType);
+        }
         if (owner && owner.passives && owner.passives.onShikigamiDownPartyHealPct) {
           const pct = owner.passives.onShikigamiDownPartyHealPct;
           fieldParty.filter((p) => p.status === "active" && !p.isClone && !p.isShikigami).forEach((p) => {
@@ -860,6 +872,11 @@ function runTreeSkill(actor, skill) {
     renderTreeSkillShieldAllyPicker(actor, skill);
     return;
   }
+  // 式神召喚: 陰陽師の現在レベル+この戦闘で未使用の式神タイプから選ばせる
+  if (action.kind === "summonShikigami") {
+    renderShikigamiTypePicker(actor, skill);
+    return;
+  }
   // 憑依: 式神がいなければMPを消費させずにその場で中止する(ターゲット選択に進まない)
   if (action.kind === "dismissShikigamiDebuff") {
     if (!fieldParty.some((c) => c.isShikigami && c.ownerId === actor.id)) {
@@ -1030,10 +1047,8 @@ function runTreeSkill(actor, skill) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
-    // 神速抜刀など: ヒット/ミストに関わらずターンを消費しない単体攻撃。
-    // 式神召喚(summonShikigami)は誰にとってもaction.noCostにはしていないため、神速召喚(noCostSummonShikigami)
-    // を持っている陰陽師だけこの分岐に乗るよう個別に判定する
-    if (action.noCost || (action.kind === "summonShikigami" && actor.passives && actor.passives.noCostSummonShikigami)) {
+    // 神速抜刀など: ヒット/ミストに関わらずターンを消費しない単体攻撃
+    if (action.noCost) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
@@ -1089,6 +1104,43 @@ function renderTreeSkillShieldAllyPicker(actor, skill) {
   backBtn.textContent = "戻る";
   backBtn.onclick = () => renderActionButtons(actor);
   grid.appendChild(backBtn);
+}
+
+// 式神召喚の種類選択。陰陽師の現在レベルで解禁済み、かつこの戦闘でまだ帰還/消滅させていないタイプだけを
+// 選択肢に出す(unlockedShikigamiTypes参照)。MPが足りないタイプはグレーアウトして選べないようにする
+function renderShikigamiTypePicker(actor, skill) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  const options = unlockedShikigamiTypes(actor, actor.__usedShikigamiTypes);
+  if (!options.length) {
+    blog(`${actor.label}が今召喚できる式神がいない！`);
+    renderActionButtons(actor);
+    return;
+  }
+  options.forEach((typeKey) => {
+    const def = SHIKIGAMI_DEFS[typeKey];
+    const affordable = actor.mp >= def.mp;
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${def.emoji}${def.name}(MP${def.mp})`;
+    if (!affordable) { btn.disabled = true; btn.style.opacity = "0.5"; }
+    btn.onclick = () => {
+      playSfx("select");
+      const result = useTreeSkill(actor, typeKey, skill, blog);
+      renderBattleScreen();
+      if (result && result.failed) { renderActionButtons(actor); return; }
+      // 神速召喚: ターンを消費せず続けて別の行動を選べる
+      if (actor.passives && actor.passives.noCostSummonShikigami) { renderActionButtons(actor); return; }
+      finishPlayerAction();
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn2 = document.createElement("button");
+  backBtn2.className = "big";
+  backBtn2.textContent = "戻る";
+  backBtn2.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn2);
 }
 
 // 変化の術: カラス/ガマ/ヘビの3択を表示する。カラスだけは変身直後にすぐ行動できる

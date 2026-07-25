@@ -1063,8 +1063,8 @@ const SKILL_TREES = {
     3: {
       left: { name: "陰陽極意", desc: "全ての技のmp消費をマイナス1する。", mp: 0, passive: { mpDiscountFlat: 1 } },
       // 式神召喚はLv6右から移動(mp6→0)。「式神は回復することができない」はheal処理側にisShikigami除外を追加して対応。
-      // 「レベルに応じて召喚できる式型の種類が増える/召喚MPは式神によって変わる」という式神の複数種類システムは
-      // 具体的な種類・ステータス・MP・解禁レベルの指定が無いため今回は未実装(makeSampleShikigami=仮データのまま)。要確認
+      // 「レベルに応じて召喚できる式型の種類が増える/召喚MPは式神によって変わる」は、2026-07-25に
+      // ユーザー提供のイラスト+仕様(紙人形/妖狐/白鶴/狛犬/麒麟/龍神の6種)でSHIKIGAMI_DEFSとして実装済み
       right: { name: "式神召喚", desc: "式神を召喚して戦わせる。式神は回復することができない。レベルに応じて召喚できる式型の種類が増える。召喚MPは式神によって変わり、戦闘終了後も式神は消えない", mp: 0, action: { kind: "summonShikigami" } },
     },
     4: {
@@ -1401,6 +1401,62 @@ const CAMP_NIGHT_MESSAGES = [
 function pickCampNightMessage() {
   return pickWeightedMessage(CAMP_NIGHT_MESSAGES);
 }
+
+// 式神の種類データ(2026-07-25、ユーザー提供のイラスト+仕様をもとに実装)。
+// unlockLevel: 陰陽師本人のキャラクターレベルがこの値に達すると式神召喚の選択肢に加わる
+// (紙人形だけは式神召喚を習得した時点で最初から選べるためnull)。
+// mp: そのタイプを選んで召喚する時に陰陽師本人が消費するMP(式神召喚スキル自体のmpは0で固定、
+// 実際のコストは選んだ式神の種類ごとにここで個別に持たせる=「召喚MPは式神によって変わる」という仕様のため)。
+// hp/atk/spdの各Fromは術者(陰陽師本人)の現在ステータスを基準にした相対値として設計してある。
+// ai/basicHits/special/onSummon/turnRegenPctの意味はengine.jsのresolveShikigamiAction参照
+const SHIKIGAMI_DEFS = {
+  kamiNingyo: {
+    name: "紙人形", emoji: "📜", unlockLevel: null, mp: 2,
+    hpFrom: (owner) => Math.round(owner.maxHp * 0.75),
+    atkFrom: (owner) => owner.atk,
+    spdFrom: (owner) => Math.round(CLASSES.hunter.spd * (1 + owner.level * 0.05)),
+    ai: "guardIfAllyLow", // 味方にHP50%未満がいれば庇う(guarding=true)、いなければ通常攻撃
+  },
+  youko: {
+    name: "妖狐", emoji: "🦊", unlockLevel: 2, mp: 3,
+    hpFrom: (owner) => owner.maxHp,
+    atkFrom: (owner) => owner.mag,
+    spdFrom: (owner) => Math.round(CLASSES.ninja.spd * (1 + owner.level * 0.05)),
+    special: { cooldown: 4, kind: "singleAttack", mult: 1.0, inflict: { type: "burn", turns: 2 }, name: "狐火" },
+  },
+  hakuzuru: {
+    name: "白鶴", emoji: "🕊️", unlockLevel: 4, mp: 5, isFlying: true,
+    hpFrom: (owner) => owner.maxHp,
+    atkFrom: (owner) => Math.round(owner.mag * 0.9),
+    spdFrom: (owner) => Math.round(owner.spd * 0.85),
+    special: { cooldown: 4, kind: "healLowestAllyIfBelow", healPct: 0.4, allyHpBelowPct: 0.5, name: "癒しの舞" },
+  },
+  komainu: {
+    name: "狛犬", emoji: "🐕", unlockLevel: 5, mp: 6,
+    hpFrom: (owner) => owner.maxHp + 10,
+    atkFrom: (owner) => owner.atk,
+    spdFrom: (owner) => Math.round(owner.spd * 1.15),
+    basicHits: 2, // 通常攻撃がランダムな敵2体への連撃になる(1体に2連続の場合もある)
+    special: { cooldown: 4, kind: "shieldLowestAllyIfBelow", barrierPct: 0.5, allyHpBelowPct: 0.3, name: "護りの結界" },
+  },
+  kirin: {
+    name: "麒麟", emoji: "🦄", unlockLevel: 7, mp: 7,
+    hpFrom: (owner) => owner.maxHp + 10,
+    atkFrom: (owner) => Math.round(CLASSES.samurai.atk * (1 + (owner.level - 1) * 0.075) * 0.9),
+    spdFrom: (owner) => Math.round(CLASSES.hunter.spd * (1 + owner.level * 0.05)),
+    onSummon: { kind: "aoeAttack", mult: 0.3, stunChance: 0.35, name: "麒麟の一喝" },
+    special: { cooldown: 5, kind: "stunSingleAttack", mult: 1.0, name: "破魔の蹄" },
+  },
+  ryujin: {
+    name: "龍神", emoji: "🐉", unlockLevel: 9, mp: 9, isFlying: true,
+    hpFrom: (owner) => owner.maxHp + 20,
+    atkFrom: (owner) => Math.round(SHIKIGAMI_DEFS.kirin.atkFrom(owner) * 0.9),
+    spdFrom: (owner) => owner.spd,
+    onSummon: { kind: "partySpdBuff", mult: 0.3, turns: 2, name: "龍神の加護" },
+    special: { cooldown: 4, kind: "aoeSilence", mult: 0.3, turns: 1, name: "龍の咆哮" },
+    turnRegenPct: 0.03,
+  },
+};
 
 // 温泉に入るとランダムで1つ付与されるバフ。次の遠征中だけ効果があり、野営するか町へ戻ると消える
 // (character.onsenBuffKeyにkeyを保存する。効果の実適用はengine.js側の各所で判定している)

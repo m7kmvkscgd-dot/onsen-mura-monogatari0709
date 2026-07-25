@@ -882,43 +882,194 @@ function makeCloneFor(actor) {
     fatigue: 0,
   };
 }
-// 式神(サンプル実装): 本物のステータス/アイコンは絵が届いてから差し替える前提の仮データ。
-// 絵文字アイコン(emojiフィールド)はcharacterPortraitSrc側で早期returnして使う想定
-function makeSampleShikigami(actor) {
-  const growth = 1 + actor.level * 0.075;
-  const maxHp = Math.max(1, Math.round((14 + actor.mag * 0.5) * growth));
+// 陰陽師本人の現在レベルで召喚できる式神タイプの一覧(SHIKIGAMI_DEFSのunlockLevel<=owner.levelで絞り込み)。
+// usedTypesを渡すと、この戦闘で既に召喚→帰還/消滅させたタイプを除外する(同じ戦闘での連続召喚禁止のため)
+function unlockedShikigamiTypes(owner, usedTypes) {
+  const used = usedTypes || owner.__usedShikigamiTypes || new Set();
+  return Object.keys(SHIKIGAMI_DEFS).filter((key) => {
+    const def = SHIKIGAMI_DEFS[key];
+    if (def.unlockLevel != null && owner.level < def.unlockLevel) return false;
+    if (used.has(key)) return false;
+    return true;
+  });
+}
+// 式神を生成する。ステータスはSHIKIGAMI_DEFS[typeKey]のhpFrom/atkFrom/spdFrom(術者の現在ステータス基準)から算出。
+// 絵は届き次第、iconImgフィールドを追加してcharacterPortraitSrc側で参照させる想定(現状はemoji仮アイコンのみ)
+function makeShikigami(actor, typeKey) {
+  const def = SHIKIGAMI_DEFS[typeKey];
+  const maxHp = Math.max(1, def.hpFrom(actor));
   return {
     id: "skg" + (__shikigamiSeq++),
     isShikigami: true,
+    shikigamiType: typeKey,
     ownerId: actor.id,
-    name: "式神(仮)",
-    label: "式神(仮)",
-    emoji: "🐾",
+    name: def.name,
+    label: def.name,
+    emoji: def.emoji,
+    isFlying: !!def.isFlying,
     status: "active", fleeState: null,
     level: actor.level,
     maxHp, hp: maxHp,
     maxMp: 0, mp: 0,
-    atk: Math.max(1, Math.round((4 + actor.mag * 0.3) * growth)),
+    atk: Math.max(1, def.atkFrom(actor)),
     def: 3,
-    spd: Math.round(13 * (1 + actor.level * 0.05)),
+    spd: Math.max(1, def.spdFrom(actor)),
     mag: 0,
     passives: initPassives(),
     statMods: [], poison: 0, bleed: 0, burnTurns: 0, stunTurns: 0, silenceTurns: 0,
     fatigue: 0,
+    specialCooldown: 0, // 0=いつでも特技が使える状態。使用すると各タイプのcooldownturnsにリセットされる
   };
 }
 // 式神帰還: 戦闘中・探索中どちらからでも呼べる。MP消費0・ターン消費0で式神を消す。
 // 「帰還」スキル(L4右、onRecallMpRestore)を選んでいる場合のみ、陰陽師のMPをその分回復する
 // (以前は無条件でMP+1していたが、スキルツリーの正式な選択肢として切り出されたため取得者限定に変更)。
+// 帰還したタイプはowner.__usedShikigamiTypesに記録し、同じ戦闘中は再召喚できないようにする
+// (消滅=撃破された場合の記録はbattle.jsのhandleFieldDeaths側で行う)。
 // battle.order(その場の手番リスト)がまだこの式神を参照していても、statusを"recalled"にしてから
 // spliceすることで、同じ参照先オブジェクトのstatusチェック(processNext側)が手番を正しくスキップする
 function recallShikigami(owner) {
   const idx = fieldParty.findIndex((c) => c.isShikigami && c.ownerId === owner.id);
   if (idx === -1) return false;
-  fieldParty[idx].status = "recalled";
+  const recalled = fieldParty[idx];
+  recalled.status = "recalled";
   fieldParty.splice(idx, 1);
+  owner.__usedShikigamiTypes = owner.__usedShikigamiTypes || new Set();
+  if (recalled.shikigamiType) owner.__usedShikigamiTypes.add(recalled.shikigamiType);
   if (owner.passives && owner.passives.onRecallMpRestore) owner.mp = Math.min(owner.maxMp, owner.mp + owner.passives.onRecallMpRestore);
   return true;
+}
+// 麒麟(onSummon.kind:"aoeAttack")/龍神(onSummon.kind:"partySpdBuff")など、召喚した瞬間に自動発動する効果
+function applyShikigamiOnSummon(shiki, owner, log) {
+  const def = SHIKIGAMI_DEFS[shiki.shikigamiType];
+  if (!def || !def.onSummon) return;
+  const os = def.onSummon;
+  if (os.kind === "aoeAttack") {
+    const targets = typeof targetableEnemies === "function" ? targetableEnemies() : [];
+    targets.forEach((t) => {
+      const dmg = Math.max(1, Math.round(withVariance(shiki.atk * os.mult * mitigation(effectiveStat(t, "def"), 15), 0.15)));
+      applyDamageToTarget(t, dmg, log, shiki.label, shiki, null, null, os.name);
+      if (os.stunChance && Math.random() < os.stunChance) applyStun(t, 1);
+    });
+    if (targets.length) log(`${shiki.label}の${os.name}が炸裂した！`);
+  } else if (os.kind === "partySpdBuff") {
+    (owner.__allies || fieldParty.filter((c) => !c.isClone && !c.isShikigami)).forEach((c) => {
+      if (c.status === "active") applyStatMod(c, "spd", 1 + os.mult, os.turns);
+    });
+    log(`${shiki.label}の${os.name}で味方全体の素早さが上がった！`);
+  }
+}
+// 式神の自律行動を1ターン分解決する(battle.jsのisShikigami分岐から呼ばれる)。
+// 戻り値のkindをbattle.js側が見て対応する演出(ポップアップ/SFX)を出す:
+//   "none"(対象なしで何もしなかった) / "guard"(庇う構えを取った) / "attack"|"multiAttack"(通常/特技攻撃) /
+//   "heal"(味方単体回復) / "shield"(味方単体に結界付与)
+// 特技(special)はspecialCooldownが0の時だけ判定し、条件(allyHpBelowPct等)を満たせば発動してcooldownをリセットする。
+// 条件を満たさない場合はcooldownを0のまま維持し(=毎ターン判定し続ける)、その代わりに通常行動を取る
+function resolveShikigamiAction(actor, log) {
+  const def = SHIKIGAMI_DEFS[actor.shikigamiType];
+  if (!def) return { kind: "none" };
+  const allies = (actor.__allies || fieldParty.filter((c) => !c.isClone)).filter((c) => c.status === "active" && c !== actor);
+  const enemies = typeof targetableEnemies === "function" ? targetableEnemies() : [];
+  if (actor.specialCooldown > 0) actor.specialCooldown--;
+  // 龍神: 毎ターンHP回復(行動の成否とは独立して常に発動)
+  let regen = 0;
+  if (def.turnRegenPct && actor.hp > 0) {
+    const before = actor.hp;
+    actor.hp = Math.min(actor.maxHp, actor.hp + Math.max(1, Math.round(actor.maxHp * def.turnRegenPct)));
+    regen = actor.hp - before;
+  }
+  // 紙人形: 味方にHP50%未満がいれば庇う(通常攻撃はしない)
+  if (def.ai === "guardIfAllyLow") {
+    if (allies.some((a) => a.hp / a.maxHp < 0.5)) {
+      actor.guarding = true;
+      actor.guardProtectCount = 0;
+      log(`${actor.label}は仲間を庇う構えを取った！`);
+      return { kind: "guard", regen };
+    }
+    return Object.assign(resolveShikigamiBasicAttack(actor, def, enemies, log), { regen });
+  }
+  if (def.special && actor.specialCooldown <= 0) {
+    const result = tryShikigamiSpecial(actor, def, allies, enemies, log);
+    if (result) return Object.assign(result, { regen });
+  }
+  return Object.assign(resolveShikigamiBasicAttack(actor, def, enemies, log), { regen });
+}
+// 妖狐/白鶴/龍神など通常時の単体攻撃、狛犬はbasicHits:2でランダムな敵へ連撃する
+function resolveShikigamiBasicAttack(actor, def, enemies, log) {
+  if (!enemies.length) return { kind: "none" };
+  const hits = def.basicHits || 1;
+  const results = [];
+  for (let i = 0; i < hits; i++) {
+    const pool = typeof targetableEnemies === "function" ? targetableEnemies() : enemies;
+    if (!pool.length) break;
+    const target = pool[Math.floor(Math.random() * pool.length)];
+    const r = performAttack(actor, target, log);
+    results.push({ target, dmg: r.dmg, hit: r.hit, crit: r.crit, hawkTargetId: r.hawkTargetId });
+  }
+  if (!results.length) return { kind: "none" };
+  return hits > 1
+    ? { kind: "multiAttack", hits: results }
+    : { kind: "attack", target: results[0].target, dmg: results[0].dmg, hit: results[0].hit, crit: results[0].crit };
+}
+// 各式神の特技(special)を判定・実行する。条件を満たせなければnullを返し(cooldownは消費しない)、
+// 呼び出し元(resolveShikigamiAction)が通常攻撃にフォールバックする
+function tryShikigamiSpecial(actor, def, allies, enemies, log) {
+  const sp = def.special;
+  const rollSingleHit = (target, mult, bigAttackName) => {
+    const dmg = Math.max(1, Math.round(withVariance(actor.atk * mult * mitigation(effectiveStat(target, "def"), 15), 0.15)));
+    return applyDamageToTarget(target, dmg, log, actor.label, actor, null, null, bigAttackName);
+  };
+  if (sp.kind === "singleAttack") {
+    if (!enemies.length) return null;
+    const target = enemies[Math.floor(Math.random() * enemies.length)];
+    const finalDmg = rollSingleHit(target, sp.mult, sp.name);
+    if (sp.inflict) applyTreeInflict(target, sp.inflict, actor);
+    actor.specialCooldown = sp.cooldown;
+    log(`${actor.label}の${sp.name}！`);
+    return { kind: "attack", target, dmg: finalDmg, hit: true, special: true };
+  }
+  if (sp.kind === "stunSingleAttack") {
+    if (!enemies.length) return null;
+    const target = enemies[Math.floor(Math.random() * enemies.length)];
+    const finalDmg = rollSingleHit(target, sp.mult, sp.name);
+    applyStun(target, 1);
+    actor.specialCooldown = sp.cooldown;
+    log(`${actor.label}の${sp.name}！`);
+    return { kind: "attack", target, dmg: finalDmg, hit: true, special: true };
+  }
+  if (sp.kind === "healLowestAllyIfBelow") {
+    const candidates = allies.filter((a) => a.hp / a.maxHp <= sp.allyHpBelowPct).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+    if (!candidates.length) return null;
+    const lowest = candidates[0];
+    const heal = Math.max(1, Math.round(lowest.maxHp * sp.healPct));
+    lowest.hp = Math.min(lowest.maxHp, lowest.hp + heal);
+    actor.specialCooldown = sp.cooldown;
+    log(`${actor.label}の${sp.name}！${lowest.label}のHPが回復した！`);
+    return { kind: "heal", target: lowest, heal, special: true };
+  }
+  if (sp.kind === "shieldLowestAllyIfBelow") {
+    const candidates = allies.filter((a) => a.hp / a.maxHp <= sp.allyHpBelowPct).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+    if (!candidates.length) return null;
+    const lowest = candidates[0];
+    const owner = (actor.__allies && actor.__allies.find((c) => c.id === actor.ownerId)) || fieldParty.find((c) => c.id === actor.ownerId);
+    const barrierHp = Math.max(1, Math.round((owner ? owner.maxHp : actor.maxHp) * sp.barrierPct));
+    lowest.barrierHp = barrierHp;
+    actor.specialCooldown = sp.cooldown;
+    log(`${actor.label}の${sp.name}！${lowest.label}に結界を付与した！`);
+    return { kind: "shield", target: lowest, barrierHp, special: true };
+  }
+  if (sp.kind === "aoeSilence") {
+    if (!enemies.length) return null;
+    const hits = enemies.map((t) => {
+      const finalDmg = rollSingleHit(t, sp.mult, sp.name);
+      applySilence(t, sp.turns);
+      return { target: t, dmg: finalDmg };
+    });
+    actor.specialCooldown = sp.cooldown;
+    log(`${actor.label}の${sp.name}！`);
+    return { kind: "multiAttack", hits, special: true };
+  }
+  return null;
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
 const BASE_CRIT_DMG_MULT = 1.55; // 会心時のダメージ倍率の基準(スキルツリーでさらに加算される)。
@@ -1219,10 +1370,19 @@ function useTreeSkill(actor, target, skill, log) {
     return { summoned: true };
   }
   if (action.kind === "summonShikigami") {
+    // 式神召喚自体のmp消費は0固定(skill.mp)で、実際のコストは選んだ式神の種類ごとに個別にかかる。
+    // battle.js側のタイプ選択ピッカーがtarget引数の位置にtypeKey(文字列)を渡す呼び出し規約
     if (fieldParty.some((c) => c.isClone || c.isShikigami)) { log(`これ以上仲間を呼び出せない！`); return { failed: true }; }
-    insertNextToOwner(makeSampleShikigami(actor), actor);
-    log(`${actor.label}は${skill.name}を唱えた！`);
-    return { summoned: true };
+    const typeKey = target;
+    const skDef = SHIKIGAMI_DEFS[typeKey];
+    if (!skDef) { log(`式神の種類が正しく選ばれていない！`); return { failed: true }; }
+    if (actor.mp < skDef.mp) { log(`${actor.label}はMPが足りない！`); return { failed: true }; }
+    actor.mp -= skDef.mp;
+    const shiki = makeShikigami(actor, typeKey);
+    insertNextToOwner(shiki, actor);
+    log(`${actor.label}は${skDef.name}を呼び出した！`);
+    applyShikigamiOnSummon(shiki, actor, log);
+    return { summoned: true, shikigami: shiki };
   }
   // 心眼の構えなど: このターン限定で、敵の単体攻撃を1度だけ完全に無効化して反撃する(applyDamageToTarget側で消費・処理する)
   if (action.kind === "guardCounterSelf") {
