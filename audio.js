@@ -631,6 +631,9 @@ function footstepSfxName() {
   if (currentStage === "coast") return "footstep_coast";
   return "footstep";
 }
+// SEごとの音量倍率(未指定は1.0=素のまま)。振りかぶりの風切り音はトリム時にピークを-1dBへ
+// 正規化した結果、着弾音より目立ってうるさかった(ユーザー指摘2026-07-26)ため、ここで下げる
+const SFX_GAIN = { swish_sharp_1: 0.35, swish_sharp_2: 0.35, swish_sharp_3: 0.35, swish_heavy_1: 0.35, swish_heavy_2: 0.35 };
 function playSfx(name) {
   if (masterBgmVolume === 0) return;
   const buffer = sfxBuffers[name];
@@ -638,7 +641,14 @@ function playSfx(name) {
   const start = () => {
     const source = sfxAudioCtx.createBufferSource(); // 使い回さず毎回新規生成(同時多重再生に対応)
     source.buffer = buffer;
-    source.connect(sfxAudioCtx.destination);
+    const gain = SFX_GAIN[name];
+    if (gain != null && gain !== 1) {
+      const g = sfxAudioCtx.createGain();
+      g.gain.value = gain;
+      source.connect(g).connect(sfxAudioCtx.destination);
+    } else {
+      source.connect(sfxAudioCtx.destination);
+    }
     source.start(0);
   };
   // iOS Safariはバックグラウンド化などでAudioContextを勝手にsuspendすることがあり、
