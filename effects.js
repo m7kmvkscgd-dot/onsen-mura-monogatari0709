@@ -142,7 +142,7 @@ function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     blog(`${spearman.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
     popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
-    playScreenShakeOnHit(enemy, false); // 反撃にも通常ヒットの軽い揺れを付ける(一撃の重み演出、2026-07-26)
+    playScreenShakeOnKillOnly(enemy, false); // 反撃は自動発生で頻度が高いため、画面が揺れるのはとどめの時だけ
     playAttackSfxWithSwish(spearman.classId);
     renderBattleScreen();
     playAttackVfx(enemy.instanceId, spearman, "normal");
@@ -288,6 +288,14 @@ function playScreenShakeOnHit(target, isCrit) {
     else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
   }
   requestAnimationFrame(step);
+}
+// 通常攻撃(と自動発生の反撃・式神)用: 画面シェイクは「とどめの一撃」の時だけ重い揺れを出し、
+// それ以外は一切揺らさない。毎回の通常ヒットで画面が揺れるのは疲れる+「画面が動く=特別」の
+// 文法が薄まるというユーザー指摘(2026-07-26)を受け、軽い揺れ(playScreenShakeOnHit)は
+// 技(MP消費)・爆弾専用に整理した。会心は従来通りplayCritEffects側の重い揺れに任せる
+function playScreenShakeOnKillOnly(target, isCrit) {
+  if (isCrit) return;
+  if (target && target.hp <= 0) playScreenShakeCrit();
 }
 // 攻撃の踏み込み: 行動者のカードが一瞬グッと前へ出て戻る一回きりのモーション。かばう反撃の
 // counter-bounceと同じ「クラス付与→時間で剥がす」方式(iOSでtransformを常時残さない前科対応に倣う)。

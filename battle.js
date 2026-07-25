@@ -486,7 +486,7 @@ function processNext() {
       hits.forEach((h) => {
         if (h.hit === false) return;
         popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(false));
-        playScreenShakeOnHit(h.target, h.crit);
+        playScreenShakeOnKillOnly(h.target, h.crit); // 式神の攻撃は毎ラウンド自動で発生するので通常攻撃と同じ扱い
         playSfx(hitTakenSfxFor(h.dmg, h.target.maxHp, h.target.isSwarm));
         if (h.crit) playCritEffects(h.target.instanceId, actor, h.dmg);
       });
@@ -794,7 +794,7 @@ function runCritFollowupAttack(actor, onDone) {
     if (result.hit) playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
     if (result.hit) {
       popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-      playScreenShakeOnHit(target, result.crit);
+      playScreenShakeOnKillOnly(target, result.crit);
       if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
       maybeSpeakOnKill(actor, target);
     } else {
@@ -1403,7 +1403,7 @@ function renderActionButtons(actor) {
         const reveal = (vfxResumeFrame) => {
           if (result.hit) {
             popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-            playScreenShakeOnHit(target, result.crit); // 通常ヒットの軽い画面揺れ(とどめは重い揺れ、会心は専用演出に任せて何もしない)
+            playScreenShakeOnKillOnly(target, result.crit); // 通常攻撃はとどめの一撃だけ画面を揺らす(毎回揺れると疲れる、ユーザー指摘2026-07-26)
             if (actor.classId === "hunter") playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
             maybeSpeakOnCrit(actor, result.crit);
