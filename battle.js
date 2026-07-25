@@ -52,7 +52,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.nullifyCounterTurnsLeft = 0; // 心眼の構えなど、このターン限定の無効化反撃も戦闘をまたいで持ち越さない
     c.nullifyCounterMult = null;
     c.migawariShieldActive = false; // 身代わりの術も戦闘をまたいで持ち越さない
-    c.barrierHp = 0; // 結界術の数値シールドも戦闘をまたいで持ち越さない
+    c.barrierHp = 0; c.barrierMaxHp = 0; // 結界術の数値シールドも戦闘をまたいで持ち越さない
     c.hasBeenHitThisBattle = false; // 忍足など、初被弾までの回避バフを毎戦闘リセットする
     c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
     c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする

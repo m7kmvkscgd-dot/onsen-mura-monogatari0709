@@ -141,7 +141,7 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx):not(.kekkai-barrier-vfx):not(.ally-target-marker-img) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 式神(サンプル実装)の仮アイコン。本物のポートレート絵が来るまでは絵文字で代用し、
      .card-portrait-img(<img>)と同じ箱サイズ(正方形/背景色/角丸)だけ再現する */
@@ -163,22 +163,26 @@
     0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
     50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
   }
+  /* 陰陽師「結界術」の数値シールド(barrierHp)専用バリア。毘沙門天の御守(bishamon-barrier-vfx)と
+     全く同じ考え方(ポートレートより一回り大きく重ね、はみ出た縁だけ見せる)だが、こちらは
+     barrierHp>0の間ずっと出続ける常設演出のためz-indexは前面(1)にして下のカードに埋もれないようにする */
+  .kekkai-barrier-vfx {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 145%; height: 145%; object-fit: contain; pointer-events: none;
+    z-index: 1;
+    animation: bishamonBarrierPulse 2.4s ease-in-out infinite;
+  }
   .ally-debuff-icons { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 2; }
   .ally-debuff-icons:empty { display: none; }
-  /* 敵の大技予告(bigAttackPending)が自分を狙っている時に立ち絵へ重ねる照準マーク。
-     タップ/クリックで敵名・技名の説明が見られる(effects.jsのTOOLTIP_TARGET_SELECTOR経由)。
-     ポートレートの箱いっぱいに正方形で重ね、赤いリング+十字線+中心ドットで狙われている感を出す */
+  /* 敵の大技予告(bigAttackPending)が自分を狙っている時に立ち絵へ重ねる照準マーク(ユーザー提供素材、
+     2026-07-25。以前はSVGで自前描画したリング+十字線だったが、専用イラストに差し替えた)。
+     タップ/クリックで敵名・技名の説明が見られる(effects.jsのTOOLTIP_TARGET_SELECTOR経由) */
   .ally-target-marker {
     position: absolute; inset: 6%; z-index: 4; cursor: pointer;
     animation: allyTargetMarkerPulse 1.1s ease-in-out infinite;
     filter: drop-shadow(0 0 4px rgba(217, 50, 40, 0.9));
   }
-  .ally-target-marker svg { width: 100%; height: 100%; overflow: visible; }
-  .ally-target-marker .marker-ring-outer, .ally-target-marker .marker-ring-inner {
-    fill: none; stroke: #e5453a; stroke-width: 4;
-  }
-  .ally-target-marker .marker-dot { fill: #e5453a; }
-  .ally-target-marker line { stroke: #e5453a; stroke-width: 4; }
+  .ally-target-marker img { width: 100%; height: 100%; object-fit: contain; }
   @keyframes allyTargetMarkerPulse {
     0%, 100% { opacity: 0.85; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.08); }
@@ -205,6 +209,12 @@
      少し遅れて追いつくように伸びる(赤のhpbar-fill-trailとは逆方向・別要素)。.hpbar-fillより後の
      DOM順で描画するため上に重なり、追いつくまでの間だけ見えて、完了後は非表示にする */
   .hpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #B8FFF5; }
+  /* 陰陽師「結界術」の数値シールド(barrierHp)専用バー。HPバーのすぐ下に重ね、barrierHp>0の間だけ
+     描画される(呼び出し元のui.js参照)。挙動はhpbar-fill-trailと全く同じ(data-hp-trail共有、
+     activateHpTrails()がそのまま拾う)で、色だけキャラのバリア演出(kekkai-barrier-vfx)と揃えた紫にした */
+  .barrierbar-track { background: #3a3a3a; border-radius: var(--radius-pill); height: 6px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
+  .barrierbar-fill-trail { position: absolute; left: 0; top: 0; height: 100%; background: var(--barrier-trail); }
+  .barrierbar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--barrier); }
   .mpbar-track { position: relative; background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 4px; overflow: hidden; border: 1px solid var(--border); margin-top: 0.15rem; }
   .fatigue-track { background: rgba(0,0,0,0.5); border-radius: var(--radius-pill); height: 3px; overflow: hidden; margin-top: 0.15rem; }
   .fatigue-fill { height: 100%; background: #b06a2a; }

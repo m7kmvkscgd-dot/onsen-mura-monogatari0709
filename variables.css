@@ -4,6 +4,7 @@
     --text: #e8ecea; --text-muted: #9aa79f; --accent: #c9a24a;
     --accent-soft: #3a3020; --border: #2a3236; --hp: #4caf6f; --hp-mid: #e0a83a; --hp-low: #7A1F2B; --hp-critical: #d1503f;
     --danger: #d1503f;
+    --barrier: #a63fd1; --barrier-trail: #5c2b78; /* 陰陽師「結界術」の数値シールド(バリア)専用の紫。ユーザー提供のバリア画像(kekkai_barrier.png)に合わせた色 */
     --panel: rgba(20,24,27,0.72); --panel-2: rgba(28,34,38,0.6);
     /* 角丸のスケール。サムネイル画像/バッジ/カード/大枠の5段階に集約し、4/5/6/8/10/11/12/16/18pxが
        近似値のまま混在していた状態を整理した */

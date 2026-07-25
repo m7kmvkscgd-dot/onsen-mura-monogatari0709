@@ -758,6 +758,16 @@ function hpBarHtml(entity) {
     : "";
   return `<div class="hpbar-track"><div class="hpbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="hpbar-fill${lowClass}" style="width:${ratio}%"></div>${healTrailHtml}</div>`;
 }
+// 陰陽師「結界術」の数値シールド(barrierHp)専用バー。HPバーの直下に重ねて表示し、
+// バリアが残っている間だけ描画する(barrierHp<=0ならui.js側の呼び出し元がそもそも呼ばない)。
+// data-hp-trailはhpBarHtmlと同じ属性名を使うことで、activateHpTrails()が汎用的に
+// このバーも一緒に拾ってアニメーションさせてくれる(専用の実装を増やさずに済む)
+function barrierBarHtml(entity) {
+  const ratio = entity.barrierMaxHp > 0 ? Math.max(0, entity.barrierHp / entity.barrierMaxHp) * 100 : 0;
+  const prevRatio = entity.__barrierDisplayRatio != null ? entity.__barrierDisplayRatio : ratio;
+  entity.__barrierDisplayRatio = ratio;
+  return `<div class="barrierbar-track"><div class="barrierbar-fill-trail" data-hp-trail data-from="${prevRatio}" data-target="${ratio}" style="width:${prevRatio}%"></div><div class="barrierbar-fill" style="width:${ratio}%"></div></div>`;
+}
 // 描画直後の赤ゲージ/回復用シアンゲージを、記録しておいた目標値までアニメーションさせて追いつかせる。
 // CSS transitionを「別のタイミングでinline styleを書き換えて発火させる」方式は、環境によっては
 // (実測したところheadless Chromiumでも)トランジションが一切発火せず一瞬で目標値に飛んでしまう
@@ -854,13 +864,14 @@ function renderPartyBar(elId, combatants, actingCharId) {
     // innerHTML設定後にJSプロパティ代入で付与する(下のtargetMarkerEl参照)
     const targetMarkerHtml = bigThreat ? `
       <div class="ally-target-marker">
-        <svg viewBox="0 0 100 100"><circle class="marker-ring-outer" cx="50" cy="50" r="42"></circle><circle class="marker-ring-inner" cx="50" cy="50" r="28"></circle><circle class="marker-dot" cx="50" cy="50" r="4"></circle><line x1="50" y1="4" x2="50" y2="20"></line><line x1="50" y1="80" x2="50" y2="96"></line><line x1="4" y1="50" x2="20" y2="50"></line><line x1="80" y1="50" x2="96" y2="50"></line></svg>
+        <img class="ally-target-marker-img" src="assets/vfx/target_marker.png" alt="">
         ${bigThreatLethal ? `<span class="ally-lethal-warning">⚠️</span>` : ""}
       </div>` : "";
     div.innerHTML = `
       <div class="party-portrait-wrap">
         ${c.isShikigami && !portraitSrc ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
         ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
+        ${c.barrierHp > 0 ? `<img class="kekkai-barrier-vfx" src="assets/vfx/kekkai_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
         ${targetMarkerHtml}
       </div>
@@ -868,6 +879,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
+      ${c.barrierHp > 0 ? barrierBarHtml(c) : ""}
       <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>

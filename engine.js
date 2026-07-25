@@ -1056,6 +1056,7 @@ function tryShikigamiSpecial(actor, def, allies, enemies, log) {
     const owner = (actor.__allies && actor.__allies.find((c) => c.id === actor.ownerId)) || fieldParty.find((c) => c.id === actor.ownerId);
     const barrierHp = Math.max(1, Math.round((owner ? owner.maxHp : actor.maxHp) * sp.barrierPct));
     lowest.barrierHp = barrierHp;
+    lowest.barrierMaxHp = barrierHp;
     actor.specialCooldown = sp.cooldown;
     log(`${actor.label}の${sp.name}！${lowest.label}に結界を付与した！`);
     return { kind: "shield", target: lowest, barrierHp, special: true };
@@ -1404,6 +1405,7 @@ function useTreeSkill(actor, target, skill, log) {
   if (action.kind === "shieldAlly") {
     const barrierHp = Math.max(1, Math.round(actor.maxHp * (action.barrierPct || 0.5)));
     target.barrierHp = barrierHp;
+    target.barrierMaxHp = barrierHp;
     log(`${actor.label}は${target.label}に${skill.name}をかけた！(結界HP${barrierHp})`);
     return { shielded: true, barrierHp };
   }
