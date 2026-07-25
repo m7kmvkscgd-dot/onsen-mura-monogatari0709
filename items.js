@@ -32,6 +32,7 @@ function renderItemMenu(actor) {
         const dmg = applyDamageToTarget(e, BOMB_FLAT_DAMAGE, blog, actor.label, null);
         popupOn(e.instanceId, `-${dmg}`, "dmg", dmgShakeIntensity(true));
       });
+      playScreenShakeOnHit(null, false); // 爆弾も一括で1回だけ軽く揺らす(一撃の重み演出、2026-07-26)
       saveState();
       renderBattleScreen();
       finishPlayerAction();

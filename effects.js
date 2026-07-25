@@ -142,6 +142,7 @@ function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     blog(`${spearman.label}はかばいながら反撃した！${enemy.label}に${counterDmg}ダメージ！`);
     popupOn(enemy.instanceId, `-${counterDmg}`, "dmg", dmgShakeIntensity(false));
+    playScreenShakeOnHit(enemy, false); // 反撃にも通常ヒットの軽い揺れを付ける(一撃の重み演出、2026-07-26)
     playAttackSfxWithSwish(spearman.classId);
     renderBattleScreen();
     playAttackVfx(enemy.instanceId, spearman, "normal");
@@ -264,6 +265,42 @@ function playScreenShakeCrit() {
     else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
   }
   requestAnimationFrame(step);
+}
+// ============ 一撃の重み演出(2026-07-25ユーザー指摘「攻撃に重みがない」対応) ============
+// 通常ヒット用の軽い画面揺れ。会心のSCREEN_SHAKE_FRAMESより振幅を抑えた同方式(--crit-shake-x/y流用)。
+// 会心の時は呼ばれても何もしない(playCritEffects側の重い揺れに任せ、二重に揺らさない)。
+// とどめの一撃(target.hp<=0)だけは会心と同じ重い揺れへ格上げして「倒した山場」を作る。
+// 敵→味方の被弾や毒などのDOTには使わない(呼び出し元は味方→敵の命中箇所のみ)
+const LIGHT_SHAKE_FRAMES = [[0, 0], [-3, 2], [3, -1], [-1, 1], [0, 0]];
+const LIGHT_SHAKE_DURATION_MS = 130;
+function playScreenShakeOnHit(target, isCrit) {
+  if (isCrit) return;
+  if (target && target.hp <= 0) { playScreenShakeCrit(); return; }
+  const targets = [document.getElementById("battleBg"), document.getElementById("battleTop"), document.querySelector(".battle-actions")].filter(Boolean);
+  if (targets.length === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / LIGHT_SHAKE_DURATION_MS);
+    const idx = Math.min(LIGHT_SHAKE_FRAMES.length - 1, Math.floor(t * (LIGHT_SHAKE_FRAMES.length - 1)));
+    const [dx, dy] = LIGHT_SHAKE_FRAMES[idx];
+    targets.forEach((el) => { el.style.setProperty("--crit-shake-x", `${dx}px`); el.style.setProperty("--crit-shake-y", `${dy}px`); });
+    if (t < 1) requestAnimationFrame(step);
+    else targets.forEach((el) => { el.style.removeProperty("--crit-shake-x"); el.style.removeProperty("--crit-shake-y"); });
+  }
+  requestAnimationFrame(step);
+}
+// 攻撃の踏み込み: 行動者のカードが一瞬グッと前へ出て戻る一回きりのモーション。かばう反撃の
+// counter-bounceと同じ「クラス付与→時間で剥がす」方式(iOSでtransformを常時残さない前科対応に倣う)。
+// renderBattleScreen()がDOMを作り直すとアニメーションが途中で消えるため、必ず再描画の「後」に呼ぶこと
+const ATTACK_LUNGE_MS = 300;
+function playAttackerLunge(actorId) {
+  if (actorId == null) return;
+  const card = findVisibleCard(actorId);
+  if (!card) return;
+  card.classList.remove("attack-lunge");
+  void card.offsetWidth; // 連続攻撃でも毎回最初から再生し直すためのリフロー強制
+  card.classList.add("attack-lunge");
+  setTimeout(() => card.classList.remove("attack-lunge"), ATTACK_LUNGE_MS);
 }
 function playCritEffects(targetId, actor, dmg) {
   setTimeout(() => {

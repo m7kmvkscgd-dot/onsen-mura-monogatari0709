@@ -486,6 +486,7 @@ function processNext() {
       hits.forEach((h) => {
         if (h.hit === false) return;
         popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(false));
+        playScreenShakeOnHit(h.target, h.crit);
         playSfx(hitTakenSfxFor(h.dmg, h.target.maxHp, h.target.isSwarm));
         if (h.crit) playCritEffects(h.target.instanceId, actor, h.dmg);
       });
@@ -494,6 +495,7 @@ function processNext() {
       if (result.kind === "shield") { popupOn(result.target.id, `結界+${result.barrierHp}`, "heal"); playSfx("select"); }
       if (result.kind === "guard") playSfx("guard");
       renderBattleScreen();
+      if (result.kind === "attack" || result.kind === "multiAttack") playAttackerLunge(actor.id); // 式神も攻撃時は踏み込む
       hits.forEach((h) => { if (h.hit !== false) playAttackVfx(h.target.instanceId, { classId: "samurai" }, "normal"); });
       const newlyCriticalAction = handleFieldDeaths();
       renderBattleScreen();
@@ -792,12 +794,14 @@ function runCritFollowupAttack(actor, onDone) {
     if (result.hit) playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
     if (result.hit) {
       popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+      playScreenShakeOnHit(target, result.crit);
       if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
       maybeSpeakOnKill(actor, target);
     } else {
       playSfx("evade");
     }
     renderBattleScreen();
+    playAttackerLunge(actor.id);
     if (result.hit) playAttackVfx(target.instanceId, actor, "normal");
     triggerShootDownEvents(result.shotDown ? [target] : [], onDone);
   });
@@ -853,6 +857,7 @@ function runTreeSkill(actor, skill) {
       setTimeout(() => {
         if (h.hit) {
           popupOn(h.target.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(true));
+          playScreenShakeOnHit(h.target, h.crit);
           playSfx(hitTakenSfxFor(h.dmg, h.target.maxHp, h.target.isSwarm));
           if (h.crit) { anyCrit = true; playCritEffects(h.target.instanceId, actor, h.dmg); }
           playAttackVfx(h.target.instanceId, actor, "skill");
@@ -860,6 +865,7 @@ function runTreeSkill(actor, skill) {
           playSfx("evade");
         }
         renderBattleScreen();
+        if (i === 0) playAttackerLunge(actor.id); // 踏み込みは最初の一撃だけ(連撃のたびに跳ねるとしつこい)
       }, i * STAGGER_MS);
     });
     setTimeout(() => {
@@ -1015,15 +1021,17 @@ function runTreeSkill(actor, skill) {
       // (renderCarryTargetsの「演出の間はボタンを消して連打を防ぐ」と同じ対策をここにも適用する)
       document.getElementById("actionGrid").innerHTML = "";
       renderBattleScreen();
+      playAttackerLunge(actor.id);
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
       const STAGGER_MS = 260;
       r.hits.forEach((hitInfo, i) => {
         setTimeout(() => {
           // ダメージ行(と貫通/鷹追撃の行があればそれも)を、このヒットのVFXと同時に流す。
           // 以前はuseTreeSkill内で全振り分のログが即座にまとめて出てしまい、エフェクトだけが
-          // 遅れて2回再生される見た目とテキストの表示タイミングがズレていた
+          // 遅れて2回再生される見た目とテキストのタイミングがズレていた
           (hitInfo.logLines || []).forEach((line) => blog(line));
           popupOn(target.instanceId, `-${hitInfo.dmg}`, "dmg", dmgShakeIntensity(true));
+          playScreenShakeOnHit(target, hitInfo.crit);
           playSfx(hitTakenSfxFor(hitInfo.dmg, target.maxHp, target.isSwarm));
           if (hitInfo.crit) playCritEffects(target.instanceId, actor, hitInfo.dmg);
           playAttackVfx(target.instanceId, actor, "skill");
@@ -1042,12 +1050,14 @@ function runTreeSkill(actor, skill) {
     }
     if (r && r.hit) {
       popupOn(target.instanceId, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+      playScreenShakeOnHit(target, r.crit);
       playSfx(hitTakenSfxFor(r.dmg, target.maxHp, target.isSwarm));
       if (r.crit) playCritEffects(target.instanceId, actor, r.dmg);
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
     }
     else if (r) playSfx("evade");
     renderBattleScreen();
+    playAttackerLunge(actor.id);
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
     if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
     // 暗殺術など: このスキルでキルした場合はターンを消費せず、もう一度行動できる
@@ -1281,7 +1291,9 @@ function runFormSkill(actor, skillKey) {
       playSfx(hitTakenSfxFor(dmg, e.maxHp, e.isSwarm));
       applyPoison(e, resolveValue({ valueMin: skill.poisonMin, valueMax: skill.poisonMax }, skill.poisonMin));
     });
+    playScreenShakeOnHit(null, false); // 全体攻撃は一括で1回だけ軽く揺らす(敵ごとに揺らすと多重で暴れる)
     renderBattleScreen();
+    playAttackerLunge(actor.id);
     finishPlayerAction();
     return;
   }
@@ -1339,8 +1351,9 @@ function renderSkillSubMenu(actor, buttons) {
 // とは完全に別の定数・別のsetTimeoutで、会心側のコード・演出には一切触れていない。
 // CSSのanimation-delayではなく、着弾リアクション(揺れ・HPバー反映・次ターンへの進行)一式を
 // 呼び出すタイミングそのものをここで止めるため、「戦闘進行として正しく止まる」本物の一時停止になる。
-// 25〜35msの範囲で調整したい場合はこの1箇所の値だけを変えればよい
-const NORMAL_ATTACK_HITSTOP_MS = 40;
+// 調整したい場合はこの1箇所の値だけを変えればよい(当初40msだったが「攻撃に重みがない」という
+// ユーザー指摘(2026-07-25)を受け、風切り音→着弾の二層SEと合わせて90msへ延長した)
+const NORMAL_ATTACK_HITSTOP_MS = 90;
 // 斬撃VFX(ATTACK_VFX_FRAME_MS=30ms/フレーム、effects.js)は、命中と同時に1フレーム目だけを
 // 即座に見せ(「斬撃が敵へ到達した瞬間」の合図)、ヒットストップ明けに続きのフレームから再開する。
 // 何フレーム目から再開するかは、ヒットストップの長さぶん既に経過したフレーム数+1として算出するため、
@@ -1390,6 +1403,7 @@ function renderActionButtons(actor) {
         const reveal = (vfxResumeFrame) => {
           if (result.hit) {
             popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+            playScreenShakeOnHit(target, result.crit); // 通常ヒットの軽い画面揺れ(とどめは重い揺れ、会心は専用演出に任せて何もしない)
             if (actor.classId === "hunter") playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
             if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
             maybeSpeakOnCrit(actor, result.crit);
@@ -1397,6 +1411,7 @@ function renderActionButtons(actor) {
           }
           else playSfx("evade");
           renderBattleScreen();
+          playAttackerLunge(actor.id); // 攻撃者の踏み込み(空振りでも振ってはいるので命中に関わらず出す)
           if (result.hit) playAttackVfx(target.instanceId, actor, "normal", vfxResumeFrame);
           if (lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // 通常攻撃が外れても鷹は独立して追撃する。倒した場合は別の対象へ
           triggerShootDownEvents(result.shotDown ? [target] : [], () => {
@@ -1514,6 +1529,8 @@ function renderActionButtons(actor) {
               applyAbilityAoeSelfBuffs(actor, ability, hitTargets.length); // 円舞(薙ぎ払いの命中数に応じて自分に回避バフ)など
             }
             renderBattleScreen();
+            playAttackerLunge(actor.id);
+            playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
             triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
             return;
@@ -1524,12 +1541,14 @@ function renderActionButtons(actor) {
             const result = useAbility(actor, target, ability, blog);
             if (result && result.hit) {
               popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
+              playScreenShakeOnHit(target, result.crit);
               playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
               if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
               if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
             }
             else if (result && !result.failed) playSfx("evade");
             renderBattleScreen();
+            playAttackerLunge(actor.id);
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
             if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction(result && result.crit));

@@ -134,6 +134,14 @@
     65% { transform: translateY(-4px) translateZ(0); }
     100% { transform: translateY(0) translateZ(0); }
   }
+  /* 攻撃の踏み込み(effects.js playAttackerLunge)。counter-bounceと同枠の一回きりモーションで、
+     着弾の瞬間に鋭く前へ出てスッと戻る(2026-07-26、「一撃の重み」演出) */
+  .party-member.attack-lunge, .enemy-card.attack-lunge { animation: attackLunge 0.3s cubic-bezier(0.25, 1, 0.4, 1); }
+  @keyframes attackLunge {
+    0% { transform: translateY(0) translateZ(0); }
+    25% { transform: translateY(-13px) scale(1.03) translateZ(0); }
+    100% { transform: translateY(0) translateZ(0); }
+  }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member.targetable { cursor: pointer; border-color: rgba(76,175,111,0.75); box-shadow: 0 0 10px rgba(76,175,111,0.5); animation: targetPulseAlly 1.1s ease-in-out infinite; }
   .party-member.targetable:active { transform: scale(0.94) translateZ(0); }
