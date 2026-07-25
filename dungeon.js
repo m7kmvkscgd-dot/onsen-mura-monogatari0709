@@ -735,20 +735,23 @@ function playAutoRetreatCutFade(afterBlack, onFullyDone) {
     };
   };
 }
-// 戦闘開始時用: 既にscreen-battleへ切り替わった後の画面に対し、黒→透明のフェードインだけ重ねる
-// (startBattle()自体がgameroll側の都合で即座に画面遷移してしまうため、事前に止めて暗転してから
-// 遷移させることができない。代わりに遷移直後の画面を一瞬黒で覆ってから明かすことで同じ「暗転して
-// 戦闘になる」体感に近づけている)
-function flashFromBlackOverCurrentScreen() {
-  const overlay = document.getElementById("moveTransitionBlack");
-  overlay.style.display = "block";
-  overlay.style.opacity = "1";
-  const fadeIn = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: AUTO_RETREAT_CUT_FADE_MS, easing: "ease", fill: "forwards" });
-  fadeIn.onfinish = () => {
-    fadeIn.cancel();
-    overlay.style.opacity = "0";
-    overlay.style.display = "none";
-  };
+// 戦闘開始時用: 既にscreen-battleへ切り替わった後の画面に、遭遇の合図(「‼️」+SE)を一瞬だけ重ねる。
+// startBattle()自体がgameroll側の都合で即座に画面遷移してしまうため、事前に止めてから遷移させる
+// ことはできないが、敵カード自体は元々ふわっと出現するアニメーション(.enemy-card.entering、
+// battle.css)を持っているため、その上に暗転を挟まずこの合図だけ重ねれば「暗転していきなり敵が
+// 現れる」より遥かに気持ちよくなる(ユーザー指摘、2026-07-25: 「暗転が不愉快」)。
+// 以前はここでmoveTransitionBlackを黒→透明にフェードして同じ「暗転して戦闘になる」体感を
+// 出していたが、その暗転自体をやめてこの演出に置き換えた
+const ENCOUNTER_CUE_MS = 700;
+function playEncounterCueOverBattleScreen() {
+  playSfx("encounter_alert");
+  const el = document.getElementById("encounterCue");
+  el.innerHTML = `<div class="encounter-cue-ring"></div><div class="encounter-cue-mark">‼️</div>`;
+  el.style.display = "flex";
+  setTimeout(() => {
+    el.style.display = "none";
+    el.innerHTML = "";
+  }, ENCOUNTER_CUE_MS);
 }
 const AUTO_RETREAT_TIMEOFDAY_FADE_MS = 900; // オート帰還中に時刻が変わった時、背景画像そのものをクロスフェードする時間
 // オート帰還中に時刻が変わった時、暗転を挟まず背景画像同士をクロスフェードする。
@@ -807,7 +810,7 @@ function performAutoRetreatFloorMove(enterTeahouse) {
   if (!retreating) return; // 0階層に到達しfinishRetreat()済み(stopAutoRetreatもそちらで呼ばれる)
   if (battle) { // 戦闘開始。画面は既にscreen-battleへ切り替わっている
     stopAutoRetreat();
-    flashFromBlackOverCurrentScreen();
+    playEncounterCueOverBattleScreen();
     return;
   }
   if (state.timeOfDay !== prevTimeOfDay) {
@@ -1777,9 +1780,8 @@ function pickEventEnemyBase(floor) {
   return pickEnemyForFloor(1, undefined, currentStage);
 }
 function startEventBattle(enemies, pathDef, encounterText) {
-  playSfx("big_attack_warning");
   startBattle(enemies, pathDef, encounterText);
-  flashFromBlackOverCurrentScreen(); // イベント選択は明転後のタップなので、戦闘への切り替わりに暗転の区切りを入れる
+  playEncounterCueOverBattleScreen(); // イベント選択は明転後のタップなので、戦闘への切り替わりに遭遇の合図を挟む(以前はbig_attack_warningの流用+暗転だったが、専用の合図に統一した)
 }
 // 各イベントの定義。choices()を都度呼ぶことで、所持金など「その瞬間の状態」でラベル/可否を出し分ける
 const DUNGEON_EVENTS = [
