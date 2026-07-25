@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 建築物エディタ</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
+    --success: #6ea95b; --danger: #c95d54; --info: #7b93b9; --unlock: #9a7fd0;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--body); font-family: "Hiragino Sans", "Yu Gothic", sans-serif; line-height: 1.5; }
+  header { position: sticky; top: 0; z-index: 20; background: linear-gradient(180deg, #1c2226 0%, #171b1e 100%); border-bottom: 1px solid var(--card-border); padding: 10px 16px; }
+  .header-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 1.05rem; color: var(--title); margin: 0; white-space: nowrap; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  input[type="search"] { background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem; width: 180px; }
+  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; -webkit-tap-highlight-color: transparent; }
+  button:hover { filter: brightness(1.15); }
+  button.danger { background: #5a2e28; }
+  button.ghost { background: transparent; }
+  #editCount { color: var(--gold); font-weight: bold; font-size: 0.82rem; white-space: nowrap; }
+  nav#sectionTabs { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px 0; }
+  .sec-tab { flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--card-border); border-bottom: none; border-radius: 10px 10px 0 0; padding: 7px 14px; cursor: pointer; color: var(--caption); font-size: 0.85rem; }
+  .sec-tab.active { background: var(--card-bg); color: var(--title); border-color: var(--gold); }
+  .sec-tab .tab-edit-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); display: none; margin-left: 2px; }
+  .sec-tab.has-edits .tab-edit-dot { display: inline-block; }
+  main { max-width: 720px; margin: 0 auto; padding: 12px 10px 60px; }
+  .empty-hint { color: var(--caption); font-size: 0.85rem; text-align: center; padding: 40px 10px; }
+  .section-note { font-size: 0.76rem; color: var(--caption); background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; }
+
+  .settings-grid { display: flex; flex-direction: column; gap: 8px; }
+  .setting-row { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .setting-row.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .setting-label { flex: 1; min-width: 0; }
+  .setting-name { font-size: 0.82rem; font-weight: bold; color: var(--title); }
+  .setting-desc { font-size: 0.72rem; color: var(--caption); margin-top: 2px; }
+  .setting-input { width: 80px; flex-shrink: 0; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.85rem; padding: 6px 8px; text-align: right; }
+  .setting-input:focus { outline: none; border-color: var(--gold); }
+  .setting-multi { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+  .setting-multi .multi-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .setting-multi .multi-item span { font-size: 0.62rem; color: var(--caption); }
+  .setting-multi input { width: 56px; }
+
+  .building-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 3px solid var(--gold); border-radius: var(--radius); overflow: hidden; margin-bottom: 8px; }
+  .building-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .building-card summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; }
+  .building-card summary::-webkit-details-marker { display: none; }
+  .building-emoji-badge { font-size: 1.1rem; flex-shrink: 0; }
+  .building-title-preview { flex: 1; min-width: 0; font-size: 0.86rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .building-meta-badge { font-size: 0.66rem; color: var(--info); flex-shrink: 0; white-space: nowrap; }
+  .building-unlock-badge { font-size: 0.66rem; color: var(--unlock); flex-shrink: 0; white-space: nowrap; }
+  .building-id-badge { font-size: 0.62rem; color: var(--caption); flex-shrink: 0; font-family: monospace; }
+  .building-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
+  .building-card.edited .building-edit-dot { display: inline-block; }
+  .building-chevron { flex-shrink: 0; color: var(--caption); font-size: 0.65rem; transition: transform 0.15s; }
+  .building-card[open] .building-chevron { transform: rotate(90deg); }
+
+  .building-body { padding: 4px 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px; }
+  .field-row { display: flex; flex-direction: column; gap: 3px; }
+  .field-row label { font-size: 0.68rem; color: var(--caption); }
+  .field-row input[type="text"], .field-row input[type="number"], .field-row textarea, .field-row select {
+    width: 100%; background: rgba(0,0,0,0.18); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body);
+    font-size: 0.82rem; padding: 6px 8px; font-family: inherit;
+  }
+  .field-row input:focus, .field-row textarea:focus, .field-row select:focus { outline: none; border-color: var(--gold); background: rgba(0,0,0,0.28); }
+  .field-row textarea { min-height: 58px; resize: vertical; }
+  .field-pair { display: flex; gap: 8px; }
+  .field-pair .field-row { flex: 1; min-width: 0; }
+  .cost-levels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cost-levels .field-row { flex: 1 1 80px; min-width: 70px; }
+  .same-cost-hint { font-size: 0.66rem; color: var(--caption); }
+  .extra-fields-title { font-size: 0.74rem; color: var(--gold); font-weight: bold; margin-top: 4px; }
+  .building-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 2px; }
+  .reset-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--card-border); color: var(--caption); display: none; }
+  .building-card.edited .reset-btn { display: inline-block; }
+
+  #exportModal, #checkpointModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open, #checkpointModal.open { display: flex; }
+  .export-panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .export-panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
+  .export-panel p.hint { margin: 0; font-size: 0.75rem; color: var(--caption); }
+  .export-panel textarea { width: 100%; flex: 1; min-height: 160px; background: #0f1214; color: var(--body); border: 1px solid var(--card-border); border-radius: 8px; font-family: monospace; font-size: 0.75rem; padding: 8px; }
+  .export-diff-list { max-height: 180px; overflow-y: auto; font-size: 0.78rem; background: #0f1214; border-radius: 8px; padding: 8px 10px; border: 1px solid var(--card-border); }
+  .export-diff-list .diff-item { margin-bottom: 8px; }
+  .export-diff-list .diff-title { color: var(--gold); font-weight: bold; }
+  .export-diff-list .diff-field { color: var(--caption); }
+  .export-diff-list del { color: var(--danger); text-decoration: line-through; opacity: 0.7; }
+  .export-diff-list ins { color: var(--success); text-decoration: none; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>🏘️ 温泉村物語 建築物エディタ</h1>
+    <div class="toolbar">
+      <input type="search" id="searchBox" placeholder="施設名・効果文で検索...">
+      <span id="editCount">編集: 0件</span>
+      <button id="checkpointBtn">💾 一時保存</button>
+      <button id="exportBtn">📋 エクスポート</button>
+      <button id="resetAllBtn" class="danger ghost">全て元に戻す</button>
+    </div>
+  </div>
+  <nav id="sectionTabs"></nav>
+</header>
+<main id="mainArea"></main>
+
+<div id="exportModal">
+  <div class="export-panel">
+    <h2>編集内容のエクスポート</h2>
+    <p class="hint">変更点だけをJSONにまとめています。この画面のJSONをそのままClaudeに貼り付けてください。</p>
+    <div id="exportDiffList" class="export-diff-list"></div>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyJsonBtn">JSONをコピー</button>
+      <button id="closeExportBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="checkpointModal">
+  <div class="export-panel">
+    <h2>一時保存(チェックポイント)</h2>
+    <p class="hint">編集途中の状態をこの下のJSONとして保存できます。コピーしてメモアプリ等に控えておき、次回このページを開いた時に貼り付けて「読み込む」を押すと編集を再開できます(このページ単体にはサーバー保存機能がありません)。</p>
+    <textarea id="checkpointJson" readonly></textarea>
+    <p class="hint">↓ 読み込む場合はここに貼り付け</p>
+    <textarea id="checkpointImportInput" placeholder="ここに一時保存JSONを貼り付け"></textarea>
+    <div id="checkpointImportStatus" style="font-size:0.78rem; min-height:1.2em; color:var(--caption);"></div>
+    <div class="modal-actions">
+      <button id="copyCheckpointBtn">JSONをコピー</button>
+      <button id="loadCheckpointBtn">読み込む</button>
+      <button id="closeCheckpointBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// classUnlock: 建築で解禁される職業。侍/槍士/狩人/陰陽師は最初から雇えるためnull
+const BUILDING_DATA = {
+  buildings: {
+    magistrate: { name: "奉行所", icon: "🏯", desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。", unlockHouseLevel: 2, costs: [10], classUnlock: null },
+    shop: { name: "鍛冶屋", icon: "⚒️", desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)", unlockHouseLevel: 4, costs: [10], classUnlock: null },
+    travelPrepShop: { name: "旅支度屋", icon: "🏕️", desc: "出発画面で野営具を購入できるようになります。", unlockHouseLevel: 3, costs: [30], classUnlock: null },
+    dojo: { name: "道場", icon: "🥋", desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。", unlockHouseLevel: 3, costs: [10, 100], classUnlock: "naginata", extra: { xpShareLv1: 0.3, xpShareLv2: 0.35 } },
+    karakuri: { name: "からくり屋敷", icon: "🎎", desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。", unlockHouseLevel: 3, costs: [10], classUnlock: "ninja" },
+    bagShop: { name: "鞄屋", icon: "🧳", desc: "支援物資の所持上限が増えます。", unlockHouseLevel: 4, costs: [75, 100, 200], classUnlock: null, extra: { supplyCapBase: 10 } },
+    watchtower: { name: "見張り台", icon: "🏹", desc: "(詳細は未定)", unlockHouseLevel: 5, costs: [200], classUnlock: null },
+    henHouse: { name: "鶏小屋", icon: "🐓", desc: "(詳細は未定)", unlockHouseLevel: 4, costs: [200, 200], classUnlock: null, sameCostAllLevels: true },
+    shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "priest" },
+    hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→70)。", unlockHouseLevel: 4, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 70 } },
+    gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner" },
+    teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 5, costs: [250], classUnlock: null },
+    stable: { name: "馬屋", icon: "🐎", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [200], classUnlock: null },
+    beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 6, costs: [100, 100, 100, 100, 100], classUnlock: null, sameCostAllLevels: true, extra: { potionBonusPerLevel: 0.02 } },
+    ferry: { name: "渡し船", icon: "⛴️", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [250], classUnlock: null },
+    ryodanki: { name: "旅団旗", icon: "🚩", desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。", unlockHouseLevel: 6, costs: [100], classUnlock: null },
+  },
+  house: {
+    maxLevel: 7,
+    rosterCapacity: 8,
+    // 家レベルNからN+1への増築費用(N=1〜6)。コード上はhouseUpgradeCost(level)という区分式の関数だが、
+    // エディタ上は計算済みの値をそのまま並べて編集させる(適用時にこちらで関数側へ反映する)
+    upgradeCosts: [30, 200, 350, 450, 550, 650],
+  },
+};
+const CLASS_UNLOCK_OPTIONS = [
+  { value: "", label: "なし" },
+  { value: "naginata", label: "薙刀士" },
+  { value: "ninja", label: "忍" },
+  { value: "priest", label: "僧侶" },
+  { value: "gunner", label: "砲術士" },
+];
+const EXTRA_FIELD_DEFS = {
+  xpShareLv1: { label: "Lv1の経験値分け前", isPct: true },
+  xpShareLv2: { label: "Lv2の経験値分け前", isPct: true },
+  supplyCapBase: { label: "支援物資の基礎上限(鞄屋Lv0時)", isPct: false },
+  potionBonusPerLevel: { label: "1段階あたりの回復薬ボーナス", isPct: true },
+  baseRelief: { label: "湯守屋なしの疲労回復量", isPct: false },
+  keeperRelief: { label: "湯守屋ありの疲労回復量", isPct: false },
+};
+
+let edits = { buildings: {}, house: {} };
+let activeSection = "buildings";
+let searchQuery = "";
+
+function buildingIds() { return Object.keys(BUILDING_DATA.buildings); }
+function setBuildingEdit(id, field, value, original) {
+  edits.buildings[id] = edits.buildings[id] || {};
+  if (JSON.stringify(value) === JSON.stringify(original)) delete edits.buildings[id][field];
+  else edits.buildings[id][field] = value;
+  if (Object.keys(edits.buildings[id]).length === 0) delete edits.buildings[id];
+  refreshEditCount();
+}
+function currentBuildingValue(id, field, original) {
+  const e = edits.buildings[id];
+  return e && Object.prototype.hasOwnProperty.call(e, field) ? e[field] : original;
+}
+function isBuildingEdited(id) { return !!(edits.buildings[id] && Object.keys(edits.buildings[id]).length); }
+function resetBuilding(id) { delete edits.buildings[id]; renderMain(); }
+function setHouseEdit(field, value, original) {
+  if (JSON.stringify(value) === JSON.stringify(original)) delete edits.house[field];
+  else edits.house[field] = value;
+  refreshEditCount();
+}
+function currentHouseValue(field, original) {
+  return Object.prototype.hasOwnProperty.call(edits.house, field) ? edits.house[field] : original;
+}
+function countEdits() {
+  let n = Object.keys(edits.buildings).reduce((s, id) => s + Object.keys(edits.buildings[id]).length, 0);
+  n += Object.keys(edits.house).length;
+  return n;
+}
+function sectionHasEdits(sec) {
+  if (sec === "buildings") return Object.keys(edits.buildings).length > 0;
+  if (sec === "house") return Object.keys(edits.house).length > 0;
+  return false;
+}
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function buildBuildingCard(id) {
+  const src = BUILDING_DATA.buildings[id];
+  const name = currentBuildingValue(id, "name", src.name);
+  const icon = currentBuildingValue(id, "icon", src.icon);
+  const desc = currentBuildingValue(id, "desc", src.desc);
+  const unlockHouseLevel = currentBuildingValue(id, "unlockHouseLevel", src.unlockHouseLevel);
+  const costs = currentBuildingValue(id, "costs", src.costs);
+  const classUnlock = currentBuildingValue(id, "classUnlock", src.classUnlock) || "";
+  const edited = isBuildingEdited(id);
+  const node = document.createElement("details");
+  node.className = "building-card" + (edited ? " edited" : "");
+  const classLabel = CLASS_UNLOCK_OPTIONS.find((o) => o.value === classUnlock).label;
+  node.innerHTML = `
+    <summary>
+      <span class="building-emoji-badge">${escapeHtml(icon || "🏚")}</span>
+      <span class="building-title-preview">${escapeHtml(name || "(無題)")}</span>
+      <span class="building-unlock-badge">家Lv${unlockHouseLevel}〜</span>
+      ${classUnlock ? `<span class="building-meta-badge">${escapeHtml(classLabel)}解禁</span>` : ""}
+      <span class="building-id-badge">${escapeHtml(id)}</span>
+      <span class="building-edit-dot"></span>
+      <span class="building-chevron">▶</span>
+    </summary>
+    <div class="building-body">
+      <div class="field-pair">
+        <div class="field-row" style="flex:0 0 60px;">
+          <label>絵文字</label>
+          <input type="text" data-field="icon" value="${escapeHtml(icon)}" maxlength="4">
+        </div>
+        <div class="field-row">
+          <label>施設名</label>
+          <input type="text" data-field="name" value="${escapeHtml(name)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>効果説明文</label>
+        <textarea data-field="desc">${escapeHtml(desc)}</textarea>
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label>解禁に必要な家レベル(unlockHouseLevel)</label>
+          <input type="number" data-field="unlockHouseLevel" value="${unlockHouseLevel}" min="1" max="${BUILDING_DATA.house.maxLevel}">
+        </div>
+        <div class="field-row">
+          <label>解禁する職業(classUnlock)</label>
+          <select data-field="classUnlock">
+            ${CLASS_UNLOCK_OPTIONS.map((o) => `<option value="${o.value}" ${o.value === classUnlock ? "selected" : ""}>${escapeHtml(o.label)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>建築/増築費用(レベルごと、Gの単位)</label>
+        <div class="cost-levels">
+          ${costs.map((c, i) => `<div class="field-row"><label>${costs.length > 1 ? `Lv${i + 1}` : "建築費"}</label><input type="number" data-cost-index="${i}" value="${c}" min="0"></div>`).join("")}
+        </div>
+        ${src.sameCostAllLevels ? '<span class="same-cost-hint">※このコードでは全レベル共通の1つの定数を使っています。レベルごとに個別の値へ分けたい場合はコード側の対応が必要になるため、その旨も含めてエクスポート内容に書き添えます</span>' : ""}
+      </div>
+      ${src.extra ? buildExtraFieldsHtml(id, src.extra) : ""}
+      <div class="building-actions">
+        <button type="button" class="reset-btn">↺ 元に戻す</button>
+      </div>
+    </div>
+  `;
+  ["icon", "name", "desc", "unlockHouseLevel", "classUnlock"].forEach((f) => {
+    const el = node.querySelector(`[data-field="${f}"]`);
+    el.addEventListener("input", () => {
+      let v = el.value;
+      if (f === "unlockHouseLevel") v = v === "" ? src[f] : Number(v);
+      if (f === "classUnlock") v = v === "" ? null : v;
+      setBuildingEdit(id, f, v, src[f]);
+      node.classList.toggle("edited", isBuildingEdited(id));
+      node.querySelector(".reset-btn").style.display = isBuildingEdited(id) ? "inline-block" : "none";
+    });
+  });
+  node.querySelectorAll("[data-cost-index]").forEach((el) => {
+    const idx = Number(el.dataset.costIndex);
+    el.addEventListener("input", () => {
+      const newCosts = costs.slice();
+      newCosts[idx] = el.value === "" ? src.costs[idx] : Number(el.value);
+      setBuildingEdit(id, "costs", newCosts, src.costs);
+      node.classList.toggle("edited", isBuildingEdited(id));
+      node.querySelector(".reset-btn").style.display = isBuildingEdited(id) ? "inline-block" : "none";
+    });
+  });
+  if (src.extra) {
+    Object.keys(src.extra).forEach((key) => {
+      const el = node.querySelector(`[data-extra="${key}"]`);
+      if (!el) return;
+      const def = EXTRA_FIELD_DEFS[key];
+      el.addEventListener("input", () => {
+        const currentExtra = Object.assign({}, currentBuildingValue(id, "extra", src.extra));
+        let raw = el.value === "" ? src.extra[key] : Number(el.value);
+        currentExtra[key] = def.isPct ? Math.round(raw * 10) / 1000 : raw;
+        setBuildingEdit(id, "extra", currentExtra, src.extra);
+        node.classList.toggle("edited", isBuildingEdited(id));
+        node.querySelector(".reset-btn").style.display = isBuildingEdited(id) ? "inline-block" : "none";
+      });
+    });
+  }
+  node.querySelector(".reset-btn").addEventListener("click", (e) => { e.preventDefault(); resetBuilding(id); });
+  return node;
+}
+function buildExtraFieldsHtml(id, extraOriginal) {
+  const currentExtra = currentBuildingValue(id, "extra", extraOriginal) || extraOriginal;
+  const rows = Object.keys(extraOriginal).map((key) => {
+    const def = EXTRA_FIELD_DEFS[key] || { label: key, isPct: false };
+    const val = currentExtra[key];
+    const displayVal = def.isPct ? Math.round(val * 1000) / 10 : val;
+    return `<div class="field-row"><label>${escapeHtml(def.label)}</label><input type="number" data-extra="${key}" value="${displayVal}" step="${def.isPct ? "0.1" : "1"}">${def.isPct ? '<span style="font-size:0.68rem;color:var(--caption);">%</span>' : ""}</div>`;
+  }).join("");
+  return `<div class="extra-fields-title">この施設固有の数値</div>${rows}`;
+}
+
+function matchesSearch(id) {
+  if (!searchQuery) return true;
+  const src = BUILDING_DATA.buildings[id];
+  const name = currentBuildingValue(id, "name", src.name) || "";
+  const desc = currentBuildingValue(id, "desc", src.desc) || "";
+  const q = searchQuery.toLowerCase();
+  return name.toLowerCase().includes(q) || desc.toLowerCase().includes(q) || id.toLowerCase().includes(q);
+}
+
+function renderBuildingsSection() {
+  const container = document.createElement("div");
+  const note = document.createElement("div");
+  note.className = "section-note";
+  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。";
+  container.appendChild(note);
+  const ids = buildingIds().filter(matchesSearch);
+  if (!ids.length) {
+    const hint = document.createElement("div");
+    hint.className = "empty-hint";
+    hint.textContent = "該当する施設が見つかりません";
+    container.appendChild(hint);
+  }
+  ids.forEach((id) => container.appendChild(buildBuildingCard(id)));
+  return container;
+}
+
+function renderHouseSection() {
+  const container = document.createElement("div");
+  const note = document.createElement("div");
+  note.className = "section-note";
+  note.textContent = "家(住居)のレベルは、各施設の解禁条件(家Lv〜)のベースになっています。増築費用はレベル1→2から6→7までの6段階ぶんです。";
+  container.appendChild(note);
+  const grid = document.createElement("div");
+  grid.className = "settings-grid";
+  const maxLevel = currentHouseValue("maxLevel", BUILDING_DATA.house.maxLevel);
+  const rosterCap = currentHouseValue("rosterCapacity", BUILDING_DATA.house.rosterCapacity);
+  [
+    { key: "maxLevel", name: "家の最大レベル", desc: "施設解禁の基準として使われる上限レベル", value: maxLevel },
+    { key: "rosterCapacity", name: "仲間の雇用上限人数", desc: "家レベルとは切り離されている固定値", value: rosterCap },
+  ].forEach((def) => {
+    const edited = Object.prototype.hasOwnProperty.call(edits.house, def.key);
+    const row = document.createElement("div");
+    row.className = "setting-row" + (edited ? " edited" : "");
+    row.innerHTML = `
+      <div class="setting-label"><div class="setting-name">${escapeHtml(def.name)}</div><div class="setting-desc">${escapeHtml(def.desc)}</div></div>
+      <input type="number" class="setting-input" value="${def.value}" min="1">
+    `;
+    row.querySelector("input").addEventListener("input", (e) => {
+      const v = e.target.value === "" ? BUILDING_DATA.house[def.key] : Number(e.target.value);
+      setHouseEdit(def.key, v, BUILDING_DATA.house[def.key]);
+      row.classList.toggle("edited", Object.prototype.hasOwnProperty.call(edits.house, def.key));
+    });
+    grid.appendChild(row);
+  });
+  const upgradeCosts = currentHouseValue("upgradeCosts", BUILDING_DATA.house.upgradeCosts);
+  const costRow = document.createElement("div");
+  const costEdited = Object.prototype.hasOwnProperty.call(edits.house, "upgradeCosts");
+  costRow.className = "setting-row" + (costEdited ? " edited" : "");
+  costRow.innerHTML = `
+    <div class="setting-label"><div class="setting-name">家の増築費用(レベルごと)</div><div class="setting-desc">左からLv1→2、2→3…Lv6→7</div></div>
+    <div class="setting-multi">
+      ${upgradeCosts.map((c, i) => `<div class="multi-item"><span>Lv${i + 1}→${i + 2}</span><input type="number" class="setting-input" data-house-cost-index="${i}" value="${c}" min="0"></div>`).join("")}
+    </div>
+  `;
+  costRow.querySelectorAll("[data-house-cost-index]").forEach((el) => {
+    const idx = Number(el.dataset.houseCostIndex);
+    el.addEventListener("input", () => {
+      const newCosts = upgradeCosts.slice();
+      newCosts[idx] = el.value === "" ? BUILDING_DATA.house.upgradeCosts[idx] : Number(el.value);
+      setHouseEdit("upgradeCosts", newCosts, BUILDING_DATA.house.upgradeCosts);
+      costRow.classList.toggle("edited", Object.prototype.hasOwnProperty.call(edits.house, "upgradeCosts"));
+    });
+  });
+  grid.appendChild(costRow);
+  container.appendChild(grid);
+  return container;
+}
+
+function renderMain() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  if (activeSection === "buildings") main.appendChild(renderBuildingsSection());
+  else if (activeSection === "house") main.appendChild(renderHouseSection());
+  renderTabs();
+  refreshEditCount();
+}
+function renderTabs() {
+  const nav = document.getElementById("sectionTabs");
+  nav.innerHTML = "";
+  const tabs = [
+    { key: "buildings", label: "施設一覧(全16)" },
+    { key: "house", label: "家(住居)設定" },
+  ];
+  tabs.forEach((t) => {
+    const btn = document.createElement("div");
+    btn.className = "sec-tab" + (activeSection === t.key ? " active" : "") + (sectionHasEdits(t.key) ? " has-edits" : "");
+    btn.innerHTML = `${escapeHtml(t.label)}<span class="tab-edit-dot"></span>`;
+    btn.addEventListener("click", () => { activeSection = t.key; renderMain(); });
+    nav.appendChild(btn);
+  });
+}
+function refreshEditCount() {
+  document.getElementById("editCount").textContent = "編集: " + countEdits() + "件";
+  document.querySelectorAll(".sec-tab").forEach((el, i) => {
+    const key = i === 0 ? "buildings" : "house";
+    el.classList.toggle("has-edits", sectionHasEdits(key));
+  });
+}
+
+document.getElementById("searchBox").addEventListener("input", (e) => { searchQuery = e.target.value.trim(); renderMain(); });
+document.getElementById("resetAllBtn").addEventListener("click", () => {
+  if (countEdits() === 0) return;
+  if (!confirm("全ての編集内容を破棄します。よろしいですか？")) return;
+  edits = { buildings: {}, house: {} };
+  renderMain();
+});
+
+// ==== エクスポート(変更点のみのJSON) ====
+function buildExportData() {
+  const out = {};
+  if (Object.keys(edits.buildings).length) out.buildings = edits.buildings;
+  if (Object.keys(edits.house).length) out.house = edits.house;
+  return out;
+}
+function buildDiffListHtml() {
+  const parts = [];
+  Object.keys(edits.buildings).forEach((id) => {
+    const fields = edits.buildings[id];
+    const name = BUILDING_DATA.buildings[id].name;
+    const fieldLines = Object.keys(fields).map((f) => {
+      const from = BUILDING_DATA.buildings[id][f];
+      const to = fields[f];
+      return `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(from))}</del> → <ins>${escapeHtml(JSON.stringify(to))}</ins></div>`;
+    }).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ ${escapeHtml(name)}(${escapeHtml(id)})</div>${fieldLines}</div>`);
+  });
+  if (Object.keys(edits.house).length) {
+    const fieldLines = Object.keys(edits.house).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(BUILDING_DATA.house[f]))}</del> → <ins>${escapeHtml(JSON.stringify(edits.house[f]))}</ins></div>`).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ 家(住居)設定</div>${fieldLines}</div>`);
+  }
+  return parts.length ? parts.join("") : '<div class="empty-hint">まだ編集がありません</div>';
+}
+document.getElementById("exportBtn").addEventListener("click", () => {
+  document.getElementById("exportDiffList").innerHTML = buildDiffListHtml();
+  document.getElementById("exportJson").value = JSON.stringify(buildExportData(), null, 2);
+  document.getElementById("exportModal").classList.add("open");
+});
+document.getElementById("closeExportBtn").addEventListener("click", () => document.getElementById("exportModal").classList.remove("open"));
+document.getElementById("copyJsonBtn").addEventListener("click", () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  document.execCommand("copy");
+  const btn = document.getElementById("copyJsonBtn");
+  const orig = btn.textContent;
+  btn.textContent = "コピーしました";
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+});
+
+// ==== 一時保存(チェックポイント) ====
+document.getElementById("checkpointBtn").addEventListener("click", () => {
+  document.getElementById("checkpointJson").value = JSON.stringify(edits, null, 2);
+  document.getElementById("checkpointImportInput").value = "";
+  document.getElementById("checkpointImportStatus").textContent = "";
+  document.getElementById("checkpointModal").classList.add("open");
+});
+document.getElementById("closeCheckpointBtn").addEventListener("click", () => document.getElementById("checkpointModal").classList.remove("open"));
+document.getElementById("copyCheckpointBtn").addEventListener("click", () => {
+  const ta = document.getElementById("checkpointJson");
+  ta.select();
+  document.execCommand("copy");
+  const btn = document.getElementById("copyCheckpointBtn");
+  const orig = btn.textContent;
+  btn.textContent = "コピーしました";
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+});
+document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
+  const statusEl = document.getElementById("checkpointImportStatus");
+  const raw = document.getElementById("checkpointImportInput").value.trim();
+  if (!raw) { statusEl.textContent = "JSONを貼り付けてください"; statusEl.style.color = "var(--danger)"; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { statusEl.textContent = "JSONの読み込みに失敗しました: " + e.message; statusEl.style.color = "var(--danger)"; return; }
+  try {
+    Object.keys(parsed.buildings || {}).forEach((id) => { edits.buildings[id] = Object.assign({}, edits.buildings[id] || {}, parsed.buildings[id]); });
+    Object.assign(edits.house, parsed.house || {});
+    statusEl.textContent = "読み込みました";
+    statusEl.style.color = "var(--success)";
+    renderMain();
+  } catch (e) {
+    statusEl.textContent = "読み込み中にエラーが発生しました: " + e.message;
+    statusEl.style.color = "var(--danger)";
+  }
+});
+
+renderMain();
+</script>
+</body>
+</html>
