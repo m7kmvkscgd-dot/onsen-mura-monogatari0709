@@ -682,6 +682,11 @@ function playDungeonMoveTransition(actualLogic) {
       moveAnim.cancel();
       bg.style.transform = ""; // 暗転しきったところで背景の変形をリセット(新しい背景はactualLogic内のrenderDungeon等が反映する)
       actualLogic();
+      // この一歩で戦闘の発生が決まっていた場合(queueEncounterBattleで保留中)、テキストボックスは
+      // 画面が真っ暗な今のうちに消しておく。明転後(fadeIn.onfinish→‼️表示)の時点で消す作りだと、
+      // 明転のフェード(600ms)の間だけテキストボックスが一瞬見えてしまう(ユーザー報告、2026-07-25)。
+      // 位置測定(getBoundingClientRect)はvisibility:hiddenでも狂わないため、‼️の表示位置には影響しない
+      if (pendingEncounterBattle) document.getElementById("dungeonLog").style.visibility = "hidden";
       // UIの薄さは画面が真っ黒な間(見えない状態)に解除を開始する。fadeMs(600ms)>UI側のopacity
       // transition(200ms)のため、暗転画面が明けきる頃には確実にUIが完全な不透明へ戻っている
       // (ユーザー指示: 「暗転画面があけたらもうUIの透明完全に解除しといて」)
