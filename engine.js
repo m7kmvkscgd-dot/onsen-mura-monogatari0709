@@ -2613,6 +2613,20 @@ function describeBigAttackProfile(p) {
   }
   return parts.join("。") + "。";
 }
+// describeBigAttackProfileの簡潔版(ターゲットマークのツールチップ専用、1〜2行に収める。
+// ignoreGuardianの言及は省略し、威力%と状態異常の有無だけを「・」区切りで並べる)
+function describeBigAttackShort(p) {
+  const parts = [];
+  if (p.aoe) parts.push("全体攻撃");
+  parts.push(`威力${Math.round((p.mult != null ? p.mult : 1) * 100)}%`);
+  if (p.debuff) {
+    const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
+    const info = STATUS_TOOLTIPS[tooltipKey];
+    const name = info ? info.title : p.debuff.type;
+    parts.push(`命中で${name}の危険`);
+  }
+  return parts.join("・");
+}
 function bigAttackSummaryText(enemyDef) {
   const pool = bigAttackPool(enemyDef);
   if (!pool.length) return "詳細不明の一撃を放つ。";

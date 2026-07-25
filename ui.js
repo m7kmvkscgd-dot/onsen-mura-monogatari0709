@@ -874,9 +874,9 @@ function renderPartyBar(elId, combatants, actingCharId) {
     `;
     if (bigThreat) {
       const markerEl = div.querySelector(".ally-target-marker");
-      markerEl.dataset.enemyName = bigThreat.enemy.label;
+      markerEl.dataset.enemyImage = bigThreat.enemy.image;
       markerEl.dataset.attackName = bigThreat.profile.name || "大技";
-      markerEl.dataset.attackDesc = describeBigAttackProfile(bigThreat.profile);
+      markerEl.dataset.attackDesc = describeBigAttackShort(bigThreat.profile);
       const warnEl = div.querySelector(".ally-lethal-warning");
       if (warnEl) warnEl.dataset.lethalDesc = "この大技を受けると戦闘不能になる可能性があります。";
     }

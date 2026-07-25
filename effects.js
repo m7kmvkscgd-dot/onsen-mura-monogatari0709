@@ -847,8 +847,9 @@ function showStatusTooltip(el) {
     // ターゲットマーク左上の⚠️: 未かばう想定で大技を受けるとHPが最大の20%以下まで落ち込む可能性が高い警告
     title = "危険：致死級の一撃"; desc = el.dataset.lethalDesc; iconHtml = "⚠️"; category = null;
   } else if (el.classList.contains("ally-target-marker")) {
-    // ターゲットマーク本体: どの敵の何の大技に狙われているかを確認できる
-    title = `${el.dataset.enemyName}に狙われています`; desc = `次のターンの大技【${el.dataset.attackName}】の対象です。${el.dataset.attackDesc}`; iconHtml = "🎯"; category = null;
+    // ターゲットマーク本体: 敵のイラスト+技名+簡潔な説明(1〜2行)だけを見せる(長文だと一目で読めないというユーザー指摘)
+    title = el.dataset.attackName; desc = el.dataset.attackDesc;
+    iconHtml = `<img src="${el.dataset.enemyImage}" class="tooltip-enemy-icon">`; category = null;
   } else {
     const info = STATUS_TOOLTIPS[el.dataset.status];
     if (!info) return;
