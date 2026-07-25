@@ -167,7 +167,39 @@ function pauseBgmAudio() {
   bgmIntentionalPauseUntil = performance.now() + 400;
   bgmAudio.pause();
 }
+// 【最後の砦: srcの読み直しによる完全リセット(ユーザー報告2026-07-25)】
+// アプリ切り替え(LINE等を開いて戻る)の後、bgmAudioのメディアパイプラインが壊れて「曲頭の
+// 0.5秒だけが永遠にリピートされる」状態に入ることがかなりの高確率である。iPhoneではChromeも
+// SafariもWebKitのため両ブラウザで同一の症状になる。壊れ方は2通り確認/推定されており、
+//  (a) 要素は「再生中」を名乗ったまま、loop属性によるネイティブループで曲頭付近だけを繰り返す
+//      (pauseイベントを一切出さないため、pause監視ベースの既存の自動復帰では検出不可能)
+//  (b) play()が一瞬成功→勝手にpause、の往復(既存の自動復帰が1秒おきにplay()し直すため、
+//      「1秒おきに曲頭だけ鳴る」リピートとして聞こえ続ける)
+// どちらもplay()やシークの再試行では直らず、src再代入+load()でパイプラインを作り直すしか
+// 治らない(「戦闘開始や帰村などplayBgm()がsrcを差し替えるタイミングで直る」という報告と一致)。
+// 読み直し後は退避しておいた再生位置へシークしてから再生し直す(音源はキャッシュ済みのため一瞬)
+let bgmHardResetToken = 0;
+function hardResetBgmAudio() {
+  if (!currentBgmKey || !audioUnlocked) return;
+  const myToken = ++bgmHardResetToken;
+  const keyAtReset = currentBgmKey;
+  const pos = bgmPositions[keyAtReset] || 0;
+  bgmIntentionalPauseUntil = performance.now() + 800; // load()に伴うpause/abortを自動復帰の対象から外す
+  bgmAudio.src = BGM_TRACKS[keyAtReset];
+  bgmAudio.load();
+  const seekAndPlay = () => {
+    // 読み直しの完了を待つ間に別のリセットや曲の切り替えが起きていたら、この古い処理は捨てる
+    if (myToken !== bgmHardResetToken || currentBgmKey !== keyAtReset) return;
+    try { bgmAudio.currentTime = pos; } catch (e) {}
+    bgmPlayRequestPending = false; // リセット前のplay()待ちが残っていても無効なので、多重呼び出しガードを明示的に解いてから再生する
+    bgmLastPlayAttemptAt = 0;
+    resumeAndPlayBgmAudio();
+  };
+  if (bgmAudio.readyState >= 1) seekAndPlay();
+  else bgmAudio.addEventListener("loadedmetadata", seekAndPlay, { once: true });
+}
 let bgmAutoRecoverLastAt = 0;
+let bgmAutoRecoverStreak = 0;
 bgmAudio.addEventListener("pause", () => {
   if (performance.now() < bgmIntentionalPauseUntil) return; // 意図した一時停止
   if (!currentBgmKey || !audioUnlocked) return; // 何も再生する意図がない/まだアンロック前
@@ -179,8 +211,12 @@ bgmAudio.addEventListener("pause", () => {
   // ②フォアグラウンドでも自動復帰は1秒に1回まで(万一play↔pauseの往復が起きても連打にしない)
   const now = performance.now();
   if (now - bgmAutoRecoverLastAt < 1000) return;
+  // ③自動復帰が短時間(5秒以内)に連続する=素のplay()では再開が定着しない壊れ方(上記(b))を
+  //   しているとみなし、2回目からはsrc読み直しの完全リセットへ格上げする
+  bgmAutoRecoverStreak = now - bgmAutoRecoverLastAt < 5000 ? bgmAutoRecoverStreak + 1 : 1;
   bgmAutoRecoverLastAt = now;
-  resumeAndPlayBgmAudio();
+  if (bgmAutoRecoverStreak >= 2) hardResetBgmAudio();
+  else resumeAndPlayBgmAudio();
 });
 
 const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含む)BGMの音量を80%に
@@ -616,12 +652,22 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && bgmAudioCtx && bgmAudioCtx.state === "suspended") {
     bgmAudioCtx.resume().catch(() => {});
   }
-  if (document.visibilityState === "visible" && currentBgmKey && bgmAudio.paused && audioUnlocked) {
-    // 退避しておいた位置へ戻してから1回だけ再生する(位置が大きくズレている時のみシークする。
-    // シーク自体もiOSでは軽い瞬断の原因になり得るため、正常なケースでは触らない)
+  if (document.visibilityState === "visible" && currentBgmKey && audioUnlocked) {
     const pos = bgmPositions[currentBgmKey] || 0;
-    try { if (Math.abs((bgmAudio.currentTime || 0) - pos) > 1.5) bgmAudio.currentTime = pos; } catch (e) {}
-    resumeAndPlayBgmAudio();
+    if (bgmAudio.paused) {
+      // iOS系はアプリ切り替えから戻るとほぼ確実にpausedになっている。以前はシーク+play()で
+      // 再開していたが、切り替え後はメディアパイプラインが壊れていて「曲頭0.5秒の永久リピート」に
+      // 入ることがかなりの高確率であり(ユーザー報告2026-07-25)、play()やシークではこの状態を
+      // 直せない。常にsrcを読み直してパイプラインごと作り直し、退避位置から再生し直す
+      // (復帰の瞬間はどのみち無音なので、読み直しによる体感の差は無い。なおPCのブラウザは
+      // タブを隠してもBGMが止まらない=pausedにならないため、この分岐自体を通らない)
+      hardResetBgmAudio();
+    } else if (pos - (bgmAudio.currentTime || 0) > 2) {
+      // 「再生中」を名乗っているのに、隠れる前に退避した位置より2秒以上巻き戻っている=
+      // loop属性によるネイティブループで曲頭付近を繰り返す壊れ方(上記(a)。pauseイベントが
+      // 出ないためここでしか検出できない)。これもsrc読み直しでしか直らない
+      hardResetBgmAudio();
+    }
   }
 });
 // 職業ごとの攻撃音(狩人/侍/砲術士は専用、僧侶・陰陽師は共用。それ以外は既存の汎用attack音のまま)
