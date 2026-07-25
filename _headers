@@ -18,7 +18,13 @@
 
 # ゲーム本体のコード類(HTML/CSS/JS)は常に再検証させる(2026-07-26)。index.htmlだけ新しく
 # CSSが古い、という不整合(朱印がパネル最下部に落ちて見えた不具合の原因)を防ぐ。
-# 画像/音声(assets/)は対象外のままキャッシュを効かせる(ファイル内容の変化が稀なため)
+
+# 画像・音声(assets/)は「手元のキャッシュを即表示→裏で更新確認」(stale-while-revalidate)。
+# Pages既定のmax-age=0のみだと、戦闘画面がボタンのたびにDOMを作り直す際に全<img>が
+# 再検証の通信待ちになり、イラストが1〜2フレーム消えてチカつく(ユーザー報告2026-07-26、
+# 画面録画のコマ解析で確認)。SWRなら表示は即時のまま、差し替えた画像も次回以降で反映される
+/assets/*
+  Cache-Control: public, max-age=0, stale-while-revalidate=604800
 /index.html
   Cache-Control: no-cache, must-revalidate
 /*.css
