@@ -1995,7 +1995,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     const counterMult = (target.nullifyCounterMult || 0.8) + (target.passives && target.passives.counterDamageBonus || 0);
     target.nullifyCounterTurnsLeft = 0;
     target.nullifyCounterMult = null;
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterMult - effectiveStat(actor, "def") * 0.5));
+    // 防御力は他の「威力X%」スキルと同じmitigation(K=15)方式で減算する(以前は「def×0.5を定額で引く」
+    // 方式だったため、槍士のように素のatkが低いクラスは防御力の高い敵相手だと常に最低保証の1ダメージに
+    // 張り付いてしまっていた。ユーザー指摘により修正)
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterMult * mitigation(effectiveStat(actor, "def"), 15)));
     actor.hp = Math.max(0, actor.hp - counterDmg);
     log(`${target.label}は${actorLabel}の攻撃を完全に無効化した！`);
     log(`${target.label}は${counterDmg}ダメージで反撃した！`);
@@ -2137,7 +2140,9 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     // 燕返し(counterCritRateAdd)/天衣無縫(counterDamageBonus)など: 反撃そのものにも会心判定と加算ダメージ補正を乗せる
     const counterCritMult = rollCritMultiplier(target, target.passives.counterCritRateAdd || 0, actor);
     const counterDamageMult = (target.passives.counterMult || 1) + (target.passives.counterDamageBonus || 0);
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterDamageMult * counterCritMult - effectiveStat(actor, "def") * 0.5));
+    // 防御力は他の「威力X%」スキルと同じmitigation(K=15)方式で減算する(def×0.5の定額減算だと
+    // 素のatkが低いクラスが防御力の高い敵相手に常に最低保証の1ダメージへ張り付いていたため修正)
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterDamageMult * counterCritMult * mitigation(effectiveStat(actor, "def"), 15)));
     actor.hp = Math.max(0, actor.hp - counterDmg);
     log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！${counterCritMult > 1 ? "会心の反撃！" : ""}`);
   }
@@ -2403,7 +2408,8 @@ function onEvadeSuccess(target, enemy, log) {
   if (target.passives && target.passives.onEvadeCounterMult && enemy && enemy.hp > 0) {
     // 天衣無縫(counterDamageBonus)など: 見切り/瞬身の順の回避反撃にも加算で乗る
     const evadeCounterMult = target.passives.onEvadeCounterMult + (target.passives.counterDamageBonus || 0);
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * evadeCounterMult - effectiveStat(enemy, "def") * 0.5));
+    // 防御力は他の「威力X%」スキルと同じmitigation(K=15)方式で減算する(def×0.5の定額減算からの修正、上記参照)
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * evadeCounterMult * mitigation(effectiveStat(enemy, "def"), 15)));
     enemy.hp = Math.max(0, enemy.hp - counterDmg);
     log(`${target.label}は${enemy.label}に反撃した！${counterDmg}ダメージ！`);
   }
@@ -2418,7 +2424,8 @@ function handleGuardSynergyPassives(target, enemy, log) {
   if (target.passives.guardMpRefund) target.mp = Math.min(target.maxMp, target.mp + 1);
   let counterDmg = null;
   if (target.passives.guardCounter && enemy.hp > 0) {
-    counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") - effectiveStat(enemy, "def") * 0.5));
+    // 防御力は他の「威力X%」スキルと同じmitigation(K=15)方式で減算する(def×0.5の定額減算からの修正、上記参照)
+    counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * mitigation(effectiveStat(enemy, "def"), 15)));
     // ここではenemy.hpを減らさない・ログも出さない。反撃の演出(playGuardCounterVisual、0.5秒後)と
     // 完全に同時になるよう、実際のHP減算とログ出力は演出発火のタイミングまで遅延させる
     // (以前はここで即座に減らしていたため、敵の攻撃演出の直後のrenderBattleScreen()で
