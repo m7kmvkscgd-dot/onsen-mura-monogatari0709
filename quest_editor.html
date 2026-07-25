@@ -178,13 +178,17 @@ function addedQuestIds(tier) {
 function isNewQuest(id) { return Object.prototype.hasOwnProperty.call(addedQuests, id); }
 function questSource(id) { return isNewQuest(id) ? addedQuests[id] : QUEST_DATA.quests[id]; }
 
+// 注意: ここでは全体再描画(refreshAll/renderMain)を呼ばない。以前は毎回呼んでいたため、
+// 1文字入力するたびにカード一覧が丸ごと作り直されて<details>が閉じてしまい入力できない不具合が
+// あった(ユーザー報告)。データを更新するだけに留め、見た目の反映は呼び出し元(input側)が
+// classList.toggle/refreshEditCount等の軽量な更新で行う。カードの構成そのものが変わる操作
+// (削除/追加/ランク変更/検索/タブ切り替え)だけは引き続き呼び出し元でrefreshAll()する
 function setQuestEdit(id, field, value, original) {
-  if (isNewQuest(id)) { addedQuests[id][field] = value; refreshAll(); return; }
+  if (isNewQuest(id)) { addedQuests[id][field] = value; return; }
   edits.quests[id] = edits.quests[id] || {};
   if (value === original || (value === "" && (original === undefined || original === null))) delete edits.quests[id][field];
   else edits.quests[id][field] = value;
   if (Object.keys(edits.quests[id]).length === 0) delete edits.quests[id];
-  refreshAll();
 }
 function currentQuestValue(id, field, original) {
   if (isNewQuest(id)) return addedQuests[id][field];
@@ -200,7 +204,6 @@ function resetQuest(id) {
 function setRescueEdit(field, value, original) {
   if (value === original) delete edits.rescue[field];
   else edits.rescue[field] = value;
-  refreshAll();
 }
 function currentRescueValue(field, original) {
   return Object.prototype.hasOwnProperty.call(edits.rescue, field) ? edits.rescue[field] : original;
@@ -208,7 +211,6 @@ function currentRescueValue(field, original) {
 function setConstEdit(key, value, original) {
   if (value === original) delete edits.constants[key];
   else edits.constants[key] = value;
-  refreshAll();
 }
 function currentConstValue(key, original) {
   return Object.prototype.hasOwnProperty.call(edits.constants, key) ? edits.constants[key] : original;
@@ -333,6 +335,9 @@ function buildQuestCard(id) {
   const fields = ["emoji", "requester", "title", "text", "targetFloor", "count", "tier", "rewardGold", "spawnId", "chaseText", "minQuestClears"];
   const REQUIRED_NUMERIC = new Set(["targetFloor", "count"]); // 空欄を許さず元の値へフォールバックする
   const OPTIONAL_NUMERIC = new Set(["rewardGold", "minQuestClears"]); // 空欄=null(未設定)として明示的に書き出す
+  const emojiPreviewEl = node.querySelector(".quest-emoji-badge");
+  const titlePreviewEl = node.querySelector(".quest-title-preview");
+  const floorPreviewEl = node.querySelector(".quest-meta-badge");
   fields.forEach((f) => {
     const el = node.querySelector(`[data-field="${f}"]`);
     if (!el) return;
@@ -345,6 +350,11 @@ function buildQuestCard(id) {
       if (REQUIRED_NUMERIC.has(f)) v = v === "" ? originalVal : Number(v);
       else if (OPTIONAL_NUMERIC.has(f)) v = v === "" ? null : Number(v);
       setQuestEdit(id, f, v, originalVal);
+      // カード折りたたみ時のプレビュー(絵文字/依頼名/目標階層)だけはその場でテキストを直接書き換える
+      // (全体再描画はしない、上のコメント参照)
+      if (f === "emoji") emojiPreviewEl.textContent = v || "❓";
+      if (f === "title") titlePreviewEl.textContent = v || "(無題)";
+      if (f === "targetFloor") floorPreviewEl.textContent = `Lv${v}〜`;
       node.classList.toggle("edited", isQuestEdited(id));
       refreshEditCount();
     });
