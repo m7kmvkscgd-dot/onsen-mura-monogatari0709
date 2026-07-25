@@ -775,53 +775,67 @@ const SKILL_TREES = {
   samurai: {
     2: {
       left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+40%", mp: 0, passive: { firstAttackBonusMult: 0.40 } },
-      right: { name: "見切り", desc: "HPが50%以下の時、回避率+25%", mp: 0, passive: { conditionalMod: { cmp: "lte", value: 0.5, evasionAdd: 0.25 } } },
+      right: { name: "見切り", desc: "敵の攻撃を回避した時、攻撃力50%の威力で反撃する。", mp: 0, passive: { onEvadeCounterMult: 0.5 } },
     },
     3: {
-      left: { name: "連斬", desc: "会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.25 } },
-      right: { name: "気迫", desc: "HPが80%以上の間、被ダメージ25%減少", mp: 0, passive: { conditionalMod: { cmp: "gte", value: 0.8, dmgTakenMult: 0.75 } } },
+      // 闘志はLv7左から移動(内容はそのまま)
+      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる。(仲間が二人以上会心を出しても、重複しない)", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
+      // 新規スキル。ユーザー指定の仕組み(HP20%減るごとに攻撃力+10%)は未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      right: { name: "武士道", desc: "HPが20%減るごとに攻撃力＋10%", mp: 0 },
     },
     4: {
-      left: { name: "一閃", desc: "敵単体へ190%ダメージ、防御力25%無視", mp: 4, action: { kind: "damage", mult: 1.9, defPierce: 0.25 } },
-      right: { name: "心眼の構え", desc: "このターン、敵の単体攻撃を1度だけ完全に無効にし、75%の攻撃力で反撃する。", mp: 1, action: { kind: "guardCounterSelf", mult: 0.75 } },
+      left: { name: "一閃", desc: "敵単体へ190%ダメージ、防御力25%無視", mp: 3, action: { kind: "damage", mult: 1.9, defPierce: 0.25 } },
+      right: { name: "心眼", desc: "このターン、敵の単体攻撃を1度だけダメージ0にし、100%の攻撃力で反撃する。", mp: 2, action: { kind: "guardCounterSelf", mult: 1.0 } },
     },
     5: {
       left: { name: "疾風斬り", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1〜3を与える。", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, valueMin: 1, valueMax: 3, condition: "targetSlower" } } },
-      right: { name: "黒曜", desc: "自身が出血時の流血ダメージを3分の1にする", mp: 0, passive: { dotDamageMult: 1 / 3 } },
+      // 新規スキル(旧・黒曜を置き換え)。敵の強化解除は未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      right: { name: "水月", desc: "威力50%で攻撃し、敵のステータス強化を全て解除する。", mp: 1 },
     },
     6: {
-      left: { name: "鬼神化", desc: "後日設定", mp: 0 },
-      right: { name: "百戦錬磨", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
+      // 鬼神化は過去に無断実装してユーザー指示でrevertした経緯があるため、今回も仕組みは実装せずテキストのみ反映(2026-07-25引き継ぎ参照、要確認)
+      left: { name: "鬼神化", desc: "遠征中一度だけ使える。5ターンの間、鬼の力を発現する。発動時、全ての状態異常、HPを全回復する。鬼神化中はストレスの影響を受けない。鬼神斬り:mp消費0。威力110%会心率＋40%が利用可能。この技で敵を倒すとHPを20%回復。ストレス＋100。ターンを消費しない。", mp: 3 },
+      // 新規スキル(旧・百戦錬磨の名前枠を置き換え、百戦錬磨自体はLv10右「天衣無縫」へ移動)。未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      right: { name: "明鏡止水", desc: "5ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3 },
     },
     7: {
-      left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる。(仲間が二人以上会心を出しても、重複しない)", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
-      right: { name: "覇気", desc: "敵を与えたダメージの1%を回復する", mp: 0, passive: { onHitLifestealPct: 0.01 } },
+      // 新規スキル(旧・闘志の名前枠を置き換え、闘志自体はLv3左へ移動)。未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      left: { name: "覇気", desc: "会心が発動するたびに、会心率が＋3%。", mp: 0 },
+      // 黒曜はLv5右から移動、効果を「流血ダメージ1/3」→「流血ダメージ無効」に強化
+      right: { name: "黒曜", desc: "出血ダメージを受けなくなる", mp: 0, passive: { dotDamageMult: 0 } },
     },
     8: {
-      left: { name: "乱れ斬り", desc: "ランダムな敵へ3回攻撃する。(対象は毎回ランダム)", mp: 3, action: { kind: "damageRandomMulti", mult: 0.65, hits: 3 } },
+      // 連斬はLv3左から移動(内容はそのまま)
+      left: { name: "連斬", desc: "会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.25 } },
       right: { name: "燕返し", desc: "被弾時、25%の確率で反撃する(攻撃力110%)", mp: 0, passive: { counterChance: 0.25, counterMult: 1.1 } },
     },
     9: {
       left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%\n(重複しない)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
-      right: { name: "覚悟", desc: "戦闘不能になる一撃を、戦闘中1回だけHP1で耐える", mp: 0, passive: { onceGuardType: "surviveAtHp1" } },
+      // 新規スキル(旧・覚悟を置き換え)。未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      right: { name: "残心", desc: "敵を倒すと次のターンに使うスキルのmpを0にする", mp: 3 },
     },
     10: {
-      left: { name: "神速抜刀", desc: "敵単体へ320%ダメージ、防御力50%無視", mp: 7, action: { kind: "damage", mult: 3.2, defPierce: 0.5 } },
-      right: { name: "明鏡止水", desc: "3ターン、自身の会心率+40%、会心ダメージ+30%。\n重ねがけはできない。", mp: 5, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.4 }, { stat: "critDmgAdd", mult: 0.3 }], turns: 3 } },
+      // 旧・神速抜刀(320%ダメージ)から全面刷新。旧仕組み(action)は新テキストと矛盾するため削除、未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      left: { name: "神速抜刀", desc: "35%の威力で敵を攻撃。ターンを消費しない。", mp: 1 },
+      // 天衣無縫は旧・百戦錬磨(Lv6右)の内容そのまま名前だけ変更して移動
+      right: { name: "天衣無縫", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
     },
   },
   ninja: {
     2: {
-      left: { name: "煙幕", desc: "煙玉を一つ消費して煙幕をはる。煙幕は1ターンの間、味方全体の回避率を50%向上させる。", mp: 1, action: { kind: "buffPartyConsumeItem", item: "smokeBomb", stats: [{ stat: "evasionAdd", mult: 0.5 }], turns: 1 } },
-      right: { name: "毒刃", desc: "通常攻撃時、50%の確率で敵を毒状態にする(蓄積2〜3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.5, valueMin: 2, valueMax: 3 } } },
+      left: { name: "煙幕", desc: "けむり玉を一つ消費して煙幕をはる。煙幕は２ターンの間、味方全体の回避率を50%向上させる。", mp: 1, action: { kind: "buffPartyConsumeItem", item: "smokeBomb", stats: [{ stat: "evasionAdd", mult: 0.5 }], turns: 2 } },
+      right: { name: "毒刃", desc: "通常攻撃時、50%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.5, valueMin: 3, valueMax: 3 } } },
     },
     3: {
-      left: { name: "口寄せの術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 5, action: { kind: "transform" } },
-      right: { name: "忍足", desc: "その戦闘で敵に初めに攻撃されるまで回避率＋20%", mp: 0, passive: { preFirstHitEvasionAdd: 0.2 } },
+      // 撒菱はLv4左から移動(内容はそのまま)
+      left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
+      right: { name: "忍足", desc: "その戦闘で敵に初めに攻撃されるまで回避率＋20%", mp: 4, passive: { preFirstHitEvasionAdd: 0.2 } },
     },
     4: {
-      left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
-      right: { name: "影分身の術", desc: "自分の分身(HP75%/MP0、通常攻撃のみ)を呼び出し、5人目として並んで戦わせる。分身は状態異常にならず回復も不可、瀕死になると消え、戦闘が終わると自動で消滅する", mp: 4, action: { kind: "summonClone" } },
+      // 口寄せの術はLv3左から移動(内容はそのまま、撒菱と入れ替え)
+      left: { name: "口寄せの術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 5, action: { kind: "transform" } },
+      // 影分身の術はユーザー指示によりプレースホルダーに戻す(元のsummonClone実装は解除。2026-07-25引き継ぎ参照、要確認)
+      right: { name: "影分身の術", desc: "後日実装", mp: 0 },
     },
     5: {
       left: { name: "身代わりの術", desc: "次に受ける全ての攻撃を1度だけ無効化する(全体攻撃を含む)", mp: 1, action: { kind: "shieldSelf" } },
@@ -829,22 +843,24 @@ const SKILL_TREES = {
     },
     6: {
       left: { name: "暗殺術", desc: "攻撃力100%で敵を攻撃する。このスキルで敵をキルした場合、ターンが終了せず、再度ターンをプレイできる。", mp: 3, action: { kind: "damage", mult: 1.0, extraTurnOnKill: true } },
-      right: { name: "空蝉", desc: "敵の攻撃を回避した時、mpを1回復する。", mp: 0, passive: { onEvadeMpRestore: 1 } },
+      // 毒殺の心得はLv9右から移動(内容はそのまま、空蝉と入れ替え)
+      right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
     },
     7: {
-      left: { name: "影縫いの術", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
-      right: { name: "瞬身反撃", desc: "敵の攻撃を回避した時、反撃する。(攻撃威力75%)", mp: 0, passive: { onEvadeCounterMult: 0.75 } },
+      left: { name: "影縫い", desc: "敵単体へ90%ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      right: { name: "瞬身の順", desc: "敵の攻撃を回避した時、反撃する。(攻撃威力75%)", mp: 0, passive: { onEvadeCounterMult: 0.75 } },
     },
     8: {
-      left: { name: "幻影乱舞の術", desc: "ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。", mp: 4, action: { kind: "damageRandomMulti", mult: 0.5, hits: 5 } },
+      left: { name: "幻影乱舞", desc: "ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。", mp: 4, action: { kind: "damageRandomMulti", mult: 0.5, hits: 5 } },
       right: { name: "修羅刃", desc: "敵を倒すと次の攻撃の回避率+40%。値は蓄積しない。", mp: 0, passive: { onKillEvasionBonus: 0.4 } },
     },
     9: {
       left: { name: "影縫い", desc: "敵一体をスタンさせる。ターンを消費しない", mp: 3, action: { kind: "stunNoCost", chance: 1, turns: 1 } },
-      right: { name: "毒殺の心得", desc: "毒を負わせた敵への会心率+40%", mp: 0, passive: { ailmentCritBonus: { ailment: "poison", addRate: 0.4 } } },
+      // 空蝉はLv6右から移動(内容はそのまま、毒殺の心得と入れ替え)。※名前欄が差分に無かったため推測で補完、要確認
+      right: { name: "空蝉", desc: "敵の攻撃を回避した時、mpを1回復する。", mp: 0, passive: { onEvadeMpRestore: 1 } },
     },
     10: {
-      left: { name: "影分身の術", desc: "後日実装", mp: 0 },
+      left: { name: "禁忌・影分身の術", desc: "", mp: 0 },
       right: { name: "朧隠れ", desc: "3ターンの間、味方全員の回避率+30%", mp: 3, action: { kind: "buffParty", stats: [{ stat: "evasionAdd", mult: 0.3 }], turns: 3 } },
     },
   },
@@ -858,23 +874,28 @@ const SKILL_TREES = {
       right: { name: "砦の構え", desc: "かばうが敵の攻撃を防いだ瞬間、確実に反撃する", mp: 0, passive: { guardCounter: true } },
     },
     4: {
-      left: { name: "迅雷突き", desc: "敵単体へ200%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)", mp: 4, action: { kind: "damage", mult: 2.0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 3 } } },
+      left: { name: "迅雷突き", desc: "敵単体へ240%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)", mp: 4, action: { kind: "damage", mult: 2.4, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 3 } } },
       right: { name: "守り槍", desc: "敵一体に攻撃をしつつ同時に庇うを発動する", mp: 2, action: { kind: "damage", mult: 1.0, alsoGuard: true } },
     },
     5: {
-      left: { name: "鎧砕き", desc: "攻撃した敵の防御力を2ターン-20%。(40%まで蓄積する)", mp: 0, action: { kind: "damage", mult: 0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 2 } } },
-      right: { name: "守護陣", desc: "3ターンの間、味方全体の防御力+20%\nターンを消費しない", mp: 3, action: { kind: "buffPartyNoCost", stats: [{ stat: "def", mult: 1.2 }], turns: 3 } },
+      // 剛槍はLv8左の旧・千人力と同内容、名前だけ変更して移動(鎧砕きと入れ替え)
+      left: { name: "剛槍", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
+      right: { name: "守護陣", desc: "4ターンの間、味方全体の防御力+20%", mp: 3, action: { kind: "buffPartyNoCost", stats: [{ stat: "def", mult: 1.2 }], turns: 4 } },
     },
     6: {
-      left: { name: "蜻蛉切り", desc: "飛行の敵に命中ペナルティなしで100%ダメージ。撃ち落とし判定もある", mp: 2, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
+      // 阿修羅突きはLv7左から移動(内容はそのまま)
+      left: { name: "阿修羅突き", desc: "HPが満タンの敵に対し、攻撃をすると出血を3〜5付与する", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 1.0, valueMin: 3, valueMax: 5, condition: "targetFullHp" } } },
       right: { name: "迎撃", desc: "被弾時、30%の確率で反撃する", mp: 0, passive: { counterChance: 0.3 } },
     },
     7: {
-      left: { name: "阿修羅突き", desc: "HPが満タンの敵に対し、攻撃をすると出血を3〜5付与する", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 1.0, valueMin: 3, valueMax: 5, condition: "targetFullHp" } } },
+      // 阿修羅突きの抜けた枠。「城壁の意志」に改名する指示だけ受け取り、効果文の更新前にデータが失われたため、
+      // 元々ここにあった蜻蛉切りの内容(名前以外)を暫定的に残している。要確認(2026-07-25引き継ぎ参照)
+      left: { name: "城壁の意志", desc: "飛行の敵に命中ペナルティなしで100%ダメージ。撃ち落とし判定もある", mp: 2, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
       right: { name: "城壁の意志", desc: "かばうが成功するとMPが1回復する", mp: 0, passive: { guardMpRefund: true } },
     },
     8: {
-      left: { name: "千人力", desc: "敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)", mp: 0, passive: { onHitSelfStackBuff: { stat: "atk", perStack: 0.1, maxStacks: 2, turns: 2 } } },
+      // 鎧砕きはLv5左から移動(内容はそのまま、千人力→剛槍と入れ替え)
+      left: { name: "鎧砕き", desc: "攻撃した敵の防御力を2ターン-20%。(40%まで蓄積する)", mp: 0, action: { kind: "damage", mult: 0, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 2 } } },
       right: { name: "不屈", desc: "状態異常にかかる確率が40%減少する", mp: 0, passive: { statusResistMult: 0.4 } },
     },
     9: {
@@ -930,8 +951,10 @@ const SKILL_TREES = {
       right: { name: "急所への一撃", desc: "通常攻撃で65%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.65, valueMin: 1, valueMax: 3 } } },
     },
     3: {
-      left: { name: "隼落とし", desc: "飛行を持つ敵への攻撃力が20%上がる", mp: 0, passive: { flyingBonus: { mult: 1.2 } } },
-      right: { name: "血痕追跡", desc: "出血中の敵から攻撃を受ける際、回避＋30%", mp: 0, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.95, turns: 1 } } },
+      // 新規の2連続攻撃スキルに全面刷新(旧・隼落とし=飛行ボーナスは廃止)。未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
+      left: { name: "隼落とし", desc: "敵単体へ2連続攻撃(合計180%ダメージ)", mp: 0 },
+      // 血痕追跡: 元々desc文が実際の仕組み(80%威力+95%スタン)と食い違っていたバグを、新desc文で修正(仕組み自体は変更なし)
+      right: { name: "血痕追跡", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 0, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.95, turns: 1 } } },
     },
     4: {
       left: { name: "貫き矢", desc: "通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 0, passive: { overkillPierce: true } },

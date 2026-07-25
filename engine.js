@@ -692,7 +692,7 @@ function refreshEquipBonus(characters, classId, classUpgrades) {
 // 魔力0の物理職(盗賊/忍者/戦士/侍)にも最低10のMPを持たせてあるので、自分の技は使える。
 // MPはレベルアップで伸びなくなった(下記levelUp参照)ため、一度の遠征で4〜5回使える程度を目安に
 // guard以外は旧コストの半分にしてある。guardは他の技より軽いが、無制限に連発できないよう1だけ消費させる
-const ABILITY_MP_COST = { magicAttack: 3, magicAttackAll: 4, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
+const ABILITY_MP_COST = { magicAttack: 2, magicAttackAll: 4, heal: 3, critAttack: 2, powerAttack: 3, physicalAttackAll: 3, preciseShot: 2, cannonShot: 4, guard: 1 };
 function abilityMpCost(abilityType, actor) {
   // 変化の術で変身中はMPの概念が無くなる(かばう等も無料で使える)
   if (actor && actor.transformForm) return 0;
