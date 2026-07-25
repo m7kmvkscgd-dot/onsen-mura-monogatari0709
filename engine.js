@@ -597,10 +597,11 @@ function applyStun(entity, turns) {
   // 連続でスタンし続けられる「スタンロック」を防ぐための措置(通常のstatusResistMultとは別枠)
   entity.stunResistTurns = Math.max(entity.stunResistTurns || 0, STUN_RESIST_TURNS);
   // 大技の構え中(bigAttackPending)にスタンが入ると、構え自体を完全に潰す(止める対抗策)。
-  // 新しい間隔を1回抽選し直し、また一から仕切り直しにする
+  // 新しい間隔を1回抽選し直し、また一から仕切り直しにする(狙われていたターゲット予告も一緒に消す)
   if (entity.bigAttackPending) {
     entity.bigAttackPending = false;
     entity.bigAttackCountdown = rollBigAttackCountdown(entity);
+    entity.bigAttackTelegraphTargetId = null;
   }
 }
 function applySilence(entity, turns) {
@@ -2541,30 +2542,82 @@ function peekNextBigAttackName(enemy) {
   const idx = pool.length <= 1 ? 0 : (enemy.bigAttackIndex || 0) % pool.length;
   return (pool[idx] && pool[idx].name) || "大技";
 }
+// 予告(bigAttackPending)の時点で「次に来る技」のプロファイル本体(mult/aoe/ignoreGuardian等)を覗き見る
+// (peekNextBigAttackNameと同じくインデックスは進めない)。ターゲット予告/致死判定の見積もりに使う
+function peekNextBigAttackProfile(enemy) {
+  const pool = bigAttackPool(enemy);
+  if (!pool.length) return null;
+  const idx = pool.length <= 1 ? 0 : (enemy.bigAttackIndex || 0) % pool.length;
+  return pool[idx] || null;
+}
+// 大技の単体ターゲット選定ロジック(enemyBigAttackから抽出。予告時の先読みと実発動時とで
+// 全く同じ結果になるよう共通化した)。aoe技は対象を選ばない(呼び出し元でnullを扱う)
+function pickBigAttackSingleTarget(enemy, alive, profile) {
+  const guardian = resolveForcedTarget(enemy, alive) || (profile.ignoreGuardian ? null : findGuardTarget(alive));
+  const pool = guardian ? alive : poolExcludingShikigamiProtected(alive);
+  return guardian || pool[Math.floor(Math.random() * pool.length)];
+}
+// 予告(bigAttackPending=true)の瞬間に呼ぶ。単体大技なら実際に狙う相手をここで確定し
+// (enemy.bigAttackTelegraphTargetId)、発動時(enemyBigAttack)も同じ相手を狙わせることで
+// 「予告で表示された対象」と「実際に狙われる対象」がズレないようにする。全体大技(aoe)は対象を
+// 選ばないため何もしない。プロファイルはpeekNextBigAttackProfileで覗き見るだけ(インデックスは
+// 進めない)ので、実発動時にpickBigAttackProfileが返す技と必ず一致する
+function commitBigAttackTelegraphTarget(enemy, alive) {
+  const profile = peekNextBigAttackProfile(enemy);
+  if (!profile || profile.aoe || !alive.length) { enemy.bigAttackTelegraphTargetId = null; return; }
+  const target = pickBigAttackSingleTarget(enemy, alive, profile);
+  enemy.bigAttackTelegraphTargetId = target ? target.id : null;
+}
+// 大技を受けた場合の想定ダメージ(かばう軽減や乱数変動は考慮しない素の見積もり)。
+// mid: 中央値(変動なしの素の計算) / max: 上振れした場合の目安(+15%、rollBasicAttackの変動幅上限と同じ)
+function predictBigAttackDamage(enemy, target, profile) {
+  let mult = profile.mult;
+  if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
+  const base = enemy.atk * mitigation(effectiveStat(target, "def"), 18) * mult;
+  return { mid: Math.max(1, Math.round(base)), max: Math.max(1, Math.round(base * 1.15)) };
+}
+// HP警告(⚠️)判定: 予告中の大技を(未かばう想定で)受けた場合、上振れの見積もりでHPが最大maxHpの
+// 20%以下まで落ち込む可能性があるかどうか。falseでも実際にダメージが乱数で上振れれば致死級になり得るため、
+// あくまで「可能性が高い」ことを知らせる目安であることに注意
+function isBigAttackLethalRisk(enemy, target, profile) {
+  const predicted = predictBigAttackDamage(enemy, target, profile);
+  return (target.hp - predicted.max) <= target.maxHp * 0.2;
+}
+// 予告中の大技でこのallyId(味方)が狙われているかどうかを調べる(ui.js側のカード描画から呼ぶ)。
+// 該当する敵が複数いる場合は最初に見つかったものを返す(同時に複数体から単体大技の予告を受ける状況は稀)
+function findBigAttackThreatFor(allyId) {
+  if (typeof battle === "undefined" || !battle || !battle.enemies) return null;
+  const enemy = battle.enemies.find((e) => e.hp > 0 && e.bigAttackPending && e.bigAttackTelegraphTargetId === allyId);
+  if (!enemy) return null;
+  const profile = peekNextBigAttackProfile(enemy);
+  if (!profile) return null;
+  return { enemy, profile };
+}
 // 敵カード上の📜アイコンをタップした時に出す、その敵の大技の説明文。予告ターン(bigAttackPending)を
 // 待たずにいつでも確認できるようにするため、data.js側の手書きテキストではなくbigAttackプロファイル
 // (mult/debuff/aoe/ignoreGuardian)から機械的に組み立てる(全103体を漏れなくカバーできる)。
 // extraBigAttacksを持つボス/中ボスは、技ごとに名前付きで列挙する
+// 1つの大技プロファイルを文章化する(bigAttackSummaryText/ターゲットマークのツールチップ両方から使う共通部品)
+function describeBigAttackProfile(p) {
+  const parts = [];
+  if (p.aoe) parts.push("全体を巻き込む");
+  if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
+  if (p.debuff) {
+    const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
+    const info = STATUS_TOOLTIPS[tooltipKey];
+    const name = info ? info.title : p.debuff.type;
+    const chancePct = Math.round((p.debuff.chance != null ? p.debuff.chance : 1) * 100);
+    parts.push(`命中時${chancePct}%の確率で【${name}】を与える`);
+  } else {
+    parts.push("状態異常は伴わない、純粋な一撃");
+  }
+  return parts.join("。") + "。";
+}
 function bigAttackSummaryText(enemyDef) {
   const pool = bigAttackPool(enemyDef);
   if (!pool.length) return "詳細不明の一撃を放つ。";
-  const describeOne = (p) => {
-    const parts = [];
-    if (p.aoe) parts.push("全体を巻き込む");
-    if (p.ignoreGuardian) parts.push("誰か1人の盾では防ぎきれない");
-    if (p.debuff) {
-      const tooltipKey = DEBUFF_TYPE_TOOLTIP_KEY[p.debuff.type] || p.debuff.type;
-      const info = STATUS_TOOLTIPS[tooltipKey];
-      const name = info ? info.title : p.debuff.type;
-      const chancePct = Math.round((p.debuff.chance != null ? p.debuff.chance : 1) * 100);
-      parts.push(`命中時${chancePct}%の確率で【${name}】を与える`);
-    } else {
-      parts.push("状態異常は伴わない、純粋な一撃");
-    }
-    return parts.join("。") + "。";
-  };
-  if (pool.length === 1) return describeOne(pool[0]);
-  return pool.map((p) => `【${p.name || "大技"}】${describeOne(p)}`).join("\n");
+  if (pool.length === 1) return describeBigAttackProfile(pool[0]);
+  return pool.map((p) => `【${p.name || "大技"}】${describeBigAttackProfile(p)}`).join("\n");
 }
 
 // enemyの「大技」。かばう/挑発中の仲間がいればその1人だけに(引きつける対抗策)、いなければ
@@ -2580,10 +2633,12 @@ function enemyBigAttack(enemy, targets, log) {
   // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。
   // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
-  // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)
-  const guardian = resolveForcedTarget(enemy, alive) || (profile.ignoreGuardian ? null : findGuardTarget(alive));
-  const bigPickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
-  const singleTarget = guardian || bigPickPool[Math.floor(Math.random() * bigPickPool.length)];
+  // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)。
+  // 予告時点でcommitBigAttackTelegraphTargetが対象を確定済みならそれを使う(ターゲットマーク表示と
+  // 実際の被弾対象がズレないように)。対象が瀕死等で既にaliveから外れている場合のみ改めて抽選する
+  const telegraphed = enemy.bigAttackTelegraphTargetId != null ? alive.find((t) => t.id === enemy.bigAttackTelegraphTargetId) : null;
+  const singleTarget = !profile.aoe ? (telegraphed || pickBigAttackSingleTarget(enemy, alive, profile)) : null;
+  enemy.bigAttackTelegraphTargetId = null;
   const hitTargets = profile.aoe ? alive : [singleTarget];
   let mult = profile.mult;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);

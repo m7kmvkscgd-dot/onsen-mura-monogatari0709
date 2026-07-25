@@ -410,6 +410,8 @@ function processNext() {
       }
       if (actor.bigAttackCountdown === 1) {
         actor.bigAttackPending = true;
+        // 単体大技ならこの瞬間に狙う相手を確定する(ターゲットマーク表示と実際の被弾対象を一致させるため)
+        commitBigAttackTelegraphTarget(actor, alive);
         // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
         // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる
         // (extraBigAttacksでローテーションする敵は、予告時点で次の技が確定しているため先出しできる)

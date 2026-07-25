@@ -845,11 +845,24 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const portraitSrc = c.isShikigami ? c.iconImg : (transformDef ? transformDef.image : characterPortraitSrc(c));
     // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
+    // 敵の大技予告(bigAttackPending)がこのキャラを狙っている場合、ターゲットマーク(照準)を出す。
+    // タップでどの敵の何の技に狙われているか説明が見られる(effects.jsのshowStatusTooltip参照)。
+    // さらに未かばう想定でHPが最大の20%以下まで落ち込む可能性が高ければ、左上に⚠️も追加で出す
+    const bigThreat = !dead ? findBigAttackThreatFor(c.id) : null;
+    const bigThreatLethal = bigThreat && isBigAttackLethalRisk(bigThreat.enemy, c, bigThreat.profile);
+    // data-*は文字列組み立てで直接埋め込まず(HTMLインジェクション対策)、他の.dataset.X=箇所と同じく
+    // innerHTML設定後にJSプロパティ代入で付与する(下のtargetMarkerEl参照)
+    const targetMarkerHtml = bigThreat ? `
+      <div class="ally-target-marker">
+        <svg viewBox="0 0 100 100"><circle class="marker-ring-outer" cx="50" cy="50" r="42"></circle><circle class="marker-ring-inner" cx="50" cy="50" r="28"></circle><circle class="marker-dot" cx="50" cy="50" r="4"></circle><line x1="50" y1="4" x2="50" y2="20"></line><line x1="50" y1="80" x2="50" y2="96"></line><line x1="4" y1="50" x2="20" y2="50"></line><line x1="80" y1="50" x2="96" y2="50"></line></svg>
+        ${bigThreatLethal ? `<span class="ally-lethal-warning">⚠️</span>` : ""}
+      </div>` : "";
     div.innerHTML = `
       <div class="party-portrait-wrap">
         ${c.isShikigami && !portraitSrc ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
         ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
+        ${targetMarkerHtml}
       </div>
       ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
@@ -859,6 +872,14 @@ function renderPartyBar(elId, combatants, actingCharId) {
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>
     `;
+    if (bigThreat) {
+      const markerEl = div.querySelector(".ally-target-marker");
+      markerEl.dataset.enemyName = bigThreat.enemy.label;
+      markerEl.dataset.attackName = bigThreat.profile.name || "大技";
+      markerEl.dataset.attackDesc = describeBigAttackProfile(bigThreat.profile);
+      const warnEl = div.querySelector(".ally-lethal-warning");
+      if (warnEl) warnEl.dataset.lethalDesc = "この大技を受けると戦闘不能になる可能性があります。";
+    }
     if (targetable) {
       div.onclick = () => {
         if (!pendingAllyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)

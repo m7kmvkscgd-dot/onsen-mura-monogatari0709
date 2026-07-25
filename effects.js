@@ -843,6 +843,12 @@ function showStatusTooltip(el) {
   } else if (el.classList.contains("enemy-bigattack-tap")) {
     // 敵イラストのタップで、その敵の大技(engine.jsのbigAttackSummaryTextで機械的に生成)を確認できる
     title = `${el.dataset.enemyName}の「${el.dataset.bigattackName}」`; desc = el.dataset.bigattackDesc; iconHtml = "📜"; category = null;
+  } else if (el.classList.contains("ally-lethal-warning")) {
+    // ターゲットマーク左上の⚠️: 未かばう想定で大技を受けるとHPが最大の20%以下まで落ち込む可能性が高い警告
+    title = "危険：致死級の一撃"; desc = el.dataset.lethalDesc; iconHtml = "⚠️"; category = null;
+  } else if (el.classList.contains("ally-target-marker")) {
+    // ターゲットマーク本体: どの敵の何の大技に狙われているかを確認できる
+    title = `${el.dataset.enemyName}に狙われています`; desc = `次のターンの大技【${el.dataset.attackName}】の対象です。${el.dataset.attackDesc}`; iconHtml = "🎯"; category = null;
   } else {
     const info = STATUS_TOOLTIPS[el.dataset.status];
     if (!info) return;
@@ -855,7 +861,7 @@ function hideStatusTooltip() {
   document.getElementById("statusTooltip").style.display = "none";
   statusTooltipShownFor = null;
 }
-const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag, .enemy-bigattack-tap";
+const TOOLTIP_TARGET_SELECTOR = ".status-icon, .onsen-buff-tag, .enemy-bigattack-tap, .ally-target-marker, .ally-lethal-warning";
 // PC: マウスホバー。pointerover/pointerout(mouseover/mouseoutと同じくバブルするので委譲できる)を
 // pointerType==="mouse"に限定することで、タッチ操作時に発火する合成pointer/mouseイベントを除外する
 document.addEventListener("pointerover", (e) => {
