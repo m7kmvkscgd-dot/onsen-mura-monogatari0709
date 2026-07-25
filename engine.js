@@ -2717,6 +2717,10 @@ function damageStress(dmg, maxHp) {
 function markCritical(character, floor, absoluteMinutes, stage) {
   character.status = "critical";
   character.hp = 0;
+  // 瀕死になる=死の淵をさまよう体験そのものが最大級のトラウマになるため、ストレスは問答無用で
+  // 上限(100=発狂ライン)に張り付かせる(ユーザー指示、2026-07-25)。救出後も温泉/宿で癒すまで
+  // 発狂状態(行動不能)が続くことになる
+  character.fatigue = FATIGUE_MAX;
   character.criticalFloor = floor;
   character.criticalStage = stage || "forest"; // 森/海岸どちらで瀕死になったかも記録し、階層番号だけでは区別できない別ステージでの誤救出/誤表示を防ぐ
   const spanHours = CRITICAL_MIN_HOURS + Math.random() * (CRITICAL_MAX_HOURS - CRITICAL_MIN_HOURS);
