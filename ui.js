@@ -562,13 +562,15 @@ function playVictoryBanner(onDone) {
   overlay.style.pointerEvents = "auto"; // 通常は演出のみでタップを透過させるが、ここだけタップで進めるようにする
   playSfx("victory");
   const proceed = () => {
-    overlay.removeEventListener("pointerdown", proceed);
+    overlay.removeEventListener("click", proceed);
     overlay.style.display = "none";
     overlay.style.pointerEvents = "none";
     overlay.querySelectorAll(".result-banner-particle").forEach((el) => el.remove());
     onDone();
   };
-  overlay.addEventListener("pointerdown", proceed);
+  // pointerdownではなくclickで進める(スキル習得の「タップして進む」と同じゴーストクリック対策:
+  // pointerdownで閉じると、指を離した時のclickが下に出たリザルト画面へ着弾してしまう)
+  overlay.addEventListener("click", proceed);
 }
 // ============ 村到着シークエンス(帰還完了、1→0層の特別演出。2026-07-26) ============
 // いつもの黒い暗転ではなく白くふわっと明転し(「森を抜けた」開放感)、村の実際の背景(現在の

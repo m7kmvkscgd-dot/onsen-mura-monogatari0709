@@ -186,7 +186,12 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
             hint.remove();
             resolveSkillChoice(character, lv, side, skill);
           };
-          document.addEventListener("pointerdown", proceed, { once: true });
+          // 【ゴーストクリック対策(ユーザー報告2026-07-26)】以前はpointerdown(指が触れた瞬間)で
+          // 進めていたが、その場合ここでオーバーレイが閉じた後、指を離した時のclickが下の画面の
+          // ボタン(宿泊/詳細など)に着弾して勝手に開いてしまっていた。clickで進めれば、そのclick自体が
+          // オーバーレイに吸われて終わるため下の画面には何も届かない。setTimeout(0)は「習得する」ボタンを
+          // 押したclickがdocumentまでバブリングして即座にproceedを発火させてしまうのを防ぐため
+          setTimeout(() => document.addEventListener("click", proceed, { once: true }), 0);
         };
       }
     };
