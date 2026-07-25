@@ -1126,10 +1126,17 @@ function renderShikigamiTypePicker(actor, skill) {
     btn.textContent = `${def.emoji}${def.name}(MP${def.mp})`;
     if (!affordable) { btn.disabled = true; btn.style.opacity = "0.5"; }
     btn.onclick = () => {
-      playSfx("select");
       const result = useTreeSkill(actor, typeKey, skill, blog);
       renderBattleScreen();
-      if (result && result.failed) { renderActionButtons(actor); return; }
+      if (result && result.failed) { playSfx("select"); renderActionButtons(actor); return; }
+      // 召喚演出: 陰陽師の呪符技と同じ紫の術式エフェクト(impact_onmyoji_)を新しく出た式神のカードに重ねる+
+      // 鷹を呼ぶと同じ「仲間を呼び出す」SEを流用する(専用素材が無いため、既存の中から一番近いものを当てる)
+      if (result && result.shikigami) {
+        playSfx("hawk_summon");
+        playAttackVfx(result.shikigami.id, actor, "skill");
+      } else {
+        playSfx("select");
+      }
       // 神速召喚: ターンを消費せず続けて別の行動を選べる
       if (actor.passives && actor.passives.noCostSummonShikigami) { renderActionButtons(actor); return; }
       finishPlayerAction();

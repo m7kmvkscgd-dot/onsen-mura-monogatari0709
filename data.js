@@ -1411,28 +1411,28 @@ function pickCampNightMessage() {
 // ai/basicHits/special/onSummon/turnRegenPctの意味はengine.jsのresolveShikigamiAction参照
 const SHIKIGAMI_DEFS = {
   kamiNingyo: {
-    name: "紙人形", emoji: "📜", unlockLevel: null, mp: 2,
+    name: "紙人形", emoji: "📜", iconImg: "assets/icons/shikigami/kamiNingyo.png", unlockLevel: null, mp: 2,
     hpFrom: (owner) => Math.round(owner.maxHp * 0.75),
     atkFrom: (owner) => owner.atk,
     spdFrom: (owner) => Math.round(CLASSES.hunter.spd * (1 + owner.level * 0.05)),
     ai: "guardIfAllyLow", // 味方にHP50%未満がいれば庇う(guarding=true)、いなければ通常攻撃
   },
   youko: {
-    name: "妖狐", emoji: "🦊", unlockLevel: 2, mp: 3,
+    name: "妖狐", emoji: "🦊", iconImg: "assets/icons/shikigami/youko.png", unlockLevel: 2, mp: 3,
     hpFrom: (owner) => owner.maxHp,
     atkFrom: (owner) => owner.mag,
     spdFrom: (owner) => Math.round(CLASSES.ninja.spd * (1 + owner.level * 0.05)),
     special: { cooldown: 4, kind: "singleAttack", mult: 1.0, inflict: { type: "burn", turns: 2 }, name: "狐火" },
   },
   hakuzuru: {
-    name: "白鶴", emoji: "🕊️", unlockLevel: 4, mp: 5, isFlying: true,
+    name: "白鶴", emoji: "🕊️", iconImg: "assets/icons/shikigami/hakuzuru.png", unlockLevel: 4, mp: 5, isFlying: true,
     hpFrom: (owner) => owner.maxHp,
     atkFrom: (owner) => Math.round(owner.mag * 0.9),
     spdFrom: (owner) => Math.round(owner.spd * 0.85),
     special: { cooldown: 4, kind: "healLowestAllyIfBelow", healPct: 0.4, allyHpBelowPct: 0.5, name: "癒しの舞" },
   },
   komainu: {
-    name: "狛犬", emoji: "🐕", unlockLevel: 5, mp: 6,
+    name: "狛犬", emoji: "🐕", iconImg: "assets/icons/shikigami/komainu.png", unlockLevel: 5, mp: 6,
     hpFrom: (owner) => owner.maxHp + 10,
     atkFrom: (owner) => owner.atk,
     spdFrom: (owner) => Math.round(owner.spd * 1.15),
@@ -1440,7 +1440,7 @@ const SHIKIGAMI_DEFS = {
     special: { cooldown: 4, kind: "shieldLowestAllyIfBelow", barrierPct: 0.5, allyHpBelowPct: 0.3, name: "護りの結界" },
   },
   kirin: {
-    name: "麒麟", emoji: "🦄", unlockLevel: 7, mp: 7,
+    name: "麒麟", emoji: "🦄", iconImg: "assets/icons/shikigami/kirin.png", unlockLevel: 7, mp: 7,
     hpFrom: (owner) => owner.maxHp + 10,
     atkFrom: (owner) => Math.round(CLASSES.samurai.atk * (1 + (owner.level - 1) * 0.075) * 0.9),
     spdFrom: (owner) => Math.round(CLASSES.hunter.spd * (1 + owner.level * 0.05)),
@@ -1448,7 +1448,7 @@ const SHIKIGAMI_DEFS = {
     special: { cooldown: 5, kind: "stunSingleAttack", mult: 1.0, name: "破魔の蹄" },
   },
   ryujin: {
-    name: "龍神", emoji: "🐉", unlockLevel: 9, mp: 9, isFlying: true,
+    name: "龍神", emoji: "🐉", iconImg: "assets/icons/shikigami/ryujin.png", unlockLevel: 9, mp: 9, isFlying: true,
     hpFrom: (owner) => owner.maxHp + 20,
     atkFrom: (owner) => Math.round(SHIKIGAMI_DEFS.kirin.atkFrom(owner) * 0.9),
     spdFrom: (owner) => owner.spd,

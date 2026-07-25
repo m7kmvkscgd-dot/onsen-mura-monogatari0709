@@ -894,7 +894,7 @@ function unlockedShikigamiTypes(owner, usedTypes) {
   });
 }
 // 式神を生成する。ステータスはSHIKIGAMI_DEFS[typeKey]のhpFrom/atkFrom/spdFrom(術者の現在ステータス基準)から算出。
-// 絵は届き次第、iconImgフィールドを追加してcharacterPortraitSrc側で参照させる想定(現状はemoji仮アイコンのみ)
+// iconImgがあればui.js側でそれを表示し、無ければemoji仮アイコンにフォールバックする
 function makeShikigami(actor, typeKey) {
   const def = SHIKIGAMI_DEFS[typeKey];
   const maxHp = Math.max(1, def.hpFrom(actor));
@@ -906,6 +906,7 @@ function makeShikigami(actor, typeKey) {
     name: def.name,
     label: def.name,
     emoji: def.emoji,
+    iconImg: def.iconImg,
     isFlying: !!def.isFlying,
     status: "active", fleeState: null,
     level: actor.level,

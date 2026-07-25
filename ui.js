@@ -840,14 +840,14 @@ function renderPartyBar(elId, combatants, actingCharId) {
     const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
     // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
     const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
-    // 式神(サンプル実装)は本物のポートレート絵がまだ無いため絵文字アイコンで代用する。
+    // 式神はiconImg(実イラスト)があればそれを、無ければ絵文字アイコンで代用する。
     // classIdを持たないのでcharacterPortraitSrc(CLASSES[c.classId]を前提とする)は呼べない
-    const portraitSrc = c.isShikigami ? null : (transformDef ? transformDef.image : characterPortraitSrc(c));
+    const portraitSrc = c.isShikigami ? c.iconImg : (transformDef ? transformDef.image : characterPortraitSrc(c));
     // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
     const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
     div.innerHTML = `
       <div class="party-portrait-wrap">
-        ${c.isShikigami ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
+        ${c.isShikigami && !portraitSrc ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
         ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
       </div>
