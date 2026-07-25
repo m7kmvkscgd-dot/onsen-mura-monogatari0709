@@ -615,6 +615,7 @@ function handleFieldDeaths() {
           blog(`${c.name}が倒れ、担がれていた${carried.name}もそのまま帰らぬ人となった...(即死モード)`);
         } else {
           markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
+          advCriticalHappened = true; // リザルトの朱印評価/「全員生還！」表示用
           blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
         }
         carried.carriedBy = null;
@@ -630,6 +631,7 @@ function handleFieldDeaths() {
         blog(`${c.name}は倒れた...即死モードによりそのまま帰らぬ人となった。`);
       } else {
         markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
+        advCriticalHappened = true; // リザルトの朱印評価/「全員生還！」表示用
         blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
       }
       newlyCritical.push(c);
@@ -1801,6 +1803,7 @@ function afterPlayerAction() {
 function victory() {
   // 影分身は戦闘が終わると自動で消滅する(式神は逆に生きていれば持ち越されるので、ここでは除去しない)
   fieldParty = fieldParty.filter((c) => !c.isClone);
+  advEnemiesDefeated += battle.enemies.filter((e) => e.hp <= 0).length; // リザルトの戦績/朱印評価用(逃げた敵は数えない)
   stopBattleBgm();
   playSfx("victory");
   unlockPeaceDialogueAfterVictory(); // 平和な掛け合い: この勝利をもって次に条件を満たした時1回だけ発火できるようにする

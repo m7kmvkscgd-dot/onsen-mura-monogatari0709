@@ -941,8 +941,10 @@
     </div>
   </div>
 
-  <!-- 冒険の結果(帰還時のリザルト画面) -->
+  <!-- 冒険の結果(帰還時のリザルト画面)。resultBgLayerに探索エリアの背景をぼかして敷き、
+       中身は漆枠+金ラインの和風パネル(resultScrollPanel)で額装する(2026-07-26、商業作品風の刷新) -->
   <div class="screen" id="screen-result">
+    <div id="resultBgLayer"></div>
     <div class="hero has-dw-header" id="resultHero">
       <div class="dw-header">
         <button class="dw-header-back" id="resultHeaderBack"></button>
@@ -952,13 +954,24 @@
       <h1 id="resultHeroTitle">冒険の記録</h1>
     </div>
     <div class="body-pad">
-      <div class="card result-fade" id="resultQuestCard" style="display:none;border:1px solid var(--accent);"></div>
-      <h2 id="resultGold" class="result-fade" style="color:var(--accent);"></h2>
-      <h2 id="resultXpHeading" class="result-fade" style="margin-top:1rem;">獲得経験値</h2>
-      <div id="resultXpList"></div>
+      <div id="resultScrollPanel">
+        <div class="card result-fade" id="resultQuestCard" style="display:none;border:1px solid var(--accent);"></div>
+        <h2 id="resultGold" class="result-fade" style="color:var(--accent);"></h2>
+        <div id="resultStatsLine" class="result-fade"></div>
+        <h2 id="resultXpHeading" class="result-fade" style="margin-top:1rem;">獲得経験値</h2>
+        <div id="resultXpList"></div>
+        <div id="resultRankStamp" style="display:none;"></div>
+      </div>
       <button class="big primary" id="resultContinueBtn" style="margin-top:1rem;">町に戻る</button>
     </div>
   </div>
+
+  <!-- 帰還完了(1→0層)の村到着シークエンス: 白明転→村の景色ズーム+鐘+一言→帰還成功バナー(ui.js playHomecomingSequence) -->
+  <div id="homecomingOverlay" style="display:none;">
+    <div id="homecomingBg"></div>
+    <div id="homecomingSpeech"></div>
+  </div>
+  <div id="homecomingWhite" style="display:none;"></div>
 
   <!-- ゲームオーバー: 所持金が尽き、名簿の全員が瀕死/ロストで稼働不能になった時 -->
   <div class="screen" id="screen-gameover">

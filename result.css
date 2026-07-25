@@ -42,3 +42,101 @@
   /* 敗北時のリザルト画面: 金色の祝祭感を消し、彩度を落とした配色に切り替える */
   #screen-result.is-defeat #resultGold { color: var(--dw-caption-color, #b6b0a2) !important; }
   #screen-result.is-defeat #resultHeroTitle { color: #cfc9bd; }
+
+  /* ============ 2026-07-26 リザルト刷新(商業作品風): 背景・額装・戦績・朱印・カウントアップ ============ */
+  /* 探索していたエリアの背景をぼかして暗めに敷く(真っ黒背景の事務的な見た目をやめる) */
+  #screen-result { position: relative; }
+  #resultBgLayer {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-size: cover; background-position: center;
+    filter: blur(6px) brightness(0.4);
+    transform: scale(1.05); /* blurで縁が透けるのを外へ逃がす */
+  }
+  #screen-result .hero, #screen-result .body-pad { position: relative; z-index: 1; }
+  /* 漆の枠+金箔ラインの額装パネル(戦闘テキストボックスと同系の和風意匠) */
+  #resultScrollPanel {
+    position: relative;
+    border: 2px solid #4b3728; border-radius: var(--radius-md);
+    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
+    padding: 0.9rem 0.8rem;
+    background:
+      radial-gradient(circle at 0 0, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 100% 0, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 0 100%, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 100% 100%, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      linear-gradient(180deg, rgba(46,37,26,0.93) 0%, rgba(24,20,16,0.95) 100%);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+  }
+  /* 「踏破◯層 ・ 討伐◯体 ・ 全員生還!」の戦績行 */
+  #resultStatsLine {
+    margin-top: 0.35rem; font-size: 0.82rem; color: #d9c49a; letter-spacing: 0.06em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  #resultStatsLine .result-all-alive { color: var(--dw-gold, #d7b66f); font-weight: 700; }
+  /* 経験値行にキャラの顔を出す */
+  .result-xp-row { display: flex; gap: 0.6rem; align-items: flex-start; }
+  .result-xp-portrait {
+    width: 44px; height: 44px; flex-shrink: 0; object-fit: contain;
+    background: #353a44; border-radius: var(--radius-xs); border: 1px solid rgba(217,196,154,0.35);
+  }
+  .result-xp-row .result-xp-main { flex: 1; min-width: 0; }
+  /* レベルアップした瞬間の顔アイコンのきらめき */
+  .result-xp-portrait.levelup-flash { animation: resultPortraitFlash 0.6s ease-out; }
+  @keyframes resultPortraitFlash {
+    0% { filter: brightness(1); box-shadow: none; }
+    30% { filter: brightness(1.9); box-shadow: 0 0 14px rgba(215,182,111,0.95); }
+    100% { filter: brightness(1); box-shadow: none; }
+  }
+  /* 経験値バーがレベル境界に達した瞬間の金フラッシュ */
+  .xpbar-track.xp-flash { box-shadow: 0 0 12px rgba(215,182,111,0.95); border-color: rgba(215,182,111,0.9); }
+  /* レベルアップバッジ: 勝利リザルトではバーが満ちた後にポンと飛び出す(敗北時は従来通り即表示) */
+  .levelup-badge.pending { opacity: 0; transform: scale(0.6); }
+  .levelup-badge.badge-pop { animation: levelupBadgePop 0.45s cubic-bezier(0.25, 1.5, 0.4, 1) forwards; }
+  @keyframes levelupBadgePop {
+    0% { opacity: 0; transform: scale(0.6); }
+    60% { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  /* 評価の朱印(松/竹/梅)。パネル右上に斜めに押される */
+  #resultRankStamp {
+    position: absolute; top: 6px; right: 8px; z-index: 2; opacity: 0;
+    width: 62px; height: 62px;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid rgba(196,42,32,0.92); border-radius: 9px;
+    box-shadow: inset 0 0 0 1px rgba(196,42,32,0.4);
+    color: rgba(206,48,36,0.96); font-size: 2.2rem; font-weight: 900; font-family: serif;
+    background: rgba(196,42,32,0.07);
+    transform: rotate(-12deg);
+    pointer-events: none;
+  }
+  #resultRankStamp.stamp-in { animation: rankStampIn 0.4s cubic-bezier(0.3, 1.2, 0.4, 1) forwards; }
+  @keyframes rankStampIn {
+    0% { opacity: 0; transform: rotate(-3deg) scale(2.1); }
+    60% { opacity: 1; transform: rotate(-12deg) scale(0.94); }
+    100% { opacity: 1; transform: rotate(-12deg) scale(1); }
+  }
+
+  /* ============ 村到着シークエンス(1→0層、ui.js playHomecomingSequence) ============ */
+  /* 白明転(黒の暗転と使い分ける「森を抜けた」開放感の演出)。バナー(z96)より下、他UIより上 */
+  #homecomingWhite { position: fixed; inset: 0; z-index: 90; background: #fff; opacity: 0; pointer-events: none; }
+  #homecomingOverlay { position: fixed; inset: 0; z-index: 60; overflow: hidden; background: #000; }
+  #homecomingBg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  #homecomingSpeech {
+    position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%);
+    max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0;
+    color: #fff; font-size: 0.95rem; text-shadow: 0 1px 0 #000, 0 2px 8px rgba(0,0,0,0.8);
+    background: rgba(10,8,6,0.55); border: 1px solid rgba(217,196,154,0.6); border-radius: var(--radius-pill);
+    padding: 0.5rem 1.1rem;
+  }
+  .homecoming-speaker { color: #d9c49a; margin-right: 0.5em; font-size: 0.85em; }
+  /* 帰還成功バナーに舞う金の粒子(playVictoryBannerがJSで生成) */
+  .result-banner-particle {
+    position: absolute; opacity: 0; pointer-events: none;
+    color: var(--dw-gold, #d7b66f); text-shadow: 0 0 8px rgba(215,182,111,0.9);
+    animation: bannerParticleFloat 2.6s ease-out infinite;
+  }
+  @keyframes bannerParticleFloat {
+    0% { opacity: 0; transform: translateY(20px) scale(0.6); }
+    25% { opacity: 0.95; }
+    100% { opacity: 0; transform: translateY(-52px) scale(1.1); }
+  }

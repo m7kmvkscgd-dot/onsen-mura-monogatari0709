@@ -107,6 +107,9 @@ function collectExpeditionSnapshot() {
     advGoldEarned,
     advXpGained,
     advLevelBefore,
+    advEnemiesDefeated,
+    advMaxFloor,
+    advCriticalHappened,
     advQuestCompleted,
     jizoBlessingActive,
     warashiLuckActive,
@@ -145,6 +148,9 @@ function resumeExpeditionFromSave() {
   advXpGained = snap.advXpGained || {};
   advLevelBefore = snap.advLevelBefore || {};
   advQuestCompleted = snap.advQuestCompleted || null;
+  advEnemiesDefeated = snap.advEnemiesDefeated || 0;
+  advMaxFloor = snap.advMaxFloor || 0;
+  advCriticalHappened = !!snap.advCriticalHappened;
   jizoBlessingActive = !!snap.jizoBlessingActive;
   warashiLuckActive = !!snap.warashiLuckActive;
   koOniRepayFloorsLeft = snap.koOniRepayFloorsLeft || 0;
@@ -193,6 +199,9 @@ let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還�
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
 let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId -> level)。リザルト画面でレベルアップを分かりやすく表示するための比較用
 let advQuestCompleted = null; // 今回の冒険で奉行所の依頼を達成した場合{title, gold, xp}(リザルト画面用、enterDungeon()でリセット)
+let advEnemiesDefeated = 0; // 今回の冒険で倒した敵の数(リザルトの戦績/朱印評価用、battle.js victory()が加算)
+let advMaxFloor = 0; // 今回の冒険で踏破した最大階層(同上。中継ステージをまたいでも単純に各ステージの階層数の最大値)
+let advCriticalHappened = false; // 今回の冒険で誰かが瀕死になったか(朱印評価と「全員生還！」表示用、battle.js側が立てる)
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 // ============ ボス追撃モード: ボス/中ボスがHPが一定以下になると瀕死のまま逃走し、以後どのフロアでも
 // 一定確率で追いつく(討伐依頼のchasing/carryHpと同じ仕組みを、通常の(討伐依頼ではない)ボス/中ボスにも
@@ -297,6 +306,9 @@ function enterDungeon() {
   advXpGained = {};
   advLevelBefore = {};
   advQuestCompleted = null;
+  advEnemiesDefeated = 0;
+  advMaxFloor = 0;
+  advCriticalHappened = false;
   resetPeaceDialogueState();
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
@@ -1000,7 +1012,9 @@ function finishRetreat() {
   bgmPositions.town = 0;
   bgmPositions.town_dawn = 0;
   bgmPositions.town_night = 0;
-  playVictoryBanner(() => {
+  // 帰還完了は「白明転→村の景色+鐘+一言→帰還成功バナー」の村到着シークエンスに変更(2026-07-26)。
+  // バナー以降(タップでリザルトへ)の流れは従来と同じ
+  playHomecomingSequence(() => {
     renderResultScreen(() => {
       renderTown();
     });
@@ -1105,6 +1119,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
     }
     saveState(); // 遠征スナップショットの階層を最新に保つ(リロード再開用)
     recordMaxFloorReached();
+    advMaxFloor = Math.max(advMaxFloor, currentFloor); // 今回の遠征の踏破階層(リザルトの戦績/朱印評価用)
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
     maybeSpeakOnFloorAdvance();

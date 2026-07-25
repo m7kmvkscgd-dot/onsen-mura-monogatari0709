@@ -545,6 +545,19 @@ function playVictoryBanner(onDone) {
   overlay.className = "result-banner-overlay victory";
   text.className = "result-banner-text victory";
   text.textContent = "帰還成功";
+  // 金の粒子(✦✧)を文字の周囲にランダムに舞わせる(2026-07-26、商業作品風の演出強化)。
+  // タップで先へ進んだ時に必ず削除する(次回の敗北バナーで使い回される入れ物のため)
+  const PARTICLE_COUNT = 12;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = document.createElement("span");
+    p.className = "result-banner-particle";
+    p.textContent = Math.random() < 0.5 ? "✦" : "✧";
+    p.style.left = `${10 + Math.random() * 80}%`;
+    p.style.top = `${30 + Math.random() * 40}%`;
+    p.style.fontSize = `${9 + Math.random() * 9}px`;
+    p.style.animationDelay = `${Math.random() * 2.2}s`;
+    overlay.appendChild(p);
+  }
   overlay.style.display = "flex";
   overlay.style.pointerEvents = "auto"; // 通常は演出のみでタップを透過させるが、ここだけタップで進めるようにする
   playSfx("victory");
@@ -552,9 +565,52 @@ function playVictoryBanner(onDone) {
     overlay.removeEventListener("pointerdown", proceed);
     overlay.style.display = "none";
     overlay.style.pointerEvents = "none";
+    overlay.querySelectorAll(".result-banner-particle").forEach((el) => el.remove());
     onDone();
   };
   overlay.addEventListener("pointerdown", proceed);
+}
+// ============ 村到着シークエンス(帰還完了、1→0層の特別演出。2026-07-26) ============
+// いつもの黒い暗転ではなく白くふわっと明転し(「森を抜けた」開放感)、村の実際の背景(現在の
+// 時間帯の湯乃里)がゆっくりズームで映り、鐘の音+仲間の一言吹き出しの後に「帰還成功」バナーが
+// 重なる。バナーのタップでリザルト画面へ進む(呼び出し元はdungeon.js finishRetreat)
+const HOMECOMING_LINES = [
+  "「ふう…やっと帰ってきたね」",
+  "「里の灯りが見えると、ほっとするなあ」",
+  "「今日も全員でただいま、っと」",
+  "「あー疲れた!温泉入ろ、温泉!」",
+  "「無事に帰れたことに感謝、だね」",
+];
+function playHomecomingSequence(onDone) {
+  const white = document.getElementById("homecomingWhite");
+  const overlay = document.getElementById("homecomingOverlay");
+  const bgEl = document.getElementById("homecomingBg");
+  const speech = document.getElementById("homecomingSpeech");
+  const tod = state.timeOfDay || "day";
+  bgEl.style.backgroundImage = `url('${BG_SETS.town[tod] || BG_SETS.town.day}')`;
+  white.style.display = "block";
+  fadeOpacity(white, 0, 1, 700, () => {
+    overlay.style.display = "block";
+    speech.style.opacity = "0";
+    const zoom = bgEl.animate([{ transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 6000, easing: "ease-out", fill: "forwards" });
+    playSfx("morning_chime"); // 里の鐘(手持ちのチャイムSEを流用。合わなければ差し替え)
+    fadeOpacity(white, 1, 0, 900, () => { white.style.display = "none"; });
+    // 生き残った仲間の誰かが一言(発言者名+固定数種からランダム)
+    const alive = fieldParty.filter((c) => c.status === "active" && c.hp > 0 && !c.isShikigami);
+    const speaker = alive.length > 0 ? alive[Math.floor(Math.random() * alive.length)] : null;
+    if (speaker) {
+      speech.innerHTML = `<span class="homecoming-speaker">${speaker.name}</span>${HOMECOMING_LINES[Math.floor(Math.random() * HOMECOMING_LINES.length)]}`;
+      setTimeout(() => fadeOpacity(speech, 0, 1, 500), 700);
+    }
+    setTimeout(() => {
+      playVictoryBanner(() => {
+        overlay.style.display = "none";
+        zoom.cancel();
+        bgEl.style.transform = "";
+        onDone();
+      });
+    }, 2100);
+  });
 }
 function playDefeatBanner(onDone) {
   const overlay = document.getElementById("resultBannerOverlay");
@@ -594,8 +650,15 @@ function renderResultScreen(onContinue, isDefeat) {
   }
   questCard.classList.remove("reveal-in");
   const goldEl = document.getElementById("resultGold");
-  goldEl.textContent = `収穫: +${advGoldEarned}G`;
   goldEl.classList.remove("reveal-in");
+  // 戦績行(踏破/討伐/全員生還)。カウンタはdungeon.js/battle.jsが遠征中に集計している
+  const statsEl = document.getElementById("resultStatsLine");
+  statsEl.classList.remove("reveal-in");
+  const allAlive = !isDefeat && !advCriticalHappened;
+  statsEl.innerHTML = `踏破 ${advMaxFloor || 0}層 ・ 討伐 ${advEnemiesDefeated || 0}体${allAlive ? ' ・ <span class="result-all-alive">全員生還！</span>' : ""}`;
+  const stampEl = document.getElementById("resultRankStamp");
+  stampEl.classList.remove("stamp-in");
+  stampEl.style.display = "none";
   const xpHeading = document.getElementById("resultXpHeading");
   xpHeading.classList.remove("reveal-in");
   const list = document.getElementById("resultXpList");
@@ -604,49 +667,171 @@ function renderResultScreen(onContinue, isDefeat) {
   if (participants.length === 0) {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">今回は経験値を得られなかった。</p>';
   }
+  const animQueue = []; // 勝利時のバー演出({row, segs})。画面が出てから順次再生する
   participants.forEach((c) => {
     const c2 = CLASSES[c.classId];
     const gained = advXpGained[c.id] || 0;
     const isMax = c.level >= MAX_LEVEL;
     const need = isMax ? 0 : xpToNext(c.level);
     const currentRatio = isMax ? 100 : Math.max(0, Math.min(100, (c.xp / need) * 100));
-    const gainRatio = isMax ? 0 : Math.max(0, Math.min(currentRatio, (Math.min(gained, c.xp) / need) * 100));
-    const baseRatio = Math.max(0, currentRatio - gainRatio);
     const levelBefore = advLevelBefore[c.id] || c.level;
     const leveledUp = c.level > levelBefore;
     const row = document.createElement("div");
     row.className = "card result-xp-row";
-    row.innerHTML = `
+    const headerHtml = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;">
         <strong>${c.name}(${c2.ja})</strong>
         <span style="font-size:0.8rem;color:var(--accent);">+${gained} XP</span>
       </div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem;">Lv.${c.level}${isMax ? "(MAX)" : ""}</div>
-      ${leveledUp ? `<div class="levelup-badge">⭐レベルアップ！ Lv.${levelBefore}→${c.level}</div>` : ""}
-      <div class="xpbar-track">
-        <div class="xpbar-fill" style="width:${baseRatio}%"></div>
-        <div class="xpbar-gain" style="left:${baseRatio}%;width:${gainRatio}%"></div>
-      </div>
-    `;
+      ${leveledUp ? `<div class="levelup-badge${isDefeat ? "" : " pending"}">⭐レベルアップ！ Lv.${levelBefore}→${c.level}</div>` : ""}`;
+    if (isDefeat) {
+      // 敗北時は従来どおり静止したバー(祝祭演出は付けない)
+      const gainRatio = isMax ? 0 : Math.max(0, Math.min(currentRatio, (Math.min(gained, c.xp) / need) * 100));
+      const baseRatio = Math.max(0, currentRatio - gainRatio);
+      row.innerHTML = `
+        <img class="result-xp-portrait" src="${characterPortraitSrc(c)}">
+        <div class="result-xp-main">
+          ${headerHtml}
+          <div class="xpbar-track">
+            <div class="xpbar-fill" style="width:${baseRatio}%"></div>
+            <div class="xpbar-gain" style="left:${baseRatio}%;width:${gainRatio}%"></div>
+          </div>
+        </div>`;
+    } else {
+      // 勝利時: 遠征開始時点のバー位置から実際に伸びていく(レベルアップの瞬間は満タン→光って→0から再スタート)
+      const segs = xpSegmentsFor(c, gained, levelBefore);
+      row.innerHTML = `
+        <img class="result-xp-portrait" src="${characterPortraitSrc(c)}">
+        <div class="result-xp-main">
+          ${headerHtml}
+          <div class="xpbar-track"><div class="xpbar-fill" style="width:${segs[0].fromRatio}%"></div></div>
+        </div>`;
+      animQueue.push({ row, segs });
+    }
     list.appendChild(row);
   });
   updateSceneBackgrounds();
+  // 探索していたエリアの背景をぼかして敷く(黒一色の事務的な見た目をやめる。2026-07-26)
+  document.getElementById("resultBgLayer").style.backgroundImage = `url('${currentAreaBgSet()[state.timeOfDay || "day"]}')`;
   // リザルト画面ではBGMを止める(currentBgmKeyもリセットし、続ける押下後の
   // playTownAreaBgm()が同じキーでも確実に再開できるようにする)
   bgmAudio.pause();
   currentBgmKey = null;
   if (!isDefeat) playSfx("result"); // 敗北時は専用SEが無いため無音のまま(賑やかな結果音を流用しない)
-  continueBtn.onclick = () => { onContinue(); };
+  const myToken = ++resultScreenToken; // 町に戻った後に朱印のSEだけ鳴るのを防ぐ世代トークン
+  continueBtn.onclick = () => { resultScreenToken++; onContinue(); };
   showScreen("screen-result");
-  // 収穫→経験値の順に時間差で浮かび上がらせる(一括表示にしない)
+  // 依頼達成→収穫(カウントアップ)→戦績→経験値(バー演出)→朱印、の順に時間差で見せていく
+  goldEl.textContent = isDefeat ? `収穫: +${advGoldEarned}G` : "収穫: +0G";
   setTimeout(() => { if (questCard.style.display !== "none") questCard.classList.add("reveal-in"); }, 80);
-  setTimeout(() => { goldEl.classList.add("reveal-in"); }, 260);
+  setTimeout(() => {
+    goldEl.classList.add("reveal-in");
+    if (!isDefeat) animateGoldCount(goldEl, advGoldEarned);
+  }, 260);
+  setTimeout(() => { statsEl.classList.add("reveal-in"); }, 430);
   setTimeout(() => {
     xpHeading.classList.add("reveal-in");
     list.querySelectorAll(".result-xp-row").forEach((row, i) => {
       setTimeout(() => row.classList.add("reveal-in"), i * 90);
     });
-  }, 460);
+    animQueue.forEach((q, i) => setTimeout(() => animateXpRow(q.row, q.segs), i * 90 + 280));
+  }, 560);
+  if (!isDefeat) {
+    // 朱印(松/竹/梅)はバー演出が一通り終わる頃にドンと押す
+    const stampDelay = 560 + animQueue.length * 90 + 1600;
+    setTimeout(() => {
+      if (myToken !== resultScreenToken) return; // もう町に戻っている
+      stampEl.textContent = computeExpeditionRank();
+      stampEl.style.display = "flex";
+      stampEl.classList.add("stamp-in");
+      playSfx("quest_accept"); // ハンコを押すドン(仮。専用SEが来たら差し替え)
+    }, stampDelay);
+  }
+}
+let resultScreenToken = 0;
+// 収穫ゴールドのカウントアップ(0→合計値がコロコロ増える)。増えている間はコインSEを小刻みに鳴らす
+function animateGoldCount(el, total) {
+  if (!(total > 0)) { el.textContent = `収穫: +${total || 0}G`; return; }
+  const durMs = Math.min(1300, 450 + total * 6);
+  const start = performance.now();
+  let lastCoinAt = -1000;
+  function step(now) {
+    const t = Math.min(1, (now - start) / durMs);
+    const eased = 1 - Math.pow(1 - t, 2); // 最後にかけてゆっくり止まる
+    el.textContent = `収穫: +${Math.round(total * eased)}G`;
+    if (t < 1) {
+      if (now - lastCoinAt > 280) { playSfx("coin"); lastCoinAt = now; }
+      requestAnimationFrame(step);
+    }
+  }
+  requestAnimationFrame(step);
+}
+// 帰還時点の(level, xp)から今回得たXPを逆再生して遠征開始時点のバー位置を割り出し、
+// レベル境界ごとの「どこからどこまで伸ばすか」の区間リストを作る(リザルトのバー演出用)
+function xpSegmentsFor(c, gained, levelBefore) {
+  let level = c.level;
+  let xp = Math.max(0, c.xp || 0);
+  let rem = Math.max(0, gained);
+  while (level > levelBefore && rem > xp) {
+    rem -= xp;
+    level--;
+    xp = xpToNext(level); // 1つ前のレベルを満了した(境界ちょうど)状態まで巻き戻す
+  }
+  const startXp = Math.max(0, xp - rem);
+  const segs = [];
+  let curLevel = levelBefore;
+  while (curLevel < c.level) {
+    const need = xpToNext(curLevel);
+    segs.push({ fromRatio: curLevel === levelBefore && need > 0 ? Math.min(100, (startXp / need) * 100) : 0, toRatio: 100, levelUpTo: curLevel + 1 });
+    curLevel++;
+  }
+  const isMax = c.level >= MAX_LEVEL;
+  const need = isMax ? 0 : xpToNext(c.level);
+  segs.push({
+    fromRatio: curLevel === levelBefore && need > 0 ? Math.min(100, (startXp / need) * 100) : 0,
+    toRatio: isMax ? 100 : (need > 0 ? Math.max(0, Math.min(100, (c.xp / need) * 100)) : 0),
+    levelUpTo: null,
+  });
+  return segs;
+}
+// 経験値バーの区間を順番に再生する。レベル境界では満タン→金フラッシュ+顔アイコンのきらめき+SE→
+// 0に戻して次の区間、最後の区間が終わったらレベルアップバッジをポンと出す
+function animateXpRow(row, segs) {
+  const fill = row.querySelector(".xpbar-fill");
+  const track = row.querySelector(".xpbar-track");
+  const portrait = row.querySelector(".result-xp-portrait");
+  const badge = row.querySelector(".levelup-badge");
+  let i = 0;
+  function runSeg() {
+    const s = segs[i];
+    if (!s) return;
+    const durMs = segs.length > 1 ? 480 : 750;
+    const anim = fill.animate([{ width: `${s.fromRatio}%` }, { width: `${s.toRatio}%` }], { duration: durMs, easing: "ease-out", fill: "forwards" });
+    anim.onfinish = () => {
+      anim.cancel();
+      fill.style.width = `${s.toRatio}%`;
+      if (s.levelUpTo != null) {
+        playSfx("skill_confirm"); // レベルアップの節目(仮SE)
+        track.classList.add("xp-flash");
+        if (portrait) { portrait.classList.remove("levelup-flash"); void portrait.offsetWidth; portrait.classList.add("levelup-flash"); }
+        setTimeout(() => track.classList.remove("xp-flash"), 380);
+        fill.style.width = "0%";
+        i++;
+        setTimeout(runSeg, 200);
+      } else if (badge) {
+        badge.classList.add("badge-pop");
+      }
+    };
+  }
+  runSeg();
+}
+// 評価の朱印(松/竹/梅)。基準は仮決め(要調整): 踏破階層+討伐数×2のスコアと、全員生還したかどうか
+function computeExpeditionRank() {
+  const score = (advMaxFloor || 0) + (advEnemiesDefeated || 0) * 2;
+  if (!advCriticalHappened && score >= 28) return "松";
+  if (score >= 12) return "竹";
+  return "梅";
 }
 function crossfadeBg(fromEl, toEl, imageUrl, durationMs, callback) {
   toEl.style.opacity = "0";
