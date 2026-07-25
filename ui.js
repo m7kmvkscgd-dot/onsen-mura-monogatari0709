@@ -1095,6 +1095,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
       };
     }
     bar.appendChild(div);
+    resumeAttackLungeOnCard(div, c.id); // 進行中の攻撃踏み込みがあれば、作り直したカードへ途中から再適用(effects.js参照)
   });
   activateHpTrails(bar);
   combatants.forEach((c) => renderVfxFor(c.id));

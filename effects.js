@@ -299,16 +299,35 @@ function playScreenShakeOnKillOnly(target, isCrit) {
 }
 // 攻撃の踏み込み: 行動者のカードが一瞬グッと前へ出て戻る一回きりのモーション。かばう反撃の
 // counter-bounceと同じ「クラス付与→時間で剥がす」方式(iOSでtransformを常時残さない前科対応に倣う)。
-// renderBattleScreen()がDOMを作り直すとアニメーションが途中で消えるため、必ず再描画の「後」に呼ぶこと
+// 【重要】通常攻撃の直後は次ターンへの切り替え再描画(renderPartyBar)が30ms程度で走り、カードごと
+// 作り直されて踏み込みがブツ切りになっていた(動画のコマ解析で確認、ユーザー報告2026-07-26)。
+// 進行中の踏み込みをactiveAttackLungeに記録し、再描画後のカードへ負のanimation-delayで途中から
+// 再適用することで、何度作り直されても1回の踏み込みとして最後まで滑らかに再生する
+// (通常攻撃の斬撃VFXのvfxResumeFrameと同じ「再描画をまたいで再開する」考え方)
 const ATTACK_LUNGE_MS = 300;
-function playAttackerLunge(actorId) {
-  if (actorId == null) return;
-  const card = findVisibleCard(actorId);
+let activeAttackLunge = null; // {actorId, startedAt}
+function applyAttackLungeClass(card, elapsedMs) {
   if (!card) return;
   card.classList.remove("attack-lunge");
   void card.offsetWidth; // 連続攻撃でも毎回最初から再生し直すためのリフロー強制
+  card.style.animationDelay = `-${Math.max(0, Math.round(elapsedMs))}ms`;
   card.classList.add("attack-lunge");
-  setTimeout(() => card.classList.remove("attack-lunge"), ATTACK_LUNGE_MS);
+  setTimeout(() => {
+    card.classList.remove("attack-lunge");
+    card.style.animationDelay = "";
+  }, Math.max(30, ATTACK_LUNGE_MS - elapsedMs));
+}
+function playAttackerLunge(actorId) {
+  if (actorId == null) return;
+  activeAttackLunge = { actorId, startedAt: performance.now() };
+  applyAttackLungeClass(findVisibleCard(actorId), 0);
+}
+// renderPartyBar(ui.js)がカードを作り直した直後に呼ばれる: 進行中の踏み込みがあれば途中から再適用する
+function resumeAttackLungeOnCard(card, entityId) {
+  if (!activeAttackLunge || activeAttackLunge.actorId !== entityId) return;
+  const elapsed = performance.now() - activeAttackLunge.startedAt;
+  if (elapsed >= ATTACK_LUNGE_MS) { activeAttackLunge = null; return; }
+  applyAttackLungeClass(card, elapsed);
 }
 function playCritEffects(targetId, actor, dmg) {
   setTimeout(() => {
