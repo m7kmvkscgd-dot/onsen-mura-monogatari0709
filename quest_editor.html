@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温泉村物語 奉行所エディタ</title>
+<style>
+  :root {
+    --bg: #14181b; --surface: #1c2226; --card-bg: #2f3540; --card-border: #5d4d35;
+    --gold: #d7b66f; --title: #f3e7c6; --body: #ece8dc; --caption: #b6b0a2;
+    --success: #6ea95b; --danger: #c95d54; --info: #7b93b9;
+    --tier1: #7db3d8; --tier2: #d98c5f;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--body); font-family: "Hiragino Sans", "Yu Gothic", sans-serif; line-height: 1.5; }
+  header { position: sticky; top: 0; z-index: 20; background: linear-gradient(180deg, #1c2226 0%, #171b1e 100%); border-bottom: 1px solid var(--card-border); padding: 10px 16px; }
+  .header-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 1.05rem; color: var(--title); margin: 0; white-space: nowrap; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  input[type="search"] { background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem; width: 180px; }
+  button { background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; transition: filter 0.1s; -webkit-tap-highlight-color: transparent; }
+  button:hover { filter: brightness(1.15); }
+  button.danger { background: #5a2e28; }
+  button.ghost { background: transparent; }
+  button.small { padding: 5px 9px; font-size: 0.74rem; }
+  #editCount { color: var(--gold); font-weight: bold; font-size: 0.82rem; white-space: nowrap; }
+  nav#sectionTabs { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px 0; }
+  .sec-tab { flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--card-border); border-bottom: none; border-radius: 10px 10px 0 0; padding: 7px 14px; cursor: pointer; color: var(--caption); font-size: 0.85rem; }
+  .sec-tab.active { background: var(--card-bg); color: var(--title); border-color: var(--gold); }
+  .sec-tab .tab-edit-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); display: none; margin-left: 2px; }
+  .sec-tab.has-edits .tab-edit-dot { display: inline-block; }
+  main { max-width: 720px; margin: 0 auto; padding: 12px 10px 60px; }
+  .empty-hint { color: var(--caption); font-size: 0.85rem; text-align: center; padding: 40px 10px; }
+
+  .settings-grid { display: flex; flex-direction: column; gap: 8px; }
+  .setting-row { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .setting-row.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .setting-label { flex: 1; min-width: 0; }
+  .setting-name { font-size: 0.82rem; font-weight: bold; color: var(--title); }
+  .setting-desc { font-size: 0.72rem; color: var(--caption); margin-top: 2px; }
+  .setting-input { width: 90px; flex-shrink: 0; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.85rem; padding: 6px 8px; text-align: right; }
+  .setting-input:focus { outline: none; border-color: var(--gold); }
+
+  .quest-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; margin-bottom: 8px; }
+  .quest-card.tier1 { border-left: 3px solid var(--tier1); }
+  .quest-card.tier2 { border-left: 3px solid var(--tier2); }
+  .quest-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .quest-card.deleted { opacity: 0.5; }
+  .quest-card summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; }
+  .quest-card summary::-webkit-details-marker { display: none; }
+  .quest-emoji-badge { font-size: 1.1rem; flex-shrink: 0; }
+  .quest-title-preview { flex: 1; min-width: 0; font-size: 0.86rem; font-weight: bold; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .quest-meta-badge { font-size: 0.66rem; color: var(--info); flex-shrink: 0; white-space: nowrap; }
+  .quest-id-badge { font-size: 0.62rem; color: var(--caption); flex-shrink: 0; font-family: monospace; }
+  .quest-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
+  .quest-card.edited .quest-edit-dot { display: inline-block; }
+  .quest-chevron { flex-shrink: 0; color: var(--caption); font-size: 0.65rem; transition: transform 0.15s; }
+  .quest-card[open] .quest-chevron { transform: rotate(90deg); }
+
+  .quest-body { padding: 4px 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px; }
+  .field-row { display: flex; flex-direction: column; gap: 3px; }
+  .field-row label { font-size: 0.68rem; color: var(--caption); }
+  .field-row input[type="text"], .field-row input[type="number"], .field-row textarea, .field-row select {
+    width: 100%; background: rgba(0,0,0,0.18); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body);
+    font-size: 0.82rem; padding: 6px 8px; font-family: inherit;
+  }
+  .field-row input:focus, .field-row textarea:focus, .field-row select:focus { outline: none; border-color: var(--gold); background: rgba(0,0,0,0.28); }
+  .field-row textarea { min-height: 58px; resize: vertical; }
+  .field-pair { display: flex; gap: 8px; }
+  .field-pair .field-row { flex: 1; min-width: 0; }
+  .field-row.checkbox-row { flex-direction: row; align-items: center; gap: 6px; }
+  .field-row.checkbox-row input { width: 16px; height: 16px; flex-shrink: 0; }
+  .field-row.checkbox-row label { font-size: 0.78rem; color: var(--body); }
+  .reward-hint { font-size: 0.68rem; color: var(--caption); }
+  .quest-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+  .quest-actions-left { display: flex; gap: 8px; }
+  .del-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--danger); color: var(--danger); }
+  .undo-del-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--success); color: var(--success); }
+  .reset-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--card-border); color: var(--caption); display: none; }
+  .quest-card.edited .reset-btn { display: inline-block; }
+  .add-quest-btn { width: 100%; background: transparent; border: 1px dashed var(--card-border); color: var(--caption); padding: 10px; border-radius: var(--radius); font-size: 0.82rem; margin-top: 4px; }
+  .add-quest-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  #exportModal, #checkpointModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open, #checkpointModal.open { display: flex; }
+  .export-panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .export-panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
+  .export-panel p.hint { margin: 0; font-size: 0.75rem; color: var(--caption); }
+  .export-panel textarea { width: 100%; flex: 1; min-height: 160px; background: #0f1214; color: var(--body); border: 1px solid var(--card-border); border-radius: 8px; font-family: monospace; font-size: 0.75rem; padding: 8px; }
+  .export-diff-list { max-height: 180px; overflow-y: auto; font-size: 0.78rem; background: #0f1214; border-radius: 8px; padding: 8px 10px; border: 1px solid var(--card-border); }
+  .export-diff-list .diff-item { margin-bottom: 8px; }
+  .export-diff-list .diff-title { color: var(--gold); font-weight: bold; }
+  .export-diff-list .diff-field { color: var(--caption); }
+  .export-diff-list del { color: var(--danger); text-decoration: line-through; opacity: 0.7; }
+  .export-diff-list ins { color: var(--success); text-decoration: none; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>🏯 温泉村物語 奉行所エディタ</h1>
+    <div class="toolbar">
+      <input type="search" id="searchBox" placeholder="依頼名・依頼者・本文で検索...">
+      <span id="editCount">編集: 0件</span>
+      <button id="checkpointBtn">💾 一時保存</button>
+      <button id="exportBtn">📋 エクスポート</button>
+      <button id="resetAllBtn" class="danger ghost">全て元に戻す</button>
+    </div>
+  </div>
+  <nav id="sectionTabs"></nav>
+</header>
+<main id="mainArea"></main>
+
+<div id="exportModal">
+  <div class="export-panel">
+    <h2>編集内容のエクスポート</h2>
+    <p class="hint">変更点だけをJSONにまとめています。この画面のJSONをそのままClaudeに貼り付けてください。</p>
+    <div id="exportDiffList" class="export-diff-list"></div>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyJsonBtn">JSONをコピー</button>
+      <button id="closeExportBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="checkpointModal">
+  <div class="export-panel">
+    <h2>一時保存(チェックポイント)</h2>
+    <p class="hint">編集途中の状態をこの下のJSONとして保存できます。コピーしてメモアプリ等に控えておき、次回このページを開いた時に貼り付けて「読み込む」を押すと編集を再開できます(このページ単体にはサーバー保存機能がありません)。</p>
+    <textarea id="checkpointJson" readonly></textarea>
+    <p class="hint">↓ 読み込む場合はここに貼り付け</p>
+    <textarea id="checkpointImportInput" placeholder="ここに一時保存JSONを貼り付け"></textarea>
+    <div id="checkpointImportStatus" style="font-size:0.78rem; min-height:1.2em; color:var(--caption);"></div>
+    <div class="modal-actions">
+      <button id="copyCheckpointBtn">JSONをコピー</button>
+      <button id="loadCheckpointBtn">読み込む</button>
+      <button id="closeCheckpointBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUEST_DATA = {"quests":{"yaken":{"emoji":"🐺","requester":"街道番・源蔵","title":"野犬どもを追い払え！","text":"街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。","targetFloor":5,"count":2,"tier":1,"rewardGold":30},"inoshishi":{"emoji":"🐗","requester":"農家・徳兵衛","title":"大猪の討伐","text":"山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。","targetFloor":8,"count":1,"spawnId":"oo_inoshishi","chaseText":"大猪が追いかけてきた！","rewardGold":70,"tier":1,"minQuestClears":3},"dokuhebi":{"emoji":"🐍","requester":"水番・お咲","title":"水場に潜む毒","text":"村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。","targetFloor":8,"count":2,"tier":1},"oogumo":{"emoji":"🕷","requester":"旅籠主人・宗吉","title":"糸に閉ざされた古道","text":"山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。","targetFloor":9,"count":1,"tier":1},"kodama":{"emoji":"🌳","requester":"山守・弥助","title":"森の異変","text":"最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。","targetFloor":6,"count":2,"tier":1},"kappa":{"emoji":"🐢","requester":"漁師・浜吉","title":"川辺の怪","text":"川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。","targetFloor":8,"count":1,"tier":1},"hitotsume_kozo":{"emoji":"👁","requester":"寺子屋師匠・文左衛門","title":"夜道の怪影","text":"子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。","targetFloor":9,"count":2,"tier":1},"bake_danuki":{"emoji":"🦝","requester":"旅商人・喜兵衛","title":"消えない山道","text":"山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。","targetFloor":11,"count":1,"tier":1},"onibi":{"emoji":"🔥","requester":"墓守・源次","title":"夜に漂う青い火","text":"夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。","targetFloor":9,"count":3,"tier":1},"kamaitachi":{"emoji":"🦦","requester":"木こり・新八","title":"風が人を斬る","text":"山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。","targetFloor":12,"count":2,"tier":1},"q_arakuma":{"emoji":"🐻","requester":"街道番・源蔵","title":"緊急依頼『森の主』","text":"山へ向かった者が誰一人戻ってきません。現場には巨大な爪痕と足跡だけが残されていました。あれは普通の熊ではありません。どうか森の主を討ち倒してください。","targetFloor":11,"count":1,"chaseText":"荒熊が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_daija":{"emoji":"🐍","requester":"庄屋・善兵衛","title":"緊急依頼『川を塞ぐ影』","text":"川へ近づいた者が次々と姿を消しています。生き残った者は巨大な蛇を見たと震えています。村へ現れる前に討伐してください。奉行所より緊急依頼です。","targetFloor":12,"count":1,"chaseText":"大蛇が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_oni":{"emoji":"👹","requester":"山番・五郎","title":"緊急依頼『山に棲む怪物』","text":"山小屋が跡形もなく壊されていました。人の仕業とは思えない力です。このままでは村まで被害が及びます。どうか討伐をお願いします。","targetFloor":14,"count":1,"chaseText":"鬼が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_gashadokuro":{"emoji":"💀","requester":"墓守・源次","title":"緊急依頼『夜鳴きの怪』","text":"夜になると山奥から骨の軋む音が聞こえます。音を追った者は誰一人帰ってきません。正体は誰にも分かりません。どうかこの怪異を止めてください。","targetFloor":15,"count":1,"chaseText":"がしゃどくろが追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"ochimusha":{"emoji":"🥷","requester":"旅籠「松風屋」主人・徳兵衛","title":"彷徨う鎧武者","text":"日が暮れるたび、あの鎧武者が街道に現れるんです…。旅人も寄り付かず、このままじゃ店を畳むしかありません。村の者も皆おびえております。どうか、あいつを止めてください。","targetFloor":18,"count":2,"tier":2},"kamaitachi2":{"emoji":"🦦","requester":"薪拾い・権次","title":"風より速き影","text":"山へ入るたび、身体中が切り傷だらけになるんです。姿は見えねぇのに風だけが吹き抜ける…。もう年寄りには敵いません。村の暮らしも立ちゆきません。頼みます。","targetFloor":21,"count":1,"tier":2},"youko":{"emoji":"🦊","requester":"庄屋・甚兵衛","title":"化け狐の誘い","text":"村の若い衆が狐火に誘われ、夜な夜な山へ消えてしまうのです。笑って帰る者もおれば、戻らぬ者もおります…。これ以上犠牲者は出したくありませぬ。どうか助けてくだされ。","targetFloor":24,"count":1,"tier":2},"rokurokubi":{"emoji":"👺","requester":"呉服屋・お絹","title":"夜道に伸びる首","text":"娘が店番を終えて帰るのも命懸けです…。首の長い女が追いかけてくると皆が震えております。このままでは夜の商売もできません。安心して夜道を歩ける町に戻してください。","targetFloor":23,"count":2,"tier":2},"yukionna":{"emoji":"❄️","requester":"猟師・熊蔵","title":"凍てつく山の怪","text":"山はわしらの命綱なんです。それなのに仲間が次々と凍りついて帰ってくる…。獲物も獲れず、村の蓄えも尽きそうです。どうか、あの雪女を討ってください。","targetFloor":27,"count":1,"tier":2},"yamauba":{"emoji":"👵","requester":"木こり・辰吉","title":"山に潜む老婆","text":"『助けておくれ』って婆さんの声が聞こえるんです。でも近寄った者は誰一人帰っちゃこねぇ…。木こりも皆、山へ入るのを怖がっています。どうか退治してください。","targetFloor":30,"count":1,"tier":2},"tsuchigumo":{"emoji":"🕷","requester":"炭焼き・留吉","title":"糸に絡む悲鳴","text":"仲間を助けに行きたいんです。でも森中が蜘蛛の糸だらけで、一歩も進めねぇ…。助けを呼ぶ声が今も聞こえるんです。どうか、あいつを退治してください。","targetFloor":26,"count":1,"tier":2},"onryo":{"emoji":"👻","requester":"安養寺 住職・玄海","title":"消えぬ怨み","text":"読経を重ねても、あの怨念だけは静まりませぬ…。寺に訪れる者も怯え、夜は誰も近寄らなくなりました。どうか、この迷える魂を救ってください。","targetFloor":29,"count":2,"tier":2},"oomukade":{"emoji":"🐛","requester":"飛脚・新八","title":"地を這う災厄","text":"この道が通れねぇと、荷も手紙も届けられません。仲間も毒にやられちまいました…。商人も旅人も皆困っています。どうか、街道を取り戻してください！","targetFloor":33,"count":1,"tier":2},"kasha":{"emoji":"🔥","requester":"墓守・源蔵","title":"燃え走る怪車","text":"弔いの最中にまで火車が現れ、亡き人をさらっていくんです…。死んだ者くらい安らかに眠らせてやりたい。このままでは供養もできません。どうか力を貸してください。","targetFloor":36,"count":1,"tier":2}},"rescue":{"emoji":"🌿","requester":"百姓・佐吉","title":"妻のための薬草摘み","text":"女房が夏の暑さにやられて臥せってしまいました。深淵の森に生える薬草を煎じれば良くなるはずなのですが、わっし自身は足腰が悪く森には入れません。どうか代わりに薬草を摘んできてもらえないでしょうか。","targetFloor":5,"rewardGold":25,"itemName":"薬草"},"constants":{"QUEST_BOARD_SIZE":3,"QUEST_BOARD_SECOND_SLOT_CHANCE":0.75,"QUEST_BOARD_THIRD_SLOT_CHANCE":0.5,"QUEST_COOLDOWN_DAYS":5,"QUEST_DEADLINE_DAYS":2,"QUEST_CONTRACT_FEE_DIVISOR":5,"QUEST_GOLD_PER_FLOOR":8,"QUEST_REWARD_MULT":0.6,"QUEST_REWARD_XP":0,"RESCUE_QUEST_GOLD_THRESHOLD":20,"RESCUE_QUEST_MAX_ACTIVE_MEMBERS":1,"CHASE_ENCOUNTER_CHANCE":0.6,"BOSS_FLEE_HP_RATIO":0.3,"BOSS_PURSUIT_ENCOUNTER_CHANCE":0.6}};
+
+// 全体設定の項目定義(name/desc/型)。isPct: 0〜1の割合値として%表示で編集させる
+const CONST_DEFS = [
+  { key: "QUEST_BOARD_SIZE", name: "張り出し枚数の上限", desc: "1日に張り出される依頼の最大枚数(1件目は確定)" },
+  { key: "QUEST_BOARD_SECOND_SLOT_CHANCE", name: "2件目が出る確率", desc: "0〜1の割合", isPct: true },
+  { key: "QUEST_BOARD_THIRD_SLOT_CHANCE", name: "3件目が出る確率", desc: "2件目が出た場合のみ抽選。0〜1の割合", isPct: true },
+  { key: "QUEST_COOLDOWN_DAYS", name: "再抽選クールダウン(日)", desc: "一度張り出された依頼が外れてから、再抽選対象に戻るまでの日数" },
+  { key: "QUEST_DEADLINE_DAYS", name: "受注後の期限(日)", desc: "受注してからこの日数以内に達成しないと失敗になる" },
+  { key: "QUEST_CONTRACT_FEE_DIVISOR", name: "契約金の割合(分母)", desc: "契約金 = 報酬金 ÷ この値。受注時に前払いし達成時に全額返還、失敗/取り下げで没収" },
+  { key: "QUEST_GOLD_PER_FLOOR", name: "報酬金の階層係数", desc: "報酬金(自動計算時) = targetFloor × この値 × 報酬倍率" },
+  { key: "QUEST_REWARD_MULT", name: "報酬金の倍率", desc: "報酬金(自動計算時)の最終倍率" },
+  { key: "QUEST_REWARD_XP", name: "討伐報酬XP", desc: "現在は0(金銭報酬のみ)固定で運用中" },
+  { key: "RESCUE_QUEST_GOLD_THRESHOLD", name: "救済クエスト発生: 所持金しきい値", desc: "所持金がこの値以下の時だけ張り出される" },
+  { key: "RESCUE_QUEST_MAX_ACTIVE_MEMBERS", name: "救済クエスト発生: 稼働人数しきい値", desc: "瀕死/ロストを除く稼働中の仲間がこの人数以下の時だけ張り出される" },
+  { key: "CHASE_ENCOUNTER_CHANCE", name: "討伐対象の追跡遭遇率", desc: "討伐せず逃げた対象が、以後フロア移動のたびに追いついてくる確率", isPct: true },
+  { key: "BOSS_FLEE_HP_RATIO", name: "ボスの逃走HP割合", desc: "ボス/中ボスがこのHP割合以下で自分の手番が来ると逃走する", isPct: true },
+  { key: "BOSS_PURSUIT_ENCOUNTER_CHANCE", name: "ボス追撃の遭遇率", desc: "逃走したボスが以後フロア移動のたびに追いついてくる確率", isPct: true },
+];
+
+let edits = { quests: {}, rescue: {}, constants: {} };
+let addedQuests = {}; // id -> フルの依頼オブジェクト(新規追加分)
+let deletedQuestIds = new Set();
+let activeSection = "tier1"; // tier1 | tier2 | rescue | settings
+let searchQuery = "";
+
+function baseQuestIds(tier) {
+  return Object.keys(QUEST_DATA.quests).filter((id) => QUEST_DATA.quests[id].tier === tier);
+}
+function addedQuestIds(tier) {
+  return Object.keys(addedQuests).filter((id) => addedQuests[id].tier === tier);
+}
+function isNewQuest(id) { return Object.prototype.hasOwnProperty.call(addedQuests, id); }
+function questSource(id) { return isNewQuest(id) ? addedQuests[id] : QUEST_DATA.quests[id]; }
+
+function setQuestEdit(id, field, value, original) {
+  if (isNewQuest(id)) { addedQuests[id][field] = value; refreshAll(); return; }
+  edits.quests[id] = edits.quests[id] || {};
+  if (value === original || (value === "" && (original === undefined || original === null))) delete edits.quests[id][field];
+  else edits.quests[id][field] = value;
+  if (Object.keys(edits.quests[id]).length === 0) delete edits.quests[id];
+  refreshAll();
+}
+function currentQuestValue(id, field, original) {
+  if (isNewQuest(id)) return addedQuests[id][field];
+  const e = edits.quests[id];
+  return e && Object.prototype.hasOwnProperty.call(e, field) ? e[field] : original;
+}
+function isQuestEdited(id) { return isNewQuest(id) || !!(edits.quests[id] && Object.keys(edits.quests[id]).length); }
+function resetQuest(id) {
+  if (isNewQuest(id)) { delete addedQuests[id]; }
+  else delete edits.quests[id];
+  refreshAll();
+}
+function setRescueEdit(field, value, original) {
+  if (value === original) delete edits.rescue[field];
+  else edits.rescue[field] = value;
+  refreshAll();
+}
+function currentRescueValue(field, original) {
+  return Object.prototype.hasOwnProperty.call(edits.rescue, field) ? edits.rescue[field] : original;
+}
+function setConstEdit(key, value, original) {
+  if (value === original) delete edits.constants[key];
+  else edits.constants[key] = value;
+  refreshAll();
+}
+function currentConstValue(key, original) {
+  return Object.prototype.hasOwnProperty.call(edits.constants, key) ? edits.constants[key] : original;
+}
+function countEdits() {
+  let n = Object.keys(edits.quests).reduce((s, id) => s + Object.keys(edits.quests[id]).length, 0);
+  n += Object.keys(addedQuests).length;
+  n += deletedQuestIds.size;
+  n += Object.keys(edits.rescue).length;
+  n += Object.keys(edits.constants).length;
+  return n;
+}
+function sectionHasEdits(sec) {
+  if (sec === "tier1" || sec === "tier2") {
+    const tierNum = sec === "tier1" ? 1 : 2;
+    const editedExisting = Object.keys(edits.quests).some((id) => QUEST_DATA.quests[id] && QUEST_DATA.quests[id].tier === tierNum);
+    const addedInTier = addedQuestIds(tierNum).length > 0;
+    const deletedInTier = [...deletedQuestIds].some((id) => QUEST_DATA.quests[id] && QUEST_DATA.quests[id].tier === tierNum);
+    return editedExisting || addedInTier || deletedInTier;
+  }
+  if (sec === "rescue") return Object.keys(edits.rescue).length > 0;
+  if (sec === "settings") return Object.keys(edits.constants).length > 0;
+  return false;
+}
+
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function buildQuestCard(id) {
+  const src = questSource(id);
+  const deleted = deletedQuestIds.has(id);
+  const emoji = currentQuestValue(id, "emoji", src.emoji);
+  const requester = currentQuestValue(id, "requester", src.requester);
+  const title = currentQuestValue(id, "title", src.title);
+  const text = currentQuestValue(id, "text", src.text);
+  const targetFloor = currentQuestValue(id, "targetFloor", src.targetFloor);
+  const count = currentQuestValue(id, "count", src.count);
+  const tier = currentQuestValue(id, "tier", src.tier);
+  const rewardGold = currentQuestValue(id, "rewardGold", src.rewardGold);
+  const spawnId = currentQuestValue(id, "spawnId", src.spawnId);
+  const chaseText = currentQuestValue(id, "chaseText", src.chaseText);
+  const requiresOoInoshishi = !!currentQuestValue(id, "requiresOoInoshishi", src.requiresOoInoshishi);
+  const minQuestClears = currentQuestValue(id, "minQuestClears", src.minQuestClears);
+  const edited = isQuestEdited(id);
+  const node = document.createElement("details");
+  node.className = "quest-card tier" + tier + (edited ? " edited" : "") + (deleted ? " deleted" : "");
+  node.innerHTML = `
+    <summary>
+      <span class="quest-emoji-badge">${escapeHtml(emoji || "❓")}</span>
+      <span class="quest-title-preview">${escapeHtml(title || "(無題)")}${deleted ? "(削除予定)" : ""}</span>
+      <span class="quest-meta-badge">Lv${targetFloor}〜</span>
+      <span class="quest-id-badge">${escapeHtml(id)}</span>
+      <span class="quest-edit-dot"></span>
+      <span class="quest-chevron">▶</span>
+    </summary>
+    <div class="quest-body">
+      <div class="field-pair">
+        <div class="field-row" style="flex:0 0 60px;">
+          <label>絵文字</label>
+          <input type="text" data-field="emoji" value="${escapeHtml(emoji)}" maxlength="4">
+        </div>
+        <div class="field-row">
+          <label>依頼者</label>
+          <input type="text" data-field="requester" value="${escapeHtml(requester)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>依頼名</label>
+        <input type="text" data-field="title" value="${escapeHtml(title)}">
+      </div>
+      <div class="field-row">
+        <label>依頼本文</label>
+        <textarea data-field="text">${escapeHtml(text)}</textarea>
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label>目標階層(targetFloor)</label>
+          <input type="number" data-field="targetFloor" value="${targetFloor}" min="1">
+        </div>
+        <div class="field-row">
+          <label>討伐数(count)</label>
+          <input type="number" data-field="count" value="${count}" min="1">
+        </div>
+        <div class="field-row" style="flex:0 0 80px;">
+          <label>★ランク</label>
+          <select data-field="tier">
+            <option value="1" ${tier === 1 ? "selected" : ""}>★1</option>
+            <option value="2" ${tier === 2 ? "selected" : ""}>★2</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>固定報酬金(rewardGold、空欄なら目標階層から自動計算)</label>
+        <input type="number" data-field="rewardGold" value="${rewardGold != null ? rewardGold : ""}" placeholder="自動計算" min="0">
+        <span class="reward-hint">空欄時の自動計算額: 目標階層 × QUEST_GOLD_PER_FLOOR × QUEST_REWARD_MULT(下の「全体設定」タブ参照)</span>
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label>指名敵ID(spawnId、任意。ボス級指名討伐用)</label>
+          <input type="text" data-field="spawnId" value="${escapeHtml(spawnId || "")}" placeholder="通常抽選なら空欄">
+        </div>
+        <div class="field-row">
+          <label>追跡セリフ(chaseText、任意)</label>
+          <input type="text" data-field="chaseText" value="${escapeHtml(chaseText || "")}" placeholder="逃走時のみ使用">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>解禁条件: 依頼達成回数(minQuestClears、任意)</label>
+        <input type="number" data-field="minQuestClears" value="${minQuestClears != null ? minQuestClears : ""}" placeholder="制限なしなら空欄" min="0">
+      </div>
+      <div class="field-row checkbox-row">
+        <input type="checkbox" data-field="requiresOoInoshishi" ${requiresOoInoshishi ? "checked" : ""}>
+        <label>大猪を一度倒すまで張り出されない(requiresOoInoshishi)</label>
+      </div>
+      <div class="quest-actions">
+        <div class="quest-actions-left">
+          <button type="button" class="reset-btn">↺ 元に戻す</button>
+        </div>
+        ${deleted ? `<button type="button" class="undo-del-btn">削除を取り消す</button>` : `<button type="button" class="del-btn">🗑 この依頼を削除</button>`}
+      </div>
+    </div>
+  `;
+  const fields = ["emoji", "requester", "title", "text", "targetFloor", "count", "tier", "rewardGold", "spawnId", "chaseText", "minQuestClears"];
+  const REQUIRED_NUMERIC = new Set(["targetFloor", "count"]); // 空欄を許さず元の値へフォールバックする
+  const OPTIONAL_NUMERIC = new Set(["rewardGold", "minQuestClears"]); // 空欄=null(未設定)として明示的に書き出す
+  fields.forEach((f) => {
+    const el = node.querySelector(`[data-field="${f}"]`);
+    if (!el) return;
+    const originalVal = src[f];
+    el.addEventListener("input", () => {
+      let v = el.value;
+      if (f === "tier") { /* handled separately below via change */ return; }
+      // JSON.stringifyはundefinedのプロパティを黙って消してしまうため、空欄=未設定はnullとして持つ
+      // (nullなら書き出される)。targetFloor/countは必須項目なので空欄時は元の値へフォールバックする
+      if (REQUIRED_NUMERIC.has(f)) v = v === "" ? originalVal : Number(v);
+      else if (OPTIONAL_NUMERIC.has(f)) v = v === "" ? null : Number(v);
+      setQuestEdit(id, f, v, originalVal);
+      node.classList.toggle("edited", isQuestEdited(id));
+      refreshEditCount();
+    });
+  });
+  const tierSelect = node.querySelector('[data-field="tier"]');
+  tierSelect.addEventListener("change", () => {
+    setQuestEdit(id, "tier", Number(tierSelect.value), src.tier);
+    renderMain(); // タブが変わるので全体再描画
+  });
+  const requiresCheckbox = node.querySelector('[data-field="requiresOoInoshishi"]');
+  requiresCheckbox.addEventListener("change", () => {
+    setQuestEdit(id, "requiresOoInoshishi", requiresCheckbox.checked, !!src.requiresOoInoshishi);
+    node.classList.toggle("edited", isQuestEdited(id));
+    refreshEditCount();
+  });
+  const resetBtn = node.querySelector(".reset-btn");
+  resetBtn.addEventListener("click", (e) => { e.preventDefault(); resetQuest(id); });
+  const delBtn = node.querySelector(".del-btn");
+  // 新規追加した依頼を削除する場合は「追加の取り消し」であり、既存依頼の削除(deletedQuestIds)とは
+  // 別枠(newQuestsから消すだけ)。混ぜるとエクスポートにnewQuests/deletedQuestIds両方に載って矛盾するため分岐する
+  if (delBtn) delBtn.addEventListener("click", (e) => { e.preventDefault(); if (isNewQuest(id)) delete addedQuests[id]; else deletedQuestIds.add(id); refreshAll(); });
+  const undoBtn = node.querySelector(".undo-del-btn");
+  if (undoBtn) undoBtn.addEventListener("click", (e) => { e.preventDefault(); deletedQuestIds.delete(id); refreshAll(); });
+  return node;
+}
+
+function matchesSearch(id) {
+  if (!searchQuery) return true;
+  const src = questSource(id);
+  const title = currentQuestValue(id, "title", src.title) || "";
+  const requester = currentQuestValue(id, "requester", src.requester) || "";
+  const text = currentQuestValue(id, "text", src.text) || "";
+  const q = searchQuery.toLowerCase();
+  return title.toLowerCase().includes(q) || requester.toLowerCase().includes(q) || text.toLowerCase().includes(q) || id.toLowerCase().includes(q);
+}
+
+function renderTierSection(tierNum) {
+  const container = document.createElement("div");
+  const ids = [...baseQuestIds(tierNum), ...addedQuestIds(tierNum)].filter((id) => {
+    // tier編集で他ランクへ移動した既存依頼はここでは除外する
+    const src = questSource(id);
+    const currentTier = currentQuestValue(id, "tier", src.tier);
+    return currentTier === tierNum;
+  }).filter(matchesSearch);
+  if (!ids.length) {
+    const hint = document.createElement("div");
+    hint.className = "empty-hint";
+    hint.textContent = searchQuery ? "該当する依頼が見つかりません" : "依頼がありません";
+    container.appendChild(hint);
+  }
+  ids.forEach((id) => container.appendChild(buildQuestCard(id)));
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "add-quest-btn";
+  addBtn.textContent = `+ ★${tierNum}に新しい依頼を追加`;
+  addBtn.addEventListener("click", () => {
+    let newId = (prompt("新しい依頼のID(英数字、既存と重複しないもの。例: yamaneko)") || "").trim();
+    if (!newId) return;
+    newId = newId.replace(/[^a-zA-Z0-9_]/g, "");
+    if (!newId) { alert("英数字・アンダースコアのみ使用できます"); return; }
+    if (QUEST_DATA.quests[newId] || addedQuests[newId]) { alert("そのIDは既に使われています"); return; }
+    addedQuests[newId] = { emoji: "❓", requester: "", title: "新しい依頼", text: "", targetFloor: 10, count: 1, tier: tierNum };
+    refreshAll();
+  });
+  container.appendChild(addBtn);
+  return container;
+}
+
+function renderRescueSection() {
+  const container = document.createElement("div");
+  const src = QUEST_DATA.rescue;
+  const emoji = currentRescueValue("emoji", src.emoji);
+  const requester = currentRescueValue("requester", src.requester);
+  const title = currentRescueValue("title", src.title);
+  const text = currentRescueValue("text", src.text);
+  const targetFloor = currentRescueValue("targetFloor", src.targetFloor);
+  const rewardGold = currentRescueValue("rewardGold", src.rewardGold);
+  const itemName = currentRescueValue("itemName", src.itemName);
+  const edited = Object.keys(edits.rescue).length > 0;
+  const card = document.createElement("div");
+  card.className = "quest-card" + (edited ? " edited" : "");
+  card.style.borderLeft = "3px solid var(--success)";
+  const hint = document.createElement("p");
+  hint.className = "empty-hint";
+  hint.style.padding = "6px 10px 0";
+  hint.style.textAlign = "left";
+  hint.textContent = "破綻寸前パーティ救済クエスト。他の依頼と違い常設1件で、所持金が少なく稼働中の仲間もほぼいない時だけ張り出される(発生条件のしきい値は「全体設定」タブ参照)。";
+  card.innerHTML = `
+    <div class="quest-body" style="border-top:none; padding-top:10px;">
+      <div class="field-pair">
+        <div class="field-row" style="flex:0 0 60px;">
+          <label>絵文字</label>
+          <input type="text" data-field="emoji" value="${escapeHtml(emoji)}" maxlength="4">
+        </div>
+        <div class="field-row">
+          <label>依頼者</label>
+          <input type="text" data-field="requester" value="${escapeHtml(requester)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>依頼名</label>
+        <input type="text" data-field="title" value="${escapeHtml(title)}">
+      </div>
+      <div class="field-row">
+        <label>依頼本文</label>
+        <textarea data-field="text">${escapeHtml(text)}</textarea>
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label>目標階層(targetFloor)</label>
+          <input type="number" data-field="targetFloor" value="${targetFloor}" min="1">
+        </div>
+        <div class="field-row">
+          <label>報酬金(rewardGold)</label>
+          <input type="number" data-field="rewardGold" value="${rewardGold}" min="0">
+        </div>
+        <div class="field-row">
+          <label>入手アイテム名(itemName)</label>
+          <input type="text" data-field="itemName" value="${escapeHtml(itemName)}">
+        </div>
+      </div>
+      <button type="button" class="reset-btn" style="${edited ? "display:inline-block;" : ""}">↺ 元に戻す</button>
+    </div>
+  `;
+  container.appendChild(hint);
+  container.appendChild(card);
+  ["emoji", "requester", "title", "text", "targetFloor", "rewardGold", "itemName"].forEach((f) => {
+    const el = card.querySelector(`[data-field="${f}"]`);
+    const numeric = f === "targetFloor" || f === "rewardGold";
+    el.addEventListener("input", () => {
+      let v = el.value;
+      if (numeric) v = v === "" ? src[f] : Number(v);
+      setRescueEdit(f, v, src[f]);
+      card.classList.toggle("edited", Object.keys(edits.rescue).length > 0);
+      card.querySelector(".reset-btn").style.display = Object.keys(edits.rescue).length > 0 ? "inline-block" : "none";
+      refreshEditCount();
+    });
+  });
+  card.querySelector(".reset-btn").addEventListener("click", (e) => { e.preventDefault(); edits.rescue = {}; refreshAll(); });
+  return container;
+}
+
+function renderSettingsSection() {
+  const container = document.createElement("div");
+  container.className = "settings-grid";
+  CONST_DEFS.forEach((def) => {
+    const original = QUEST_DATA.constants[def.key];
+    const current = currentConstValue(def.key, original);
+    const edited = Object.prototype.hasOwnProperty.call(edits.constants, def.key);
+    const row = document.createElement("div");
+    row.className = "setting-row" + (edited ? " edited" : "");
+    const displayVal = def.isPct ? Math.round(current * 1000) / 10 : current;
+    row.innerHTML = `
+      <div class="setting-label">
+        <div class="setting-name">${escapeHtml(def.name)}</div>
+        <div class="setting-desc">${escapeHtml(def.desc)}</div>
+      </div>
+      <input type="number" class="setting-input" value="${displayVal}" step="${def.isPct ? "0.1" : "1"}">
+      ${def.isPct ? '<span style="font-size:0.75rem;color:var(--caption);">%</span>' : ""}
+    `;
+    const input = row.querySelector("input");
+    input.addEventListener("input", () => {
+      let v = input.value === "" ? original : Number(input.value);
+      if (def.isPct) v = Math.round(v * 10) / 1000;
+      setConstEdit(def.key, v, original);
+      row.classList.toggle("edited", Object.prototype.hasOwnProperty.call(edits.constants, def.key));
+      refreshEditCount();
+    });
+    container.appendChild(row);
+  });
+  return container;
+}
+
+function renderMain() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  if (activeSection === "tier1") main.appendChild(renderTierSection(1));
+  else if (activeSection === "tier2") main.appendChild(renderTierSection(2));
+  else if (activeSection === "rescue") main.appendChild(renderRescueSection());
+  else if (activeSection === "settings") main.appendChild(renderSettingsSection());
+  renderTabs();
+  refreshEditCount();
+}
+function renderTabs() {
+  const nav = document.getElementById("sectionTabs");
+  nav.innerHTML = "";
+  const tabs = [
+    { key: "tier1", label: "★1討伐依頼" },
+    { key: "tier2", label: "★2討伐依頼" },
+    { key: "rescue", label: "救済クエスト" },
+    { key: "settings", label: "全体設定" },
+  ];
+  tabs.forEach((t) => {
+    const btn = document.createElement("div");
+    btn.className = "sec-tab" + (activeSection === t.key ? " active" : "") + (sectionHasEdits(t.key) ? " has-edits" : "");
+    btn.innerHTML = `${escapeHtml(t.label)}<span class="tab-edit-dot"></span>`;
+    btn.addEventListener("click", () => { activeSection = t.key; renderMain(); });
+    nav.appendChild(btn);
+  });
+}
+function refreshEditCount() {
+  document.getElementById("editCount").textContent = "編集: " + countEdits() + "件";
+}
+function refreshAll() { renderMain(); }
+
+document.getElementById("searchBox").addEventListener("input", (e) => { searchQuery = e.target.value.trim(); renderMain(); });
+document.getElementById("resetAllBtn").addEventListener("click", () => {
+  if (countEdits() === 0) return;
+  if (!confirm("全ての編集内容を破棄します。よろしいですか？")) return;
+  edits = { quests: {}, rescue: {}, constants: {} };
+  addedQuests = {};
+  deletedQuestIds = new Set();
+  renderMain();
+});
+
+// ==== エクスポート(変更点のみのJSON) ====
+function buildExportData() {
+  const out = {};
+  if (Object.keys(edits.quests).length) out.quests = edits.quests;
+  if (Object.keys(addedQuests).length) out.newQuests = addedQuests;
+  if (deletedQuestIds.size) out.deletedQuestIds = [...deletedQuestIds];
+  if (Object.keys(edits.rescue).length) out.rescue = edits.rescue;
+  if (Object.keys(edits.constants).length) out.constants = edits.constants;
+  return out;
+}
+function buildDiffListHtml() {
+  const parts = [];
+  Object.keys(edits.quests).forEach((id) => {
+    const fields = edits.quests[id];
+    const title = QUEST_DATA.quests[id] ? QUEST_DATA.quests[id].title : id;
+    const fieldLines = Object.keys(fields).map((f) => {
+      const from = QUEST_DATA.quests[id][f];
+      const to = fields[f];
+      return `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(from))}</del> → <ins>${escapeHtml(JSON.stringify(to))}</ins></div>`;
+    }).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ ${escapeHtml(title)}(${escapeHtml(id)})</div>${fieldLines}</div>`);
+  });
+  Object.keys(addedQuests).forEach((id) => {
+    parts.push(`<div class="diff-item"><div class="diff-title">＋新規: ${escapeHtml(addedQuests[id].title)}(${escapeHtml(id)})</div></div>`);
+  });
+  [...deletedQuestIds].forEach((id) => {
+    const title = QUEST_DATA.quests[id] ? QUEST_DATA.quests[id].title : id;
+    parts.push(`<div class="diff-item"><div class="diff-title" style="color:var(--danger);">🗑削除: ${escapeHtml(title)}(${escapeHtml(id)})</div></div>`);
+  });
+  if (Object.keys(edits.rescue).length) {
+    const fieldLines = Object.keys(edits.rescue).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(QUEST_DATA.rescue[f]))}</del> → <ins>${escapeHtml(JSON.stringify(edits.rescue[f]))}</ins></div>`).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ 救済クエスト</div>${fieldLines}</div>`);
+  }
+  if (Object.keys(edits.constants).length) {
+    const fieldLines = Object.keys(edits.constants).map((k) => `<div class="diff-field">${escapeHtml(k)}: <del>${escapeHtml(JSON.stringify(QUEST_DATA.constants[k]))}</del> → <ins>${escapeHtml(JSON.stringify(edits.constants[k]))}</ins></div>`).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ 全体設定</div>${fieldLines}</div>`);
+  }
+  return parts.length ? parts.join("") : '<div class="empty-hint">まだ編集がありません</div>';
+}
+document.getElementById("exportBtn").addEventListener("click", () => {
+  document.getElementById("exportDiffList").innerHTML = buildDiffListHtml();
+  document.getElementById("exportJson").value = JSON.stringify(buildExportData(), null, 2);
+  document.getElementById("exportModal").classList.add("open");
+});
+document.getElementById("closeExportBtn").addEventListener("click", () => document.getElementById("exportModal").classList.remove("open"));
+document.getElementById("copyJsonBtn").addEventListener("click", () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  document.execCommand("copy");
+  const btn = document.getElementById("copyJsonBtn");
+  const orig = btn.textContent;
+  btn.textContent = "コピーしました";
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+});
+
+// ==== 一時保存(チェックポイント)。編集途中の状態(edits/addedQuests/deletedQuestIds)をJSONで
+// 出し入れできるようにする。localStorageに頼らず(別端末/別ブラウザでも使えるように)コピペで運用する ====
+function buildCheckpointData() {
+  return { edits, addedQuests, deletedQuestIds: [...deletedQuestIds] };
+}
+document.getElementById("checkpointBtn").addEventListener("click", () => {
+  document.getElementById("checkpointJson").value = JSON.stringify(buildCheckpointData(), null, 2);
+  document.getElementById("checkpointImportInput").value = "";
+  document.getElementById("checkpointImportStatus").textContent = "";
+  document.getElementById("checkpointModal").classList.add("open");
+});
+document.getElementById("closeCheckpointBtn").addEventListener("click", () => document.getElementById("checkpointModal").classList.remove("open"));
+document.getElementById("copyCheckpointBtn").addEventListener("click", () => {
+  const ta = document.getElementById("checkpointJson");
+  ta.select();
+  document.execCommand("copy");
+  const btn = document.getElementById("copyCheckpointBtn");
+  const orig = btn.textContent;
+  btn.textContent = "コピーしました";
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+});
+// チェックポイントの読み込みはマージ方式(既存の編集内容を消さず、貼り付けた分を上書き統合する)。
+// 同じ端末で複数回に分けて一時保存→読み込みを繰り返しても、それまでの作業が失われないようにするため
+document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
+  const statusEl = document.getElementById("checkpointImportStatus");
+  const raw = document.getElementById("checkpointImportInput").value.trim();
+  if (!raw) { statusEl.textContent = "JSONを貼り付けてください"; statusEl.style.color = "var(--danger)"; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { statusEl.textContent = "JSONの読み込みに失敗しました: " + e.message; statusEl.style.color = "var(--danger)"; return; }
+  try {
+    if (parsed.edits) {
+      Object.keys(parsed.edits.quests || {}).forEach((id) => { edits.quests[id] = Object.assign({}, edits.quests[id] || {}, parsed.edits.quests[id]); });
+      Object.assign(edits.rescue, parsed.edits.rescue || {});
+      Object.assign(edits.constants, parsed.edits.constants || {});
+    }
+    Object.assign(addedQuests, parsed.addedQuests || {});
+    (parsed.deletedQuestIds || []).forEach((id) => deletedQuestIds.add(id));
+    statusEl.textContent = "読み込みました";
+    statusEl.style.color = "var(--success)";
+    refreshAll();
+  } catch (e) {
+    statusEl.textContent = "読み込み中にエラーが発生しました: " + e.message;
+    statusEl.style.color = "var(--danger)";
+  }
+});
+
+renderMain();
+</script>
+</body>
+</html>
