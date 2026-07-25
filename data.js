@@ -821,7 +821,10 @@ const SKILL_TREES = {
     8: {
       // 連斬はLv3左から移動(内容はそのまま)
       left: { name: "連斬", desc: "会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)", mp: 0, passive: { onCritExtraAttackChance: 0.25 } },
-      right: { name: "燕返し", desc: "被弾時、25%の確率で反撃する(攻撃力110%)", mp: 0, passive: { counterChance: 0.25, counterMult: 1.1 } },
+      // desc変更(スキルエディタの差分反映、要確認): 新descは「反撃時会心率+20%」のみで元の発生率25%/威力110%への
+      // 言及が消えているが、それらの数値自体を変更する指示は無かったため、既存passiveはそのまま維持し
+      // counterCritRateAddだけ追加した(descが仕様の全文なのか、単なる追記のつもりだったのか要確認)
+      right: { name: "燕返し", desc: "反撃時会心率+20%", mp: 0, passive: { counterChance: 0.25, counterMult: 1.1, counterCritRateAdd: 0.2 } },
     },
     9: {
       left: { name: "修羅", desc: "敵を倒すと3ターンの間、攻撃力+25%\n(重複しない)", mp: 0, passive: { onKill: { statMult: [{ stat: "atk", mult: 1.25 }], turns: 3, maxStacks: 1 } } },
@@ -831,8 +834,9 @@ const SKILL_TREES = {
     10: {
       // 旧・神速抜刀(320%ダメージ)から全面刷新
       left: { name: "神速抜刀", desc: "35%の威力で敵を攻撃。ターンを消費しない。", mp: 1, action: { kind: "damage", mult: 0.35, noCost: true } },
-      // 天衣無縫は旧・百戦錬磨(Lv6右)の内容そのまま名前だけ変更して移動
-      right: { name: "天衣無縫", desc: "１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)", mp: 0, passive: { turnStackAtkBuff: { perTurn: 0.03, maxTurns: 10 } } },
+      // desc変更(スキルエディタの差分反映): 旧・百戦錬磨(ターン経過で攻撃力up)から「反撃ダメージ+50%」の
+      // 固定バフに全面差し替え。燕返しのcounterMultとは別枠で加算されるcounterDamageBonusとして実装
+      right: { name: "天衣無縫", desc: "反撃ダメージ+50%", mp: 0, passive: { counterDamageBonus: 0.5 } },
     },
   },
   ninja: {
@@ -964,10 +968,11 @@ const SKILL_TREES = {
       right: { name: "急所への一撃", desc: "通常攻撃で65%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.65, valueMin: 1, valueMax: 3 } } },
     },
     3: {
-      // 新規の2連続攻撃スキルに全面刷新(旧・隼落とし=飛行ボーナスは廃止)。未実装のため仕組みデータ無し(2026-07-25引き継ぎ参照)
-      left: { name: "隼落とし", desc: "敵単体へ2連続攻撃(合計180%ダメージ)", mp: 0 },
-      // 血痕追跡: 元々desc文が実際の仕組み(80%威力+95%スタン)と食い違っていたバグを、新desc文で修正(仕組み自体は変更なし)
-      right: { name: "血痕追跡", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 0, action: { kind: "damage", mult: 0.7, inflict: { type: "stun", chance: 0.95, turns: 1 } } },
+      // desc変更(スキルエディタの差分反映): 2連続攻撃案を取りやめ、旧・隼落としの飛行ボーナスに再度差し替え
+      left: { name: "隼落とし", desc: "飛行を持つ敵へのダメージ+20%", mp: 0, passive: { flyingBonus: { mult: 1.2 } } },
+      // desc変更(スキルエディタの差分反映): ダメージ+スタンのアクションから、出血中の敵に狙われた時の
+      // 回避率バフ(パッシブ)に全面差し替え
+      right: { name: "血痕追跡", desc: "出血状態の敵から攻撃されるとき、回避率が+30%", mp: 0, passive: { evasionVsAilmentAdd: { ailment: "bleed", add: 0.3 } } },
     },
     4: {
       left: { name: "貫き矢", desc: "通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 0, passive: { overkillPierce: true } },
@@ -978,7 +983,9 @@ const SKILL_TREES = {
       right: { name: "血管炸裂", desc: "出血中の敵へのダメージが、出血1蓄積しているごとに5%上がる。最大50%", mp: 0, passive: { bleedFollowupOnHit: true } },
     },
     6: {
-      left: { name: "必中撃ち", desc: "敵単体へ210%ダメージ。この攻撃は必ず命中する", mp: 3, action: { kind: "damage", mult: 2.1, guaranteedHit: true } },
+      // desc変更(スキルエディタの差分反映、要確認): 確定命中ダメージ技から、大技予告中の敵への追加ダメージ(パッシブ)に
+      // 全面差し替え。差分にmp指定は無かったが、パッシブは全スキル共通でmp:0のため0に修正した
+      left: { name: "必中撃ち", desc: "大技予告中の敵への攻撃ダメージ+30%", mp: 0, passive: { bigAttackPendingDmgBonus: 0.3 } },
       right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 3, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
     },
     7: {
@@ -1037,37 +1044,56 @@ const SKILL_TREES = {
     },
   },
   onmyoji: {
+    // ここから9レベルぶん、右側ツリーをスキルエディタの差分反映で「式神」テーマの一続きに全面刷新した
+    // (2026-07-25、docs/引き継ぎ_影分身式神.mdへのフィードバックとして受け取った差分)。
+    // 左側は2Lの威力調整のみ、3L以降は変更なし
     2: {
-      left: { name: "火遁符", desc: "敵単体へ110%の攻撃。炎上2〜3を付与。", mp: 2, action: { kind: "damage", mult: 1.1, useMag: true, inflict: { type: "burn", chance: 1, turnsMin: 2, turnsMax: 3 } } },
-      right: { name: "呪縛符", desc: "通常攻撃時、50%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.5, turns: 3 } } },
+      // desc変更(スキルエディタの差分反映): 威力110%→120%
+      left: { name: "火遁符", desc: "敵単体へ120%の攻撃。炎上2〜3を付与。", mp: 2, action: { kind: "damage", mult: 1.2, useMag: true, inflict: { type: "burn", chance: 1, turnsMin: 2, turnsMax: 3 } } },
+      // 結界術はLv3右から移動(効果を「味方全体def+15%/3ターン」→「味方単体への数値シールド」に全面差し替え、mp4→3)。
+      // 「陰陽師の半分のHP」は術者の最大HPの50%と解釈した。既存のbarrierHp(数値シールド)機構をこの技のために新設。
+      // 旧結界術が持っていたcomboTag:"kekkai"は、それを参照していた霊脈支配(旧9右)も今回消えるため引き継いでいない
+      right: { name: "結界術", desc: "味方一人に結界を付与する。結界は陰陽師の半分のHPのシールドとなり、その数値分敵の攻撃を防ぐ。", mp: 3, action: { kind: "shieldAlly", barrierPct: 0.5 } },
     },
     3: {
       left: { name: "陰陽極意", desc: "全ての技のmp消費をマイナス1する。", mp: 0, passive: { mpDiscountFlat: 1 } },
-      right: { name: "結界術", desc: "3ターンの間、味方全体の防御力+15%", mp: 4, comboTag: "kekkai", action: { kind: "buffParty", stats: [{ stat: "def", mult: 1.15 }], turns: 3 } },
+      // 式神召喚はLv6右から移動(mp6→0)。「式神は回復することができない」はheal処理側にisShikigami除外を追加して対応。
+      // 「レベルに応じて召喚できる式型の種類が増える/召喚MPは式神によって変わる」という式神の複数種類システムは
+      // 具体的な種類・ステータス・MP・解禁レベルの指定が無いため今回は未実装(makeSampleShikigami=仮データのまま)。要確認
+      right: { name: "式神召喚", desc: "式神を召喚して戦わせる。式神は回復することができない。レベルに応じて召喚できる式型の種類が増える。召喚MPは式神によって変わり、戦闘終了後も式神は消えない", mp: 0, action: { kind: "summonShikigami" } },
     },
     4: {
       left: { name: "水遁符", desc: "ランダムな敵2体へ75%のダメージと、攻撃力25%減少、素早さ30%減少を２ターン付与する。", mp: 3, action: { kind: "damageRandomMulti", hits: 2, mult: 0.75, useMag: true, inflict: [{ type: "atkDown", chance: 1, value: 0.25, turns: 2 }, { type: "spdDown", chance: 1, value: 0.3, turns: 2 }] } },
-      right: { name: "衰弱符", desc: "敵単体へ80%の魔法ダメージ、3ターンの間防御力-20%", mp: 3, action: { kind: "damage", mult: 0.8, useMag: true, inflict: { type: "defDown", chance: 1.0, value: 0.2, turns: 3 } } },
+      // 新規スキル(旧・衰弱符を置き換え)。以前は「式神帰還でmp+1」が全陰陽師共通の無条件仕様だったが、
+      // このスキルを取得した人だけの効果に変更した(engine.js recallShikigami参照)。差分にmp指定は無かったが
+      // パッシブは全スキル共通でmp:0のため0とした
+      right: { name: "帰還", desc: "式神を帰還させるとmpを1回復する", mp: 0, passive: { onRecallMpRestore: 1 } },
     },
     5: {
       left: { name: "呪符の見切り", desc: "回避に成功すると、次の自分の1ターンだけ術の威力+20%", mp: 0, passive: { onEvadeSelfBuff: { stat: "mag", mult: 1.2 } } },
-      right: { name: "封魔符", desc: "敵単体へ60%の魔法ダメージ、85%の確率でスタン", mp: 3, action: { kind: "damage", mult: 0.6, useMag: true, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
+      // 新規スキル(旧・封魔符を置き換え)。差分にmp指定は無かったが、パッシブは全スキル共通でmp:0のため0とした
+      right: { name: "霊魂吸収", desc: "同じ敵に2回連続で通常攻撃するごとに、mpを1回復する。", mp: 0, passive: { onConsecutiveSameTargetMp: 1 } },
     },
     6: {
       left: { name: "陰陽融合", desc: "炎上している敵への魔法ダメージ+15%", mp: 0, passive: { woundBonus: { mult: 1.15, ailment: "burn" } } },
-      right: { name: "式神召喚", desc: "式神を呼び出し、5人目として並んで戦わせる。式神は自律的に敵を攻撃し、戦闘が終わっても消えず、回復も可能", mp: 6, action: { kind: "summonShikigami" } },
+      // 新規スキル(式神召喚が3右へ移動した後の空き枠)
+      right: { name: "式神の加護", desc: "式神召喚中は自身がターゲットにされない", mp: 0, passive: { shikigamiProtect: true } },
     },
     7: {
       left: { name: "天地鳴動", desc: "敵全体へ110%の魔法ダメージ", mp: 6, action: { kind: "damage", aoe: true, mult: 1.1, useMag: true } },
-      right: { name: "厄災", desc: "HPが30%以下の敵への魔法ダメージ+15%", mp: 0, passive: { executeBonus: { belowPct: 0.3, mult: 1.15 } } },
+      // 新規スキル(旧・厄災を置き換え)
+      right: { name: "魂養術", desc: "式神が瀕死になったとき味方全員のHPを10%回復する", mp: 0, passive: { onShikigamiDownPartyHealPct: 0.1 } },
     },
     8: {
       left: { name: "雷遁符", desc: "敵単体へ110%の魔法ダメージ、85%の確率でスタン", mp: 4, action: { kind: "damage", mult: 1.1, useMag: true, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
-      right: { name: "呪詛", desc: "通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)", mp: 0, passive: { onHitInflict: { type: "burn", chance: 0.2, turns: 3 } } },
+      // 新規スキル(旧・呪詛を置き換え)。式神召喚(3右)のaction自体にnoCostは付けず、このパッシブを
+      // 持っている場合だけbattle.js側でターン消費をスキップするよう分岐した
+      right: { name: "神速召喚", desc: "式神を召喚してもターンを消費しない", mp: 0, passive: { noCostSummonShikigami: true } },
     },
     9: {
       left: { name: "衰弱撃ち", desc: "防御力が下がっている敵への会心率+25%", mp: 0, passive: { debuffCritBonus: { stat: "def", addRate: 0.25 } } },
-      right: { name: "霊脈支配", desc: "結界術を使った直後、次の自分の1ターンだけ防御力+15%", mp: 0, passive: { comboFollowup: { tag: "kekkai", stat: "def", mult: 1.15 } } },
+      // 新規スキル(旧・霊脈支配を置き換え)
+      right: { name: "憑依", desc: "式神を消滅させ、敵単体の攻撃力を１ターンの間半分にする。", mp: 2, action: { kind: "dismissShikigamiDebuff", value: 0.5, turns: 1 } },
     },
     10: {
       left: { name: "五行滅殺陣", desc: "敵全体へ200%の魔法ダメージ、防御力25%無視", mp: 7, action: { kind: "damage", aoe: true, mult: 2.0, useMag: true, defPierce: 0.25 } },

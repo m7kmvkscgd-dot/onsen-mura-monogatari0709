@@ -832,6 +832,16 @@ function initPassives() {
     flyingBonus: null, // {mult} 対象がisFlyingの間、与ダメージ倍率(隼落としなど)
     onCritSelfStackCritRate: 0, // 自分が会心を出すたびに、会心率がこの値だけ加算的に積み上がる(戦闘中ずっと持続、覇気など)
     onKillNextSkillFree: false, // 敵を倒した直後、次に使うスキルのMP消費が0になる(1回限り、残心など)
+    counterCritRateAdd: 0, // 迎撃/反撃(counterChance)の反撃ダメージにこの値だけ会心率が上乗せされる(燕返しなど)
+    counterDamageBonus: 0, // 迎撃/反撃(counterChance)のダメージ倍率にこの値を加算する(counterMultとは別枠、加算式。天衣無縫など)
+    onRecallMpRestore: 0, // 式神を帰還させた瞬間、MPをこれだけ回復する(帰還)。未取得ならrecallShikigamiは無償だがMPは回復しない
+    onConsecutiveSameTargetMp: 0, // 同じ敵に2回連続で通常攻撃するごとに、MPをこれだけ回復する(霊魂吸収)
+    shikigamiProtect: false, // 自分の式神が場に出ている間、敵のランダム/単体大技のターゲットから除外される(式神の加護。挑発/かばうの引きつけは対象外)
+    onShikigamiDownPartyHealPct: 0, // 自分の式神が力尽きた瞬間、味方全員のHPをこの割合だけ回復する(魂養術)
+    bigAttackPendingDmgBonus: 0, // 大技予告中(bigAttackPending)の敵への追加ダメージ倍率(BIG_ATTACK_EXPOSED_BONUSとは別枠、加算式)
+    evasionVsAilmentAdd: [], // [{ailment, add}] 特定の状態異常を負っている敵から攻撃される時、回避率がこの値だけ上がる(血痕追跡など)
+    noCostSummonShikigami: false, // 式神召喚を使ってもターンを消費しない(神速召喚)。summonShikigami自体のaction.noCostは
+    // 誰でも無条件になってしまうため付けず、battle.js側でこのフラグを見て個別に分岐する
   };
 }
 
@@ -894,8 +904,9 @@ function makeSampleShikigami(actor) {
     fatigue: 0,
   };
 }
-// 式神帰還: 戦闘中・探索中どちらからでも呼べる。MP消費0・ターン消費0で式神を消し、
-// 陰陽師のMPを1回復する(「式神を使うことでMPを1回復する」というユーザー指定の仕様)。
+// 式神帰還: 戦闘中・探索中どちらからでも呼べる。MP消費0・ターン消費0で式神を消す。
+// 「帰還」スキル(L4右、onRecallMpRestore)を選んでいる場合のみ、陰陽師のMPをその分回復する
+// (以前は無条件でMP+1していたが、スキルツリーの正式な選択肢として切り出されたため取得者限定に変更)。
 // battle.order(その場の手番リスト)がまだこの式神を参照していても、statusを"recalled"にしてから
 // spliceすることで、同じ参照先オブジェクトのstatusチェック(processNext側)が手番を正しくスキップする
 function recallShikigami(owner) {
@@ -903,7 +914,7 @@ function recallShikigami(owner) {
   if (idx === -1) return false;
   fieldParty[idx].status = "recalled";
   fieldParty.splice(idx, 1);
-  owner.mp = Math.min(owner.maxMp, owner.mp + 1);
+  if (owner.passives && owner.passives.onRecallMpRestore) owner.mp = Math.min(owner.maxMp, owner.mp + owner.passives.onRecallMpRestore);
   return true;
 }
 const BASE_CRIT_RATE = 0.05; // 全キャラ共通の会心率の下限(スキルツリーで底上げされる)
@@ -1010,6 +1021,15 @@ function applySkillChoice(character, skill, level) {
     if (add.onHitSelfStackBuff) p.onHitSelfStackBuff = add.onHitSelfStackBuff;
     if (add.onCritSelfStackCritRate) p.onCritSelfStackCritRate += add.onCritSelfStackCritRate;
     if (add.onKillNextSkillFree) p.onKillNextSkillFree = true;
+    if (add.counterCritRateAdd) p.counterCritRateAdd += add.counterCritRateAdd;
+    if (add.counterDamageBonus) p.counterDamageBonus += add.counterDamageBonus;
+    if (add.onRecallMpRestore) p.onRecallMpRestore += add.onRecallMpRestore;
+    if (add.onConsecutiveSameTargetMp) p.onConsecutiveSameTargetMp += add.onConsecutiveSameTargetMp;
+    if (add.shikigamiProtect) p.shikigamiProtect = true;
+    if (add.onShikigamiDownPartyHealPct) p.onShikigamiDownPartyHealPct += add.onShikigamiDownPartyHealPct;
+    if (add.bigAttackPendingDmgBonus) p.bigAttackPendingDmgBonus += add.bigAttackPendingDmgBonus;
+    if (add.evasionVsAilmentAdd) p.evasionVsAilmentAdd.push(add.evasionVsAilmentAdd);
+    if (add.noCostSummonShikigami) p.noCostSummonShikigami = true;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -1211,6 +1231,24 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は${skill.name}を唱えた！`);
     return { buffed: true };
   }
+  // 結界術: 味方単体に、術者の最大HPの一定割合ぶんの数値シールド(barrierHp)を付与する。
+  // 既に結界が残っている場合は上書き(重ね掛けで際限なく増えないよう、applyStatModと同じ思想)
+  if (action.kind === "shieldAlly") {
+    const barrierHp = Math.max(1, Math.round(actor.maxHp * (action.barrierPct || 0.5)));
+    target.barrierHp = barrierHp;
+    log(`${actor.label}は${target.label}に${skill.name}をかけた！(結界HP${barrierHp})`);
+    return { shielded: true, barrierHp };
+  }
+  // 憑依: 自分の式神を消滅させ(帰還のMP回復は発生しない)、敵単体の攻撃力をこのターンの間半減させる
+  if (action.kind === "dismissShikigamiDebuff") {
+    const idx = fieldParty.findIndex((c) => c.isShikigami && c.ownerId === actor.id);
+    if (idx === -1) { log(`${actor.label}には式神がいない！`); return { failed: true }; }
+    fieldParty[idx].status = "recalled";
+    fieldParty.splice(idx, 1);
+    applyStatMod(target, "atk", 1 - (action.value || 0.5), action.turns || 1);
+    log(`${actor.label}は式神を消し去り、${target.label}に${skill.name}をかけた！`);
+    return { debuffed: true };
+  }
   // 撒菱など: ターンを消費せずに敵全体へデバフを撒く
   if (action.kind === "debuffAllNoCost") {
     const pool = typeof targetableEnemies === "function" ? targetableEnemies() : [];
@@ -1249,6 +1287,7 @@ function useTreeSkill(actor, target, skill, log) {
     const heals = targets.map((t) => {
       // 影分身はいずれの方法でも回復不可(呪文/アイテム共通の安全弁。UI側の対象一覧でも別途除外済み)
       if (t.isClone) { log(`${t.label}は分身のため回復できない！`); return { target: t, heal: 0 }; }
+      if (t.isShikigami) { log(`${t.label}は式神のため回復できない！`); return { target: t, heal: 0 }; }
       const bonusMult = healBonusMultiplier(actor, t, !!action.cleanse);
       const heal = Math.round(applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct))) * bonusMult);
       if (t.status === "critical" && action.reviveHpPct) {
@@ -1614,7 +1653,12 @@ function rollHit(actor, target, rangeType) {
   let dodge = (target.passives && target.passives.dodgeChance) || 0;
   if (target.statMods) target.statMods.forEach((m) => { if (m.stat === "dodgeChance") dodge += m.mult; });
   if (dodge > 0 && Math.random() < dodge) return false;
-  let chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor, target) - evasionChance(target)));
+  // 血痕追跡など: 攻撃者が特定の状態異常を負っている時、対象の回避率が上がる
+  let extraEvasion = 0;
+  if (target.passives && target.passives.evasionVsAilmentAdd && target.passives.evasionVsAilmentAdd.length) {
+    target.passives.evasionVsAilmentAdd.forEach((ev) => { if (hasSpecificAilment(actor, ev.ailment)) extraEvasion += ev.add; });
+  }
+  let chance = Math.max(MIN_HIT_CHANCE, Math.min(0.99, accuracyOf(actor, target) - evasionChance(target) - extraEvasion));
   // 修羅刃など: 敵を倒した直後の1回だけ、次に受ける攻撃への回避率が上がる(蓄積しない、この1回のロールで消費する)
   if (target.onKillEvasionBonusActive) {
     chance = Math.max(MIN_HIT_CHANCE, chance - (target.passives && target.passives.onKillEvasionBonus || 0));
@@ -1691,6 +1735,15 @@ function performAttack(actor, target, log) {
   if (result.hit && wasBleeding && actor.passives && actor.passives.bleedFollowupOnHit && target.hp > 0) applyBleed(target, 3);
   // 狩人「貫き矢」: 通常攻撃で敵を倒した時だけ発動する(ダメージ倍率は据え置き、通常攻撃そのものは強化しない)
   if (result.hit && actor.passives && actor.passives.overkillPierce) applyOverkillPierce(target, hpBeforeHit, result.dmg, log, actor);
+  // 陰陽師「霊魂吸収」: 同じ敵に2回連続で通常攻撃するごとにMP回復。命中したかどうかは問わず「同じ相手を狙い続けた」時点でカウントする
+  if (actor.passives && actor.passives.onConsecutiveSameTargetMp && target.instanceId !== undefined) {
+    if (actor.__lastNormalAtkTargetId === target.instanceId) actor.__consecutiveNormalAtkCount = (actor.__consecutiveNormalAtkCount || 0) + 1;
+    else { actor.__lastNormalAtkTargetId = target.instanceId; actor.__consecutiveNormalAtkCount = 1; }
+    if (actor.__consecutiveNormalAtkCount >= 2) {
+      actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.onConsecutiveSameTargetMp);
+      actor.__consecutiveNormalAtkCount = 0;
+    }
+  }
   return result;
 }
 
@@ -1840,8 +1893,13 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   if (target.passives && target.passives.fasterFoeDmgReduction && actor && effectiveStat(actor, "spd") > effectiveStat(target, "spd")) {
     dmg = Math.round(dmg * (1 - target.passives.fasterFoeDmgReduction));
   }
-  // 大技の構え中(bigAttackPending)の敵は隙だらけとみなし、受けるダメージが増える(押し切る対抗策)
-  if (target.bigAttackPending) dmg = Math.round(dmg * BIG_ATTACK_EXPOSED_BONUS);
+  // 大技の構え中(bigAttackPending)の敵は隙だらけとみなし、受けるダメージが増える(押し切る対抗策)。
+  // 全員共通の底上げ(BIG_ATTACK_EXPOSED_BONUS)に、狩人「連射の心得」改め新スキルの追加ボーナスを
+  // 加算する(乗算の重ねがけで複利にならないよう、どちらも「+◯%」の差分としてまとめて1回だけ乗算する)
+  if (target.bigAttackPending) {
+    const bonus = (BIG_ATTACK_EXPOSED_BONUS - 1) + (actor && actor.passives && actor.passives.bigAttackPendingDmgBonus ? actor.passives.bigAttackPendingDmgBonus : 0);
+    dmg = Math.round(dmg * (1 + bonus));
+  }
   dmg = Math.max(0, Math.round(dmg * damageTakenMultiplier(target)));
   if (target.passives && target.passives.onceGuardType === "nullifyDamage" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
@@ -1856,6 +1914,13 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   }
   // 忍足など: 実際にダメージを受けた(=無効化されなかった)時点で「初めて攻撃を受けた」扱いにする
   if (actor && dmg > 0) target.hasBeenHitThisBattle = true;
+  // 結界術(barrierHp): 陰陽師が付与した数値シールドが残っていれば先にそこから減算し、残りだけHPに通す
+  if (target.barrierHp > 0 && dmg > 0) {
+    const barrierAbsorbed = Math.min(target.barrierHp, dmg);
+    target.barrierHp -= barrierAbsorbed;
+    dmg -= barrierAbsorbed;
+    log(`${target.label}の結界が${barrierAbsorbed}ダメージを防いだ！`);
+  }
   const lethal = target.hp - dmg <= 0;
   // 阿修羅突きなど: 「HPが満タンの敵」の判定はダメージを引く前の時点で見る(このダメージ自体で減った後では
   // 満タンでなくなってしまい絶対に発動しなくなるため)
@@ -1898,9 +1963,12 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 両方の受動を選んでいると同じ1回の被弾に対して敵へ二重に反撃ダメージが入ってしまっていた
   const guardCounterWillHandleIt = logSuffix === "(かばう)" && target.passives && target.passives.guardCounter;
   if (actor && target.hp > 0 && target.passives && target.passives.counterChance > 0 && !guardCounterWillHandleIt && Math.random() < target.passives.counterChance) {
-    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * (target.passives.counterMult || 1) - effectiveStat(actor, "def") * 0.5));
+    // 燕返し(counterCritRateAdd)/天衣無縫(counterDamageBonus)など: 反撃そのものにも会心判定と加算ダメージ補正を乗せる
+    const counterCritMult = rollCritMultiplier(target, target.passives.counterCritRateAdd || 0, actor);
+    const counterDamageMult = (target.passives.counterMult || 1) + (target.passives.counterDamageBonus || 0);
+    const counterDmg = Math.max(1, Math.round(effectiveStat(target, "atk") * counterDamageMult * counterCritMult - effectiveStat(actor, "def") * 0.5));
     actor.hp = Math.max(0, actor.hp - counterDmg);
-    log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！`);
+    log(`${target.label}は反撃した！${actorLabel}に${counterDmg}ダメージ！${counterCritMult > 1 ? "会心の反撃！" : ""}`);
   }
   // 敵を倒した攻撃者を記録しておく(全滅時のセリフで「最後に倒した人物」を優先的に喋らせるために使う)
   if (actor && target.instanceId !== undefined && target.hp <= 0) {
@@ -2129,6 +2197,13 @@ function findGuardTarget(alive) {
   if (guardian && Math.random() < GUARD_REDIRECT_CHANCE) return guardian;
   return null;
 }
+// 陰陽師「式神の加護」: 自分の式神が場に出ている間、ランダム/単体大技の抽選プールから除外する
+// (挑発/かばうによる明示的な引きつけはfindGuardTargetが別途処理するため対象外)。
+// 除外すると誰も残らない場合(式神の加護持ちしかいない等)はそのままaliveを返し、必ず1人は選べるようにする
+function poolExcludingShikigamiProtected(alive) {
+  const filtered = alive.filter((t) => !(t.passives && t.passives.shikigamiProtect && fieldParty.some((c) => c.isShikigami && c.ownerId === t.id && c.status === "active")));
+  return filtered.length ? filtered : alive;
+}
 // enemy一体がtargets(生存中の味方)を攻撃する。かばう中の仲間がいれば、タンクとして95%の確率で身代わりになって
 // 大幅減衰した上で構えを消費する(誰もかばっていない、または5%で守り切れなければランダムに1人を攻撃する)
 // 回避に成功した瞬間、evadeCritCounter持ちなら「次の自分の攻撃は確定会心」フラグを立て(反射神経)、
@@ -2178,7 +2253,8 @@ function enemyAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
   const guardian = findGuardTarget(alive);
-  const target = guardian || alive[Math.floor(Math.random() * alive.length)];
+  const pickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
+  const target = guardian || pickPool[Math.floor(Math.random() * pickPool.length)];
   // 戦闘中1回だけ確実に攻撃を回避する受動(分身など)。dodgeChance(確率式)とは別枠の確定回避
   if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
@@ -2324,7 +2400,8 @@ function enemyBigAttack(enemy, targets, log) {
   // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
   // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)
   const guardian = profile.ignoreGuardian ? null : findGuardTarget(alive);
-  const singleTarget = guardian || alive[Math.floor(Math.random() * alive.length)];
+  const bigPickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
+  const singleTarget = guardian || bigPickPool[Math.floor(Math.random() * bigPickPool.length)];
   const hitTargets = profile.aoe ? alive : [singleTarget];
   let mult = profile.mult;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);

@@ -52,6 +52,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.nullifyCounterTurnsLeft = 0; // 心眼の構えなど、このターン限定の無効化反撃も戦闘をまたいで持ち越さない
     c.nullifyCounterMult = null;
     c.migawariShieldActive = false; // 身代わりの術も戦闘をまたいで持ち越さない
+    c.barrierHp = 0; // 結界術の数値シールドも戦闘をまたいで持ち越さない
     c.hasBeenHitThisBattle = false; // 忍足など、初被弾までの回避バフを毎戦闘リセットする
     c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
     c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする
@@ -559,6 +560,19 @@ function handleFieldDeaths() {
     if ((c.isClone || c.isShikigami) && c.hp <= 0 && c.status === "active") {
       blog(`${c.name}は力尽きて消えた...`);
       vanishIds.push(c.id);
+      // 魂養術: 式神が力尽きた瞬間、味方全員のHPを一定割合回復する(分身には効果を紐付けていない)
+      if (c.isShikigami) {
+        const owner = fieldParty.find((p) => p.id === c.ownerId);
+        if (owner && owner.passives && owner.passives.onShikigamiDownPartyHealPct) {
+          const pct = owner.passives.onShikigamiDownPartyHealPct;
+          fieldParty.filter((p) => p.status === "active" && !p.isClone && !p.isShikigami).forEach((p) => {
+            const heal = Math.max(1, Math.round(p.maxHp * pct));
+            p.hp = Math.min(p.maxHp, p.hp + heal);
+            popupOn(p.id, `+${heal}`, "heal");
+          });
+          blog(`${owner.name}の魂養術で味方が回復した！`);
+        }
+      }
     }
   });
   if (vanishIds.length) fieldParty = fieldParty.filter((c) => !vanishIds.includes(c.id));
@@ -828,6 +842,27 @@ function runTreeSkill(actor, skill) {
     finishPlayerAction();
     return;
   }
+  // 結界術: 味方単体を選んで数値シールドを付与する
+  if (action.kind === "shieldAlly") {
+    renderTreeSkillShieldAllyPicker(actor, skill);
+    return;
+  }
+  // 憑依: 式神がいなければMPを消費させずにその場で中止する(ターゲット選択に進まない)
+  if (action.kind === "dismissShikigamiDebuff") {
+    if (!fieldParty.some((c) => c.isShikigami && c.ownerId === actor.id)) {
+      blog(`${actor.label}には式神がいない！`);
+      renderActionButtons(actor);
+      return;
+    }
+    pickSingleEnemyTarget((target) => {
+      playSfx("select");
+      const result = useTreeSkill(actor, target, skill, blog);
+      renderBattleScreen();
+      if (result && result.debuffed) playAttackVfx(target.instanceId, actor, "skill");
+      finishPlayerAction();
+    });
+    return;
+  }
   // 撒菱など: ターンを消費しないので、行動確定後は普通に行動選択へ戻す(変化の術/鷹を呼ぶと同じ扱い)
   if (action.kind === "debuffAllNoCost") {
     playSfx("select");
@@ -883,7 +918,7 @@ function runTreeSkill(actor, skill) {
   if (action.kind === "heal") {
     if (action.aoe) {
       playSfx("heal");
-      const targets = fieldParty.filter((c) => !c.transformForm && !c.isClone && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
+      const targets = fieldParty.filter((c) => !c.transformForm && !c.isClone && !c.isShikigami && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
       const result = useTreeSkill(actor, targets, skill, blog);
       if (result && result.healed) {
         result.healed.forEach((h) => {
@@ -981,8 +1016,10 @@ function runTreeSkill(actor, skill) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
-    // 神速抜刀など: ヒット/ミストに関わらずターンを消費しない単体攻撃
-    if (action.noCost) {
+    // 神速抜刀など: ヒット/ミストに関わらずターンを消費しない単体攻撃。
+    // 式神召喚(summonShikigami)は誰にとってもaction.noCostにはしていないため、神速召喚(noCostSummonShikigami)
+    // を持っている陰陽師だけこの分岐に乗るよう個別に判定する
+    if (action.noCost || (action.kind === "summonShikigami" && actor.passives && actor.passives.noCostSummonShikigami)) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
@@ -995,7 +1032,7 @@ function renderTreeSkillAllyPicker(actor, skill) {
   battleSubMenuActive = true;
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
-  aliveField().filter((target) => !target.transformForm && !target.isClone).forEach((target) => {
+  aliveField().filter((target) => !target.transformForm && !target.isClone && !target.isShikigami).forEach((target) => {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
@@ -1003,6 +1040,31 @@ function renderTreeSkillAllyPicker(actor, skill) {
       playSfx("heal");
       const result = useTreeSkill(actor, target, skill, blog);
       if (result && result.healed && result.healed[0]) { popupOn(target.id, `+${result.healed[0].heal}`, "heal"); maybeSpeakHealed(target); }
+      renderBattleScreen();
+      finishPlayerAction();
+    };
+    grid.appendChild(btn);
+  });
+  const backBtn = document.createElement("button");
+  backBtn.className = "big";
+  backBtn.textContent = "戻る";
+  backBtn.onclick = () => renderActionButtons(actor);
+  grid.appendChild(backBtn);
+}
+
+// 結界術用、味方の対象選択(renderTreeSkillAllyPickerは回復専用のため、シールド付与用に別関数にしてある)
+function renderTreeSkillShieldAllyPicker(actor, skill) {
+  battleSubMenuActive = true;
+  const grid = document.getElementById("actionGrid");
+  grid.innerHTML = "";
+  aliveField().filter((target) => !target.transformForm && !target.isClone).forEach((target) => {
+    const btn = document.createElement("button");
+    btn.className = "big";
+    btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
+    btn.onclick = () => {
+      playSfx("select");
+      const result = useTreeSkill(actor, target, skill, blog);
+      if (result && result.shielded) popupOn(target.id, `結界+${result.barrierHp}`, "heal");
       renderBattleScreen();
       finishPlayerAction();
     };
