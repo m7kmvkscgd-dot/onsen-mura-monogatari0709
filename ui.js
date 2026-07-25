@@ -663,11 +663,14 @@ function renderResultScreen(onContinue, isDefeat) {
   xpHeading.classList.remove("reveal-in");
   const list = document.getElementById("resultXpList");
   list.innerHTML = "";
-  const participants = state.roster.filter((c) => (advXpGained[c.id] || 0) > 0);
+  // 経験値リストは実際に遠征へ出たメンバーだけを出す(ユーザー指示2026-07-26: 道場の分け前を
+  // もらっただけの留守番組はリザルトに並べない。分け前の経験値自体はこれまで通り入っている)
+  const wasOnExpedition = (c) => fieldParty.some((f) => f.id === c.id) || (reserveFieldMember && reserveFieldMember.id === c.id);
+  const participants = state.roster.filter((c) => (advXpGained[c.id] || 0) > 0 && wasOnExpedition(c));
   if (participants.length === 0) {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">今回は経験値を得られなかった。</p>';
   }
-  // 1画面完結(スクロール不要)のため、道場の分け前などで参加者が5人以上に膨らむ時は2列で畳む
+  // 1画面完結(スクロール不要)のため、旅団旗の5人編成で行が増えた時は2列で畳む
   list.classList.toggle("result-xp-grid-2", participants.length > 4);
   const animQueue = []; // 勝利時のバー演出({row, segs})。画面が出てから順次再生する
   participants.forEach((c) => {
