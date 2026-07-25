@@ -147,8 +147,18 @@ function resumeAndPlayBgmAudio() {
   if (bgmPlayRequestPending || now - bgmLastPlayAttemptAt < 400) return;
   bgmLastPlayAttemptAt = now;
   bgmPlayRequestPending = true;
+  const keyAtRequest = currentBgmKey;
   const finish = () => { bgmPlayRequestPending = false; };
-  const doPlay = () => bgmAudio.play().then(finish).catch(finish);
+  const doPlay = () => {
+    // 【レース対策(ユーザー報告2026-07-26)】この再生要求は非同期(AudioContextのresume待ちや
+    // アプリ復帰時のsrc読み直し完了待ち)の後に実行されるため、その間に曲が止められた/別の曲へ
+    // 切り替わったなら、もう古い要求であり再生してはいけない。このチェックが無いと、
+    // 「アプリ復帰(村BGMの再生要求が仕掛かる)→すぐ村から出発(stopTownBgm()で停止+キーnull化)→
+    // 遅れてplay()が実行され、誰も管理していない探索中に村BGMが鳴り出す(壊れた要素だと曲頭の
+    // ループとして延々続き、戦闘開始でsrcが差し替わるまで止まらない)」という事故になっていた
+    if (!currentBgmKey || currentBgmKey !== keyAtRequest) { finish(); return; }
+    bgmAudio.play().then(finish).catch(finish);
+  };
   if (bgmAudioCtx && bgmAudioCtx.state === "suspended") {
     bgmAudioCtx.resume().then(doPlay).catch(doPlay);
   } else {
