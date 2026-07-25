@@ -64,6 +64,7 @@
   .enemy-badges { display: flex; gap: 3px; flex-shrink: 0; }
   .enemy-badge { font-size: 0.62rem; border-radius: 5px; padding: 1px 5px; background: rgba(255,255,255,0.08); color: var(--caption); }
   .enemy-badge.boss { background: rgba(201,93,84,0.25); color: #f0a89f; }
+  .enemy-badge.elite { background: rgba(215,182,111,0.25); color: var(--gold); }
   .enemy-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
   .enemy-card.edited .enemy-edit-dot, .enemy-card.is-new .enemy-edit-dot { display: inline-block; }
   .enemy-card.is-new .enemy-edit-dot { background: var(--success); }
@@ -258,6 +259,22 @@ const WEAKNESS_TYPE_LABELS = { bleed: "出血🩸", poison: "毒☠️", burn: "
 const WEAKNESS_EXTRA_EFFECTS = ["atkDown", "defDown", "spdDown"];
 const WEAKNESS_EXTRA_EFFECT_LABELS = { atkDown: "①攻撃力25%減少", defDown: "②防御力25%減少", spdDown: "③素早さ25%減少" };
 const PATH_FIELD_LABELS = { battle: "戦闘率", gold: "財宝率", ambushChance: "奇襲率", goldMult: "金倍率" };
+// エリート個体(通常種の強化バリアント)用のステータス欄。階層範囲(minFloor/maxFloor)は
+// 通常種と同じ場所に出現する前提のため、エリート側では持たない
+const ELITE_STAT_FIELDS = [
+  { key: "hp", label: "HP" }, { key: "atk", label: "攻撃" }, { key: "def", label: "防御(%)" },
+  { key: "spd", label: "素早さ" }, { key: "goldMin", label: "最小金" }, { key: "goldMax", label: "最大金" },
+  { key: "xp", label: "経験値" },
+];
+// エリート化ボタンを押した瞬間の初期値の目安倍率(あくまで叩き台。値そのものはこの後エディタ上で自由に調整する)
+const ELITE_DEFAULT_MULT = { hp: 2.5, atk: 1.35, def: 1.2, spd: 1.1, goldMin: 2, goldMax: 2, xp: 2.2 };
+function buildDefaultEliteStats(base) {
+  const out = {};
+  ELITE_STAT_FIELDS.forEach((f) => { out[f.key] = Math.round((base[f.key] || 0) * (ELITE_DEFAULT_MULT[f.key] || 1)); });
+  const ba = base.bigAttack || {};
+  out.bigAttack = Object.assign({}, ba, { mult: Number(((ba.mult !== undefined ? ba.mult : 1) * 1.15).toFixed(2)) });
+  return out;
+}
 
 const STORAGE_KEY = "onsenEnemyEditor_v1";
 let edits = { fields: {}, newEnemies: {}, removed: {} };
@@ -893,6 +910,74 @@ function renderStatusImmuneSub(id, enemy) {
   return det;
 }
 
+// エリート個体: 同じ妖怪の強化バリアント(HP/攻撃/防御/素早さ/報酬/大技を個別に上書き)。
+// 奉行所の討伐依頼などで「同じ妖怪だが手強い個体」を出したい時に使う想定。
+// 有効化ボタンを押すまではenemy.eliteはundefinedのまま(全ての妖怪に表示するとカードが
+// 長くなりすぎるため、他のサブ項目と違い明示的なON/OFFボタンを置く)
+function renderEliteSub(id, enemy) {
+  const det = document.createElement("details");
+  det.className = "sub-detail";
+  const summaryOf = (el) => el ? `有効(HP${el.hp}/攻${el.atk}/防${el.def}/速${el.spd})` : "未設定";
+  det.innerHTML = `<summary>👹 エリート個体 <span class="sub-summary-text">${summaryOf(enemy.elite)}</span></summary>`;
+  const body = document.createElement("div");
+  body.className = "sub-body";
+  const enableRow = document.createElement("div");
+  enableRow.className = "enable-toggle";
+  enableRow.innerHTML = `<label class="flag-chip" style="width:auto;"><input type="checkbox" data-f="eliteEnabled" ${enemy.elite ? "checked" : ""}> この妖怪のエリート版を作る</label>`;
+  body.appendChild(enableRow);
+  const fieldsWrap = document.createElement("div");
+  fieldsWrap.style.display = enemy.elite ? "" : "none";
+  body.appendChild(fieldsWrap);
+
+  function commit(next) {
+    setField(id, "elite", next);
+    det.querySelector("summary").innerHTML = `👹 エリート個体 <span class="sub-summary-text">${summaryOf(next)}</span>`;
+    onAnyFieldChanged(id);
+  }
+
+  function renderFields(cur) {
+    fieldsWrap.innerHTML = "";
+    const statGrid = document.createElement("div");
+    statGrid.className = "stat-grid";
+    statGrid.innerHTML = ELITE_STAT_FIELDS.map((f) => `<div class="stat-field"><label>${f.label}</label>${stepperHtml(f.key, cur[f.key], { step: STAT_FIELD_STEP[f.key], min: 0 })}</div>`).join("");
+    fieldsWrap.appendChild(statGrid);
+    ELITE_STAT_FIELDS.forEach((f) => {
+      wireStepper(statGrid.querySelector(`[data-f="${f.key}"]`), (v) => {
+        const next = Object.assign({}, getEnemy(id).elite);
+        next[f.key] = v;
+        commit(next);
+      });
+    });
+    const baLabel = document.createElement("div");
+    baLabel.className = "sub-field-row";
+    baLabel.style.marginTop = "4px";
+    baLabel.innerHTML = `<label style="width:auto;">エリート専用の大技</label>`;
+    fieldsWrap.appendChild(baLabel);
+    const baFields = buildBigAttackProfileFields(cur.bigAttack || {}, (out) => {
+      const next = Object.assign({}, getEnemy(id).elite);
+      next.bigAttack = out;
+      commit(next);
+    });
+    fieldsWrap.appendChild(baFields);
+  }
+
+  enableRow.querySelector("input").addEventListener("change", (ev) => {
+    if (ev.target.checked) {
+      const next = getEnemy(id).elite || buildDefaultEliteStats(getEnemy(id));
+      fieldsWrap.style.display = "";
+      renderFields(next);
+      commit(next);
+    } else {
+      fieldsWrap.style.display = "none";
+      commit(undefined);
+    }
+  });
+
+  if (enemy.elite) renderFields(enemy.elite);
+  det.appendChild(body);
+  return det;
+}
+
 function onAnyFieldChanged(id) {
   refreshEditCount();
 }
@@ -911,6 +996,7 @@ function buildEnemyCard(id, opts) {
   if (enemy.isFlying) badges.push('<span class="enemy-badge">飛行</span>');
   if (enemy.isPlant) badges.push('<span class="enemy-badge">植物</span>');
   if (enemy.questOnly) badges.push('<span class="enemy-badge">依頼専用</span>');
+  if (enemy.elite) badges.push('<span class="enemy-badge elite">👹エリート有</span>');
   const stageTag = opts.showStageTag ? `<span class="enemy-badge">${STAGE_MAP[effectiveStage(id)].ja}</span>` : "";
   const otherStages = otherStagesForImage(enemy.image, id);
   const otherStagesBadge = otherStages.length > 0 ? `<span class="also-appears-badge" title="他エリアにも同じ絵の妖怪が配置されています">🔁${otherStages.length}</span>` : "";
@@ -1019,6 +1105,7 @@ function buildEnemyCard(id, opts) {
   bodyEl.appendChild(renderOnHitSub(id, enemy));
   bodyEl.appendChild(renderWeaknessSub(id, enemy));
   bodyEl.appendChild(renderStatusImmuneSub(id, enemy));
+  bodyEl.appendChild(renderEliteSub(id, enemy));
 
   const actions = document.createElement("div");
   actions.className = "card-actions";

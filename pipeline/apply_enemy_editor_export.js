@@ -75,6 +75,7 @@ function serializeEnemy(id, e) {
   if (e.bigAttackCycle) extraLines.push(`bigAttackCycle: ${jsLit(e.bigAttackCycle)}`);
   if (e.onHitInflict) extraLines.push(`onHitInflict: ${jsLit(e.onHitInflict)}`);
   if (e.statusImmune && e.statusImmune.length) extraLines.push(`statusImmune: ${jsLit(e.statusImmune)}`);
+  if (e.elite) extraLines.push(`elite: ${jsLit(e.elite)}`);
   let out = `  ${id}: { ${parts.join(", ")}`;
   if (extraLines.length > 0) {
     out += `,\n    ${extraLines.join(",\n    ")} },`;
