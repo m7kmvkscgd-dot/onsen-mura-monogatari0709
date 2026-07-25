@@ -281,14 +281,15 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
   const isSwapSelected = !!(swapSource && swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side);
   const { name: _n, desc: _d, ...mech } = skill;
   // このスキルが「パッシブ(常時発動)」か「アクション(選んで使う技)」かを表示するバッジ。
-  // 実装データ(skill.passive/skill.action)から自動判定するが、両方とも無い未実装プレースホルダー
-  // (「鬼神化」「影分身の術」等、desc:後日設定/後日実装)だけは判定できないため、
-  // isPassiveOverride編集フィールドで手動指定できるようにする(実際のゲーム挙動には影響しない、
-  // このエディタ上のメモ用途)
+  // 実装データ(skill.passive/skill.action)から自動判定するのが既定値だが、スキルの中身は
+  // 作業中に差し替わることがよくあるため、手動指定(isPassiveOverride)を常時どのスキルでも
+  // 上書きできるようにしている(実際のゲーム挙動には影響しない、このエディタ上のメモ用途)
   const hasMech = !!skill.passive || !!skill.action;
   const override = currentValue(cid, lvl, side, "isPassive", undefined);
-  const kind = hasMech ? (skill.passive ? "passive" : "action") : (override === true ? "passive" : override === false ? "action" : "unset");
+  const autoKind = hasMech ? (skill.passive ? "passive" : "action") : "unset";
+  const kind = override === true ? "passive" : override === false ? "action" : autoKind;
   const kindLabel = kind === "passive" ? "パッシブ" : kind === "action" ? "アクション" : "未設定";
+  const passiveChecked = override === true || (override === undefined && autoKind === "passive");
   const node = document.createElement("details");
   node.className = "tree-node side-" + side + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
   const sideJa = side === "left" ? "左" : "右";
@@ -310,11 +311,10 @@ function buildSkillCard(cid, lvl, side, skill, allowSwap, opts) {
       </div>
       <span class="type-badge ${kind}" style="margin-bottom:6px;display:inline-block;">${kindLabel}</span>
       <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
-      ${!hasMech ? `
       <label class="passive-toggle">
-        <input type="checkbox" data-field="isPassive" ${override === true ? "checked" : ""}>
-        パッシブスキルとして指定する(まだ実装データが無いスキル専用のメモ。チェックを外すとアクション扱い)
-      </label>` : ""}
+        <input type="checkbox" data-field="isPassive" ${passiveChecked ? "checked" : ""}>
+        パッシブスキルとして指定する(このエディタ上の表示用メモ。チェックを外すとアクション扱い。実装データがあるスキルでは初期状態がそのデータに合わせてある)
+      </label>
       <div class="skill-meta">
         <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
         <button class="reset-btn">↺ 元に戻す</button>
