@@ -111,6 +111,8 @@ function createCharacter(name, classId, classUpgrades) {
     formCooldowns: {}, // 変身中のform専用スキル(丸呑み/脱皮/毒液散布等)ごとの残りクールタイム。キーはformSkillsのkey
     hawkTurnsLeft: 0, // 狩人「鷹を呼ぶ」: 鷹が出現している残りターン数(0=いない)
     hawkGuardTargetId: null, // 「味方を守れ」で鷹が庇っている対象のid(いなければnull)
+    hagakiCritStack: 0, // 覇気: 自分が会心を出すたびに積み上がる会心率の加算値(戦闘開始時にリセット)
+    nextSkillFreeMp: false, // 残心: 敵を倒した直後、次に使うスキルのMP消費を0にするフラグ(戦闘開始時にリセット)
   };
 }
 
@@ -696,6 +698,8 @@ const ABILITY_MP_COST = { magicAttack: 2, magicAttackAll: 4, heal: 3, critAttack
 function abilityMpCost(abilityType, actor) {
   // 変化の術で変身中はMPの概念が無くなる(かばう等も無料で使える)
   if (actor && actor.transformForm) return 0;
+  // 残心: 敵を倒した直後の1回だけ、次に使う技のMP消費を0にする(消費判定はskillMpCost/呼び出し元で行う)
+  if (actor && actor.nextSkillFreeMp) return 0;
   let cost = ABILITY_MP_COST[abilityType] || 0;
   // 温泉バフ「英気充填」: MP消費-10%
   if (actor && actor.onsenBuffKey === "eikijuten") cost = Math.max(0, Math.round(cost * 0.9));
@@ -823,6 +827,8 @@ function initPassives() {
     onDamagedSelfHealPct: 0, // 敵からダメージを受けるたび、自分の最大HPのこの割合だけ回復する(不動の構えなど)
     onHitSelfStackBuff: null, // {stat, perStack, maxStacks, turns} 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる(剛槍など)
     flyingBonus: null, // {mult} 対象がisFlyingの間、与ダメージ倍率(隼落としなど)
+    onCritSelfStackCritRate: 0, // 自分が会心を出すたびに、会心率がこの値だけ加算的に積み上がる(戦闘中ずっと持続、覇気など)
+    onKillNextSkillFree: false, // 敵を倒した直後、次に使うスキルのMP消費が0になる(1回限り、残心など)
   };
 }
 
@@ -936,6 +942,7 @@ function applySkillChoice(character, skill, level) {
     if (add.firstAttackBonusMult) p.firstAttackBonusMult = add.firstAttackBonusMult;
     if (add.onKill) p.onKill = add.onKill;
     if (add.conditionalMod) p.conditionalMods.push(add.conditionalMod);
+    if (add.conditionalMods) add.conditionalMods.forEach((cm) => p.conditionalMods.push(cm)); // 1スキルで複数段のHP条件を同時に持たせたい場合(武士道など)
     if (add.onHitInflict) p.onHitInflicts.push(add.onHitInflict);
     if (add.executeBonus) p.executeBonus = add.executeBonus;
     if (add.executeCritBonus) p.executeCritBonus.push(add.executeCritBonus);
@@ -998,6 +1005,8 @@ function applySkillChoice(character, skill, level) {
     if (add.onHitLifestealPct) p.onHitLifestealPct += add.onHitLifestealPct;
     if (add.onDamagedSelfHealPct) p.onDamagedSelfHealPct += add.onDamagedSelfHealPct;
     if (add.onHitSelfStackBuff) p.onHitSelfStackBuff = add.onHitSelfStackBuff;
+    if (add.onCritSelfStackCritRate) p.onCritSelfStackCritRate += add.onCritSelfStackCritRate;
+    if (add.onKillNextSkillFree) p.onKillNextSkillFree = true;
   }
   if (skill.action) {
     character.unlockedSkills = character.unlockedSkills || [];
@@ -1084,7 +1093,7 @@ function rollCritMultiplier(actor, extraCritRate, target) {
       if (m.stat === "critDmgAdd") tempCritDmgAdd += m.mult;
     });
   }
-  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0);
+  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0) + (actor.hagakiCritStack || 0);
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd + tempCritDmgAdd;
   return 1;
 }
@@ -1093,6 +1102,8 @@ function skillMpCost(actor, baseMp) {
   // 変化の術で変身中はMPの概念自体が無くなる(変身をかけるための消費自体はtransformFormがまだnullの
   // 状態で判定されるため、ここでの0化は「変身後の他の技」向けの安全策)
   if (actor.transformForm) return 0;
+  // 残心: 敵を倒した直後の1回だけ、次に使う技のMP消費を0にする
+  if (actor.nextSkillFreeMp) return 0;
   let discount = (actor.passives && actor.passives.mpDiscountPct) || 0;
   // 温泉バフ「英気充填」: MP消費-10%(他の割引と乗算ではなく加算で重ねる)
   if (actor.onsenBuffKey === "eikijuten") discount += 0.1;
@@ -1148,6 +1159,7 @@ function useTreeSkill(actor, target, skill, log) {
     return { failed: true };
   }
   const cost = skillMpCost(actor, skill.mp);
+  if (actor.nextSkillFreeMp) actor.nextSkillFreeMp = false; // 残心: 次に使う技1回だけ無償化、ここで消費する
   if (cost > 0) {
     if (actor.mp < cost) { log(`${actor.label}はMPが足りない！`); return { failed: true }; }
     const refund = actor.passives && Math.random() < actor.passives.mpRefundChance;
@@ -1331,6 +1343,10 @@ function useTreeSkill(actor, target, skill, log) {
       if (hawkTarget) hawkTargetIds.push(hawkTarget.instanceId);
     }
     applyTreeInflict(t, action.inflict, actor);
+    // 水月など: 敵の自己強化(攻撃力/防御力/素早さの上昇、被ダメージ軽減)だけを解除する。デバフは残す
+    if (action.dispelTargetBuffs && t.statMods) {
+      t.statMods = t.statMods.filter((m) => !((["atk", "def", "spd"].includes(m.stat) && m.mult > 1) || (m.stat === "dmgTaken" && m.mult < 1)));
+    }
     const shotDown = maybeShootDown(actor, t, action);
     return { hit: true, dmg: totalDmg, shotDown, crit: anyCrit, hawkTargetId: hawkTargetIds[0] || null, hits: hitsList, hawkTargetIds };
   });
@@ -1803,6 +1819,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       const b = actor.passives.onCritSelfBuff;
       applyStatMod(actor, b.stat, b.mult, 2);
     }
+    // 覇気: 自分が会心を出すたびに、会心率が加算的に積み上がる(戦闘中ずっと持続)
+    if (lastHitWasCrit && actor.passives && actor.passives.onCritSelfStackCritRate) {
+      actor.hagakiCritStack = (actor.hagakiCritStack || 0) + actor.passives.onCritSelfStackCritRate;
+    }
     // 仲間が会心を出した直後、次の自分の1ターンだけ会心率が上がる受動(闘志など)
     if (lastHitWasCrit && actor.__allies) {
       actor.__allies.forEach((ally) => {
@@ -1892,6 +1912,10 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 修羅刃など: 敵を倒した直後、次に受ける1回の攻撃だけ回避率が上がる(蓄積しない、rollHit側で消費する)
   if (actor && actor.passives && actor.passives.onKillEvasionBonus && target.hp <= 0) {
     actor.onKillEvasionBonusActive = true;
+  }
+  // 残心: 敵を倒した直後、次に使うスキルのMP消費を0にする(1回限り、abilityMpCost/skillMpCostで消費する)
+  if (actor && actor.passives && actor.passives.onKillNextSkillFree && target.hp <= 0) {
+    actor.nextSkillFreeMp = true;
   }
   // 通常攻撃に乗る状態異常付与の受動効果(毒刃・毒矢など): 攻撃が当たった時に確率判定する。複数選んでいれば全て判定する
   if (actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
@@ -1993,6 +2017,7 @@ function maybeHawkFollowup(actor, target, log) {
 // target: 単体系は対象1体、全体系(...All)は生存中の敵配列、heal/guardはactor自身か味方1体
 function useAbility(actor, target, abilityType, log) {
   let cost = abilityMpCost(abilityType, actor);
+  if (actor.nextSkillFreeMp) actor.nextSkillFreeMp = false; // 残心: 次に使う技1回だけ無償化、ここで消費する
   // 鉄壁など: かばうのMP消費が一定確率で0になる
   if (abilityType === "guard" && cost > 0 && actor.passives && actor.passives.guardFreeChance > 0 && Math.random() < actor.passives.guardFreeChance) {
     cost = 0;

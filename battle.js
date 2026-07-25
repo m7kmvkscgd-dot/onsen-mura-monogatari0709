@@ -54,6 +54,8 @@ function startBattle(enemies, pathDef, encounterText) {
     c.migawariShieldActive = false; // 身代わりの術も戦闘をまたいで持ち越さない
     c.hasBeenHitThisBattle = false; // 忍足など、初被弾までの回避バフを毎戦闘リセットする
     c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
+    c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする
+    c.nextSkillFreeMp = false; // 残心: キル直後の次技無償化フラグも毎戦闘リセットする
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
     // 他の味方の状態を参照できるようにするための、パーティ全体への自己参照(戦闘開始のたびに配り直す)
     c.__allies = fieldParty;
@@ -849,6 +851,8 @@ function runTreeSkill(actor, skill) {
     playSfx("select");
     useTreeSkill(actor, actor, skill, blog);
     renderBattleScreen();
+    // 明鏡止水など: ターンを消費しない自己バフ
+    if (action.noCost) { renderActionButtons(actor); return; }
     finishPlayerAction();
     return;
   }
@@ -974,6 +978,11 @@ function runTreeSkill(actor, skill) {
     if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
     // 暗殺術など: このスキルでキルした場合はターンを消費せず、もう一度行動できる
     if (action.extraTurnOnKill && r && r.hit && target.hp <= 0) {
+      triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
+      return;
+    }
+    // 神速抜刀など: ヒット/ミストに関わらずターンを消費しない単体攻撃
+    if (action.noCost) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
@@ -1319,7 +1328,7 @@ function renderActionButtons(actor) {
       (actor.silenceTurns > 0 ? [] : (c.abilities || [])).forEach((ability) => {
         const abBtn = document.createElement("button");
         abBtn.className = "big";
-        const cost = abilityMpCost(ability);
+        const cost = abilityMpCost(ability, actor);
         abBtn.textContent = ABILITY_LABEL[ability] + (cost > 0 ? `(MP${cost})` : "");
         if (cost > 0 && actor.mp < cost) abBtn.disabled = true;
         abBtn.onclick = () => {
