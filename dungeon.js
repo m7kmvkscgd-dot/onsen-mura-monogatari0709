@@ -691,6 +691,13 @@ function playDungeonMoveTransition(actualLogic) {
         fadeIn.cancel();
         overlay.style.opacity = "0";
         overlay.style.display = "none";
+        // この一歩で戦闘の発生が決まっていた場合(queueEncounterBattleで保留中)、ボタンは無効のまま
+        // (dungeonMoveTransitionActiveも維持したまま)「‼️→一拍→戦闘開始」へ進む。暗転はあくまで
+        // 毎歩の景色の切り替え用で、明転して新しい階が見えてから遭遇の合図が出る、という順序を作る
+        if (pendingEncounterBattle) {
+          playEncounterCueThenStartBattle();
+          return;
+        }
         dungeonMoveTransitionActive = false;
         advanceBtnEl.disabled = false;
         retreatBtnEl.disabled = false;
@@ -735,23 +742,48 @@ function playAutoRetreatCutFade(afterBlack, onFullyDone) {
     };
   };
 }
-// 戦闘開始時用: 既にscreen-battleへ切り替わった後の画面に、遭遇の合図(「‼️」+SE)を一瞬だけ重ねる。
-// startBattle()自体がgameroll側の都合で即座に画面遷移してしまうため、事前に止めてから遷移させる
-// ことはできないが、敵カード自体は元々ふわっと出現するアニメーション(.enemy-card.entering、
-// battle.css)を持っているため、その上に暗転を挟まずこの合図だけ重ねれば「暗転していきなり敵が
-// 現れる」より遥かに気持ちよくなる(ユーザー指摘、2026-07-25: 「暗転が不愉快」)。
-// 以前はここでmoveTransitionBlackを黒→透明にフェードして同じ「暗転して戦闘になる」体感を
-// 出していたが、その暗転自体をやめてこの演出に置き換えた
-const ENCOUNTER_CUE_MS = 700;
-function playEncounterCueOverBattleScreen() {
+// ============ 戦闘遭遇の合図(全遭遇ルート共通) ============
+// 戦闘の発生が決まっても、即座にstartBattle()で戦闘画面へ切り替えず一旦ここへ保留する。
+// その後、探索画面が見えている状態で「‼️+専用SE→一拍→戦闘画面へ切り替え(敵は既存の
+// .enemy-card.enteringでふわっと出現)」の順で開始する(ユーザー指示、2026-07-25: 「‼️を出して
+// 音楽を鳴らし、一拍おいてから敵が出てきてほしい。暗転から突然敵が出るのが不愉快」)。
+// 以前はオート帰還とイベント遭遇だけ、しかも戦闘画面へ切り替わった上に‼️を重ねる(=一拍なし)
+// 実装だったが、「進む」/村からの手動帰還(playDungeonMoveTransitionの暗転中に戦闘が始まり
+// 「暗転→即敵」のままだった)も含めて全ルートをこの流れに統一した。
+// 合図の発火タイミングはルートごとに3通り:
+//  - 進む/手動帰還: 歩行演出の暗転が明けて新しい階の景色が見えた後(playDungeonMoveTransitionの
+//    fadeIn.onfinishがpendingEncounterBattleを見て呼ぶ。それまでボタン無効を維持するため
+//    dungeonMoveTransitionActiveはstartBattle直前まで解除しない)
+//  - オート帰還: 歩みを止めた直後(performAutoRetreatFloorMoveが呼ぶ)
+//  - それ以外(イベント遭遇・茶屋明け・瀕死発見の確認後など、既に画面が見えている状態): 保留と同時に即発火
+// 保留〜開始までの一拍はstartBattle()内のsaveState(inBattle)より前になるため、理屈の上では
+// 「‼️を見て1秒以内にリロード」で遭遇を消せるが、スマホのリロード操作はこの窓より遅いため実害なしと判断
+let pendingEncounterBattle = null; // {enemies, pathDef, encounterText, after}
+const ENCOUNTER_CUE_HOLD_MS = 1000; // ‼️+SEが出てから戦闘画面へ切り替わるまでの「一拍」(‼️自体の演出0.7秒+余白0.3秒)
+function queueEncounterBattle(enemies, pathDef, encounterText, after) {
+  pendingEncounterBattle = { enemies, pathDef, encounterText, after: after || null };
+  if (!dungeonMoveTransitionActive && !autoRetreatActive) playEncounterCueThenStartBattle();
+}
+function playEncounterCueThenStartBattle() {
+  const p = pendingEncounterBattle;
+  if (!p) return;
+  pendingEncounterBattle = null;
   playSfx("encounter_alert");
   const el = document.getElementById("encounterCue");
   el.innerHTML = `<div class="encounter-cue-ring"></div><div class="encounter-cue-mark">‼️</div>`;
   el.style.display = "flex";
+  // 合図〜戦闘開始までの一拍の間だけ、画面全体のタップをこのオーバーレイで遮断する(平常時のCSSは
+  // pointer-events:none)。オート帰還ルートではstopAutoRetreat()が進む/里に戻るボタンを再有効化して
+  // しまうため、この遮断が無いと一拍の間に次の歩行演出を開始できてしまい、戦闘開始と二重進行になる
+  el.style.pointerEvents = "auto";
   setTimeout(() => {
+    dungeonMoveTransitionActive = false; // 進む経由の場合、明転後もボタン無効のまま維持していたフラグをここで解除(戦闘後のrenderDungeon()の自己修復でボタンも復活する)
+    startBattle(p.enemies, p.pathDef, p.encounterText);
+    if (p.after) p.after();
     el.style.display = "none";
+    el.style.pointerEvents = "";
     el.innerHTML = "";
-  }, ENCOUNTER_CUE_MS);
+  }, ENCOUNTER_CUE_HOLD_MS);
 }
 const AUTO_RETREAT_TIMEOFDAY_FADE_MS = 900; // オート帰還中に時刻が変わった時、背景画像そのものをクロスフェードする時間
 // オート帰還中に時刻が変わった時、暗転を挟まず背景画像同士をクロスフェードする。
@@ -808,9 +840,9 @@ function performAutoRetreatFloorMove(enterTeahouse) {
   moveOneFloor(null, enterTeahouse);
   if (!autoRetreatActive) return; // queueCriticalAlerts側等で既に停止済み
   if (!retreating) return; // 0階層に到達しfinishRetreat()済み(stopAutoRetreatもそちらで呼ばれる)
-  if (battle) { // 戦闘開始。画面は既にscreen-battleへ切り替わっている
+  if (battle || pendingEncounterBattle) { // 戦闘の発生が決まった(pendingEncounterBattleに保留中)。歩みを止めてから遭遇の合図に入る
     stopAutoRetreat();
-    playEncounterCueOverBattleScreen();
+    playEncounterCueThenStartBattle();
     return;
   }
   if (state.timeOfDay !== prevTimeOfDay) {
@@ -1098,11 +1130,12 @@ function tryForceQuestEncounter() {
   enemies.forEach((e) => { e.isQuestTarget = true; }); // 敵カードに🎯マークと金色パルス枠を出すための目印
   const def = QUEST_DEFS[q.questKey];
   const encounterText = isChaseEncounter && def.chaseText ? def.chaseText : null;
-  startBattle(enemies, null, encounterText);
-  battle.questKey = q.questKey; // victory()でこの戦闘がどの依頼の討伐対象だったと判定するための目印
-  // 依頼の討伐対象を発見した特別な一言(性格ごとに10種、確実に発言させる)
-  const alive = aliveField();
-  if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
+  queueEncounterBattle(enemies, null, encounterText, () => {
+    battle.questKey = q.questKey; // victory()でこの戦闘がどの依頼の討伐対象だったと判定するための目印
+    // 依頼の討伐対象を発見した特別な一言(性格ごとに10種、確実に発言させる)
+    const alive = aliveField();
+    if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
+  });
   return true;
 }
 // ボス追撃モード中、フロア移動のたびに一定確率で追いつき再戦になる(討伐依頼のtryForceQuestEncounterと
@@ -1120,10 +1153,11 @@ function tryForceBossPursuitEncounter() {
   // このインスタンスはもう自主逃走しない(倒すか、プレイヤー側が改めて逃げるかの二択になる)
   enemy.__hasFledPursuit = true;
   const def = ENEMIES[p.enemyId];
-  startBattle([enemy], null, `${def.ja}に追いついた！`);
-  battle.bossPursuitEnemyId = p.enemyId; // victory()でこの戦闘が追撃対象だったと判定するための目印
-  const alive = aliveField();
-  if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
+  queueEncounterBattle([enemy], null, `${def.ja}に追いついた！`, () => {
+    battle.bossPursuitEnemyId = p.enemyId; // victory()でこの戦闘が追撃対象だったと判定するための目印
+    const alive = aliveField();
+    if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
+  });
   return true;
 }
 function resolveFloorArrival(pathBias) {
@@ -1780,8 +1814,8 @@ function pickEventEnemyBase(floor) {
   return pickEnemyForFloor(1, undefined, currentStage);
 }
 function startEventBattle(enemies, pathDef, encounterText) {
-  startBattle(enemies, pathDef, encounterText);
-  playEncounterCueOverBattleScreen(); // イベント選択は明転後のタップなので、戦闘への切り替わりに遭遇の合図を挟む(以前はbig_attack_warningの流用+暗転だったが、専用の合図に統一した)
+  // イベント選択は画面が見えている状態でのタップなので、queueEncounterBattle()が即座に「‼️→一拍→戦闘開始」を始める
+  queueEncounterBattle(enemies, pathDef, encounterText);
 }
 // 各イベントの定義。choices()を都度呼ぶことで、所持金など「その瞬間の状態」でラベル/可否を出し分ける
 const DUNGEON_EVENTS = [
@@ -2345,7 +2379,7 @@ function rollEncounter(pathBias) {
   const roll = Math.random();
   if (roll < battleChance) {
     lastFloorMoveOutcome = "battle"; // オート帰還の一時停止判定用
-    startBattle(pickEncounterForFloor(currentFloor, currentStage), bias);
+    queueEncounterBattle(pickEncounterForFloor(currentFloor, currentStage), bias);
   } else if (roll < battleChance + goldChance) {
     lastFloorMoveOutcome = "gold"; // オート帰還の一時停止判定用
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という

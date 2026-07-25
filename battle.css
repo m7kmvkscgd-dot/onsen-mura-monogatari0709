@@ -264,12 +264,12 @@
     background: radial-gradient(ellipse at center, rgba(245,166,35,0) 55%, rgba(245,166,35,0.35) 100%);
     opacity: 0;
   }
-  /* 戦闘遭遇の合図(dungeon.js playEncounterCueOverBattleScreen)。screen-battleへの切り替え自体は
-     既にstartBattle()側で完了しており、敵カードは通常の出現演出(.enemy-card.entering、下記
-     enemyAppear)でふわっと現れている最中。以前はその上から即座に真っ黒→フェードで明転という
-     暗転を挟んでいたが、「一瞬画面が暗転するのが不愉快」との指摘(2026-07-25)で撤去し、代わりに
-     背景を暗くしない「‼️」の合図(ユーザー提供SE付き)を一瞬だけ重ねるだけにした。敵の出現
-     フェードインが透けて見えたまま進行する(むしろそれが狙い) */
+  /* 戦闘遭遇の合図(dungeon.js playEncounterCueThenStartBattle)。戦闘の発生が決まると、まず
+     探索画面が見えている状態でこの「‼️」+専用SEを出し、一拍(ENCOUNTER_CUE_HOLD_MS)おいてから
+     startBattle()で戦闘画面へ切り替わる。敵カードは通常の出現演出(.enemy-card.entering、下記
+     enemyAppear)でふわっと現れる。以前は暗転(真っ黒→フェード)で戦闘に入っていたが「暗転から
+     突然敵が出るのが不愉快」との指摘(2026-07-25)で全遭遇ルートをこの流れに統一した。
+     pointer-events:noneが平常時の値で、合図中だけJS側がinlineでautoに切り替えてタップを遮断する */
   #encounterCue {
     position: fixed; inset: 0; z-index: 35; pointer-events: none;
     display: flex; align-items: center; justify-content: center;
