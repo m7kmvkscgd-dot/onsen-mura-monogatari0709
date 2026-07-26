@@ -222,12 +222,13 @@ function updateEnemyCard(card, e) {
   // 出現演出は初回描画だけ。2回目以降の描画でクラスを剥がす(従来はカード作り直しで暗黙に消えていた)
   if (!battle.justAppeared) card.classList.remove("entering");
   // 被弾の揺れ: shakeClassFor()は「1回の被弾(__shakeUntil)につき最初の描画だけ」クラス名を返す。
-  // カードが使い回しになったため、新しい揺れはクラスを一度剥がしてリフローを挟んでから付け直して
-  // CSSアニメーションを確実に再発火させる(地雷リスト2番の既存パターン)。空文字の時に剥がすのは、
-  // 従来の「カード作り直しで暗黙にリセットされる」挙動をそのまま再現するため(絆創膏の整理はフェーズ5)
+  // 新しい揺れはクラスを一度剥がしてリフローを挟んでから付け直してCSSアニメーションを確実に
+  // 再発火させる(地雷リスト2番の既存パターン)。揺れ中の再描画では何もしない=アニメーションを
+  // 途中で切らず完走させる(旧方式は再描画のカード作り直しで揺れがブツ切りになっており、
+  // その再現をフェーズ5で撤去した。完了後にクラスが残り続けるのは無害=付け直した瞬間しか再生されない)
   const shake = shakeClassFor(e).trim();
-  card.classList.remove(...HIT_SHAKE_CLASSES);
   if (shake) {
+    card.classList.remove(...HIT_SHAKE_CLASSES);
     void card.offsetWidth;
     card.classList.add(...shake.split(/\s+/));
   }

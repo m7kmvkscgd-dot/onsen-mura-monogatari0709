@@ -1049,11 +1049,12 @@ function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
     card.classList.add("acting-enter");
   }
   card.classList.toggle("targetable", targetable);
-  // 被弾の揺れ: 敵カード(updateEnemyCard)と同じ扱い。shakeClassFor()が空文字の時に剥がすのは
-  // 従来の「カード作り直しで暗黙にリセットされる」挙動の再現(絆創膏の整理はフェーズ5)
+  // 被弾の揺れ: 敵カード(updateEnemyCard)と同じ扱い。新しい揺れの時だけ剥がして付け直し、
+  // 揺れ中の再描画では何もしない=アニメーションを途中で切らず完走させる(フェーズ5で
+  // 「空文字時に剥がす」従来挙動の再現を撤去。残ったクラスは無害=付け直した瞬間しか再生されない)
   const shake = shakeClassFor(c).trim();
-  card.classList.remove(...HIT_SHAKE_CLASSES);
   if (shake) {
+    card.classList.remove(...HIT_SHAKE_CLASSES);
     void card.offsetWidth;
     card.classList.add(...shake.split(/\s+/));
   }
