@@ -64,7 +64,6 @@
 
   #stats { margin-top: 0.4rem; font-size: 0.82rem; color: #d9c49a; letter-spacing: 0.06em; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
   #stats .alive { color: #d7b66f; font-weight: 700; }
-  #xpHeading { margin: 0.6rem 0 0.45rem; font-size: 1rem; font-weight: 800; }
 
   .xp-list { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
   .xp-row {
@@ -133,8 +132,7 @@
       <!-- ★ここが提案の追加要素: 素材チップ行(1行・約28px)。他は現状のリザルトと同じ構成 -->
       <div class="mat-row" id="matRow"></div>
       <div id="stats" class="reveal">踏破 6層 ・ 討伐 14体 ・ <span class="alive">全員生還！</span></div>
-      <h2 id="xpHeading" class="reveal">獲得経験値</h2>
-      <div class="xp-list" id="xpList"></div>
+      <div class="xp-list" id="xpList" style="margin-top:0.6rem;"></div>
     </div>
     <button class="continue-btn">町に戻る</button>
   </div>
@@ -173,7 +171,7 @@
       row.innerHTML = `
         <img src="${m.img}" alt="">
         <div class="xp-main">
-          <div class="xp-head"><strong>${m.name}(${m.cls})</strong><span>+${m.xp} XP</span></div>
+          <div class="xp-head"><strong>${m.name}</strong><span>+${m.xp} XP</span></div>
           <div class="xp-lv">Lv.${m.lv}</div>
           <div class="xpbar"><i></i></div>
         </div>`;
@@ -208,9 +206,8 @@
     buildMatRow();
     const gold = document.getElementById("gold");
     const stats = document.getElementById("stats");
-    const xpHeading = document.getElementById("xpHeading");
     const stamp = document.getElementById("stamp");
-    [gold, stats, xpHeading].forEach((el) => el.classList.remove("in"));
+    [gold, stats].forEach((el) => el.classList.remove("in"));
     stamp.style.opacity = "0";
     stamp.getAnimations().forEach((a) => a.cancel());
     gold.textContent = "収穫: +0G";
@@ -256,7 +253,6 @@
     setTimeout(() => { if (alive()) stats.classList.add("in"); }, 2100);
     setTimeout(() => {
       if (!alive()) return;
-      xpHeading.classList.add("in");
       document.querySelectorAll(".xp-row").forEach((row, i) => {
         setTimeout(() => {
           if (!alive()) return;
