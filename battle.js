@@ -683,6 +683,27 @@ function showSwapConfirmDialog(actor) {
       </div>
     </div>`;
 }
+// 立ち絵のスライド演出用の下ごしらえ。ゲームの立ち絵<img>はCSSでグレーの台座(background:#353a44)を
+// 持っているため、そのまま動かすと台座ごと滑ってしまう(ユーザー報告2026-07-26「背景も一緒についていく」)。
+// 演出中だけ台座を枠側(.party-portrait-wrap)へ移し、イラストの絵だけが台座の上を走るようにする。
+// overflowも枠側で切る(はみ出しは台座の縁で消える=モックと同じ見た目)
+function beginPortraitSlideStage(card) {
+  const wrap = card.querySelector(".party-portrait-wrap");
+  const img = card.querySelector(".card-portrait-img");
+  if (!wrap || !img) return null;
+  wrap.style.background = "#353a44";
+  wrap.style.borderRadius = "var(--radius-xs)";
+  wrap.style.overflow = "hidden";
+  img.style.background = "transparent";
+  return { wrap, img };
+}
+function endPortraitSlideStage(stage) {
+  if (!stage) return;
+  stage.wrap.style.background = "";
+  stage.wrap.style.borderRadius = "";
+  stage.wrap.style.overflow = "";
+  stage.img.style.background = "";
+}
 function performVoluntarySwap(actor) {
   if (battleActionLocked || !battle || (battle.swapCooldown || 0) > 0) return;
   battleActionLocked = true;
@@ -691,7 +712,7 @@ function performVoluntarySwap(actor) {
   playSfx("swap_dash");
   // 退場: 今のカードの立ち絵が右へダッシュ(前傾)。演出後にデータを入れ替えて再描画→走り込み
   const outCard = document.querySelector(`#battlePartyBar .party-member[data-id="${actor.id}"]`);
-  const outPortrait = outCard ? outCard.querySelector(".card-portrait-img") : null;
+  const outStage = outCard ? beginPortraitSlideStage(outCard) : null;
   const finishSwap = () => {
     const incoming = swapReserveMember(actor, blog);
     if (!incoming) { battleActionLocked = false; renderActionButtons(actor); return; }
@@ -699,15 +720,18 @@ function performVoluntarySwap(actor) {
     // 出た側の両方に出場カウントを付ける
     battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
     battle.actingId = incoming.id; // このターンをそのまま入れ替わった控えのキャラへ引き継ぐ
+    // 手番切り替えのカードスライド演出(acting-enter)は発火させない。カード全体がポンと跳ねる動きが
+    // 走り込みに被さって「ドンと急に現れる」見た目になっていたため(ユーザー報告2026-07-26)、
+    // 交代の登場はこの後の走り込み(playSwapRunIn)だけに一本化する
+    lastPartyBarActingId.battlePartyBar = incoming.id;
     renderBattleScreen();
     playSwapRunIn(incoming, () => { renderActionButtons(incoming); });
   };
-  if (outPortrait) {
-    outCard.style.overflow = "hidden"; // ダッシュした立ち絵が隣のカードへはみ出さないように
-    const outAnim = outPortrait.animate([
+  if (outStage) {
+    const outAnim = outStage.img.animate([
       { transform: "translateX(0) rotate(0deg)", opacity: 1 },
-      { transform: "translateX(12px) rotate(4deg)", opacity: 1, offset: 0.3 },
-      { transform: "translateX(130px) rotate(8deg)", opacity: 0.9 },
+      { transform: "translateX(12%) rotate(4deg)", opacity: 1, offset: 0.3 },
+      { transform: "translateX(130%) rotate(8deg)", opacity: 0.9 },
     ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "forwards" });
     outAnim.onfinish = () => setTimeout(finishSwap, 100); // 一拍(0.1秒)おいてから走り込み
   } else {
@@ -719,21 +743,20 @@ function performVoluntarySwap(actor) {
 // カードが見つからない場合(理論上の保険)は演出をスキップして即続行する
 function playSwapRunIn(incoming, onDone) {
   const card = document.querySelector(`#battlePartyBar .party-member[data-id="${incoming.id}"]`);
-  const portrait = card ? card.querySelector(".card-portrait-img") : null;
-  if (!card || !portrait) { onDone(); return; }
-  card.style.overflow = "hidden";
-  const inAnim = portrait.animate([
-    { transform: "translateX(130px) rotate(-8deg)" },
-    { transform: "translateX(-8px) rotate(-3deg)", offset: 0.7 },
-    { transform: "translateX(3px) rotate(0deg)", offset: 0.88 },
+  const stage = card ? beginPortraitSlideStage(card) : null;
+  if (!stage) { onDone(); return; }
+  const inAnim = stage.img.animate([
+    { transform: "translateX(130%) rotate(-8deg)" },
+    { transform: "translateX(-7%) rotate(-3deg)", offset: 0.7 },
+    { transform: "translateX(3%) rotate(0deg)", offset: 0.88 },
     { transform: "translateX(0) rotate(0deg)" },
   ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
-  // 土埃: 着地点に3つ、時間差で舞い上がる
+  // 土埃: 立ち絵の足元(台座の下端)に3つ、時間差で舞い上がる
   [0, 1, 2].forEach((k) => {
     const d = document.createElement("div");
     d.className = "swap-dust";
-    d.style.left = (26 + k * 16) + "px";
-    card.appendChild(d);
+    d.style.left = (22 + k * 18) + "px";
+    stage.wrap.appendChild(d);
     d.animate([
       { transform: "translate(0,0) scale(0.6)", opacity: 0 },
       { transform: `translate(${8 + k * 4}px,-${6 + k * 3}px) scale(${1.3 + k * 0.3})`, opacity: 0.8, offset: 0.4 },
@@ -741,7 +764,7 @@ function playSwapRunIn(incoming, onDone) {
     ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
   });
   inAnim.onfinish = () => {
-    card.style.overflow = ""; // バナーはカードの外へはみ出して表示するため、走り込みが終わったら解除する
+    endPortraitSlideStage(stage); // 台座をイラスト側へ戻す(見た目は同じ位置なので切り替わりは分からない)
     const bn = document.createElement("span");
     bn.className = "swap-in-banner";
     bn.textContent = `${incoming.name}、参上!`;
