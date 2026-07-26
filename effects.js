@@ -1095,38 +1095,46 @@ function playQuestAcceptStamp(title, onDone) {
 // 演出は一回きりの使い捨てDOM(fixedレイヤーを作って終わったら丸ごと除去)で、戦闘UIの
 // 差分更新デザイン(カードDOMの使い回し)には一切触れない。アニメーションは全てelement.animate()
 // (CSS transition+二重rAFはiOSで不発があるため使わない方針)
-function playMaterialDropFx(gains) {
-  const icons = [];
-  MATERIAL_ORDER.forEach((id) => {
-    for (let i = 0; i < (gains[id] || 0); i++) icons.push(MATERIALS[id].icon);
+function playMaterialDropFx(drops) {
+  if (!drops || drops.length === 0) return;
+  // 【重要】発射元(=落とした敵のカード)の座標は、この関数が呼ばれた瞬間(勝利処理中)に
+  // 同期的に確定してしまう。演出開始を遅延させた後にDOMを引き直す方式だと、撃破演出で
+  // 敵カードが消えた後に座標が取れず画面外から飛んでくる不具合があった(実機報告2026-07-27)。
+  // 座標は全て素のviewport基準(レイヤーはinset:0のfixedで、中央寄せの変換を一切しない)
+  const fallbackOrigin = (() => {
+    const row = document.getElementById("enemyRow");
+    if (row) {
+      const r = row.getBoundingClientRect();
+      if (r.width > 0) return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    return { x: window.innerWidth / 2, y: 130 };
+  })();
+  const items = drops.map((d) => {
+    const card = d.instanceId != null ? findVisibleCard(d.instanceId) : null;
+    const r = card ? card.getBoundingClientRect() : null;
+    const from = r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : fallbackOrigin;
+    return { src: MATERIALS[d.matId].icon, x: from.x, y: from.y };
   });
-  if (icons.length === 0) return;
   const layer = document.createElement("div");
   layer.className = "mat-drop-layer";
   const pouch = document.createElement("div");
   pouch.className = "mat-drop-pouch";
+  // 巾着はゲームの表示カラム(最大480px)の右端に置く(レイヤー自体は全画面のため自前で計算)
+  const colRight = Math.min(window.innerWidth, window.innerWidth / 2 + 240);
+  pouch.style.left = `${colRight - 54 - 12}px`;
   pouch.innerHTML = `<img src="assets/icons/pouch.png" alt=""><div class="mat-drop-count">0</div>`;
   layer.appendChild(pouch);
   document.body.appendChild(layer);
   const countEl = pouch.querySelector(".mat-drop-count");
   let bagCount = 0;
-  // 座標は全てレイヤー(=480px幅の中央寄せカラム)基準に変換する
-  const layerRect = () => layer.getBoundingClientRect();
-  const originOf = () => {
-    const row = document.querySelector("#screen-battle .enemy-row") || document.querySelector(".enemy-row");
-    const lr = layerRect();
-    if (!row) return { x: lr.width / 2, y: 120 };
-    const r = row.getBoundingClientRect();
-    return { x: r.left - lr.left + r.width / 2, y: r.top - lr.top + r.height / 2 };
-  };
+  const to = { x: colRight - 54 - 12 + 27, y: 200 + 27 }; // 巾着(54px角、top:200px)の中心
   pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
   const D_POP = 220, D_FLY = 500, STAGGER = 170, START = 600; // 勝利SE/ゴールドポップが先に出るよう少し待つ
-  icons.forEach((src, i) => {
+  items.forEach((item, i) => {
     setTimeout(() => {
       if (!layer.isConnected) return;
-      const from = originOf();
-      const pr = pouch.getBoundingClientRect(), lr = layerRect();
-      const to = { x: pr.left - lr.left + pr.width / 2, y: pr.top - lr.top + pr.height / 2 };
+      const from = { x: item.x, y: item.y };
+      const src = item.src;
       const wrap = document.createElement("div");
       wrap.className = "mat-drop-flyx";
       wrap.style.transform = `translate(${from.x - 16}px, ${from.y - 16}px)`;
@@ -1165,7 +1173,7 @@ function playMaterialDropFx(gains) {
   setTimeout(() => {
     if (!layer.isConnected) return;
     layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" }).onfinish = () => layer.remove();
-  }, START + (icons.length - 1) * STAGGER + D_POP + D_FLY + 900);
+  }, START + (items.length - 1) * STAGGER + D_POP + D_FLY + 900);
 }
 
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。

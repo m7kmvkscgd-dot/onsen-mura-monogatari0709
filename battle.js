@@ -2109,6 +2109,7 @@ function victory() {
     blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ)");
   }
   const materialGains = {}; // { 素材id: 個数 } この戦闘で落ちた素材(data.js ENEMY_MATERIAL_DROPS)
+  const materialDrops = []; // [{matId, instanceId}] 落とした敵の対応付き(ドロップ演出が「その敵の位置」から飛ばすのに使う)
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
@@ -2116,6 +2117,7 @@ function victory() {
     const matId = ENEMY_MATERIAL_DROPS[e.id];
     if (matId && !e.isBoss && Math.random() < (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) {
       materialGains[matId] = (materialGains[matId] || 0) + 1;
+      materialDrops.push({ matId, instanceId: e.instanceId });
     }
     if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
@@ -2179,7 +2181,8 @@ function victory() {
       state.materials[id] = (state.materials[id] || 0) + materialGains[id];
       advMaterialGains[id] = (advMaterialGains[id] || 0) + materialGains[id]; // リザルト画面のアイコン並び用
     });
-    playMaterialDropFx(materialGains);
+    // 発射元の敵カード座標はこの呼び出しの瞬間(=撃破演出でカードが消える前)に確定される
+    playMaterialDropFx(materialDrops);
   }
   // 大国主命の御守: 戦闘終了後12%でストレスを5回復
   if (hasOmamori("okuninushi") && Math.random() < 0.12) {
