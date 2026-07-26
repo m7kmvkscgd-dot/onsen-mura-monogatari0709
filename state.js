@@ -88,6 +88,7 @@ function defaultState() {
     highDurabilityDefBonusPct: 0,
     highDurabilityAtkReductionPct: 0,
     goldDropAdjustment: 0, // 設定画面のドロップダウン「金調整」(0=OFF、1〜10)。敵1体が落とすゴールドからこの値を定額で差し引く(goldReward参照、0未満にはならない)。UI上は「-1」〜「-10」表記
+    materials: { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, // 敵ドロップ素材(皮/骨/木/鉄)の所持数。鞄(支援物資枠)は圧迫しない別枠で、温泉の売店の買取カウンターで売却できる(data.js MATERIALS参照)
   };
 }
 

@@ -1861,9 +1861,15 @@ function victory() {
     soulShardCount += 1;
     blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ)");
   }
+  const materialGains = {}; // { 素材id: 個数 } この戦闘で落ちた素材(data.js ENEMY_MATERIAL_DROPS)
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
+    // 素材ドロップ: 1体1種固定・確率制。ボス/中ボスは設計保留のため対象外(データ側にも未登録)
+    const matId = ENEMY_MATERIAL_DROPS[e.id];
+    if (matId && !e.isBoss && Math.random() < (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) {
+      materialGains[matId] = (materialGains[matId] || 0) + 1;
+    }
     if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
     if ((e.isBoss || e.isMidBoss) && Math.random() < SOUL_LUMP_DROP_CHANCE) soulLumpCount++; // ボス/中ボス討伐時のみ低確率で魂の塊をドロップ(神社の特別祈願用)
@@ -1910,6 +1916,13 @@ function victory() {
     state.inventory.soulLump = Math.min(SOUL_LUMP_CAP, before + soulLumpCount);
     if (state.inventory.soulLump > before) blog(`魂の塊を${state.inventory.soulLump - before}個手に入れた！`);
     else blog("魂の塊を感じたが、これ以上は持てなかった。");
+  }
+  // 素材(皮/骨/木/鉄)の獲得。表示順はMATERIAL_ORDER(=売店の買取カウンターと同じ並び)
+  const materialGainText = MATERIAL_ORDER.filter((id) => materialGains[id]).map((id) => `${MATERIALS[id].ja}×${materialGains[id]}`).join("、");
+  if (materialGainText) {
+    if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+    MATERIAL_ORDER.forEach((id) => { if (materialGains[id]) state.materials[id] = (state.materials[id] || 0) + materialGains[id]; });
+    blog(`素材を手に入れた: ${materialGainText}`);
   }
   // 大国主命の御守: 戦闘終了後12%でストレスを5回復
   if (hasOmamori("okuninushi") && Math.random() < 0.12) {

@@ -213,6 +213,7 @@ function loadState() {
       if (loaded.highDurabilityDefBonusPct == null) loaded.highDurabilityDefBonusPct = loaded.highDurabilityMode ? 20 : 0;
       if (loaded.highDurabilityAtkReductionPct == null) loaded.highDurabilityAtkReductionPct = loaded.highDurabilityMode ? 20 : 0;
       delete loaded.highDurabilityMode;
+      if (loaded.materials == null) loaded.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 }; // 旧セーブ用の初期値(素材ドロップ実装以前は所持0から)
       // 新チュートリアル導線も、旧セーブ(既にある程度進んでいるプレイヤー)にいきなり降ってこないよう、
       // 既存のセーブは全て「見た」扱いにする(defaultStateでは新規プレイヤーのみfalseスタート)
       delete loaded.worldStep;

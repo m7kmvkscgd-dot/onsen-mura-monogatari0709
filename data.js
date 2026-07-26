@@ -480,6 +480,55 @@ const ENEMIES = {
     onHitInflict: { type: "burn", chance: 0.25, turnsMin: 2, turnsMax: 3 } },
 };
 
+// ============ 素材(敵ドロップ) ============
+// 敵を倒すと確率で落とす素材4種。現状の使い道は温泉の売店での売却のみ(鍛冶/建築への
+// 組み込みは後日設計)。ボス/中ボス(isBoss)のドロップ設計は保留中のため対象外。
+// 並び順(MATERIAL_ORDER)は売店の買取カウンターの表示順(ユーザー指定: 皮→骨→木→鉄)
+const MATERIALS = {
+  kawa: { id: "kawa", ja: "皮", icon: "assets/icons/materials/kawa.png", sell: 8 },
+  hone: { id: "hone", ja: "骨", icon: "assets/icons/materials/hone.png", sell: 6 },
+  ki: { id: "ki", ja: "木", icon: "assets/icons/materials/ki.png", sell: 6 },
+  tetsu: { id: "tetsu", ja: "鉄", icon: "assets/icons/materials/tetsu.png", sell: 15 },
+};
+const MATERIAL_ORDER = ["kawa", "hone", "ki", "tetsu"];
+const MATERIAL_DROP_CHANCE = 0.4; // 雑魚1体あたりのドロップ率
+// 大群(isSwarm)は1戦闘の頭数が多く、40%のままだと1戦あたりの入手量が通常戦の約2倍になって
+// しまうため半分にして、1戦あたりの期待値を通常戦と同水準に揃えている
+const MATERIAL_DROP_CHANCE_SWARM = 0.2;
+// 敵→素材の対応(1体につき1種固定)。体感ルールは
+//   皮=生身の生き物 / 骨=骸骨・亡者 / 木=植物・木製の器物 / 鉄=鬼・武具持ち・金属もの。
+// ここに載っていない敵はドロップ無し: 純粋な霊体(鬼火・雪女・海坊主・洞窟の提灯火。
+// 鬼火は既存の魂のかけら枠があるため素材とは重複させない)と、設計保留中のボス/中ボス
+const ENEMY_MATERIAL_DROPS = {
+  // 森ルート
+  yaken: "kawa", inoshishi: "kawa", dokuhebi: "kawa", oogumo: "kawa", kodama: "ki",
+  kappa: "kawa", hitotsume_kozo: "kawa", bake_danuki: "kawa", kamaitachi: "kawa",
+  ochimusha: "hone", kamaitachi2: "kawa", youko: "kawa", rokurokubi: "hone",
+  yamauba: "kawa", onryo: "hone", kasha: "tetsu", oni: "tetsu", karasu_tengu: "tetsu",
+  yamauba2: "kawa", gyuki: "kawa", nue: "kawa", wanyudo: "ki", gaikotsu_musha: "hone",
+  orochi: "kawa", shuten_doji: "tetsu", ibaraki_doji: "tetsu", dai_tengu: "tetsu",
+  yamata_no_orochi: "kawa", tamamo_no_mae: "kawa", giou: "kawa", kyubi_shin: "kawa",
+  gashadokuro_shin: "hone", yomi_no_onryo: "hone",
+  // 大群
+  nurari_koumori: "kawa", chochin_obake: "ki", kawappa: "kawa", chibi_oni: "tetsu",
+  karakasa: "ki", kogitsune: "kawa", warashibe_ningyo: "ki", medama_kozou: "kawa",
+  // 鍾乳洞
+  cave_tsuchigumo: "kawa", cave_oomukade: "kawa", cave_nurarikoumori: "kawa",
+  doukutsu_shokujinsou: "ki", bake_nezumi: "kawa", bake_take: "ki",
+  doukutsu_bourei: "hone", doukutsu_inoshishi: "kawa",
+  // 海ルート
+  iso_gani: "kawa", yadokari: "kawa", isozakana: "kawa", kurage_bou: "kawa",
+  kaiyose: "kawa", hama_tako: "kawa", kaisou_douji: "ki", harifugu: "kawa",
+  umineko: "kawa", kaizoku_gaikotsu: "hone", iso_inu: "kawa", oo_dako_1: "kawa",
+  iwa_gani: "kawa", gyojin: "tetsu", shell_slime: "kawa", kaisou_no_sei: "ki",
+  same: "kawa", iso_onna_1: "kawa", oo_kai: "kawa", iso_onna_2: "kawa",
+  iwagaki_ou: "kawa", umihebi: "kawa", umigumo: "kawa", ryuuguu_no_shisha: "tetsu",
+  oo_dako_2: "kawa", same_bito: "kawa", shinkai_no_bourei: "hone",
+  kaima_daiou: "tetsu", youen_na_isoonna: "kawa", kyokai_no_oodako: "kawa",
+  oni_harifugu: "kawa", oo_kani_shougun: "kawa", kairyuu_ou: "kawa",
+  same_no_bujin: "tetsu", umi_no_souryo: "kawa", uzushio_no_onryou: "hone",
+};
+
 // 図鑑用のテキスト(生態の説明+大技の内容)。ENEMIES本体(ステータス・戦闘用の数値)とは意図的に
 // 分離してある(こちらは純粋な表示用データで、書き間違えても戦闘バランスには一切影響しない)。
 // 弱点(isFlying/isPlant)は既存のフラグから自動算出するため、ここには持たせていない。
@@ -1685,6 +1734,7 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
+    MATERIALS, MATERIAL_ORDER, MATERIAL_DROP_CHANCE, MATERIAL_DROP_CHANCE_SWARM, ENEMY_MATERIAL_DROPS,
     PERSONALITIES, ACTIVE_PERSONALITIES, DIALOGUE_LINES, DIALOGUE_CHANCE, DANGER_FLOOR_LEVEL_MULT, SPEECH_BUBBLE_DURATION_MS,
     FATIGUE_PER_FLOOR, FATIGUE_PER_FLOOR_RETREAT, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL,
     SWARM_ENCOUNTER_CHANCE, BURN_DAMAGE_PCT,

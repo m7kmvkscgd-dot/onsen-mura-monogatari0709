@@ -1422,6 +1422,7 @@ function renderOnsenShop() {
   }
   const takigyoBtn = document.getElementById("buyTakigyoBtn");
   takigyoBtn.disabled = state.gold < ITEMS.takigyo.price;
+  renderMaterialCounter();
 }
 document.getElementById("buyOnsenEggBtn").onclick = () => {
   resetOnsenEggStockIfNewDay();
@@ -1445,8 +1446,142 @@ document.getElementById("buyTakigyoBtn").onclick = () => {
   renderOnsenShop();
 };
 document.getElementById("toOnsenShopBtn").onclick = () => { playSfx("select"); facilityHomeOnsenScreen = "screen-onsen"; renderOnsenShop(); showScreen("screen-onsen-shop"); };
-document.getElementById("onsenShopBackBtn").onclick = () => { renderFacilityHomeOnsen(); };
-document.getElementById("onsenShopBackBtnTop").onclick = () => { renderFacilityHomeOnsen(); };
+document.getElementById("onsenShopBackBtn").onclick = () => { resetMaterialCounter(); renderFacilityHomeOnsen(); };
+document.getElementById("onsenShopBackBtnTop").onclick = () => { resetMaterialCounter(); renderFacilityHomeOnsen(); };
+
+// ============ 素材の買取カウンター(温泉の売店) ============
+// 敵ドロップ素材(皮/骨/木/鉄、data.js MATERIALS)を「カウンターに積んでまとめて売る」UI。
+// アイコンをタップ=1個、長押し=連続で積む(所持数バッジが減り、黄色い総額枠に売値が積み上がる)。
+// 総額枠をタップで全リセット(積んだ分を返す)。「売る」で成立し、内部的には押した瞬間に
+// ゴールド加算+素材減算+セーブまで確定した上で、コインが総額枠→所持金表示へ飛ぶ演出を再生する
+// (飛び立ちで右の残額が減り、着弾で左の所持金が増える。演出中に画面を離れても金は満額入っている)。
+// 積んでいる途中の個数(materialPending)はUIローカルで、売却成立までstateには一切触れない。
+// そのため「戻す」ボタンは不要(画面離脱=自動全返却、resetMaterialCounter)という設計
+let materialPending = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+let materialSellAnimating = false;
+function materialPendingTotal() {
+  return MATERIAL_ORDER.reduce((sum, id) => sum + materialPending[id] * MATERIALS[id].sell, 0);
+}
+function resetMaterialCounter() {
+  materialPending = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+}
+function renderMaterialCounter() {
+  const row = document.getElementById("materialIconRow");
+  if (!row.childElementCount) buildMaterialIconRow(row);
+  MATERIAL_ORDER.forEach((id) => {
+    const btn = document.getElementById(`materialIconBtn_${id}`);
+    const shown = ((state.materials && state.materials[id]) || 0) - materialPending[id];
+    btn.querySelector(".material-count-badge").textContent = shown;
+    btn.classList.toggle("is-empty", shown <= 0);
+  });
+  // 演出中は総額枠の表示をコイン演出側(playMaterialCoinFly)が管理するため上書きしない
+  if (!materialSellAnimating) document.getElementById("materialTotalBox").textContent = materialPendingTotal() + "G";
+  document.getElementById("materialSellBtn").disabled = materialSellAnimating || materialPendingTotal() <= 0;
+}
+// アイコン4つの初回生成。タップ=1個は残しつつ長押しで連続投入(420ms押しっぱなしで90ms間隔)。
+// clickではなくpointerdownで積むのは長押し判定と起点を揃えるため(積む操作はUIローカルなので
+// ゴーストクリックの実害もない)。imgはpointer-events:none(CSS側)でボタン自身がイベントを受ける
+function buildMaterialIconRow(row) {
+  MATERIAL_ORDER.forEach((id) => {
+    const btn = document.createElement("button");
+    btn.className = "material-icon-btn";
+    btn.id = `materialIconBtn_${id}`;
+    btn.innerHTML = `<img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}"><span class="material-count-badge">0</span>`;
+    let holdTimer = null;
+    let holdInterval = null;
+    const addOne = () => {
+      const shown = ((state.materials && state.materials[id]) || 0) - materialPending[id];
+      if (materialSellAnimating || shown <= 0) return;
+      materialPending[id]++;
+      playSfx("select");
+      renderMaterialCounter();
+    };
+    const stopHold = () => {
+      clearTimeout(holdTimer);
+      clearInterval(holdInterval);
+      holdTimer = holdInterval = null;
+    };
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      addOne();
+      holdTimer = setTimeout(() => { holdInterval = setInterval(addOne, 90); }, 420);
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => btn.addEventListener(ev, stopHold));
+    row.appendChild(btn);
+  });
+}
+document.getElementById("materialTotalBox").onclick = () => {
+  if (materialSellAnimating || materialPendingTotal() <= 0) return;
+  playSfx("select");
+  resetMaterialCounter();
+  renderMaterialCounter();
+};
+document.getElementById("materialSellBtn").onclick = () => {
+  const total = materialPendingTotal();
+  if (materialSellAnimating || total <= 0) return;
+  if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+  MATERIAL_ORDER.forEach((id) => { materialPending[id] && (state.materials[id] -= materialPending[id]); });
+  state.gold += total;
+  resetMaterialCounter();
+  saveState();
+  playMaterialCoinFly(total);
+};
+// 売却のコイン演出: 売却額に応じた枚数(上限12枚)の和銭が総額枠から所持金表示へ時間差で飛ぶ。
+// 「金が右から左へ移動している」を数字でも表現するため、各コインが担当額を持ち、
+// 飛び立った瞬間に右の総額から担当額が減り、着弾した瞬間に左の所持金へ同額が加算される
+// (状態上のゴールドは売却ボタンを押した時点で確定済み。ここで動かすのは表示だけ)
+function playMaterialCoinFly(total) {
+  const fromEl = document.getElementById("materialTotalBox");
+  const toEl = document.getElementById("onsenShopGold");
+  toEl.style.transformOrigin = "left center"; // 所持金は左寄せ表示のため、着弾パルスも左端を基点に弾ませる
+  const from = fromEl.getBoundingClientRect();
+  const to = toEl.getBoundingClientRect();
+  const n = Math.max(2, Math.min(12, Math.round(total / 8)));
+  const base = Math.floor(total / n);
+  const shares = Array.from({ length: n }, (_, i) => base + (i < total % n ? 1 : 0));
+  let displayedRight = total;
+  let displayedGold = state.gold - total;
+  materialSellAnimating = true;
+  renderMaterialCounter();
+  fromEl.textContent = displayedRight + "G";
+  toEl.textContent = displayedGold + "G";
+  let arrivedCount = 0;
+  shares.forEach((share, i) => {
+    setTimeout(() => {
+      displayedRight -= share;
+      fromEl.textContent = displayedRight + "G";
+      const coin = document.createElement("img");
+      coin.src = "assets/icons/materials/coin.png";
+      coin.className = "material-fly-coin";
+      const startX = from.left + from.width / 2 - 16 + (Math.random() * 28 - 14);
+      const startY = from.top + from.height / 2 - 12;
+      coin.style.left = startX + "px";
+      coin.style.top = startY + "px";
+      document.body.appendChild(coin);
+      // 左端の所持金テキストの先頭付近に着弾させる(表示は「1234G」と左寄せのため)
+      const dx = (to.left + 18) - startX;
+      const dy = (to.top + to.height / 2 - 12) - startY;
+      const anim = coin.animate([
+        { transform: "translate(0,0) scale(1) rotate(0deg)" },
+        { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 46}px) scale(0.95) rotate(180deg)` },
+        { transform: `translate(${dx}px,${dy}px) scale(0.7) rotate(360deg)` },
+      ], { duration: 520, easing: "ease-in", fill: "forwards" });
+      anim.onfinish = () => {
+        coin.remove();
+        displayedGold += share;
+        toEl.textContent = displayedGold + "G";
+        arrivedCount++;
+        // 毎枚鳴らすと団子になるため1枚おき。ただし最後の1枚は締めとして必ず鳴らす
+        if (arrivedCount % 2 === 1 || arrivedCount === n) playSfx("coin");
+        toEl.animate([{ transform: "scale(1)" }, { transform: "scale(1.22)" }, { transform: "scale(1)" }], { duration: 180, easing: "ease-out" });
+        if (arrivedCount === n) {
+          materialSellAnimating = false;
+          renderOnsenShop();
+        }
+      };
+    }, i * 80);
+  });
+}
 
 // ============ 温泉の神社(奉納祈願: お守りガチャ+装備) ============
 function omamoriRarityLabel(tier) {

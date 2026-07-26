@@ -472,6 +472,15 @@
     </div>
     <div class="body-pad">
       <button class="big" id="onsenShopBackBtnTop" style="margin-bottom:0.8rem;">温泉に戻る</button>
+      <!-- 素材の買取カウンター(敵ドロップの皮/骨/木/鉄をまとめて売る。中身の生成と操作はtown.js「素材の買取カウンター」参照) -->
+      <div class="material-counter" id="materialCounter">
+        <div class="material-icon-row" id="materialIconRow"></div>
+        <div class="material-sell-row">
+          <button class="material-total" id="materialTotalBox">0G</button>
+          <button class="big" id="materialSellBtn" style="width:auto;padding-left:1.6rem;padding-right:1.6rem;">売る</button>
+        </div>
+        <p class="material-counter-hint">素材をタップでカウンターへ(長押しで連続)。金額をタップで全部戻す</p>
+      </div>
       <p class="gold" id="onsenShopGold">0G</p>
       <div class="card">
         <div class="shop-item">
