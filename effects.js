@@ -1121,8 +1121,8 @@ function spawnMaterialGroundDrop(matId, card) {
   img.src = MATERIALS[matId].icon;
   const x = r.left + r.width / 2 + (Math.random() * 16 - 8); // 足元で少し散らばる
   const y = r.bottom - 13;
-  img.style.left = `${x - 14}px`;
-  img.style.top = `${y - 14}px`;
+  img.style.left = `${x - 20}px`;
+  img.style.top = `${y - 20}px`;
   layer.appendChild(img);
   // ポンっと跳ね上がって落ち、小さくバウンドして静止する
   img.animate(
