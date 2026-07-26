@@ -317,9 +317,6 @@ function renderSettingsScreen() {
   const soundBtn = document.getElementById("settingsSoundToggle");
   soundBtn.textContent = masterBgmVolume === 0 ? "OFF" : "ON";
   soundBtn.classList.toggle("is-on", masterBgmVolume > 0);
-  const instadeathBtn = document.getElementById("settingsInstadeathToggle");
-  instadeathBtn.textContent = state.instadeathMode ? "ON" : "OFF";
-  instadeathBtn.classList.toggle("is-on", state.instadeathMode);
   const highEncounterBtn = document.getElementById("settingsHighEncounterToggle");
   highEncounterBtn.textContent = state.highEncounterMode ? "ON" : "OFF";
   highEncounterBtn.classList.toggle("is-on", state.highEncounterMode);
@@ -374,12 +371,6 @@ function renderSettingsDebugWarpSection() {
 }
 document.getElementById("settingsSoundToggle").onclick = () => {
   toggleMute();
-  renderSettingsScreen();
-};
-document.getElementById("settingsInstadeathToggle").onclick = () => {
-  state.instadeathMode = !state.instadeathMode;
-  saveState();
-  playSfx("select");
   renderSettingsScreen();
 };
 document.getElementById("settingsHighEncounterToggle").onclick = () => {

@@ -173,7 +173,6 @@ function useSmokeBomb(actor) {
     pendingAllyPick = null;
     showScreen("screen-dungeon");
     renderDungeon();
-    checkStrandedOnCurrentFloor();
   });
 }
 

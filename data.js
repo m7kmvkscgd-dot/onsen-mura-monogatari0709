@@ -104,7 +104,7 @@ const ACTIVE_PERSONALITIES = PERSONALITIES.filter((p) => p !== "世話好き");
 // trySpeak()側は該当カテゴリ/性格のセリフが無ければ何も発言しないだけなので、システムはこのままで動作する。
 // 今後、通常イベント/戦闘後の掛け合い/野営会話/ボス前会話/帰還時会話などを新10性格分で順次追加していく予定。
 // (カテゴリの目安: selfPinch/allyPinch/selfSkillHit/allySkillHit/selfHealed/allyDefeated/battleStart/
-//  stressLight/stressMid/stressHigh/breakdown/dangerFloor/normalKill/carried/allDefeated/retreat/
+//  stressLight/stressMid/stressHigh/breakdown/dangerFloor/normalKill/allDefeated/retreat/
 //  retreatPinch/questTargetFound)
 const DIALOGUE_LINES = {};
 
@@ -189,10 +189,9 @@ const DIALOGUE_CHANCE = {
   breakdownPerTurn: 0.50,
   dangerFloor: 0.40,
   stressFloor: 0.20,
-  carried: 0.90, // 瀕死の仲間を担いだ時、担がれた側(瀕死側)が発言する確率(元0.75から+15%)
   allDefeated: 0.35, // 敵を全滅させた時のセリフの発生確率(発動時は最後に倒した人物65%/他の仲間35%で抽選)
-  retreat: 0.60, // 里に戻るを押した時(瀕死の仲間がいない通常の帰還)
-  retreatPinch: 0.50, // 里に戻るを押した時(瀕死の仲間を担いでいるピンチの帰還)
+  retreat: 0.60, // 里に戻るを押した時(誰も失っていない通常の帰還)
+  retreatPinch: 0.50, // 里に戻るを押した時(この遠征で仲間をロストしているピンチの帰還)
 };
 // 現在階層がパーティ平均レベルのこの倍数を超えたら「自分たちのレベル的に危険な階層」とみなす
 const DANGER_FLOOR_LEVEL_MULT = 1.3;
@@ -914,7 +913,7 @@ const SKILL_TREES = {
     4: {
       // 口寄せの術はLv3左から移動(内容はそのまま、撒菱と入れ替え)
       left: { name: "口寄せの術", desc: "カラス・ガマ・ヘビのいずれかに変身する。", mp: 5, action: { kind: "transform" } },
-      right: { name: "影分身の術", desc: "自分の分身(HP75%/MP0、通常攻撃のみ)を呼び出し、5人目として並んで戦わせる。分身は状態異常にならず回復も不可、瀕死になると消え、戦闘が終わると自動で消滅する", mp: 4, action: { kind: "summonClone" } },
+      right: { name: "影分身の術", desc: "自分の分身(HP75%/MP0、通常攻撃のみ)を呼び出し、4人目として並んで戦わせる。分身は状態異常にならず回復も不可、力尽きると消え、戦闘が終わると自動で消滅する", mp: 4, action: { kind: "summonClone" } },
     },
     5: {
       left: { name: "身代わりの術", desc: "次に受ける全ての攻撃を1度だけ無効化する(全体攻撃を含む)", mp: 1, action: { kind: "shieldSelf" } },
@@ -1414,13 +1413,6 @@ const EQUIPMENT = {
   },
 };
 
-// 戦闘不能で瀕死になったキャラは、実際のゲーム内時間(絶対分数)が経過するとロストする。
-// 町へ帰る/宿泊するタイミングだけでなく、ダンジョン内を歩き回っている間の時計の進みも
-// そのまま消費される。この範囲でランダムに決まる猶予を過ぎると誰も救出に来なくてもロストする
-// (旧2〜4=1〜2日分→4〜6=2〜3日分→5〜7半日=2.5〜3.5日ときて、時間ベースに再設計した)
-const CRITICAL_MIN_HOURS = 50;
-const CRITICAL_MAX_HOURS = 74;
-
 // 重み(weight)の合計を100として、そこからランダムに1つ選ぶ共通ヘルパー(宿泊/野営の演出キャプションで使う)
 function pickWeightedMessage(list) {
   const total = list.reduce((sum, m) => sum + m.weight, 0);
@@ -1665,7 +1657,7 @@ const RESCUE_QUEST_DEF = {
   targetFloor: 5, rewardGold: 25, itemName: "薬草",
 };
 const RESCUE_QUEST_GOLD_THRESHOLD = 20; // 所持金がこれ以下
-const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(瀕死・ロストを除く)の仲間がこの人数以下の時だけ張り出される
+const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(ロストを除く)の仲間がこの人数以下の時だけ張り出される
 // 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
 const CHASE_ENCOUNTER_CHANCE = 0.6;
@@ -1693,7 +1685,6 @@ const STATUS_TOOLTIPS = {
   dmgTakenUp: { icon: "💥", title: "被ダメージ増加", desc: "受けるダメージが増える。" },
   bigAttackPending: { icon: "⚡", title: "大技の構え", desc: "次の自分のターンに強力な一撃(大技)を放つ構えに入っている。" },
   guarding: { icon: "🛡", title: "かばう", desc: "仲間の代わりに攻撃を引き受け、被ダメージを軽減する。" },
-  carrying: { icon: "🎒", title: "担いでいる", desc: "瀕死の仲間を担いでいる。素早さが下がり、攻撃・技が使えなくなる。" },
   flying: { icon: "🪽", title: "飛行", desc: "飛行していて、攻撃が当たりにくい。遠距離攻撃は当たりやすく、当たると打ち落としてスタンさせることがある。" },
   questTarget: { icon: "🎯", title: "討伐対象", desc: "受注中の依頼の討伐対象。" },
 };
@@ -1733,7 +1724,7 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT, CRITICAL_MIN_HOURS, CRITICAL_MAX_HOURS,
+    CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT,
     MATERIALS, MATERIAL_ORDER, MATERIAL_DROP_CHANCE, MATERIAL_DROP_CHANCE_SWARM, ENEMY_MATERIAL_DROPS,
     PERSONALITIES, ACTIVE_PERSONALITIES, DIALOGUE_LINES, DIALOGUE_CHANCE, DANGER_FLOOR_LEVEL_MULT, SPEECH_BUBBLE_DURATION_MS,
     FATIGUE_PER_FLOOR, FATIGUE_PER_FLOOR_RETREAT, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL,

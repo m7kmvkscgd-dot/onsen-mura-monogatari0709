@@ -86,13 +86,9 @@ function createCharacter(name, classId, classUpgrades) {
     guardProtectCount: 0, // かばう構え中に身代わりになった回数。2に達したら強制的に構えを解除する
     reloading: false, // 砲術士の砲撃を使った直後、次の自分のターンは装填で動けない
     fleeState: null, // null | "preparing"(逃走準備中) | "fled"(この戦闘から逃げた)。戦闘開始のたびリセットされる
-    status: "active", // active | critical | lost
+    status: "active", // active | lost(戦闘不能=即ロスト。瀕死(critical)は2026-07-26の3人化転換で廃止)
     onsenLockUntilMinutes: null, // 入浴した時点から見て翌朝(dawn=4:30)の絶対分数。この値を過ぎるまでパーティ編成に組み込めない
     onsenPendingRelief: false, // 入浴済みでまだ「リラックスできた！」演出(ストレス減少)を再生していない場合true
-    criticalFloor: null,
-    criticalExpireMinutes: null, // ロストするゲーム内絶対分数(この値を過ぎるとtickCriticalExpiryでロストになる)
-    carryingId: null, // 担いでいる瀕死の仲間のid(いなければnull)。担いでいる間は素早さ半減+攻撃/技が使えない
-    carriedBy: null, // 自分が瀕死の時、誰に担がれているか(担がれていなければnull)
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
     bleed: 0, // 出血の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する。出血中は攻撃力-10%
     burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
@@ -343,7 +339,6 @@ function effectiveStat(entity, key) {
     const fatigued = base * (1 - fatigueMalus(entity.fatigue));
     const equip = (entity.equipBonus && entity.equipBonus[key]) || 0;
     result = Math.max(1, Math.round(fatigued + equip));
-    if (key === "spd" && entity.carryingId) result = Math.max(1, Math.round(result * 0.5)); // 仲間を担いでいる間は素早さ半減
   }
   // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
   if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
@@ -849,8 +844,8 @@ function initPassives() {
   };
 }
 
-// ============ 5人目の枠(影分身/式神)============
-// fieldPartyは通常4人までだが、忍者「影分身の術」・陰陽師「式神召喚」だけは一時的に5人目を追加できる。
+// ============ 追加の1枠(影分身/式神)============
+// fieldParty(戦闘に出る枠)は通常3人までだが、忍者「影分身の術」・陰陽師「式神召喚」だけは一時的に1体を追加できる。
 // 同時に存在できるのはどちらか1体まで(isClone/isShikigamiのどちらかが既にいたら新規召喚は弾く)。
 // 忍者の隣に並ぶよう、pushではなく召喚者のすぐ後ろにspliceで挿入する
 function insertNextToOwner(entity, owner) {
@@ -1365,7 +1360,7 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は鷹を呼び出した！`);
     return { summonedHawk: true };
   }
-  // 影分身の術(忍者)/式神召喚(陰陽師): 5人目の枠はどちらか1体まで(既に出ていたら弾く)
+  // 影分身の術(忍者)/式神召喚(陰陽師): 追加の1枠はどちらか1体まで(既に出ていたら弾く)
   if (action.kind === "summonClone") {
     if (fieldParty.some((c) => c.isClone || c.isShikigami)) { log(`これ以上仲間を呼び出せない！`); return { failed: true }; }
     insertNextToOwner(makeCloneFor(actor), actor);
@@ -1460,9 +1455,8 @@ function useTreeSkill(actor, target, skill, log) {
       if (t.isShikigami) { log(`${t.label}は式神のため回復できない！`); return { target: t, heal: 0 }; }
       const bonusMult = healBonusMultiplier(actor, t, !!action.cleanse);
       const heal = Math.round(applyOnsenHealBonus(t, Math.max(1, Math.round(t.maxHp * action.healPct))) * bonusMult);
-      if (t.status === "critical" && action.reviveHpPct) {
-        return { target: t, revived: true, heal: 0 };
-      }
+      // reviveHpPct(蘇生系)は瀕死廃止(戦闘不能=即ロスト)により蘇生対象が存在しなくなったため、
+      // 通常の回復としてだけ機能する(スキル自体の整理はスキル棚卸しの際に行う)
       t.hp = Math.min(t.maxHp, t.hp + heal);
       if (action.cleanse) {
         t.poison = 0; t.burnTurns = 0; t.bleed = 0; t.stunTurns = 0; t.silenceTurns = 0;
@@ -2712,50 +2706,6 @@ function damageStress(dmg, maxHp) {
   return Math.round(26 * (ratio - 0.3) + 2);
 }
 
-// 戦闘不能になったキャラをそのフロアで瀕死にする(死体ではなく生存しているが動けない状態)。
-// 別の仲間がそのフロアに到達し、救出コマンドを使えば連れ帰れる(ただし冒険はそこで終了する)。
-// 誰も助けに来ないまま、実ゲーム内時間で2.5〜3.5日(CRITICAL_MIN_HOURS〜MAX_HOURS)経過すると
-// ロスト(完全消滅)する。absoluteMinutesはその時点のゲーム内絶対分数(呼び出し側で算出)
-function markCritical(character, floor, absoluteMinutes, stage) {
-  character.status = "critical";
-  character.hp = 0;
-  // 瀕死になる=死の淵をさまよう体験そのものが最大級のトラウマになるため、ストレスは問答無用で
-  // 上限(100=発狂ライン)に張り付かせる(ユーザー指示、2026-07-25)。救出後も温泉/宿で癒すまで
-  // 発狂状態(行動不能)が続くことになる
-  character.fatigue = FATIGUE_MAX;
-  character.criticalFloor = floor;
-  character.criticalStage = stage || "forest"; // 森/海岸どちらで瀕死になったかも記録し、階層番号だけでは区別できない別ステージでの誤救出/誤表示を防ぐ
-  const spanHours = CRITICAL_MIN_HOURS + Math.random() * (CRITICAL_MAX_HOURS - CRITICAL_MIN_HOURS);
-  character.criticalExpireMinutes = absoluteMinutes + spanHours * 60;
-}
-
-// ゲーム内時間が進むたび(町へ帰る/宿泊はもちろん、ダンジョン内を歩き回っている間も)呼び、
-// 期限切れの瀕死キャラをロストにする。ただし既に誰かに担がれている間は「救出済みで運搬中」
-// なので、カウントダウンを進めない(ロストしない)
-function tickCriticalExpiry(characters, absoluteMinutes) {
-  // characters(呼び出し元は常にstate.roster自身)をforEachで回している最中にsplice(removeFromRoster)
-  // すると要素の読み飛ばしが起きるため、対象のidだけ集めてforEach完了後にまとめて削除する
-  const expiredIds = [];
-  characters.forEach((c) => {
-    if (c.status === "critical" && !c.carriedBy && absoluteMinutes > c.criticalExpireMinutes) {
-      c.status = "lost";
-      expiredIds.push(c.id);
-    }
-  });
-  expiredIds.forEach((id) => removeFromRoster(id)); // 名簿からも完全に削除する(ロストは戻ってこないため)
-}
-
-// 瀕死の仲間を救出する(HP半分で復活)。呼び出し側でその冒険を終了させて町に戻す
-function rescueCritical(character) {
-  if (character.status !== "critical") return false;
-  character.status = "active";
-  character.hp = 1; // 瀕死から復帰した直後はHP1(ぎりぎり生きている状態。全快ではない)
-  character.criticalFloor = null;
-  character.criticalExpireMinutes = null;
-  character.carriedBy = null;
-  return true;
-}
-
 // 速度順(疲労を反映した実効素早さ+ランダム性込み)で行動順を決める
 function turnOrder(entities) {
   return [...entities].sort((a, b) => (effectiveStat(b, "spd") + Math.random() * 4) - (effectiveStat(a, "spd") + Math.random() * 4));
@@ -2806,7 +2756,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     createCharacter, rollBasicAttack, rollMagicAttack, rollPowerAttack, rollCritAttack, rollPreciseShot, rollCannonShot, rollHeal,
     pickEnemyForFloor, pickEncounterForFloor, instantiateEnemyById, goldReward, performAttack, useAbility, usePotion, useOnsenEgg, enemyAttack, enemyBigAttack, resolveDebuffEffect, rollBigAttackCountdown, applyGroupNerf, bigAttackPool, pickBigAttackProfile, peekNextBigAttackName, bigAttackSummaryText,
-    markCritical, tickCriticalExpiry, rescueCritical, turnOrder, simulateBattle, simulateBattleMulti,
+    turnOrder, simulateBattle, simulateBattleMulti,
     xpToNext, levelUp, grantXp, maxMpFor, baseMaxMpFor, abilityMpCost,
     advanceFatigue, fatigueMalus, stressTier, effectiveStat, computeEquipBonus, refreshEquipBonus, classHasReachedLevel,
     onsenCost, useOnsen, isOnsenLocked, collectReadyOnsenReliefs, useLodging, useCampRest, isAvailable, evasionChance, accuracyOf, rollHit,

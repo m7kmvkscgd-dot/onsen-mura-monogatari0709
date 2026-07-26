@@ -418,9 +418,7 @@ function triggerShootDownEvents(shotDownTargets, onDone) {
 // 返す、という不具合があった(敵側は#enemyRowが戦闘画面にしか存在しないため起こらなかった)。
 // 複数マッチする中から実際にレイアウトされている(幅/高さが0でない)ものを選ぶ
 function findVisibleCard(targetId) {
-  // 担がれているキャラは自分の.party-memberを持たず、担いでいるキャラのカードに重ねた
-  // .carried-badge(data-carried-id)としてしか存在しないため、そちらも検索対象に含める
-  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"], .carried-badge[data-carried-id="${targetId}"]`);
+  const candidates = document.querySelectorAll(`.enemy-card[data-id="${targetId}"], .party-member[data-id="${targetId}"]`);
   for (const c of candidates) {
     const r = c.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) return c;
@@ -614,7 +612,7 @@ function renderVfxFor(targetId) {
       if (!freshEl || !freshBubble) return;
       const rect = freshEl.getBoundingClientRect();
       // 自キャラ(味方)の吹き出しだけ、ユーザー指示によりさらに5px下にずらす(敵はそのまま)
-      const isPartySide = freshEl.classList.contains("party-member") || freshEl.classList.contains("carried-badge");
+      const isPartySide = freshEl.classList.contains("party-member");
       // 4人パーティの左端/右端キャラだと、キャラ中心に吹き出しを置くと画面外にはみ出て
       // 文字が読めなくなることがあった。吹き出し自体の位置は画面内に収まるようクランプし、
       // 矢印(::after)だけ--arrow-offsetでキャラの実際の中心へずらして指し示す
@@ -643,9 +641,7 @@ function anyoneSpeaking() {
 }
 // 吹き出しセリフの中核処理。category に応じてspeakerの性格のセリフ配列からランダムに1つ選んで表示する
 function trySpeak(speaker, category) {
-  // 担がれた側(瀕死でstatus==="critical")のセリフだけは例外的に許可する
-  const speakerOk = speaker && (speaker.status === "active" || (category === "carried" && speaker.status === "critical"));
-  if (!speakerOk) return false;
+  if (!speaker || speaker.status !== "active") return false;
   // breakdown(発狂)とallDefeated(全滅)は他のセリフより優先させるため、表示中の吹き出しがあっても構わず発言させる
   const allowConcurrent = category === "breakdown" || category === "allDefeated";
   if (!allowConcurrent && anyoneSpeaking()) return false;

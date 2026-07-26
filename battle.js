@@ -22,7 +22,9 @@ function startBattle(enemies, pathDef, encounterText) {
   // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる。この戦闘で使い切る(2戦目以降には持ち越さない)
   const omikujiGuaranteedCrits = state.omikujiGuaranteedCritsLeft || 0;
   if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
-  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, voluntarySwapUsed: false };
+  // swapCooldown: 交代コマンドの残りクールダウン(ラウンドの節目で1減る、0で使用可、開幕から使用可)。
+  // roundsTotal/presence: 参加ターン比の経験値配分用(そのラウンドに戦場へ出ていたキャラのカウント。nextRound/victory参照)
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, swapCooldown: 0, roundsTotal: 0, presence: {} };
   // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
   // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
   lastPartyBarActingId.battlePartyBar = null;
@@ -178,7 +180,7 @@ function renderBattleScreen() {
   if (!battle) return;
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
-  // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(5人編成でも
+  // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(4人編成でも
   // 常時表示されるアイコンは4つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
   const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled");
   renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
@@ -279,6 +281,12 @@ function nextRound(forceFirstStrike) {
   const alive = aliveField();
   if (aliveEnemies().length === 0) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
+  // 交代コマンドのクールダウンはラウンドの節目で1減る
+  if (battle.swapCooldown > 0) battle.swapCooldown--;
+  // 参加ターン比の経験値配分用: このラウンドに戦場へ出ていたメンバーを記録する。
+  // ラウンド途中で交代したキャラは出た側にも別途加算する(=交代ターンは双方にカウント、victory参照)
+  battle.roundsTotal++;
+  alive.forEach((c) => { battle.presence[c.id] = (battle.presence[c.id] || 0) + 1; });
   battle.order = turnOrder([...alive, ...aliveEnemies()]);
   // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
   if (forceFirstStrike) {
@@ -405,7 +413,7 @@ function processNext() {
             setTimeout(advanceTurnAfterBig, 500);
           }
         };
-        offerReserveSwapIfNeeded(newlyCriticalBig, continueAfterBig);
+        autoDeployReserveIfNeeded(newlyCriticalBig, continueAfterBig);
         return;
       }
       if (actor.bigAttackCountdown === 1) {
@@ -443,7 +451,7 @@ function processNext() {
           setTimeout(advanceTurn, 500);
         }
       };
-      offerReserveSwapIfNeeded(newlyCritical, continueAfterAttack);
+      autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
     }, enemyActionDelay);
   } else if (actor.isShikigami) {
     // 式神: プレイヤー操作不要で自動的に行動する(resolveShikigamiAction参照。タイプごとに通常攻撃/連撃/
@@ -500,7 +508,7 @@ function processNext() {
       const newlyCriticalAction = handleFieldDeaths();
       renderBattleScreen();
       const advanceTurn = () => { battle.orderIndex++; processNext(); };
-      offerReserveSwapIfNeeded(newlyCriticalAction, () => setTimeout(advanceTurn, 500));
+      autoDeployReserveIfNeeded(newlyCriticalAction, () => setTimeout(advanceTurn, 500));
     }, 600);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
@@ -517,7 +525,7 @@ function processNext() {
       const newlyCriticalDot = handleFieldDeaths();
       renderBattleScreen();
       if (actor.hp <= 0 || actor.status !== "active") {
-        offerReserveSwapIfNeeded(newlyCriticalDot, () => {
+        autoDeployReserveIfNeeded(newlyCriticalDot, () => {
           setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
         });
         return;
@@ -562,15 +570,12 @@ function processNext() {
   }
 }
 
-// 戻り値: このタイミングで新たに瀕死になった(fieldParty本人が力尽きた)キャラの配列。
-// 呼び出し元(processNext等)がこれを見て、控えとの交代ポップアップを出すかどうか判断する
-// (担がれていた側が巻き添えで瀕死になったケースは対象外、あくまで直接倒れた本人のみ)
+// 戻り値: このタイミングで力尽きてロストしたキャラの配列。
+// 呼び出し元(processNext等)がこれをautoDeployReserveIfNeededへ渡し、控えの自動登場を判断する
 function handleFieldDeaths() {
-  // 以前は確定戦闘(大猪等の依頼専用エンカウント)で瀕死になった場合だけ1つ手前のフロアで
-  // 救助できる特例があったが、ユーザー指示で廃止。敵がいたフロアにそのまま取り残す通常仕様に統一する
   const newlyCritical = [];
-  // 影分身/式神はHPが0になっても瀕死(要救出)にはならず、その場で消滅するだけ。
-  // 通常の瀕死化ロジックには一切乗せないよう、forEachの一番最初で処理してreturnする
+  // 影分身/式神はHPが0になってもロストにはならず、その場で消滅するだけ。
+  // 通常のロスト処理には一切乗せないよう、forEachの一番最初で処理してreturnする
   const vanishIds = [];
   fieldParty.forEach((c) => {
     if ((c.isClone || c.isShikigami) && c.hp <= 0 && c.status === "active") {
@@ -607,37 +612,13 @@ function handleFieldDeaths() {
       return;
     }
     if (c.hp <= 0 && c.status === "active") {
-      // このキャラが誰かを担いでいた場合、担がれていた側もここで降ろされる。即死モードでは
-      // 瀕死という状態自体が発生しないため、担がれていた側もそのままロストする
-      const carried = fieldParty.find((x) => x.carriedBy === c.id);
-      if (carried) {
-        if (state.instadeathMode) {
-          carried.status = "lost";
-          removeFromRoster(carried.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
-          blog(`${c.name}が倒れ、担がれていた${carried.name}もそのまま帰らぬ人となった...(即死モード)`);
-        } else {
-          markCritical(carried, currentFloor, absoluteGameMinutes(), currentStage);
-          advCriticalHappened = true; // リザルトの朱印評価/「全員生還！」表示用
-          blog(`${c.name}が倒れ、担がれていた${carried.name}もその場に取り残された...`);
-        }
-        carried.carriedBy = null;
-        c.carryingId = null;
-      }
-      // 瀕死になるダメージを受けた本人にも、その衝撃でストレスが溜まる
-      c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 30);
-      popupOn(c.id, "30", "stress");
-      // 即死モード: 瀕死(担いで救出可能)を経由せず、その場でロスト(完全消滅)する
-      if (state.instadeathMode) {
-        c.status = "lost";
-        removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
-        blog(`${c.name}は倒れた...即死モードによりそのまま帰らぬ人となった。`);
-      } else {
-        markCritical(c, currentFloor, absoluteGameMinutes(), currentStage);
-        advCriticalHappened = true; // リザルトの朱印評価/「全員生還！」表示用
-        blog(`${c.name}は倒れた...瀕死のまま${currentStageName()} ${currentFloor}層目に取り残された。`);
-      }
+      // 戦闘不能=100%ロスト(完全消滅)。瀕死・担ぐ・救出システムは廃止済み(2026-07-26の3人化転換)
+      c.status = "lost";
+      removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
+      advLostHappened = true; // リザルトの朱印評価/「全員生還！」表示用
+      blog(`${c.name}は倒れた...帰らぬ人となった。`);
       newlyCritical.push(c);
-      // 仲間が瀕死になった衝撃で、生き残っている他のメンバーのストレスが上がる
+      // 仲間が倒れた衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
         if (ally.id !== c.id && ally.status === "active") {
           ally.fatigue = Math.min(FATIGUE_MAX, (ally.fatigue || 0) + 25);
@@ -656,23 +637,23 @@ function handleFieldDeaths() {
   return newlyCritical;
 }
 
-// 瀕死になった直後、控え(reserveFieldMember)がいれば「交代しますか？」のポップアップを出す。
-// 「はい」なら瀕死のキャラを控え枠に下げ、控えだったキャラをその場に迎える(ターン進行はonDoneで続ける)。
-// 「いいえ」、または控えがいない/既に控えが瀕死等で交代できない場合は即座にonDoneを呼んで通常通り進む
-function offerReserveSwapIfNeeded(newlyCritical, onDone) {
-  // 即死モードでは瀕死("critical")を経由せず直接ロスト("lost")になるため、両方を交代候補として扱う
-  const candidate = newlyCritical.find((c) => c.status === "critical" || c.status === "lost");
-  if (!candidate || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
-  showConfirmModal(`控えの${reserveFieldMember.name}と交代しますか？`, [
-    {
-      label: "はい", className: "big primary", onClick: () => {
-        swapReserveMember(candidate, blog);
-        renderBattleScreen();
-        onDone();
-      },
-    },
-    { label: "いいえ", className: "big", onClick: onDone },
-  ]);
+// 味方が倒れ(ロストし)た直後、控え(reserveFieldMember)がいれば確認なしで自動的に戦場へ登場させる。
+// 交代コマンドとは別枠の無料登場(クールダウンを無視する)だが、登場後のクールダウンは3ターンに
+// リセットされる(登場直後に任意交代で回転させることはできない)。控えがいなければ何もしない
+function autoDeployReserveIfNeeded(newlyLost, onDone) {
+  const someoneLost = newlyLost.some((c) => c.status === "lost");
+  if (!someoneLost || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
+  const incoming = reserveFieldMember;
+  reserveFieldMember = null;
+  fieldParty.push(incoming);
+  if (battle) {
+    battle.swapCooldown = 3;
+    // 参加ターン比の経験値: 登場したこのラウンドから出場カウントを付ける
+    battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
+  }
+  blog(`控えの${incoming.name}が飛び出してきた！`);
+  renderBattleScreen();
+  onDone();
 }
 
 // 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
@@ -807,7 +788,6 @@ function runCritFollowupAttack(actor, onDone) {
   });
 }
 
-// 担いでいる相手を対象に選ぶ(戦闘中に瀕死になった仲間、または担いでいる最中に別の仲間が瀕死になった場合)
 // スキルツリーの能動スキルを実行する。種類(自己バフ/全体バフ/回復/範囲攻撃/単体攻撃)ごとに対象の選び方が違う
 function runTreeSkill(actor, skill) {
   const action = skill.action;
@@ -951,7 +931,7 @@ function runTreeSkill(actor, skill) {
     return;
   }
   if (action.kind === "summonHawk") {
-    // 担ぐ・変身解除と同じく、召喚自体はターンを消費しない(呼び出した後そのまま別の行動を選べる)
+    // 変身解除と同じく、召喚自体はターンを消費しない(呼び出した後そのまま別の行動を選べる)
     const result = useTreeSkill(actor, actor, skill, blog);
     if (result && result.failed) { renderActionButtons(actor); return; }
     playSfx("hawk_summon");
@@ -962,12 +942,14 @@ function runTreeSkill(actor, skill) {
   if (action.kind === "heal") {
     if (action.aoe) {
       playSfx("heal");
-      const targets = fieldParty.filter((c) => !c.transformForm && !c.isClone && !c.isShikigami && (c.status === "active" || (action.reviveHpPct && c.status === "critical")));
+      // reviveHpPct(蘇生系)は瀕死廃止(戦闘不能=即ロスト)に伴い蘇生対象が存在しなくなったため、
+      // 生存者への回復としてだけ機能する(スキル自体の整理はスキル棚卸しの際にユーザーが行う)
+      const targets = fieldParty.filter((c) => !c.transformForm && !c.isClone && !c.isShikigami && c.status === "active");
       const result = useTreeSkill(actor, targets, skill, blog);
       if (result && result.healed) {
         result.healed.forEach((h) => {
-          if (h.revived) { rescueCritical(h.target); h.target.hp = Math.max(1, Math.round(h.target.maxHp * action.reviveHpPct)); blog(`${h.target.name}が蘇生した！`); }
-          else { popupOn(h.target.id, `+${h.heal}`, "heal"); maybeSpeakHealed(h.target); }
+          popupOn(h.target.id, `+${h.heal}`, "heal");
+          maybeSpeakHealed(h.target);
         });
       }
       renderBattleScreen();
@@ -1018,7 +1000,7 @@ function runTreeSkill(actor, skill) {
       // 鷹の追撃を再生する(合計ダメージを1回にまとめて見せていた旧仕様をユーザー指摘で修正)。
       // renderBattleScreen()は#actionGridに触れないため、finishPlayerAction()が呼ばれるまで
       // 演出中もボタンが押せる状態のまま残っており、連打すると同じ技が多重発動するバグがあった
-      // (renderCarryTargetsの「演出の間はボタンを消して連打を防ぐ」と同じ対策をここにも適用する)
+      // (演出の間はボタンを消して連打を防ぐ)
       document.getElementById("actionGrid").innerHTML = "";
       renderBattleScreen();
       playAttackerLunge(actor.id);
@@ -1299,38 +1281,6 @@ function runFormSkill(actor, skillKey) {
   }
 }
 
-function renderCarryTargets(actor, targets) {
-  battleSubMenuActive = true;
-  const grid = document.getElementById("actionGrid");
-  grid.innerHTML = "";
-  targets.forEach((target) => {
-    const btn = document.createElement("button");
-    btn.className = "big";
-    btn.textContent = `${target.name}を担ぐ`;
-    btn.onclick = () => {
-      actor.carryingId = target.id;
-      target.carriedBy = actor.id;
-      target.criticalFloor = null;
-      target.criticalExpireMinutes = null;
-      blog(`${actor.label}は${target.name}を担いだ！`);
-      if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(target, "carried");
-      playSfx("carry");
-      document.getElementById("actionGrid").innerHTML = ""; // 演出の間はボタンを消して連打を防ぐ
-      // 2秒静止してから、担がれるキャラのイラストを担ぐキャラのカードに重ねる演出に入る
-      setTimeout(() => {
-        renderBattleScreen();
-        renderActionButtons(actor); // 担ぐ自体はターンを消費しない。続けて逃げる準備などの行動を選べる
-      }, 2000);
-    };
-    grid.appendChild(btn);
-  });
-  const backBtn = document.createElement("button");
-  backBtn.className = "big";
-  backBtn.textContent = "戻る";
-  backBtn.onclick = () => renderActionButtons(actor);
-  grid.appendChild(backBtn);
-}
-
 // 技(スキル)サブメニュー: 職業の基本アビリティ+スキルツリーの能動スキル+味方を守れの合計が
 // 3つ以上あるクラスは、通常攻撃の右の「技」ボタンからこのサブメニューを開いて選ぶ形にまとめる。
 // buttonsは既にrenderActionButtons側でクリック処理まで組み立て済みの要素をそのまま流用する
@@ -1368,8 +1318,7 @@ function renderActionButtons(actor) {
   grid.style.gridTemplateColumns = ""; // 敵対象選択(3列)からの復帰時、通常の2列に戻す
   const c = CLASSES[actor.classId];
 
-  // 仲間を担いでいる間は攻撃/技が使えず、逃げるかアイテムしか行動できない
-  if (!actor.carryingId) {
+  {
     const atkBtn = document.createElement("button");
     atkBtn.className = "big primary";
     atkBtn.textContent = "攻撃";
@@ -1438,7 +1387,7 @@ function renderActionButtons(actor) {
     };
     grid.appendChild(atkBtn);
 
-    // 影分身は通常攻撃のみ使用可能(技/道具/担ぐ/交代/逃げる、いずれも不可)
+    // 影分身は通常攻撃のみ使用可能(技/道具/交代/逃げる、いずれも不可)
     if (actor.isClone) return;
 
     // 変化の術で変身中は、通常の職業アビリティ/スキルツリー技の代わりに専用の行動(カラスのかばう、
@@ -1604,32 +1553,24 @@ function renderActionButtons(actor) {
       }
     }
 
-    // 担ぐ: 今この戦闘で瀕死になった(このフロアに取り残された)仲間がいて、まだ誰にも担がれていない場合に表示。
-    // 控え枠(reserveFieldMember)に瀕死のまま入っているキャラもここに含める(「交代」で控えに下がっても
-    // 歩けないのは変わらないため、担いで救出する必要がある)
-    const carryPool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
-    const carryTargets = carryPool.filter((x) => x.status === "critical" && x.criticalFloor === currentFloor && (x.criticalStage || "forest") === currentStage && !x.carriedBy);
-    if (carryTargets.length > 0) {
-      const carryBtn = document.createElement("button");
-      carryBtn.className = "big";
-      carryBtn.textContent = "担ぐ";
-      carryBtn.onclick = () => renderCarryTargets(actor, carryTargets);
-      grid.appendChild(carryBtn);
-    }
-    // 交代: 控えが健在(瀕死でない)の時だけ表示。任意の交代は1戦闘につき1回まで(瀕死時の自動提案は
-    // 別枠でカウントしないため回数に影響しない、offerReserveSwapIfNeeded参照)。ターンは消費せず、
-    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(担ぐ・変身解除と同じ「無消費」パターン)
+    // 交代: 控えがいる時だけ表示。パーティ共有のクールダウン制(3ターン、開幕から使用可。
+    // ラウンドの節目で1減る=nextRound参照。倒れた時の自動登場autoDeployReserveIfNeededは
+    // クールダウンを無視するが、登場後はクールダウンが3にリセットされる)。ターンは消費せず、
+    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(変身解除と同じ「無消費」パターン)
     if (reserveFieldMember && reserveFieldMember.status === "active") {
-      const swapUsed = battle.voluntarySwapUsed;
+      const cd = battle.swapCooldown || 0;
       const swapBtn = document.createElement("button");
       swapBtn.className = "big";
-      swapBtn.textContent = "交代" + (swapUsed ? "(使用済み)" : "");
-      swapBtn.disabled = swapUsed;
+      swapBtn.textContent = cd > 0 ? `交代(あと${cd}T)` : "交代";
+      swapBtn.disabled = cd > 0;
       swapBtn.onclick = () => {
-        if (battleActionLocked || battle.voluntarySwapUsed) return;
-        battle.voluntarySwapUsed = true;
+        if (battleActionLocked || (battle.swapCooldown || 0) > 0) return;
+        battle.swapCooldown = 3;
         const incoming = swapReserveMember(actor, blog);
         if (!incoming) return;
+        // 参加ターン比の経験値: 交代が発生したラウンドは下がった側(ラウンド頭で加算済み)と
+        // 出た側の両方に出場カウントを付ける
+        battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
         battle.actingId = incoming.id; // このターンをそのまま入れ替わった控えのキャラへ引き継ぐ
         renderBattleScreen();
         renderActionButtons(incoming);
@@ -1638,8 +1579,7 @@ function renderActionButtons(actor) {
     }
   }
 
-  // 変身解除: 任意のタイミングで解除できる。担いでいる間でも(変身自体は解除したいはずなので)表示し、
-  // ターンを消費せずそのまま行動選択に戻る(担ぐコマンドと同じ「無消費の意思決定」パターン)
+  // 変身解除: 任意のタイミングで解除できる。ターンを消費せずそのまま行動選択に戻る(交代と同じ「無消費の意思決定」パターン)
   if (actor.transformForm) {
     const revertBtn = document.createElement("button");
     revertBtn.className = "big";
@@ -1813,7 +1753,7 @@ function finishPlayerAction(wasCrit) {
 
 function afterPlayerAction() {
   const newlyCritical = handleFieldDeaths();
-  offerReserveSwapIfNeeded(newlyCritical, () => {
+  autoDeployReserveIfNeeded(newlyCritical, () => {
     battle.orderIndex++;
     processNext();
   });
@@ -1830,6 +1770,12 @@ function victory() {
   clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
+  // 参加ターン比の経験値(2026-07-26): 獲得経験値=敵xp×(出場ラウンド数÷戦闘の総ラウンド数)。
+  // 出場カウントはnextRound(ラウンド頭の在場者)と交代処理(出た側にも加算)が記録している。
+  // 一度も出なかった控えは0%(=もらえない)。逃げた仲間は従来通り対象外
+  const xpRatioOf = (c) => Math.min(1, (battle.presence[c.id] || 0) / Math.max(1, battle.roundsTotal || 0));
+  const xpParticipants = () => (reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty)
+    .filter((c) => c.status === "active" && !c.isClone && !c.isShikigami && c.fleeState !== "fled" && xpRatioOf(c) > 0);
   // 奉行所の討伐依頼(受注制): この戦闘がbattle.questKey(tryForceQuestEncounterで確定出現させた
   // 対象)ならその場で達成とし、報酬はリザルト画面(renderResultScreen)にまとめて表示する。
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
@@ -1837,10 +1783,12 @@ function victory() {
     const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
     advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP };
     totalGold += questGold;
-    aliveField().forEach((c) => {
+    xpParticipants().forEach((c) => {
+      const share = Math.round(QUEST_REWARD_XP * xpRatioOf(c));
+      if (share <= 0) return;
       const beforeLevel = c.level;
-      grantXp(c, QUEST_REWARD_XP, blog);
-      advXpGained[c.id] = (advXpGained[c.id] || 0) + QUEST_REWARD_XP;
+      grantXp(c, share, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + share;
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
     state.acceptedQuest = null;
@@ -1873,16 +1821,19 @@ function victory() {
     if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
     if ((e.isBoss || e.isMidBoss) && Math.random() < SOUL_LUMP_DROP_CHANCE) soulLumpCount++; // ボス/中ボス討伐時のみ低確率で魂の塊をドロップ(神社の特別祈願用)
-    aliveField().forEach((c) => {
+    xpParticipants().forEach((c) => {
+      const share = Math.round(e.xp * xpRatioOf(c));
+      if (share <= 0) return;
       const beforeLevel = c.level;
-      grantXp(c, e.xp, blog);
-      advXpGained[c.id] = (advXpGained[c.id] || 0) + e.xp;
+      grantXp(c, share, blog);
+      advXpGained[c.id] = (advXpGained[c.id] || 0) + share;
       for (let lv = beforeLevel + 1; lv <= c.level; lv++) leveledUp.push({ character: c, level: lv });
     });
     // 道場があれば、この冒険に同行しなかった(名簿にいるが出発していない)仲間にも経験値の一部を分配する
+    // (遠征に同行している控えは留守番ではないため対象外。控えの経験値は上の参加ターン比で決まる)
     if ((state.dojoLevel || 0) >= 1) {
       const reserveXp = Math.round(e.xp * DOJO_XP_SHARE_BY_LEVEL[state.dojoLevel]);
-      state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c)).forEach((c) => {
+      state.roster.filter((c) => c.status === "active" && !fieldParty.includes(c) && !(reserveFieldMember && reserveFieldMember.id === c.id)).forEach((c) => {
         const beforeLevel = c.level;
         grantXp(c, reserveXp, blog);
         advXpGained[c.id] = (advXpGained[c.id] || 0) + reserveXp;
@@ -1956,10 +1907,9 @@ function victory() {
     clearHawkState(fieldParty);
     clearGuardState(fieldParty);
     clearOmamoriIwanagaBonus(fieldParty);
-    fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+    fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば行動の対象に戻す
     showScreen("screen-dungeon");
     renderDungeon();
-    checkStrandedOnCurrentFloor();
   };
 }
 
@@ -2000,7 +1950,6 @@ function triggerBossFlee(enemy) {
     showScreen("screen-dungeon");
     renderDungeon();
     dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-    checkStrandedOnCurrentFloor();
   });
 }
 // 討伐依頼対象のボス/中ボス(大猪など)がHPをBOSS_FLEE_HP_RATIO以下まで削られた時の自動逃走。
@@ -2028,7 +1977,6 @@ function triggerQuestBossFlee(enemy) {
     showScreen("screen-dungeon");
     renderDungeon();
     dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-    checkStrandedOnCurrentFloor();
   });
 }
 // ボス追撃モードの再戦(battle.bossPursuitEnemyId)からプレイヤー側が逃げた(escapeBattle/
@@ -2056,7 +2004,7 @@ function escapeBattle() {
   clearGuardState(fieldParty);
   clearOmamoriIwanagaBonus(fieldParty);
   fieldParty.forEach((c) => {
-    c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば担ぐ/行動の対象に戻す
+    c.fleeState = null; // 戦闘中に個別に逃げた仲間も、戦闘が終われば行動の対象に戻す
     // 逃げ延びた緊張と疲れでストレスが溜まる(進む→即逃げるを繰り返すだけの無限探索への対策)
     if (c.status === "active") {
       c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + FLEE_STRESS_PENALTY);
@@ -2067,11 +2015,8 @@ function escapeBattle() {
   advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
   showScreen("screen-dungeon");
   renderDungeon();
-  checkStrandedOnCurrentFloor();
 }
 
-// 今しがたの戦闘でこのフロアに瀕死のまま取り残された(まだ誰にも担がれていない)仲間がいれば、
-// 探索画面に戻った直後にも担ぐ/救出のアラートを出す(戦闘中に担ぎそびれた場合の救済)
 function defeat() {
   fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   updateBossPursuitHpIfFled(); // 追撃モードの再戦中に全滅した場合、その時点のダメージを反映してから記録する
@@ -2079,15 +2024,13 @@ function defeat() {
   stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
-  clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく(瀕死の仲間が後で救出された時のため)
+  clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   clearOmamoriIwanagaBonus(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
-  blog(state.instadeathMode
-    ? `パーティは全滅した...即死モードのため、誰も助けられなかった。町に戻った。`
-    : `パーティは全滅した...瀕死の仲間を${currentStageName()}に残し、町に戻った。別の仲間で助けに向かおう。`);
+  blog(`パーティは全滅した...誰も帰ってこなかった。`);
   document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     stopAmbientBgm();

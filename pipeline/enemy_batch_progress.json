@@ -1,0 +1,5 @@
+{
+  "note": "AREAS配列の並び順(enemy_prompt_generator.html準拠)でenemiesを2体ずつ消化していく前提のトラッキングファイル。doneはこのスクリプトが処理済みとしてクロップ済みのキャラ名一覧。processedFilesは既に取り込んだ元画像ファイル名(同じファイルを二重処理しないためのガード)。",
+  "done": [],
+  "processedFiles": []
+}

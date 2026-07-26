@@ -1,4 +1,4 @@
-// ============ dungeon.js: 深淵の森/海岸探索(進む・進路選択・エンカウント・瀕死救出・帰還) ============
+// ============ dungeon.js: 深淵の森/海岸探索(進む・進路選択・エンカウント・帰還) ============
 // ============ ダンジョン ============
 // 海の村/山伏の里から「元来た道を歩いて戻る」場合の特別な帰還モード(2026-07-19)。
 // 通常の帰還(オート帰還、0階層に着くまで無操作で進み続ける)とは違い、こちらは普通の
@@ -109,7 +109,7 @@ function collectExpeditionSnapshot() {
     advLevelBefore,
     advEnemiesDefeated,
     advMaxFloor,
-    advCriticalHappened,
+    advLostHappened,
     advQuestCompleted,
     jizoBlessingActive,
     warashiLuckActive,
@@ -137,7 +137,7 @@ function resumeExpeditionFromSave() {
   manualRetreatHomeVillage = snap.manualRetreatHomeVillage || null;
   fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
-  // 稼働できる仲間が誰も居ない(全員瀕死/ロスト)なら再開のしようがないので、諦めて町へ
+  // 稼働できる仲間が誰も居ない(全員ロスト)なら再開のしようがないので、諦めて町へ
   if (fieldParty.filter((c) => c.status === "active").length === 0) {
     clearExpeditionSnapshot();
     saveState();
@@ -150,7 +150,7 @@ function resumeExpeditionFromSave() {
   advQuestCompleted = snap.advQuestCompleted || null;
   advEnemiesDefeated = snap.advEnemiesDefeated || 0;
   advMaxFloor = snap.advMaxFloor || 0;
-  advCriticalHappened = !!snap.advCriticalHappened;
+  advLostHappened = !!snap.advLostHappened;
   jizoBlessingActive = !!snap.jizoBlessingActive;
   warashiLuckActive = !!snap.warashiLuckActive;
   koOniRepayFloorsLeft = snap.koOniRepayFloorsLeft || 0;
@@ -186,14 +186,11 @@ function recordMaxFloorReached() {
   state.maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0, cave: 0 };
   if (currentFloor > (state.maxFloorReached[currentStage] || 0)) state.maxFloorReached[currentStage] = currentFloor;
 }
-let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列(戦闘に出る最大4人。5人目は下記reserveFieldMember)
-// 5人編成で出発した時の5人目(交代要員)。戦闘には参加せず、
-// 探索中はいつでも自由にfieldPartyの誰かと交代でき、戦闘中は①行動中のキャラが自分のターンを
-// 消費して手動で交代する、②誰かが瀕死になった瞬間に「交代しますか？」のポップアップで交代する、の2経路がある。
-// 瀕死のキャラがこの枠に入ることもあるが、その場合も「歩けない」ため戦闘終了後は通常通り担いで
-// 救出する必要がある(この枠にいるだけでは救出したことにならない)。
-// 「助っ人の札」アイテムは廃止したため、現状maxActivePartySize()が常に4を返し5人編成には
-// 到達しないが、この仕組み自体は将来別の解禁方法で使う想定でそのまま残してある
+let fieldParty = []; // 現在ダンジョンに出ているキャラのライブ参照配列(戦闘に出る最大3人。4人目は下記reserveFieldMember)
+// 4人編成で出発した時の4人目(控え)。戦闘には3人までしか出ず、控えは
+// 探索中はいつでも自由にfieldPartyの誰かと交代でき、戦闘中は①行動中のキャラの手番で「交代」コマンド
+// (ターン非消費で出たキャラが即行動、パーティ共有クールダウン3ターン)、②誰かが倒れた瞬間の
+// 自動登場(autoDeployReserveIfNeeded、無料だがクールダウンは3にリセット)、の2経路で戦場に出る
 let reserveFieldMember = null;
 let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還時のリザルト画面用、enterDungeon()でリセット)
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
@@ -201,7 +198,7 @@ let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId 
 let advQuestCompleted = null; // 今回の冒険で奉行所の依頼を達成した場合{title, gold, xp}(リザルト画面用、enterDungeon()でリセット)
 let advEnemiesDefeated = 0; // 今回の冒険で倒した敵の数(リザルトの戦績/朱印評価用、battle.js victory()が加算)
 let advMaxFloor = 0; // 今回の冒険で踏破した最大階層(同上。中継ステージをまたいでも単純に各ステージの階層数の最大値)
-let advCriticalHappened = false; // 今回の冒険で誰かが瀕死になったか(朱印評価と「全員生還！」表示用、battle.js側が立てる)
+let advLostHappened = false; // 今回の冒険で誰かがロストしたか(朱印評価と「全員生還！」表示用、battle.js側が立てる)
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 // ============ ボス追撃モード: ボス/中ボスがHPが一定以下になると瀕死のまま逃走し、以後どのフロアでも
 // 一定確率で追いつく(討伐依頼のchasing/carryHpと同じ仕組みを、通常の(討伐依頼ではない)ボス/中ボスにも
@@ -224,12 +221,12 @@ function recordBossWoundIfPursuing() {
 }
 // ============ オート帰還: 「帰還」ボタンを押した後は無操作で0階層まで自動的に進み続ける ============
 // 背景ズームは1階層ごとにリセットせず、帰還開始時の階層〜0階層まで連続的に拡大し続ける(1階層=1秒)。
-// 戦闘/茶屋/瀕死発見のいずれかが起きると暗転を挟んで一時停止する(時刻変化は例外で自動再開、
+// 戦闘/茶屋のいずれかが起きると暗転を挟んで一時停止する(時刻変化は例外で自動再開、
 // 財宝発見はユーザー指示によりそもそも一時停止せずオート帰還を継続する)。
 // 画面を任意にタップすると即座に手動操作へ戻せる
 const AUTO_RETREAT_TICK_MS = 1000; // 1階層につき1秒
 const AUTO_RETREAT_ZOOM_PER_FLOOR = 0.08; // 1階層あたりのズーム増分(通常の1回分の歩行演出=buildWalkKeyframesと同じ値)
-const AUTO_RETREAT_CUT_FADE_MS = 400; // 時刻変化/茶屋/瀕死発見で一旦区切る時の暗転フェード時間
+const AUTO_RETREAT_CUT_FADE_MS = 400; // 時刻変化/茶屋で一旦区切る時の暗転フェード時間
 let autoRetreatActive = false;
 let autoRetreatStartFloor = 0; // ズームの基準(この階層をscale(1)として、0階層でscale(1+ZOOM_PER_FLOOR*ここ)になる)
 let autoRetreatTimer = null;
@@ -291,14 +288,13 @@ function enterDungeon() {
   recordMaxFloorReached();
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
-  // 5人選んでいた場合、5人目(最後に選んだ人)は交代要員として控えに回る
-  // (現状maxActivePartySize()が常に4を返すため到達しないが、仕組みとして残してある)
-  if (fieldParty.length >= 5) {
+  // 4人選んでいた場合、4人目(最後に選んだ人)は控えに回る(戦闘に出るのは3人まで。
+  // 3人以下で出発した場合は控えなし)
+  if (fieldParty.length >= 4) {
     reserveFieldMember = fieldParty.pop();
   } else {
     reserveFieldMember = null;
   }
-  fieldParty.forEach((c) => { c.carryingId = null; }); // 前回の冒険の担ぎ状態が万が一残っていないよう保険でリセット
   fieldParty.forEach((c) => applyOnsenHpBuffOnDeparture(c)); // 温泉バフ「ぽかぽか」(最大HP+7%)をこの遠征分だけ加算する
   if (reserveFieldMember) applyOnsenHpBuffOnDeparture(reserveFieldMember);
   applyOmikujiExpeditionStart();
@@ -308,7 +304,7 @@ function enterDungeon() {
   advQuestCompleted = null;
   advEnemiesDefeated = 0;
   advMaxFloor = 0;
-  advCriticalHappened = false;
+  advLostHappened = false;
   resetPeaceDialogueState();
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];
@@ -339,11 +335,10 @@ function dlog(msg) {
   appendTypewriterLog("dungeonLog", "dungeonLogArrow", msg);
 }
 
-// ストレス段階に応じた落書き風オーバーレイ画像(無ければnull)
-// 交代要員(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない
-// (5人編成でも常時表示されるアイコンは4つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
+// 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない
+// (4人編成でも常時表示されるアイコンは3つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
 function visibleFieldParty() {
-  return fieldParty.filter((c) => c.status !== "critical" || c.carriedBy);
+  return fieldParty.filter((c) => c.status !== "lost"); // 戦闘でロストした仲間は探索の隊列に並ばない
 }
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
@@ -353,15 +348,7 @@ function renderDungeon() {
   updateBossPursuitBadge();
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("dungeonLog").style.display = "";
-  // 担ぐ/見送るの選択中に道具ボタン等を使うとrenderDungeon()が呼ばれ、そのままだと
-  // criticalAlertが空になって選択肢が消えたまま二度と出てこなくなっていたバグの修正。
-  // 表示中だったアラート/担ぎ手選択があれば、消さずに同じ内容を再表示する
-  if (activeCriticalAlert) {
-    if (activeCriticalAlert.screen === "carryPicker") showCarryPicker(activeCriticalAlert.critical, activeCriticalAlert.onResolved);
-    else showCriticalAlert(activeCriticalAlert.critical, activeCriticalAlert.onResolved);
-  } else {
-    document.getElementById("criticalAlert").innerHTML = "";
-  }
+  document.getElementById("criticalAlert").innerHTML = ""; // 選択パネル(進路/イベント)の使い回し枠。表示中の再描画ガードはpath-choice-active側で行う
   // 森は「虫の声」、海岸は「波音」のアンビエントを、探索中・戦闘中を通して流し続ける(playAmbientBgm内でstage判定)。
   // BGM(森:dungeon系/海岸:coast/coast_battle)はこれとは別チャンネル(bgmAudio)で、startBattleでのみ切り替わり、
   // stopBattleBgmで探索用に戻る。どちらのチャンネルも戦闘中に止めない
@@ -382,11 +369,11 @@ function renderDungeon() {
     document.getElementById("retreatBtn").style.display = retreating ? "none" : "";
     document.getElementById("retreatBtn").textContent = "里に戻る";
   }
-  // 進む/里に戻るのdisabledは、進路選択(showPathChoice)や瀕死アラート(showCriticalAlert)、
-  // 移動演出(playDungeonMoveTransition)など複数箇所が個別にtrue/falseを設定する分散管理になっており、
+  // 進む/里に戻るのdisabledは、進路選択(showPathChoice)や移動演出(playDungeonMoveTransition)など
+  // 複数箇所が個別にtrue/falseを設定する分散管理になっており、
   // 稀にdisabled=trueのまま解除されずに残ってしまうと次の遠征に持ち越されて「進む/里に戻るが
   // 押せなくなる」不具合になる(押せるのは道具だけ、という報告と一致)。renderDungeon()は
-  // 探索画面に戻るたびに必ず呼ばれる場所のため、瀕死アラート表示中でない限りここで強制的に
+  // 探索画面に戻るたびに必ず呼ばれる場所のため、ここで強制的に
   // 解除し、どんな経路で壊れても次の描画で自己修復するようにする。
   // ただしオート帰還が進行中(autoRetreatActive)の間は例外: rollEncounter()の「静かな通路」/
   // 「財宝発見」分岐がtickの途中でrenderDungeon()を呼ぶため、ここで無条件に再有効化してしまうと
@@ -394,15 +381,10 @@ function renderDungeon() {
   // stopAutoRetreat()→startAutoRetreat()が連続発火して1tick=1秒のペースを無視した多重進行が
   // 起きてしまう(「オート帰還中に重複して帰還ボタンが押せる」不具合の原因)。startAutoRetreat()/
   // stopAutoRetreat()自身が既にdisabledを正しく管理しているため、進行中はここで触れない。
-  // 【不具合の根本原因】進路選択(showPathChoice)/茶屋の2択(showTeahouseOffer)/探索イベント
-  // (showDungeonEvent)はいずれも"path-choice-active"をbodyに付けてadvanceBtn等を無効化するが、
-  // このクラス自体はactiveCriticalAlertとは別管理の変数のため、この判定に含まれていなかった。
-  // その結果、選択パネルが開いたまま(まだ選ばれていない)状態でも、何らかの理由でrenderDungeon()が
-  // 再度呼ばれると(道具ボタンの副作用等、277行目のコメント参照)ここで無条件にdisabledが
-  // falseへ戻ってしまい、パネルの下でまだ有効なままのadvanceBtnを連打すると
-  // showPathChoiceが二重に呼ばれて抽選が上書きされる(選択肢が2回抽選されて変わって見える)
-  // 不具合の原因になっていた。選択パネル表示中はここでも解除しないようにして塞ぐ
-  if (!activeCriticalAlert && !autoRetreatActive && !dungeonMoveTransitionActive && !document.body.classList.contains("path-choice-active")) {
+  // また、進路選択(showPathChoice)/茶屋の2択(showTeahouseOffer)/探索イベント(showDungeonEvent)は
+  // いずれも"path-choice-active"をbodyに付けてadvanceBtn等を無効化するため、選択パネルの
+  // 表示中もここで解除しない(解除するとパネルの下のadvanceBtn連打で抽選が二重に走る)
+  if (!autoRetreatActive && !dungeonMoveTransitionActive && !document.body.classList.contains("path-choice-active")) {
     document.getElementById("advanceBtn").disabled = false;
     document.getElementById("retreatBtn").disabled = false;
   }
@@ -421,7 +403,7 @@ function renderDungeon() {
     healBtn.textContent = `治癒の術(MP${healCost})`;
     healBtn.disabled = !dungeonPriests.some((c) => c.mp >= healCost);
   }
-  // 交代: 控え(reserveFieldMember)が健在(瀕死でない)の時だけ表示。探索中はいつでも無償で交代できる
+  // 交代: 控え(reserveFieldMember)が健在の時だけ表示。探索中はいつでも無償で交代できる
   const swapBtn = document.getElementById("dungeonSwapBtn");
   swapBtn.style.display = reserveFieldMember && reserveFieldMember.status === "active" ? "" : "none";
   // 式神帰還: 陰陽師が式神を出している間、探索中もいつでも呼び戻せる(戦闘パートの同名ボタンと同じ関数)
@@ -431,7 +413,8 @@ function renderDungeon() {
 }
 
 // fieldPartyの誰か(activeMember)と控え(reserveFieldMember)を入れ替える共通処理。
-// 探索中のボタン/戦闘中の手動交代/瀕死時の自動交代提案、いずれもこれを使う。
+// 探索中のボタン/戦闘中の交代コマンド、いずれもこれを使う(倒れた時の自動登場は
+// 入れ替え相手がいないため別処理=autoDeployReserveIfNeeded)。
 // ログの出し方(dlog/blog)は呼び出し元ごとに違うため引数で受け取る
 function swapReserveMember(activeMember, log) {
   const idx = fieldParty.indexOf(activeMember);
@@ -452,11 +435,10 @@ function swapReserveMember(activeMember, log) {
   if (log) log(`${incoming.name}が${activeMember.name}と交代した。`);
   return incoming;
 }
-// 探索中(戦闘外): 交代要員がいる間はいつでも自由に、ターン等の概念なしに交代できる。
-// 誰かを担いでいる最中のキャラは交代候補から除外する(担いでいる相手の行き場が無くなるため)
+// 探索中(戦闘外): 控えがいる間はいつでも自由に、ターン等の概念なしに交代できる
 document.getElementById("dungeonSwapBtn").onclick = () => {
   if (!reserveFieldMember || reserveFieldMember.status !== "active") return;
-  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.carryingId && !c.isClone && !c.isShikigami);
+  const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.isClone && !c.isShikigami);
   if (targets.length === 0) { showInfoModal("交代できる仲間がいません(全員ふさがっています)"); return; }
   pendingAllyPick = (t) => {
     pendingAllyPick = null;
@@ -727,7 +709,7 @@ function playDungeonMoveTransition(actualLogic) {
 
 // ============ オート帰還 ============
 // 完全に停止する(ボタンを再有効化し、タイマー/フラグをリセットする)。手動タップでのキャンセル、
-// 戦闘開始・茶屋・瀕死発見などの割り込み、0階層到達(finishRetreat経由)、いずれからも呼ばれる
+// 戦闘開始・茶屋などの割り込み、0階層到達(finishRetreat経由)、いずれからも呼ばれる
 function stopAutoRetreat() {
   autoRetreatActive = false;
   clearTimeout(autoRetreatTimer);
@@ -740,7 +722,7 @@ function stopAutoRetreat() {
   document.getElementById("retreatBtn").disabled = false;
   document.getElementById("dungeonLog").style.visibility = ""; // オート帰還中に消していたテキストボックスを戻す
 }
-// 暗転→(黒目の間にafterBlackを実行)→明転、という「区切り」の演出。財宝発見/時刻変化/茶屋/瀕死発見で使う。
+// 暗転→(黒目の間にafterBlackを実行)→明転、という「区切り」の演出。財宝発見/時刻変化/茶屋で使う。
 // 通常のplayDungeonMoveTransitionと違い歩行ズームは伴わない(ズームは呼び出し元が別途管理しているため)
 // onFullyDone: 省略可。明転まで完全に終わった後に呼ばれる(afterBlackは暗転中に呼ばれる点と区別)
 function playAutoRetreatCutFade(afterBlack, onFullyDone) {
@@ -773,7 +755,7 @@ function playAutoRetreatCutFade(afterBlack, onFullyDone) {
 //    fadeIn.onfinishがpendingEncounterBattleを見て呼ぶ。それまでボタン無効を維持するため
 //    dungeonMoveTransitionActiveはstartBattle直前まで解除しない)
 //  - オート帰還: 歩みを止めた直後(performAutoRetreatFloorMoveが呼ぶ)
-//  - それ以外(イベント遭遇・茶屋明け・瀕死発見の確認後など、既に画面が見えている状態): 保留と同時に即発火
+//  - それ以外(イベント遭遇・茶屋明けなど、既に画面が見えている状態): 保留と同時に即発火
 // 保留〜開始までの一拍はstartBattle()内のsaveState(inBattle)より前になるため、理屈の上では
 // 「‼️を見て1秒以内にリロード」で遭遇を消せるが、スマホのリロード操作はこの窓より遅いため実害なしと判断
 let pendingEncounterBattle = null; // {enemies, pathDef, encounterText, after}
@@ -869,7 +851,7 @@ function performAutoRetreatFloorMove(enterTeahouse) {
   lastFloorMoveOutcome = null;
   playSfx(footstepSfxName());
   moveOneFloor(null, enterTeahouse);
-  if (!autoRetreatActive) return; // queueCriticalAlerts側等で既に停止済み
+  if (!autoRetreatActive) return; // 別経路で既に停止済み
   if (!retreating) return; // 0階層に到達しfinishRetreat()済み(stopAutoRetreatもそちらで呼ばれる)
   if (battle || pendingEncounterBattle) { // 戦闘の発生が決まった(pendingEncounterBattleに保留中)。歩みを止めてから遭遇の合図に入る
     stopAutoRetreat();
@@ -919,7 +901,7 @@ document.getElementById("screen-dungeon").addEventListener("pointerdown", () => 
 });
 
 // 「里に戻る」を押すと、確認後すぐにオート帰還が始まる(以後は0階層に着くまで無操作で進み続ける。
-// 戦闘/財宝発見/茶屋/瀕死発見が起きた時と、任意のタイミングでの画面タップだけが一時停止のきっかけになる)
+// 戦闘/財宝発見/茶屋が起きた時と、任意のタイミングでの画面タップだけが一時停止のきっかけになる)
 // 村からの手動帰還中(manualRetreatMode)にこのボタンを押した時は、瞬間ワープではなく「向きを
 // 変えて村への道を通常探索と同じように歩き直す」形にする(ユーザー指示、2026-07-21: 海の村は
 // 温泉村と対等な拠点であり、そこへ向かう道も戦闘等が発生する通常の探索そのものであるべき)。
@@ -953,11 +935,10 @@ document.getElementById("retreatBtn").onclick = () => {
       label: "はい",
       className: "big danger",
       onClick: () => {
-        // 瀕死の仲間を担いでいる(=ピンチで帰還を決めた)かどうかで別のセリフ枠を抽選する
+        // 仲間を失った遠征(=ピンチで帰還を決めた)かどうかで別のセリフ枠を抽選する
         const alive = fieldParty.filter((c) => c.status === "active");
-        const isCarrying = fieldParty.some((c) => c.carryingId);
         if (alive.length > 0) {
-          if (isCarrying) { if (Math.random() < DIALOGUE_CHANCE.retreatPinch) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreatPinch"); }
+          if (advLostHappened) { if (Math.random() < DIALOGUE_CHANCE.retreatPinch) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreatPinch"); }
           else { if (Math.random() < DIALOGUE_CHANCE.retreat) trySpeak(alive[Math.floor(Math.random() * alive.length)], "retreat"); }
         }
         retreating = true;
@@ -993,7 +974,6 @@ function finishRetreat() {
   retreating = false;
   clearExpeditionSnapshot(); // 帰還完了。リロードしても次からは町スタートに戻る
   recordBossWoundIfPursuing(); // 里に戻った時点で追撃モードは終了。追撃中だったなら手負いのHPを記録する(見送った扱い)
-  deliverCarriedAllies();
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
@@ -1124,9 +1104,6 @@ function moveOneFloor(pathBias, enterTeahouse) {
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
     maybeSpeakOnFloorAdvance();
   }
-  // ダンジョン内を歩き回っている間も時計は進んでいるので、町へ帰る/宿泊する時だけでなく
-  // ここでも瀕死ロスト判定を行う(担がれている間は消化されない)
-  tickCriticalExpiry(state.roster, absoluteGameMinutes());
   checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
   // 破綻寸前パーティ救済クエスト(薬草摘み): 受注中に森の対象階層へ到達したら、戦闘/宝箱の抽選とは
   // 独立して確定でキーアイテムを入手する(帰り道で通り過ぎても再入手はしない)
@@ -1136,13 +1113,8 @@ function moveOneFloor(pathBias, enterTeahouse) {
   }
   saveState();
 
-  const criticalHereList = state.roster.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
   renderDungeon();
   const arrive = enterTeahouse ? enterTeahouseFromDungeon : () => resolveFloorArrival(pathBias);
-  if (criticalHereList.length > 0) {
-    queueCriticalAlerts(criticalHereList, arrive);
-    return;
-  }
   arrive();
 }
 // 受注中の依頼があり、かつその対象フロアに到達した場合は通常の抽選より優先して確定でその群れと戦闘になる。
@@ -1654,7 +1626,7 @@ const STAGE_CHAIN_ENTER_LOG = { cave: "🌲森が少しだけ戻ってきた。"
 const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
 function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, offerValleyFork) {
   const div = document.getElementById("criticalAlert");
-  // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする(showCriticalAlertと同じ対処)
+  // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする
   document.getElementById("dungeonLog").style.display = "none";
   let picked;
   if (questApproach) {
@@ -2199,164 +2171,6 @@ function enterTeahouseFromDungeon() {
   showScreen("screen-teahouse");
 }
 
-// 同じ階に瀕死の仲間が複数いる場合、1人ずつ順番に「担ぐ/見送る」を選ばせるためのキュー
-let pendingCriticalQueue = [];
-let afterCriticalQueue = null;
-// 現在criticalAlert欄に表示中の内容(担ぐ/見送るの選択肢、または担ぎ手選択の一覧)を覚えておく。
-// 道具ボタンの使用等でrenderDungeon()が割り込んだ時に、消さずに同じ内容を再表示するために使う
-let activeCriticalAlert = null; // { critical, onResolved, screen: "alert" | "carryPicker" } | null
-function queueCriticalAlerts(criticalList, onAllDone) {
-  pendingCriticalQueue = criticalList;
-  afterCriticalQueue = onAllDone;
-  // オート帰還中に瀕死の仲間を発見した場合は、戦闘/茶屋と同じく暗転を挟んで一旦停止する
-  // (解決後も自動再開はしない。時刻変化だけが唯一の自動再開の例外)
-  if (autoRetreatActive) {
-    stopAutoRetreat();
-    playAutoRetreatCutFade(() => { showNextQueuedCriticalAlert(); });
-    return;
-  }
-  showNextQueuedCriticalAlert();
-}
-function showNextQueuedCriticalAlert() {
-  if (pendingCriticalQueue.length === 0) {
-    // 「担ぐ/見送る」の判断が全て終わるまでは進む/里に戻るを封じていたので、ここで解除する
-    document.getElementById("advanceBtn").disabled = false;
-    document.getElementById("retreatBtn").disabled = false;
-    const cb = afterCriticalQueue;
-    afterCriticalQueue = null;
-    if (cb) cb();
-    return;
-  }
-  const critical = pendingCriticalQueue.shift();
-  if (critical.status !== "critical" || critical.carriedBy) { showNextQueuedCriticalAlert(); return; } // 既に対応済みなら飛ばす
-  showCriticalAlert(critical, showNextQueuedCriticalAlert);
-}
-
-// 別の冒険で瀕死のまま残された仲間がいる階に到達した時のアラート。
-// onResolved: 「見送る」または「担ぐ」が確定した時の続き処理(複数人いる場合は次の1人のアラートへ、
-// 全員片付いたらフロア到達時は次のエンカウント抽選、戦闘直後は何もせず探索画面に留まる)。
-// 「救出して町に戻る」(即座に瀕死解除+強制帰還)は、実質ノーコストのファストトラベルになってしまうため廃止。
-// 瀕死の仲間を助ける手段は「担ぐ」(歩いて連れて帰る必要がある)のみにしてある
-function showCriticalAlert(critical, onResolved) {
-  activeCriticalAlert = { critical, onResolved, screen: "alert" };
-  // 「担ぐ/見送る」を選ぶまでは進む/里に戻るを封じる(でないと選ばずに階層を進めてしまい、
-  // 元の階に取り残されたキャラのアラートが新しい階でも(activeCriticalAlertの復元により)
-  // 出続けてしまうバグがあった)。道具ボタンはこれまで通り使用可(既存の中断復元の仕組みを維持)
-  document.getElementById("advanceBtn").disabled = true;
-  document.getElementById("retreatBtn").disabled = true;
-  document.body.classList.add("critical-alert-active");
-  const div = document.getElementById("criticalAlert");
-  // このポップアップの下に隠れているはずの探索ログが透けて見え、下部の進む/里に戻るボタンとも
-  // 見た目上重なってしまうため、ポップアップ表示中はログを非表示にする(解決時に元に戻す)
-  document.getElementById("dungeonLog").style.display = "none";
-  const stageLabel = critical.criticalStage === "coast" ? "海岸" : critical.criticalStage === "cave" ? "洞窟" : "深淵の森";
-  div.innerHTML = `
-    <div class="critical-alert">
-      <p class="critical-alert-title">仲間が倒れている</p>
-      <div class="critical-alert-portrait">
-        <img src="${characterPortraitSrc(critical)}">
-      </div>
-      <p class="critical-alert-name">${critical.name}</p>
-      <div class="critical-alert-timer">
-        <span class="critical-alert-timer-label">消滅まで残り</span>
-        <span class="critical-alert-timer-value">${criticalTimeLeftStr(critical)}</span>
-      </div>
-      <p class="critical-alert-place">${stageLabel} ${critical.criticalFloor}層目</p>
-      <div class="critical-alert-actions">
-        <button class="big primary critical-alert-btn" id="carryBtn">連れて帰る</button>
-        <button class="big critical-alert-skip-btn critical-alert-btn" id="skipCriticalBtn">見送る</button>
-      </div>
-    </div>
-  `;
-  // 閉じる/画面遷移する直前にごく短いscale+opacityの退場演出を挟んでから次へ進む(0.15秒、テンポは維持)
-  function closeWithAnim(next) {
-    const box = div.querySelector(".critical-alert");
-    if (box) box.classList.add("critical-alert-closing");
-    setTimeout(next, 150);
-  }
-  document.getElementById("carryBtn").onclick = () => {
-    // 担げる仲間が1人もいない場合はshowCarryPicker側がshowInfoModal()を出して現在のアラートをそのまま
-    // 残す仕様なので、その場合だけは退場演出を挟まずに現在の表示を維持する
-    if (aliveField().filter((c) => !c.carryingId).length === 0) {
-      showCarryPicker(critical, onResolved);
-      return;
-    }
-    closeWithAnim(() => showCarryPicker(critical, onResolved));
-  };
-  document.getElementById("skipCriticalBtn").onclick = () => {
-    closeWithAnim(() => {
-      dlog(`${critical.name}をその場に残した。`);
-      div.innerHTML = "";
-      document.getElementById("dungeonLog").style.display = "";
-      document.body.classList.remove("critical-alert-active");
-      activeCriticalAlert = null;
-      onResolved();
-    });
-  };
-}
-
-// 誰が担ぐかを選ぶ(探索中に取り残された仲間の階へたどり着いた時、または戦闘直後にこのフロアで瀕死になった仲間がいる時)
-function showCarryPicker(critical, onResolved) {
-  const div = document.getElementById("criticalAlert");
-  const carriers = aliveField().filter((c) => !c.carryingId);
-  if (carriers.length === 0) {
-    showInfoModal("担げる仲間がいません(全員ふさがっています)");
-    return;
-  }
-  activeCriticalAlert = { critical, onResolved, screen: "carryPicker" };
-  document.getElementById("advanceBtn").disabled = true;
-  document.getElementById("retreatBtn").disabled = true;
-  const rowHtml = (c) => {
-    return `
-      <button class="big" data-carrier-id="${c.id}" style="margin-top:0.3rem; display:flex; align-items:center; gap:0.6rem; justify-content:flex-start; padding-left:0.8rem;">
-        <img src="${characterPortraitSrc(c)}" style="width:36px;height:36px;object-fit:contain;background:#353a44;border-radius:4px;">
-        <span>${c.name}</span>
-      </button>
-    `;
-  };
-  div.innerHTML = `
-    <div class="critical-alert">
-      <p><strong>${critical.name}を誰が担ぎますか？</strong></p>
-      ${carriers.map(rowHtml).join("")}
-      <button class="big" id="cancelCarryBtn" style="margin-top:0.4rem;">やめる</button>
-    </div>
-  `;
-  carriers.forEach((c) => {
-    div.querySelector(`button[data-carrier-id="${c.id}"]`).onclick = () => {
-      c.carryingId = critical.id;
-      critical.carriedBy = c.id;
-      critical.criticalFloor = null;
-      critical.criticalExpireMinutes = null;
-      saveState();
-      dlog(`${c.name}が${critical.name}を担いだ。里まで歩いて連れて帰ろう。`);
-      if (Math.random() < DIALOGUE_CHANCE.carried) trySpeak(critical, "carried");
-      playSfx("carry");
-      // ユーザー指示により、以前あった2秒間の静止(演出のための強制停止)を廃止し、即座に再開する
-      activeCriticalAlert = null;
-      div.innerHTML = "";
-      document.body.classList.remove("critical-alert-active");
-      renderDungeon();
-      onResolved();
-    };
-  });
-  document.getElementById("cancelCarryBtn").onclick = () => showCriticalAlert(critical, onResolved);
-}
-
-// 担いでいた仲間を無事に里まで届け、瀕死から回復させる(里に着いた時に呼ぶ)
-// 担がれている本人は、今回の遠征の名簿(fieldParty)に居るとは限らない(別の冒険で瀕死のまま
-// 取り残されていた仲間を、今回の探索中に見つけて担いだ場合など)。そのため検索はfieldPartyではなく
-// state.roster全体に対して行い、「今回の遠征メンバーの誰かに担がれているか」で判定する
-function deliverCarriedAllies() {
-  state.roster.forEach((c) => {
-    if (c.status === "critical" && c.carriedBy && fieldParty.some((f) => f.id === c.carriedBy)) {
-      const carrier = getRosterChar(c.carriedBy);
-      rescueCritical(c);
-      dlog(`${carrier ? carrier.name : "仲間"}が担いでいた${c.name}を無事に里まで連れ帰った！`);
-    }
-  });
-  fieldParty.forEach((c) => { c.carryingId = null; });
-}
-
 // 帰還中(retreating)は危険が少ない道を通るという設定で、戦闘遭遇率・財宝発見率を下げる(固定値)
 const RETREAT_BATTLE_CHANCE = 0.18; // ユーザー指示で19%・18%に1%下げた
 const RETREAT_GOLD_CHANCE = 0.10;
@@ -2473,7 +2287,7 @@ function rollEncounter(pathBias) {
 // 発生条件(全て満たす時のみ100%発生。呼び出し元rollEncounter側で「敵と遭遇しなかった場合」
 // (財宝発見含む、神隠しの道は対象外)・帰還中でないこと、に限定して呼んでいるため、ここでは
 // 残りの条件のみチェックする:
-// ① パーティ全員(戦闘に出ているactiveメンバー)がストレス49以下、かつ瀕死のキャラがいない、担いでもいない
+// ① パーティ全員(戦闘に出ているactiveメンバー)がストレス49以下
 // ② パーティ全員がHP50%以上
 // ③⑦ その遠征で敵に一回以上勝利しており、かつ直近の勝利後にまだこのセリフが発火していない
 //     (peaceDialogueLocked、victory()勝利のたびにunlockPeaceDialogueAfterVictory()でfalseに戻り、
@@ -2483,8 +2297,6 @@ function peaceDialogueConditionsMet() {
   if (peaceDialogueLocked) return false; // ③⑦
   const active = fieldParty.filter((c) => c.status === "active");
   if (active.length < 2) return false; // ⑥
-  if (fieldParty.some((c) => c.status === "critical")) return false; // ① 瀕死がいない
-  if (fieldParty.some((c) => c.carryingId)) return false; // ① 担いでいない
   if (!active.every((c) => (c.fatigue || 0) <= 49)) return false; // ① ストレス49以下
   if (!active.every((c) => c.maxHp > 0 && c.hp / c.maxHp >= 0.5)) return false; // ② HP50%以上
   return true;
@@ -2572,8 +2384,6 @@ function tiredDialogueConditionsMet() {
   if (tiredDialogueLocked) return false; // 勝利→1回発火のサイクル(banterのpeaceDialogueLockedと同じ)
   const active = fieldParty.filter((c) => c.status === "active");
   if (active.length < 2) return false;
-  if (fieldParty.some((c) => c.status === "critical")) return false; // 瀕死がいない
-  if (fieldParty.some((c) => c.carryingId)) return false; // 担いでいない
   if (!active.every((c) => c.maxHp > 0 && c.hp / c.maxHp >= 0.5)) return false; // HP50%以上
   return true;
 }
@@ -2771,14 +2581,6 @@ function showTreasurePopup(amount, extraImageSrc) {
   treasurePopupTimer = setTimeout(() => { popup.style.display = "none"; }, 1800);
 }
 
-function checkStrandedOnCurrentFloor() {
-  // 戦闘中に「控えと交代」した瀕死の仲間はfieldPartyから控え(reserveFieldMember)へ移っているため、
-  // ここでも合わせて確認しないと担ぐ/見送るの選択肢が二度と出なくなってしまう
-  const pool = reserveFieldMember ? fieldParty.concat([reserveFieldMember]) : fieldParty;
-  const criticalList = pool.filter((c) => c.status === "critical" && c.criticalFloor === currentFloor && (c.criticalStage || "forest") === currentStage && !c.carriedBy);
-  if (criticalList.length > 0) queueCriticalAlerts(criticalList, () => {});
-}
-
 // ============ 茶屋 ============
 // 深淵の森15層に建築後は確定で立ち寄れる休憩所。「一休み」でHP/MPを回復、「買い物」で
 // 回復薬/煙玉/お茶菓子を購入できる。夜・早朝の時間帯は営業時間外として利用できない。
@@ -2932,7 +2734,6 @@ document.getElementById("teaHouseRestBtn").onclick = () => {
     });
     fieldParty.forEach((c) => { if (c.status === "active") useTeahouseRest(c); });
     advanceExplorationClock(TEAHOUSE_REST_CLOCK_MINUTES);
-    tickCriticalExpiry(state.roster, absoluteGameMinutes());
     checkQuestDeadline();
     saveState();
     showRestSummary("teahouseRestSummary", "teahouseRestSummaryList", "teahouseRestNextBtn", beforeSnapshot, () => {

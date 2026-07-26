@@ -1,9 +1,9 @@
 // ============ save.js: セーブ/ロード(localStorageへの保存・読み込み・旧セーブ互換処理) ============
 const SAVE_KEY = "dungeon1_save";
 
-// 開発中に途中でMP/疲労度/装備ボーナス/瀕死システムの仕組みを追加・変更したため、それ以前に
+// 開発中に途中でMP/疲労度/装備ボーナスの仕組みを追加・変更したため、それ以前に
 // 保存された古いセーブのキャラクターにはこれらのフィールドが無かったり形が古かったりする。
-// ロード時に不足しているフィールドを補完し、旧「死体(corpse)」状態も瀕死(critical)に変換する
+// ロード時に不足しているフィールドを補完する
 function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
   if (c.onsenLockUntilMinutes === undefined) c.onsenLockUntilMinutes = null; // 旧セーブ(入浴ロック導入前)はロック無し扱い
   // 旧セーブ(入浴時に即ストレスを減らしていた仕様)はfalse扱いにする。既にonsenLockUntilMinutesが
@@ -26,21 +26,6 @@ function normalizeCharacter(c, classUpgrades, nowAbsoluteMinutes) {
     c.maxMp = newMaxMp;
     c.equipBonus = newEquipBonus;
   }
-  if (c.status === "corpse") {
-    c.status = "critical";
-    c.criticalFloor = c.corpseFloor;
-    c.criticalExpireMinutes = nowAbsoluteMinutes + CRITICAL_MIN_HOURS * 60;
-  }
-  if (c.criticalFloor === undefined) c.criticalFloor = null;
-  if (c.criticalStage === undefined) c.criticalStage = "forest"; // 旧セーブ(この機能追加以前)は全て森で瀕死になっていたと扱う
-  if (c.criticalExpireMinutes === undefined) {
-    // 旧halfDayStep方式のセーブから移行。瀕死中なら現在時刻起点で新しく猶予を与え、
-    // それ以外(active/lost)はもともと使わない値なのでnullのままでよい
-    c.criticalExpireMinutes = c.status === "critical" ? nowAbsoluteMinutes + CRITICAL_MIN_HOURS * 60 : null;
-  }
-  delete c.criticalExpireHalfDay;
-  if (c.carryingId === undefined) c.carryingId = null;
-  if (c.carriedBy === undefined) c.carriedBy = null;
   // 性格構成を変更した際(例: 「豪快」を廃止し「怖がり」に置き換え)、旧セーブに残っている
   // 今のPERSONALITIESに存在しない性格は、DIALOGUE_LINES/PEACE_DIALOGUES/OMIKUJI_LINESの
   // どのルックアップにも一致せず「セリフが何も出ない」不具合の原因になるため、現行の性格一覧に
@@ -111,7 +96,7 @@ function loadState() {
       const loaded = JSON.parse(raw);
       loaded.classUpgrades = loaded.classUpgrades || {};
       loaded.timeOfDay = loaded.timeOfDay || "day";
-      delete loaded.halfDayStep; // 瀕死ロスト判定を実時間ベースに移行したため廃止(criticalExpireMinutes参照)
+      delete loaded.halfDayStep; // 旧・瀕死システム時代の残骸(瀕死自体を2026-07-26に廃止)
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
       if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、家レベルで解禁される施設を再度お金を払わず使えるよう最大レベル扱いにする
@@ -205,7 +190,7 @@ function loadState() {
       if (loaded.seenUnlockedBuildings == null) loaded.seenUnlockedBuildings = {}; // 旧セーブ用の初期値(NEWバッジ機能実装前は無条件で空扱い)
       if (loaded.seenUnlockedClasses == null) loaded.seenUnlockedClasses = {};
       if (loaded.maxFloorReached == null) loaded.maxFloorReached = { forest: 0, coast: 0 }; // 旧セーブ用の初期値(この機能追加以前は記録していないため0から)
-      if (loaded.instadeathMode == null) loaded.instadeathMode = false; // 旧セーブ用の初期値(即死モード実装以前はOFF扱い)
+      delete loaded.instadeathMode; // 即死モードは戦闘不能=100%ロストの標準化(2026-07-26)に伴い廃止
       if (loaded.highEncounterMode == null) loaded.highEncounterMode = false; // 旧セーブ用の初期値(高遭遇モード実装以前はOFF扱い)
       // 高耐久モードはON/OFFトグル(bool)から、防御力アップ幅・攻撃力ダウン幅をそれぞれ選ぶ
       // ドロップダウン(0〜100%、独立)に仕様変更した。旧セーブでONだった場合は、以前の固定値だった

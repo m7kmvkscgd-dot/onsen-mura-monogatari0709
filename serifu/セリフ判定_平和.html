@@ -1,0 +1,5746 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>せりふくん(平和)</title>
+<style>
+  :root {
+    --bg: #1c1a22;
+    --card-bg: #2a2733;
+    --text: #f0ecf5;
+    --sub: #a89fb5;
+    --accent: #e6c977;
+    --tired-bg: #4a2530;
+    --tired-border: #d16b7a;
+    --energetic-bg: #1f3d33;
+    --energetic-border: #5fbf94;
+    --adopt: #4caf7d;
+    --reject: #d9576a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 4px;
+    flex: 0 0 auto;
+  }
+  .topbar-left {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  .topbar-right {
+    display: flex;
+    gap: 6px;
+  }
+  .topbar-right button {
+    background: #3a3646;
+    color: var(--text);
+    border: 1px solid #4c4759;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .progress-wrap {
+    flex: 0 0 auto;
+    padding: 2px 12px 8px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #3a3646;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .stats {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--sub);
+    text-align: center;
+  }
+  .card-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    padding: 4px 12px;
+  }
+  .card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 10px 12px;
+  }
+  .card-meta {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #3a3646;
+    color: var(--sub);
+    white-space: nowrap;
+  }
+  .badge-id { color: var(--accent); }
+  .bubbles {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    overflow: hidden;
+    padding: 4px 2px;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.4;
+    border: 2px solid;
+    word-break: break-word;
+  }
+  .bubble-a { align-self: flex-start; border-bottom-left-radius: 3px; }
+  .bubble-b { align-self: flex-end; border-bottom-right-radius: 3px; text-align: right; }
+  .bubble.mood-tired { background: var(--tired-bg); border-color: var(--tired-border); }
+  .bubble.mood-energetic { background: var(--energetic-bg); border-color: var(--energetic-border); }
+  .chars {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    gap: 4%;
+    height: 34dvh;
+    max-height: 260px;
+  }
+  .char-slot {
+    width: 42%;
+    max-width: 180px;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: flex-end;
+  }
+  .char-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+  }
+  .empty-state {
+    margin: auto;
+    color: var(--sub);
+    font-size: 16px;
+    text-align: center;
+  }
+  .action-bar {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .action-bar button {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .btn-back { flex: 0.7 !important; background: #4c4759; color: var(--text); }
+  .btn-reject { background: var(--reject); }
+  .btn-adopt { background: var(--adopt); }
+  .action-bar button:disabled { opacity: 0.4; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .overlay-panel {
+    width: 100%;
+    max-width: 480px;
+    max-height: 80dvh;
+    background: var(--card-bg);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .overlay-header {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid #3a3646;
+    font-weight: bold;
+  }
+  .overlay-header button {
+    background: #3a3646;
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 14px;
+  }
+  .history-empty {
+    color: var(--sub);
+    text-align: center;
+    padding: 20px 0;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    border-bottom: 1px solid #3a3646;
+    font-size: 13px;
+  }
+  .history-icon { font-size: 16px; width: 20px; text-align: center; }
+  .history-item.adopt .history-icon { color: var(--adopt); }
+  .history-item.reject .history-icon { color: var(--reject); }
+  .history-id { color: var(--sub); flex: 0 0 auto; }
+  .history-preview {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #exportText {
+    width: 100%;
+    height: 40dvh;
+    background: #1c1a22;
+    color: var(--text);
+    border: 1px solid #3a3646;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    resize: none;
+  }
+  #btnCopyExport {
+    margin-top: 8px;
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #2a2733;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .export-empty { color: var(--sub); text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">せりふくん(平和)</div>
+    <div class="topbar-right">
+      <button id="btnHistory">履歴</button>
+      <button id="btnExport">出力</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="stats" id="statsText"></div>
+  </div>
+
+  <div class="card-area" id="cardArea"></div>
+
+  <div class="action-bar">
+    <button id="btnBack" class="btn-back">← 戻る</button>
+    <button id="btnReject" class="btn-reject">✕ 没</button>
+    <button id="btnAdopt" class="btn-adopt">◯ 採用</button>
+  </div>
+</div>
+
+<div class="overlay" id="historyOverlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <span>履歴</span>
+      <button id="btnCloseHistory">閉じる</button>
+    </div>
+    <div class="overlay-body" id="historyList"></div>
+  </div>
+</div>
+
+<div class="overlay" id="exportOverlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <span>出力(採用分)</span>
+      <button id="btnCloseExport">閉じる</button>
+    </div>
+    <div class="overlay-body">
+      <textarea id="exportText" readonly></textarea>
+      <button id="btnCopyExport">クリップボードにコピー</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// せりふくん(平和) - セリフ判定システム(全員元気、MOODなし)
+// LINESデータは「続き」ワークフローでこの配列に追記していく(ID連番継続)。
+// 1件の形式: { id, pair:[性格A,性格B], mood:"bothTired"|"aTiredBEnergetic"|"aEnergeticBTired",
+//              lines:[{speaker:"A"|"B", text:"..."}, ...] } (lines は2〜3件)
+// ============================================================
+const LINES = [
+  { id: 1, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"宝箱の匂いがするもん!"},
+    {speaker:"B", text:"それは苔の匂いだ"}
+  ]},
+  { id: 2, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"鼻歌、一緒にどう？"},
+    {speaker:"B", text:"……音痴"},
+    {speaker:"A", text:"大丈夫、私も"}
+  ]},
+  { id: 3, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"今日は百体倒すぞ!"},
+    {speaker:"B", text:"目標だけ立派だって"}
+  ]},
+  { id: 4, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"あの山、大きな器に見える〜"},
+    {speaker:"B", text:"何も盛れません"}
+  ]},
+  { id: 5, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"今の音なに…!?"},
+    {speaker:"B", text:"風だ"},
+    {speaker:"A", text:"風って敵…？"}
+  ]},
+  { id: 6, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あたしの強さ、字にすると？"},
+    {speaker:"B", text:"「元気」かな"},
+    {speaker:"A", text:"「最強」でしょ"}
+  ]},
+  { id: 7, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"手裏剣に流派はありますか"},
+    {speaker:"B", text:"あたし流! 今できたもん!"}
+  ]},
+  { id: 8, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……勝負"},
+    {speaker:"B", text:"受けて立つ! 何のだ!?"},
+    {speaker:"A", text:"……にらめっこ"}
+  ]},
+  { id: 9, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"花かんむり作ろっか"},
+    {speaker:"B", text:"実用性は無いが…作る"}
+  ]},
+  { id: 10, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"妖怪と友達になれるもん!"},
+    {speaker:"B", text:"なりたくないよ!?"}
+  ]},
+  { id: 11, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"歩幅を合わせてみろ"},
+    {speaker:"B", text:"合わせたら止まりそう〜"}
+  ]},
+  { id: 12, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"この先に強敵の気配がする!"},
+    {speaker:"B", text:"気配の根拠を提出してください"}
+  ]},
+  { id: 13, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あたしのすごい話、聞く？"},
+    {speaker:"B", text:"……三行で"}
+  ]},
+  { id: 14, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"水切り十回いくもん!"},
+    {speaker:"B", text:"二回だったね〜"},
+    {speaker:"A", text:"心は十回もん!"}
+  ]},
+  { id: 15, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"本日の目標を発表します"},
+    {speaker:"B", text:"昨日と同じなら省略しろ"}
+  ]},
+  { id: 16, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"背中合わせなら戦える…かも"},
+    {speaker:"B", text:"よし任せろ! 背中は譲らん!"}
+  ]},
+  { id: 17, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……これあげる"},
+    {speaker:"B", text:"わ、きれいな石! ありがとう"}
+  ]},
+  { id: 18, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしの必殺技名、決めたもん!"},
+    {speaker:"B", text:"長いと噛むからやめときな"}
+  ]},
+  { id: 19, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"危険予知の訓練をする"},
+    {speaker:"B", text:"予知したら回避できるの…!?"}
+  ]},
+  { id: 20, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"雲に名前つけよ〜あれは団子雲〜"},
+    {speaker:"B", text:"……安直"}
+  ]},
+  { id: 21, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"今日の私は絶好調だ!"},
+    {speaker:"B", text:"いつも絶好調だよね？"}
+  ]},
+  { id: 22, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"先生って呼んであげよっか？"},
+    {speaker:"B", text:"教えることがありません"}
+  ]},
+  { id: 23, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"足音を消す練習してるの…"},
+    {speaker:"B", text:"声でばれてるじゃん"}
+  ]},
+  { id: 24, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"静かだな"},
+    {speaker:"B", text:"何か企んでるもん!"},
+    {speaker:"A", text:"自白が早い"}
+  ]},
+  { id: 25, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"今日はいい日になりそう"},
+    {speaker:"B", text:"もうなってるよ〜"}
+  ]},
+  { id: 26, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……調子いい"},
+    {speaker:"B", text:"知ってる。顔に書いてあるし"}
+  ]},
+  { id: 27, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"声が大きいです"},
+    {speaker:"B", text:"元気の音量だ!"}
+  ]},
+  { id: 28, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"面白いこと言うから聞いてて!"},
+    {speaker:"B", text:"うん、ずっと待ってるね"}
+  ]},
+  { id: 29, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"四つ葉さがそ〜"},
+    {speaker:"B", text:"効率の悪い幸運だ"}
+  ]},
+  { id: 30, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"誰かに見られてる気がする…"},
+    {speaker:"B", text:"……小鳥"},
+    {speaker:"A", text:"鳥か〜…"}
+  ]},
+  { id: 31, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"勝利の舞を考案した!"},
+    {speaker:"B", text:"地味なら没にするもん!"}
+  ]},
+  { id: 32, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたし、いけてるでしょ"},
+    {speaker:"B", text:"データが足りない"}
+  ]},
+  { id: 33, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"手をつなご？ 迷子防止"},
+    {speaker:"B", text:"迷子になる予定なの…!?"}
+  ]},
+  { id: 34, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"予定通りに進んでいます"},
+    {speaker:"B", text:"予定があったんだ〜"}
+  ]},
+  { id: 35, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……あれ見て"},
+    {speaker:"B", text:"どれ!? どれ!?"},
+    {speaker:"A", text:"……もう飛んでった"}
+  ]},
+  { id: 36, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"落ち着け"},
+    {speaker:"B", text:"落ち着いてこれだ!"}
+  ]},
+  { id: 37, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"抜き打ちでダジャレいくもん!"},
+    {speaker:"B", text:"事前申請をお願いします"}
+  ]},
+  { id: 38, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"いい天気〜"},
+    {speaker:"B", text:"情報が三周遅れだって"}
+  ]},
+  { id: 39, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"準備運動しないと不安…"},
+    {speaker:"B", text:"三回目ですが付き合います"}
+  ]},
+  { id: 40, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"掛け声の練習だ! おー!"},
+    {speaker:"B", text:"……おー"},
+    {speaker:"A", text:"及第点だ!"}
+  ]},
+  { id: 41, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"今日のラッキーアイテムは？"},
+    {speaker:"B", text:"教えたら取り合いになるもん"}
+  ]},
+  { id: 42, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"競争しよ、あそこの木まで"},
+    {speaker:"B", text:"心の中でもう走ってる〜"}
+  ]},
+  { id: 43, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"無駄口を叩かない同盟を結ぶか"},
+    {speaker:"B", text:"加入をもって発言とします"}
+  ]},
+  { id: 44, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"今日のあたし、何点!?"},
+    {speaker:"B", text:"……九十八"},
+    {speaker:"A", text:"減点どこ!?"}
+  ]},
+  { id: 45, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"お腹すいたらどうしよ〜"},
+    {speaker:"B", text:"おやつ、半分こしよ？"}
+  ]},
+  { id: 46, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"景気づけに一言頼む!"},
+    {speaker:"B", text:"進め"}
+  ]},
+  { id: 47, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"虫が飛んでる…こわい…"},
+    {speaker:"B", text:"あんたのが百倍大きいって"}
+  ]},
+  { id: 48, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"会話の練習をしましょう"},
+    {speaker:"B", text:"……本番派"}
+  ]},
+  { id: 49, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"今日も一緒にがんばろうね"},
+    {speaker:"B", text:"百人力だ!"}
+  ]},
+  { id: 50, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"観察日記をつけている。お前の"},
+    {speaker:"B", text:"面白い章ある〜？"}
+  ]},
+  { id: 51, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"新しい挨拶考えたもん!"},
+    {speaker:"B", text:"従来ので足りている"}
+  ]},
+  { id: 52, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……守る"},
+    {speaker:"B", text:"え、なにから!?"},
+    {speaker:"A", text:"……全部"}
+  ]},
+  { id: 53, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"強さの秘訣、教えてあげる"},
+    {speaker:"B", text:"ぜひ頼む!"},
+    {speaker:"A", text:"気分"}
+  ]},
+  { id: 54, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"この石、顔に見える〜"},
+    {speaker:"B", text:"岩衛門と名付けるもん!"}
+  ]},
+  { id: 55, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"反省点を…思いつきません"},
+    {speaker:"B", text:"いい日だね"}
+  ]},
+  { id: 56, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"恐れは友だ! 抱きしめろ!"},
+    {speaker:"B", text:"抱きしめたくないよ!?"}
+  ]},
+  { id: 57, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"沈黙は金だ"},
+    {speaker:"B", text:"あたしは喋る派の大富豪"}
+  ]},
+  { id: 58, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"好きな食べ物おしえて？"},
+    {speaker:"B", text:"……甘いの"}
+  ]},
+  { id: 59, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"早口言葉対決だもん! なまむぎ…"},
+    {speaker:"B", text:"なーまーむーぎー〜"}
+  ]},
+  { id: 60, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"お守り、効いてるかな…"},
+    {speaker:"B", text:"現在無傷。つまり効いている"}
+  ]},
+  { id: 61, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"どっちが人気者か勝負する？"},
+    {speaker:"B", text:"審査員がいないじゃん!"}
+  ]},
+  { id: 62, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"私語が多い気がします"},
+    {speaker:"B", text:"今のも私語だ"}
+  ]},
+  { id: 63, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"きょうの目標は〜？"},
+    {speaker:"B", text:"全力!"},
+    {speaker:"A", text:"ざっくり〜"}
+  ]},
+  { id: 64, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……花"},
+    {speaker:"B", text:"私に？"},
+    {speaker:"A", text:"……観賞用"}
+  ]},
+  { id: 65, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"修行の成果を見せる時だ!"},
+    {speaker:"B", text:"成果の定義から確認します"}
+  ]},
+  { id: 66, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"度胸試しするもん!"},
+    {speaker:"B", text:"私は見てるだけだから…!"}
+  ]},
+  { id: 67, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"情報交換をしよう"},
+    {speaker:"B", text:"……特になし"},
+    {speaker:"A", text:"早い"}
+  ]},
+  { id: 68, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"髪、結んであげよっか"},
+    {speaker:"B", text:"別にいい…上手にね"}
+  ]},
+  { id: 69, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"道草って食べられるのかな〜"},
+    {speaker:"B", text:"比喩です。食べません"}
+  ]},
+  { id: 70, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"変な夢見た…妖怪と踊ってた…"},
+    {speaker:"B", text:"楽しそうじゃんもん!"},
+    {speaker:"A", text:"楽しかったのがこわい…"}
+  ]},
+  { id: 71, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"褒め言葉の練習しなよ"},
+    {speaker:"B", text:"えらい"},
+    {speaker:"A", text:"練習の成果それ？"}
+  ]},
+  { id: 72, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"規則正しい生活が力になります"},
+    {speaker:"B", text:"規則って破る用じゃないの!?"}
+  ]},
+  { id: 73, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"走り込みするぞ!"},
+    {speaker:"B", text:"見学席どこ〜？"}
+  ]},
+  { id: 74, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……その髪型、いい"},
+    {speaker:"B", text:"え!? …ふーん、当然だし"}
+  ]},
+  { id: 75, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"深呼吸って気持ちいいね"},
+    {speaker:"B", text:"酸素の効果だ"}
+  ]},
+  { id: 76, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"ライバル宣言するもん!"},
+    {speaker:"B", text:"望むところだ! 何で勝負だ!"},
+    {speaker:"A", text:"あっち向いてほいで!"}
+  ]},
+  { id: 77, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"のんびりしてたら強くなれた〜"},
+    {speaker:"B", text:"その理屈が一番こわい…"}
+  ]},
+  { id: 78, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"平和だ"},
+    {speaker:"B", text:"うん、平和だね"},
+    {speaker:"A", text:"記録しておこう"}
+  ]},
+  { id: 79, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"無口対決しよっか"},
+    {speaker:"B", text:"……"},
+    {speaker:"A", text:"あたしの負けじゃん"}
+  ]},
+  { id: 80, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"勇気は準備から生まれます"},
+    {speaker:"B", text:"じゃあ準備します…いっぱい…"}
+  ]},
+  { id: 81, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"必殺技は叫んで出す派だ!"},
+    {speaker:"B", text:"あたしも叫ぶ派だもん! 絶対!"}
+  ]},
+  { id: 82, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"お茶の時間にしよっか"},
+    {speaker:"B", text:"三票入れる〜"}
+  ]},
+  { id: 83, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"前向きな報告だけ許可する"},
+    {speaker:"B", text:"全部前向きだから長いもん!"}
+  ]},
+  { id: 84, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"妖怪の弱点しってる…？"},
+    {speaker:"B", text:"……私たち"}
+  ]},
+  { id: 85, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"縁側ごっこしよ〜"},
+    {speaker:"B", text:"ここ森だって"}
+  ]},
+  { id: 86, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"声量の訓練ですか"},
+    {speaker:"B", text:"ただの返事だ!"},
+    {speaker:"A", text:"規制します"}
+  ]},
+  { id: 87, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"世界一おもしろい話するもん"},
+    {speaker:"B", text:"審査基準は優しめにするね"}
+  ]},
+  { id: 88, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……暇"},
+    {speaker:"B", text:"平和の証拠だ"}
+  ]},
+  { id: 89, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"敬語やめなよ、堅いって"},
+    {speaker:"B", text:"では砕けます。よろしくって"},
+    {speaker:"A", text:"似合わな!?"}
+  ]},
+  { id: 90, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"この景色、皆に見せたいな!"},
+    {speaker:"B", text:"絵に描いて帰ろっか"}
+  ]},
+  { id: 91, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"恐怖の対象を列挙してみろ"},
+    {speaker:"B", text:"時間が足りないよ…!?"}
+  ]},
+  { id: 92, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"ものまね第二弾いくもん!"},
+    {speaker:"B", text:"第一弾を覚えてないって"}
+  ]},
+  { id: 93, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"歌詠むよ〜 五・七・五〜"},
+    {speaker:"B", text:"……字余り"}
+  ]},
+  { id: 94, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"木の陰に誰かいる…!"},
+    {speaker:"B", text:"よし私が見てくる!"},
+    {speaker:"A", text:"一人にしないで!?"}
+  ]},
+  { id: 95, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"今日のよかったこと発表会しよ？"},
+    {speaker:"B", text:"議事録を用意します"}
+  ]},
+  { id: 96, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"おやつ賭けて勝負しない？"},
+    {speaker:"B", text:"賭けた分はみんなで食べよ〜"}
+  ]},
+  { id: 97, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"目標を唱和します。ご一緒に"},
+    {speaker:"B", text:"……唱和済み"}
+  ]},
+  { id: 98, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"燃えてきたー!"},
+    {speaker:"B", text:"燃料は何だ"}
+  ]},
+  { id: 99, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"だいじょうぶ、そばにいるよ"},
+    {speaker:"B", text:"それが一番きく…"}
+  ]},
+  { id: 100, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"平和っていいね〜"},
+    {speaker:"B", text:"いいね〜…なんか歌うもん!"}
+  ]},
+  { id: 101, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"見て、変な形の木!"},
+    {speaker:"B", text:"お前の髪型に似てる"}
+  ]},
+  { id: 102, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"今日の空、きれいだね"},
+    {speaker:"B", text:"……見てる"}
+  ]},
+  { id: 103, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あんたの技、名前ダサいって"},
+    {speaker:"B", text:"心で名付けた!"},
+    {speaker:"A", text:"だからか…"}
+  ]},
+  { id: 104, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"きのこ狩り日和だね〜"},
+    {speaker:"B", text:"毒のは狩らないでね…!"}
+  ]},
+  { id: 105, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"元気の出どころを知りたい"},
+    {speaker:"B", text:"秘密! 一子相伝じゃん!"}
+  ]},
+  { id: 106, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"素振り千回付き合え!"},
+    {speaker:"B", text:"見てる係でもいい？"}
+  ]},
+  { id: 107, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……袖、ほつれてる"},
+    {speaker:"B", text:"え!? …直せる？"},
+    {speaker:"A", text:"……任せて"}
+  ]},
+  { id: 108, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"歩きながら学べる事は多いです"},
+    {speaker:"B", text:"雲の名前おぼえた〜"}
+  ]},
+  { id: 109, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"蛇いたらどうしよう…"},
+    {speaker:"B", text:"あたしが睨んで追い返す"}
+  ]},
+  { id: 110, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"大声出した人が勝ちね!"},
+    {speaker:"B", text:"近所迷惑です"}
+  ]},
+  { id: 111, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"空見ながら歩けるよ〜特技〜"},
+    {speaker:"B", text:"特技の使い所がない"}
+  ]},
+  { id: 112, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"今日の意気込みを聞かせろ!"},
+    {speaker:"B", text:"……ぼちぼち"}
+  ]},
+  { id: 113, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あたしが隊長ってことでいい？"},
+    {speaker:"B", text:"いいよ、隊長さん"},
+    {speaker:"A", text:"え、あっさり…責任重…"}
+  ]},
+  { id: 114, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"経験上、今日は安全だ"},
+    {speaker:"B", text:"経験って何回分…？"}
+  ]},
+  { id: 115, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"隠し芸大会開催!"},
+    {speaker:"B", text:"拍手の練習しとく〜"}
+  ]},
+  { id: 116, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"姿勢が美しいですね"},
+    {speaker:"B", text:"でしょ。生まれつきだし"}
+  ]},
+  { id: 117, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"転ばないように見ててあげる"},
+    {speaker:"B", text:"私が!? 転ぶと思われてる!?"}
+  ]},
+  { id: 118, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……いい天気"},
+    {speaker:"B", text:"喋った! 記念日じゃん!"}
+  ]},
+  { id: 119, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"おやつの時間はまだかな〜"},
+    {speaker:"B", text:"時間を決めた覚えがありません"}
+  ]},
+  { id: 120, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"妖怪の鳴き真似しないで…"},
+    {speaker:"B", text:"上手すぎるのが悪いじゃん？"}
+  ]},
+  { id: 121, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの実力、まだ三割だし"},
+    {speaker:"B", text:"七割を見たことがない"}
+  ]},
+  { id: 122, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"走れば景色も倍楽しいぞ!"},
+    {speaker:"B", text:"倍ぶれて見えるよ〜"}
+  ]},
+  { id: 123, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"いつも元気で偉いね"},
+    {speaker:"B", text:"褒められて伸びる型だもん!"}
+  ]},
+  { id: 124, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"沈黙が心地よい"},
+    {speaker:"B", text:"……同感"}
+  ]},
+  { id: 125, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"木の上から景色見てくるね!"},
+    {speaker:"B", text:"降りられなくなるよ…!?"}
+  ]},
+  { id: 126, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"ペース配分を考えましょう"},
+    {speaker:"B", text:"常に全力が私の配分だ!"}
+  ]},
+  { id: 127, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"面白い形の枝ひろった〜"},
+    {speaker:"B", text:"何に使うの、それ"},
+    {speaker:"A", text:"眺める〜"}
+  ]},
+  { id: 128, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……髪、切った？"},
+    {speaker:"B", text:"気づいてくれたの!?"}
+  ]},
+  { id: 129, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"競争で負けたことないし"},
+    {speaker:"B", text:"私とやったことないだろ!"}
+  ]},
+  { id: 130, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"心の準備してから進みたい…"},
+    {speaker:"B", text:"具体的に何分だ"},
+    {speaker:"A", text:"三年…"}
+  ]},
+  { id: 131, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"たんぽぽの綿毛、飛ばそ？"},
+    {speaker:"B", text:"願いごと三つした〜"}
+  ]},
+  { id: 132, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"決めポーズ考えたから見て!"},
+    {speaker:"B", text:"三秒で忘れる自信ある"}
+  ]},
+  { id: 133, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"花の名を三つ言えるか"},
+    {speaker:"B", text:"全部「きれいなお花」だよ"},
+    {speaker:"A", text:"満点をやろう"}
+  ]},
+  { id: 134, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"恐怖も鍛えれば筋肉になる!"},
+    {speaker:"B", text:"ならないと思う…!?"}
+  ]},
+  { id: 135, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……質問"},
+    {speaker:"B", text:"はい、どうぞ"},
+    {speaker:"A", text:"……ごはんの予定"}
+  ]},
+  { id: 136, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"川の音って歌みたい〜"},
+    {speaker:"B", text:"合いの手いれるじゃん!"}
+  ]},
+  { id: 137, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"忘れ物ゼロを継続中です"},
+    {speaker:"B", text:"私の水筒を持っているな"},
+    {speaker:"A", text:"あっ"}
+  ]},
+  { id: 138, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あたしも成長したでしょ、静かで"},
+    {speaker:"B", text:"……三分前も喋ってた"}
+  ]},
+  { id: 139, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"いつか村一番の強さになる!"},
+    {speaker:"B", text:"もう応援団一番手だよ"}
+  ]},
+  { id: 140, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"二人きりだと静かだね…"},
+    {speaker:"B", text:"……守備は万全"}
+  ]},
+  { id: 141, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたしの笑顔、値千金じゃん？"},
+    {speaker:"B", text:"相場を知らない"}
+  ]},
+  { id: 142, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"全力と脱力、どっちが強い〜？"},
+    {speaker:"B", text:"全力に決まっている!"},
+    {speaker:"A", text:"脱力も強いよ〜"}
+  ]},
+  { id: 143, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"今日も髪つやつやだね"},
+    {speaker:"B", text:"当然…見てくれてありがと"}
+  ]},
+  { id: 144, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"笑い声の音量を三割下げろ"},
+    {speaker:"B", text:"楽しさも三割下がるじゃん!"}
+  ]},
+  { id: 145, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"勇敢さの練習をしましょう"},
+    {speaker:"B", text:"練習で身につくもの…？"}
+  ]},
+  { id: 146, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……雲、はやい"},
+    {speaker:"B", text:"追いかける〜？"},
+    {speaker:"A", text:"……歩きで"}
+  ]},
+  { id: 147, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"私の背中、大きく見えるだろう!"},
+    {speaker:"B", text:"普通サイズだって"}
+  ]},
+  { id: 148, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"新しい遊び発明したじゃん!"},
+    {speaker:"B", text:"ルール聞かせて？"},
+    {speaker:"A", text:"今から考える!"}
+  ]},
+  { id: 149, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"順調すぎて逆に警戒している"},
+    {speaker:"B", text:"珍しく同意見です"}
+  ]},
+  { id: 150, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"しあわせ〜って感じの道だね〜"},
+    {speaker:"B", text:"ほんとだね…おだんご食べたい"}
+  ]},
+  { id: 151, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あたしのほうが目立ってるし"},
+    {speaker:"B", text:"あたしじゃん!"},
+    {speaker:"A", text:"声はね"}
+  ]},
+  { id: 152, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"大きい声出せる人、尊敬する…"},
+    {speaker:"B", text:"誇れ! お前も出せる!"}
+  ]},
+  { id: 153, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……鳥の名前"},
+    {speaker:"B", text:"知らん。鳥だ"},
+    {speaker:"A", text:"……雑"}
+  ]},
+  { id: 154, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"笑うと素敵だね"},
+    {speaker:"B", text:"に…似合いませんから…"}
+  ]},
+  { id: 155, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"おみくじ大吉だったじゃん!"},
+    {speaker:"B", text:"分けて〜"},
+    {speaker:"A", text:"運は割れない!"}
+  ]},
+  { id: 156, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"遊びも全力でやる主義です"},
+    {speaker:"B", text:"話が合うじゃん!!"}
+  ]},
+  { id: 157, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"ぼーっとする対決しよ〜"},
+    {speaker:"B", text:"……開始済み"}
+  ]},
+  { id: 158, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"血が騒ぐ!"},
+    {speaker:"B", text:"医者に診せるか"}
+  ]},
+  { id: 159, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"後ろ歩くの、任せていい…？"},
+    {speaker:"B", text:"うん、背中は私が見てるね"}
+  ]},
+  { id: 160, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"敬語の練習、あたしもいる？"},
+    {speaker:"B", text:"想像ができません"}
+  ]},
+  { id: 161, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"ものまねリクエストある？"},
+    {speaker:"B", text:"……私"},
+    {speaker:"A", text:"高難度!?"}
+  ]},
+  { id: 162, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"歩数を当ててみろ"},
+    {speaker:"B", text:"いっぱい〜"}
+  ]},
+  { id: 163, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"元気を分けてもらってる気がする"},
+    {speaker:"B", text:"無限にあるから平気じゃん!"}
+  ]},
+  { id: 164, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"稽古つけてやろう!"},
+    {speaker:"B", text:"お手柔らかにお願いします"},
+    {speaker:"A", text:"全力で手柔らかく!"}
+  ]},
+  { id: 165, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……後ろ、任せた"},
+    {speaker:"B", text:"私に!? 荷が重いよ!?"}
+  ]},
+  { id: 166, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"生き急がない主義なんだ〜"},
+    {speaker:"B", text:"急いだ姿も見てみたいって"}
+  ]},
+  { id: 167, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"花を踏まないよう歩いてます"},
+    {speaker:"B", text:"私も。仲間だね"}
+  ]},
+  { id: 168, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"どっちが先に笑わせるか勝負!"},
+    {speaker:"B", text:"私は既に楽しい!"},
+    {speaker:"A", text:"手強いじゃん…"}
+  ]},
+  { id: 169, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"機嫌が良さそうだ"},
+    {speaker:"B", text:"分かる？ 天才だから"}
+  ]},
+  { id: 170, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"分かれ道、どっちが安全…？"},
+    {speaker:"B", text:"楽しそうな方〜"},
+    {speaker:"A", text:"基準がちがう…"}
+  ]},
+  { id: 171, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"楽しい？"},
+    {speaker:"B", text:"……まあまあ"}
+  ]},
+  { id: 172, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしの後ろついてきな"},
+    {speaker:"B", text:"心強い…前見えないけど…"}
+  ]},
+  { id: 173, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"燃える話をしてくれ!"},
+    {speaker:"B", text:"こないだ転んだ話するじゃん!"},
+    {speaker:"A", text:"燃えない!"}
+  ]},
+  { id: 174, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"なぜいつも優しいんだ"},
+    {speaker:"B", text:"優しくされてるからだよ"}
+  ]},
+  { id: 175, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……つよい"},
+    {speaker:"B", text:"急に何？ …まあね!"}
+  ]},
+  { id: 176, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"蝶々についてったらだめ〜？"},
+    {speaker:"B", text:"迷子になります"},
+    {speaker:"A", text:"蝶々も〜？"}
+  ]},
+  { id: 177, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"賑やかだと安心する…"},
+    {speaker:"B", text:"任せて! 一生賑やかだもん!"}
+  ]},
+  { id: 178, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"心を無にして歩いています"},
+    {speaker:"B", text:"無の割に喋るな"}
+  ]},
+  { id: 179, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"その声、遠くまで届きそう"},
+    {speaker:"B", text:"山の向こうまで届かせる!"}
+  ]},
+  { id: 180, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"双六作った! 進むマスだけ!"},
+    {speaker:"B", text:"出来レースでしょ"}
+  ]},
+  { id: 181, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"何が一番怖いか教えろ"},
+    {speaker:"B", text:"その質問が怖い"}
+  ]},
+  { id: 182, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"お前は大物になるぞ!"},
+    {speaker:"B", text:"もうなってる気がする〜"}
+  ]},
+  { id: 183, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あたしって天才かも"},
+    {speaker:"B", text:"うん、知ってたよ"},
+    {speaker:"A", text:"…もっと言って"}
+  ]},
+  { id: 184, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……元気すぎ"},
+    {speaker:"B", text:"褒め言葉として受け取るじゃん!"}
+  ]},
+  { id: 185, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"道の草にも名前あるんだね〜"},
+    {speaker:"B", text:"あるが、私は三種しか知らん"}
+  ]},
+  { id: 186, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"今日、笑顔多いね"},
+    {speaker:"B", text:"気のせい。数えないで"}
+  ]},
+  { id: 187, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"あー、あー、声の調子を確認"},
+    {speaker:"B", text:"……いい声"}
+  ]},
+  { id: 188, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"前向きな怖がり方ってある…？"},
+    {speaker:"B", text:"あります。警戒と言います"}
+  ]},
+  { id: 189, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"今日の運勢、あたしが占う!"},
+    {speaker:"B", text:"どうせ大吉だろ"},
+    {speaker:"A", text:"ばれた!"}
+  ]},
+  { id: 190, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"守りたいものが多すぎる!"},
+    {speaker:"B", text:"私も入ってる？"},
+    {speaker:"A", text:"筆頭だ!"}
+  ]},
+  { id: 191, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたのペース、嫌いじゃない"},
+    {speaker:"B", text:"照れる〜"},
+    {speaker:"A", text:"褒めてないし!"}
+  ]},
+  { id: 192, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"会話の効率が良すぎる"},
+    {speaker:"B", text:"……以心伝心"}
+  ]},
+  { id: 193, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"頼りにしてる…って言っておく…"},
+    {speaker:"B", text:"百人力の気分だ!!"}
+  ]},
+  { id: 194, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"その明るさ、みんなの薬だね"},
+    {speaker:"B", text:"副作用は無いもん!"}
+  ]},
+  { id: 195, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"こわい時は雲を見るといいよ〜"},
+    {speaker:"B", text:"足元が見えなくなるよ…!?"}
+  ]},
+  { id: 196, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"あなたの自信、見習いたいです"},
+    {speaker:"B", text:"才能だから無理かも"}
+  ]},
+  { id: 197, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……となり、いい？"},
+    {speaker:"B", text:"もちろん。ずっとどうぞ"}
+  ]},
+  { id: 198, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"感動した! 泣いていいか!"},
+    {speaker:"B", text:"理由を聞いてからだ"}
+  ]},
+  { id: 199, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"帰ったら祭りの練習するじゃん!"},
+    {speaker:"B", text:"見る側で参加する…"}
+  ]},
+  { id: 200, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"いい一日だね〜まだ途中だけど〜"},
+    {speaker:"B", text:"途中経過も満点だよ"}
+  ]},
+  { id: 201, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしの話、三日は笑えるじゃん"},
+    {speaker:"B", text:"三秒だった"}
+  ]},
+  { id: 202, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"良いことすると歩くの速くなるね"},
+    {speaker:"B", text:"初耳の現象だ"}
+  ]},
+  { id: 203, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"語り合おう、夢を!"},
+    {speaker:"B", text:"……食べ放題"}
+  ]},
+  { id: 204, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"急がば回れって言うし〜"},
+    {speaker:"B", text:"あんたは回りすぎだって"}
+  ]},
+  { id: 205, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"びっくりさせないでね…？"},
+    {speaker:"B", text:"しないしない。…わっ!"},
+    {speaker:"A", text:"言ったのに!?"}
+  ]},
+  { id: 206, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"声量と強さは比例しない"},
+    {speaker:"B", text:"では叫んで証明する!"}
+  ]},
+  { id: 207, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……いいにおい"},
+    {speaker:"B", text:"お花かな？"},
+    {speaker:"A", text:"……おやつの気配"}
+  ]},
+  { id: 208, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"あたし天才って呼ばれてるし"},
+    {speaker:"B", text:"呼んでいるのは誰ですか"},
+    {speaker:"A", text:"あたし"}
+  ]},
+  { id: 209, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"感謝の全力疾走をしてくる!"},
+    {speaker:"B", text:"感謝は言葉でいいんだよ？"}
+  ]},
+  { id: 210, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"手品覚えた! 消えるおやつ!"},
+    {speaker:"B", text:"食べただけだろ"}
+  ]},
+  { id: 211, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"おそろいだね〜歩く速さ〜"},
+    {speaker:"B", text:"……合わせてる"}
+  ]},
+  { id: 212, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"強い人の隣が一番安全…"},
+    {speaker:"B", text:"見る目あるじゃん"}
+  ]},
+  { id: 213, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"笑いすぎです"},
+    {speaker:"B", text:"真顔の方が失礼な時あるじゃん!"}
+  ]},
+  { id: 214, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"お前の周りだけ時間が遅い"},
+    {speaker:"B", text:"ゆっくり味わってるの〜"}
+  ]},
+  { id: 215, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"たまには肩の力抜いてね？"},
+    {speaker:"B", text:"抜き方を教えてくれ!"},
+    {speaker:"A", text:"力強い…"}
+  ]},
+  { id: 216, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……面白い"},
+    {speaker:"B", text:"どこが!? 今の無言のどこが!?"}
+  ]},
+  { id: 217, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしがいれば百人力でしょ"},
+    {speaker:"B", text:"一人力だが、良い一人力だ"}
+  ]},
+  { id: 218, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"今日という日は二度と来ない!"},
+    {speaker:"B", text:"明日も似た日が来ます"}
+  ]},
+  { id: 219, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"石、川の向こうまで届くかな〜"},
+    {speaker:"B", text:"見せて見せて!"},
+    {speaker:"A", text:"明日ね〜"}
+  ]},
+  { id: 220, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"音のしない足音って怖くない…？"},
+    {speaker:"B", text:"矛盾している"}
+  ]},
+  { id: 221, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"元気すぎて心配になる時ある"},
+    {speaker:"B", text:"心配の使い方ちがうじゃん!"}
+  ]},
+  { id: 222, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"言葉遣いが美しいですね"},
+    {speaker:"B", text:"……どこが"},
+    {speaker:"A", text:"簡潔さです"}
+  ]},
+  { id: 223, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"自信の根拠を…いや、いい"},
+    {speaker:"B", text:"聞いてよ! 長いけど!"}
+  ]},
+  { id: 224, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"優しさってうつるじゃん？"},
+    {speaker:"B", text:"あなたにもうつってるよ"}
+  ]},
+  { id: 225, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"情熱の炎を分けてやる!"},
+    {speaker:"B", text:"遠火でお願い〜"}
+  ]},
+  { id: 226, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"無口なの、実は作戦でしょ"},
+    {speaker:"B", text:"……素"}
+  ]},
+  { id: 227, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"帰り道でお花摘んでこ〜"},
+    {speaker:"B", text:"花屋さんできるね"}
+  ]},
+  { id: 228, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"勇気のおすそ分けして…"},
+    {speaker:"B", text:"受け取れ! 大盛りだ!"},
+    {speaker:"A", text:"こぼれる…"}
+  ]},
+  { id: 229, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"騒がしさに慣れた自分が怖い"},
+    {speaker:"B", text:"仲間入りじゃん!"}
+  ]},
+  { id: 230, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"反省会が三秒で終わりました"},
+    {speaker:"B", text:"優秀じゃん、あたしたち"}
+  ]},
+  { id: 231, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……あの雲、変"},
+    {speaker:"B", text:"同意する。変だ"}
+  ]},
+  { id: 232, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"秘密基地つくるじゃん!"},
+    {speaker:"B", text:"安全性は…？"},
+    {speaker:"A", text:"秘密!"}
+  ]},
+  { id: 233, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"二人で歩くと楽しいね"},
+    {speaker:"B", text:"べつに…うん、まあ"}
+  ]},
+  { id: 234, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"深呼吸したら空の味がした〜"},
+    {speaker:"B", text:"詩人ですね"}
+  ]},
+  { id: 235, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"我らの旅に伝説の予感がする!"},
+    {speaker:"B", text:"語り部はあたしね!"}
+  ]},
+  { id: 236, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"平穏。特に報告なし"},
+    {speaker:"B", text:"それが一番の知らせだね"}
+  ]},
+  { id: 237, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あたしの真似してみて"},
+    {speaker:"B", text:"え〜…「あたし天才」〜"},
+    {speaker:"A", text:"似てて悔しい"}
+  ]},
+  { id: 238, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"怖い話は禁止ね…？"},
+    {speaker:"B", text:"……持ってない"}
+  ]},
+  { id: 239, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"燃えすぎです。少し消火を"},
+    {speaker:"B", text:"心の火は消えん!"}
+  ]},
+  { id: 240, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"早歩き競争、いま開催!"},
+    {speaker:"B", text:"終わりはどこ〜？"}
+  ]},
+  { id: 241, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"手袋、片方あげようか？"},
+    {speaker:"B", text:"両手が寒い提案だ"}
+  ]},
+  { id: 242, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……歩き方、きれい"},
+    {speaker:"B", text:"今日のあんた褒めすぎ"},
+    {speaker:"A", text:"……日課"}
+  ]},
+  { id: 243, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"亀と競争したら勝てるかな〜"},
+    {speaker:"B", text:"勝負になる時点で問題だ"}
+  ]},
+  { id: 244, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"叫んだら悩みが飛ぶぞ!"},
+    {speaker:"B", text:"悩みより私が飛びそう…"}
+  ]},
+  { id: 245, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あんたの元気、少し分けなさい"},
+    {speaker:"B", text:"命令形でも可愛くないじゃん"}
+  ]},
+  { id: 246, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"冗談を言う。笑ってくれ"},
+    {speaker:"B", text:"はい。…いつ言いますか"},
+    {speaker:"A", text:"今のがそうだ"}
+  ]},
+  { id: 247, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"怖くなったら私の名前呼んでね"},
+    {speaker:"B", text:"呼びすぎて減っちゃいそう…"}
+  ]},
+  { id: 248, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"面白い掛け声考えるじゃん!"},
+    {speaker:"B", text:"普通ので十分です"}
+  ]},
+  { id: 249, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……競争する？"},
+    {speaker:"B", text:"いいよ〜のんびり部門ね〜"},
+    {speaker:"A", text:"……強敵"}
+  ]},
+  { id: 250, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"友情に感動して震える!"},
+    {speaker:"B", text:"寒いのかと思った"}
+  ]},
+  { id: 251, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたのそれ、お人好しすぎ"},
+    {speaker:"B", text:"ありがとう"}
+  ]},
+  { id: 252, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"おばけもお休みの日あるよ〜"},
+    {speaker:"B", text:"今日がそうだといいな…"}
+  ]},
+  { id: 253, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"一緒に叫ぼ! せーの!"},
+    {speaker:"B", text:"……"},
+    {speaker:"A", text:"一人だったじゃん…"}
+  ]},
+  { id: 254, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"私は冗談が苦手です"},
+    {speaker:"B", text:"今のちょっと面白かったよ"},
+    {speaker:"A", text:"本気でした"}
+  ]},
+  { id: 255, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"静かな仲間は貴重だ"},
+    {speaker:"B", text:"……希少種"}
+  ]},
+  { id: 256, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"挑戦状を受け取れ!"},
+    {speaker:"B", text:"宛名まちがってない？"}
+  ]},
+  { id: 257, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"今日、あっという間だね"},
+    {speaker:"B", text:"まだ半分だよ〜"}
+  ]},
+  { id: 258, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"後ろから声かけないで…!"},
+    {speaker:"B", text:"前から行くと遅いじゃん"}
+  ]},
+  { id: 259, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"その汗、きらきらしてる〜"},
+    {speaker:"B", text:"魂の光だ!"}
+  ]},
+  { id: 260, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"無言の時間も有意義です"},
+    {speaker:"B", text:"今壊したな"}
+  ]},
+  { id: 261, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"良いことあったら拍手するじゃん!"},
+    {speaker:"B", text:"じゃあ今する？"}
+  ]},
+  { id: 262, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……声、届いた"},
+    {speaker:"B", text:"どこまでだ!"},
+    {speaker:"A", text:"……山"}
+  ]},
+  { id: 263, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"冷めたふりして楽しんでるでしょ"},
+    {speaker:"B", text:"ばれたか"}
+  ]},
+  { id: 264, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"面白い石みつけた〜"},
+    {speaker:"B", text:"あたしのが面白いじゃん!"}
+  ]},
+  { id: 265, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"列の真ん中がいい…はさまれたい…"},
+    {speaker:"B", text:"具材ですか"}
+  ]},
+  { id: 266, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"世界一の応援するね"},
+    {speaker:"B", text:"力が湧きすぎて困る!"}
+  ]},
+  { id: 267, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"助言をやろう"},
+    {speaker:"B", text:"いらないけど聞くだけ聞く"}
+  ]},
+  { id: 268, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"笑うと長生きするじゃん!"},
+    {speaker:"B", text:"なら私たちは長寿確定だな"}
+  ]},
+  { id: 269, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"その余裕、どこから来るのですか"},
+    {speaker:"B", text:"空を見てるとわいてくる〜"}
+  ]},
+  { id: 270, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"熱く語っていいか!"},
+    {speaker:"B", text:"……要点のみ"}
+  ]},
+  { id: 271, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"雲に乗るのが夢なんだ〜"},
+    {speaker:"B", text:"落ちたら受け止めるね"}
+  ]},
+  { id: 272, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしのあだ名が妖怪だったら？"},
+    {speaker:"B", text:"似合…わなくもない…"}
+  ]},
+  { id: 273, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"その元気、どこに貯めてるんだ"},
+    {speaker:"B", text:"貯めてない! 出しっぱなし!"}
+  ]},
+  { id: 274, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"頑張り屋さんの手、見せて？"},
+    {speaker:"B", text:"手相ですか？"}
+  ]},
+  { id: 275, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……いる"},
+    {speaker:"B", text:"何が!? どこに!?"},
+    {speaker:"A", text:"……私が。隣に"}
+  ]},
+  { id: 276, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"元気対決、引き分けでいいじゃん"},
+    {speaker:"B", text:"決着をつけよう!"},
+    {speaker:"A", text:"平和にいこ？"}
+  ]},
+  { id: 277, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"三歩あるくと忘れる特技なの〜"},
+    {speaker:"B", text:"特技ではなく心配です"}
+  ]},
+  { id: 278, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"優しい人のそばは安全…"},
+    {speaker:"B", text:"じゃあずっとそばだね"}
+  ]},
+  { id: 279, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"静けさも旅の醍醐味です"},
+    {speaker:"B", text:"三秒で飽きたじゃん!"}
+  ]},
+  { id: 280, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"焦りという概念を知っているか"},
+    {speaker:"B", text:"聞いたことはある〜"}
+  ]},
+  { id: 281, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"優しさこそ最強の技だ!"},
+    {speaker:"B", text:"じゃあ二人とも最強だね"}
+  ]},
+  { id: 282, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"たまにはあたしを褒めなさい"},
+    {speaker:"B", text:"……たまに？"},
+    {speaker:"A", text:"今!"}
+  ]},
+  { id: 283, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしたち名相棒じゃん？"},
+    {speaker:"B", text:"相方の顔がいいだけでしょ"}
+  ]},
+  { id: 284, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……鳥、二羽"},
+    {speaker:"B", text:"観察日記をつけますか"},
+    {speaker:"A", text:"……つけた"}
+  ]},
+  { id: 285, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"世界はひろいね〜"},
+    {speaker:"B", text:"あんたの歩幅じゃ余計にね"}
+  ]},
+  { id: 286, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"笑顔が一番の装備だね"},
+    {speaker:"B", text:"防御力ないじゃん!"}
+  ]},
+  { id: 287, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"勇気が出る呪文おしえて…"},
+    {speaker:"B", text:"「大丈夫だ」"},
+    {speaker:"A", text:"大丈夫…効く…"}
+  ]},
+  { id: 288, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"感謝の正拳突き百回!"},
+    {speaker:"B", text:"感謝が薄まります"}
+  ]},
+  { id: 289, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"お前の笑顔は治癒術に似ている"},
+    {speaker:"B", text:"あなたの言葉も、だよ"}
+  ]},
+  { id: 290, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"声出していこーじゃん!"},
+    {speaker:"B", text:"……えい"},
+    {speaker:"A", text:"出た! 尊い!"}
+  ]},
+  { id: 291, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あたしの活躍、見てなさいよ"},
+    {speaker:"B", text:"目に焼き付ける!!"}
+  ]},
+  { id: 292, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"ゆっくり歩くと怖くないよ〜"},
+    {speaker:"B", text:"逃げる時どうするの…!?"}
+  ]},
+  { id: 293, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"身だしなみが完璧ですね"},
+    {speaker:"B", text:"当然。五分で完成だし"}
+  ]},
+  { id: 294, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"今日のこと、日記に書こうね"},
+    {speaker:"B", text:"……三文字で"},
+    {speaker:"A", text:"「楽しい」？"}
+  ]},
+  { id: 295, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"山に向かって叫ぶぞ!"},
+    {speaker:"B", text:"やまびこ係やる〜"}
+  ]},
+  { id: 296, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"勇敢だったな、さっき"},
+    {speaker:"B", text:"え!? 逃げただけだよ!?"},
+    {speaker:"A", text:"速さも才能だ"}
+  ]},
+  { id: 297, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"おやつ占いするじゃん!"},
+    {speaker:"B", text:"全部当たりのやつでしょ？"}
+  ]},
+  { id: 298, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……いい道"},
+    {speaker:"B", text:"通なコメント〜"}
+  ]},
+  { id: 299, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"今日のあたし、輝いてた？"},
+    {speaker:"B", text:"毎日輝いてるよ"},
+    {speaker:"A", text:"…知ってた"}
+  ]},
+  { id: 300, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"楽しいって続くもんだね〜"},
+    {speaker:"B", text:"あたしたちの周りだけね!"}
+  ]},
+  { id: 301, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"見えない縄で縄跳びしてた!"},
+    {speaker:"B", text:"ただの跳躍だ"}
+  ]},
+  { id: 302, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"おにぎりの具、何派？"},
+    {speaker:"B", text:"具までたどり着けない派〜"}
+  ]},
+  { id: 303, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あたしの武勇伝聞きたい？"},
+    {speaker:"B", text:"……三倍盛り？"},
+    {speaker:"A", text:"二倍だし!"}
+  ]},
+  { id: 304, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"米一粒に七人の神がいるなら!"},
+    {speaker:"B", text:"拾いましょう"}
+  ]},
+  { id: 305, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"どんぐり拾ったら虫出るかな…"},
+    {speaker:"B", text:"出たらお友達〜"}
+  ]},
+  { id: 306, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"しゃっくりが止まらん、ひっく"},
+    {speaker:"B", text:"驚かせてあげるじゃん!"},
+    {speaker:"A", text:"結構だ、ひっく"}
+  ]},
+  { id: 307, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……腕相撲"},
+    {speaker:"B", text:"いくぞ! …強っ!?"}
+  ]},
+  { id: 308, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"亀さんに道ゆずってもらった〜"},
+    {speaker:"B", text:"追い抜かれていたのですか"}
+  ]},
+  { id: 309, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"くしゃみで鳥が逃げたじゃん…"},
+    {speaker:"B", text:"元気なくしゃみだったね"}
+  ]},
+  { id: 310, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"じゃんけん必勝法おしえたげる"},
+    {speaker:"B", text:"後出しはだめだ"},
+    {speaker:"A", text:"ばれてた"}
+  ]},
+  { id: 311, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"影踏みで鍛えよう!"},
+    {speaker:"B", text:"自分の影は踏めないよ…？"},
+    {speaker:"A", text:"深いな!?"}
+  ]},
+  { id: 312, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"今日は順風満帆ですね"},
+    {speaker:"B", text:"おなかいっぱいってこと〜？"}
+  ]},
+  { id: 313, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"あやとりできる？"},
+    {speaker:"B", text:"……ほうき"}
+  ]},
+  { id: 314, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"敵の名前を覚えているか"},
+    {speaker:"B", text:"全部「ざこ」で覚えてる"}
+  ]},
+  { id: 315, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"回復薬っておいしいのかな？"},
+    {speaker:"B", text:"味見はだめだよ…!?"}
+  ]},
+  { id: 316, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"まつぼっくり、おみやげにしよ〜"},
+    {speaker:"B", text:"かごに三十個目だよ？"}
+  ]},
+  { id: 317, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"我が拳は岩をも砕く!"},
+    {speaker:"B", text:"砕いた実績は"},
+    {speaker:"A", text:"これから作る!"}
+  ]},
+  { id: 318, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"寝癖ついてたら言ってよね"},
+    {speaker:"B", text:"今ついてるよ"},
+    {speaker:"A", text:"先に言ってよ!?"}
+  ]},
+  { id: 319, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"木の年輪って年の数…？"},
+    {speaker:"B", text:"この木は百歳ほどかと"},
+    {speaker:"A", text:"敬語つかお…"}
+  ]},
+  { id: 320, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……へそくりある"},
+    {speaker:"B", text:"いくら!? どこに!?"},
+    {speaker:"A", text:"……内緒"}
+  ]},
+  { id: 321, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"花言葉って知ってる？"},
+    {speaker:"B", text:"知らん! だが花と話したい!"}
+  ]},
+  { id: 322, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"打ち上げの企画を任せたい"},
+    {speaker:"B", text:"座右の銘は質素倹約です"},
+    {speaker:"A", text:"人選を誤った"}
+  ]},
+  { id: 323, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"逆さ言葉ね〜「かさ」は〜？"},
+    {speaker:"B", text:"さか! 天才じゃん!"},
+    {speaker:"A", text:"誰でもできる〜"}
+  ]},
+  { id: 324, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"図鑑の妖怪、夢に出そう…"},
+    {speaker:"B", text:"名前聞いてきてじゃん!"}
+  ]},
+  { id: 325, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"持ち物を点検し合いましょう"},
+    {speaker:"B", text:"開けたら驚くよ"},
+    {speaker:"A", text:"飴が三十個…"}
+  ]},
+  { id: 326, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"全身全霊で休憩を楽しむ!"},
+    {speaker:"B", text:"休憩に全霊いる〜？"}
+  ]},
+  { id: 327, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"無言劇やろうじゃん!"},
+    {speaker:"B", text:"……日常"}
+  ]},
+  { id: 328, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"けんかしたことないね、私たち"},
+    {speaker:"B", text:"する理由がないし"}
+  ]},
+  { id: 329, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"勇気とは恐怖を知ることだ"},
+    {speaker:"B", text:"じゃあ私、勇気の達人…？"}
+  ]},
+  { id: 330, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"二人だと会話いらないね〜"},
+    {speaker:"B", text:"……相性"}
+  ]},
+  { id: 331, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"昨日の大技、見たか!"},
+    {speaker:"B", text:"見た! 転んだやつじゃん!"}
+  ]},
+  { id: 332, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"敬語って肩こらない？"},
+    {speaker:"B", text:"敬語が私の自然体です"}
+  ]},
+  { id: 333, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"「人」書いて飲むの、効く…？"},
+    {speaker:"B", text:"効くまで一緒に書こっか"}
+  ]},
+  { id: 334, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……あの木、渋い"},
+    {speaker:"B", text:"樹齢の貫禄だな"}
+  ]},
+  { id: 335, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしのあだ名決めて!"},
+    {speaker:"B", text:"「うるさい」"},
+    {speaker:"A", text:"あだ名!?"}
+  ]},
+  { id: 336, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"完璧じゃなくてもいいんだよ？"},
+    {speaker:"B", text:"完璧にほどほどにします"}
+  ]},
+  { id: 337, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"石の上にも三年っていうし〜"},
+    {speaker:"B", text:"座るな。進め"}
+  ]},
+  { id: 338, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"沈黙の裏に闘志を感じる!"},
+    {speaker:"B", text:"……無"}
+  ]},
+  { id: 339, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"妖怪に好かれるのどっち？賭けよ"},
+    {speaker:"B", text:"負けたい賭けじゃん!?"}
+  ]},
+  { id: 340, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"暗い洞窟、平気…？"},
+    {speaker:"B", text:"数字を数えていろ"}
+  ]},
+  { id: 341, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"集合の合図を決めましょう"},
+    {speaker:"B", text:"「やっほー」じゃん!"},
+    {speaker:"A", text:"では「やっほーです」で"}
+  ]},
+  { id: 342, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"その笑い声、遠くまで届くね"},
+    {speaker:"B", text:"迷子防止になるもん!"}
+  ]},
+  { id: 343, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"座右の銘はあるか"},
+    {speaker:"B", text:"「まあいっか」〜"},
+    {speaker:"A", text:"強い言葉だ"}
+  ]},
+  { id: 344, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……秘密ある？"},
+    {speaker:"B", text:"あるけど教えない"},
+    {speaker:"A", text:"……おそろい"}
+  ]},
+  { id: 345, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"今日まだありがとうを言ってない!"},
+    {speaker:"B", text:"今聞いた気がするよ"}
+  ]},
+  { id: 346, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"静かにしてたら褒めて"},
+    {speaker:"B", text:"静かに、していたら、な"}
+  ]},
+  { id: 347, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"怖い時は「まあいっか」だよ〜"},
+    {speaker:"B", text:"言えたら苦労しないよ…"}
+  ]},
+  { id: 348, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"背、伸びた気がするんだけど"},
+    {speaker:"B", text:"背比べだ! …伸びてるな!"}
+  ]},
+  { id: 349, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"感想を一言お願いします"},
+    {speaker:"B", text:"……良き"}
+  ]},
+  { id: 350, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"帰ったら何のお茶いれよっか"},
+    {speaker:"B", text:"甘いやつ〜"}
+  ]},
+  { id: 351, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"元気の秘訣を三行で"},
+    {speaker:"B", text:"寝る! 食べる! 騒ぐ!"},
+    {speaker:"A", text:"完璧な三行だ"}
+  ]},
+  { id: 352, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"虫の声って安心する…"},
+    {speaker:"B", text:"さっき悲鳴あげてたのに？"}
+  ]},
+  { id: 353, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……荷造り上手"},
+    {speaker:"B", text:"弟子を取る予定はないよ？"}
+  ]},
+  { id: 354, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"ごはんと甘いもの、どっち派〜？"},
+    {speaker:"B", text:"議論が平行線になる予感です"}
+  ]},
+  { id: 355, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"熱意は伝染する!"},
+    {speaker:"B", text:"予防は可能か"}
+  ]},
+  { id: 356, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"変な鳴き声出せるよ、ほら"},
+    {speaker:"B", text:"上手…誰の声？"}
+  ]},
+  { id: 357, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたと居ると調子狂う"},
+    {speaker:"B", text:"いい意味〜？"},
+    {speaker:"A", text:"…いい意味"}
+  ]},
+  { id: 358, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"言葉の節約仲間に敬意を"},
+    {speaker:"B", text:"……どうも"}
+  ]},
+  { id: 359, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"勇者と臆病者、紙一重かな…"},
+    {speaker:"B", text:"一枚めくれ! こっち側だ!"}
+  ]},
+  { id: 360, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"今日の私、笑いましたか？"},
+    {speaker:"B", text:"三回はみたよ"}
+  ]},
+  { id: 361, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"暇つぶしの天才って呼んで"},
+    {speaker:"B", text:"天才〜"}
+  ]},
+  { id: 362, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……虫、肩に"},
+    {speaker:"B", text:"ぎゃー!? どっち!?"},
+    {speaker:"A", text:"……嘘"}
+  ]},
+  { id: 363, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"たまには冗談言うんだね"},
+    {speaker:"B", text:"言っていない"}
+  ]},
+  { id: 364, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"雲の形あて、答えは〜？"},
+    {speaker:"B", text:"どうせおやつじゃん"}
+  ]},
+  { id: 365, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"一日一善、もう済ませた!"},
+    {speaker:"B", text:"挨拶の声が大きかった事ですか"}
+  ]},
+  { id: 366, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あたしの長所言える？"},
+    {speaker:"B", text:"……素直"},
+    {speaker:"A", text:"どこがよ! …ありがと"}
+  ]},
+  { id: 367, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"優しさが尽きない理由は"},
+    {speaker:"B", text:"補充してもらってるの、みんなに"}
+  ]},
+  { id: 368, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"心臓に毛が生えてるって本当…？"},
+    {speaker:"B", text:"見せてあげたいじゃん!"}
+  ]},
+  { id: 369, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"無事是名馬と言います"},
+    {speaker:"B", text:"我々は名馬か"}
+  ]},
+  { id: 370, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"勢いだけで生きてるじゃん、あたし"},
+    {speaker:"B", text:"勢いは正義だ!"}
+  ]},
+  { id: 371, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"我が道を行くって褒め言葉〜？"},
+    {speaker:"B", text:"あんたの場合は事実"}
+  ]},
+  { id: 372, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"苦手なもの、一緒に数えよっか"},
+    {speaker:"B", text:"指が足りないよ…？"}
+  ]},
+  { id: 373, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"妖怪も仲間にできたら最強だ!"},
+    {speaker:"B", text:"おやつで釣れるかもじゃん!"}
+  ]},
+  { id: 374, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"会話の主導権を譲ろう"},
+    {speaker:"B", text:"最初からあたしのだし"}
+  ]},
+  { id: 375, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……きのこ、家族連れ"},
+    {speaker:"B", text:"ほんとだ〜親子〜"}
+  ]},
+  { id: 376, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"あたしを見習いたいでしょ"},
+    {speaker:"B", text:"部分的には"},
+    {speaker:"A", text:"どの部分!?"}
+  ]},
+  { id: 377, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"一人で留守番できる…？"},
+    {speaker:"B", text:"……二人でいる"}
+  ]},
+  { id: 378, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"決めゼリフ考えて!"},
+    {speaker:"B", text:"「計画通りです」"},
+    {speaker:"A", text:"悪役じゃん!?"}
+  ]},
+  { id: 379, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"熱いお茶と冷たい水、どっち〜？"},
+    {speaker:"B", text:"熱い方に決まっている!"}
+  ]},
+  { id: 380, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"素直って言われるの嫌？"},
+    {speaker:"B", text:"嫌…でもあんたなら許す"}
+  ]},
+  { id: 381, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"猫と犬、どちら派だ"},
+    {speaker:"B", text:"亀です"},
+    {speaker:"A", text:"三択目があったか"}
+  ]},
+  { id: 382, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"武勇伝を語る! 三時間!"},
+    {speaker:"B", text:"三分で…"}
+  ]},
+  { id: 383, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"いつか大物になるじゃん!"},
+    {speaker:"B", text:"器は既に大きい。声が"}
+  ]},
+  { id: 384, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……ありがと"},
+    {speaker:"B", text:"え、何が？"},
+    {speaker:"A", text:"……ぜんぶ"}
+  ]},
+  { id: 385, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"たまには負けてあげよっか？"},
+    {speaker:"B", text:"勝ってから言え"}
+  ]},
+  { id: 386, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"幸せの数、かぞえきれない〜"},
+    {speaker:"B", text:"あたしの分も足しといて!"}
+  ]},
+  { id: 387, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"石橋を叩いて渡るタイプ…"},
+    {speaker:"B", text:"私は叩いて補強します"},
+    {speaker:"A", text:"心強い!?"}
+  ]},
+  { id: 388, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"元気の出るツボ押してあげよっか"},
+    {speaker:"B", text:"全身ツボだもん!"}
+  ]},
+  { id: 389, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"お前は大器晩成型だ"},
+    {speaker:"B", text:"大きい器でおかわり〜"}
+  ]},
+  { id: 390, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"二人で必殺技を作ろう!"},
+    {speaker:"B", text:"……名前だけ"},
+    {speaker:"A", text:"「静かなる爆発」!"}
+  ]},
+  { id: 391, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"面白さなら負けないじゃん"},
+    {speaker:"B", text:"張り合う土俵が違うし"}
+  ]},
+  { id: 392, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"あなたの熱意、見習います"},
+    {speaker:"B", text:"燃え移れ!"}
+  ]},
+  { id: 393, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……たまには静かに"},
+    {speaker:"B", text:"三秒ならできるじゃん!"},
+    {speaker:"A", text:"……計測開始"}
+  ]},
+  { id: 394, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"落ちてた花、かんざしにしよ？"},
+    {speaker:"B", text:"似合うのか"}
+  ]},
+  { id: 395, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"明日できることは明日やる〜"},
+    {speaker:"B", text:"今日できることは今日です"}
+  ]},
+  { id: 396, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしの度胸、少し分けたげる"},
+    {speaker:"B", text:"返せる気がしない…"}
+  ]},
+  { id: 397, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"この道もいつか思い出になる!"},
+    {speaker:"B", text:"もうなってるよ、いい思い出に"}
+  ]},
+  { id: 398, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"長話も短話も自由だ"},
+    {speaker:"B", text:"……中くらい"}
+  ]},
+  { id: 399, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"帰ったら怖い話大会するじゃん!"},
+    {speaker:"B", text:"平和な話大会にして…"}
+  ]},
+  { id: 400, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"今日の「よかった」を一個ずつ〜"},
+    {speaker:"B", text:"多すぎるから明日に分けよ？"}
+  ]},
+  { id: 401, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"口笛ふけるようになった! すー"},
+    {speaker:"B", text:"呼吸だな"}
+  ]},
+  { id: 402, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"好きな色おしえて？"},
+    {speaker:"B", text:"……藍"}
+  ]},
+  { id: 403, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あたしが姉ってことでいいよね"},
+    {speaker:"B", text:"姉の座は実力で取れ!"}
+  ]},
+  { id: 404, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"だるまさんがころんだ、しよ〜"},
+    {speaker:"B", text:"動かなすぎて終わりません"}
+  ]},
+  { id: 405, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"犬に吠えられやすいの…"},
+    {speaker:"B", text:"逃げ腰が犬語で「追え」だ"}
+  ]},
+  { id: 406, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……かくれんぼ"},
+    {speaker:"B", text:"いいじゃん! …どこ!?"},
+    {speaker:"A", text:"……もう隠れた"}
+  ]},
+  { id: 407, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"見よ、竹とんぼの飛距離を!"},
+    {speaker:"B", text:"屋根に乗っちゃったね"}
+  ]},
+  { id: 408, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"口癖を数えた。「あたし」百回"},
+    {speaker:"B", text:"あたしそんなに…あ"}
+  ]},
+  { id: 409, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"笹舟ながそ〜"},
+    {speaker:"B", text:"流れが速い方に置くじゃん!"}
+  ]},
+  { id: 410, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"約束です。指切りしましょう"},
+    {speaker:"B", text:"針千本は飲めないよ…!?"}
+  ]},
+  { id: 411, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"ほっぺにご飯粒ついてる"},
+    {speaker:"B", text:"え!? …いつから!?"},
+    {speaker:"A", text:"会った時から"}
+  ]},
+  { id: 412, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"静けさを言葉で説明してみろ"},
+    {speaker:"B", text:"声に出したら消えるじゃん!"}
+  ]},
+  { id: 413, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……手紙書いた"},
+    {speaker:"B", text:"私に？ うれしい!"},
+    {speaker:"A", text:"……白紙"}
+  ]},
+  { id: 414, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"湯は熱いほど強くなれる!"},
+    {speaker:"B", text:"のぼせて弱くなります"}
+  ]},
+  { id: 415, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたのくせ毛、ちょっといい"},
+    {speaker:"B", text:"わけてあげようか〜？"}
+  ]},
+  { id: 416, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"二人羽織って怖くない…？"},
+    {speaker:"B", text:"後ろがあたしなら安心じゃん!"},
+    {speaker:"A", text:"一番怖い"}
+  ]},
+  { id: 417, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"白湯っておいしいね〜"},
+    {speaker:"B", text:"味はないはずだが"}
+  ]},
+  { id: 418, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"宝の地図かいた! ここ掘る!"},
+    {speaker:"B", text:"そこ、さっき埋めてたよね？"}
+  ]},
+  { id: 419, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"猫舌か"},
+    {speaker:"B", text:"はい。慎重派なので"}
+  ]},
+  { id: 420, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"心のたぎりを言葉にしろ!"},
+    {speaker:"B", text:"……ぐつぐつ"}
+  ]},
+  { id: 421, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"迷子になったら私を呼んでね"},
+    {speaker:"B", text:"前科あるのばれてる!?"}
+  ]},
+  { id: 422, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"利き手どっち？ あたし右"},
+    {speaker:"B", text:"両利きです"}
+  ]},
+  { id: 423, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"夢の続きって見られるのかな〜"},
+    {speaker:"B", text:"妖怪の夢は続き禁止ね…!"}
+  ]},
+  { id: 424, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"花びら占いをどうぞ"},
+    {speaker:"B", text:"……「勝つ」"},
+    {speaker:"A", text:"一枚で終わったな"}
+  ]},
+  { id: 425, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしの声、山まで届くじゃん!"},
+    {speaker:"B", text:"隣のあたしが先に散る"}
+  ]},
+  { id: 426, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"私の長所を一つ挙げるなら？"},
+    {speaker:"B", text:"全部で一つって数えていい？"},
+    {speaker:"A", text:"数学的に困ります"}
+  ]},
+  { id: 427, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"石積み、崩れるのが怖い…"},
+    {speaker:"B", text:"崩れる前提で積むな"}
+  ]},
+  { id: 428, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……その帯、いい"},
+    {speaker:"B", text:"でしょ。目が高いじゃん"}
+  ]},
+  { id: 429, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"亀を飼うなら名前どうする〜？"},
+    {speaker:"B", text:"「はやて」はどう？"}
+  ]},
+  { id: 430, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"味噌汁の具は多いほど強い!"},
+    {speaker:"B", text:"戦闘力の話ではないだろう"}
+  ]},
+  { id: 431, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あたしの笑い方、上品でしょ"},
+    {speaker:"B", text:"今日一番の大声だったじゃん!"}
+  ]},
+  { id: 432, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"良いこと日記、三冊目なの"},
+    {speaker:"B", text:"世界が良いことだらけだな"}
+  ]},
+  { id: 433, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"後ろで音がした…!"},
+    {speaker:"B", text:"……私の足音"}
+  ]},
+  { id: 434, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"隠し味って何でも隠れるの？"},
+    {speaker:"B", text:"入れすぎは主役になります"}
+  ]},
+  { id: 435, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"石を積んで九段だ"},
+    {speaker:"B", text:"崩す係やる〜？"},
+    {speaker:"A", text:"来るな"}
+  ]},
+  { id: 436, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……的当て、勝負"},
+    {speaker:"B", text:"望むところ! …百発百中!?"},
+    {speaker:"A", text:"……特技"}
+  ]},
+  { id: 437, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"数え歌うたお〜ひとつ〜"},
+    {speaker:"B", text:"ふたつ、です"}
+  ]},
+  { id: 438, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしより強い妖怪いる？"},
+    {speaker:"B", text:"いっぱいいるよ!?"}
+  ]},
+  { id: 439, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"たまには弱音はいていいよ？"},
+    {speaker:"B", text:"弱音…甘いもの食べたい!"}
+  ]},
+  { id: 440, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"お前の元気を数値化したい"},
+    {speaker:"B", text:"数字こわれるじゃん!"}
+  ]},
+  { id: 441, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"本日の一句をどうぞ"},
+    {speaker:"B", text:"……「道、長い」"},
+    {speaker:"A", text:"五文字です"}
+  ]},
+  { id: 442, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"褒められるの慣れてなくて…"},
+    {speaker:"B", text:"毎日少しずつ慣れよっか"}
+  ]},
+  { id: 443, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"あたしの早口、聞き取れる？"},
+    {speaker:"B", text:"ゆっくりでいいよ〜"}
+  ]},
+  { id: 444, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"勝負の心得を授けよう!"},
+    {speaker:"B", text:"授かる側じゃないし"}
+  ]},
+  { id: 445, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……口数、貸す"},
+    {speaker:"B", text:"借りても使い道がない"},
+    {speaker:"A", text:"……同業"}
+  ]},
+  { id: 446, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"頑張りすぎたら止めるからね"},
+    {speaker:"B", text:"では頑張りすぎます"},
+    {speaker:"A", text:"逆効果!?"}
+  ]},
+  { id: 447, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"猫になりたい〜"},
+    {speaker:"B", text:"もう半分なってるじゃん"}
+  ]},
+  { id: 448, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"勇気を出した回数を記録してる"},
+    {speaker:"B", text:"え、私の？ …何回？"},
+    {speaker:"A", text:"今日だけで七回だ"}
+  ]},
+  { id: 449, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"優しさで世界とれるよ、あんた"},
+    {speaker:"B", text:"世界はいらないかな"}
+  ]},
+  { id: 450, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"声で妖怪を追い払えるか実験だ!"},
+    {speaker:"B", text:"効いたら英雄じゃん!"}
+  ]},
+  { id: 451, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"また大きくなりましたね"},
+    {speaker:"B", text:"身長？"},
+    {speaker:"A", text:"態度です"}
+  ]},
+  { id: 452, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"声まね得意! 「……」!"},
+    {speaker:"B", text:"……似てない"}
+  ]},
+  { id: 453, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"おかず交換しない？ 卵あげる"},
+    {speaker:"B", text:"お礼にぜんぶあげる〜"}
+  ]},
+  { id: 454, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"目をつぶると想像が怖い…"},
+    {speaker:"B", text:"目を開けろ。以上だ"}
+  ]},
+  { id: 455, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"雲の流れで移動したい〜"},
+    {speaker:"B", text:"発想が仙人だって"}
+  ]},
+  { id: 456, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"お前の笑顔は部隊の旗だ!"},
+    {speaker:"B", text:"旗って笑うんだ？"}
+  ]},
+  { id: 457, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"「天才」の使用回数を制限する"},
+    {speaker:"B", text:"天才に制限は効かないし"}
+  ]},
+  { id: 458, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……この道、好き"},
+    {speaker:"B", text:"おそろい〜"}
+  ]},
+  { id: 459, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"妖怪の好物ってなんだと思う？"},
+    {speaker:"B", text:"私たち…じゃないよね…？"}
+  ]},
+  { id: 460, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"沈黙は失礼にあたりますか"},
+    {speaker:"B", text:"沈黙は礼儀だ。我々の間では"}
+  ]},
+  { id: 461, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"荷物持ち当番、あんたね"},
+    {speaker:"B", text:"……くじで"},
+    {speaker:"A", text:"乗った"}
+  ]},
+  { id: 462, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"幸せって道に落ちてる〜？"},
+    {speaker:"B", text:"拾い方を知ってる人にはね"}
+  ]},
+  { id: 463, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"恐怖に名前をつけて呼び捨てろ!"},
+    {speaker:"B", text:"呼んだら来そう!?"}
+  ]},
+  { id: 464, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"労力の九割が声に使われている"},
+    {speaker:"B", text:"残り一割が本体じゃん!"}
+  ]},
+  { id: 465, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"ふたりで内緒ね"},
+    {speaker:"B", text:"……墓まで"},
+    {speaker:"A", text:"重い! でも嬉しい"}
+  ]},
+  { id: 466, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"折り紙で手裏剣つくれる〜"},
+    {speaker:"B", text:"実戦投入は禁止です"}
+  ]},
+  { id: 467, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"たまには褒めなさいよ"},
+    {speaker:"B", text:"毎日心で褒めている!"}
+  ]},
+  { id: 468, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"くすぐり弱いの…やめてね…"},
+    {speaker:"B", text:"いい情報きいたじゃん!"},
+    {speaker:"A", text:"言わなきゃよかった"}
+  ]},
+  { id: 469, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……声、節約中"},
+    {speaker:"B", text:"溜めてどうするのですか"},
+    {speaker:"A", text:"……老後"}
+  ]},
+  { id: 470, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"世界一の話し相手って誰？"},
+    {speaker:"B", text:"今の相手かな"}
+  ]},
+  { id: 471, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"猫に会いたい"},
+    {speaker:"B", text:"帰れば里に三匹います"}
+  ]},
+  { id: 472, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"情熱の温度は百度だ!"},
+    {speaker:"B", text:"やけどしない〜？"}
+  ]},
+  { id: 473, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの機嫌の直し方知ってる？"},
+    {speaker:"B", text:"甘味"},
+    {speaker:"A", text:"…正解"}
+  ]},
+  { id: 474, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"帰ったら一緒におやつ作ろ？"},
+    {speaker:"B", text:"失敗しても食べてくれる…？"},
+    {speaker:"A", text:"失敗の方が好き"}
+  ]},
+  { id: 475, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……騒がしいの、実は"},
+    {speaker:"B", text:"実は!?"},
+    {speaker:"A", text:"……安心する"}
+  ]},
+  { id: 476, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"心にゆとりの間取りがあるの〜"},
+    {speaker:"B", text:"何部屋だ"},
+    {speaker:"A", text:"ぜんぶ〜"}
+  ]},
+  { id: 477, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"忘れ物したかも…確認して…"},
+    {speaker:"B", text:"三度目です。ありません"}
+  ]},
+  { id: 478, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"盛り上げ担当はあたしじゃん!"},
+    {speaker:"B", text:"私と役割がかぶっている!"}
+  ]},
+  { id: 479, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"髪、結んだの似合うね"},
+    {speaker:"B", text:"気分転換…見すぎ"}
+  ]},
+  { id: 480, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"目で会話が成立している"},
+    {speaker:"B", text:"……今のは？"},
+    {speaker:"A", text:"「進もう」だろ"}
+  ]},
+  { id: 481, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"笑い声に品格を持たせましょう"},
+    {speaker:"B", text:"上品に「わはは」じゃん!"}
+  ]},
+  { id: 482, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"こわい夢は逆から思い出すの〜"},
+    {speaker:"B", text:"結末から!? 余計こわい!?"}
+  ]},
+  { id: 483, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"全力で歩く! 全力で休む!"},
+    {speaker:"B", text:"差がわかりません"}
+  ]},
+  { id: 484, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたのペースに合わせたげてる"},
+    {speaker:"B", text:"息ぴったりだね〜"}
+  ]},
+  { id: 485, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたしの笑顔は太陽級じゃん!"},
+    {speaker:"B", text:"直視できない眩しさではある"}
+  ]},
+  { id: 486, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……荷物、よこせ"},
+    {speaker:"B", text:"え、優しさの角度が急!"}
+  ]},
+  { id: 487, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"度胸のつけかた教えて…"},
+    {speaker:"B", text:"まず「どけ」って言ってみな"},
+    {speaker:"A", text:"ど、どいてください…"}
+  ]},
+  { id: 488, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"感情の起伏が羨ましいです"},
+    {speaker:"B", text:"分けてやる! 喜怒哀楽全部!"},
+    {speaker:"A", text:"楽だけで結構です"}
+  ]},
+  { id: 489, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"ふたりで屋台やるなら何屋〜？"},
+    {speaker:"B", text:"団子屋! いや飴屋!"}
+  ]},
+  { id: 490, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"借りができたな"},
+    {speaker:"B", text:"貸した覚えはないよ？"}
+  ]},
+  { id: 491, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"背中を預けるぞ!"},
+    {speaker:"B", text:"……預かる"}
+  ]},
+  { id: 492, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしたちの旅、本にできるじゃん"},
+    {speaker:"B", text:"九割あんたの独り言の本ね"}
+  ]},
+  { id: 493, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"今日の空に名前つけるなら？"},
+    {speaker:"B", text:"「青」"}
+  ]},
+  { id: 494, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"説教くさいこと言わないでよね"},
+    {speaker:"B", text:"では要点のみ。素敵です"},
+    {speaker:"A", text:"説教して？"}
+  ]},
+  { id: 495, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"木陰でひとやすみしよ〜"},
+    {speaker:"B", text:"……見張る"}
+  ]},
+  { id: 496, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"私、足手まといじゃない…？"},
+    {speaker:"B", text:"手をつなぐ理由ができる人だよ"}
+  ]},
+  { id: 497, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"心が叫んでいる!"},
+    {speaker:"B", text:"内容を要約しろ"},
+    {speaker:"A", text:"「楽しい」!"}
+  ]},
+  { id: 498, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"今日のあたし、静かじゃん？"},
+    {speaker:"B", text:"……体感二倍"}
+  ]},
+  { id: 499, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"ずっとこのままとか思ってないし"},
+    {speaker:"B", text:"私は思ってるよ"},
+    {speaker:"A", text:"…あたしも"}
+  ]},
+  { id: 500, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"五百歩目〜記念〜"},
+    {speaker:"B", text:"数えてたの!?"},
+    {speaker:"A", text:"今てきとうに言った〜"}
+  ]},
+  { id: 501, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"けん玉百回連続いけるじゃん!"},
+    {speaker:"B", text:"今三回目で落ちた"}
+  ]},
+  { id: 502, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"茶柱立ったらいいことあるよ"},
+    {speaker:"B", text:"……二本"}
+  ]},
+  { id: 503, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたの巾着、何入ってるの"},
+    {speaker:"B", text:"どんぐりの蔵〜"},
+    {speaker:"A", text:"蔵!?"}
+  ]},
+  { id: 504, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"おにぎりは三角派だ! 角が武器!"},
+    {speaker:"B", text:"食料を武装させないで下さい"}
+  ]},
+  { id: 505, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"お化け屋敷ごっこしない…よね…？"},
+    {speaker:"B", text:"本物がいるのに!?"}
+  ]},
+  { id: 506, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"手押し相撲をする。押せ"},
+    {speaker:"B", text:"動かな…岩？"}
+  ]},
+  { id: 507, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……草笛 ぴー"},
+    {speaker:"B", text:"上手〜! 鳥が返事してる〜"}
+  ]},
+  { id: 508, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"妖怪は「一体」と数えます"},
+    {speaker:"B", text:"「一匹」じゃだめじゃん？"}
+  ]},
+  { id: 509, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"押し花、図鑑にはさんでるの〜"},
+    {speaker:"B", text:"妖怪と花の本になってるね"}
+  ]},
+  { id: 510, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"木登り、あたしのが高いし"},
+    {speaker:"B", text:"降りられるかも競え!"}
+  ]},
+  { id: 511, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"風にも名前があったらいいのに"},
+    {speaker:"B", text:"「向かい風」だ"}
+  ]},
+  { id: 512, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"影絵やるじゃん! これは何!"},
+    {speaker:"B", text:"……手"},
+    {speaker:"A", text:"犬だし!"}
+  ]},
+  { id: 513, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"絵馬に「無事」って書いた…"},
+    {speaker:"B", text:"完璧な祈願です"}
+  ]},
+  { id: 514, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"お賽銭はいくら入れた"},
+    {speaker:"B", text:"気持ち! 気持ちが大事じゃん!"},
+    {speaker:"A", text:"額を聞いている"}
+  ]},
+  { id: 515, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"やっほーの返事を頼む!"},
+    {speaker:"B", text:"……やほ"}
+  ]},
+  { id: 516, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"噛む回数っていくつがいいの〜"},
+    {speaker:"B", text:"三十回です"}
+  ]},
+  { id: 517, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたの怒った顔、想像できない"},
+    {speaker:"B", text:"想像で許して？"}
+  ]},
+  { id: 518, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……手、大きい？"},
+    {speaker:"B", text:"比べるか"},
+    {speaker:"A", text:"……勝った"}
+  ]},
+  { id: 519, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"たくあんの音、村一なんだ!"},
+    {speaker:"B", text:"音まで元気なんだね"}
+  ]},
+  { id: 520, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"箸の持ち方が美しいですね"},
+    {speaker:"B", text:"育ちがいいから"}
+  ]},
+  { id: 521, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"森の音…なんかこわい…"},
+    {speaker:"B", text:"森のおしゃべりだよ〜"}
+  ]},
+  { id: 522, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"満腹の定義を述べよ"},
+    {speaker:"B", text:"おかわり三杯まで!"}
+  ]},
+  { id: 523, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"おやつの隠し場所、教えよっか"},
+    {speaker:"B", text:"親友じゃん!!!"}
+  ]},
+  { id: 524, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"ひなたぼっこ日和〜"},
+    {speaker:"B", text:"……とかげの気分"}
+  ]},
+  { id: 525, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"飴の味、当ててみなよ"},
+    {speaker:"B", text:"見た。桃だ"},
+    {speaker:"A", text:"当てるって舌でよ!"}
+  ]},
+  { id: 526, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"昔は泣き虫だったんだ、私"},
+    {speaker:"B", text:"今はみんなを守る側だね"}
+  ]},
+  { id: 527, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"夢は大金持ちのお団子屋じゃん!"},
+    {speaker:"B", text:"順序はお団子屋が先ですね"}
+  ]},
+  { id: 528, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……夢、ある？"},
+    {speaker:"B", text:"世界一有名になる"},
+    {speaker:"A", text:"……応援"}
+  ]},
+  { id: 529, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"めだかの群れ、見つけた〜"},
+    {speaker:"B", text:"仲間に入れてもらうじゃん!"}
+  ]},
+  { id: 530, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"神社の作法、合ってるか見てて…"},
+    {speaker:"B", text:"見ている。既に完璧だ"}
+  ]},
+  { id: 531, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"湯呑みの柄、何が好みですか"},
+    {speaker:"B", text:"あなたと同じでいいな"}
+  ]},
+  { id: 532, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あたしの笑いのツボ、浅くないし"},
+    {speaker:"B", text:"さっき葉っぱで笑ってたじゃん"}
+  ]},
+  { id: 533, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"好きな妖怪はいるか"},
+    {speaker:"B", text:"……こだま"},
+    {speaker:"A", text:"通好みだ"}
+  ]},
+  { id: 534, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"推し妖怪を決めよう!"},
+    {speaker:"B", text:"推せる要素ある!?"}
+  ]},
+  { id: 535, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"匂い袋つくったの、どうぞ"},
+    {speaker:"B", text:"いい香り〜夢に出そう〜"}
+  ]},
+  { id: 536, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"手をたたくと幸せ来るじゃん!"},
+    {speaker:"B", text:"来るのはあんたの周りだけ"}
+  ]},
+  { id: 537, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"石の数を数えて心を鎮めます"},
+    {speaker:"B", text:"何個目だ"},
+    {speaker:"A", text:"三個で鎮まりました"}
+  ]},
+  { id: 538, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"苔のじゅうたん、ふかふか〜"},
+    {speaker:"B", text:"滑るから気をつけて…!"}
+  ]},
+  { id: 539, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……勝負の前は？"},
+    {speaker:"B", text:"深呼吸と雄叫びだ!"},
+    {speaker:"A", text:"……前半だけ真似る"}
+  ]},
+  { id: 540, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"敬称って「ちゃん」でいい？"},
+    {speaker:"B", text:"職務中は「さん」で"},
+    {speaker:"A", text:"職務いつ終わるの"}
+  ]},
+  { id: 541, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"鈴の音って、お守りになるかな…"},
+    {speaker:"B", text:"なるよ。私の声も付けとくね"}
+  ]},
+  { id: 542, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"かるた強いじゃん、あたし"},
+    {speaker:"B", text:"まだ読み札を読んでいない"}
+  ]},
+  { id: 543, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"失敗談、聞きたいな"},
+    {speaker:"B", text:"記録が見当たりません"}
+  ]},
+  { id: 544, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"石とびで川わたれる〜？"},
+    {speaker:"B", text:"お前の滞空時間では無理だ"}
+  ]},
+  { id: 545, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"我が拳と君の声、どっちが響く!"},
+    {speaker:"B", text:"合わせたら山が驚くじゃん!"}
+  ]},
+  { id: 546, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"親切の返済期限はあるか"},
+    {speaker:"B", text:"ないよ、無期限"}
+  ]},
+  { id: 547, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……肩ぐるま"},
+    {speaker:"B", text:"視界良好にしたげるじゃん!"},
+    {speaker:"A", text:"……高い"}
+  ]},
+  { id: 548, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"たまには急ぎなよ"},
+    {speaker:"B", text:"急いだら景色がこぼれる〜"},
+    {speaker:"A", text:"詩人ぶるな"}
+  ]},
+  { id: 549, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"整列の際は声かけを"},
+    {speaker:"B", text:"……もう隣"}
+  ]},
+  { id: 550, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"帰り道、歌でもうたう？"},
+    {speaker:"B", text:"小さい声でなら…"}
+  ]},
+  { id: 551, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"元気の総量、村一じゃん!"},
+    {speaker:"B", text:"分けても減らないやつ〜"}
+  ]},
+  { id: 552, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"憂いは半分こにする決まりだ"},
+    {speaker:"B", text:"いつ決まったの…？"},
+    {speaker:"A", text:"今だ"}
+  ]},
+  { id: 553, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"ライバルは多いほど燃える!"},
+    {speaker:"B", text:"あたし一人で十分でしょ"}
+  ]},
+  { id: 554, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"木漏れ日って名前かわいいね〜"},
+    {speaker:"B", text:"道の名前にもなってるね"}
+  ]},
+  { id: 555, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"無口って損してない？"},
+    {speaker:"B", text:"……黒字"}
+  ]},
+  { id: 556, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"心の準備の速さなら負けない…"},
+    {speaker:"B", text:"何の準備!?"},
+    {speaker:"A", text:"逃げる準備"}
+  ]},
+  { id: 557, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"熱意にも礼儀作法があります"},
+    {speaker:"B", text:"礼儀正しく燃える!"}
+  ]},
+  { id: 558, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"ありがとうって言われるの好き？"},
+    {speaker:"B", text:"悪くない。回数は増やせ"}
+  ]},
+  { id: 559, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"おはじき、指がすべった〜"},
+    {speaker:"B", text:"三連敗の言い訳がそれ？"}
+  ]},
+  { id: 560, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……そろばん、得意"},
+    {speaker:"B", text:"静かな早業ですね"}
+  ]},
+  { id: 561, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"愛嬌担当はあたしじゃん!"},
+    {speaker:"B", text:"じゃあ私は…慎重担当…？"}
+  ]},
+  { id: 562, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"亀の甲より年の功と言う"},
+    {speaker:"B", text:"亀の甲もいいのにね〜"},
+    {speaker:"A", text:"亀の肩を持つな"}
+  ]},
+  { id: 563, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"全力のありがとうを受け取れ!"},
+    {speaker:"B", text:"受け止めた、両手で"}
+  ]},
+  { id: 564, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしに敬語使わなくていいよ"},
+    {speaker:"B", text:"元から使っていない"},
+    {speaker:"A", text:"使いなさいよ!?"}
+  ]},
+  { id: 565, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"静かな遊びも覚えよ？"},
+    {speaker:"B", text:"静かに騒ぐじゃん!"}
+  ]},
+  { id: 566, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"暗いの、先歩いて…？"},
+    {speaker:"B", text:"……手を出せ"},
+    {speaker:"A", text:"あったかい…"}
+  ]},
+  { id: 567, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"上品な笑い方を披露します。ほほほ"},
+    {speaker:"B", text:"似合わないじゃん!?"}
+  ]},
+  { id: 568, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"燃える人って冷めないの〜？"},
+    {speaker:"B", text:"常に薪をくべている!"}
+  ]},
+  { id: 569, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"たまには規則を破るか"},
+    {speaker:"B", text:"では五分だけ自由に"},
+    {speaker:"A", text:"規則的な自由だ"}
+  ]},
+  { id: 570, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"あたしの扱い方、わかってきた？"},
+    {speaker:"B", text:"甘いもので直る、でしょ？"}
+  ]},
+  { id: 571, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……雲、羊"},
+    {speaker:"B", text:"群れだね〜"},
+    {speaker:"A", text:"……放牧"}
+  ]},
+  { id: 572, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしの背中、貸したげよっか"},
+    {speaker:"B", text:"意外と…頼りになりそう"}
+  ]},
+  { id: 573, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"今日を一言で表すなら「熱」!"},
+    {speaker:"B", text:"私は「凪」だ"},
+    {speaker:"A", text:"合わせて温泉だな!"}
+  ]},
+  { id: 574, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"素直じゃないとこも長所だよ"},
+    {speaker:"B", text:"褒めてるの、それ"}
+  ]},
+  { id: 575, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"いつか雲を触りにいこ〜ね〜"},
+    {speaker:"B", text:"約束じゃん! 指切り!"}
+  ]},
+  { id: 576, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"我々の会話、外から見ると謎らしい"},
+    {speaker:"B", text:"……通じてるのに"}
+  ]},
+  { id: 577, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"心臓の音が早い…緊張かな…"},
+    {speaker:"B", text:"楽しみの音かもしれません"}
+  ]},
+  { id: 578, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"二人で音頭とったら村祭りじゃん!"},
+    {speaker:"B", text:"今から演目を考える!"}
+  ]},
+  { id: 579, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたのそういうとこ、ずるい"},
+    {speaker:"B", text:"どういうとこ？"},
+    {speaker:"A", text:"内緒"}
+  ]},
+  { id: 580, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"亀を見習うところがあります"},
+    {speaker:"B", text:"甲羅〜？"}
+  ]},
+  { id: 581, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……にぎやか、半分こ"},
+    {speaker:"B", text:"出た! 名案じゃん!"},
+    {speaker:"A", text:"……持ち帰り不可"}
+  ]},
+  { id: 582, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"「別に」の翻訳を頼む"},
+    {speaker:"B", text:"「ありがと」って意味だし"}
+  ]},
+  { id: 583, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"焚き火の番なら任せろ!"},
+    {speaker:"B", text:"まだ火はありません"}
+  ]},
+  { id: 584, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"二人の秘密の合図つくろ？"},
+    {speaker:"B", text:"……まばたき二回"}
+  ]},
+  { id: 585, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"走るのと歩くの、間ってある〜？"},
+    {speaker:"B", text:"「急ぎ足」だ"}
+  ]},
+  { id: 586, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"びっくりした時、手にぎっていい？"},
+    {speaker:"B", text:"いつでも。予約もいらないよ"}
+  ]},
+  { id: 587, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"今日の面白かったこと発表!"},
+    {speaker:"B", text:"あなたの転び方です"}
+  ]},
+  { id: 588, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あくせくしないの、見習おっかな"},
+    {speaker:"B", text:"入門編は深呼吸〜"}
+  ]},
+  { id: 589, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"沈黙百秒に挑戦しろ"},
+    {speaker:"B", text:"余裕じゃん! …ねえ今何秒？"},
+    {speaker:"A", text:"三秒だ"}
+  ]},
+  { id: 590, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"声を合わせて「おー」!"},
+    {speaker:"B", text:"……くちぱく"}
+  ]},
+  { id: 591, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"勇気が出る食べ物って何だろうね"},
+    {speaker:"B", text:"甘いもの…かな…"}
+  ]},
+  { id: 592, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"空の青、今日は何割〜？"},
+    {speaker:"B", text:"十割です"}
+  ]},
+  { id: 593, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたしの元気、うつしたげる!"},
+    {speaker:"B", text:"経路を説明しろ"}
+  ]},
+  { id: 594, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……つよがり、ばれてる"},
+    {speaker:"B", text:"え、いつから"},
+    {speaker:"A", text:"……最初から"}
+  ]},
+  { id: 595, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"頼っていい日と悪い日ある…？"},
+    {speaker:"B", text:"無い。常に頼れ"}
+  ]},
+  { id: 596, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"善行の記録が今日も増えました"},
+    {speaker:"B", text:"私のも書いといて？"}
+  ]},
+  { id: 597, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あんたのまっすぐさ、まぶしい"},
+    {speaker:"B", text:"太陽と呼べ!"}
+  ]},
+  { id: 598, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"帰ったら何する〜？"},
+    {speaker:"B", text:"……続き"}
+  ]},
+  { id: 599, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"今日も無事でよかったね"},
+    {speaker:"B", text:"明日も無事にする! 宣言だ!"}
+  ]},
+  { id: 600, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"記念日つくろ! 今日は何の日？"},
+    {speaker:"B", text:"「いい道の日」〜"},
+    {speaker:"A", text:"採用!"}
+  ]},
+  { id: 601, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"見張り台なら世界一周じゃん!"},
+    {speaker:"B", text:"見えるのは村までだ"}
+  ]},
+  { id: 602, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"第一印象、覚えてる？"},
+    {speaker:"B", text:"……静かな人"}
+  ]},
+  { id: 603, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あたしたち、どっちが先輩？"},
+    {speaker:"B", text:"心の年季なら私だ!"}
+  ]},
+  { id: 604, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"渡し船、ゆらゆらで好き〜"},
+    {speaker:"B", text:"船頭さんの邪魔はしないように"}
+  ]},
+  { id: 605, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"火薬庫の近く、通りたくない…"},
+    {speaker:"B", text:"賢明だ"}
+  ]},
+  { id: 606, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……はちみつ"},
+    {speaker:"B", text:"養蜂場の!? 買いに行くじゃん!"}
+  ]},
+  { id: 607, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"鍛冶屋の音は魂の太鼓だ!"},
+    {speaker:"B", text:"職人さんに伝えたら喜ぶね"}
+  ]},
+  { id: 608, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"馬に名前をつけるなら"},
+    {speaker:"B", text:"「あたし二号」"},
+    {speaker:"A", text:"馬が困る"}
+  ]},
+  { id: 609, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"茶屋の新作、何だと思う〜？"},
+    {speaker:"B", text:"団子の親分みたいなやつ!"}
+  ]},
+  { id: 610, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"奉行所の張り紙は熟読しましょう"},
+    {speaker:"B", text:"こわい依頼は読み飛ばす…"}
+  ]},
+  { id: 611, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"呼び方、変えてみる？"},
+    {speaker:"B", text:"今ので慣れてるし…今ので"}
+  ]},
+  { id: 612, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"からくり屋敷の仕掛け、解けるか"},
+    {speaker:"B", text:"力技でいくじゃん!"}
+  ]},
+  { id: 613, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……けんかごっこ、する？"},
+    {speaker:"B", text:"え、どうやるの？"},
+    {speaker:"A", text:"……わからない"}
+  ]},
+  { id: 614, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"道場やぶりに行くぞ!"},
+    {speaker:"B", text:"私たちの村の道場です"}
+  ]},
+  { id: 615, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"二人の共通点って何かな"},
+    {speaker:"B", text:"おやつ好き〜"}
+  ]},
+  { id: 616, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"湯気で前が見えないよ…"},
+    {speaker:"B", text:"前もあたしもいるじゃん!"}
+  ]},
+  { id: 617, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"温泉の効能、ぜんぶ言える〜？"},
+    {speaker:"B", text:"「気分」"}
+  ]},
+  { id: 618, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"温泉たまごの殻むき、神業じゃん!"},
+    {speaker:"B", text:"つるんと出ると気持ちいいね"}
+  ]},
+  { id: 619, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"風呂の順番を決める"},
+    {speaker:"B", text:"譲り合いで永遠に決まりません"}
+  ]},
+  { id: 620, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"湯船で「いい湯だな」を歌おう!"},
+    {speaker:"B", text:"……鼻歌なら"}
+  ]},
+  { id: 621, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"のぼせたらすぐ言ってね"},
+    {speaker:"B", text:"のぼせる前が一番楽しいじゃん!"}
+  ]},
+  { id: 622, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"効能書き、読んで"},
+    {speaker:"B", text:"「肩こりに効く」そうです"},
+    {speaker:"A", text:"全部読んで"}
+  ]},
+  { id: 623, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"露天は空を見ながら入れるの〜"},
+    {speaker:"B", text:"妖怪も見てたりして…"}
+  ]},
+  { id: 624, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"湯加減の感想を"},
+    {speaker:"B", text:"……ちょうど"}
+  ]},
+  { id: 625, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"脱衣かご、隣にするじゃん!"},
+    {speaker:"B", text:"距離感よ"}
+  ]},
+  { id: 626, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"長湯は計画的に"},
+    {speaker:"B", text:"一緒だと長くなっちゃうね"}
+  ]},
+  { id: 627, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"熱いお湯、入れる気がしない…"},
+    {speaker:"B", text:"端は温い! 案内する!"}
+  ]},
+  { id: 628, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……背中、流す"},
+    {speaker:"B", text:"急に優しいじゃん、何？"}
+  ]},
+  { id: 629, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"お風呂のあとの一杯、何にする〜"},
+    {speaker:"B", text:"冷たいお水が一番かも"}
+  ]},
+  { id: 630, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"十数えてから上がるぞ! 一!"},
+    {speaker:"B", text:"十"},
+    {speaker:"A", text:"飛ばすな!"}
+  ]},
+  { id: 631, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"美肌効果、あたしに一番効くし"},
+    {speaker:"B", text:"元が良いから分かんないじゃん!"}
+  ]},
+  { id: 632, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"湯気の向こうの絵、見える？"},
+    {speaker:"B", text:"湯気しか見えない"}
+  ]},
+  { id: 633, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"湯船で百まで数えるじゃん!"},
+    {speaker:"B", text:"……のぼせる"},
+    {speaker:"A", text:"五十で妥協!"}
+  ]},
+  { id: 634, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"見張り台、高くてこわい…"},
+    {speaker:"B", text:"景色は恐怖の三倍です"},
+    {speaker:"A", text:"三倍…見たい…"}
+  ]},
+  { id: 635, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"旅団旗のデザイン案はあるか"},
+    {speaker:"B", text:"おやつの絵〜"}
+  ]},
+  { id: 636, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……旗、持ちたい"},
+    {speaker:"B", text:"任せた! 誇り高く!"},
+    {speaker:"A", text:"……重い、心が"}
+  ]},
+  { id: 637, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"鞄屋の大きい鞄、何入れます？"},
+    {speaker:"B", text:"夢!"},
+    {speaker:"A", text:"容積の話です"}
+  ]},
+  { id: 638, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"鶏小屋の卵、あったかいんだよ〜"},
+    {speaker:"B", text:"触ったの？ 怒られるよ"}
+  ]},
+  { id: 639, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"神社でお願いした？"},
+    {speaker:"B", text:"「皆が笑うように」と!"}
+  ]},
+  { id: 640, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの十年後、予想して"},
+    {speaker:"B", text:"今と同じ"},
+    {speaker:"A", text:"誉め言葉と受け取る"}
+  ]},
+  { id: 641, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"二人で商売するなら何屋？"},
+    {speaker:"B", text:"静かな…本屋…？"}
+  ]},
+  { id: 642, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"隣の家に住む案が出ている"},
+    {speaker:"B", text:"誰から？"},
+    {speaker:"A", text:"私からだ"}
+  ]},
+  { id: 643, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"元気が服着て歩いてると言われた!"},
+    {speaker:"B", text:"服も元気そう〜"}
+  ]},
+  { id: 644, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……通せんぼ"},
+    {speaker:"B", text:"なんで!? 通して!?"},
+    {speaker:"A", text:"……通行料、笑顔"}
+  ]},
+  { id: 645, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"背中に字書くから当てて"},
+    {speaker:"B", text:"くすぐったいね…「あ」？"},
+    {speaker:"A", text:"「天才」って書いた"}
+  ]},
+  { id: 646, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"十数えて振り向くと妖怪いるって…"},
+    {speaker:"B", text:"いなかったら景品ほしいね〜"}
+  ]},
+  { id: 647, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"巻物風に今日を記すと？"},
+    {speaker:"B", text:"「往きて、帰る」"}
+  ]},
+  { id: 648, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"荷物の整頓、あたしが一番じゃん"},
+    {speaker:"B", text:"中身が全ておやつだったぞ!"}
+  ]},
+  { id: 649, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"木の実、集めすぎた〜"},
+    {speaker:"B", text:"……りす？"},
+    {speaker:"A", text:"りすじゃないよ〜"}
+  ]},
+  { id: 650, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"出会った日のこと覚えてる？"},
+    {speaker:"B", text:"覚えてない…ふりしてる"},
+    {speaker:"A", text:"素直!"}
+  ]},
+  { id: 651, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"恐怖体験を財産と呼べるか"},
+    {speaker:"B", text:"呼びたくない財産だよ…!"}
+  ]},
+  { id: 652, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"応援合戦なら負けん!"},
+    {speaker:"B", text:"応援し合ったら無限じゃん!"}
+  ]},
+  { id: 653, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……早口言葉"},
+    {speaker:"B", text:"生麦生米生卵"},
+    {speaker:"A", text:"……棄権"}
+  ]},
+  { id: 654, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"通りゃんせって続きあるの〜？"},
+    {speaker:"B", text:"作ればいいじゃん!"}
+  ]},
+  { id: 655, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"説得力あるって言われるでしょ"},
+    {speaker:"B", text:"声量の話か？"}
+  ]},
+  { id: 656, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"好きな瞬間っていつ？"},
+    {speaker:"B", text:"……今"}
+  ]},
+  { id: 657, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"強気って顔からつくるの…？"},
+    {speaker:"B", text:"中身からに決まってるでしょ"}
+  ]},
+  { id: 658, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"感謝の言葉に予備はありますか"},
+    {speaker:"B", text:"無限にある!"}
+  ]},
+  { id: 659, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたし、村の看板娘になれる？"},
+    {speaker:"B", text:"看板より声が大きい"}
+  ]},
+  { id: 660, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……ぼーっとする才能"},
+    {speaker:"B", text:"二人とも天才だね〜"}
+  ]},
+  { id: 661, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"たまには羽目はずしなよ"},
+    {speaker:"B", text:"手本を見せてください"},
+    {speaker:"A", text:"あたしのは真似禁止"}
+  ]},
+  { id: 662, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"湯冷めしない歩き方ある〜？"},
+    {speaker:"B", text:"早歩きだ"}
+  ]},
+  { id: 663, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"恐怖よ、去れ! …効いたか!?"},
+    {speaker:"B", text:"声で怖さが増えた…"}
+  ]},
+  { id: 664, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"笑い声で誰か分かるよ"},
+    {speaker:"B", text:"一番大きいのがあたしじゃん!"}
+  ]},
+  { id: 665, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"助言その二。素直は損をしない"},
+    {speaker:"B", text:"その一は何だったの"},
+    {speaker:"A", text:"「素直になれ」"}
+  ]},
+  { id: 666, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"妖怪の夢見ない方法ある…？"},
+    {speaker:"B", text:"……別の夢、予約"}
+  ]},
+  { id: 667, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"私の趣味は整頓です"},
+    {speaker:"B", text:"見てて気持ちいい〜"}
+  ]},
+  { id: 668, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"二人の必殺「わいわい斬り」!"},
+    {speaker:"B", text:"命名会議やり直し"}
+  ]},
+  { id: 669, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"戦友と呼ばせてくれ!"},
+    {speaker:"B", text:"……許可"}
+  ]},
+  { id: 670, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"幸せのおすそ分け〜はい〜"},
+    {speaker:"B", text:"見えないけど受け取ったよ"}
+  ]},
+  { id: 671, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あんたのそれ、天然？"},
+    {speaker:"B", text:"計算じゃん!"}
+  ]},
+  { id: 672, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"休暇の予定を聞く"},
+    {speaker:"B", text:"予定を立てる休暇にします"},
+    {speaker:"A", text:"休め"}
+  ]},
+  { id: 673, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"苦手克服、手伝おうか？"},
+    {speaker:"B", text:"苦手のまま隣いてくれる…？"}
+  ]},
+  { id: 674, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……沈黙"},
+    {speaker:"B", text:"確かに伝わった"}
+  ]},
+  { id: 675, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"元気印って呼ばれたじゃん!"},
+    {speaker:"B", text:"印どころか元気の看板だよ"}
+  ]},
+  { id: 676, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんた見てると安心する…なんか"},
+    {speaker:"B", text:"縁側効果〜"}
+  ]},
+  { id: 677, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"守られてばかりで悪いな…"},
+    {speaker:"B", text:"守らせてくれてありがとうだ!"}
+  ]},
+  { id: 678, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"相互理解が進んでいますね"},
+    {speaker:"B", text:"……順調"}
+  ]},
+  { id: 679, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"祭りの太鼓、もう楽しみ〜"},
+    {speaker:"B", text:"あたしの出番もあるじゃん!"}
+  ]},
+  { id: 680, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"感謝を定期報告する。ありがとう"},
+    {speaker:"B", text:"定期!?"}
+  ]},
+  { id: 681, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"我らの伝説、第一章はどこから!"},
+    {speaker:"B", text:"あたしの登場からでしょ"}
+  ]},
+  { id: 682, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……静かな祭りはある？"},
+    {speaker:"B", text:"無い! 祭りは音じゃん!"}
+  ]},
+  { id: 683, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"頼りにしてるからね"},
+    {speaker:"B", text:"相互だ"}
+  ]},
+  { id: 684, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"明日の楽しみを今日決めとこ〜"},
+    {speaker:"B", text:"前倒しの楽しみですね"}
+  ]},
+  { id: 685, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あたしの隣、特等席だから"},
+    {speaker:"B", text:"料金取られそう…"},
+    {speaker:"A", text:"あんたはタダ"}
+  ]},
+  { id: 686, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"目立つの苦手…隠して…"},
+    {speaker:"B", text:"あたしの影は特等席じゃん!"}
+  ]},
+  { id: 687, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"品行方正を心がけましょう"},
+    {speaker:"B", text:"ひんこう…なんて？"}
+  ]},
+  { id: 688, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"二人の会話記録、今日は五語だ"},
+    {speaker:"B", text:"……新記録？"},
+    {speaker:"A", text:"更新中だ"}
+  ]},
+  { id: 689, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"心が広いな! 海か!"},
+    {speaker:"B", text:"海は見たことないけどね"}
+  ]},
+  { id: 690, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"笑う門には福来るじゃん!"},
+    {speaker:"B", text:"うちの門、大渋滞〜"}
+  ]},
+  { id: 691, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"助けて…とか言わないから"},
+    {speaker:"B", text:"……聞こえてる"},
+    {speaker:"A", text:"空耳でしょ"}
+  ]},
+  { id: 692, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"幸せの基準ってなに〜？"},
+    {speaker:"B", text:"現状だ"}
+  ]},
+  { id: 693, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"私の心配性、直すべき…？"},
+    {speaker:"B", text:"直さないで。助かってるよ"}
+  ]},
+  { id: 694, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"声がでかいのは長所だな!"},
+    {speaker:"B", text:"長所です。距離があれば"},
+    {speaker:"A", text:"距離!?"}
+  ]},
+  { id: 695, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……たまに喋ると驚かれる"},
+    {speaker:"B", text:"貴重だからでしょ"},
+    {speaker:"A", text:"……骨董品？"}
+  ]},
+  { id: 696, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"落ち込んだ時は呼んでね"},
+    {speaker:"B", text:"落ち込み方わかんないじゃん!"}
+  ]},
+  { id: 697, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"静と動、良い組み合わせだ"},
+    {speaker:"B", text:"阿吽の呼吸だな!"}
+  ]},
+  { id: 698, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたには負けてもいい気がする"},
+    {speaker:"B", text:"勝負したことあったっけ？"},
+    {speaker:"A", text:"心の話!"}
+  ]},
+  { id: 699, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"この速度、世界がよく見える〜"},
+    {speaker:"B", text:"……特権"}
+  ]},
+  { id: 700, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"この旅、ずっと覚えてようね"},
+    {speaker:"B", text:"忘れても私が語り続ける!"}
+  ]},
+  { id: 701, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"蜘蛛の巣! 顔から突っ込んだ!"},
+    {speaker:"B", text:"先頭の宿命だ"}
+  ]},
+  { id: 702, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"髪に葉っぱついてるよ、取るね"},
+    {speaker:"B", text:"……飾り"}
+  ]},
+  { id: 703, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"先頭代わってあげよっか"},
+    {speaker:"B", text:"先頭は譲らん! 花形だ!"}
+  ]},
+  { id: 704, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"この道、遠回りが景色いいよ〜"},
+    {speaker:"B", text:"全員の同意が必要です"}
+  ]},
+  { id: 705, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"枝が折れる音した…"},
+    {speaker:"B", text:"私が踏んだ"}
+  ]},
+  { id: 706, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……木苺"},
+    {speaker:"B", text:"どこ!? みんなの分ある!?"},
+    {speaker:"A", text:"……五粒"}
+  ]},
+  { id: 707, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"川の水で顔を洗うと目が覚める!"},
+    {speaker:"B", text:"はねてるはねてる"}
+  ]},
+  { id: 708, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"ぬかるみだ。裾に注意"},
+    {speaker:"B", text:"言うのおそ…もう汚れた"}
+  ]},
+  { id: 709, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"岩がお饅頭に見える〜"},
+    {speaker:"B", text:"お腹すいてるじゃん、それ"}
+  ]},
+  { id: 710, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"目印に布を結びました"},
+    {speaker:"B", text:"帰りに絶対見失うやつ…"}
+  ]},
+  { id: 711, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"転ばないように、はい手"},
+    {speaker:"B", text:"子ども扱い…借りとく"}
+  ]},
+  { id: 712, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"静かな区間だ。声量を落とせ"},
+    {speaker:"B", text:"ささやきでもうるさい自信ある!"}
+  ]},
+  { id: 713, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……りす"},
+    {speaker:"B", text:"どこ!? …逃げた後!?"}
+  ]},
+  { id: 714, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"この坂、一気に駆け上がる!"},
+    {speaker:"B", text:"隊列が崩れます!"}
+  ]},
+  { id: 715, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"歩く順番、あたし二番目ね"},
+    {speaker:"B", text:"こだわるね〜"}
+  ]},
+  { id: 716, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"洞窟の入口…入るの…？"},
+    {speaker:"B", text:"顔だけ入れてみるじゃん!"},
+    {speaker:"A", text:"顔だけ!?"}
+  ]},
+  { id: 717, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"光る苔きれい〜持って帰れる〜？"},
+    {speaker:"B", text:"光は森に置いていけ"}
+  ]},
+  { id: 718, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"水筒の水、四人で足りるかな？"},
+    {speaker:"B", text:"計算してる時点でえらいね"}
+  ]},
+  { id: 719, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"地図の現在地が不明だ"},
+    {speaker:"B", text:"道なりです。道なりに全てを"}
+  ]},
+  { id: 720, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"遠くで物音! 全員警戒!"},
+    {speaker:"B", text:"……小鳥"}
+  ]},
+  { id: 721, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"おやつ配分、四等分でいい？"},
+    {speaker:"B", text:"あたし五等分で二個分!"},
+    {speaker:"A", text:"それは四等分じゃ…"}
+  ]},
+  { id: 722, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"蜘蛛の巣くらい避けなさいよ"},
+    {speaker:"B", text:"今あなたの頭上にあります"},
+    {speaker:"A", text:"とって!?"}
+  ]},
+  { id: 723, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"兎いた〜追いかけよ〜"},
+    {speaker:"B", text:"罠だったらどうするの…!?"}
+  ]},
+  { id: 724, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"分岐だ。直感で選べ"},
+    {speaker:"B", text:"……右"},
+    {speaker:"A", text:"採用"}
+  ]},
+  { id: 725, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"顔に虫あたった! 二回目!"},
+    {speaker:"B", text:"顔が道をふさいでるんでしょ"}
+  ]},
+  { id: 726, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"全員の歩数を揃えると美しいかと"},
+    {speaker:"B", text:"行進みたいで楽しいかもね"}
+  ]},
+  { id: 727, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"後ろの気配、確認して…"},
+    {speaker:"B", text:"振り向いた! 味方しかいない!"},
+    {speaker:"A", text:"それが一番いい報告"}
+  ]},
+  { id: 728, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……先頭、飽きた"},
+    {speaker:"B", text:"素直に交代って言いな"}
+  ]},
+  { id: 729, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"お花のトンネルみたいな道だね〜"},
+    {speaker:"B", text:"みんなで通ろ、順番に"}
+  ]},
+  { id: 730, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"橋だ! 渡る前に強度を確かめる!"},
+    {speaker:"B", text:"お前が跳ねたら意味がない"}
+  ]},
+  { id: 731, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"木の根っこ、引っかけ多すぎ"},
+    {speaker:"B", text:"三回転んだあたしに言う？"}
+  ]},
+  { id: 732, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"鳥の群れ、何羽いると思う？"},
+    {speaker:"B", text:"数える前に飛ぶ"}
+  ]},
+  { id: 733, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"やまびこ試すじゃん! やっほ!"},
+    {speaker:"B", text:"……木霊が返す"},
+    {speaker:"A", text:"敵の!?"}
+  ]},
+  { id: 734, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"蛇の抜け殻。縁起物だ"},
+    {speaker:"B", text:"拾うの!?"}
+  ]},
+  { id: 735, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"休憩地点まであと少しです"},
+    {speaker:"B", text:"あと少し詐欺じゃないよね〜？"}
+  ]},
+  { id: 736, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"全員で掛け声いくぞ! せーの!"},
+    {speaker:"B", text:"何て言うか決めてないじゃん!"}
+  ]},
+  { id: 737, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……足元、穴"},
+    {speaker:"B", text:"全員に周知します"},
+    {speaker:"A", text:"……もう落ちてる、私"}
+  ]},
+  { id: 738, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"きのこの傘、屋根になるかな〜"},
+    {speaker:"B", text:"あんたが小人ならね"}
+  ]},
+  { id: 739, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"はぐれたら…って考えちゃう…"},
+    {speaker:"B", text:"考える前に、ほら、真ん中どうぞ"}
+  ]},
+  { id: 740, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"森が静かだ。敵も休みか"},
+    {speaker:"B", text:"なら今のうちに進むぞ!"}
+  ]},
+  { id: 741, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"石、蹴って歩くの上手だね"},
+    {speaker:"B", text:"蹴りすぎて石なくした"}
+  ]},
+  { id: 742, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"木に登れば偵察できるじゃん!"},
+    {speaker:"B", text:"偵察は見張り役の仕事です"}
+  ]},
+  { id: 743, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"虫があたしにだけ来るんだけど"},
+    {speaker:"B", text:"花と間違われている"}
+  ]},
+  { id: 744, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"歩きながら雲も進んでる〜"},
+    {speaker:"B", text:"……並走"}
+  ]},
+  { id: 745, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"全員いるな! よし!"},
+    {speaker:"B", text:"数えてくれるの、安心する…"}
+  ]},
+  { id: 746, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"蜂です。静止してください"},
+    {speaker:"B", text:"固まるの得意じゃん! …まだ？"}
+  ]},
+  { id: 747, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"この花の群生は見る価値がある"},
+    {speaker:"B", text:"みんなで見てから進もっか"}
+  ]},
+  { id: 748, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……葉っぱの舟"},
+    {speaker:"B", text:"川に流すじゃん!"}
+  ]},
+  { id: 749, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"枝、顔に当たったんだけど!"},
+    {speaker:"B", text:"私が押さえてたのに離した!"},
+    {speaker:"A", text:"犯人じゃん!"}
+  ]},
+  { id: 750, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"木の実、食べられるか分かる？"},
+    {speaker:"B", text:"分からない時は全部毒って覚えた"},
+    {speaker:"A", text:"賢い、悲しいけど"}
+  ]},
+  { id: 751, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"近道の匂いがするじゃん!"},
+    {speaker:"B", text:"迷子の匂いだ"}
+  ]},
+  { id: 752, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"蟻の行列、渡り終わるの待とう〜"},
+    {speaker:"B", text:"迂回を提案します"}
+  ]},
+  { id: 753, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"今の風、変な音した…"},
+    {speaker:"B", text:"森の口笛でしょ"}
+  ]},
+  { id: 754, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"荷物が重い者は申告せよ!"},
+    {speaker:"B", text:"みんな強がるだろうね"}
+  ]},
+  { id: 755, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"標識がない。記憶を頼る"},
+    {speaker:"B", text:"……木、三本目"},
+    {speaker:"A", text:"有能だ"}
+  ]},
+  { id: 756, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"花冠、あたしにも作れる？"},
+    {speaker:"B", text:"教えるね、みんなの分作ろ"}
+  ]},
+  { id: 757, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"暗い道は歌でごまかすじゃん!"},
+    {speaker:"B", text:"敵に聞こえちゃう…!"},
+    {speaker:"A", text:"じゃあ心の中で大熱唱!"}
+  ]},
+  { id: 758, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"全員の水分補給を確認しました"},
+    {speaker:"B", text:"良い癖だ"}
+  ]},
+  { id: 759, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"この坂、帰りは下りだよ〜"},
+    {speaker:"B", text:"天才の発見じゃん!"}
+  ]},
+  { id: 760, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……この道、前も通った"},
+    {speaker:"B", text:"何!? 進んでいたのに!?"},
+    {speaker:"A", text:"……景色が二回目"}
+  ]},
+  { id: 761, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"みんなの歩幅、揃ってきたね"},
+    {speaker:"B", text:"隊として成長している"}
+  ]},
+  { id: 762, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"どんぐり投げないでよね"},
+    {speaker:"B", text:"当てたんじゃなくて落ちたの〜"}
+  ]},
+  { id: 763, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"分かれ道の看板、読める…？"},
+    {speaker:"B", text:"「どちらも森」"},
+    {speaker:"A", text:"情報量!?"}
+  ]},
+  { id: 764, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"川を飛び越える! 助走十歩!"},
+    {speaker:"B", text:"橋がすぐそこにあります"}
+  ]},
+  { id: 765, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"花の名前、てきとうに呼んでる"},
+    {speaker:"B", text:"花も慣れてそうだね"}
+  ]},
+  { id: 766, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"荷物の紐がほどけている"},
+    {speaker:"B", text:"あんた母親？ …ありがと"}
+  ]},
+  { id: 767, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"森のどこかに温泉あったらいいね〜"},
+    {speaker:"B", text:"見つけたらみんなで…帰りにね"}
+  ]},
+  { id: 768, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……前髪に、虫"},
+    {speaker:"B", text:"先に言ってよ!?"},
+    {speaker:"A", text:"……もう飛んだ"}
+  ]},
+  { id: 769, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"進行速度、良好です"},
+    {speaker:"B", text:"気合いが伝播した証だ!"}
+  ]},
+  { id: 770, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"迷ったら明るい方へ、だね"},
+    {speaker:"B", text:"あたしの周りが一番明るいじゃん!"},
+    {speaker:"A", text:"じゃあ迷わないね"}
+  ]},
+  { id: 771, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの勘、今日冴えてるし"},
+    {speaker:"B", text:"昨日も同じ事を言っていた"}
+  ]},
+  { id: 772, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"蜂の巣!? あれ蜂の巣!?"},
+    {speaker:"B", text:"蜂に聞いてくるじゃん!"},
+    {speaker:"A", text:"やめて!?"}
+  ]},
+  { id: 773, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"ペースを上げたい。可能か"},
+    {speaker:"B", text:"検討する〜"},
+    {speaker:"A", text:"長い検討になりそうだ"}
+  ]},
+  { id: 774, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"この岩、動かせると思うか!"},
+    {speaker:"B", text:"……なぜ動かす"},
+    {speaker:"A", text:"浪漫だ!"}
+  ]},
+  { id: 775, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"迷子も面白ければ勝ちじゃん"},
+    {speaker:"B", text:"負けを面白がってるだけ"}
+  ]},
+  { id: 776, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"葉っぱのお面つくった〜"},
+    {speaker:"B", text:"みんなの分もある？"}
+  ]},
+  { id: 777, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"恐れず進みましょう。私が先頭です"},
+    {speaker:"B", text:"二番目は譲らない…"}
+  ]},
+  { id: 778, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"話し声で鳥が三度逃げた"},
+    {speaker:"B", text:"三度も会いに来たじゃん!"}
+  ]},
+  { id: 779, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"石ころ、蹴っていい？"},
+    {speaker:"B", text:"道の石にも役目があります"}
+  ]},
+  { id: 780, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……いい枝、発見"},
+    {speaker:"B", text:"杖にする〜？"},
+    {speaker:"A", text:"……剣"}
+  ]},
+  { id: 781, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"綺麗な羽根ひろった。あげる"},
+    {speaker:"B", text:"兜に飾る! 家宝だ!"}
+  ]},
+  { id: 782, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"変な足跡! 新種の妖怪じゃん!?"},
+    {speaker:"B", text:"お前の足跡だ。一周した"}
+  ]},
+  { id: 783, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"変な音したら教えてね…"},
+    {speaker:"B", text:"……常時"},
+    {speaker:"A", text:"常時!?"}
+  ]},
+  { id: 784, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"お腹すいた〜まだ〜？"},
+    {speaker:"B", text:"あたしに聞かれても…すいた〜"}
+  ]},
+  { id: 785, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"力比べだ! この倒木を持て!"},
+    {speaker:"B", text:"持てたら英雄! 無理! 即答!"}
+  ]},
+  { id: 786, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"全員の位置を常に把握している"},
+    {speaker:"B", text:"感謝します。三歩右にいます"}
+  ]},
+  { id: 787, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"歩くの速いね、あんた"},
+    {speaker:"B", text:"……合わせられる"}
+  ]},
+  { id: 788, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"木漏れ日、あったかいね"},
+    {speaker:"B", text:"座りたくなる〜だめ〜？"}
+  ]},
+  { id: 789, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"探検隊ごっこするじゃん!"},
+    {speaker:"B", text:"実際に探検中です"},
+    {speaker:"A", text:"本物だった!"}
+  ]},
+  { id: 790, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"恐怖は共有すると半減するらしい"},
+    {speaker:"B", text:"じゃあ四人で四分の一…？"},
+    {speaker:"A", text:"良い計算だ"}
+  ]},
+  { id: 791, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"荷物、私がまとめて持とう!"},
+    {speaker:"B", text:"全部はやめときな、倒れる"}
+  ]},
+  { id: 792, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……花、みんなに一輪ずつ"},
+    {speaker:"B", text:"優しいね、配ろっか"},
+    {speaker:"A", text:"……内緒で"}
+  ]},
+  { id: 793, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"森の音、演奏会みたい〜"},
+    {speaker:"B", text:"客席は歩き続けろ"}
+  ]},
+  { id: 794, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"大きい岩の陰…何かいそう…"},
+    {speaker:"B", text:"見てくる! …岩の裏も岩だ!"}
+  ]},
+  { id: 795, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"実況しながら歩くじゃん!"},
+    {speaker:"B", text:"……お静かに"}
+  ]},
+  { id: 796, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"皆の荷物の重さを均等化しました"},
+    {speaker:"B", text:"いつの間に!? ありがとう"}
+  ]},
+  { id: 797, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"妖怪出てこないね、あたしの威圧？"},
+    {speaker:"B", text:"あたしの声で逃げたじゃん!"}
+  ]},
+  { id: 798, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"前方異常なし"},
+    {speaker:"B", text:"……後方も"},
+    {speaker:"A", text:"完璧な布陣だ"}
+  ]},
+  { id: 799, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"怖い時はみんなの背中を見てね"},
+    {speaker:"B", text:"四つもある…心強い…"}
+  ]},
+  { id: 800, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"いい探索だね〜みんな元気〜"},
+    {speaker:"B", text:"元気番長はあたしじゃん!"}
+  ]},
+  { id: 801, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたし今いいこと言った？"},
+    {speaker:"B", text:"言う前から聞くな"}
+  ]},
+  { id: 802, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"歩きながら考え事？"},
+    {speaker:"B", text:"……献立"}
+  ]},
+  { id: 803, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あんたのその自信、どこ製？"},
+    {speaker:"B", text:"心の鍛冶屋で打った!"}
+  ]},
+  { id: 804, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"考え事してたら口あいてた〜"},
+    {speaker:"B", text:"虫が入る前に閉じましょう"}
+  ]},
+  { id: 805, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"心細い時どうしてる…？"},
+    {speaker:"B", text:"お前の後ろを歩いている"},
+    {speaker:"A", text:"それで守られてたんだ…"}
+  ]},
+  { id: 806, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……元気の源、何"},
+    {speaker:"B", text:"秘密! 知りたい？"},
+    {speaker:"A", text:"……もういい"}
+  ]},
+  { id: 807, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"私の笑い声、うるさくないか!"},
+    {speaker:"B", text:"森の鳥と同じくらいかな"}
+  ]},
+  { id: 808, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"「別に」が今日五回目だ"},
+    {speaker:"B", text:"別に…六回目"}
+  ]},
+  { id: 809, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"歩きながら踊るのやめな〜？"},
+    {speaker:"B", text:"歩きが踊りなの!"}
+  ]},
+  { id: 810, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"あなたの慎重さは美徳です"},
+    {speaker:"B", text:"美徳…初めて言われた…"}
+  ]},
+  { id: 811, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"眉間のしわ、伸ばしてあげる"},
+    {speaker:"B", text:"触るな…五秒だけ"}
+  ]},
+  { id: 812, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"元気の維持費を知りたい"},
+    {speaker:"B", text:"おやつと拍手じゃん!"}
+  ]},
+  { id: 813, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……鼻歌、続けて"},
+    {speaker:"B", text:"聞いててくれたの？"}
+  ]},
+  { id: 814, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"燃えているか!"},
+    {speaker:"B", text:"平常心です"}
+  ]},
+  { id: 815, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"たまにはあたしを驚かせてみな"},
+    {speaker:"B", text:"ばあ〜"},
+    {speaker:"A", text:"遅すぎて逆にびっくり"}
+  ]},
+  { id: 816, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"妖怪より怖いものってある…？"},
+    {speaker:"B", text:"おやつ切れじゃん!"}
+  ]},
+  { id: 817, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"いま何考えてたと思う〜？"},
+    {speaker:"B", text:"団子"},
+    {speaker:"A", text:"正解〜"}
+  ]},
+  { id: 818, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"あたしが静かな時って何してる？"},
+    {speaker:"B", text:"おやつのことでしょ？"}
+  ]},
+  { id: 819, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"冗談を一つ言ってみろ"},
+    {speaker:"B", text:"準備に三日ください"}
+  ]},
+  { id: 820, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"お前の一言は重い!"},
+    {speaker:"B", text:"……どうも"}
+  ]},
+  { id: 821, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"元気もらってるよ、いつも"},
+    {speaker:"B", text:"出し放題だから大丈夫!"}
+  ]},
+  { id: 822, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"あんたの真面目さ、少し欲しい"},
+    {speaker:"B", text:"差し上げます。使いますか？"}
+  ]},
+  { id: 823, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"深呼吸すると森の味がする〜"},
+    {speaker:"B", text:"変な胞子じゃないよね…!?"}
+  ]},
+  { id: 824, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"言いたいことがある顔だ"},
+    {speaker:"B", text:"……飯"}
+  ]},
+  { id: 825, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あたしのこと一言で表して"},
+    {speaker:"B", text:"音"},
+    {speaker:"A", text:"音!?"}
+  ]},
+  { id: 826, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"感謝の伝え方が分かりません"},
+    {speaker:"B", text:"今ちゃんと伝わったよ"}
+  ]},
+  { id: 827, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"声が大きい人って、いいな…"},
+    {speaker:"B", text:"分けたい! が、分け方が謎だ!"}
+  ]},
+  { id: 828, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……その簪、いい"},
+    {speaker:"B", text:"今日二回目の褒め。どしたの"}
+  ]},
+  { id: 829, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"幸せそうに歩くねって言われた〜"},
+    {speaker:"B", text:"事実だからだね"}
+  ]},
+  { id: 830, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"我が友よ!"},
+    {speaker:"B", text:"急にどうした"}
+  ]},
+  { id: 831, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"うるさいのに嫌いになれない"},
+    {speaker:"B", text:"愛嬌の勝利じゃん!"}
+  ]},
+  { id: 832, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"ありがとうは何回言ってもいい？"},
+    {speaker:"B", text:"上限は設けていない"}
+  ]},
+  { id: 833, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"静かさの秘訣おしえて!"},
+    {speaker:"B", text:"……口を閉じる"}
+  ]},
+  { id: 834, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"お前の観察眼は鋭い"},
+    {speaker:"B", text:"怖がってるだけだよ…？"},
+    {speaker:"A", text:"それを観察眼と言う"}
+  ]},
+  { id: 835, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"あなたの歩調は乱れませんね"},
+    {speaker:"B", text:"乱すほど急いだことない〜"}
+  ]},
+  { id: 836, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"我らの声、森の名物になるぞ!"},
+    {speaker:"B", text:"名物なら騒いでいいじゃん!"}
+  ]},
+  { id: 837, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……真面目、才能"},
+    {speaker:"B", text:"照れます"},
+    {speaker:"A", text:"……正直者"}
+  ]},
+  { id: 838, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"怒った顔も見てみたいな〜"},
+    {speaker:"B", text:"あんたには無理、怒れない"}
+  ]},
+  { id: 839, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"私、役に立ててる…？"},
+    {speaker:"B", text:"いてくれるだけで安心だよ"}
+  ]},
+  { id: 840, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"声量以外の長所を挙げてみろ"},
+    {speaker:"B", text:"声量以外…粘るぞ!"},
+    {speaker:"A", text:"出てこないのか"}
+  ]},
+  { id: 841, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あたしたち、割と気が合う？"},
+    {speaker:"B", text:"……割と"},
+    {speaker:"A", text:"割とか"}
+  ]},
+  { id: 842, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"その元気、湧き水みたいだね"},
+    {speaker:"B", text:"源泉かけ流しだ!"}
+  ]},
+  { id: 843, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"笑うと寿命のびるらしいじゃん!"},
+    {speaker:"B", text:"私の分ものびてそうです"}
+  ]},
+  { id: 844, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"慌てたことある〜？"},
+    {speaker:"B", text:"記憶にない"}
+  ]},
+  { id: 845, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"私の後ろは森一番安全だ!"},
+    {speaker:"B", text:"予約でうまってそう…"}
+  ]},
+  { id: 846, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"あなたの明るさに助けられています"},
+    {speaker:"B", text:"改まると照れるじゃん!"}
+  ]},
+  { id: 847, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"微笑の頻度が高い"},
+    {speaker:"B", text:"楽しいからだよ"}
+  ]},
+  { id: 848, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……ねえ"},
+    {speaker:"B", text:"なあに〜？"},
+    {speaker:"A", text:"……忘れた"}
+  ]},
+  { id: 849, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"優しさが歩いてるね、あんた"},
+    {speaker:"B", text:"あなたもね？"}
+  ]},
+  { id: 850, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"沈黙が続くと死んじゃう病なの!"},
+    {speaker:"B", text:"初耳の奇病だ"}
+  ]},
+  { id: 851, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"静かに歩ける人、尊敬する…"},
+    {speaker:"B", text:"……教える？"},
+    {speaker:"A", text:"弟子入りする…"}
+  ]},
+  { id: 852, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"いま鼻歌ハモった〜？"},
+    {speaker:"B", text:"運命じゃん!"}
+  ]},
+  { id: 853, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"得意げな時は歩き方が三割増しだ"},
+    {speaker:"B", text:"観察しすぎ…やめない？"},
+    {speaker:"A", text:"資料になる"}
+  ]},
+  { id: 854, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"今日の私、輝いてるか!"},
+    {speaker:"B", text:"目にやさしい輝きだよ"}
+  ]},
+  { id: 855, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……荷物、鳴ってる"},
+    {speaker:"B", text:"おやつの音色じゃん!"}
+  ]},
+  { id: 856, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"意地っ張りも可愛いと思うよ"},
+    {speaker:"B", text:"誰が意地っ張りよ"},
+    {speaker:"A", text:"ほらね"}
+  ]},
+  { id: 857, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"雑念が三件あります"},
+    {speaker:"B", text:"内容を"},
+    {speaker:"A", text:"団子、団子、温泉です"}
+  ]},
+  { id: 858, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"その余裕、あたしにも売って!"},
+    {speaker:"B", text:"無料〜"}
+  ]},
+  { id: 859, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"勇気の定義を変えよう。「進む」だ"},
+    {speaker:"B", text:"それなら…毎日勇気だ…"}
+  ]},
+  { id: 860, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"負けず嫌い同士、大変ね"},
+    {speaker:"B", text:"最高の間柄だろう!"}
+  ]},
+  { id: 861, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"ゆっくりは長生きするんだよ〜"},
+    {speaker:"B", text:"出典を求めます"},
+    {speaker:"A", text:"亀〜"}
+  ]},
+  { id: 862, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"明るい人のそば、あったかい…"},
+    {speaker:"B", text:"歩くたき火じゃん、あたし!"}
+  ]},
+  { id: 863, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"静かな優しさ、いつも見てるよ"},
+    {speaker:"B", text:"……ばれてた"}
+  ]},
+  { id: 864, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"声がまた大きいと言われた!"},
+    {speaker:"B", text:"事実の指摘です"}
+  ]},
+  { id: 865, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"ねえ今の話聞いてた？"},
+    {speaker:"B", text:"三割ね"},
+    {speaker:"A", text:"三割も!"}
+  ]},
+  { id: 866, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"お前のあだ名を考えている"},
+    {speaker:"B", text:"楽しみ〜"},
+    {speaker:"A", text:"「歩く休日」"}
+  ]},
+  { id: 867, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……いいこと、あった"},
+    {speaker:"B", text:"聞かせて聞かせて"},
+    {speaker:"A", text:"……今"}
+  ]},
+  { id: 868, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの扱い、うまくなったね"},
+    {speaker:"B", text:"飴の補充を欠かさないだけだ"}
+  ]},
+  { id: 869, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"こわい話もゆっくりならほのぼの〜"},
+    {speaker:"B", text:"速度の問題じゃないよ!?"}
+  ]},
+  { id: 870, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"感情表現の見本にしています"},
+    {speaker:"B", text:"見本! 誇らしい!"}
+  ]},
+  { id: 871, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"落ち込んでても隠すの上手そう"},
+    {speaker:"B", text:"ばれた!? 隠してた!?"}
+  ]},
+  { id: 872, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"稀に喋ると皆が振り向く"},
+    {speaker:"B", text:"……効果的"}
+  ]},
+  { id: 873, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"隣、歩いていい…？"},
+    {speaker:"B", text:"空いてるからいいよ…べつに"}
+  ]},
+  { id: 874, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"元気の出るツボ教え合おうじゃん!"},
+    {speaker:"B", text:"私は常時全開だ!"}
+  ]},
+  { id: 875, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"優しさって伝染するね〜"},
+    {speaker:"B", text:"発生源はどこかな？"}
+  ]},
+  { id: 876, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"敬語崩れたとこ、見てみたい"},
+    {speaker:"B", text:"み、見せられません"},
+    {speaker:"A", text:"動揺で崩れかけた"}
+  ]},
+  { id: 877, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"静かなお前は想像できない"},
+    {speaker:"B", text:"あたしも想像できないじゃん!"}
+  ]},
+  { id: 878, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"語らずとも通じ合えるか!"},
+    {speaker:"B", text:"……試す？"}
+  ]},
+  { id: 879, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"勇気出したら教えて。褒めるから"},
+    {speaker:"B", text:"さっき虫を見ても逃げなかった…"},
+    {speaker:"A", text:"えらい!!"}
+  ]},
+  { id: 880, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"たまには一緒に騒ごうじゃん!"},
+    {speaker:"B", text:"心の中で騒いでいる"}
+  ]},
+  { id: 881, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"その平和な空気、分けなさい"},
+    {speaker:"B", text:"とっくに届いてるよ〜"}
+  ]},
+  { id: 882, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……会話、しよう"},
+    {speaker:"B", text:"珍しい。議題は"}
+  ]},
+  { id: 883, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"賑やかで森も喜んでる〜"},
+    {speaker:"B", text:"森公認じゃん!"}
+  ]},
+  { id: 884, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"心配の数だけ準備ができます"},
+    {speaker:"B", text:"じゃあ私、準備の達人…!"}
+  ]},
+  { id: 885, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"悔しい時は言え! 聞く!"},
+    {speaker:"B", text:"今んとこ無いし…ありがと"}
+  ]},
+  { id: 886, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"和む。存在が"},
+    {speaker:"B", text:"ふふ、直球だね"}
+  ]},
+  { id: 887, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"静かと賑やか、混ぜたら何？"},
+    {speaker:"B", text:"……普通"},
+    {speaker:"A", text:"深い!"}
+  ]},
+  { id: 888, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"守ってあげてもいいけど？"},
+    {speaker:"B", text:"素直に守るって言えばいいのに…"}
+  ]},
+  { id: 889, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"焦らない秘訣はね〜、ないの〜"},
+    {speaker:"B", text:"秘訣の不在が秘訣か"}
+  ]},
+  { id: 890, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"みんなの太陽だね"},
+    {speaker:"B", text:"照れる! が否定しない!"}
+  ]},
+  { id: 891, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"頼りにしていい…？"},
+    {speaker:"B", text:"……いつでも"}
+  ]},
+  { id: 892, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"元気の報告は不要。見れば分かる"},
+    {speaker:"B", text:"見た目でバレる元気じゃん!"}
+  ]},
+  { id: 893, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"ツンの割合が減ってきたな"},
+    {speaker:"B", text:"気のせい。絶対気のせい"}
+  ]},
+  { id: 894, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"全速力を見せてやる!"},
+    {speaker:"B", text:"見てるだけでいい〜？"}
+  ]},
+  { id: 895, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……たまに、うるさいの恋しい"},
+    {speaker:"B", text:"素直に一緒がいいって言いな"},
+    {speaker:"A", text:"……そう"}
+  ]},
+  { id: 896, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"今日も見守ってくれてありがと"},
+    {speaker:"B", text:"任務ではなく趣味だ"}
+  ]},
+  { id: 897, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"怖いもの、あたしが笑い飛ばす!"},
+    {speaker:"B", text:"頼もしい…半分くらい信じる"}
+  ]},
+  { id: 898, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"今日ものんびり歩けて幸せ〜"},
+    {speaker:"B", text:"進捗も出ています。両立ですね"}
+  ]},
+  { id: 899, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"別に感謝とかしてないし"},
+    {speaker:"B", text:"翻訳すると「ありがとう」だね"},
+    {speaker:"A", text:"…訳すな"}
+  ]},
+  { id: 900, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"良い旅だ"},
+    {speaker:"B", text:"……道中良し"},
+    {speaker:"A", text:"締めの言葉か"}
+  ]},
+  { id: 901, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……メモ帳、何冊目"},
+    {speaker:"B", text:"十二冊です"},
+    {speaker:"A", text:"……博物館"}
+  ]},
+  { id: 902, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"今日の花の名を三つ記録しました"},
+    {speaker:"B", text:"……見せて"}
+  ]},
+  { id: 903, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……字、きれい"},
+    {speaker:"B", text:"祖母仕込みです"}
+  ]},
+  { id: 904, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……その帳面、落ちた"},
+    {speaker:"B", text:"一大事です!!"}
+  ]},
+  { id: 905, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"言葉数と誠実さは無関係ですね"},
+    {speaker:"B", text:"……深い"}
+  ]},
+  { id: 906, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……休みの日、何してる"},
+    {speaker:"B", text:"整頓をします"}
+  ]},
+  { id: 907, pair: ["真面目","無口"], lines: [
+    {speaker:"A", text:"感嘆符を初めて使います。すごい!"},
+    {speaker:"B", text:"……おめでとう"}
+  ]},
+  { id: 908, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……手帳、貸して"},
+    {speaker:"B", text:"どうぞ"},
+    {speaker:"A", text:"……辞書？"}
+  ]},
+  { id: 909, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"失敗しても私は笑わないからね"},
+    {speaker:"B", text:"では安心して…いえ、しません"}
+  ]},
+  { id: 910, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"あなたの柔らかさ、見習いたいです"},
+    {speaker:"B", text:"固いままのあなたもいいな"}
+  ]},
+  { id: 911, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"肩の力、抜けてる？"},
+    {speaker:"B", text:"三割ほど抜きました"},
+    {speaker:"A", text:"上出来"}
+  ]},
+  { id: 912, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"優しさに規則はありますか"},
+    {speaker:"B", text:"ないよ、自由だよ"}
+  ]},
+  { id: 913, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"たまには私を叱って？"},
+    {speaker:"B", text:"減点箇所が見つかりません"}
+  ]},
+  { id: 914, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"道端の花に会釈しかけました"},
+    {speaker:"B", text:"しても素敵だと思う"}
+  ]},
+  { id: 915, pair: ["優しい","真面目"], lines: [
+    {speaker:"A", text:"ふふって今言ったね"},
+    {speaker:"B", text:"き、気のせいです"}
+  ]},
+  { id: 916, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"本日の善行は達成済みです"},
+    {speaker:"B", text:"私に優しくしてくれたこと？"},
+    {speaker:"A", text:"それは日常です"}
+  ]},
+  { id: 917, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"お前の心配は八割外れる"},
+    {speaker:"B", text:"二割は当たるんだ…"},
+    {speaker:"A", text:"備えよう"}
+  ]},
+  { id: 918, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"冷たい人かと思ってた…違った…"},
+    {speaker:"B", text:"温度は平常だ"}
+  ]},
+  { id: 919, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"怖い時は数を数えろと言ったな"},
+    {speaker:"B", text:"今日はまだ数えてない…!"},
+    {speaker:"A", text:"良い日だ"}
+  ]},
+  { id: 920, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"あなたの落ち着き、少し分けて…"},
+    {speaker:"B", text:"側にいれば勝手に移る"}
+  ]},
+  { id: 921, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"逃げ足の速さは戦術的資産だ"},
+    {speaker:"B", text:"資産…!? 褒められた…!?"}
+  ]},
+  { id: 922, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"物音の正体、当ててくれる…？"},
+    {speaker:"B", text:"九割は風だ"}
+  ]},
+  { id: 923, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"お前が隣だと静かで助かる"},
+    {speaker:"B", text:"声が出ないだけだけど…"}
+  ]},
+  { id: 924, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"未来のこと考えると不安…"},
+    {speaker:"B", text:"未来は来てから相手にしろ"}
+  ]},
+  { id: 925, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"小鳥が手に乗った…静かに…!"},
+    {speaker:"B", text:"意外な特技…!"}
+  ]},
+  { id: 926, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"大声出さない時もあるんだね"},
+    {speaker:"B", text:"小鳥の前では礼儀だ"}
+  ]},
+  { id: 927, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"実は感動して泣きそうだ…景色に"},
+    {speaker:"B", text:"泣いていいと思う…"}
+  ]},
+  { id: 928, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"あなたの元気、頼りにしてる…"},
+    {speaker:"B", text:"今日は静かに任される"}
+  ]},
+  { id: 929, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"怖い物帳を克服帳と呼ぼう!"},
+    {speaker:"B", text:"呼び方変えても中身が…!"}
+  ]},
+  { id: 930, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"走るの速いね…追いつけない…"},
+    {speaker:"B", text:"合わせて歩くのも強さだ!"}
+  ]},
+  { id: 931, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"花を踏みかけた! 危なかった!"},
+    {speaker:"B", text:"花に優しい人は信用できる…"}
+  ]},
+  { id: 932, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"揺れる橋、先に渡ってみせて…？"},
+    {speaker:"B", text:"任せろ! …意外と揺れるな!"},
+    {speaker:"A", text:"正直!?"}
+  ]},
+  { id: 933, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"こわい時はね〜飴なめるの〜"},
+    {speaker:"B", text:"味で気がまぎれる…かも…"}
+  ]},
+  { id: 934, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"あなたの隣、時間がゆっくり…"},
+    {speaker:"B", text:"森もゆっくりだしね〜"}
+  ]},
+  { id: 935, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"妖怪ものんびり屋がいると思う〜"},
+    {speaker:"B", text:"会うならそれがいい…"}
+  ]},
+  { id: 936, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"心配事が多すぎて…"},
+    {speaker:"B", text:"一個ずつ〜今日は一個目だけ〜"}
+  ]},
+  { id: 937, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"石につまずいた〜びっくりした〜"},
+    {speaker:"B", text:"私より驚くの珍しい…"}
+  ]},
+  { id: 938, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"ゆっくり歩くと安全…？"},
+    {speaker:"B", text:"転ぶ時もゆっくりだよ〜"},
+    {speaker:"A", text:"利点なの!?"}
+  ]},
+  { id: 939, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"深呼吸の名人だね〜"},
+    {speaker:"B", text:"回数だけは自信ある…"}
+  ]},
+  { id: 940, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"理屈で語るぞ。楽しいは正義!"},
+    {speaker:"B", text:"論理が飛躍しています"},
+    {speaker:"A", text:"飛躍も鍛錬だ!"}
+  ]},
+  { id: 941, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"全力と丁寧、両立可能でしょうか"},
+    {speaker:"B", text:"丁寧に全力! 可能だ!"}
+  ]},
+  { id: 942, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"感謝の書状を書きたい! 誰にだ!"},
+    {speaker:"B", text:"まず宛先から迷わないで下さい"}
+  ]},
+  { id: 943, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"私の熱意は静かに燃えるたちです"},
+    {speaker:"B", text:"種火仲間だな!"},
+    {speaker:"A", text:"種火…いい言葉"}
+  ]},
+  { id: 944, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"汗は嘘をつかない!"},
+    {speaker:"B", text:"拭くものは要りますか"},
+    {speaker:"A", text:"気配りも嘘をつかない!"}
+  ]},
+  { id: 945, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"突然ですが、しばらく走りたいです"},
+    {speaker:"B", text:"どうした!? いや、走ろう!"}
+  ]},
+  { id: 946, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"昨日より優しくなれた気がする!"},
+    {speaker:"B", text:"数値化は困難ですが同意します"}
+  ]},
+  { id: 947, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"真面目って実は最強の陽気じゃん？"},
+    {speaker:"B", text:"解釈が新しすぎます"}
+  ]},
+  { id: 948, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"ふざける時間を設けましょうか"},
+    {speaker:"B", text:"設けた瞬間つまらなくなるじゃん!"}
+  ]},
+  { id: 949, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"あたしの辞書に「静か」はないの!"},
+    {speaker:"B", text:"辞書に載せておきます"},
+    {speaker:"A", text:"読まないけどね!"}
+  ]},
+  { id: 950, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"あなたの陽気さ、伝染に注意です"},
+    {speaker:"B", text:"もうふふって言ってたじゃん!"}
+  ]},
+  { id: 951, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"敬語でふざけてみてよ!"},
+    {speaker:"B", text:"おやつにございます"},
+    {speaker:"A", text:"出来てるじゃん!"}
+  ]},
+  { id: 952, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"履物の紐、直しなさい…です"},
+    {speaker:"B", text:"敬語が乱れるほど心配!?"}
+  ]},
+  { id: 953, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"一緒に変な歩き方するじゃん!"},
+    {speaker:"B", text:"五歩だけなら"}
+  ]},
+  { id: 954, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"燃えるの、休みながらでもいい〜？"},
+    {speaker:"B", text:"休憩も燃料だ!"}
+  ]},
+  { id: 955, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"お前の落ち着き、実は強い!"},
+    {speaker:"B", text:"気づいちゃった〜？"}
+  ]},
+  { id: 956, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"走る人を見るの好き〜"},
+    {speaker:"B", text:"見てないで…いや観客も大事だ!"}
+  ]},
+  { id: 957, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"ゆっくりの中に極意がある!"},
+    {speaker:"B", text:"弟子入りする〜？"}
+  ]},
+  { id: 958, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"大声のあと、照れてるでしょ〜"},
+    {speaker:"B", text:"ばれたか!!"}
+  ]},
+  { id: 959, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"感動を分かち合おう! この景色!"},
+    {speaker:"B", text:"さっきから分かち合ってるよ〜"}
+  ]},
+  { id: 960, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"競争しよ〜遅く着いた方が勝ち〜"},
+    {speaker:"B", text:"初めて負けたい勝負だ!"}
+  ]},
+  { id: 961, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"心配帳が今日で三冊目…"},
+    {speaker:"B", text:"私の記録帳と同じ速度です"},
+    {speaker:"A", text:"おそろい…？"}
+  ]},
+  { id: 962, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"あなたの注意深さは皆の助けです"},
+    {speaker:"B", text:"役に立ってた…!?"}
+  ]},
+  { id: 963, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"準備しすぎって言われる…"},
+    {speaker:"B", text:"準備に「しすぎ」はありません"},
+    {speaker:"A", text:"味方だ…"}
+  ]},
+  { id: 964, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"恐怖の記録をつけては"},
+    {speaker:"B", text:"書いたら思い出しちゃう…"}
+  ]},
+  { id: 965, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"失敗したらどうしよう…"},
+    {speaker:"B", text:"謝罪文の下書きを用意します"},
+    {speaker:"A", text:"先に!?"}
+  ]},
+  { id: 966, pair: ["真面目","怖がり"], lines: [
+    {speaker:"A", text:"石橋を叩く音が良い音でした"},
+    {speaker:"B", text:"一緒に叩く人、初めて…"}
+  ]},
+  { id: 967, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"あなたといると忘れ物しない…"},
+    {speaker:"B", text:"二重確認の力です"}
+  ]},
+  { id: 968, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"お前の声で遠くの妖怪が引き返した"},
+    {speaker:"B", text:"戦わずして勝った!!"}
+  ]},
+  { id: 969, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"冷めたやつと思ってたが熱いな!"},
+    {speaker:"B", text:"内側は沸いている"}
+  ]},
+  { id: 970, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"落ち着きを分けてやろうか"},
+    {speaker:"B", text:"いらん! いや、少しくれ!"}
+  ]},
+  { id: 971, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"勝負だ! 先に笑ったら負け!"},
+    {speaker:"B", text:"開始前にお前が笑っている"}
+  ]},
+  { id: 972, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"その体力の使い道を検討しろ"},
+    {speaker:"B", text:"検討より実行!"},
+    {speaker:"A", text:"せめて交互にしろ"}
+  ]},
+  { id: 973, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"お前の一言は必殺技だな!"},
+    {speaker:"B", text:"乱発しないのが極意だ"}
+  ]},
+  { id: 974, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"静かな熱意も存在する"},
+    {speaker:"B", text:"それだ! 私の第二形態!"}
+  ]},
+  { id: 975, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"堂々としてて羨ましい…"},
+    {speaker:"B", text:"中身は普通だし…内緒ね"}
+  ]},
+  { id: 976, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あんたの後ろ歩くの、実は好き"},
+    {speaker:"B", text:"え、なんで…？"},
+    {speaker:"A", text:"前は任せた"}
+  ]},
+  { id: 977, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"悪口言われたら守ってくれる…？"},
+    {speaker:"B", text:"あたしより先に言い返しな"}
+  ]},
+  { id: 978, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"ビビリなのについてくるの根性ね"},
+    {speaker:"B", text:"逃げ場がないだけ…かも…"},
+    {speaker:"A", text:"それを根性って言うの"}
+  ]},
+  { id: 979, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"あなたの強気、一枚もらえる…？"},
+    {speaker:"B", text:"貸すだけね。返してよ"}
+  ]},
+  { id: 980, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あんたが悲鳴あげないと逆に不安"},
+    {speaker:"B", text:"期待に応えたくない…"}
+  ]},
+  { id: 981, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"一番安心する声、あんたかも…"},
+    {speaker:"B", text:"「かも」？ 一位でしょ"}
+  ]},
+  { id: 982, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"我々の会話は要点のみだな"},
+    {speaker:"B", text:"効率的で心地よいです"}
+  ]},
+  { id: 983, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"冷静さの秘訣を教えてください"},
+    {speaker:"B", text:"諦めが早いだけだ"},
+    {speaker:"A", text:"深いような浅いような"}
+  ]},
+  { id: 984, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"お前の帳面は美術品だ"},
+    {speaker:"B", text:"じ、実用品です!"}
+  ]},
+  { id: 985, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"たまには雑談をしましょう"},
+    {speaker:"B", text:"今のが雑談だ"},
+    {speaker:"A", text:"短い!!"}
+  ]},
+  { id: 986, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"融通の利かなさは信頼の証だ"},
+    {speaker:"B", text:"褒められて…いる…？"}
+  ]},
+  { id: 987, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"笑い声を初めて聞きました"},
+    {speaker:"B", text:"記憶違いだ"},
+    {speaker:"A", text:"今の、照れですか"}
+  ]},
+  { id: 988, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"生真面目同士、楽でいい"},
+    {speaker:"B", text:"では本日も堅実にふざけずに"},
+    {speaker:"A", text:"たまにはふざけろ"}
+  ]},
+  { id: 989, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"静かって不安…あなたのは平気"},
+    {speaker:"B", text:"……才能"}
+  ]},
+  { id: 990, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……怖いもの、私も有る"},
+    {speaker:"B", text:"え、意外…仲間…"},
+    {speaker:"A", text:"……虫"}
+  ]},
+  { id: 991, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"何かいたら教えて…声出なくても…"},
+    {speaker:"B", text:"……袖引く"},
+    {speaker:"A", text:"分かりやすい"}
+  ]},
+  { id: 992, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……悲鳴、上手"},
+    {speaker:"B", text:"褒めないで!?"}
+  ]},
+  { id: 993, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"言葉少ないと怖くない…不思議…"},
+    {speaker:"B", text:"……厳選"}
+  ]},
+  { id: 994, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……守る側、交代制"},
+    {speaker:"B", text:"私も守る側に入ってるの…!?"},
+    {speaker:"A", text:"……当然"}
+  ]},
+  { id: 995, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"どっちの声が遠くまで届く？"},
+    {speaker:"B", text:"合体させれば山越えだ!"}
+  ]},
+  { id: 996, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"お前の明るさは技だな!"},
+    {speaker:"B", text:"生まれつきの必殺技じゃん!"}
+  ]},
+  { id: 997, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"静かにする勝負…三秒で無理!"},
+    {speaker:"B", text:"私は二秒だった!"}
+  ]},
+  { id: 998, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"騒がし担当が二人いてもいいか!?"},
+    {speaker:"B", text:"倍楽しいからいいじゃん!"}
+  ]},
+  { id: 999, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"落ち込んだあたし、想像できる？"},
+    {speaker:"B", text:"できん! だが受け止める!"}
+  ]},
+  { id: 1000, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"声かれたらあたしが二代目じゃん!"},
+    {speaker:"B", text:"襲名を許可する!!"}
+  ]},
+  { id: 1001, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"北はどっちだ! こっちか!"},
+    {speaker:"B", text:"それは西だ"},
+    {speaker:"A", text:"惜しい!"}
+  ]},
+  { id: 1002, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"木と話せる気がしてきた!"},
+    {speaker:"B", text:"返事あった？"},
+    {speaker:"A", text:"まだだ!"}
+  ]},
+  { id: 1003, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"静かに、と言ったら"},
+    {speaker:"B", text:"心得た!!"},
+    {speaker:"A", text:"その返事が最大音量だ"}
+  ]},
+  { id: 1004, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"いいことを思いついたぞ!"},
+    {speaker:"B", text:"聞くじゃん!"},
+    {speaker:"A", text:"忘れた!"}
+  ]},
+  { id: 1005, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"覚えた言葉を使う! 温故知新!"},
+    {speaker:"B", text:"使い所は合っていますか"},
+    {speaker:"A", text:"分からん!"}
+  ]},
+  { id: 1006, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"右と左、どっちが得意？"},
+    {speaker:"B", text:"右だ!"},
+    {speaker:"A", text:"変な質問に即答した"}
+  ]},
+  { id: 1007, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"以心伝心! 今何を考えた!"},
+    {speaker:"B", text:"……飯"},
+    {speaker:"A", text:"私もだ!!"}
+  ]},
+  { id: 1008, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"花の香りを胸いっぱい…むせた!"},
+    {speaker:"B", text:"吸いすぎだよ"}
+  ]},
+  { id: 1009, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"亀の甲羅は何年で強くなる!"},
+    {speaker:"B", text:"亀に聞こ〜"},
+    {speaker:"A", text:"亀と話せるのか!?"}
+  ]},
+  { id: 1010, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"恐怖は分解すれば無だ!"},
+    {speaker:"B", text:"分解の仕方が分からない…"},
+    {speaker:"A", text:"私もだ!"}
+  ]},
+  { id: 1011, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"三つ数えたら出発だ"},
+    {speaker:"B", text:"一、二、出発!"},
+    {speaker:"A", text:"三はどうした"}
+  ]},
+  { id: 1012, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"あたしの物まねしてみて!"},
+    {speaker:"B", text:"「わっはっは」!"},
+    {speaker:"A", text:"誰!?"}
+  ]},
+  { id: 1013, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"見えない敵と鍛錬中だ!"},
+    {speaker:"B", text:"さっきから枝と戦っている"},
+    {speaker:"A", text:"敵は実在した!"}
+  ]},
+  { id: 1014, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたし、今日冴えてる気がする"},
+    {speaker:"B", text:"昨日と同水準だ"}
+  ]},
+  { id: 1015, pair: ["無口","冷静"], lines: [
+    {speaker:"A", text:"……静かの極意、教える"},
+    {speaker:"B", text:"拝聴する"},
+    {speaker:"A", text:"……以上"}
+  ]},
+  { id: 1016, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"面白い話が三つあるじゃん!"},
+    {speaker:"B", text:"一番短いやつで"},
+    {speaker:"A", text:"全部同じ長さ!"}
+  ]},
+  { id: 1017, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"荷物の紐、結び直してあげる"},
+    {speaker:"B", text:"……三回目"}
+  ]},
+  { id: 1018, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"昨日の自分に勝つ! 昨日何した!"},
+    {speaker:"B", text:"覚えていないのですか"},
+    {speaker:"A", text:"勝てそうだ!"}
+  ]},
+  { id: 1019, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"考えごとしてたら着いてた〜"},
+    {speaker:"B", text:"便利な体だ"}
+  ]},
+  { id: 1020, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"大きい音した…!"},
+    {speaker:"B", text:"お前のくしゃみだ"}
+  ]},
+  { id: 1021, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"影が二つある! 敵か!"},
+    {speaker:"B", text:"あたしの影でしょ"},
+    {speaker:"A", text:"味方だった!"}
+  ]},
+  { id: 1022, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"たまには言い返しなさいよ"},
+    {speaker:"B", text:"……やだ"},
+    {speaker:"A", text:"言い返した!"}
+  ]},
+  { id: 1023, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"鳥の鳴きまね対決だ! ぴよ!"},
+    {speaker:"B", text:"鳴き声が力強すぎじゃん!"}
+  ]},
+  { id: 1024, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"沈黙の練習…いや、なんでもない"},
+    {speaker:"B", text:"諦め早いじゃん!?"}
+  ]},
+  { id: 1025, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"石を積んだ! 五段! 芸術だ!"},
+    {speaker:"B", text:"三段に見えるけど…"},
+    {speaker:"A", text:"心の目で五段だ!"}
+  ]},
+  { id: 1026, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……にぎやか"},
+    {speaker:"B", text:"褒めてる？ けなしてる？"},
+    {speaker:"A", text:"……事実"}
+  ]},
+  { id: 1027, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"この葉っぱ、薬草に見える!"},
+    {speaker:"B", text:"ただの葉だ"},
+    {speaker:"A", text:"見えるだけ言った!"}
+  ]},
+  { id: 1028, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたのお人好し、心配になる"},
+    {speaker:"B", text:"心配してくれるんだ？"}
+  ]},
+  { id: 1029, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"どこまで走るの〜？"},
+    {speaker:"B", text:"決めてない!"}
+  ]},
+  { id: 1030, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたしの声、こだま三回分じゃん!"},
+    {speaker:"B", text:"森が疲弊する"}
+  ]},
+  { id: 1031, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"沈黙対決を挑む! ……"},
+    {speaker:"B", text:"……"},
+    {speaker:"A", text:"もうだめだ、喋りたい!!"}
+  ]},
+  { id: 1032, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"謙遜という言葉を知っているか"},
+    {speaker:"B", text:"知ってるけど使わない主義"}
+  ]},
+  { id: 1033, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"四字熟語で気合いを! 焼肉定食!"},
+    {speaker:"B", text:"それは献立です"}
+  ]},
+  { id: 1034, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"背中に何かついてる…？"},
+    {speaker:"B", text:"見てあげる! 勇気がついてる!"}
+  ]},
+  { id: 1035, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"雲より速く歩くぞ!"},
+    {speaker:"B", text:"雲、今日は速いよ〜"},
+    {speaker:"A", text:"強敵だ!"}
+  ]},
+  { id: 1036, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"いつも冷静で尊敬する"},
+    {speaker:"B", text:"内心は騒がしい"}
+  ]},
+  { id: 1037, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"声の大きさで負けた気がしない"},
+    {speaker:"B", text:"勝負した覚えないじゃん!"}
+  ]},
+  { id: 1038, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"虫は友だ! ほら手に!"},
+    {speaker:"B", text:"友達の作り方が違う…!"}
+  ]},
+  { id: 1039, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……この石、いい顔"},
+    {speaker:"B", text:"わかる〜"}
+  ]},
+  { id: 1040, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"作戦を言う。静かに進む"},
+    {speaker:"B", text:"了解した!!"},
+    {speaker:"A", text:"作戦は既に失敗だ"}
+  ]},
+  { id: 1041, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"面白い顔の木みつけたじゃん!"},
+    {speaker:"B", text:"ほんとだ、笑ってるみたい"}
+  ]},
+  { id: 1042, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"強さの秘訣は毎日のめし!"},
+    {speaker:"B", text:"それ皆やってるって"},
+    {speaker:"A", text:"皆強いわけだ!"}
+  ]},
+  { id: 1043, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"あわてない、あわてない〜"},
+    {speaker:"B", text:"一回くらい慌ててみせてよ"}
+  ]},
+  { id: 1044, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"喉が渇いた! つまり生きてる!"},
+    {speaker:"B", text:"証明が豪快すぎる"}
+  ]},
+  { id: 1045, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"暗いとこ、手つないでいい…？"},
+    {speaker:"B", text:"……もう出してる"}
+  ]},
+  { id: 1046, pair: ["生意気","真面目"], lines: [
+    {speaker:"A", text:"優等生って言われて嬉しい？"},
+    {speaker:"B", text:"はい、とても"}
+  ]},
+  { id: 1047, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"ことわざ作った!「進めば道」!"},
+    {speaker:"B", text:"もうありそうじゃん!"}
+  ]},
+  { id: 1048, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"お前の一言で会議が終わる"},
+    {speaker:"B", text:"……便利"}
+  ]},
+  { id: 1049, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"深呼吸、上手にできてるね"},
+    {speaker:"B", text:"呼吸も鍛えている!"}
+  ]},
+  { id: 1050, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"あたしの話のオチ、当ててみて!"},
+    {speaker:"B", text:"……転ぶ"},
+    {speaker:"A", text:"当たってるじゃん!"}
+  ]},
+  { id: 1051, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"目を閉じても歩ける! 見てろ!"},
+    {speaker:"B", text:"木にぶつかります"},
+    {speaker:"A", text:"目を開けた!"}
+  ]},
+  { id: 1052, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしが黙ったら心配する？"},
+    {speaker:"B", text:"医者を呼ぶ"}
+  ]},
+  { id: 1053, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"石ころに名前つけて拾ってる〜"},
+    {speaker:"B", text:"何個目じゃん!?"},
+    {speaker:"A", text:"八郎まで〜"}
+  ]},
+  { id: 1054, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"背筋を伸ばせば恐怖も逃げる!"},
+    {speaker:"B", text:"伸ばした…まだいる…"},
+    {speaker:"A", text:"しぶといな!"}
+  ]},
+  { id: 1055, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"体力の配分を考えたことは"},
+    {speaker:"B", text:"全部前半に使う派じゃん!"}
+  ]},
+  { id: 1056, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……その自信、どこから"},
+    {speaker:"B", text:"生まれた時から"},
+    {speaker:"A", text:"……年季"}
+  ]},
+  { id: 1057, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"良いことをしたら胸が熱い!"},
+    {speaker:"B", text:"それが優しさの体温だね"}
+  ]},
+  { id: 1058, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"歩きながら片足けんけんできる？"},
+    {speaker:"B", text:"それは歩行ではありません"}
+  ]},
+  { id: 1059, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"全力で歩いてみた! 今の見たか!"},
+    {speaker:"B", text:"普通の速さだった〜"},
+    {speaker:"A", text:"心は全力だった!"}
+  ]},
+  { id: 1060, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"強がりの練習…じゃなくて、その…"},
+    {speaker:"B", text:"言い切れてない時点でかわいいね"}
+  ]},
+  { id: 1061, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"真顔で冗談を言う訓練の成果を"},
+    {speaker:"B", text:"いつ言うのですか"},
+    {speaker:"A", text:"今言い終えた"}
+  ]},
+  { id: 1062, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんたのペースに巻き込まれてる"},
+    {speaker:"B", text:"ようこそ〜二回目〜"}
+  ]},
+  { id: 1063, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"筋肉は語る! 聞こえるか!"},
+    {speaker:"B", text:"……無音"},
+    {speaker:"A", text:"照れ屋なんだ!"}
+  ]},
+  { id: 1064, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"転んでも笑いに変えるの、すごい"},
+    {speaker:"B", text:"痛いのは後で泣くじゃん!"},
+    {speaker:"A", text:"泣いていいよ？"}
+  ]},
+  { id: 1065, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"名前が出てこない! あの鳥の!"},
+    {speaker:"B", text:"「あの鳥」でいいだろう"},
+    {speaker:"A", text:"解決した!"}
+  ]},
+  { id: 1066, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"道草って栄養ありそう〜"},
+    {speaker:"B", text:"食用の話でしたら却下です"}
+  ]},
+  { id: 1067, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"びっくり箱作りたいじゃん!"},
+    {speaker:"B", text:"完成しても開けないから…"}
+  ]},
+  { id: 1068, pair: ["熱血","生意気"], lines: [
+    {speaker:"A", text:"謎かけをやる! 整いました!"},
+    {speaker:"B", text:"お題まだ出してない"},
+    {speaker:"A", text:"整うのが早すぎた!"}
+  ]},
+  { id: 1069, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"影に怯える必要はない"},
+    {speaker:"B", text:"影が急に動いたら…？"},
+    {speaker:"A", text:"それは本体を見ろ"}
+  ]},
+  { id: 1070, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"静かにしてたら誰か気づく？"},
+    {speaker:"B", text:"森中が心配するじゃん!"}
+  ]},
+  { id: 1071, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"逆立ちで視野を広げる!"},
+    {speaker:"B", text:"上下が逆になるだけです"},
+    {speaker:"A", text:"広がった気がする!"}
+  ]},
+  { id: 1072, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……この花、名前は"},
+    {speaker:"B", text:"わからないけど、かわいいね"},
+    {speaker:"A", text:"……名前、かわいい"}
+  ]},
+  { id: 1073, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"元気の出る呪文を開発した!"},
+    {speaker:"B", text:"聞かせて!"},
+    {speaker:"A", text:"「めし」!"}
+  ]},
+  { id: 1074, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"歩きながら首を回すな。器用か"},
+    {speaker:"B", text:"景色を余さず見る技〜"}
+  ]},
+  { id: 1075, pair: ["怖がり","熱血"], lines: [
+    {speaker:"A", text:"急に走り出さないでね…？"},
+    {speaker:"B", text:"約束する! …あ、ちょうちょ!"}
+  ]},
+  { id: 1076, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あんたのその目、何か言いたげ"},
+    {speaker:"B", text:"……飴、落ちそう"}
+  ]},
+  { id: 1077, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"髪、風でぐしゃぐしゃだね、直そ"},
+    {speaker:"B", text:"あんたのが先。ひどいから"}
+  ]},
+  { id: 1078, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"疑問がある! 空はなぜ広い!"},
+    {speaker:"B", text:"広いからだ"},
+    {speaker:"A", text:"納得した!"}
+  ]},
+  { id: 1079, pair: ["お調子者","のんびり"], lines: [
+    {speaker:"A", text:"急がば回れの「回れ」やるじゃん!"},
+    {speaker:"B", text:"回りすぎて元の場所〜"}
+  ]},
+  { id: 1080, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"計画表を作りました"},
+    {speaker:"B", text:"予定は「進む」だけか!"},
+    {speaker:"A", text:"はい、力作です"}
+  ]},
+  { id: 1081, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"雲、置いてかれた〜"},
+    {speaker:"B", text:"……また来る"}
+  ]},
+  { id: 1082, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"素直度が昨日より二割増だ"},
+    {speaker:"B", text:"計るのやめてよね…で、明日は？"}
+  ]},
+  { id: 1083, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"勇気が余ってきた! 分けるぞ!"},
+    {speaker:"B", text:"余るものなの…!?"}
+  ]},
+  { id: 1084, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"退屈が天敵じゃん!"},
+    {speaker:"B", text:"では一生無敵だな、この旅は"}
+  ]},
+  { id: 1085, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"あんた騙されやすいでしょ"},
+    {speaker:"B", text:"そんなことないぞ!"},
+    {speaker:"A", text:"後ろに妖怪"}
+  ]},
+  { id: 1086, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"いい風だね"},
+    {speaker:"B", text:"風の通り道を歩いてるの〜"}
+  ]},
+  { id: 1087, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"お前と組むと静と動だな!"},
+    {speaker:"B", text:"……私が静"}
+  ]},
+  { id: 1088, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"妖怪の笑い声って知ってる…？"},
+    {speaker:"B", text:"あたしの笑い声と間違われそう!"}
+  ]},
+  { id: 1089, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"善意の出力が常に最大だな"},
+    {speaker:"B", text:"抑え方を知らないの"}
+  ]},
+  { id: 1090, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"燃える心に休みなし!"},
+    {speaker:"B", text:"休みも燃やしてるの〜？"}
+  ]},
+  { id: 1091, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……忘れ物、ない"},
+    {speaker:"B", text:"確認までしてくれたのですか"}
+  ]},
+  { id: 1092, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あたしが優しくしたら気持ち悪い？"},
+    {speaker:"B", text:"ううん、いつも優しいよ"},
+    {speaker:"A", text:"ばれてたか"}
+  ]},
+  { id: 1093, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"笑いすぎて腹が筋肉痛だ!"},
+    {speaker:"B", text:"あたしの話の効果じゃん!"}
+  ]},
+  { id: 1094, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"びっくりした時ってお腹すくね〜"},
+    {speaker:"B", text:"私、常にお腹すいてるかも…"}
+  ]},
+  { id: 1095, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"喋らない同士、稀に喋ると"},
+    {speaker:"B", text:"……祭り"}
+  ]},
+  { id: 1096, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"歌の歌詞、途中から自作じゃん!"},
+    {speaker:"B", text:"どこからか分からなかったよ"}
+  ]},
+  { id: 1097, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"迷いを断ち切った!"},
+    {speaker:"B", text:"何を迷っていた"},
+    {speaker:"A", text:"忘れた!"}
+  ]},
+  { id: 1098, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"守られてばかりは卒業したい…"},
+    {speaker:"B", text:"その気持ちがもう卒業証書だよ"}
+  ]},
+  { id: 1099, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"最後まであたしについてきな"},
+    {speaker:"B", text:"道は知っているのか"},
+    {speaker:"A", text:"あんたが教えて"}
+  ]},
+  { id: 1100, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"今日もいい日〜まだ途中だけど〜"},
+    {speaker:"B", text:"途中でもう決まりだね"}
+  ]},
+  { id: 1101, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"昨日よく寝れた？"},
+    {speaker:"B", text:"枕変わると寝れない…すぐ寝たけど"}
+  ]},
+  { id: 1102, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"昨日の寝言、面白かったぞ"},
+    {speaker:"B", text:"何て言ってた!?"},
+    {speaker:"A", text:"「おかわり」"}
+  ]},
+  { id: 1103, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"昨日、寝言で喋ってたよ"},
+    {speaker:"B", text:"……嘘"},
+    {speaker:"A", text:"起きてる時より長かった"}
+  ]},
+  { id: 1104, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"夢で妖怪百体倒した!"},
+    {speaker:"B", text:"現実は昨日三体だ"}
+  ]},
+  { id: 1105, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"昨日の夢、続きが気になる〜"},
+    {speaker:"B", text:"今日の分で確認しましょう"}
+  ]},
+  { id: 1106, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"昨日、布団の下確認して寝た…"},
+    {speaker:"B", text:"何もいなかったじゃん？"}
+  ]},
+  { id: 1107, pair: ["真面目","熱血"], lines: [
+    {speaker:"A", text:"昨日は姿勢よく眠れましたか"},
+    {speaker:"B", text:"寝てる時まで姿勢が要るのか!?"}
+  ]},
+  { id: 1108, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……昨日の飯、うまかった"},
+    {speaker:"B", text:"三杯おかわりしてたもんね"},
+    {speaker:"A", text:"……見てたか"}
+  ]},
+  { id: 1109, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"昨日のあたしの寝相、どうだった？"},
+    {speaker:"B", text:"回転していた"}
+  ]},
+  { id: 1110, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"寝癖ついてない？ 見て"},
+    {speaker:"B", text:"大丈夫、今日はきれい"},
+    {speaker:"A", text:"今日は？"}
+  ]},
+  { id: 1111, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"昨日は何の夢を見た"},
+    {speaker:"B", text:"おやつが降る夢〜"},
+    {speaker:"A", text:"内容が平常運転だ"}
+  ]},
+  { id: 1112, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"寝言が「うりゃー」だったらしい!"},
+    {speaker:"B", text:"聞いた…夢でも戦ってた…"}
+  ]},
+  { id: 1113, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"昨日、先に寝ちゃってごめんね"},
+    {speaker:"B", text:"……子守できた"}
+  ]},
+  { id: 1114, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あんたの歯ぎしり聞いたじゃん!"},
+    {speaker:"B", text:"言わない約束でしょ!?"},
+    {speaker:"A", text:"初耳の約束!"}
+  ]},
+  { id: 1115, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"昨日の反省を一つ共有します"},
+    {speaker:"B", text:"聞こう"},
+    {speaker:"A", text:"夢の中でも点呼していました"}
+  ]},
+  { id: 1116, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"昨日いっぱい寝たから元気〜"},
+    {speaker:"B", text:"いつもと同じに見えるじゃん!"}
+  ]},
+  { id: 1117, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"昨日、物音で三回起きた…"},
+    {speaker:"B", text:"その音は私の寝返りだ"}
+  ]},
+  { id: 1118, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"快眠だった! 三秒で寝た!"},
+    {speaker:"B", text:"それ特技だね"}
+  ]},
+  { id: 1119, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……昨日、鼻歌歌ってた"},
+    {speaker:"B", text:"あたしが？ 証拠は"},
+    {speaker:"A", text:"……いい曲だった"}
+  ]},
+  { id: 1120, pair: ["冷静","真面目"], lines: [
+    {speaker:"A", text:"睡眠時間を報告し合うか"},
+    {speaker:"B", text:"六時間です。理想は七"},
+    {speaker:"A", text:"惜しかったな"}
+  ]},
+  { id: 1121, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"夢であんたが出てきたじゃん!"},
+    {speaker:"B", text:"どんな私だった？"},
+    {speaker:"A", text:"おやつくれた!"}
+  ]},
+  { id: 1122, pair: ["生意気","熱血"], lines: [
+    {speaker:"A", text:"起きた時の第一声、なんだった？"},
+    {speaker:"B", text:"「よし」だ!"},
+    {speaker:"A", text:"起きた瞬間から!?"}
+  ]},
+  { id: 1123, pair: ["のんびり","怖がり"], lines: [
+    {speaker:"A", text:"夢の中でものんびりだった〜"},
+    {speaker:"B", text:"夢で逃げ遅れない…？"},
+    {speaker:"A", text:"夢は平和〜"}
+  ]},
+  { id: 1124, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"昨日ちゃんと休めた？"},
+    {speaker:"B", text:"枕に感謝状を出したい"}
+  ]},
+  { id: 1125, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"夢の中で語り合ったな!"},
+    {speaker:"B", text:"……覚えがない"},
+    {speaker:"A", text:"私の夢の中でだ!"}
+  ]},
+  { id: 1126, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"昨日、歯磨きの歌が聞こえました"},
+    {speaker:"B", text:"歌と磨きで時短じゃん!"}
+  ]},
+  { id: 1127, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"寝起きのお前は三割素直だ"},
+    {speaker:"B", text:"記憶にないし"},
+    {speaker:"A", text:"だろうな"}
+  ]},
+  { id: 1128, pair: ["怖がり","優しい"], lines: [
+    {speaker:"A", text:"怖い夢見たら起こしていい…？"},
+    {speaker:"B", text:"いつでも。合図決めとく？"}
+  ]},
+  { id: 1129, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"寝る前の一発ギャグ、聞いてた？"},
+    {speaker:"B", text:"……寝てた"},
+    {speaker:"A", text:"一番いい客なのに!"}
+  ]},
+  { id: 1130, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"あんた、昨日笑いながら寝てた"},
+    {speaker:"B", text:"いい夢だった証拠〜"}
+  ]},
+  { id: 1131, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"お前は飯を噛まずに飲むな"},
+    {speaker:"B", text:"噛んでいる! 三回は!"}
+  ]},
+  { id: 1132, pair: ["優しい","お調子者"], lines: [
+    {speaker:"A", text:"いつも笑い出すの、話の途中だね"},
+    {speaker:"B", text:"オチ待てないじゃん!"}
+  ]},
+  { id: 1133, pair: ["無口","真面目"], lines: [
+    {speaker:"A", text:"……箸の持ち方、手本"},
+    {speaker:"B", text:"恐縮です。祖父仕込みです"}
+  ]},
+  { id: 1134, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あんた、驚くと眉が動くよね"},
+    {speaker:"B", text:"気のせいだ"},
+    {speaker:"A", text:"今動いた"}
+  ]},
+  { id: 1135, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"あなたの相槌、安心する〜"},
+    {speaker:"B", text:"そう？ ふふ"}
+  ]},
+  { id: 1136, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"お前の笑い方は三段変化だな!"},
+    {speaker:"B", text:"分析されてたじゃん!?"}
+  ]},
+  { id: 1137, pair: ["怖がり","無口"], lines: [
+    {speaker:"A", text:"あなたの足音、覚えたよ…"},
+    {speaker:"B", text:"……なぜ"},
+    {speaker:"A", text:"安心する音だから"}
+  ]},
+  { id: 1138, pair: ["お調子者","真面目"], lines: [
+    {speaker:"A", text:"メモ帳の角、いつも揃ってるじゃん"},
+    {speaker:"B", text:"当然のことです"}
+  ]},
+  { id: 1139, pair: ["冷静","のんびり"], lines: [
+    {speaker:"A", text:"お前は驚いた時も語尾が伸びる"},
+    {speaker:"B", text:"そうかな〜!?"},
+    {speaker:"A", text:"ほら伸びた"}
+  ]},
+  { id: 1140, pair: ["優しい","生意気"], lines: [
+    {speaker:"A", text:"髪を触るのは考え事の合図だね"},
+    {speaker:"B", text:"…観察しすぎ、恥ずい"}
+  ]},
+  { id: 1141, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"お前の「です」は盾のようだ!"},
+    {speaker:"B", text:"敬語は心の鎧です"}
+  ]},
+  { id: 1142, pair: ["無口","お調子者"], lines: [
+    {speaker:"A", text:"……笑い声で場所わかる"},
+    {speaker:"B", text:"便利じゃん!"},
+    {speaker:"A", text:"……迷子対策"}
+  ]},
+  { id: 1143, pair: ["生意気","怖がり"], lines: [
+    {speaker:"A", text:"あんた、ありがとうの回数多いね"},
+    {speaker:"B", text:"数えてたの…!?"},
+    {speaker:"A", text:"昨日は十二回"}
+  ]},
+  { id: 1144, pair: ["のんびり","冷静"], lines: [
+    {speaker:"A", text:"ため息、優しい時に出るね〜"},
+    {speaker:"B", text:"観察されていたか"}
+  ]},
+  { id: 1145, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"あんたの「よし」を数えたじゃん!"},
+    {speaker:"B", text:"何回だった!"},
+    {speaker:"A", text:"昨日だけで三十!"}
+  ]},
+  { id: 1146, pair: ["真面目","優しい"], lines: [
+    {speaker:"A", text:"私、怒った事がないでしょうか"},
+    {speaker:"B", text:"昨日、石に説教してたよ"},
+    {speaker:"A", text:"あれは指導です"}
+  ]},
+  { id: 1147, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"お前の「……」には種類がある"},
+    {speaker:"B", text:"……よく気づいた"},
+    {speaker:"A", text:"今のは満足のやつだ"}
+  ]},
+  { id: 1148, pair: ["怖がり","生意気"], lines: [
+    {speaker:"A", text:"強気な人って夢でも強気…？"},
+    {speaker:"B", text:"夢では割と泣き虫"}
+  ]},
+  { id: 1149, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"寝ても覚めても元気だね"},
+    {speaker:"B", text:"寝てる間は静からしい!"}
+  ]},
+  { id: 1150, pair: ["のんびり","無口"], lines: [
+    {speaker:"A", text:"二人の会話、静かで好き〜"},
+    {speaker:"B", text:"……最長記録更新中"}
+  ]},
+  { id: 1151, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"あたしの口癖、何だと思う？"},
+    {speaker:"B", text:"「じゃん」"},
+    {speaker:"A", text:"言わないじゃん! …あ"}
+  ]},
+  { id: 1152, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"あんたの「大丈夫？」は先回りすぎ"},
+    {speaker:"B", text:"転ぶ三歩前に分かるから"}
+  ]},
+  { id: 1153, pair: ["熱血","のんびり"], lines: [
+    {speaker:"A", text:"お前の緊張した姿を見た事がない!"},
+    {speaker:"B", text:"してるよ〜内側で〜"}
+  ]},
+  { id: 1154, pair: ["冷静","怖がり"], lines: [
+    {speaker:"A", text:"お前は謝る時、二回頭を下げる"},
+    {speaker:"B", text:"癖なの…直す…？"},
+    {speaker:"A", text:"丁寧で良い"}
+  ]},
+  { id: 1155, pair: ["無口","熱血"], lines: [
+    {speaker:"A", text:"……声で目覚める、毎回"},
+    {speaker:"B", text:"目覚まし係を拝命した!"},
+    {speaker:"A", text:"……頼んでない"}
+  ]},
+  { id: 1156, pair: ["真面目","生意気"], lines: [
+    {speaker:"A", text:"荷物に飴が常備されていますね"},
+    {speaker:"B", text:"緊急用。あんたにもあげる"}
+  ]},
+  { id: 1157, pair: ["お調子者","怖がり"], lines: [
+    {speaker:"A", text:"びくってした時、耳が動くじゃん!"},
+    {speaker:"B", text:"う、動いてない…動いた？"}
+  ]},
+  { id: 1158, pair: ["冷静","優しい"], lines: [
+    {speaker:"A", text:"お前は誰にでも礼を言う"},
+    {speaker:"B", text:"言われた側も言うんだよ"},
+    {speaker:"A", text:"今の私か"}
+  ]},
+  { id: 1159, pair: ["のんびり","生意気"], lines: [
+    {speaker:"A", text:"怒った時も髪きれいだね〜"},
+    {speaker:"B", text:"怒ってても手入れはするし"}
+  ]},
+  { id: 1160, pair: ["熱血","冷静"], lines: [
+    {speaker:"A", text:"お前の歩幅は常に一定だ! 尊敬!"},
+    {speaker:"B", text:"測っていたのか"},
+    {speaker:"A", text:"三日間!"}
+  ]},
+  { id: 1161, pair: ["優しい","無口"], lines: [
+    {speaker:"A", text:"昨日より言葉が二つ増えたね"},
+    {speaker:"B", text:"……成長期"}
+  ]},
+  { id: 1162, pair: ["生意気","お調子者"], lines: [
+    {speaker:"A", text:"あんたの夢、うるさそう"},
+    {speaker:"B", text:"夢でも祭りだったじゃん!"}
+  ]},
+  { id: 1163, pair: ["怖がり","真面目"], lines: [
+    {speaker:"A", text:"持ち物の角が揃ってて安心する…"},
+    {speaker:"B", text:"整頓は心の平穏です"}
+  ]},
+  { id: 1164, pair: ["無口","のんびり"], lines: [
+    {speaker:"A", text:"……歩く速さ、覚えた"},
+    {speaker:"B", text:"私の〜？"},
+    {speaker:"A", text:"……揺れない速さ"}
+  ]},
+  { id: 1165, pair: ["お調子者","優しい"], lines: [
+    {speaker:"A", text:"泣いた後でも笑えるのなんで？"},
+    {speaker:"B", text:"隣で笑ってる人がいるから"}
+  ]},
+  { id: 1166, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"寝る前「今日も勝った」と言ったな"},
+    {speaker:"B", text:"聞いてたの!?"}
+  ]},
+  { id: 1167, pair: ["熱血","怖がり"], lines: [
+    {speaker:"A", text:"夢で先頭を歩いてたぞ、お前!"},
+    {speaker:"B", text:"私が!? 夢の私すごい…"},
+    {speaker:"A", text:"現実も近い!"}
+  ]},
+  { id: 1168, pair: ["真面目","のんびり"], lines: [
+    {speaker:"A", text:"「まあいっか」に救われます"},
+    {speaker:"B", text:"口癖が役に立った〜"}
+  ]},
+  { id: 1169, pair: ["生意気","無口"], lines: [
+    {speaker:"A", text:"あんたの拍手、一回だけだよね"},
+    {speaker:"B", text:"……本気の一回"}
+  ]},
+  { id: 1170, pair: ["のんびり","熱血"], lines: [
+    {speaker:"A", text:"燃えてる時、眉がきりってなるね〜"},
+    {speaker:"B", text:"眉も燃えている!"}
+  ]},
+  { id: 1171, pair: ["優しい","冷静"], lines: [
+    {speaker:"A", text:"あなたの地図の畳み方、美しいね"},
+    {speaker:"B", text:"三十年の鍛錬だ"},
+    {speaker:"A", text:"年季!?"}
+  ]},
+  { id: 1172, pair: ["お調子者","無口"], lines: [
+    {speaker:"A", text:"昨日の宿、いびきの人いたじゃん？"},
+    {speaker:"B", text:"……お前"}
+  ]},
+  { id: 1173, pair: ["怖がり","のんびり"], lines: [
+    {speaker:"A", text:"あなたの隣だと悪夢見ない気が…"},
+    {speaker:"B", text:"夢まで平和にする才能〜？"}
+  ]},
+  { id: 1174, pair: ["冷静","お調子者"], lines: [
+    {speaker:"A", text:"静かに笑う技術を教えろ"},
+    {speaker:"B", text:"無理! 笑いは全身運動じゃん!"}
+  ]},
+  { id: 1175, pair: ["熱血","優しい"], lines: [
+    {speaker:"A", text:"お前の「おかえり」は最強の技だ!"},
+    {speaker:"B", text:"ただいまも強いよ"}
+  ]},
+  { id: 1176, pair: ["生意気","冷静"], lines: [
+    {speaker:"A", text:"あたしの好きな食べ物、知ってる？"},
+    {speaker:"B", text:"桃の飴。荷物で音がする"},
+    {speaker:"A", text:"恥ず…正解"}
+  ]},
+  { id: 1177, pair: ["無口","怖がり"], lines: [
+    {speaker:"A", text:"……昨日、うなされてた"},
+    {speaker:"B", text:"起こしてくれたの、あなた…？"},
+    {speaker:"A", text:"……偶然"}
+  ]},
+  { id: 1178, pair: ["真面目","お調子者"], lines: [
+    {speaker:"A", text:"あなたは初対面の人とすぐ歌います"},
+    {speaker:"B", text:"歌は世界共通じゃん!"}
+  ]},
+  { id: 1179, pair: ["のんびり","優しい"], lines: [
+    {speaker:"A", text:"あなたのお茶の入れ方、丁寧〜"},
+    {speaker:"B", text:"飲む人の顔を思い浮かべるの"}
+  ]},
+  { id: 1180, pair: ["お調子者","生意気"], lines: [
+    {speaker:"A", text:"あんたのくしゃみ、可愛い系じゃん"},
+    {speaker:"B", text:"忘れて。今すぐ"}
+  ]},
+  { id: 1181, pair: ["冷静","熱血"], lines: [
+    {speaker:"A", text:"夢の中でも走っていたそうだな"},
+    {speaker:"B", text:"寝言が「もう一周」だったか!"}
+  ]},
+  { id: 1182, pair: ["優しい","怖がり"], lines: [
+    {speaker:"A", text:"戸締まり確認してくれてたね"},
+    {speaker:"B", text:"三回確認した…"},
+    {speaker:"A", text:"おかげでぐっすり"}
+  ]},
+  { id: 1183, pair: ["無口","生意気"], lines: [
+    {speaker:"A", text:"……その帯の結び、器用"},
+    {speaker:"B", text:"十秒でできるし"},
+    {speaker:"A", text:"……実演希望"}
+  ]},
+  { id: 1184, pair: ["熱血","真面目"], lines: [
+    {speaker:"A", text:"お前の筆の持ち方は美しい!"},
+    {speaker:"B", text:"字は心の姿勢ですから"},
+    {speaker:"A", text:"私の字は元気だ!"}
+  ]},
+  { id: 1185, pair: ["怖がり","お調子者"], lines: [
+    {speaker:"A", text:"あなたの声で起きるの、助かる…"},
+    {speaker:"B", text:"目覚まし一号じゃん!"}
+  ]},
+  { id: 1186, pair: ["生意気","のんびり"], lines: [
+    {speaker:"A", text:"寝ても覚めても同じ速さね"},
+    {speaker:"B", text:"夢の中では速いよ〜"}
+  ]},
+  { id: 1187, pair: ["冷静","無口"], lines: [
+    {speaker:"A", text:"昨日の会話記録、二語だ"},
+    {speaker:"B", text:"……十分"},
+    {speaker:"A", text:"同意する"}
+  ]},
+  { id: 1188, pair: ["お調子者","熱血"], lines: [
+    {speaker:"A", text:"声のでかさ、あんたが優勝じゃん!"},
+    {speaker:"B", text:"互角だと思っている!"},
+    {speaker:"A", text:"謙虚!?"}
+  ]},
+  { id: 1189, pair: ["優しい","のんびり"], lines: [
+    {speaker:"A", text:"眠そうだと瞬きゆっくりだね"},
+    {speaker:"B", text:"気づいてた〜？"}
+  ]},
+  { id: 1190, pair: ["真面目","冷静"], lines: [
+    {speaker:"A", text:"昨日の私の寝言、聞きましたか"},
+    {speaker:"B", text:"「消灯時間です」と言っていた"},
+    {speaker:"A", text:"職務熱心……"}
+  ]},
+  { id: 1191, pair: ["のんびり","お調子者"], lines: [
+    {speaker:"A", text:"夢の話、三倍盛ってるでしょ〜"},
+    {speaker:"B", text:"夢は自由じゃん!"}
+  ]},
+  { id: 1192, pair: ["怖がり","冷静"], lines: [
+    {speaker:"A", text:"寝顔、初めて見た…安らかだった"},
+    {speaker:"B", text:"見るな"}
+  ]},
+  { id: 1193, pair: ["熱血","無口"], lines: [
+    {speaker:"A", text:"今日の調子はどうだ!"},
+    {speaker:"B", text:"……絶好調"},
+    {speaker:"A", text:"聞けてよかった!!"}
+  ]},
+  { id: 1194, pair: ["生意気","優しい"], lines: [
+    {speaker:"A", text:"昨日助けられたの、忘れてないから"},
+    {speaker:"B", text:"私も助けられたよ"},
+    {speaker:"A", text:"…おあいこね"}
+  ]},
+  { id: 1195, pair: ["お調子者","冷静"], lines: [
+    {speaker:"A", text:"昨日、寝るの惜しかったじゃん!"},
+    {speaker:"B", text:"楽しい日はそうなる"}
+  ]},
+  { id: 1196, pair: ["無口","優しい"], lines: [
+    {speaker:"A", text:"……夢に、みんな出た"},
+    {speaker:"B", text:"どんな様子だった？"},
+    {speaker:"A", text:"……楽しい夢"}
+  ]},
+  { id: 1197, pair: ["のんびり","真面目"], lines: [
+    {speaker:"A", text:"夢の中でも整頓してた〜？"},
+    {speaker:"B", text:"はい。夢も整いました"}
+  ]},
+  { id: 1198, pair: ["冷静","生意気"], lines: [
+    {speaker:"A", text:"寝癖を直してから言え"},
+    {speaker:"B", text:"何も言ってないでしょ!"},
+    {speaker:"A", text:"言いたげだった"}
+  ]},
+  { id: 1199, pair: ["熱血","お調子者"], lines: [
+    {speaker:"A", text:"昨日の宿の飯、再現できるか!"},
+    {speaker:"B", text:"音だけならできるじゃん!"}
+  ]},
+  { id: 1200, pair: ["優しい","熱血"], lines: [
+    {speaker:"A", text:"今日もよく笑ったね"},
+    {speaker:"B", text:"明日の分も笑っておいた!"},
+    {speaker:"A", text:"前借り!?"}
+  ]},
+];
+
+const STORAGE_KEY = "serifuKunPeaceState";
+const TIRED_IMG = { samurai: "images/侍軽度2.PNG", hunter: "images/狩人軽度.PNG" };
+const ENERGETIC_IMG = { samurai: "images/侍普通.PNG", hunter: "images/狩人普通.PNG" };
+const MOOD_LABEL = {
+  bothTired: "両者疲弊",
+  aTiredBEnergetic: "A疲弊 / B元気",
+  aEnergeticBTired: "A元気 / B疲弊",
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { judgments: {}, history: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      judgments: parsed.judgments || {},
+      history: parsed.history || [],
+    };
+  } catch (e) {
+    return { judgments: {}, history: [] };
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function currentCard() {
+  return LINES.find(l => !(l.id in state.judgments));
+}
+
+function moodFlags(mood) {
+  // 平和版: 全員元気で固定(MOODという概念自体が無い)
+  return { aTired: false, bTired: false };
+}
+
+// A役を侍と狩人のどちらが演じるかだけをランダムに決める。
+// 吹き出しが「A=左上、B=右上」で固定なので、立ち位置も必ずA=左、B=右にする
+// (以前は立ち位置も独立にランダムにしていたため、Aのキャラが右に立った回は
+// 疲弊/元気の絵が吹き出しの左右と食い違って見えるバグがあった)
+function pickCharacterAssignment() {
+  return {
+    samuraiIsA: Math.random() < 0.5,
+  };
+}
+
+function renderCard() {
+  const cardArea = document.getElementById("cardArea");
+
+  if (LINES.length === 0) {
+    cardArea.innerHTML = '<div class="empty-state">まだセリフがありません</div>';
+    return;
+  }
+
+  const card = currentCard();
+  if (!card) {
+    cardArea.innerHTML = '<div class="empty-state">判定完了<br><span style="font-size:13px;">「出力」でダウンロードしてから<br>Claude Codeに「続き」と伝えてください</span></div>';
+    return;
+  }
+
+  const { aTired, bTired } = moodFlags(card.mood);
+  const { samuraiIsA } = pickCharacterAssignment();
+
+  // 左=A(吹き出し左上と対応)、右=B(吹き出し右上と対応)で固定
+  const leftChar = samuraiIsA ? "samurai" : "hunter";
+  const rightChar = samuraiIsA ? "hunter" : "samurai";
+  const leftImg = (aTired ? TIRED_IMG : ENERGETIC_IMG)[leftChar];
+  const rightImg = (bTired ? TIRED_IMG : ENERGETIC_IMG)[rightChar];
+
+  const bubblesHtml = card.lines.map(line => {
+    const tired = line.speaker === "A" ? aTired : bTired;
+    const speakerCls = line.speaker === "A" ? "bubble-a" : "bubble-b";
+    const moodCls = tired ? "mood-tired" : "mood-energetic";
+    return `<div class="bubble ${speakerCls} ${moodCls}">${escapeHtml(line.text)}</div>`;
+  }).join("");
+
+  cardArea.innerHTML = `
+    <div class="card">
+      <div class="card-meta">
+        <span class="badge badge-id">ID:${String(card.id).padStart(3, "0")}</span>
+        <span class="badge badge-pair">${escapeHtml(card.pair[0])} × ${escapeHtml(card.pair[1])}</span>
+        
+      </div>
+      <div class="bubbles">${bubblesHtml}</div>
+      <div class="chars">
+        <div class="char-slot"><img src="${leftImg}" alt=""></div>
+        <div class="char-slot"><img src="${rightImg}" alt=""></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStats() {
+  const total = LINES.length;
+  const judgedCount = Object.keys(state.judgments).length;
+  const adoptCount = Object.values(state.judgments).filter(v => v === "adopt").length;
+  const rejectCount = judgedCount - adoptCount;
+  document.getElementById("statsText").textContent =
+    `判定済み ${judgedCount}/${total}　採用 ${adoptCount}　没 ${rejectCount}`;
+  const pct = total > 0 ? Math.round((judgedCount / total) * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+}
+
+function renderButtons() {
+  const hasCard = LINES.length > 0 && !!currentCard();
+  document.getElementById("btnReject").disabled = !hasCard;
+  document.getElementById("btnAdopt").disabled = !hasCard;
+  document.getElementById("btnBack").disabled = state.history.length === 0;
+}
+
+function renderAll() {
+  renderCard();
+  renderStats();
+  renderButtons();
+}
+
+function judge(result) {
+  const card = currentCard();
+  if (!card) return;
+  state.judgments[card.id] = result;
+  state.history.push(card.id);
+  saveState();
+  renderAll();
+}
+
+function goBack() {
+  const lastId = state.history.pop();
+  if (lastId === undefined) return;
+  delete state.judgments[lastId];
+  saveState();
+  renderAll();
+}
+
+document.getElementById("btnAdopt").addEventListener("click", () => judge("adopt"));
+document.getElementById("btnReject").addEventListener("click", () => judge("reject"));
+document.getElementById("btnBack").addEventListener("click", goBack);
+
+// ---- 履歴 ----
+function renderHistoryList() {
+  const listEl = document.getElementById("historyList");
+  const judgedIds = Object.keys(state.judgments).map(Number).sort((a, b) => a - b);
+  if (judgedIds.length === 0) {
+    listEl.innerHTML = '<div class="history-empty">まだ判定がありません</div>';
+    return;
+  }
+  listEl.innerHTML = judgedIds.map(id => {
+    const line = LINES.find(l => l.id === id);
+    if (!line) return "";
+    const result = state.judgments[id];
+    const cls = result === "adopt" ? "adopt" : "reject";
+    const icon = result === "adopt" ? "◯" : "✕";
+    const preview = line.lines.map(l => l.text).join(" / ");
+    return `<div class="history-item ${cls}" data-id="${id}">
+      <span class="history-icon">${icon}</span>
+      <span class="history-id">ID:${String(id).padStart(3, "0")}</span>
+      <span class="history-preview">${escapeHtml(preview)}</span>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("historyList").addEventListener("click", (e) => {
+  const item = e.target.closest(".history-item");
+  if (!item) return;
+  const id = Number(item.dataset.id);
+  delete state.judgments[id];
+  state.history = state.history.filter(x => x !== id);
+  saveState();
+  renderHistoryList();
+  renderAll();
+});
+
+document.getElementById("btnHistory").addEventListener("click", () => {
+  renderHistoryList();
+  document.getElementById("historyOverlay").classList.add("open");
+});
+document.getElementById("btnCloseHistory").addEventListener("click", () => {
+  document.getElementById("historyOverlay").classList.remove("open");
+});
+
+// ---- 出力 ----
+function buildExportText() {
+  const adoptedIds = Object.keys(state.judgments)
+    .filter(id => state.judgments[id] === "adopt")
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  if (adoptedIds.length === 0) return "";
+
+  const blocks = adoptedIds.map((id, idx) => {
+    const line = LINES.find(l => l.id === id);
+    const newId = String(idx + 1).padStart(3, "0");
+    const pairStr = line.pair.join("|");
+    const body = line.lines.map(l => `${l.speaker}:${l.text}`).join("\n");
+    return `ID:${newId}\nPAIR:${pairStr}\nMOOD:${line.mood}\n\n${body}`;
+  });
+
+  return blocks.join("\n\n---\n\n");
+}
+
+function downloadExportFile(text) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const filename = `せりふくん平和_出力_${stamp}.txt`;
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("btnExport").addEventListener("click", () => {
+  const text = buildExportText();
+  const exportTextEl = document.getElementById("exportText");
+  if (!text) {
+    exportTextEl.style.display = "none";
+    let emptyEl = document.querySelector(".export-empty");
+    if (!emptyEl) {
+      emptyEl = document.createElement("div");
+      emptyEl.className = "export-empty";
+      emptyEl.textContent = "採用されたセリフがまだありません";
+      exportTextEl.insertAdjacentElement("beforebegin", emptyEl);
+    }
+    document.getElementById("btnCopyExport").disabled = true;
+  } else {
+    exportTextEl.style.display = "";
+    const emptyEl = document.querySelector(".export-empty");
+    if (emptyEl) emptyEl.remove();
+    exportTextEl.value = text;
+    document.getElementById("btnCopyExport").disabled = false;
+    downloadExportFile(text);
+  }
+  document.getElementById("exportOverlay").classList.add("open");
+});
+document.getElementById("btnCloseExport").addEventListener("click", () => {
+  document.getElementById("exportOverlay").classList.remove("open");
+});
+document.getElementById("btnCopyExport").addEventListener("click", async () => {
+  const text = document.getElementById("exportText").value;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById("btnCopyExport");
+    const original = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (e) {
+    alert("コピーに失敗しました。テキストを選択して手動でコピーしてください。");
+  }
+});
+
+renderAll();
+</script>
+</body>
+</html>

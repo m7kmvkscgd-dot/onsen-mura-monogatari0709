@@ -1,0 +1,328 @@
+
+const SKILL_DATA = {"samurai":{"ja":"侍","image":"assets/class_samurai.png","base":{"id":"critAttack","name":"会心の一撃","desc":"敵一体に高威力の一撃"},"levels":{"2":{"left":{"name":"居合","desc":"戦闘開始後、最初の攻撃のダメージ+40%","mp":0,"passive":{"firstAttackBonusMult":0.4}},"right":{"name":"見切り","desc":"HPが50%以下の時、回避率+25%","mp":0,"passive":{"conditionalMod":{"cmp":"lte","value":0.5,"evasionAdd":0.25}}}},"3":{"left":{"name":"連斬","desc":"会心を出した直後、25%の確率でもう一度通常攻撃できる。(通常攻撃のみ選択可、対象も選び直せる)","mp":0,"passive":{"onCritExtraAttackChance":0.25}},"right":{"name":"気迫","desc":"HPが80%以上の間、被ダメージ20%減少","mp":0,"passive":{"conditionalMod":{"cmp":"gte","value":0.8,"dmgTakenMult":0.8}}}},"4":{"left":{"name":"一閃","desc":"敵単体へ190%ダメージ、防御力25%無視","mp":4,"action":{"kind":"damage","mult":1.9,"defPierce":0.25}},"right":{"name":"心眼の構え","desc":"このターン、敵の単体攻撃を1度だけ完全に無効にし、75%の攻撃力で反撃する。","mp":1,"action":{"kind":"guardCounterSelf","mult":0.75}}},"5":{"left":{"name":"疾風斬り","desc":"自分より素早さが遅い相手に攻撃する時、75%の確率で出血1〜3を与える。","mp":0,"passive":{"onHitInflict":{"type":"bleed","chance":0.75,"valueMin":1,"valueMax":3,"condition":"targetSlower"}}},"right":{"name":"黒曜","desc":"自身が出血時の流血ダメージを3分の1にする","mp":0,"passive":{"dotDamageMult":0.3333333333333333}}},"6":{"left":{"name":"鬼神化","desc":"後日設定","mp":0},"right":{"name":"百戦錬磨","desc":"１ターン経過するにつき、攻撃力が3%上がる(最大10ターン)","mp":0,"passive":{"turnStackAtkBuff":{"perTurn":0.03,"maxTurns":10}}}},"7":{"left":{"name":"闘志","desc":"仲間が会心を発動したターン、自分の会心率が25%上がる。(仲間が二人以上会心を出しても、重複しない)","mp":0,"passive":{"allyCritSelfCritBuff":0.25}},"right":{"name":"覇気","desc":"敵を与えたダメージの1%を回復する","mp":0,"passive":{"onHitLifestealPct":0.01}}},"8":{"left":{"name":"乱れ斬り","desc":"ランダムな敵へ3回攻撃する。(対象は毎回ランダム)","mp":3,"action":{"kind":"damageRandomMulti","mult":0.65,"hits":3}},"right":{"name":"燕返し","desc":"被弾時、25%の確率で反撃する(攻撃力110%)","mp":0,"passive":{"counterChance":0.25,"counterMult":1.1}}},"9":{"left":{"name":"修羅","desc":"敵を倒すと3ターンの間、攻撃力+25%\n(重複しない)","mp":0,"passive":{"onKill":{"statMult":[{"stat":"atk","mult":1.25}],"turns":3,"maxStacks":1}}},"right":{"name":"覚悟","desc":"戦闘不能になる一撃を、戦闘中1回だけHP1で耐える","mp":0,"passive":{"onceGuardType":"surviveAtHp1"}}},"10":{"left":{"name":"神速抜刀","desc":"敵単体へ320%ダメージ、防御力50%無視","mp":7,"action":{"kind":"damage","mult":3.2,"defPierce":0.5}},"right":{"name":"明鏡止水","desc":"3ターン、自身の会心率+40%、会心ダメージ+30%。\n重ねがけはできない。","mp":5,"action":{"kind":"buffSelf","stats":[{"stat":"critRateAdd","mult":0.4},{"stat":"critDmgAdd","mult":0.3}],"turns":3}}}}},"ninja":{"ja":"忍","image":"assets/class_ninja.png","base":{"id":"powerAttack","name":"奇襲","desc":"敵1体に不意を突いた一撃"},"levels":{"2":{"left":{"name":"煙幕","desc":"煙玉を一つ消費して煙幕をはる。煙幕は1ターンの間、味方全体の回避率を50%向上させる。","mp":1,"action":{"kind":"buffPartyConsumeItem","item":"smokeBomb","stats":[{"stat":"evasionAdd","mult":0.5}],"turns":1}},"right":{"name":"毒刃","desc":"通常攻撃時、50%の確率で敵を毒状態にする(蓄積3)","mp":0,"passive":{"onHitInflict":{"type":"poison","chance":0.5,"value":3}}}},"3":{"left":{"name":"口寄せの術","desc":"カラス・ガマ・ヘビのいずれかに変身する。","mp":5,"action":{"kind":"transform"}},"right":{"name":"影分身の術","desc":"後日実装","mp":0}},"4":{"left":{"name":"撒菱","desc":"敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。","mp":1,"action":{"kind":"debuffAllNoCost","stat":"spd","value":0.3,"turns":3}},"right":{"name":"忍足","desc":"その戦闘で敵に初めに攻撃されるまで回避率＋20%","mp":0,"passive":{"preFirstHitEvasionAdd":0.2}}},"5":{"left":{"name":"身代わりの術","desc":"次に受ける全ての攻撃を1度だけ無効化する(全体攻撃を含む)","mp":1,"action":{"kind":"shieldSelf"}},"right":{"name":"蝮手裏剣","desc":"75%のダメージを与え、毒3〜5を与える","mp":2,"rangeType":"ranged","action":{"kind":"damage","mult":0.75,"inflict":{"type":"poison","chance":1,"valueMin":3,"valueMax":5}}}},"6":{"left":{"name":"暗殺術","desc":"攻撃力100%で敵を攻撃する。このスキルで敵をキルした場合、ターンが終了せず、再度ターンをプレイできる。","mp":3,"action":{"kind":"damage","mult":1,"extraTurnOnKill":true}},"right":{"name":"空蝉","desc":"敵の攻撃を回避した時、mpを1回復する。","mp":0,"passive":{"onEvadeMpRestore":1}}},"7":{"left":{"name":"影縫いの術","desc":"敵単体へ90%ダメージ、85%の確率でスタン","mp":3,"action":{"kind":"damage","mult":0.9,"inflict":{"type":"stun","chance":0.85,"turns":1}}},"right":{"name":"瞬身反撃","desc":"敵の攻撃を回避した時、反撃する。(攻撃威力75%)","mp":0,"passive":{"onEvadeCounterMult":0.75}}},"8":{"left":{"name":"幻影乱舞の術","desc":"ランダムな敵に威力50%の攻撃を5回繰り返す。対象ターゲットは毎回抽選。","mp":4,"action":{"kind":"damageRandomMulti","mult":0.5,"hits":5}},"right":{"name":"修羅刃","desc":"敵を倒すと次の攻撃の回避率+40%。値は蓄積しない。","mp":0,"passive":{"onKillEvasionBonus":0.4}}},"9":{"left":{"name":"影縫い","desc":"敵一体をスタンさせる。ターンを消費しない","mp":3,"action":{"kind":"stunNoCost","chance":1,"turns":1}},"right":{"name":"毒殺の心得","desc":"毒を負わせた敵への会心率+40%","mp":0,"passive":{"ailmentCritBonus":{"ailment":"poison","addRate":0.4}}}},"10":{"left":{"name":"影分身の術","desc":"後日実装","mp":0},"right":{"name":"朧隠れ","desc":"3ターンの間、味方全員の回避率+30%","mp":3,"action":{"kind":"buffParty","stats":[{"stat":"evasionAdd","mult":0.3}],"turns":3}}}}},"spearman":{"ja":"槍士","image":"assets/class_spearman.png","base":{"id":"guard","name":"かばう","desc":"仲間を敵の攻撃からかばう。"},"levels":{"2":{"left":{"name":"貫通突き","desc":"敵単体へ180%ダメージ、防御力20%無視","mp":2,"action":{"kind":"damage","mult":1.8,"defPierce":0.2}},"right":{"name":"不動","desc":"敵からダメージを受けるとHPを2%回復する","mp":0,"passive":{"onDamagedSelfHealPct":0.02}}},"3":{"left":{"name":"貫きの構え","desc":"かばうが成功した直後、次の自分の攻撃が確定会心になる","mp":0,"passive":{"guardCritCounter":true}},"right":{"name":"砦の構え","desc":"かばうが敵の攻撃を防いだ瞬間、確実に反撃する","mp":0,"passive":{"guardCounter":true}}},"4":{"left":{"name":"迅雷突き","desc":"敵単体へ200%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)","mp":4,"action":{"kind":"damage","mult":2,"inflict":{"type":"defDownStack","chance":1,"value":0.2,"maxStacks":2,"turns":3}}},"right":{"name":"守り槍","desc":"敵一体に攻撃をしつつ同時に庇うを発動する","mp":2,"action":{"kind":"damage","mult":1,"alsoGuard":true}}},"5":{"left":{"name":"鎧砕き","desc":"攻撃した敵の防御力を2ターン-20%。(40%まで蓄積する)","mp":0,"action":{"kind":"damage","mult":0,"inflict":{"type":"defDownStack","chance":1,"value":0.2,"maxStacks":2,"turns":2}}},"right":{"name":"守護陣","desc":"3ターンの間、味方全体の防御力+20%\nターンを消費しない","mp":3,"action":{"kind":"buffPartyNoCost","stats":[{"stat":"def","mult":1.2}],"turns":3}}},"6":{"left":{"name":"千人力","desc":"敵に攻撃すると攻撃力が２ターンの間10%上がる(20%まで蓄積する)","mp":0,"passive":{"onHitSelfStackBuff":{"stat":"atk","perStack":0.1,"maxStacks":2,"turns":2}}},"right":{"name":"迎撃","desc":"被弾時、30%の確率で反撃する","mp":0,"passive":{"counterChance":0.3}}},"7":{"left":{"name":"阿修羅突き","desc":"HPが満タンの敵に対し、攻撃をすると出血を3〜5付与する","mp":0,"passive":{"onHitInflict":{"type":"bleed","chance":1,"valueMin":3,"valueMax":5,"condition":"targetFullHp"}}},"right":{"name":"鋼の肉体","desc":"HPが50%以下の間、被ダメージ20%減少","mp":0,"passive":{"conditionalMod":{"cmp":"lte","value":0.5,"dmgTakenMult":0.8}}}},"8":{"left":{"name":"城壁の意志","desc":"かばうが成功するとMPが1回復する","mp":0,"passive":{"guardMpRefund":true}},"right":{"name":"不屈","desc":"状態異常にかかる確率が40%減少する","mp":0,"passive":{"statusResistMult":0.4}}},"9":{"left":{"name":"槍鬼","desc":"敵を倒すたび攻撃力+12%(最大3回まで重複)","mp":0,"passive":{"onKill":{"statMult":[{"stat":"atk","mult":1.12}],"turns":20,"maxStacks":3}}},"right":{"name":"金剛","desc":"かばうがターンを消費しなくなる","mp":0,"passive":{"guardTurnFree":true}}},"10":{"left":{"name":"天穿槍","desc":"敵単体へ290%ダメージ、防御力45%無視","mp":5,"action":{"kind":"damage","mult":2.9,"defPierce":0.45}},"right":{"name":"仁王立ち","desc":"5ターンの間、防御力+35%、被ダメージ25%減少、毎ターンHP5%回復","mp":5,"action":{"kind":"buffSelf","stats":[{"stat":"def","mult":1.35},{"stat":"dmgTaken","mult":0.75}],"turns":5,"hpRegenPct":0.05}}}}},"naginata":{"ja":"薙刀士","image":"assets/class_naginata.png","base":{"id":"physicalAttackAll","name":"薙ぎ払い(全体)","desc":"敵全体になぎ払いの一撃(1体あたりは控えめ)"},"levels":{"2":{"left":{"name":"舞の型","desc":"薙ぎ払いのMP消費-1","mp":0,"passive":{"abilityMpDiscount":{"physicalAttackAll":1}}},"right":{"name":"足払い","desc":"敵単体へ90%ダメージ、85%の確率でスタン(1ターン)","mp":2,"action":{"kind":"damage","mult":0.9,"inflict":{"type":"stun","chance":0.85,"turns":1}}}},"3":{"left":{"name":"円舞","desc":"薙ぎ払いが命中した敵の数×20%、次の自分のターンまで回避率が上がる","mp":0,"passive":{"abilityAoeSelfBuff":{"physicalAttackAll":{"stat":"evasionAdd","perHitMult":0.2,"turns":2}}}},"right":{"name":"崩し","desc":"通常攻撃が命中した敵の防御力を15%下げる(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"defDown","chance":0.3,"value":0.15,"turns":3}}}},"4":{"left":{"name":"旋風薙ぎ","desc":"薙ぎ払いが出血2〜4を付与するようになる","mp":0,"passive":{"abilityOnHitInflict":{"physicalAttackAll":{"type":"bleed","chance":1,"valueMin":2,"valueMax":4}}}},"right":{"name":"威圧","desc":"通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"atkDown","chance":0.3,"value":0.15,"turns":3}}}},"5":{"left":{"name":"拍子外し","desc":"素早さが下がっている敵への会心率+25%","mp":0,"passive":{"debuffCritBonus":{"stat":"spd","addRate":0.25}}},"right":{"name":"舞姫","desc":"回避に成功すると、次の自分の1ターンだけ回避率+30%","mp":0,"passive":{"onEvadeSelfBuff":{"stat":"evasionAdd","mult":0.3}}}},"6":{"left":{"name":"乱舞","desc":"敵全体へ2連続攻撃(合計130%ダメージ)","mp":5,"action":{"kind":"damage","aoe":true,"mult":1.3,"hits":2}},"right":{"name":"流水","desc":"回避に成功すると、次の自分の1ターンだけ攻撃力+15%","mp":0,"passive":{"onEvadeSelfBuff":{"stat":"atk","mult":1.15}}}},"7":{"left":{"name":"豪舞","desc":"HPが70%以上の間、攻撃力+12%","mp":0,"passive":{"conditionalMod":{"cmp":"gte","value":0.7,"statMult":[{"stat":"atk","mult":1.12}]}}},"right":{"name":"護りの薙刀","desc":"仲間がかばっている間、被ダメージ-10%","mp":0,"passive":{"allyGuardDmgTakenMult":0.9}}},"8":{"left":{"name":"花吹雪","desc":"敵全体へ150%ダメージ","mp":6,"action":{"kind":"damage","aoe":true,"mult":1.5}},"right":{"name":"乱心","desc":"通常攻撃時、15%の確率で敵をスタンさせる","mp":0,"passive":{"onHitInflict":{"type":"stun","chance":0.15,"turns":1}}}},"9":{"left":{"name":"百花繚乱","desc":"スタン中の敵へのダメージ+20%","mp":0,"passive":{"woundBonus":{"mult":1.2,"ailment":"stun"}}},"right":{"name":"静寂","desc":"状態異常にかかる確率が35%減少する","mp":0,"passive":{"statusResistMult":0.35}}},"10":{"left":{"name":"千本桜","desc":"敵全体へ220%ダメージ","mp":7,"action":{"kind":"damage","aoe":true,"mult":2.2}},"right":{"name":"天女の舞","desc":"5ターンの間、味方全体の攻撃力・防御力・素早さ+15%","mp":6,"action":{"kind":"buffParty","stats":[{"stat":"atk","mult":1.15},{"stat":"def","mult":1.15},{"stat":"spd","mult":1.15}],"turns":5}}}}},"hunter":{"ja":"狩人","image":"assets/class_hunter.png","base":{"id":"preciseShot","name":"会心の一矢","desc":"敵1体に防御力を無視しやすい矢"},"levels":{"2":{"left":{"name":"狙撃","desc":"敵単体へ170%ダメージ、3ターンの間その敵の被ダメージ+10%(パーティ全員に有効)","mp":3,"action":{"kind":"damage","mult":1.7,"inflict":{"type":"dmgTakenUp","chance":1,"value":0.1,"turns":3}}},"right":{"name":"急所への一撃","desc":"通常攻撃で25%の確率で出血1〜3を付与","mp":0,"passive":{"onHitInflict":{"type":"bleed","chance":0.25,"valueMin":1,"valueMax":3}}}},"3":{"left":{"name":"二連射","desc":"敵単体へ2連続攻撃(合計180%ダメージ)","mp":3,"comboTag":"rapidFire","action":{"kind":"damage","mult":1.8,"hits":2}},"right":{"name":"麻痺の矢","desc":"敵単体へ70%ダメージ、95%の確率でスタン","mp":3,"action":{"kind":"damage","mult":0.7,"inflict":{"type":"stun","chance":0.95,"turns":1}}}},"4":{"left":{"name":"貫き矢","desc":"通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)","mp":0,"passive":{"overkillPierce":true}},"right":{"name":"鷹を呼ぶ","desc":"鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。","mp":3,"action":{"kind":"summonHawk","turns":8}}},"5":{"left":{"name":"急所連撃","desc":"対象の状態異常の種類数に応じてダメージ増(1種につき+10%)","mp":0,"passive":{"stackedWoundBonusPerAilment":0.1}},"right":{"name":"追い討ち","desc":"出血中の敵を通常攻撃すると、相手に出血スタックを3付与する","mp":0,"passive":{"bleedFollowupOnHit":true}}},"6":{"left":{"name":"狙撃術","desc":"HPが90%以上の敵への会心率+15%","mp":0,"passive":{"executeCritBonus":{"belowPct":0.9,"addRate":0.15,"cmp":"gte"}}},"right":{"name":"捕縛","desc":"通常攻撃が命中した敵の素早さを20%下げる(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"spdDown","chance":0.25,"value":0.2,"turns":3}}}},"7":{"left":{"name":"連射の心得","desc":"二連射を使った直後、次の自分の1ターンだけ攻撃力+20%","mp":0,"passive":{"comboFollowup":{"tag":"rapidFire","stat":"atk","mult":1.2}}},"right":{"name":"狩猟本能","desc":"HPが50%以下の敵へのダメージ+25%","mp":0,"passive":{"executeBonus":{"belowPct":0.5,"mult":1.25}}}},"8":{"left":{"name":"必中撃ち","desc":"敵単体へ210%ダメージ。この攻撃は必ず命中する","mp":4,"action":{"kind":"damage","mult":2.1,"guaranteedHit":true}},"right":{"name":"腐食毒","desc":"通常攻撃が命中した敵の防御力を20%下げる(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"defDown","chance":0.2,"value":0.2,"turns":3}}}},"9":{"left":{"name":"弱者狩り","desc":"攻撃力が下がっている敵への会心率+30%","mp":0,"passive":{"debuffCritBonus":{"stat":"atk","addRate":0.3}}},"right":{"name":"痺れ矢・豪雨","desc":"敵全体に矢の雨を降らせる。命中率95%、命中した敵は90%の確率でスタン","mp":5,"action":{"kind":"damage","aoe":true,"mult":0,"hitChance":0.95,"inflict":{"type":"stun","chance":0.9,"turns":1}}}},"10":{"left":{"name":"流星射ち","desc":"敵単体へ290%ダメージ","mp":7,"action":{"kind":"damage","mult":2.9}},"right":{"name":"狩神の領域","desc":"5ターンの間、素早さ+20%、攻撃力+15%","mp":6,"action":{"kind":"buffSelf","stats":[{"stat":"spd","mult":1.2},{"stat":"atk","mult":1.15}],"turns":5}}}}},"gunner":{"ja":"砲術士","image":"assets/class_gunner.png","base":{"id":"cannonShot","name":"砲撃","desc":"敵1体に大ダメージ。使った次のターンは装填で動けない"},"levels":{"2":{"left":{"name":"土嚢展開","desc":"3ターンの間、自分の防御力+30%。この間は砲撃を使っても装填が発生しない","mp":0,"comboTag":"sandbag","action":{"kind":"buffSelf","stats":[{"stat":"def","mult":1.3},{"stat":"reloadImmune","mult":1}],"turns":3}},"right":{"name":"榴弾","desc":"敵全体へ65%ダメージ、30%の確率でスタン","mp":5,"action":{"kind":"damage","aoe":true,"mult":0.65,"inflict":{"type":"stun","chance":0.3,"turns":1}}}},"3":{"left":{"name":"火薬強化","desc":"装填中、防御力+20%","mp":0,"passive":{"flagMod":{"flag":"reloading","stat":"def","mult":1.2}}},"right":{"name":"爆薬調合","desc":"土嚢展開を使った直後、次の自分の1ターンだけ攻撃力+15%","mp":0,"passive":{"comboFollowup":{"tag":"sandbag","stat":"atk","mult":1.15}}}},"4":{"left":{"name":"貫通弾","desc":"敵単体へ210%ダメージ、防御力25%無視。次の自分のターンは装填で動けない","mp":4,"action":{"kind":"damage","mult":2.1,"defPierce":0.25,"selfReload":true}},"right":{"name":"炸裂弾","desc":"敵全体へ100%ダメージ、30%の確率で攻撃力-15%(3ターン)","mp":5,"action":{"kind":"damage","aoe":true,"mult":1,"inflict":{"type":"atkDown","chance":0.3,"value":0.15,"turns":3}}}},"5":{"left":{"name":"援護砲撃","desc":"仲間がかばっている間、与えるダメージ+12%","mp":0,"passive":{"allyGuardDmgMult":1.12}},"right":{"name":"焼夷弾","desc":"通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"burn","chance":0.2,"turns":3}}}},"6":{"left":{"name":"装填術","desc":"土嚢展開の間、技のMP消費-30%","mp":0,"passive":{"discountWhileFlag":{"statModName":"reloadImmune","pct":0.3}}},"right":{"name":"爆風拡大","desc":"装填中、素早さ+20%","mp":0,"passive":{"flagMod":{"flag":"reloading","stat":"spd","mult":1.2}}}},"7":{"left":{"name":"会心装填","desc":"会心を出した直後、次の自分の1ターンだけ攻撃力+20%","mp":0,"passive":{"onCritSelfBuff":{"stat":"atk","mult":1.2}}},"right":{"name":"衝撃波","desc":"通常攻撃が命中した敵を15%の確率でスタンさせる(1ターン)","mp":0,"passive":{"onHitInflict":{"type":"stun","chance":0.15,"turns":1}}}},"8":{"left":{"name":"徹甲弾","desc":"敵単体へ220%ダメージ、防御力35%無視","mp":5,"action":{"kind":"damage","mult":2.2,"defPierce":0.35}},"right":{"name":"一斉砲撃","desc":"敵全体へ190%ダメージ。次の自分のターンは装填で動けない","mp":6,"action":{"kind":"damage","aoe":true,"mult":1.9,"selfReload":true}}},"9":{"left":{"name":"砲撃術皆伝","desc":"スタン中の敵へのダメージ+20%","mp":0,"passive":{"woundBonus":{"mult":1.2,"ailment":"stun"}}},"right":{"name":"爆炎支配","desc":"HPが50%以下の敵へのダメージ+25%","mp":0,"passive":{"executeBonus":{"belowPct":0.5,"mult":1.25}}}},"10":{"left":{"name":"神威砲","desc":"敵単体へ340%ダメージ、防御力45%無視","mp":7,"action":{"kind":"damage","mult":3.4,"defPierce":0.45}},"right":{"name":"天地崩砲","desc":"敵全体へ220%ダメージ、40%の確率で炎上(3ターン)を付与","mp":7,"action":{"kind":"damage","aoe":true,"mult":2.2,"inflict":{"type":"burn","chance":0.4,"turns":3}}}}}},"onmyoji":{"ja":"陰陽師","image":"assets/class_onmyoji.png","base":{"id":"magicAttack","name":"呪符ノ術","desc":"敵1体に陰陽術のダメージ"},"levels":{"2":{"left":{"name":"火遁符","desc":"敵単体へ140%の魔法ダメージ、25%の確率で炎上(3ターン)を付与","mp":3,"action":{"kind":"damage","mult":1.4,"useMag":true,"inflict":{"type":"burn","chance":0.25,"turns":3}}},"right":{"name":"呪縛符","desc":"通常攻撃時、50%の確率で敵を炎上状態にする(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"burn","chance":0.5,"turns":3}}}},"3":{"left":{"name":"水遁符","desc":"敵全体へ85%の魔法ダメージ","mp":5,"action":{"kind":"damage","aoe":true,"mult":0.85,"useMag":true}},"right":{"name":"結界術","desc":"3ターンの間、味方全体の防御力+15%","mp":4,"comboTag":"kekkai","action":{"kind":"buffParty","stats":[{"stat":"def","mult":1.15}],"turns":3}}},"4":{"left":{"name":"雷遁符","desc":"敵単体へ110%の魔法ダメージ、85%の確率でスタン","mp":4,"action":{"kind":"damage","mult":1.1,"useMag":true,"inflict":{"type":"stun","chance":0.85,"turns":1}}},"right":{"name":"衰弱符","desc":"敵単体へ80%の魔法ダメージ、3ターンの間防御力-20%","mp":3,"action":{"kind":"damage","mult":0.8,"useMag":true,"inflict":{"type":"defDown","chance":1,"value":0.2,"turns":3}}}},"5":{"left":{"name":"呪符の見切り","desc":"回避に成功すると、次の自分の1ターンだけ術の威力+20%","mp":0,"passive":{"onEvadeSelfBuff":{"stat":"mag","mult":1.2}}},"right":{"name":"封魔符","desc":"敵単体へ60%の魔法ダメージ、85%の確率でスタン","mp":3,"action":{"kind":"damage","mult":0.6,"useMag":true,"inflict":{"type":"stun","chance":0.85,"turns":1}}}},"6":{"left":{"name":"陰陽融合","desc":"炎上している敵への魔法ダメージ+15%","mp":0,"passive":{"woundBonus":{"mult":1.15,"ailment":"burn"}}},"right":{"name":"式神召喚","desc":"結界術を使った直後、次の自分の1ターンだけ魔法威力+15%","mp":0,"passive":{"comboFollowup":{"tag":"kekkai","stat":"mag","mult":1.15}}}},"7":{"left":{"name":"天地鳴動","desc":"敵全体へ110%の魔法ダメージ","mp":6,"action":{"kind":"damage","aoe":true,"mult":1.1,"useMag":true}},"right":{"name":"厄災","desc":"HPが30%以下の敵への魔法ダメージ+15%","mp":0,"passive":{"executeBonus":{"belowPct":0.3,"mult":1.15}}}},"8":{"left":{"name":"陰陽極意","desc":"スタン中の敵への会心率+20%","mp":0,"passive":{"ailmentCritBonus":{"ailment":"stun","addRate":0.2}}},"right":{"name":"呪詛","desc":"通常攻撃時、20%の確率で敵を炎上状態にする(3ターン)","mp":0,"passive":{"onHitInflict":{"type":"burn","chance":0.2,"turns":3}}}},"9":{"left":{"name":"衰弱撃ち","desc":"防御力が下がっている敵への会心率+25%","mp":0,"passive":{"debuffCritBonus":{"stat":"def","addRate":0.25}}},"right":{"name":"霊脈支配","desc":"結界術を使った直後、次の自分の1ターンだけ防御力+15%","mp":0,"passive":{"comboFollowup":{"tag":"kekkai","stat":"def","mult":1.15}}}},"10":{"left":{"name":"五行滅殺陣","desc":"敵全体へ200%の魔法ダメージ、防御力25%無視","mp":7,"action":{"kind":"damage","aoe":true,"mult":2,"useMag":true,"defPierce":0.25}},"right":{"name":"黄泉の呪","desc":"敵全体へ80%の魔法ダメージ、60%の確率で防御力-25%(3ターン)","mp":7,"action":{"kind":"damage","aoe":true,"mult":0.8,"useMag":true,"inflict":{"type":"defDown","chance":0.6,"value":0.25,"turns":3}}}}}},"priest":{"ja":"僧侶","image":"assets/class_priest.png","base":{"id":"heal","name":"治癒の術","desc":"味方1人のHPを回復"},"levels":{"2":{"left":{"name":"治癒術","desc":"HPが50%以下の仲間への回復量+20%","mp":0,"passive":{"healBonusRule":{"trigger":"targetHpBelow","value":0.5,"mult":1.2}}},"right":{"name":"祝福","desc":"癒しの祈りを使った直後、次の自分の1ターンだけ防御力+15%","mp":0,"passive":{"comboFollowup":{"tag":"healPrayer","stat":"def","mult":1.15}}}},"3":{"left":{"name":"癒しの祈り","desc":"味方単体のHPを35%回復し、状態異常を解除する","mp":3,"comboTag":"healPrayer","action":{"kind":"heal","healPct":0.35,"cleanse":true}},"right":{"name":"神聖加護","desc":"3ターンの間、味方全体の防御力+15%","mp":4,"action":{"kind":"buffParty","stats":[{"stat":"def","mult":1.15}],"turns":3}}},"4":{"left":{"name":"生命力循環","desc":"状態異常を治すたび、MPが2回復する","mp":0,"passive":{"mpOnCleanse":2}},"right":{"name":"浄化","desc":"味方全体の状態異常を解除する","mp":3,"action":{"kind":"buffParty","stats":[],"turns":1,"cleanse":true}}},"5":{"left":{"name":"慈愛","desc":"状態異常を治した対象への回復量+20%","mp":0,"passive":{"healBonusRule":{"trigger":"onCleanse","value":0,"mult":1.2}}},"right":{"name":"聖なる結界","desc":"3ターンの間、味方全体の被ダメージ12%減少","mp":4,"action":{"kind":"buffParty","stats":[{"stat":"dmgTaken","mult":0.88}],"turns":3}}},"6":{"left":{"name":"蘇生術","desc":"技のMP消費-20%","mp":0,"passive":{"mpDiscountPct":0.2}},"right":{"name":"神託","desc":"3ターンの間、味方全体の素早さ+15%","mp":4,"action":{"kind":"buffParty","stats":[{"stat":"spd","mult":1.15}],"turns":3}}},"7":{"left":{"name":"癒しの波動","desc":"味方全体のHPを20%回復する","mp":5,"action":{"kind":"heal","aoe":true,"healPct":0.2}},"right":{"name":"聖域","desc":"状態異常にかかる確率が40%減少する","mp":0,"passive":{"statusResistMult":0.4}}},"8":{"left":{"name":"生命の奇跡","desc":"HPが20%以下の仲間への回復量+30%(緊急回復)","mp":0,"passive":{"healBonusRule":{"trigger":"targetHpBelow","value":0.2,"mult":1.3}}},"right":{"name":"神威","desc":"4ターンの間、味方全体の攻撃力・防御力+15%","mp":5,"action":{"kind":"buffParty","stats":[{"stat":"atk","mult":1.15},{"stat":"def","mult":1.15}],"turns":4}}},"9":{"left":{"name":"慈悲の心","desc":"自分のHPが80%以上の間、回復量+15%","mp":0,"passive":{"healBonusRule":{"trigger":"selfHpAbove","value":0.8,"mult":1.15}}},"right":{"name":"退魔","desc":"状態異常にかかる確率が30%減少する","mp":0,"passive":{"statusResistMult":0.3}}},"10":{"left":{"name":"命の祝福","desc":"味方全体のHPを全回復し、戦闘不能の仲間をHP50%で蘇生する","mp":8,"action":{"kind":"heal","aoe":true,"healPct":1,"reviveHpPct":0.5,"cleanse":true}},"right":{"name":"天恵の祈り","desc":"5ターンの間、味方全体の攻撃力・防御力・素早さ+20%、毎ターンHP8%回復、状態異常無効","mp":7,"action":{"kind":"buffParty","stats":[{"stat":"atk","mult":1.2},{"stat":"def","mult":1.2},{"stat":"spd","mult":1.2}],"turns":5,"hpRegenPct":0.08,"statusImmuneTurns":5}}}}}};
+// スキル名入力欄の🎲ボタン用、職業ごとの「かっこいい名前」候補プール。既存スキル名とはテーマを揃えつつ、
+// 実際に使われている名前とは重複しない新規候補にしてある(重複チェックは選択時にも行う)
+const RANDOM_NAME_POOLS = {
+  samurai: ["一刀両断", "断ち斬り", "破邪の剣", "無双", "鬼気", "業火斬", "白刃取り", "一撃必殺", "天誅", "抜刀術", "剛剣", "双刃", "斬鉄", "会心撃", "侍魂", "死中活", "一騎当千", "電光石火", "太刀風", "鬼斬り", "影討ち", "刃唸り", "破軍", "竜神剣"],
+  ninja: ["音無しの術", "煙玉", "隠れ蓑", "影渡り", "蜘蛛の巣", "火遁の術", "土遁の術", "毒霧", "鎖鎌", "早業", "神出鬼没", "忍法帳", "木の葉隠れ", "蟲毒", "迅雷刃", "影武者", "幻術", "夜叉", "骨抜き", "針千本", "蝮の一撃", "百鬼夜行"],
+  spearman: ["不動の構え", "鉄壁", "大車輪", "石突き", "千段突き", "龍牙突き", "守り槍", "一文字突き", "穂先の舞", "堅陣", "鉄槍", "突貫", "千人力", "鎧通し", "剛槍", "城壁の意志", "陣形固め", "破陣槍", "阿修羅突き", "石の心"],
+  naginata: ["風花", "桜吹雪", "舞い斬り", "白鷺の舞", "花散らし", "風車", "薙ぎ倒し", "蝶の舞", "月影の舞", "紅蓮舞", "弧月斬", "花衣", "雅の型", "薄雪", "疾風の舞", "天女降臨", "螺旋斬", "舞扇", "秋風薙", "千羽の舞"],
+  hunter: ["百発百中", "山彦", "一射", "鷹の目", "疾風の矢", "罠師", "影追い", "弓聖", "狼の勘", "森の使者", "貫通の矢", "遠見", "獣道", "弦音", "一矢報い", "追跡術", "銀の矢", "狩人の掟", "隼落とし", "大地の矢"],
+  gunner: ["砲煙", "一発逆転", "業火砲", "轟音弾", "火薬の匠", "破城砲", "弾幕", "焦土", "砲撃神", "爆炎弾", "連射砲", "鉄火", "雷鳴弾", "砲台術", "制圧射撃", "火薬庫", "焼夷弾幕", "大筒", "決死の一発", "灼熱弾"],
+  onmyoji: ["式神の加護", "護符", "陰陽道", "鬼門封じ", "天変地異", "六芒陣", "呪術返し", "千里眼", "憑依", "冥界の門", "破魔の術", "龍神符", "星読み", "邪気払い", "呪縛陣", "反魂術", "白虎の術", "玄武の盾", "陰陽玉", "鬼払い"],
+  priest: ["光明の祈り", "慈悲の光", "加持祈祷", "天の恵み", "聖水", "浄土の光", "除霊", "大願成就", "菩薩の慈悲", "光の加護", "安寧の祈り", "招福", "除災", "功徳", "涅槃の光", "慈悲の雨", "救済の光", "御仏の加護", "招来の祈り", "平癒"],
+};
+function pickRandomSkillName(cid) {
+  const pool = RANDOM_NAME_POOLS[cid] || [];
+  if (pool.length === 0) return "";
+  // 同じ職業内で現在使われている名前(編集済み含む)とは被らない候補を優先する
+  const used = new Set();
+  const cls = SKILL_DATA[cid];
+  Object.keys(cls.levels).forEach((lvl) => {
+    ["left", "right"].forEach((side) => {
+      const skill = cls.levels[lvl][side];
+      used.add(currentValue(cid, lvl, side, "name", skill.name));
+    });
+  });
+  const candidates = pool.filter((n) => !used.has(n));
+  const list = candidates.length > 0 ? candidates : pool;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+const STORAGE_KEY = "onsenSkillEditor_v1";
+let edits = {};
+try { edits = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch (e) { edits = {}; }
+const classIds = Object.keys(SKILL_DATA);
+let currentClass = classIds[0];
+let searchQuery = "";
+
+function saveEdits() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
+function getEdit(cid, lvl, side, field) {
+  return edits[cid] && edits[cid][lvl] && edits[cid][lvl][side] && edits[cid][lvl][side][field];
+}
+function setEdit(cid, lvl, side, field, value, original) {
+  if (value === original) {
+    // 元の値に戻したら編集エントリ自体を消す(エクスポートを綺麗に保つ)
+    if (edits[cid] && edits[cid][lvl] && edits[cid][lvl][side]) {
+      delete edits[cid][lvl][side][field];
+      if (Object.keys(edits[cid][lvl][side]).length === 0) delete edits[cid][lvl][side];
+      if (Object.keys(edits[cid][lvl]).length === 0) delete edits[cid][lvl];
+      if (Object.keys(edits[cid]).length === 0) delete edits[cid];
+    }
+  } else {
+    edits[cid] = edits[cid] || {};
+    edits[cid][lvl] = edits[cid][lvl] || {};
+    edits[cid][lvl][side] = edits[cid][lvl][side] || {};
+    edits[cid][lvl][side][field] = value;
+  }
+  saveEdits();
+}
+function currentValue(cid, lvl, side, field, original) {
+  const e = getEdit(cid, lvl, side, field);
+  return e !== undefined ? e : original;
+}
+function isEditedField(cid, lvl, side, field) {
+  return getEdit(cid, lvl, side, field) !== undefined;
+}
+function isEditedSkill(cid, lvl, side) {
+  return !!(edits[cid] && edits[cid][lvl] && edits[cid][lvl][side] && Object.keys(edits[cid][lvl][side]).length > 0);
+}
+function countEdits() {
+  let n = 0;
+  Object.values(edits).forEach((lvls) => Object.values(lvls).forEach((sides) => Object.values(sides).forEach((fields) => { n += Object.keys(fields).length; })));
+  return n;
+}
+function resetSkill(cid, lvl, side) {
+  if (edits[cid] && edits[cid][lvl]) {
+    delete edits[cid][lvl][side];
+    if (Object.keys(edits[cid][lvl]).length === 0) delete edits[cid][lvl];
+    if (Object.keys(edits[cid]).length === 0) delete edits[cid];
+  }
+  saveEdits();
+  render();
+}
+function resetAll() {
+  if (!confirm("全ての編集内容を破棄しますか？この操作は取り消せません。")) return;
+  edits = {};
+  swapSource = null;
+  saveEdits();
+  render();
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// スキル同士の場所(内容)を入れ替える機能。⇄ボタンを押した2枚のカードの間で、
+// 現在表示中の内容(name/desc/mp。仕組み/mechは各スロット固定の実装データのため対象外、
+// 上部details参照)をまるごと入れ替える。入れ替え先は必ずそれぞれの元データと比較して
+// 差分判定するため、入れ替え後も通常の編集(✎編集済み/元に戻す)と同じ仕組みで扱える
+let swapSource = null; // {cid, lvl, side} | null
+function performSwap(a, b) {
+  const skillA = SKILL_DATA[a.cid].levels[a.lvl][a.side];
+  const skillB = SKILL_DATA[b.cid].levels[b.lvl][b.side];
+  const valA = { name: currentValue(a.cid, a.lvl, a.side, "name", skillA.name), desc: currentValue(a.cid, a.lvl, a.side, "desc", skillA.desc), mp: currentValue(a.cid, a.lvl, a.side, "mp", skillA.mp) };
+  const valB = { name: currentValue(b.cid, b.lvl, b.side, "name", skillB.name), desc: currentValue(b.cid, b.lvl, b.side, "desc", skillB.desc), mp: currentValue(b.cid, b.lvl, b.side, "mp", skillB.mp) };
+  ["name", "desc", "mp"].forEach((f) => {
+    setEdit(a.cid, a.lvl, a.side, f, valB[f], skillA[f]);
+    setEdit(b.cid, b.lvl, b.side, f, valA[f], skillB[f]);
+  });
+  swapSource = null;
+  render();
+}
+function handleSwapClick(cid, lvl, side) {
+  const here = { cid, lvl, side };
+  if (!swapSource) {
+    swapSource = here;
+    render();
+    return;
+  }
+  if (swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side) {
+    swapSource = null; // 同じカードをもう一度押したら選択解除
+    render();
+    return;
+  }
+  performSwap(swapSource, here);
+}
+function buildSkillCard(cid, lvl, side, skill, allowSwap) {
+  const name = currentValue(cid, lvl, side, "name", skill.name);
+  const desc = currentValue(cid, lvl, side, "desc", skill.desc);
+  const mp = currentValue(cid, lvl, side, "mp", skill.mp);
+  const edited = isEditedSkill(cid, lvl, side);
+  const isSwapSelected = !!(swapSource && swapSource.cid === cid && swapSource.lvl === lvl && swapSource.side === side);
+  const { name: _n, desc: _d, ...mech } = skill;
+  const card = document.createElement("div");
+  card.className = "skill-card" + (edited ? " edited" : "") + (isSwapSelected ? " swap-selected" : "");
+  card.innerHTML = `
+    <div class="skill-card-head">
+      <span class="side-tag">${side === "left" ? "左" : "右"}</span>
+      <input class="skill-name-input" data-field="name" value="${escapeHtml(name)}">
+      ${RANDOM_NAME_POOLS[cid] ? `<button class="rand-name-btn" type="button" title="ランダムなかっこいい名前を提案(名前欄を空にしてから押すと分かりやすい)">🎲</button>` : ""}
+      <span class="mp-badge">MP<input class="mp-input" type="number" min="0" data-field="mp" value="${mp}"></span>
+    </div>
+    <textarea class="skill-desc-input" data-field="desc">${escapeHtml(desc)}</textarea>
+    <div class="skill-meta">
+      <span class="edited-badge">✎ 編集済み(元: 「${escapeHtml(skill.name)}」)</span>
+      <div style="display:flex; gap:6px;">
+        ${allowSwap ? `<button class="swap-btn${isSwapSelected ? " active" : ""}">⇄ ${isSwapSelected ? "選択中" : "入れ替え"}</button>` : ""}
+        <button class="reset-btn">↺ 元に戻す</button>
+      </div>
+    </div>
+    <details class="mech-detail"><summary>仕組み(実装データ・参考/読み取り専用)</summary><pre>${escapeHtml(JSON.stringify(mech, null, 2))}</pre></details>
+  `;
+  const nameInput = card.querySelector('[data-field="name"]');
+  nameInput.addEventListener("input", (e) => {
+    setEdit(cid, lvl, side, "name", e.target.value, skill.name);
+    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    refreshEditCount();
+  });
+  const randBtn = card.querySelector(".rand-name-btn");
+  if (randBtn) {
+    randBtn.addEventListener("click", () => {
+      const picked = pickRandomSkillName(cid);
+      if (!picked) return;
+      nameInput.value = picked;
+      setEdit(cid, lvl, side, "name", picked, skill.name);
+      card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+      refreshEditCount();
+    });
+  }
+  card.querySelector('[data-field="mp"]').addEventListener("input", (e) => {
+    const v = e.target.value === "" ? skill.mp : Number(e.target.value);
+    setEdit(cid, lvl, side, "mp", v, skill.mp);
+    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    refreshEditCount();
+  });
+  card.querySelector('[data-field="desc"]').addEventListener("input", (e) => {
+    setEdit(cid, lvl, side, "desc", e.target.value, skill.desc);
+    card.classList.toggle("edited", isEditedSkill(cid, lvl, side));
+    refreshEditCount();
+  });
+  card.querySelector(".reset-btn").addEventListener("click", () => resetSkill(cid, lvl, side));
+  if (allowSwap) {
+    card.querySelector(".swap-btn").addEventListener("click", () => handleSwapClick(cid, lvl, side));
+  }
+  return card;
+}
+
+function renderClassTabs() {
+  const nav = document.getElementById("classTabs");
+  nav.innerHTML = "";
+  classIds.forEach((cid) => {
+    const cls = SKILL_DATA[cid];
+    const hasEdits = !!edits[cid];
+    const tab = document.createElement("div");
+    tab.className = "class-tab" + (cid === currentClass ? " active" : "") + (hasEdits ? " has-edits" : "");
+    tab.innerHTML = `<img src="${cls.image}" alt=""><span>${cls.ja}</span><span class="tab-edit-dot"></span>`;
+    tab.addEventListener("click", () => { currentClass = cid; searchQuery = ""; document.getElementById("searchBox").value = ""; render(); });
+    nav.appendChild(tab);
+  });
+}
+
+function renderClassView() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  const cls = SKILL_DATA[currentClass];
+  if (swapSource && swapSource.cid === currentClass) {
+    const hint = document.createElement("div");
+    hint.className = "swap-hint";
+    hint.innerHTML = `<span>⇄ 入れ替え先のスキルの「入れ替え」ボタンを押してください(同じ職業内のみ)</span><button class="ghost">キャンセル</button>`;
+    hint.querySelector("button").addEventListener("click", () => { swapSource = null; render(); });
+    main.appendChild(hint);
+  }
+  const baseDiv = document.createElement("div");
+  baseDiv.className = "base-ability";
+  baseDiv.innerHTML = `<b>初期習得(Lv.1)</b>: ${escapeHtml(cls.base.name)} — ${escapeHtml(cls.base.desc)}<br><span style="opacity:0.7;">※他の職業と共有する基本技のため、このツールでは編集対象外です</span>`;
+  main.appendChild(baseDiv);
+  const levels = Object.keys(cls.levels).map(Number).sort((a, b) => a - b);
+  levels.forEach((lvl) => {
+    const group = document.createElement("div");
+    group.className = "level-group";
+    const label = document.createElement("div");
+    label.className = "level-label";
+    label.textContent = "Lv." + lvl;
+    group.appendChild(label);
+    const pair = document.createElement("div");
+    pair.className = "level-pair";
+    pair.appendChild(buildSkillCard(currentClass, lvl, "left", cls.levels[lvl].left, true));
+    pair.appendChild(buildSkillCard(currentClass, lvl, "right", cls.levels[lvl].right, true));
+    group.appendChild(pair);
+    main.appendChild(group);
+  });
+}
+
+function renderSearchView() {
+  const main = document.getElementById("mainArea");
+  main.innerHTML = "";
+  const q = searchQuery.trim().toLowerCase();
+  let found = 0;
+  classIds.forEach((cid) => {
+    const cls = SKILL_DATA[cid];
+    const levels = Object.keys(cls.levels).map(Number).sort((a, b) => a - b);
+    levels.forEach((lvl) => {
+      ["left", "right"].forEach((side) => {
+        const skill = cls.levels[lvl][side];
+        const name = currentValue(cid, lvl, side, "name", skill.name);
+        const desc = currentValue(cid, lvl, side, "desc", skill.desc);
+        if (!name.toLowerCase().includes(q) && !desc.toLowerCase().includes(q)) return;
+        found++;
+        const wrap = document.createElement("div");
+        wrap.className = "level-group";
+        wrap.innerHTML = `<div class="search-result-class">${cls.ja} ・ Lv.${lvl}</div>`;
+        const pairWrap = document.createElement("div");
+        pairWrap.className = "level-pair";
+        pairWrap.style.gridTemplateColumns = "1fr";
+        pairWrap.appendChild(buildSkillCard(cid, lvl, side, skill, false));
+        wrap.appendChild(pairWrap);
+        main.appendChild(wrap);
+      });
+    });
+  });
+  if (found === 0) {
+    main.innerHTML += '<div class="empty-hint">一致するスキルが見つかりません</div>';
+  }
+}
+
+function refreshEditCount() {
+  document.getElementById("editCount").textContent = "編集: " + countEdits() + "件";
+  renderClassTabs();
+}
+
+function render() {
+  renderClassTabs();
+  refreshEditCount();
+  if (searchQuery.trim()) renderSearchView();
+  else renderClassView();
+}
+
+document.getElementById("searchBox").addEventListener("input", (e) => {
+  searchQuery = e.target.value;
+  render();
+});
+document.getElementById("resetAllBtn").addEventListener("click", resetAll);
+
+function buildExportData() {
+  const diffs = [];
+  Object.keys(edits).forEach((cid) => {
+    Object.keys(edits[cid]).forEach((lvl) => {
+      Object.keys(edits[cid][lvl]).forEach((side) => {
+        const fields = edits[cid][lvl][side];
+        const original = SKILL_DATA[cid].levels[lvl][side];
+        diffs.push({ cid, cja: SKILL_DATA[cid].ja, lvl, side, fields, original });
+      });
+    });
+  });
+  return diffs;
+}
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const diffs = buildExportData();
+  const listEl = document.getElementById("exportDiffList");
+  if (diffs.length === 0) {
+    listEl.innerHTML = '<div class="empty-hint">まだ編集がありません</div>';
+  } else {
+    listEl.innerHTML = diffs.map((d) => {
+      const fieldLines = Object.keys(d.fields).map((f) => {
+        const label = f === "name" ? "名前" : f === "desc" ? "効果" : "MP";
+        return `<div class="diff-field">${label}: <del>${escapeHtml(String(d.original[f]))}</del> → <ins>${escapeHtml(String(d.fields[f]))}</ins></div>`;
+      }).join("");
+      return `<div class="diff-item"><div class="diff-title">[${d.cja}] Lv.${d.lvl} ${d.side === "left" ? "左" : "右"}: ${escapeHtml(d.original.name)}</div>${fieldLines}</div>`;
+    }).join("");
+  }
+  document.getElementById("exportJson").value = JSON.stringify(edits, null, 2);
+  document.getElementById("exportModal").classList.add("open");
+});
+document.getElementById("closeExportBtn").addEventListener("click", () => {
+  document.getElementById("exportModal").classList.remove("open");
+});
+document.getElementById("copyJsonBtn").addEventListener("click", () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById("copyJsonBtn");
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました！";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }).catch(() => { document.execCommand("copy"); });
+});
+
+render();

@@ -21,7 +21,7 @@ function defaultState() {
     timeOfDay: "day", // "dawn" | "day" | "dusk" | "night"。ダンジョン往復や宿屋での宿泊で進む
     clockMinutes: 12 * 60, // 探索中に「進む」で進む時計(0〜1439分)。初期値は正午
     dayCount: 1, // ゲーム内の経過日数(1 = 4月1日)。深夜0時を跨ぐ、または宿泊で翌朝になるたびに+1
-    houseLevel: 1, // 増築で上がる家のレベル。仲間を雇える上限とは無関係で、他の施設の建築解禁の基準にのみ使う(rosterCapacity参照)。出発パーティ(戦闘に出す人数)は常に4人までで、これとは別
+    houseLevel: 1, // 増築で上がる家のレベル。仲間を雇える上限とは無関係で、他の施設の建築解禁の基準にのみ使う(rosterCapacity参照)。出発パーティは最大4人(戦闘に出る3人+控え1人)で、これとは別
     dojoLevel: 0, // 増築の1つ、道場のレベル(0=未建築、1=建築済み)。冒険に同行しなかった名簿の仲間にも経験値の一部が入るようになる
     magistrateLevel: 0, // 増築の1つ、奉行所のレベル(0=未建築、1=建築済み。家レベル2で解禁)。依頼を受けられるようになる
     magistrateQuestDate: 0, // 依頼を最後に張り替えたdayCount(0=未生成)
@@ -37,7 +37,7 @@ function defaultState() {
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。家レベル4で解禁)。出発画面で野営具を購入できるようになる
     bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。家レベル5で解禁)。支援物資の所持上限が1増える
     watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。家レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
-    ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。家レベル6で解禁)。出発パーティの上限が4人→5人になる(5人目は交代要員、旧「助っ人の札」の後継)
+    ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。家レベル6で解禁)。旧: 出発上限4→5人。3人+控え標準化で効果は一旦無効(maxActivePartySize参照)、再設計待ち
     stableLevel: 0, // 増築の1つ、馬小屋のレベル(0=未建築、1=建築済み。家レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
     henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1〜2=建築済み。家レベル5で解禁)。温泉卵の回復量+2%/段階+売店の毎日の在庫+1
     teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。家レベル6で解禁)。深淵の森15層の進路選択に「茶屋」が必ず現れ、一休み(HP/MP回復)や買い物ができるようになる
@@ -80,7 +80,6 @@ function defaultState() {
     seenCampingKitSupply: false, // 旅支度屋解禁後、出発準備画面(支度タブ=野営具の購入欄)を見たか
     seenBombSupply: false, // 火薬庫解禁後、出発準備画面(支度タブ=爆弾の購入欄)を見たか
     maxFloorReached: { forest: 0, coast: 0 }, // ステージごとの最高到達階層(出発準備画面のボタン横に表示)。moveOneFloor()の前進時にのみ更新する
-    instadeathMode: false, // 設定画面のトグル。ONの間は戦闘不能=瀕死(担いで救出可能)を経由せず、即座にロスト(完全消滅)する
     highEncounterMode: false, // 設定画面のトグル。ONの間は敵との遭遇確率が通常の1.5倍になる(rollEncounter参照)
     // 設定画面のドロップダウン(各0〜100%、5%刻み、独立)。防御力アップは敵の防御力にこの値を直接加算
     // (乗算ではない。例: def15の敵に+20を選ぶとdef35になる)、攻撃力ダウンは敵の攻撃力にこの割合を
@@ -141,7 +140,8 @@ function supplyItemTotal() {
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
 const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 6;
 const WATCHTOWER_COST = 200;
-// 旅団旗: 建築すると出発パーティの上限が4人→5人になる(5人目は交代要員)。旧アイテム「助っ人の札」の後継
+// 旅団旗: 旧仕様では出発パーティの上限が4人→5人になる建物だったが、3人+控え1人が標準になったため
+// 効果は一旦無効化(maxActivePartySize参照)。建物自体は残置、再設計はユーザーが別途行う
 const RYODANKI_UNLOCK_HOUSE_LEVEL = 6;
 const RYODANKI_COST = 100;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
@@ -266,7 +266,6 @@ function advanceExplorationClock(minutes) {
 // asa_*.jpgとして退避し、そのまま流用している。海岸はユーザー提供の5枚が揃っているためcoast_asa.jpgを使う
 function advanceCalendar(applyPhase) {
   applyPhase();
-  tickCriticalExpiry(state.roster, absoluteGameMinutes()); // 瀕死のまま猶予が切れた仲間をロストにする
   checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
   pruneActiveParty();
   saveState();
@@ -297,11 +296,13 @@ function removeFromRoster(id) {
   if (idx !== -1) state.roster.splice(idx, 1);
 }
 
-// 旅団旗を建築していれば、出発パーティの上限が4人→5人になる(5人目は交代要員扱い)
+// 出発パーティの上限。3人化転換(2026-07-26)により常に4(戦闘に出る3人+控え1人)。
+// 旧仕様では旅団旗の建築で4→5人に増えていたが、控えが標準装備になったため旅団旗の効果は
+// 一旦無効化してある(施設側の再設計はユーザーが別途行う予定)
 function maxActivePartySize() {
-  return (state.ryodankiLevel || 0) > 0 ? 5 : 4;
+  return 4;
 }
-// 瀕死/ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
+// ロストになった、または温泉の入浴ロック中になったキャラがパーティ編成の枠に
 // 居座り続けないよう、activePartyIdsから現在isAvailable()でなくなった者を取り除く
 function pruneActiveParty() {
   const now = absoluteGameMinutes();

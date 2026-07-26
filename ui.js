@@ -162,8 +162,6 @@ function updateSceneBackgrounds() {
   const yamabushionsenHero = document.getElementById("yamabushionsenHero");
   if (yamabushionsenHero) yamabushionsenHero.style.backgroundImage = `url('${BG_SETS.yamabushionsen[tod]}')`;
 }
-// 瀕死ロスト判定・保存・背景更新は共通処理として括り出し、
-// 時間帯フェーズの進め方(applyPhase、時計に触る場合は呼び出し元でsyncClockToPhaseまで行う)だけを呼び出し元ごとに変える
 let lastTouchEndAt = 0;
 let lastTouchEndTarget = null;
 // 一度150ms→400msに広げたことがあったが、「進む」やコマンドボタンを連打してテンポよく進めたい
@@ -234,7 +232,7 @@ function statusLabel(c) {
 }
 // 出発準備(パーティ編成)・宿屋の名簿用: 職業名の代わりに性格を表示する(ユーザー指示2026-07-18
 // 「レベルの横に職業書かなくていいから性格書いといて」)。職業は詳細画面で確認できる。
-// active以外(瀕死/ロスト)の表示はstatusLabelと共通
+// active以外(ロスト)の表示はstatusLabelと共通
 function statusLabelPersonality(c) {
   if (c.status === "active") {
     const base = `Lv.${c.level} ${c.personality || CLASSES[c.classId].ja}`;
@@ -245,7 +243,7 @@ function statusLabelPersonality(c) {
 }
 // レベルメダル+性格の行(ユーザー提供の漢数字メダルassets/icons/level_1..10.png)。
 // 出発準備/宿屋の名簿で「Lv.◯ 性格」の文字表記の代わりに使う(C改レイアウト:
-// 名前→メダル+性格→HP/MPバーの順)。active以外(瀕死/ロスト)はメダルを出さず状態文のみ
+// 名前→メダル+性格→HP/MPバーの順)。active以外(ロスト)はメダルを出さず状態文のみ
 function rosterSubWithLevelBadge(c) {
   if (c.status !== "active") return statusLabelNonActive(c);
   const frenzy = stressTier(c.fatigue) >= 4 ? "(発狂中)" : "";
@@ -253,22 +251,7 @@ function rosterSubWithLevelBadge(c) {
   return `<img class="lv-badge" src="assets/icons/level_${lv}.png" alt="Lv.${c.level}">${c.personality || CLASSES[c.classId].ja}${frenzy}`;
 }
 function statusLabelNonActive(c) {
-  if (c.status === "critical") {
-    if (c.carriedBy) {
-      const carrier = getRosterChar(c.carriedBy);
-      return `${carrier ? carrier.name : "仲間"}に担がれている(里に着けば回復する)`;
-    }
-    return `${c.criticalStage === "coast" ? "海岸" : c.criticalStage === "cave" ? "洞窟" : "深淵の森"} ${c.criticalFloor}層目で瀕死(あと約${criticalTimeLeftStr(c)}で救出しないとロスト)`;
-  }
   return "ロスト(消滅した)";
-}
-// 瀕死キャラのロストまでの残り時間を「◯日◯時間」形式にする(statusLabel/瀕死救出アラート共通)
-function criticalTimeLeftStr(c) {
-  const minutesLeft = Math.max(0, (c.criticalExpireMinutes || 0) - absoluteGameMinutes());
-  const totalHoursLeft = Math.floor(minutesLeft / 60);
-  const daysLeft = Math.floor(totalHoursLeft / 24);
-  const hoursLeft = totalHoursLeft % 24;
-  return hoursLeft > 0 ? `${daysLeft}日${hoursLeft}時間` : `${daysLeft}日`;
 }
 
 // 温泉の入浴名簿を描画する共通処理。温泉村/海の村/山伏の里(および今後増える村)で全て同じ仕様に
@@ -505,14 +488,14 @@ function statusTagClass(c) {
   return c.status;
 }
 
-// 名簿の全員が稼働不能(瀕死/ロスト)になり、かつ新しく雇う手段も残っていなければ、もう手詰まりなのでゲームオーバーにする。
+// 名簿の全員が稼働不能(ロスト)になり、かつ新しく雇う手段も残っていなければ、もう手詰まりなのでゲームオーバーにする。
 // 「新しく雇う手段」は所持金(HIRE_COST以上)だけでなく名簿の空き枠(rosterCapacity()、固定8人)も両方必要。
 // 名簿が8人とも稼働不能になった時点で所持金がいくらあっても新規雇用の枠自体が無く実質詰みになる
 // (旧実装は所持金しか見ておらずこのケースを見逃していた)。
 // ロストしたキャラは名簿から完全に削除される(removeFromRoster)ため、全滅した末に名簿が0人に
 // なるケースもここを通る。roster.length===0は[].every()が常にtrueを返す(空配列は「全員非activeで
 // ある」を満たす)ため特別扱いは不要で、canStillHireの判定だけで「新規に1人目を雇えるなら詰みではない」
-// を正しく表現できる(即死モードOFFのゲーム開始直後は所持金50・HIRE_COST20なので誤検出しない)
+// を正しく表現できる(ゲーム開始直後は所持金50・HIRE_COST20なので誤検出しない)
 // trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
 function checkGameOver() {
   const noActive = state.roster.every((c) => c.status !== "active");
@@ -660,12 +643,11 @@ function renderResultScreen(onContinue, isDefeat) {
   // 戦績行(踏破/討伐/全員生還)。カウンタはdungeon.js/battle.jsが遠征中に集計している
   const statsEl = document.getElementById("resultStatsLine");
   statsEl.classList.remove("reveal-in");
-  // 「全員生還！」は今回の遠征中に瀕死が出ていない(advCriticalHappened)ことに加えて、帰還時点の
-  // 顔ぶれに瀕死/離脱者がいないことも確認する(瀕死の仲間を担いで帰ってきた場合や、遠征の途中で
-  // この集計機能が入ってフラグが立っていない場合でも「全員無事」と言い張らないように。ユーザー報告2026-07-26)
-  const anyNotActive = fieldParty.some((c) => !c.isShikigami && (c.status !== "active" || c.hp <= 0)) ||
-    state.roster.some((c) => c.status === "critical" && (advXpGained[c.id] || 0) > 0);
-  const allAlive = !isDefeat && !advCriticalHappened && !anyNotActive;
+  // 「全員生還！」は今回の遠征中に誰もロストしていない(advLostHappened)ことに加えて、帰還時点の
+  // 顔ぶれに離脱者がいないことも確認する(遠征の途中でこの集計機能が入ってフラグが立っていない
+  // 場合でも「全員無事」と言い張らないように。ユーザー報告2026-07-26)
+  const anyNotActive = fieldParty.some((c) => !c.isShikigami && (c.status !== "active" || c.hp <= 0));
+  const allAlive = !isDefeat && !advLostHappened && !anyNotActive;
   statsEl.innerHTML = `踏破 ${advMaxFloor || 0}層 ・ 討伐 ${advEnemiesDefeated || 0}体${allAlive ? ' ・ <span class="result-all-alive">全員生還！</span>' : ""}`;
   const stampEl = document.getElementById("resultRankStamp");
   stampEl.classList.remove("stamp-in");
@@ -843,7 +825,7 @@ function animateXpRow(row, segs) {
 // 評価の朱印(松/竹/梅)。基準は仮決め(要調整): 踏破階層+討伐数×2のスコアと、全員生還したかどうか
 function computeExpeditionRank() {
   const score = (advMaxFloor || 0) + (advEnemiesDefeated || 0) * 2;
-  if (!advCriticalHappened && score >= 28) return "松";
+  if (!advLostHappened && score >= 28) return "松";
   if (score >= 12) return "竹";
   return "梅";
 }
@@ -930,7 +912,6 @@ const ICONS = {
   dmgTakenUp: '💥',
   bigAttackPending: '⚡',
   guarding: '🛡',
-  carrying: '🎒',
   flying: '<img src="assets/icons/status_flying.png" alt="" style="display:inline-block;width:22px;height:22px;vertical-align:middle;">',
   questTarget: '🎯',
   // 施設・行動(町画面等)
@@ -1028,10 +1009,9 @@ function renderPartyBar(elId, combatants, actingCharId) {
   const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
   lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
   bar.innerHTML = "";
-  // 影分身/式神で5人目が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする
-  bar.classList.toggle("party-bar-five", combatants.filter((c) => !c.carriedBy).length >= 5);
-  // 担がれているキャラは自分単独のカードを持たず、担いでいるキャラのカード右上に小さく重ねて表示する
-  combatants.filter((c) => !c.carriedBy).forEach((c) => {
+  // 影分身/式神で追加の1体が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする
+  bar.classList.toggle("party-bar-five", combatants.length >= 5);
+  combatants.forEach((c) => {
     const dead = c.hp <= 0 || c.status !== "active";
     // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
     const targetable = !!pendingAllyPick && !dead && !c.transformForm;
@@ -1041,10 +1021,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
     div.className = "party-member" + (dead ? " dead" : "") + actingClass + (targetable ? " targetable" : "") + shakeClassFor(c);
     div.dataset.id = c.id;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-    // 担がれている本人は今回の遠征の名簿(fieldParty/combatants)に居るとは限らない(別の冒険で瀕死のまま
-    // 取り残されていた仲間を、今回の探索中に見つけて担いだ場合など、deliverCarriedAlliesと同じ理由)。
-    // そのためcombatants内だけでなくstate.roster全体からも探す
-    const carried = combatants.find((x) => x.carriedBy === c.id) || state.roster.find((x) => x.carriedBy === c.id);
     // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
     const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
     // 式神はiconImg(実イラスト)があればそれを、無ければ絵文字アイコンで代用する。
@@ -1072,11 +1048,10 @@ function renderPartyBar(elId, combatants, actingCharId) {
         <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
         ${targetMarkerHtml}
       </div>
-      ${carried ? `<img class="carried-badge" src="${characterPortraitSrc(carried)}" data-carried-id="${carried.id}">` : ""}
       ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
       ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
       ${hpBarHtml(c)}
-      <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}${c.carryingId ? statusIconHtml("carrying") : ""}</div>
+      <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}</div>
       ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
       <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>
     `;
@@ -1130,8 +1105,6 @@ if (window.visualViewport) {
   });
 }
 
-// 瀕死(critical)のまま誰にも担がれていない(carriedByが無い)仲間は、その場に置いていかれた
-// ものとしてUIから消す(担がれている場合は引き続き表示する)
 let battleLogLines = [];
 const LOG_CHAR_MS = 18; // 1文字あたりの文字送り速度(0.015〜0.02秒の範囲)
 // タップで現在の文字送りを即座に全文表示するためのコールバック群。短時間に複数行が追加され、

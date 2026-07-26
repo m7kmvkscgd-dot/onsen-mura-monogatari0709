@@ -269,7 +269,6 @@ function startTimeSkipAnimation(totalMin) {
   }
   function runStep(i) {
     if (i >= steps.length) {
-      tickCriticalExpiry(state.roster, absoluteGameMinutes());
       checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
       pruneActiveParty();
       saveState();
@@ -344,14 +343,14 @@ function renderInnRosterList(ids, membersFn, onBack) {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
+    const tagText = c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
     const hasPendingSkill = pendingLevels.length > 0;
     const levelUpFrom = hasPendingSkill ? Math.min(...pendingLevels) - 1 : null;
     const row = document.createElement("div");
-    // 瀕死/ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
+    // ロストで戦線に戻っていない仲間は、出発準備画面(renderPartySelect)の選べないキャラと
     // 同じ.disabledクラス(半透明)でグレーアウト表示する
     row.className = "roster-row" + (c.status !== "active" ? " disabled" : "");
     row.innerHTML = `
@@ -1129,13 +1128,13 @@ function renderPartySelect() {
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
-    const tagText = c.status !== "active" ? (c.status === "critical" ? "瀕死" : "ロスト") : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
-    // 5人目(5人編成した時の最後の1枠)は交代要員として控えに回るため、その旨を分かるようにする
-    const isReserveSlot = inParty && state.activePartyIds.length >= 5 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
+    const tagText = c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
+    // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする
+    const isReserveSlot = inParty && state.activePartyIds.length >= 4 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">控え</span>' : ""}</div>
         <div class="roster-sub">${rosterSubWithLevelBadge(c)}</div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
@@ -1296,16 +1295,16 @@ function showDepartConfirm(stage) {
     const c2 = CLASSES[c.classId];
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-    // 5人目(最後に選んだ人)は交代要員として控えに回る(swapReserveMember/enterDungeon参照)ため、
+    // 4人目(最後に選んだ人)は控えに回る(swapReserveMember/enterDungeon参照)ため、
     // 確認画面でもそれとわかるタグを付けておく
-    const isReserve = state.activePartyIds.length >= 5 && idx === state.activePartyIds.length - 1;
+    const isReserve = state.activePartyIds.length >= 4 && idx === state.activePartyIds.length - 1;
     const row = document.createElement("div");
     row.className = "card";
     row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
-        <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})${isReserve ? ' <span class="status-tag bathing">交代要員</span>' : ""}</div>
+        <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})${isReserve ? ' <span class="status-tag bathing">控え</span>' : ""}</div>
         <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
         <div style="font-size:13px;color:var(--dw-caption-color);margin-top:0.15rem;">HP ${c.hp}/${c.maxHp}${c.maxMp > 0 ? `　MP ${c.mp}/${c.maxMp}` : ""}　ストレス ${Math.round(c.fatigue || 0)}</div>
@@ -1811,7 +1810,7 @@ const BUILDING_DEFS = [
     desc: "(詳細は未定)" },
   { key: "ryodanki", levelField: "ryodankiLevel", name: "旅団旗", icon: "🚩", iconImg: "assets/icons/buildings/ryodanki.png",
     unlock: RYODANKI_UNLOCK_HOUSE_LEVEL, costs: [RYODANKI_COST],
-    desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。" },
+    desc: "(編成システムの刷新に伴い、効果を再設計中です)" },
 ];
 // 施設アイコンのHTML。写真素材(iconImg)があればそれを、無ければ絵文字を表示する。
 // silhouette=trueの時はfilter:brightness(0)で黒いシルエットにする。CSSのfilterは要素自身の
@@ -1930,7 +1929,7 @@ function renderExtension() {
   document.getElementById("extensionGold").textContent = state.gold + "G";
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
-  document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人です。）";
+  document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）";
   // 次の家レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
   const nextLevel = level + 1;
   const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
@@ -2134,7 +2133,7 @@ function refreshMagistrateQuestsIfNeeded() {
   state.magistrateQuestLastShown = lastShown;
   state.magistrateQuestDate = state.dayCount;
 }
-// 依頼の期限切れ判定。tickCriticalExpiryと同じく、実時間(絶対分数)ベースで期限を過ぎていないか
+// 依頼の期限切れ判定。実時間(絶対分数)ベースで期限を過ぎていないか
 // 確認する。過ぎていたら強制的に取り下げ(契約金は没収)、「間に合いませんでした」のポップアップを出す
 function checkQuestDeadline() {
   const q = state.acceptedQuest;
