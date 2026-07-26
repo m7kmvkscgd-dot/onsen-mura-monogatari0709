@@ -755,20 +755,73 @@ function performVoluntarySwap(actor) {
     finishSwap();
   }
 }
+// iOS Safariの初回描画待ちヘルパー(交代の走り込みが実機で描画されない問題の対策一式)。
+// 原因: renderBattleScreen()のDOM再構築→ステージ挿入→同じJSタスク内でdelayなしのanimate()即開始、
+// という流れだと、WebKitが初回スタイル計算/imgのデコード/合成レイヤーの確立/初回コミットを終える前に
+// WAAPIのタイムラインだけが進み、途中フレームが一切画面に乗らない(onfinishは正しい時刻に発火する)。
+// 同じステージ内でもdelay180ms付きの土埃(div)だけ動いていたのはこのため。
+// 対策: ①初期transformを通常スタイルとして先に確立 ②クローンimgのdecode()を待つ
+// ③レイアウトを同期確定 ④rAFを2回待って初期状態を最低一度描画させる ⑤その後にanimate()開始
+function waitTwoAnimationFrames() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
+}
+async function waitForImageDecode(img) {
+  if (!img) return;
+  if (typeof img.decode === "function") {
+    try {
+      await img.decode();
+      return;
+    } catch (error) {
+      // decode失敗時はload/error待ちへフォールバック
+    }
+  }
+  if (img.complete) return;
+  await new Promise((resolve) => {
+    const finish = () => {
+      img.removeEventListener("load", finish);
+      img.removeEventListener("error", finish);
+      resolve();
+    };
+    img.addEventListener("load", finish, { once: true });
+    img.addEventListener("error", finish, { once: true });
+  });
+}
 // 走り込み登場(手動交代・倒れた時の自動登場の共通演出)。renderBattleScreen()で作り直された
 // 直後のカードに対して、立ち絵の走り込み+土埃+「◯◯、参上!」バナーを重ねる。
 // カードが見つからない場合(理論上の保険)は演出をスキップして即続行する
-function playSwapRunIn(incoming, onDone) {
+async function playSwapRunIn(incoming, onDone) {
   const card = document.querySelector(`#battlePartyBar .party-member[data-id="${incoming.id}"]`);
   const stage = makePortraitFxStage(card);
   if (!stage) { onDone(); return; }
   const w = stage.width;
+  const startTransform = `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)`;
+  // WAAPIの最初のキーフレームだけに初期状態を任せず、通常スタイルとして先に確立する
+  stage.mover.style.transform = startTransform;
+  stage.mover.style.transformOrigin = "50% 50%";
+  stage.mover.style.willChange = "transform";
+  // renderBattleScreen直後の新規画像が描画可能になるまで待つ
+  await waitForImageDecode(stage.clone);
+  // レイアウトを同期的に確定
+  void stage.mover.offsetWidth;
+  // 初期状態を最低一度描画させてから開始
+  await waitTwoAnimationFrames();
+  // 待機中に別の描画でDOMが破棄された場合の保険
+  if (!stage.box.isConnected || !card.isConnected) {
+    removePortraitFxStage(stage);
+    battleActionLocked = false;
+    onDone();
+    return;
+  }
   const inAnim = stage.mover.animate([
-    { transform: `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)` },
+    { transform: startTransform },
     { transform: `translateX(${Math.round(w * -0.07)}px) rotate(-3deg)`, offset: 0.7 },
     { transform: `translateX(${Math.round(w * 0.03)}px) rotate(0deg)`, offset: 0.88 },
     { transform: "translateX(0) rotate(0deg)" },
-  ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
+  ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "both" });
   // 土埃: 立ち絵の足元(ステージの下端)に3つ、時間差で舞い上がる
   [0, 1, 2].forEach((k) => {
     const d = document.createElement("div");
@@ -782,6 +835,7 @@ function playSwapRunIn(incoming, onDone) {
     ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
   });
   inAnim.onfinish = () => {
+    stage.mover.style.willChange = "auto";
     // 本物の立ち絵は即座に戻す(ステージのクローンが同じ位置に重なっているので切り替わりは見えない)。
     // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから片付ける
     stage.img.style.opacity = "";
