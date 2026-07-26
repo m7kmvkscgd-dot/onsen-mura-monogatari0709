@@ -324,8 +324,10 @@
     stage.appendChild(wrap);
 
     const D_POP = 320, D_FLY = 620;
-    // その場にポンと出る(ちょい浮き)
-    wrap.animate([{ transform: `translate(${from.x - 17}px, ${from.y - 17}px)` }], { duration: D_POP + D_FLY, fill: "forwards" });
+    // その場にポンと出る(ちょい浮き)。位置決めはアニメーションではなく直接セットする
+    // (1キーフレームのanimateだと開始値が無指定=左上(0,0)扱いになり、画面左上から
+    // 飛んでくる誤動作になるため。実機で発覚)
+    wrap.style.transform = `translate(${from.x - 17}px, ${from.y - 17}px)`;
     inner.animate(
       [ { transform: "translateY(0) scale(0)", opacity: 0 },
         { transform: "translateY(-16px) scale(1.25)", opacity: 1, offset: 0.6 },
