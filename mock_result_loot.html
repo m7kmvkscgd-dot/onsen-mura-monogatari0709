@@ -123,6 +123,7 @@
   <div class="mock-ctrl">
     <button id="btnReplay">▶ 演出リプレイ</button>
     <button id="btnMembers">👥 4人版で確認</button>
+    <button id="btnRareTest">🔔 レア音テスト</button>
   </div>
 
   <div class="body-pad">
@@ -170,13 +171,20 @@
   const sfxBuffers = {};
   const SFX_URLS = ["assets/sfx/result.mp3", "assets/sfx/coin.ogg", "assets/sfx/quest_accept.mp3",
    "assets/sfx/loot_item.mp3", "assets/sfx/loot_rare.mp3"];
+  const sfxFailed = []; // デコード失敗したファイル(デバッグ表示用)
   SFX_URLS.forEach((url) => {
     if (!sfxCtx) return;
     fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d))
-      .then((b) => { sfxBuffers[url] = b; }).catch(() => {});
+      .then((b) => { sfxBuffers[url] = b; })
+      .catch(() => { sfxFailed.push(url.split("/").pop()); });
   });
   function sfx(src, vol) {
-    if (!sfxCtx || !sfxBuffers[src]) return;
+    if (!sfxCtx) return;
+    if (!sfxBuffers[src]) {
+      // デコード失敗/未完了の保険: 旧方式で代打再生(遅延はあるが無音よりまし)
+      try { const a = new Audio(src); a.volume = vol == null ? 0.5 : vol; a.play().catch(() => {}); } catch (e) {}
+      return;
+    }
     const start = () => {
       const s = sfxCtx.createBufferSource();
       s.buffer = sfxBuffers[src];
@@ -196,7 +204,7 @@
   // 音声デバッグ表示(モック専用): SEの読み込み数とAudioContextの状態
   setInterval(() => {
     const note = document.querySelector(".mock-note");
-    if (note && sfxCtx) note.textContent = `リザルト素材欄モック ｜ SE:${Object.keys(sfxBuffers).length}/${SFX_URLS.length} ctx:${sfxCtx.state}`;
+    if (note && sfxCtx) note.textContent = `SE:${Object.keys(sfxBuffers).length}/${SFX_URLS.length} ctx:${sfxCtx.state}${sfxFailed.length ? " 失敗:" + sfxFailed.join(",") : ""}`;
   }, 800);
 
   function buildXpList() {
@@ -276,8 +284,10 @@
             { opacity: 1, transform: "translateX(2px) scale(1.15)", offset: 0.7 },
             { opacity: 1, transform: "translateX(0) scale(1)" } ],
           { duration: 240, easing: "ease-out", fill: "forwards" });
-        // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)
-        sfx(item.classList.contains("orb") ? "assets/sfx/loot_rare.mp3" : "assets/sfx/loot_item.mp3", 0.5);
+        // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)。風鈴は音源自体が
+        // 控えめなので大きめに鳴らす
+        if (item.classList.contains("orb")) sfx("assets/sfx/loot_rare.mp3", 1.0);
+        else sfx("assets/sfx/loot_item.mp3", 0.5);
         if (item.classList.contains("orb")) {
           item.animate(
             [ { filter: "drop-shadow(0 0 18px rgba(255,190,60,1)) brightness(1.8)" },
@@ -316,6 +326,7 @@
   }
 
   document.getElementById("btnReplay").addEventListener("click", play);
+  document.getElementById("btnRareTest").addEventListener("click", () => sfx("assets/sfx/loot_rare.mp3", 1.0));
   document.getElementById("btnMembers").addEventListener("click", (e) => {
     memberCount = memberCount === 3 ? 4 : 3;
     e.target.textContent = memberCount === 3 ? "👥 4人版で確認" : "👥 3人版に戻す";
