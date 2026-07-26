@@ -745,12 +745,11 @@ function performVoluntarySwap(actor) {
   };
   if (outStage) {
     const w = outStage.width;
-    const outAnim = outStage.mover.animate([
-      { transform: "translateX(0) rotate(0deg)", opacity: 1 },
-      { transform: `translateX(${Math.round(w * 0.12)}px) rotate(4deg)`, opacity: 1, offset: 0.3 },
-      { transform: `translateX(${Math.round(w * 1.3)}px) rotate(8deg)`, opacity: 0.9 },
-    ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "forwards" });
-    outAnim.onfinish = () => setTimeout(finishSwap, 100); // 一拍(0.1秒)おいてから走り込み
+    runManualTransformAnim(outStage.mover, [
+      { at: 0, x: 0, r: 0 },
+      { at: 0.3, x: w * 0.12, r: 4 },
+      { at: 1, x: w * 1.3, r: 8 },
+    ], 250, cubicBezierEase(0.5, 0, 0.9, 0.6), () => setTimeout(finishSwap, 100)); // 一拍(0.1秒)おいてから走り込み
   } else {
     finishSwap();
   }
@@ -768,6 +767,54 @@ function waitTwoAnimationFrames() {
       requestAnimationFrame(resolve);
     });
   });
+}
+// cubic-bezier(x1,y1,x2,y2)のイージング関数を返す(ニュートン法5回で十分な精度)。
+// 下のrunManualTransformAnimで使う
+function cubicBezierEase(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
+  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
+  return (x) => {
+    let t = x;
+    for (let i = 0; i < 5; i++) {
+      const err = sampleX(t) - x;
+      const d = (3 * ax * t + 2 * bx) * t + cx;
+      if (Math.abs(err) < 1e-4 || d === 0) break;
+      t -= err / d;
+    }
+    return sampleY(Math.max(0, Math.min(1, t)));
+  };
+}
+// requestAnimationFrameループで毎フレームstyle.transformを直接書き換える手動アニメーション。
+// element.animate()(WAAPI)による移動が、iOS Safari実機で「onfinishは発火するのに途中フレームが
+// 一切描画されない」事象を起こし続けたため(初期style事前適用+decode待ち+rAF二重待ちでも解消せず)、
+// 走り込み/退場の移動はコンポジタのアニメ機構を一切通らないこの方式で駆動する。
+// frames: [{at(0〜1), x(px), r(deg)}...]。イージングはWAAPI同様セグメントごとに適用する
+function runManualTransformAnim(el, frames, duration, ease, onFinish) {
+  const startTime = performance.now();
+  const setAt = (p) => {
+    let seg = frames.length - 2;
+    for (let i = 0; i < frames.length - 1; i++) {
+      if (p <= frames[i + 1].at) { seg = i; break; }
+    }
+    const a = frames[seg];
+    const b = frames[seg + 1];
+    const local = b.at === a.at ? 1 : Math.max(0, Math.min(1, (p - a.at) / (b.at - a.at)));
+    const eased = ease(local);
+    const x = a.x + (b.x - a.x) * eased;
+    const r = a.r + (b.r - a.r) * eased;
+    el.style.transform = `translateX(${x.toFixed(1)}px) rotate(${r.toFixed(2)}deg)`;
+  };
+  setAt(0);
+  const tick = (now) => {
+    if (!el.isConnected) { if (onFinish) onFinish(); return; }
+    const t = Math.min(1, (now - startTime) / duration);
+    setAt(t);
+    if (t < 1) requestAnimationFrame(tick);
+    else if (onFinish) onFinish();
+  };
+  requestAnimationFrame(tick);
 }
 async function waitForImageDecode(img) {
   if (!img) return;
@@ -798,16 +845,11 @@ async function playSwapRunIn(incoming, onDone) {
   const stage = makePortraitFxStage(card);
   if (!stage) { onDone(); return; }
   const w = stage.width;
-  const startTransform = `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)`;
-  // WAAPIの最初のキーフレームだけに初期状態を任せず、通常スタイルとして先に確立する
-  stage.mover.style.transform = startTransform;
+  // 初期位置(画面外)を通常スタイルとして先に確立し、画像のデコード完了と初回描画を待ってから動かし始める
+  stage.mover.style.transform = `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)`;
   stage.mover.style.transformOrigin = "50% 50%";
-  stage.mover.style.willChange = "transform";
-  // renderBattleScreen直後の新規画像が描画可能になるまで待つ
   await waitForImageDecode(stage.clone);
-  // レイアウトを同期的に確定
-  void stage.mover.offsetWidth;
-  // 初期状態を最低一度描画させてから開始
+  void stage.mover.offsetWidth; // レイアウトを同期的に確定
   await waitTwoAnimationFrames();
   // 待機中に別の描画でDOMが破棄された場合の保険
   if (!stage.box.isConnected || !card.isConnected) {
@@ -816,12 +858,6 @@ async function playSwapRunIn(incoming, onDone) {
     onDone();
     return;
   }
-  const inAnim = stage.mover.animate([
-    { transform: startTransform },
-    { transform: `translateX(${Math.round(w * -0.07)}px) rotate(-3deg)`, offset: 0.7 },
-    { transform: `translateX(${Math.round(w * 0.03)}px) rotate(0deg)`, offset: 0.88 },
-    { transform: "translateX(0) rotate(0deg)" },
-  ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "both" });
   // 土埃: 立ち絵の足元(ステージの下端)に3つ、時間差で舞い上がる
   [0, 1, 2].forEach((k) => {
     const d = document.createElement("div");
@@ -834,8 +870,13 @@ async function playSwapRunIn(incoming, onDone) {
       { transform: `translate(${14 + k * 6}px,-${10 + k * 4}px) scale(${1.8 + k * 0.3})`, opacity: 0 },
     ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
   });
-  inAnim.onfinish = () => {
-    stage.mover.style.willChange = "auto";
+  // 走り込み本体: WAAPIではなく手動rAF駆動(runManualTransformAnim参照)
+  runManualTransformAnim(stage.mover, [
+    { at: 0, x: w * 1.3, r: -8 },
+    { at: 0.7, x: w * -0.07, r: -3 },
+    { at: 0.88, x: w * 0.03, r: 0 },
+    { at: 1, x: 0, r: 0 },
+  ], 300, cubicBezierEase(0.2, 0.8, 0.4, 1), () => {
     // 本物の立ち絵は即座に戻す(ステージのクローンが同じ位置に重なっているので切り替わりは見えない)。
     // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから片付ける
     stage.img.style.opacity = "";
@@ -853,7 +894,7 @@ async function playSwapRunIn(incoming, onDone) {
     ], { duration: 900, easing: "ease-out" }).onfinish = () => bn.remove();
     battleActionLocked = false;
     onDone();
-  };
+  });
 }
 
 // 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
