@@ -317,6 +317,33 @@
     80% { opacity: 1; transform: scale(1.0) rotate(-8deg); animation-timing-function: ease-out; }
     100% { opacity: 0; transform: scale(1.0) rotate(-8deg); }
   }
+  /* ============ 交代演出(タッグ走り込み、battle.js playSwapRunIn等) ============
+     下がるキャラが画面端へダッシュ→控えが反対側から走り込んでズサッと止まる(土埃+参上バナー付き)。
+     swap_anim_mock.htmlの案1をユーザーが採用(2026-07-26)。動き自体はelement.animate()でJS側が駆動し、
+     ここには土埃とバナーの見た目だけを置く。演出中はカードにinlineでoverflow:hiddenが当たる */
+  .swap-dust {
+    position: absolute; bottom: 8px; width: 10px; height: 10px;
+    background: radial-gradient(circle, rgba(214,203,178,0.9) 0%, rgba(214,203,178,0) 70%);
+    border-radius: 50%; opacity: 0; pointer-events: none; z-index: 3;
+  }
+  .swap-in-banner {
+    position: absolute; left: 50%; top: -12px;
+    transform: translateX(-50%) scale(0);
+    background: #b3402f; color: #fff;
+    font-size: 0.62rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    white-space: nowrap; pointer-events: none; z-index: 4;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  }
+  /* 交代確認ダイアログ内の控えステータスカード(genericConfirmExtraへ流し込む) */
+  .swap-confirm-card {
+    display: flex; align-items: center; gap: 0.6rem; text-align: left;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 0.6rem; margin-bottom: 1rem;
+  }
+  .swap-confirm-card img { width: 56px; height: 56px; object-fit: contain; background: #353a44; border-radius: 6px; flex-shrink: 0; }
+  .swap-confirm-card .swap-confirm-info { flex: 1; min-width: 0; font-size: 0.8rem; }
+  .swap-confirm-card .swap-confirm-numbers { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
      レイアウトの幅(=他の敵の並び位置)だけ確保したまま見た目だけ消す。実際の演出はbody直下に

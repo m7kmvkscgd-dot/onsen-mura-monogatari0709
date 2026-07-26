@@ -834,6 +834,7 @@ function showConfirmModal(text, buttons, textColor, panelClass) {
   const textEl = document.getElementById("genericConfirmText");
   textEl.textContent = text;
   textEl.style.color = textColor || "";
+  document.getElementById("genericConfirmExtra").innerHTML = ""; // 追加コンテンツ枠は毎回クリア(使う側が表示後に流し込む)
   const btnWrap = document.getElementById("genericConfirmButtons");
   btnWrap.innerHTML = "";
   buttons.forEach((b) => {

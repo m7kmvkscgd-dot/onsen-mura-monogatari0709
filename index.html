@@ -1010,6 +1010,8 @@
   <div id="genericConfirmOverlay" style="display:none; position:fixed; inset:0; z-index:80; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; padding:1rem;">
     <div id="genericConfirmPanel" style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-md); padding:1.2rem; max-width:320px; width:100%; text-align:center;">
       <p id="genericConfirmText" style="margin-bottom:1rem; font-size:0.95rem;"></p>
+      <!-- テキストとボタンの間に任意のHTML(交代確認の控えステータスカード等)を差し込む枠。showConfirmModal()が毎回クリアする -->
+      <div id="genericConfirmExtra"></div>
       <div id="genericConfirmButtons" style="display:flex; gap:0.6rem; justify-content:center;"></div>
     </div>
   </div>

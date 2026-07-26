@@ -653,7 +653,109 @@ function autoDeployReserveIfNeeded(newlyLost, onDone) {
   }
   blog(`控えの${incoming.name}が飛び出してきた！`);
   renderBattleScreen();
-  onDone();
+  playSfx("swap_dash");
+  // 登場後に0.7秒の「間」を挟んでからターン進行を再開する。すぐ進めると直後の再描画で
+  // 「参上!」バナーが作り直しに巻き込まれて消えてしまうため(演出を最後まで見せるための猶予)
+  playSwapRunIn(incoming, () => setTimeout(onDone, 700));
+}
+
+// ============ 交代の確認ダイアログ+タッグ走り込み演出 ============
+// 「交代」ボタン→控えのステータスカード付きダイアログ→「交代する」で成立(ユーザー指示2026-07-26)。
+// 演出はswap_anim_mock.htmlの案1「タッグ走り込み」採用: 下がるキャラが画面端へダッシュ→一拍→
+// 控えが反対側から走り込んでズサッと止まる(土埃+「◯◯、参上!」バナー+専用SE swap_dash)
+function showSwapConfirmDialog(actor) {
+  const rm = reserveFieldMember;
+  if (!rm) return;
+  showConfirmModal("控えと交代しますか？", [
+    { label: "交代する", className: "big primary", onClick: () => performVoluntarySwap(actor) },
+    { label: "やめる", className: "big" },
+  ]);
+  // ダイアログのテキストとボタンの間に、控えのステータスカードを流し込む(showConfirmModalが毎回クリアする枠)
+  const frenzy = stressTier(rm.fatigue) >= 4 ? " <span style='color:#e08787;'>(発狂中)</span>" : "";
+  document.getElementById("genericConfirmExtra").innerHTML = `
+    <div class="swap-confirm-card">
+      <img src="${characterPortraitSrc(rm)}">
+      <div class="swap-confirm-info">
+        <div><strong>${rm.name}</strong>(${CLASSES[rm.classId].ja} Lv${rm.level}・${rm.personality || "-"})${frenzy}</div>
+        ${hpBarHtml(rm)}
+        ${rm.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${Math.max(0, rm.mp / rm.maxMp) * 100}%"></div></div>` : ""}
+        <div class="swap-confirm-numbers">HP ${rm.hp}/${rm.maxHp}${rm.maxMp > 0 ? `・MP ${rm.mp}/${rm.maxMp}` : ""}・ストレス ${rm.fatigue || 0}</div>
+      </div>
+    </div>`;
+}
+function performVoluntarySwap(actor) {
+  if (battleActionLocked || !battle || (battle.swapCooldown || 0) > 0) return;
+  battleActionLocked = true;
+  battle.swapCooldown = 3;
+  document.getElementById("actionGrid").innerHTML = ""; // 演出の間はボタンを消して連打を防ぐ
+  playSfx("swap_dash");
+  // 退場: 今のカードの立ち絵が右へダッシュ(前傾)。演出後にデータを入れ替えて再描画→走り込み
+  const outCard = document.querySelector(`#battlePartyBar .party-member[data-id="${actor.id}"]`);
+  const outPortrait = outCard ? outCard.querySelector(".card-portrait-img") : null;
+  const finishSwap = () => {
+    const incoming = swapReserveMember(actor, blog);
+    if (!incoming) { battleActionLocked = false; renderActionButtons(actor); return; }
+    // 参加ターン比の経験値: 交代が発生したラウンドは下がった側(ラウンド頭で加算済み)と
+    // 出た側の両方に出場カウントを付ける
+    battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
+    battle.actingId = incoming.id; // このターンをそのまま入れ替わった控えのキャラへ引き継ぐ
+    renderBattleScreen();
+    playSwapRunIn(incoming, () => { renderActionButtons(incoming); });
+  };
+  if (outPortrait) {
+    outCard.style.overflow = "hidden"; // ダッシュした立ち絵が隣のカードへはみ出さないように
+    const outAnim = outPortrait.animate([
+      { transform: "translateX(0) rotate(0deg)", opacity: 1 },
+      { transform: "translateX(12px) rotate(4deg)", opacity: 1, offset: 0.3 },
+      { transform: "translateX(130px) rotate(8deg)", opacity: 0.9 },
+    ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "forwards" });
+    outAnim.onfinish = () => setTimeout(finishSwap, 100); // 一拍(0.1秒)おいてから走り込み
+  } else {
+    finishSwap();
+  }
+}
+// 走り込み登場(手動交代・倒れた時の自動登場の共通演出)。renderBattleScreen()で作り直された
+// 直後のカードに対して、立ち絵の走り込み+土埃+「◯◯、参上!」バナーを重ねる。
+// カードが見つからない場合(理論上の保険)は演出をスキップして即続行する
+function playSwapRunIn(incoming, onDone) {
+  const card = document.querySelector(`#battlePartyBar .party-member[data-id="${incoming.id}"]`);
+  const portrait = card ? card.querySelector(".card-portrait-img") : null;
+  if (!card || !portrait) { onDone(); return; }
+  card.style.overflow = "hidden";
+  const inAnim = portrait.animate([
+    { transform: "translateX(130px) rotate(-8deg)" },
+    { transform: "translateX(-8px) rotate(-3deg)", offset: 0.7 },
+    { transform: "translateX(3px) rotate(0deg)", offset: 0.88 },
+    { transform: "translateX(0) rotate(0deg)" },
+  ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
+  // 土埃: 着地点に3つ、時間差で舞い上がる
+  [0, 1, 2].forEach((k) => {
+    const d = document.createElement("div");
+    d.className = "swap-dust";
+    d.style.left = (26 + k * 16) + "px";
+    card.appendChild(d);
+    d.animate([
+      { transform: "translate(0,0) scale(0.6)", opacity: 0 },
+      { transform: `translate(${8 + k * 4}px,-${6 + k * 3}px) scale(${1.3 + k * 0.3})`, opacity: 0.8, offset: 0.4 },
+      { transform: `translate(${14 + k * 6}px,-${10 + k * 4}px) scale(${1.8 + k * 0.3})`, opacity: 0 },
+    ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
+  });
+  inAnim.onfinish = () => {
+    card.style.overflow = ""; // バナーはカードの外へはみ出して表示するため、走り込みが終わったら解除する
+    const bn = document.createElement("span");
+    bn.className = "swap-in-banner";
+    bn.textContent = `${incoming.name}、参上!`;
+    card.appendChild(bn);
+    bn.animate([
+      { transform: "translateX(-50%) scale(0)", opacity: 1 },
+      { transform: "translateX(-50%) scale(1.15)", opacity: 1, offset: 0.25 },
+      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.35 },
+      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.8 },
+      { transform: "translateX(-50%) scale(0.9)", opacity: 0 },
+    ], { duration: 900, easing: "ease-out" }).onfinish = () => bn.remove();
+    battleActionLocked = false;
+    onDone();
+  };
 }
 
 // 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
@@ -1556,7 +1658,8 @@ function renderActionButtons(actor) {
     // 交代: 控えがいる時だけ表示。パーティ共有のクールダウン制(3ターン、開幕から使用可。
     // ラウンドの節目で1減る=nextRound参照。倒れた時の自動登場autoDeployReserveIfNeededは
     // クールダウンを無視するが、登場後はクールダウンが3にリセットされる)。ターンは消費せず、
-    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(変身解除と同じ「無消費」パターン)
+    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(変身解除と同じ「無消費」パターン)。
+    // 押すと即交代ではなく、控えのステータスを確認するダイアログを挟んでから成立する
     if (reserveFieldMember && reserveFieldMember.status === "active") {
       const cd = battle.swapCooldown || 0;
       const swapBtn = document.createElement("button");
@@ -1565,15 +1668,7 @@ function renderActionButtons(actor) {
       swapBtn.disabled = cd > 0;
       swapBtn.onclick = () => {
         if (battleActionLocked || (battle.swapCooldown || 0) > 0) return;
-        battle.swapCooldown = 3;
-        const incoming = swapReserveMember(actor, blog);
-        if (!incoming) return;
-        // 参加ターン比の経験値: 交代が発生したラウンドは下がった側(ラウンド頭で加算済み)と
-        // 出た側の両方に出場カウントを付ける
-        battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
-        battle.actingId = incoming.id; // このターンをそのまま入れ替わった控えのキャラへ引き継ぐ
-        renderBattleScreen();
-        renderActionButtons(incoming);
+        showSwapConfirmDialog(actor);
       };
       grid.appendChild(swapBtn);
     }
