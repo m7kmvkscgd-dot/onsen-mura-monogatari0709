@@ -295,12 +295,16 @@
     animation: encounterCuePop 1s cubic-bezier(0.22, 1.6, 0.4, 1) forwards; /* 表示時間+0.3秒(ユーザー指示、2026-07-26)。戦闘開始までの一拍(ENCOUNTER_CUE_HOLD_MS)も+300して同期 */
   }
   /* 傾きは出現時の-8°のまま固定(ユーザー指示2026-07-26: 途中でまっすぐへ起き上がる動きが引っかかるため、
-     傾いたまま出て傾いたまま消える)。拡縮の動きは元のまま */
+     傾いたまま出て傾いたまま消える)。
+     「押し込み」(1.25→0.96→1.05と一度縮めて着地させる動き)は削除済み(ユーザー指示2026-07-26:
+     バネ系イージングが縮み側にもオーバーシュートして引っかかって見えるため)。現在は
+     飛び出したらそのサイズのまま静止し、縮まずスッと消える。80%のease-outは消え際の
+     フェードにまでバネが効いて不自然になるのを防ぐ区間指定 */
   @keyframes encounterCuePop {
     0% { opacity: 0; transform: scale(0.2) rotate(-8deg); }
-    55% { opacity: 1; transform: scale(1.25) rotate(-8deg); }
-    75% { opacity: 1; transform: scale(0.96) rotate(-8deg); }
-    100% { opacity: 0; transform: scale(1.05) rotate(-8deg); }
+    40% { opacity: 1; transform: scale(1.15) rotate(-8deg); }
+    80% { opacity: 1; transform: scale(1.15) rotate(-8deg); animation-timing-function: ease-out; }
+    100% { opacity: 0; transform: scale(1.15) rotate(-8deg); }
   }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
