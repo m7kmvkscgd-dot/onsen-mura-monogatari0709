@@ -651,12 +651,15 @@ function autoDeployReserveIfNeeded(newlyLost, onDone) {
     // 参加ターン比の経験値: 登場したこのラウンドから出場カウントを付ける
     battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
   }
-  blog(`控えの${incoming.name}が飛び出してきた！`);
   renderBattleScreen();
   playSfx("swap_dash");
+  // ログの文字送りは走り込みとメインスレッドを食い合ってカクつくため、演出後に流す。
   // 登場後に0.7秒の「間」を挟んでからターン進行を再開する。すぐ進めると直後の再描画で
   // 「参上!」バナーが作り直しに巻き込まれて消えてしまうため(演出を最後まで見せるための猶予)
-  playSwapRunIn(incoming, () => setTimeout(onDone, 700));
+  playSwapRunIn(incoming, () => {
+    blog(`控えの${incoming.name}が飛び出してきた！`);
+    setTimeout(onDone, 700);
+  });
 }
 
 // ============ 交代の確認ダイアログ+タッグ走り込み演出 ============
@@ -730,7 +733,10 @@ function performVoluntarySwap(actor) {
   const outStage = makePortraitFxStage(outCard);
   const finishSwap = () => {
     removePortraitFxStage(outStage); // 退場ステージを片付ける(直後の再描画でカード自体も作り直される)
-    const incoming = swapReserveMember(actor, blog);
+    // 交代ログの文字送り(18msごとのDOM追加)が走り込みと同時に走るとメインスレッドを食い合って
+    // 手動rAF駆動の走り込みがカクつくため、ログは溜めておいて演出が終わってから流す
+    const pendingLogs = [];
+    const incoming = swapReserveMember(actor, (msg) => pendingLogs.push(msg));
     if (!incoming) { battleActionLocked = false; renderActionButtons(actor); return; }
     // 参加ターン比の経験値: 交代が発生したラウンドは下がった側(ラウンド頭で加算済み)と
     // 出た側の両方に出場カウントを付ける
@@ -741,7 +747,10 @@ function performVoluntarySwap(actor) {
     // 交代の登場はこの後の走り込み(playSwapRunIn)だけに一本化する
     lastPartyBarActingId.battlePartyBar = incoming.id;
     renderBattleScreen();
-    playSwapRunIn(incoming, () => { renderActionButtons(incoming); });
+    playSwapRunIn(incoming, () => {
+      pendingLogs.forEach(blog);
+      renderActionButtons(incoming);
+    });
   };
   if (outStage) {
     const w = outStage.width;
@@ -804,7 +813,7 @@ function runManualTransformAnim(el, frames, duration, ease, onFinish) {
     const eased = ease(local);
     const x = a.x + (b.x - a.x) * eased;
     const r = a.r + (b.r - a.r) * eased;
-    el.style.transform = `translateX(${x.toFixed(1)}px) rotate(${r.toFixed(2)}deg)`;
+    el.style.transform = `translateX(${x.toFixed(1)}px) rotate(${r.toFixed(2)}deg) translateZ(0)`; // translateZ(0)は合成レイヤー維持用(カクつき対策)
   };
   setAt(0);
   const tick = (now) => {

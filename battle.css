@@ -337,7 +337,9 @@
   /* ステージ内の可動レイヤー。<img>を直接animateするとiOS WebKitの「置換要素への%transform」系の
      不具合を踏み得る(実機で走り込みだけ動かない事象、2026-07-26)ため、動かすのはこのdivに限定し、
      移動量もJS側で実測px指定にしている */
-  .swap-fx-mover { width: 100%; height: 100%; }
+  /* will-change: 手動rAF駆動(runManualTransformAnim)の毎フレームのtransform書き換えを
+     「合成レイヤーの移動だけ」で済ませて再ペイントを避けるための昇格(カクつき対策) */
+  .swap-fx-mover { width: 100%; height: 100%; will-change: transform; }
   .swap-fx-sprite { width: 100%; height: 100%; object-fit: contain; display: block; }
   .swap-in-banner {
     position: absolute; left: 50%; top: -12px;
