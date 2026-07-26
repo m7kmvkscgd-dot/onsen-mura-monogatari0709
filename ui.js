@@ -1004,75 +1004,147 @@ function mpBarHtml(entity) {
 // サブメニューを開くたびに同じキャラのカードが再生成され、そのたびに演出が再生されてしつこくなる
 // (「ぴょんぴょん1」で実際に踏んだ不具合。KAMIKAKUSHI_REVEAL_MSと同じ「フラグで一度きりに絞る」考え方)
 const lastPartyBarActingId = {};
+// ============ 味方カードの差分更新(2026-07-26、iOS演出品質の根本対策) ============
+// 以前は毎回bar.innerHTML=""で全カードを作り直していたが、iOS Safariは「挿入したてのDOM要素への
+// 即時アニメーション」の序盤フレームを描画しない(docs/引き継ぎ_戦闘UI差分更新化.md §3)。
+// カードはキャラ(id)ごとに1回だけ生成して使い回し、毎回の描画では中身だけを書き換える。
+// 要素の追加/削除は編成が実際に変わった時だけ(交代・式神/分身の召喚と消滅・逃走離脱・遠征の入れ替え)
+function createPartyMemberCard(c) {
+  const div = document.createElement("div");
+  div.className = "party-member";
+  div.dataset.id = c.id;
+  // 静的な骨組みのみ。ポートレート/バー/バッジ類は毎描画updatePartyMemberCard()が書き換える
+  div.innerHTML = `
+      <div class="party-portrait-wrap">
+        <div class="ally-debuff-icons"></div>
+      </div>
+      <div class="status-icon-row"></div>
+      <div class="nm"></div>
+    `;
+  // タップ(回復対象などの味方選択)は生成時に一度だけ張る。対象選択中(targetableクラスが付いて
+  // いる時)だけ反応する。クロージャで生成時のキャラ参照を掴まず、発火時にdata-idから現在の
+  // エンティティを引き直す(引き継ぎ文書の地雷リスト3番)
+  div.onclick = () => {
+    if (!pendingAllyPick || !div.classList.contains("targetable")) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
+    const cur = fieldParty.find((x) => String(x.id) === div.dataset.id);
+    if (!cur) return;
+    const picked = pendingAllyPick;
+    pendingAllyPick = null;
+    picked(cur);
+  };
+  return div;
+}
+function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
+  const dead = c.hp <= 0 || c.status !== "active";
+  // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
+  const targetable = !!pendingAllyPick && !dead && !c.transformForm;
+  card.classList.toggle("dead", dead);
+  card.classList.toggle("acting", isActing);
+  // 手番切り替えのスライド演出(acting-enter)は、実際に手番が変わった描画(isFreshTurn)の時だけ
+  // 再発火させる。カードが使い回しになったため、クラス除去→リフロー→再付与でCSSアニメーションを
+  // 確実に最初から再生する(地雷リスト2番の既存パターン)
+  card.classList.remove("acting-enter");
+  if (isActing && isFreshTurn) {
+    void card.offsetWidth;
+    card.classList.add("acting-enter");
+  }
+  card.classList.toggle("targetable", targetable);
+  // 被弾の揺れ: 敵カード(updateEnemyCard)と同じ扱い。shakeClassFor()が空文字の時に剥がすのは
+  // 従来の「カード作り直しで暗黙にリセットされる」挙動の再現(絆創膏の整理はフェーズ5)
+  const shake = shakeClassFor(c).trim();
+  card.classList.remove(...HIT_SHAKE_CLASSES);
+  if (shake) {
+    void card.offsetWidth;
+    card.classList.add(...shake.split(/\s+/));
+  }
+  const wrap = card.querySelector(".party-portrait-wrap");
+  const debuffIconsEl = wrap.querySelector(".ally-debuff-icons");
+  const statusRowEl = card.querySelector(".status-icon-row");
+  const nmEl = card.querySelector(".nm");
+  // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
+  const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
+  // 式神はiconImg(実イラスト)があればそれを、無ければ絵文字アイコンで代用する。
+  // classIdを持たないのでcharacterPortraitSrc(CLASSES[c.classId]を前提とする)は呼べない
+  const portraitSrc = c.isShikigami ? c.iconImg : (transformDef ? transformDef.image : characterPortraitSrc(c));
+  // ポートレートは表示内容(変身・式神の種類)が実際に変わった時だけ差し替える。毎回作り直すと
+  // 「作りたてのimg」に戻ってしまい、差分更新化の意味が無くなるため
+  const isEmojiPortrait = c.isShikigami && !portraitSrc;
+  const portraitKey = isEmojiPortrait ? `emoji:${c.emoji || "🐾"}` : `img:${portraitSrc}`;
+  if (card.__portraitKey !== portraitKey) {
+    card.__portraitKey = portraitKey;
+    const oldPortrait = wrap.querySelector(":scope > .card-portrait-img");
+    if (oldPortrait) oldPortrait.remove();
+    wrap.insertAdjacentHTML("afterbegin", isEmojiPortrait ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`);
+  }
+  // 立ち絵に重ねる動的オーバーレイ(毘沙門の加護/結界/照準マーク)は毎回作り直す。全て
+  // position:absoluteの小要素で、被弾揺れ等のアニメーションの起点にはならないため問題ない。
+  // DOM上の並び(毘沙門/結界はデバフアイコン列の手前、照準マークは末尾)も従来のマークアップと同じに保つ
+  wrap.querySelectorAll(":scope > .bishamon-barrier-vfx, :scope > .kekkai-barrier-vfx, :scope > .ally-target-marker").forEach((el) => el.remove());
+  let vfxHtml = "";
+  if (c.passives && c.passives.omamoriBishamonPending) vfxHtml += `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">`;
+  if (c.barrierHp > 0) vfxHtml += `<img class="kekkai-barrier-vfx" src="assets/vfx/kekkai_barrier.png">`;
+  if (vfxHtml) debuffIconsEl.insertAdjacentHTML("beforebegin", vfxHtml);
+  debuffIconsEl.innerHTML = statusIconsFor(c);
+  // 敵の大技予告(bigAttackPending)がこのキャラを狙っている場合、ターゲットマーク(照準)を出す。
+  // タップでどの敵の何の技に狙われているか説明が見られる(effects.jsのshowStatusTooltip参照)。
+  // さらに未かばう想定でHPが最大の20%以下まで落ち込む可能性が高ければ、左上に⚠️も追加で出す
+  const bigThreat = !dead ? findBigAttackThreatFor(c.id) : null;
+  if (bigThreat) {
+    const bigThreatLethal = isBigAttackLethalRisk(bigThreat.enemy, c, bigThreat.profile);
+    wrap.insertAdjacentHTML("beforeend", `
+      <div class="ally-target-marker">
+        <img class="ally-target-marker-img" src="assets/vfx/target_marker.png" alt="">
+        ${bigThreatLethal ? `<span class="ally-lethal-warning">⚠️</span>` : ""}
+      </div>`);
+    // data-*は文字列組み立てで直接埋め込まず(HTMLインジェクション対策)、他の.dataset.X=箇所と
+    // 同じくHTML挿入後にJSプロパティ代入で付与する
+    const markerEl = wrap.querySelector(".ally-target-marker");
+    markerEl.dataset.enemyImage = bigThreat.enemy.image;
+    markerEl.dataset.attackName = bigThreat.profile.name || "大技";
+    markerEl.dataset.attackDesc = describeBigAttackShort(bigThreat.profile);
+    const warnEl = wrap.querySelector(".ally-lethal-warning");
+    if (warnEl) warnEl.dataset.lethalDesc = "この大技を受けると戦闘不能になる可能性があります。";
+  }
+  // 鷹バッジ/次ターン行動バッジ/HPバーは従来と同じDOM順(立ち絵ラッパーの直後)で毎回作り直す。
+  // HPバーはトレイル(前回表示位置からの追いつき)のfrom/targetを描画のたびに現在値で組み直す
+  // 必要があるため(この後のactivateHpTrails()が拾って動かす)
+  card.querySelectorAll(":scope > .hawk-badge, :scope > .next-actor-badge, :scope > .hpbar-track, :scope > .mpbar-track").forEach((el) => el.remove());
+  // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
+  const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
+  let midHtml = "";
+  if (c.hawkTurnsLeft > 0 && !c.hawkFlightActive) midHtml += `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">`;
+  if (isNextActor) midHtml += '<span class="next-actor-badge">▲次ターン行動</span>';
+  wrap.insertAdjacentHTML("afterend", midHtml + hpBarHtml(c));
+  statusRowEl.innerHTML = c.guarding ? statusIconHtml("guarding") : "";
+  if (!transformDef && c.maxMp > 0) {
+    const mpRatio = Math.max(0, c.mp / c.maxMp) * 100;
+    statusRowEl.insertAdjacentHTML("afterend", `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>`);
+  }
+  nmEl.textContent = `${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}`;
+}
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
   const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
   lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
-  bar.innerHTML = "";
   // 影分身/式神で追加の1体が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする
   bar.classList.toggle("party-bar-five", combatants.length >= 5);
+  // 表示対象でなくなったカードだけ取り除く(交代で下がった/ロストして探索バーから外れた/
+  // 式神・分身の消滅/逃走離脱/別の遠征メンバーへの入れ替わり)
+  const validIds = new Set(combatants.map((c) => String(c.id)));
+  [...bar.children].forEach((el) => { if (!validIds.has(el.dataset.id)) el.remove(); });
+  let prevCard = null;
   combatants.forEach((c) => {
-    const dead = c.hp <= 0 || c.status !== "active";
-    // 変化の術で変身中は回復薬/治癒の術の対象にできない(回復不可のため、味方イラストの直接タップからも除外する)
-    const targetable = !!pendingAllyPick && !dead && !c.transformForm;
-    const div = document.createElement("div");
-    const isActing = c.id === actingCharId;
-    const actingClass = isActing ? (isFreshTurn ? " acting acting-enter" : " acting") : "";
-    div.className = "party-member" + (dead ? " dead" : "") + actingClass + (targetable ? " targetable" : "") + shakeClassFor(c);
-    div.dataset.id = c.id;
-    const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
-    // 忍の変化の術で変身中は、ポートレートをform専用イラストに差し替え、MPバー(概念自体が無くなる)は隠す
-    const transformDef = c.transformForm ? TRANSFORM_FORMS[c.transformForm] : null;
-    // 式神はiconImg(実イラスト)があればそれを、無ければ絵文字アイコンで代用する。
-    // classIdを持たないのでcharacterPortraitSrc(CLASSES[c.classId]を前提とする)は呼べない
-    const portraitSrc = c.isShikigami ? c.iconImg : (transformDef ? transformDef.image : characterPortraitSrc(c));
-    // カラス変身中の「観察眼」: 次に行動するのがこのキャラなら青い矢印バッジを出す
-    const isNextActor = anyCrowScoutActive() && nextActingCombatant() === c;
-    // 敵の大技予告(bigAttackPending)がこのキャラを狙っている場合、ターゲットマーク(照準)を出す。
-    // タップでどの敵の何の技に狙われているか説明が見られる(effects.jsのshowStatusTooltip参照)。
-    // さらに未かばう想定でHPが最大の20%以下まで落ち込む可能性が高ければ、左上に⚠️も追加で出す
-    const bigThreat = !dead ? findBigAttackThreatFor(c.id) : null;
-    const bigThreatLethal = bigThreat && isBigAttackLethalRisk(bigThreat.enemy, c, bigThreat.profile);
-    // data-*は文字列組み立てで直接埋め込まず(HTMLインジェクション対策)、他の.dataset.X=箇所と同じく
-    // innerHTML設定後にJSプロパティ代入で付与する(下のtargetMarkerEl参照)
-    const targetMarkerHtml = bigThreat ? `
-      <div class="ally-target-marker">
-        <img class="ally-target-marker-img" src="assets/vfx/target_marker.png" alt="">
-        ${bigThreatLethal ? `<span class="ally-lethal-warning">⚠️</span>` : ""}
-      </div>` : "";
-    div.innerHTML = `
-      <div class="party-portrait-wrap">
-        ${c.isShikigami && !portraitSrc ? `<div class="card-portrait-img shikigami-emoji-portrait">${c.emoji || "🐾"}</div>` : `<img class="card-portrait-img" src="${portraitSrc}">`}
-        ${c.passives && c.passives.omamoriBishamonPending ? `<img class="bishamon-barrier-vfx" src="assets/vfx/bishamon_barrier.png">` : ""}
-        ${c.barrierHp > 0 ? `<img class="kekkai-barrier-vfx" src="assets/vfx/kekkai_barrier.png">` : ""}
-        <div class="ally-debuff-icons">${statusIconsFor(c)}</div>
-        ${targetMarkerHtml}
-      </div>
-      ${c.hawkTurnsLeft > 0 && !c.hawkFlightActive ? `<img class="hawk-badge" src="assets/vfx/hawk.png" title="鷹(あと${c.hawkTurnsLeft}T)">` : ""}
-      ${isNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
-      ${hpBarHtml(c)}
-      <div class="status-icon-row">${c.guarding ? statusIconHtml("guarding") : ""}</div>
-      ${!transformDef && c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      <div class="nm">${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}</div>
-    `;
-    if (bigThreat) {
-      const markerEl = div.querySelector(".ally-target-marker");
-      markerEl.dataset.enemyImage = bigThreat.enemy.image;
-      markerEl.dataset.attackName = bigThreat.profile.name || "大技";
-      markerEl.dataset.attackDesc = describeBigAttackShort(bigThreat.profile);
-      const warnEl = div.querySelector(".ally-lethal-warning");
-      if (warnEl) warnEl.dataset.lethalDesc = "この大技を受けると戦闘不能になる可能性があります。";
+    let card = bar.querySelector(`:scope > .party-member[data-id="${c.id}"]`);
+    if (!card) {
+      card = createPartyMemberCard(c);
+      // combatantsの並び順を保って挿入する(基本は末尾追加。交代でカードの中身が別キャラに変わる
+      // ケースは「同じ位置に新しいidのカードを挿入」として自然に処理される)。既存カードは
+      // 並べ替えない=再挿入で「作りたて扱い」に戻さない(引き継ぎ文書の地雷リスト6番)
+      bar.insertBefore(card, prevCard ? prevCard.nextElementSibling : bar.firstElementChild);
     }
-    if (targetable) {
-      div.onclick = () => {
-        if (!pendingAllyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
-        const picked = pendingAllyPick;
-        pendingAllyPick = null;
-        picked(c);
-      };
-    }
-    bar.appendChild(div);
-    resumeAttackLungeOnCard(div, c.id); // 進行中の攻撃踏み込みがあれば、作り直したカードへ途中から再適用(effects.js参照)
+    updatePartyMemberCard(card, c, c.id === actingCharId, isFreshTurn);
+    prevCard = card;
+    resumeAttackLungeOnCard(card, c.id); // 進行中の攻撃踏み込みがあれば、途中から再適用(effects.js参照)
   });
   activateHpTrails(bar);
   combatants.forEach((c) => renderVfxFor(c.id));
