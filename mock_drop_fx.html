@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ドロップ演出モック</title>
+<style>
+  /* ドロップ演出の提案モック(ゲーム本体には未実装)。
+     ②素材が巾着に吸い込まれる演出 / ③勝利後の戦利品パネル を実機で見比べるための単独ページ。
+     見た目は battle.css / result.css の該当スタイルを簡略コピーして雰囲気を再現している */
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: #1a1410; color: #e8e0d0;
+    display: flex; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .stage { position: relative; width: 100%; max-width: 480px; height: 100dvh; overflow: hidden; }
+  .battle-bg {
+    position: absolute; inset: 0;
+    background: url("assets/bg/forest_day.jpg") center / cover no-repeat #1a1410;
+  }
+  .battle-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
+  .mock-note {
+    position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; color: rgba(232,224,208,0.75); background: rgba(0,0,0,0.4);
+    padding: 2px 10px; border-radius: 10px; z-index: 5; white-space: nowrap;
+  }
+
+  /* ---- 敵カード(battle.cssの簡略版) ---- */
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; }
+  .enemy-card {
+    position: relative; text-align: center; border-radius: 10px; padding: 0.4rem;
+    border: 2px solid transparent;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+  }
+  .enemy-card::before {
+    content: ""; position: absolute; inset: 4px; z-index: 0; border-radius: 7px;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(circle at 78% 85%, rgba(0,0,0,0.15), transparent 60%),
+      #3c3527;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .enemy-card img { position: relative; z-index: 1; width: 92px; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6)); }
+  .enemy-card .ename { position: relative; z-index: 1; font-size: 0.7rem; font-weight: 700; margin-top: 2px; }
+  .enemy-card .hpbar { position: relative; z-index: 1; height: 5px; margin-top: 3px; background: rgba(0,0,0,0.55); border-radius: 3px; overflow: hidden; }
+  .enemy-card .hpbar i { display: block; height: 100%; width: 70%; background: linear-gradient(to bottom, #d9705a, #b84a38); }
+  .enemy-card.dead { pointer-events: none; }
+
+  /* ---- 味方バー(雰囲気だけの簡略版) ---- */
+  .party-bar { position: absolute; left: 0; right: 0; top: 240px; display: flex; justify-content: center; gap: 10px; z-index: 1; }
+  .pcard {
+    width: 84px; border-radius: 10px; padding: 4px 4px 6px; text-align: center;
+    background: linear-gradient(160deg, rgba(38,46,52,0.92), rgba(24,30,36,0.92));
+    border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+  }
+  .pcard img { width: 56px; display: block; margin: 0 auto; }
+  .pcard .pname { font-size: 0.62rem; font-weight: 700; }
+  .pcard .bar { height: 4px; border-radius: 2px; overflow: hidden; background: rgba(0,0,0,0.5); margin-top: 2px; }
+  .pcard .bar i { display: block; height: 100%; }
+  .pcard .hp i { width: 82%; background: #5fae6e; }
+  .pcard .mp i { width: 60%; background: #5b87c5; }
+
+  /* ---- テキストボックス(和風意匠の簡略版) ---- */
+  .battle-log {
+    position: absolute; left: 8px; right: 8px; bottom: 128px; height: 84px; z-index: 2;
+    border: 2px solid #4b3728; border-radius: 10px;
+    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
+    background: rgba(26,20,14,0.9); padding: 10px 12px; font-size: 0.74rem; line-height: 1.5;
+    overflow: hidden;
+  }
+  .battle-log .dim { opacity: 0.55; }
+
+  /* ---- ② 巾着(戦利品袋) ---- */
+  .pouch {
+    position: absolute; right: 14px; bottom: 222px; z-index: 6;
+    width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
+  }
+  .pouch svg { width: 46px; height: 46px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .pouch .count {
+    position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px;
+    background: #c9a55a; color: #241a0c; font-size: 0.72rem; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6); opacity: 0;
+  }
+  .pouch .count.show { opacity: 1; }
+
+  /* 飛翔アイテム(外側=X移動、内側=Y移動で放物線を作る) */
+  .fly-x { position: absolute; z-index: 40; pointer-events: none; will-change: transform; }
+  .fly-y { display: block; will-change: transform; }
+  .fly-y img { width: 34px; display: block; filter: drop-shadow(0 0 5px rgba(255,240,190,0.9)) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+  .fly-y.rare img { filter: drop-shadow(0 0 8px rgba(255,214,102,1)) drop-shadow(0 0 16px rgba(255,190,60,0.8)); }
+  .fly-y .rare-orb {
+    width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; text-shadow: 0 0 10px rgba(255,214,102,1);
+  }
+  .spark { position: absolute; z-index: 39; width: 6px; height: 6px; border-radius: 50%; background: #ffe08a; pointer-events: none; box-shadow: 0 0 6px rgba(255,214,102,0.9); }
+  .gain-pop {
+    position: absolute; z-index: 41; pointer-events: none; white-space: nowrap;
+    font-size: 0.78rem; font-weight: 800; color: #ffe9b0; text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(255,214,102,0.5);
+  }
+  .gain-pop.rare { color: #ffd666; font-size: 0.9rem; }
+
+  /* ---- ③ 勝利バナー(result.cssの簡略版) ---- */
+  .victory-overlay {
+    position: absolute; inset: 0; z-index: 50; display: none;
+    align-items: center; justify-content: center; background: rgba(24,18,6,0.32);
+  }
+  .victory-text {
+    font-weight: 900; letter-spacing: 0.2em; font-size: 2.6rem; color: #d7b66f;
+    text-shadow: 0 0 24px rgba(215,182,111,0.55), 0 4px 10px rgba(0,0,0,0.7);
+  }
+
+  /* ---- ③ 戦利品パネル(resultScrollPanelの意匠を流用) ---- */
+  .loot-overlay {
+    position: absolute; inset: 0; z-index: 60; display: none;
+    align-items: center; justify-content: center; background: rgba(10,8,6,0.55);
+  }
+  .loot-panel {
+    position: relative; width: min(86%, 340px);
+    border: 2px solid #4b3728; border-radius: 10px;
+    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
+    padding: 14px 14px 16px;
+    background:
+      radial-gradient(circle at 0 0, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 100% 0, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 0 100%, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      radial-gradient(circle at 100% 100%, rgba(217,196,154,0.14) 0, rgba(217,196,154,0) 26px),
+      linear-gradient(165deg, #2a211a 0%, #221a14 60%, #1c150f 100%);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  }
+  .loot-title { text-align: center; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3em; color: #d7b66f; margin-bottom: 4px; }
+  .loot-sub { text-align: center; font-size: 0.66rem; color: rgba(232,224,208,0.6); margin-bottom: 10px; }
+  .loot-gold { text-align: center; font-size: 1rem; font-weight: 800; color: #e5c878; margin-bottom: 12px; }
+  .loot-gold img { width: 20px; vertical-align: -4px; margin-right: 4px; }
+  .loot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .loot-card {
+    position: relative; text-align: center; border-radius: 8px; padding: 8px 4px 7px;
+    background: linear-gradient(160deg, rgba(64,50,36,0.9), rgba(42,33,24,0.9));
+    border: 1px solid rgba(217,196,154,0.35);
+    overflow: hidden;
+  }
+  .loot-card img { width: 40px; display: block; margin: 0 auto 3px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+  .loot-card .lname { font-size: 0.7rem; font-weight: 700; }
+  .loot-card .lcount { font-size: 0.78rem; font-weight: 900; color: #ffe9b0; }
+  .loot-card.rare {
+    border: 1px solid rgba(255,214,102,0.9);
+    box-shadow: 0 0 10px rgba(255,190,60,0.45), inset 0 0 12px rgba(255,214,102,0.15);
+  }
+  .loot-card.rare .rare-badge {
+    position: absolute; top: 3px; right: 3px; font-size: 0.55rem; font-weight: 900;
+    color: #241a0c; background: linear-gradient(160deg, #ffe08a, #d9a940);
+    border-radius: 6px; padding: 1px 5px;
+  }
+  .loot-card.rare .orb { font-size: 34px; line-height: 40px; display: block; text-shadow: 0 0 12px rgba(255,214,102,0.9); }
+  /* 金の光がカードを横切るシャイン */
+  .loot-card.rare::after {
+    content: ""; position: absolute; top: -30%; bottom: -30%; width: 26px;
+    background: linear-gradient(100deg, transparent, rgba(255,240,190,0.5), transparent);
+    transform: rotate(18deg); left: -40px;
+  }
+  .loot-tap { text-align: center; font-size: 0.62rem; color: rgba(232,224,208,0.55); margin-top: 12px; }
+
+  /* ---- モック操作ボタン ---- */
+  .controls {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 70;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+  }
+  .controls button {
+    font-family: inherit; font-size: 0.8rem; font-weight: 700; color: #e8e0d0;
+    background: linear-gradient(160deg, #3a4750, #26313a); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 9px; padding: 11px 4px; cursor: pointer;
+  }
+  .controls button:active { transform: scale(0.96); }
+  .controls button.reset { grid-column: span 2; padding: 7px 4px; font-size: 0.7rem; opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="battle-bg"></div>
+  <div class="mock-note">ドロップ演出モック(本体には未実装)</div>
+
+  <div class="enemy-row" id="enemyRow">
+    <div class="enemy-card" data-mat="tetsu" data-matname="鉄">
+      <img src="assets/enemies/oni.png" alt=""><div class="ename">鬼</div><div class="hpbar"><i></i></div>
+    </div>
+    <div class="enemy-card" data-mat="kawa" data-matname="皮">
+      <img src="assets/enemies/dokuhebi.png" alt=""><div class="ename">毒蛇</div><div class="hpbar"><i></i></div>
+    </div>
+    <div class="enemy-card" data-mat="hone" data-matname="骨">
+      <img src="assets/enemies/gaikotsu_musha.png" alt=""><div class="ename">骸骨武者</div><div class="hpbar"><i></i></div>
+    </div>
+  </div>
+
+  <div class="party-bar">
+    <div class="pcard"><img src="assets/class_samurai.png" alt=""><div class="pname">侍</div><div class="bar hp"><i></i></div><div class="bar mp"><i></i></div></div>
+    <div class="pcard"><img src="assets/class_onmyoji.png" alt=""><div class="pname">陰陽師</div><div class="bar hp"><i></i></div><div class="bar mp"><i></i></div></div>
+    <div class="pcard"><img src="assets/class_hunter.png" alt=""><div class="pname">狩人</div><div class="bar hp"><i></i></div><div class="bar mp"><i></i></div></div>
+  </div>
+
+  <div class="pouch" id="pouch">
+    <svg viewBox="0 0 48 48">
+      <path d="M24 10 C14 10 8 20 8 30 C8 40 15 44 24 44 C33 44 40 40 40 30 C40 20 34 10 24 10 Z" fill="#8a5a30" stroke="#4b3020" stroke-width="2"/>
+      <path d="M17 11 C17 6 31 6 31 11 C31 15 17 15 17 11 Z" fill="#6e441f" stroke="#4b3020" stroke-width="2"/>
+      <path d="M14 13 C20 17 28 17 34 13" fill="none" stroke="#d9c49a" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="24" cy="30" r="6" fill="none" stroke="rgba(217,196,154,0.55)" stroke-width="1.5"/>
+      <text x="24" y="34" font-size="9" text-anchor="middle" fill="rgba(217,196,154,0.8)">袋</text>
+    </svg>
+    <div class="count" id="pouchCount">0</div>
+  </div>
+
+  <div class="battle-log" id="log">
+    <div class="dim">陰陽師の攻撃！ 鬼に 24 のダメージ！</div>
+    <div class="dim">狩人の攻撃！ 毒蛇に 31 のダメージ！</div>
+  </div>
+
+  <div class="victory-overlay" id="victoryOverlay"><div class="victory-text" id="victoryText">勝利！</div></div>
+
+  <div class="loot-overlay" id="lootOverlay">
+    <div class="loot-panel" id="lootPanel"></div>
+  </div>
+
+  <div class="controls">
+    <button id="btnDrop">② 素材ドロップ</button>
+    <button id="btnDropRare">② レアドロップ</button>
+    <button id="btnPanel">③ 戦利品パネル</button>
+    <button id="btnPanelRare">③ パネル(レア入り)</button>
+    <button class="reset" id="btnReset">敵と袋をリセット</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const stage = document.getElementById("stage");
+  const pouch = document.getElementById("pouch");
+  const pouchCount = document.getElementById("pouchCount");
+  const logEl = document.getElementById("log");
+  let bagTotal = 0;
+  let busy = false;
+
+  const MAT_ICON = { kawa: "assets/icons/materials/kawa.png", hone: "assets/icons/materials/hone.png", ki: "assets/icons/materials/ki.png", tetsu: "assets/icons/materials/tetsu.png" };
+
+  function sfx(src, vol) {
+    try { const a = new Audio(src); a.volume = vol == null ? 0.5 : vol; a.play().catch(() => {}); } catch (e) {}
+  }
+  function stageRect() { return stage.getBoundingClientRect(); }
+  function centerOf(el) {
+    const r = el.getBoundingClientRect(), s = stageRect();
+    return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 };
+  }
+  function addLog(text) {
+    const d = document.createElement("div");
+    d.textContent = text;
+    logEl.appendChild(d);
+    while (logEl.children.length > 3) logEl.removeChild(logEl.firstChild);
+  }
+
+  // 巾着をぷるんと揺らす+バッジ更新
+  function pouchGain(n) {
+    bagTotal += n;
+    pouchCount.textContent = bagTotal;
+    pouchCount.classList.add("show");
+    pouch.animate(
+      [ { transform: "rotate(0deg) scale(1)" }, { transform: "rotate(-10deg) scale(1.18)", offset: 0.25 },
+        { transform: "rotate(8deg) scale(1.1)", offset: 0.5 }, { transform: "rotate(-4deg) scale(1.04)", offset: 0.75 },
+        { transform: "rotate(0deg) scale(1)" } ],
+      { duration: 380, easing: "ease-out" });
+    pouchCount.animate([ { transform: "scale(1.6)" }, { transform: "scale(1)" } ], { duration: 250, easing: "ease-out" });
+    sfx("assets/sfx/coin.ogg", 0.45);
+  }
+
+  function gainPop(x, y, text, rare) {
+    const p = document.createElement("div");
+    p.className = "gain-pop" + (rare ? " rare" : "");
+    p.textContent = text;
+    p.style.left = x + "px"; p.style.top = y + "px"; p.style.transform = "translate(-100%, -50%)";
+    stage.appendChild(p);
+    p.animate(
+      [ { opacity: 0, transform: "translate(-100%, -50%) translateY(6px)" },
+        { opacity: 1, transform: "translate(-100%, -50%) translateY(0)", offset: 0.2 },
+        { opacity: 1, transform: "translate(-100%, -50%) translateY(-4px)", offset: 0.75 },
+        { opacity: 0, transform: "translate(-100%, -50%) translateY(-14px)" } ],
+      { duration: 1100, easing: "ease-out" }).onfinish = () => p.remove();
+  }
+
+  function spawnSpark(x, y) {
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = (x - 3) + "px"; s.style.top = (y - 3) + "px";
+    stage.appendChild(s);
+    const dx = (Math.random() - 0.5) * 26, dy = (Math.random() - 0.5) * 26;
+    s.animate(
+      [ { opacity: 1, transform: "translate(0,0) scale(1)" }, { opacity: 0, transform: `translate(${dx}px,${dy}px) scale(0.2)` } ],
+      { duration: 420, easing: "ease-out" }).onfinish = () => s.remove();
+  }
+
+  // ② 敵カードから巾着へ、放物線で飛ばす(外側=X直線、内側=Yを山なりに)
+  function flyItem(fromEl, opts) {
+    const from = centerOf(fromEl);
+    const to = centerOf(pouch);
+    const wrap = document.createElement("div");
+    wrap.className = "fly-x";
+    wrap.style.left = "0px"; wrap.style.top = "0px";
+    const inner = document.createElement("div");
+    inner.className = "fly-y" + (opts.rare ? " rare" : "");
+    if (opts.icon) {
+      const img = document.createElement("img");
+      img.src = opts.icon;
+      inner.appendChild(img);
+    } else {
+      const orb = document.createElement("div");
+      orb.className = "rare-orb"; orb.textContent = "💠";
+      inner.appendChild(orb);
+    }
+    wrap.appendChild(inner);
+    stage.appendChild(wrap);
+
+    const D_POP = 320, D_FLY = 620;
+    // その場にポンと出る(ちょい浮き)
+    wrap.animate([{ transform: `translate(${from.x - 17}px, ${from.y - 17}px)` }], { duration: D_POP + D_FLY, fill: "forwards" });
+    inner.animate(
+      [ { transform: "translateY(0) scale(0)", opacity: 0 },
+        { transform: "translateY(-16px) scale(1.25)", opacity: 1, offset: 0.6 },
+        { transform: "translateY(-10px) scale(1)", opacity: 1 } ],
+      { duration: D_POP, easing: "ease-out", fill: "forwards" });
+
+    setTimeout(() => {
+      // 飛翔: Xは等速、Yは一度浮き上がってから落ちる=放物線
+      wrap.animate(
+        [ { transform: `translate(${from.x - 17}px, ${from.y - 17}px)` },
+          { transform: `translate(${to.x - 17}px, ${to.y - 17}px)` } ],
+        { duration: D_FLY, easing: "linear", fill: "forwards" });
+      inner.animate(
+        [ { transform: "translateY(-10px) scale(1)" },
+          { transform: "translateY(-46px) scale(0.95)", offset: 0.45 },
+          { transform: "translateY(0) scale(0.5)" } ],
+        { duration: D_FLY, easing: "ease-in", fill: "forwards" });
+      if (opts.rare) {
+        // レアは金の火花を尾のように残す
+        const trail = setInterval(() => {
+          const r = wrap.getBoundingClientRect(), s = stageRect();
+          spawnSpark(r.left - s.left + 17, r.top - s.top + 17 + (inner.getBoundingClientRect().top - r.top));
+        }, 50);
+        setTimeout(() => clearInterval(trail), D_FLY);
+      }
+      setTimeout(() => {
+        wrap.remove();
+        const pc = centerOf(pouch);
+        for (let i = 0; i < (opts.rare ? 10 : 4); i++) spawnSpark(pc.x, pc.y);
+        pouchGain(1);
+        gainPop(pc.x - 34, pc.y - 6, opts.popText, opts.rare);
+        if (opts.onDone) opts.onDone();
+      }, D_FLY);
+    }, D_POP);
+  }
+
+  function killEnemy(card) {
+    card.classList.add("dead");
+    card.animate(
+      [ { opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(0.85) translateY(6px)" } ],
+      { duration: 450, easing: "ease-out", fill: "forwards" });
+  }
+  function nextAliveEnemy() { return document.querySelector(".enemy-card:not(.dead)"); }
+
+  document.getElementById("btnDrop").addEventListener("click", () => {
+    if (busy) return;
+    const card = nextAliveEnemy();
+    if (!card) { addLog("(敵がいません。リセットしてください)"); return; }
+    busy = true;
+    const name = card.querySelector(".ename").textContent;
+    killEnemy(card);
+    addLog(`${name}を倒した！`);
+    setTimeout(() => {
+      flyItem(card, { icon: MAT_ICON[card.dataset.mat], popText: `+${card.dataset.matname}`, onDone: () => { busy = false; } });
+    }, 250);
+  });
+
+  document.getElementById("btnDropRare").addEventListener("click", () => {
+    if (busy) return;
+    const card = nextAliveEnemy();
+    if (!card) { addLog("(敵がいません。リセットしてください)"); return; }
+    busy = true;
+    const name = card.querySelector(".ename").textContent;
+    killEnemy(card);
+    addLog(`${name}を倒した！`);
+    setTimeout(() => {
+      flyItem(card, { rare: true, popText: "+魂の塊", onDone: () => { busy = false; } });
+    }, 250);
+  });
+
+  // ③ 勝利バナー→戦利品パネル
+  const victoryOverlay = document.getElementById("victoryOverlay");
+  const lootOverlay = document.getElementById("lootOverlay");
+  const lootPanel = document.getElementById("lootPanel");
+
+  function lootCardHtml(icon, name, count, rare) {
+    if (rare) {
+      return `<div class="loot-card rare"><span class="rare-badge">レア</span><span class="orb">💠</span><div class="lname">${name}</div><div class="lcount">×${count}</div></div>`;
+    }
+    return `<div class="loot-card"><img src="${icon}" alt=""><div class="lname">${name}</div><div class="lcount">×${count}</div></div>`;
+  }
+
+  function showLootPanel(withRare) {
+    if (busy) return;
+    busy = true;
+    victoryOverlay.style.display = "flex";
+    sfx("assets/sfx/result.mp3", 0.5);
+    const vt = document.getElementById("victoryText");
+    vt.animate(
+      [ { opacity: 0, transform: "scale(1.5)" }, { opacity: 1, transform: "scale(0.94)", offset: 0.35 },
+        { transform: "scale(1.03)", offset: 0.5 }, { opacity: 1, transform: "scale(1)" } ],
+      { duration: 550, easing: "cubic-bezier(0.2,0.9,0.3,1)", fill: "forwards" });
+
+    setTimeout(() => {
+      victoryOverlay.style.display = "none";
+      const cards = [
+        lootCardHtml(MAT_ICON.kawa, "皮", 2, false),
+        lootCardHtml(MAT_ICON.tetsu, "鉄", 1, false),
+      ];
+      if (withRare) cards.push(lootCardHtml(null, "魂の塊", 1, true));
+      lootPanel.innerHTML = `
+        <div class="loot-title">戦利品</div>
+        <div class="loot-sub">— 深淵の森・三層 —</div>
+        <div class="loot-gold"><img src="assets/icons/materials/coin.png" alt="">+36G</div>
+        <div class="loot-grid">${cards.join("")}</div>
+        <div class="loot-tap">タップで閉じる</div>`;
+      lootOverlay.style.display = "flex";
+      lootPanel.animate(
+        [ { opacity: 0, transform: "translateY(14px) scale(0.96)" }, { opacity: 1, transform: "translateY(0) scale(1)" } ],
+        { duration: 300, easing: "ease-out", fill: "forwards" });
+      // 戦利品カードを時間差でふわっと出す(result.cssのreveal-inと同じ思想)
+      const cardEls = lootPanel.querySelectorAll(".loot-card, .loot-gold");
+      cardEls.forEach((el, i) => {
+        el.animate(
+          [ { opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "translateY(0)" } ],
+          { duration: 280, delay: 150 + i * 130, easing: "ease-out", fill: "backwards" });
+        if (el.classList.contains("loot-card")) {
+          setTimeout(() => sfx("assets/sfx/coin.ogg", 0.35), 150 + i * 130);
+        }
+      });
+      // レアカードのシャイン(::afterを横切らせる)+登場時に強めの光
+      const rare = lootPanel.querySelector(".loot-card.rare");
+      if (rare) {
+        setTimeout(() => {
+          const rc = centerOf(rare);
+          for (let i = 0; i < 12; i++) spawnSpark(rc.x, rc.y);
+          rare.animate(
+            [ { boxShadow: "0 0 24px rgba(255,190,60,0.95), inset 0 0 18px rgba(255,214,102,0.4)" },
+              { boxShadow: "0 0 10px rgba(255,190,60,0.45), inset 0 0 12px rgba(255,214,102,0.15)" } ],
+            { duration: 900, easing: "ease-out" });
+        }, 150 + (cardEls.length - 1) * 130 + 150);
+        // シャインは繰り返し(疑似要素はWAAPI非対応のためCSS変数でなくanimateをパネル側で代用不可→
+        // ここではシンプルにクローンの光帯をJSで走らせる)
+        const shineLoop = setInterval(() => {
+          if (lootOverlay.style.display === "none") { clearInterval(shineLoop); return; }
+          const band = document.createElement("div");
+          band.style.cssText = "position:absolute;top:-30%;bottom:-30%;width:26px;background:linear-gradient(100deg,transparent,rgba(255,240,190,0.5),transparent);transform:rotate(18deg);left:-40px;pointer-events:none;";
+          rare.appendChild(band);
+          band.animate([ { left: "-40px" }, { left: "130%" } ], { duration: 700, easing: "ease-in-out" }).onfinish = () => band.remove();
+        }, 2200);
+      }
+      busy = false;
+    }, 1100);
+  }
+
+  lootOverlay.addEventListener("click", () => { lootOverlay.style.display = "none"; });
+  document.getElementById("btnPanel").addEventListener("click", () => showLootPanel(false));
+  document.getElementById("btnPanelRare").addEventListener("click", () => showLootPanel(true));
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    bagTotal = 0; busy = false;
+    pouchCount.textContent = "0"; pouchCount.classList.remove("show");
+    document.querySelectorAll(".enemy-card").forEach((c) => {
+      c.classList.remove("dead");
+      c.getAnimations().forEach((a) => a.cancel());
+    });
+    addLog("(リセットしました)");
+  });
+})();
+</script>
+</body>
+</html>
