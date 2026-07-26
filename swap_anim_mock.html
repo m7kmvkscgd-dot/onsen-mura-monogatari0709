@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>交代アニメーション モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #14161c url() ;
+    background: linear-gradient(180deg, #1a1d26 0%, #12141a 100%);
+    color: #e8e4da;
+    font-family: -apple-system, "Hiragino Sans", sans-serif;
+    min-height: 100vh;
+    padding: 1rem 1rem 3rem;
+  }
+  h1 { font-size: 1.05rem; margin-bottom: 0.3rem; }
+  .note { font-size: 0.75rem; color: #9a958a; margin-bottom: 1.2rem; line-height: 1.5; }
+  .demo-block {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+  .demo-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.15rem; }
+  .demo-desc { font-size: 0.72rem; color: #9a958a; margin-bottom: 0.7rem; line-height: 1.5; }
+  /* ゲームの味方バー風の並び(3枚) */
+  .mock-bar { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 0.8rem; }
+  .mock-card {
+    width: 88px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    padding: 0.35rem 0.3rem 0.4rem;
+    text-align: center;
+    position: relative;
+    overflow: visible;
+  }
+  .mock-card.stage { overflow: hidden; } /* 演出対象カードはカード内で動きを完結させる */
+  .portrait-wrap { position: relative; height: 74px; }
+  .portrait-wrap img {
+    width: 100%; height: 74px; object-fit: contain;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.55));
+  }
+  .hpbar { height: 6px; background: #3a2c2c; border-radius: 4px; margin-top: 0.3rem; overflow: hidden; }
+  .hpbar > div { height: 100%; width: 78%; background: linear-gradient(90deg, #4caf6d, #7fd98f); }
+  .mpbar { height: 4px; background: #26303f; border-radius: 4px; margin-top: 0.2rem; overflow: hidden; }
+  .mpbar > div { height: 100%; width: 55%; background: linear-gradient(90deg, #3d7bd9, #6aa8f0); }
+  .nm { font-size: 0.68rem; margin-top: 0.25rem; }
+  button.play {
+    display: block; width: 100%;
+    background: linear-gradient(180deg, #4a3a22, #37290f);
+    border: 1px solid #8a6a30;
+    color: #ffdf9a;
+    font-size: 0.9rem; font-weight: 700;
+    padding: 0.6rem; border-radius: 10px;
+    touch-action: manipulation;
+  }
+  button.play:active { transform: translateY(1px); }
+  /* 土埃(タッグ走り込み用) */
+  .dust {
+    position: absolute; bottom: 6px; width: 10px; height: 10px;
+    background: radial-gradient(circle, rgba(214,203,178,0.9) 0%, rgba(214,203,178,0) 70%);
+    border-radius: 50%; opacity: 0; pointer-events: none;
+  }
+  /* 幕(幕引き用) */
+  .curtain {
+    position: absolute; top: -6%; bottom: -6%; width: 60%;
+    left: 0;
+    background: linear-gradient(105deg, rgba(240,235,222,0) 0%, rgba(240,235,222,0.97) 18%, #f4efe2 50%, rgba(240,235,222,0.97) 82%, rgba(240,235,222,0) 100%);
+    transform: translateX(-140%) skewX(-8deg);
+    pointer-events: none;
+    box-shadow: 0 0 14px rgba(0,0,0,0.35);
+  }
+  /* 名前バナー(共通の登場一言。全案に付けて比較しやすく) */
+  .in-banner {
+    position: absolute; left: 50%; top: -14px;
+    transform: translateX(-50%) scale(0);
+    background: #b3402f; color: #fff;
+    font-size: 0.62rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    white-space: nowrap; pointer-events: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+  <h1>交代アニメーション モック(3案)</h1>
+  <p class="note">真ん中のカードが交代する。ボタンを押すたびに 侍⇄僧侶 が入れ替わって再生される。実装時は「交代する」確定→この演出→即行動、の流れに入る想定。</p>
+
+  <div class="demo-block">
+    <div class="demo-title">案1: タッグ走り込み</div>
+    <div class="demo-desc">下がるキャラが画面端へダッシュ→一拍→控えが反対側から走り込んでズサッと止まる(土埃付き)。勢い重視。約0.65秒。</div>
+    <div class="mock-bar">
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_ninja.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">忍者</div></div>
+      <div class="mock-card stage" id="stage1">
+        <div class="portrait-wrap"><img id="img1" src="assets/class_samurai.png"></div>
+        <div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm" id="nm1">侍</div>
+        <span class="in-banner" id="bn1">参上!</span>
+      </div>
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_hunter.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">狩人</div></div>
+    </div>
+    <button class="play" onclick="playDash()">▶ 再生</button>
+  </div>
+
+  <div class="demo-block">
+    <div class="demo-title">案2: 上下スライド</div>
+    <div class="demo-desc">下がるキャラがスッと下に沈んでフェード→控えが下からせり上がって最後にプルッと弾む。上品・最短。約0.5秒。</div>
+    <div class="mock-bar">
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_ninja.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">忍者</div></div>
+      <div class="mock-card stage" id="stage2">
+        <div class="portrait-wrap"><img id="img2" src="assets/class_samurai.png"></div>
+        <div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm" id="nm2">侍</div>
+        <span class="in-banner" id="bn2">参上!</span>
+      </div>
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_hunter.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">狩人</div></div>
+    </div>
+    <button class="play" onclick="playSlide()">▶ 再生</button>
+  </div>
+
+  <div class="demo-block">
+    <div class="demo-title">案3: 幕引き(早替わり)</div>
+    <div class="demo-desc">白い幕がカードを横切り、通り過ぎた跡にはもう控えが立っている。歌舞伎の早替わり風。約0.45秒。</div>
+    <div class="mock-bar">
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_ninja.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">忍者</div></div>
+      <div class="mock-card stage" id="stage3">
+        <div class="portrait-wrap"><img id="img3" src="assets/class_samurai.png"></div>
+        <div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm" id="nm3">侍</div>
+        <div class="curtain" id="curtain3"></div>
+        <span class="in-banner" id="bn3">参上!</span>
+      </div>
+      <div class="mock-card"><div class="portrait-wrap"><img src="assets/class_hunter.png"></div><div class="hpbar"><div></div></div><div class="mpbar"><div></div></div><div class="nm">狩人</div></div>
+    </div>
+    <button class="play" onclick="playCurtain()">▶ 再生</button>
+  </div>
+
+<script>
+  const A = { src: "assets/class_samurai.png", name: "侍" };
+  const B = { src: "assets/class_priest.png", name: "僧侶" };
+  const cur = { 1: "A", 2: "A", 3: "A" };
+  const busy = { 1: false, 2: false, 3: false };
+  function nextChar(i) {
+    cur[i] = cur[i] === "A" ? "B" : "A";
+    return cur[i] === "A" ? A : B;
+  }
+  function setChar(i, ch) {
+    document.getElementById("img" + i).src = ch.src;
+    document.getElementById("nm" + i).textContent = ch.name;
+  }
+  function popBanner(i, name) {
+    const bn = document.getElementById("bn" + i);
+    bn.textContent = name + "、参上!";
+    bn.animate([
+      { transform: "translateX(-50%) scale(0)", opacity: 1 },
+      { transform: "translateX(-50%) scale(1.15)", opacity: 1, offset: 0.25 },
+      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.35 },
+      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.8 },
+      { transform: "translateX(-50%) scale(0.9)", opacity: 0 },
+    ], { duration: 900, easing: "ease-out" });
+  }
+
+  // 案1: タッグ走り込み
+  function playDash() {
+    if (busy[1]) return; busy[1] = true;
+    const img = document.getElementById("img1");
+    const stage = document.getElementById("stage1");
+    const incoming = nextChar(1);
+    // 退場: 右へダッシュ(前傾)
+    const out = img.animate([
+      { transform: "translateX(0) rotate(0deg)", opacity: 1 },
+      { transform: "translateX(12px) rotate(4deg)", opacity: 1, offset: 0.3 },
+      { transform: "translateX(130px) rotate(8deg)", opacity: 0.9 },
+    ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "forwards" });
+    out.onfinish = () => {
+      setTimeout(() => {
+        setChar(1, incoming);
+        // 登場: 右から走り込んでズサッ(行き過ぎて戻るスキール)
+        const inAnim = img.animate([
+          { transform: "translateX(130px) rotate(-8deg)" },
+          { transform: "translateX(-8px) rotate(-3deg)", offset: 0.7 },
+          { transform: "translateX(3px) rotate(0deg)", offset: 0.88 },
+          { transform: "translateX(0) rotate(0deg)" },
+        ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
+        // 土埃: 着地点に3つ
+        [0, 1, 2].forEach((k) => {
+          const d = document.createElement("div");
+          d.className = "dust";
+          d.style.left = (30 + k * 16) + "px";
+          stage.appendChild(d);
+          d.animate([
+            { transform: "translate(0,0) scale(0.6)", opacity: 0 },
+            { transform: `translate(${8 + k * 4}px,-${6 + k * 3}px) scale(${1.3 + k * 0.3})`, opacity: 0.8, offset: 0.4 },
+            { transform: `translate(${14 + k * 6}px,-${10 + k * 4}px) scale(${1.8 + k * 0.3})`, opacity: 0 },
+          ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
+        });
+        inAnim.onfinish = () => { popBanner(1, incoming.name); busy[1] = false; };
+      }, 100);
+    };
+  }
+
+  // 案2: 上下スライド
+  function playSlide() {
+    if (busy[2]) return; busy[2] = true;
+    const img = document.getElementById("img2");
+    const incoming = nextChar(2);
+    const out = img.animate([
+      { transform: "translateY(0)", opacity: 1 },
+      { transform: "translateY(30px)", opacity: 0 },
+    ], { duration: 200, easing: "cubic-bezier(0.5, 0, 0.8, 0.6)", fill: "forwards" });
+    out.onfinish = () => {
+      setChar(2, incoming);
+      const inAnim = img.animate([
+        { transform: "translateY(40px)", opacity: 0 },
+        { transform: "translateY(-4px)", opacity: 1, offset: 0.75 },
+        { transform: "translateY(0) scale(1.05)", offset: 0.88 },
+        { transform: "translateY(0) scale(1)" },
+      ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
+      inAnim.onfinish = () => { popBanner(2, incoming.name); busy[2] = false; };
+    };
+  }
+
+  // 案3: 幕引き
+  function playCurtain() {
+    if (busy[3]) return; busy[3] = true;
+    const img = document.getElementById("img3");
+    const curtain = document.getElementById("curtain3");
+    const incoming = nextChar(3);
+    const sweep = curtain.animate([
+      { transform: "translateX(-140%) skewX(-8deg)" },
+      { transform: "translateX(300%) skewX(-8deg)" },
+    ], { duration: 450, easing: "cubic-bezier(0.45, 0, 0.3, 1)" });
+    // 幕がカード中央を覆った瞬間(約45%)に入れ替える
+    setTimeout(() => { setChar(3, incoming); }, 200);
+    sweep.onfinish = () => { popBanner(3, incoming.name); busy[3] = false; };
+  }
+</script>
+</body>
+</html>
