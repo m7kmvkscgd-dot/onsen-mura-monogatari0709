@@ -158,9 +158,30 @@
   let memberCount = 3;
   let genToken = 0; // リプレイ連打対策(古いタイマーの演出を無効化)
 
+  // SE再生: 本体audio.jsのplaySfxと同じ「起動時にfetch+decodeAudioDataで事前デコード→
+  // 再生ごとにAudioBufferSourceNodeを使い捨て生成」方式。毎回new Audio(src)する旧方式は
+  // iOS Safariで再生遅延(音ズレ)+タップ外で生成した音が鳴らない問題があった(実機で発覚)
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const sfxCtx = AC ? new AC() : null;
+  const sfxBuffers = {};
+  ["assets/sfx/result.mp3", "assets/sfx/coin.ogg", "assets/sfx/quest_accept.mp3",
+   "assets/sfx/loot_item.mp3", "assets/sfx/loot_rare.mp3"].forEach((url) => {
+    if (!sfxCtx) return;
+    fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d))
+      .then((b) => { sfxBuffers[url] = b; }).catch(() => {});
+  });
   function sfx(src, vol) {
-    try { const a = new Audio(src); a.volume = vol == null ? 0.5 : vol; a.play().catch(() => {}); } catch (e) {}
+    if (!sfxCtx || !sfxBuffers[src]) return;
+    if (sfxCtx.state === "suspended") sfxCtx.resume();
+    const s = sfxCtx.createBufferSource();
+    s.buffer = sfxBuffers[src];
+    const g = sfxCtx.createGain();
+    g.gain.value = vol == null ? 0.5 : vol;
+    s.connect(g).connect(sfxCtx.destination);
+    s.start();
   }
+  // iOSはユーザー操作までAudioContextがsuspendedのままなので、最初のタッチで解錠しておく
+  document.addEventListener("touchstart", () => { if (sfxCtx && sfxCtx.state === "suspended") sfxCtx.resume(); }, { passive: true });
 
   function buildXpList() {
     const list = document.getElementById("xpList");

@@ -248,9 +248,27 @@
 
   const MAT_ICON = { kawa: "assets/icons/materials/kawa.png", hone: "assets/icons/materials/hone.png", ki: "assets/icons/materials/ki.png", tetsu: "assets/icons/materials/tetsu.png" };
 
+  // SE再生: 本体audio.jsのplaySfxと同じ事前デコード+AudioBufferSourceNode方式
+  // (毎回new Audio(src)する旧方式はiOS Safariで音ズレ+タイマー内生成分が鳴らない。実機で発覚)
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const sfxCtx = AC ? new AC() : null;
+  const sfxBuffers = {};
+  ["assets/sfx/coin.ogg", "assets/sfx/result.mp3"].forEach((url) => {
+    if (!sfxCtx) return;
+    fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d))
+      .then((b) => { sfxBuffers[url] = b; }).catch(() => {});
+  });
   function sfx(src, vol) {
-    try { const a = new Audio(src); a.volume = vol == null ? 0.5 : vol; a.play().catch(() => {}); } catch (e) {}
+    if (!sfxCtx || !sfxBuffers[src]) return;
+    if (sfxCtx.state === "suspended") sfxCtx.resume();
+    const s = sfxCtx.createBufferSource();
+    s.buffer = sfxBuffers[src];
+    const g = sfxCtx.createGain();
+    g.gain.value = vol == null ? 0.5 : vol;
+    s.connect(g).connect(sfxCtx.destination);
+    s.start();
   }
+  document.addEventListener("touchstart", () => { if (sfxCtx && sfxCtx.state === "suspended") sfxCtx.resume(); }, { passive: true });
   function stageRect() { return stage.getBoundingClientRect(); }
   function centerOf(el) {
     const r = el.getBoundingClientRect(), s = stageRect();
