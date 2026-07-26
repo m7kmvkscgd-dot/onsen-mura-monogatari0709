@@ -479,13 +479,12 @@ function findVisibleCard(targetId) {
 // 一切使わず、transformのtranslate/scaleとopacityだけで構成する: ①白フラッシュ(40ms)
 // ②攻撃側(=常に画面下の味方側)から押し返されたようにわずかに上へ(8px)+わずかに縮み(scale0.95)+
 // 半透明化(opacity0.4)する(180ms) ③そのまま自然にopacity0までフェードアウトして消える(250ms)。
-// renderBattleScreen()は.enemy-cardを毎回innerHTML総取っ替えで作り直すため、カード自身の上で
-// このアニメーションを再生すると、演出の途中で別の理由の再描画(多段ヒットの次の1発、HPバー更新等)
-// が挟まった瞬間に演出が切れてしまう(hit-shakeで実際に踏んだ地雷と同じ構造の問題)。この演出は
-// 470ms前後とhit-shakeより長く、複数体同時撃破(AOE)では再描画の頻度も上がるため影響を受けやすい。
-// そのためカードの見た目をクローンしてbody直下へ独立させ、Web Animations API(element.animate())で
-// 再生する(hawk projectileと同じ回避パターン)。元のカードは.defeat-hidden(visibility:hidden)で
-// 見た目だけ消し、レイアウト上の幅(=他の敵の並び)は演出が終わるまでそのまま確保しておく
+// カードの見た目をクローンしてbody直下へ独立させ、Web Animations API(element.animate())で再生する
+// (hawk projectileと同じパターン)。元は「innerHTML総取っ替えの再描画で演出が切れる」対策だったが、
+// 差分更新化(2026-07-26)後もクローン方式を存続させている(引き継ぎ文書フェーズ5の「残してもよい」枠。
+// body直下で再生するためカードのスタッキングコンテキストや後続のクラス変更の影響を一切受けない利点が
+// ある)。元のカードは.defeat-hidden(visibility:hidden)で見た目だけ消し、レイアウト上の幅(=他の敵の
+// 並び)は演出が終わるまでそのまま確保しておく
 const ENEMY_DEFEAT_FLASH_MS = 40;
 const ENEMY_DEFEAT_PUSH_MS = 180;
 const ENEMY_DEFEAT_FADE_MS = 250;
@@ -606,10 +605,11 @@ function renderVfxFor(targetId) {
       pop.textContent = entity.__popupText;
       pop.dataset.popupAt = String(entity.__popupAt);
       const elapsed = Date.now() - entity.__popupAt;
-      // カード自体がrenderBattleScreen()の再構築(innerHTML=""での作り直し)で差し替わり、
-      // 表示中のポップアップごと消えてしまうことがある。その場合でも見た目上は同じ1回のポップアップに
-      // 見えるよう、経過時間分だけ負のanimation-delayでアニメーションを巻き戻して途中から再開させる
-      // (これをしないと、作り直しのたびにアニメーションが最初から再生され「2回表示された」ように見える)
+      // 差分更新化(2026-07-26)以降、戦闘中の再描画でポップが消えることは無くなったが、
+      // 表示中に画面が切り替わる(戦闘→探索/野営など)と、findVisibleCardが別のバーのカードを
+      // 指すようになりポップを作り直す経路が今も正当に残っている。その場合でも見た目上は同じ
+      // 1回のポップアップに見えるよう、経過時間分だけ負のanimation-delayで巻き戻して途中から
+      // 再開させる(フェーズ5で撤去検討の結果、画面跨ぎの継続機構として存続させると判断)
       pop.style.animationDelay = `-${elapsed}ms`;
       el.appendChild(pop);
       const remaining = POPUP_DISPLAY_MS - elapsed;
@@ -881,12 +881,10 @@ function maybeSpeakOnFloorAdvance() {
   }
 }
 // entity(キャラ/敵オブジェクト)の__shakeUntilを見て、まだ揺れる時間内ならクラス名を返す。
-// __shakeUntilの猶予(400ms)は揺れ本体のCSSアニメーション(144〜216ms)より長いため、アニメーション自体は
-// もう終わっているのにまだ「揺れ中判定」の期間が残っていることがある。この期間中にコマンドボタン押下等で
-// renderBattleScreen()が再実行されると、.enemy-card/.party-memberはinnerHTML総取っ替えで新しいDOM要素に
-// 作り直されるため、同じshakeクラスが付いた新要素にCSSアニメーションが最初から再生され、
-// 「コマンドを押すたびにイラストがちかちかする」ように見える不具合があった。1回の被弾(=__shakeUntilの値)
-// につき最初の描画だけクラスを付与し、以降の再描画では付けないようにして再生を1回きりにする
+// 1回の被弾(=__shakeUntilの値)につき最初の描画だけクラス名を返し、以降の再描画では空文字を返す。
+// このガードが無いと、揺れ中判定の期間(400ms、揺れ本体の144〜216msより長い)にコマンドボタン押下等で
+// 再描画が走るたび、呼び出し側(updateEnemyCard/updatePartyMemberCard)の「剥がして付け直す」再発火
+// 処理が毎回実行され、イラストがちかちかして見える(差分更新化後もこのガードは現役で必要)
 function shakeClassFor(entity) {
   if (!entity.__shakeUntil || entity.__shakeUntil <= Date.now()) return "";
   if (entity.__shakeRenderedFor === entity.__shakeUntil) return "";
