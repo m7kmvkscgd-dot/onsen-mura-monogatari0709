@@ -239,7 +239,12 @@ function loadState() {
 
 // __allies/__enemyAllies(かばう連携/貫き矢がengine.js側から他の味方/敵を参照するための自己参照。
 // fieldParty自身を指すため循環参照になる)はJSON.stringifyできないので、保存対象から除外する
+// 開発用テストモード(title.js startTestMode)中はtrue。この間はセーブを一切書き込まない
+// (テストプレイが本物のセーブデータ(SAVE_KEY)を上書き・破壊しないようにするための保護。
+// テストモードの終了は常にlocation.reload()なので、リロード後は実セーブがそのまま生きている)
+let testModeActive = false;
 function saveState() {
+  if (testModeActive) return; // テストモード中は何も書き込まない
   // 遠征中ならスナップショットをstate.expeditionへ反映してから保存する(リロード再開用。
   // dungeon.js読み込み前にsaveStateが呼ばれる可能性に備えてtypeofで存在確認する)
   if (typeof collectExpeditionSnapshot === "function") collectExpeditionSnapshot();

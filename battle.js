@@ -2351,6 +2351,8 @@ function defeat() {
     bgmPositions.town = 0; // 里に帰るたびに町の曲を続きからではなく最初から再生する
     playDefeatBanner(() => {
       renderResultScreen(() => {
+        // テストモード(title.js)なら全滅=そのままタイトルへ(ゲームオーバー画面は経由しない)
+        if (testModeActive) { location.reload(); return; }
         renderTown();
       }, true);
     });

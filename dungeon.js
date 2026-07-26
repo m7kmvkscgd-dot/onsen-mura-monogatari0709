@@ -1006,6 +1006,9 @@ function finishRetreat() {
   // バナー以降(タップでリザルトへ)の流れは従来と同じ
   playHomecomingSequence(() => {
     renderResultScreen(() => {
+      // テストモード(title.js)の遠征はここで終了: 町へは行かずリロードでタイトルへ戻る
+      // (テスト中はsaveStateが無効なので、リロード後は実セーブがそのまま復元される)
+      if (testModeActive) { location.reload(); return; }
       renderTown();
     });
   });

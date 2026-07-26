@@ -305,6 +305,23 @@ document.getElementById("titleSettingsBtn").onclick = () => {
   renderSettingsScreen();
 };
 
+// ============ 開発用テストモード(2026-07-27) ============
+// 侍/狩人/陰陽師+控え槍士(全Lv1)の固定パーティで、村を経由せず即・深淵の森へ出発する。
+// 実機での動作確認を1タップで始めるためのもの。テストモード中はsaveState()が無効化される
+// (save.js testModeActive)ため、本物のセーブデータには一切影響しない。帰還・全滅時は
+// location.reload()でタイトルへ戻る(リロードすれば実セーブがそのまま生きている)
+document.getElementById("titleTestBtn").onclick = () => {
+  playSfx("select");
+  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
+  state = defaultState();
+  const specs = [["小太郎", "samurai"], ["弥助", "hunter"], ["静", "onmyoji"], ["権六", "spearman"]];
+  const chars = specs.map(([name, classId]) => createCharacter(name, classId, state.classUpgrades));
+  state.roster.push(...chars);
+  state.activePartyIds = chars.map((c) => c.id); // 4人目(槍士)はenterDungeon()が控えに回す
+  currentStage = "forest";
+  enterDungeon(); // 画面遷移・BGM・遠征トラッカーのリセットまで通常の出発と同じ
+};
+
 // ============ 設定画面 ============
 // 既存のミュート機能(#muteBtn/audio.js)をON/OFFトグルとして見せるだけの最小限の設定画面。
 // (チュートリアル表示トグルは機能ごと削除した、2026-07-18)
