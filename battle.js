@@ -686,42 +686,64 @@ function showSwapConfirmDialog(actor) {
       </div>
     </div>`;
 }
-// 立ち絵のスライド演出用の独立ステージを作る。
-// 当初はカード内の<img>を直接animateしていたが、①立ち絵のCSS背景(グレーの台座)ごと滑る、
-// ②iOS Safari実機でレイヤー合成の影響か動きが画面に反映されない(完了扱いにはなる)、という
-// 2つの問題が出た(ユーザー報告2026-07-26)。そのため撃破リアクション(playEnemyDefeatReaction)と
-// 同じ「body直下にクローンを置いて独立して動かす」方式に変更: 立ち絵の実座標にoverflow:hiddenの
-// 固定ステージ(台座の見た目を再現した箱)を重ね、本物の立ち絵は隠し、ステージ内のクローンを走らせる
+// 常設ステージ(シングルトン)。一連の実機検証で分かったこと:
+// モック(swap_anim_mock.html)がiPhoneで滑らかだったのは「ページ読み込み時から存在し描画済みの
+// 要素」をWAAPI(element.animate=合成スレッド駆動、ProMotionなら120fps)で動かしていたから。
+// 本番で同じWAAPIが全く描画されなかったのは「作りたてのDOMに同時挿入→即animate」だったから。
+// 手動rAF駆動は動きはするがメインスレッド依存で60fps上限+負荷でカクつく(ユーザー報告)。
+// → 結論: ステージを1個だけ作って画面外に常駐させ(=常に描画済みの温まった状態を維持)、
+//    使う時だけ実座標へ移動してWAAPIで動かす。これでモックと同じ条件を本番に再現する
+let swapFxStageSingleton = null;
+function getSwapFxStageSingleton() {
+  if (swapFxStageSingleton && swapFxStageSingleton.box.isConnected) return swapFxStageSingleton;
+  const box = document.createElement("div");
+  box.className = "swap-fx-stage";
+  // display:noneではなく画面外配置で待機する(noneだと表示のたびに「初回描画」からやり直しになり、
+  // 作りたてDOMと同じ描画されない問題を踏み得るため。画面外でも常にレンダリング対象であり続ける)
+  box.style.left = "-2000px";
+  box.style.top = "0px";
+  box.style.width = "80px";
+  box.style.height = "80px";
+  // 動かすのはimgではなくこのmover(div)。置換要素を直接animateするのは避ける
+  const mover = document.createElement("div");
+  mover.className = "swap-fx-mover";
+  const clone = document.createElement("img");
+  clone.className = "swap-fx-sprite";
+  mover.appendChild(clone);
+  box.appendChild(mover);
+  document.body.appendChild(box);
+  swapFxStageSingleton = { box, mover, clone };
+  return swapFxStageSingleton;
+}
 function makePortraitFxStage(card) {
   const img = card ? card.querySelector(".card-portrait-img") : null;
   if (!img || img.tagName !== "IMG") return null; // 式神の絵文字ポートレート等、<img>以外は演出をスキップ
   const rect = img.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
-  const box = document.createElement("div");
-  box.className = "swap-fx-stage";
-  box.style.left = rect.left + "px";
-  box.style.top = rect.top + "px";
-  box.style.width = rect.width + "px";
-  box.style.height = rect.height + "px";
-  // 動かすのはimgではなく、このmover(div)。iOS WebKitでは<img>(置換要素)への%指定transformが
-  // 正しく解決されず「移動量0の実質静止」になる事象が実機で出たため(2026-07-26)、
-  // ①置換要素を直接animateしない ②移動量は%でなく実測pxで渡す、の2点をここで担保する
-  const mover = document.createElement("div");
-  mover.className = "swap-fx-mover";
-  const clone = document.createElement("img");
-  clone.src = img.currentSrc || img.src;
-  clone.className = "swap-fx-sprite";
-  mover.appendChild(clone);
-  box.appendChild(mover);
-  document.body.appendChild(box);
+  const s = getSwapFxStageSingleton();
+  // 前回の演出の残り(アニメーション・transform・土埃)を掃除してから再利用する
+  s.mover.getAnimations().forEach((a) => a.cancel());
+  s.mover.style.transform = "";
+  s.box.querySelectorAll(".swap-dust").forEach((d) => d.remove());
+  s.box.style.left = rect.left + "px";
+  s.box.style.top = rect.top + "px";
+  s.box.style.width = rect.width + "px";
+  s.box.style.height = rect.height + "px";
+  s.clone.src = img.currentSrc || img.src;
   img.style.opacity = "0"; // 本物は演出中隠す(台座の見た目はステージ側が描いている)
-  return { box, mover, clone, img, width: rect.width };
+  return { box: s.box, mover: s.mover, clone: s.clone, img, width: rect.width };
 }
+// 常設ステージを画面外の待機位置へ戻す(removeはしない=描画済みの温まった状態を保つ)
 function removePortraitFxStage(stage) {
   if (!stage) return;
   stage.img.style.opacity = "";
-  stage.box.remove();
+  stage.mover.getAnimations().forEach((a) => a.cancel());
+  stage.mover.style.transform = "";
+  stage.box.querySelectorAll(".swap-dust").forEach((d) => d.remove());
+  stage.box.style.left = "-2000px";
 }
+// 起動時に常設ステージを先に作って描画に乗せておく(初回の交代でも「作りたてDOM」にならないように)
+getSwapFxStageSingleton();
 function performVoluntarySwap(actor) {
   if (battleActionLocked || !battle || (battle.swapCooldown || 0) > 0) return;
   battleActionLocked = true;
@@ -754,11 +776,12 @@ function performVoluntarySwap(actor) {
   };
   if (outStage) {
     const w = outStage.width;
-    runManualTransformAnim(outStage.mover, [
-      { at: 0, x: 0, r: 0 },
-      { at: 0.3, x: w * 0.12, r: 4 },
-      { at: 1, x: w * 1.3, r: 8 },
-    ], 250, cubicBezierEase(0.5, 0, 0.9, 0.6), () => setTimeout(finishSwap, 100)); // 一拍(0.1秒)おいてから走り込み
+    const outAnim = outStage.mover.animate([
+      { transform: "translateX(0) rotate(0deg)" },
+      { transform: `translateX(${Math.round(w * 0.12)}px) rotate(4deg)`, offset: 0.3 },
+      { transform: `translateX(${Math.round(w * 1.3)}px) rotate(8deg)` },
+    ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "both" });
+    outAnim.onfinish = () => setTimeout(finishSwap, 100); // 一拍(0.1秒)おいてから走り込み
   } else {
     finishSwap();
   }
@@ -776,54 +799,6 @@ function waitTwoAnimationFrames() {
       requestAnimationFrame(resolve);
     });
   });
-}
-// cubic-bezier(x1,y1,x2,y2)のイージング関数を返す(ニュートン法5回で十分な精度)。
-// 下のrunManualTransformAnimで使う
-function cubicBezierEase(x1, y1, x2, y2) {
-  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
-  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
-  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
-  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
-  return (x) => {
-    let t = x;
-    for (let i = 0; i < 5; i++) {
-      const err = sampleX(t) - x;
-      const d = (3 * ax * t + 2 * bx) * t + cx;
-      if (Math.abs(err) < 1e-4 || d === 0) break;
-      t -= err / d;
-    }
-    return sampleY(Math.max(0, Math.min(1, t)));
-  };
-}
-// requestAnimationFrameループで毎フレームstyle.transformを直接書き換える手動アニメーション。
-// element.animate()(WAAPI)による移動が、iOS Safari実機で「onfinishは発火するのに途中フレームが
-// 一切描画されない」事象を起こし続けたため(初期style事前適用+decode待ち+rAF二重待ちでも解消せず)、
-// 走り込み/退場の移動はコンポジタのアニメ機構を一切通らないこの方式で駆動する。
-// frames: [{at(0〜1), x(px), r(deg)}...]。イージングはWAAPI同様セグメントごとに適用する
-function runManualTransformAnim(el, frames, duration, ease, onFinish) {
-  const startTime = performance.now();
-  const setAt = (p) => {
-    let seg = frames.length - 2;
-    for (let i = 0; i < frames.length - 1; i++) {
-      if (p <= frames[i + 1].at) { seg = i; break; }
-    }
-    const a = frames[seg];
-    const b = frames[seg + 1];
-    const local = b.at === a.at ? 1 : Math.max(0, Math.min(1, (p - a.at) / (b.at - a.at)));
-    const eased = ease(local);
-    const x = a.x + (b.x - a.x) * eased;
-    const r = a.r + (b.r - a.r) * eased;
-    el.style.transform = `translateX(${x.toFixed(1)}px) rotate(${r.toFixed(2)}deg) translateZ(0)`; // translateZ(0)は合成レイヤー維持用(カクつき対策)
-  };
-  setAt(0);
-  const tick = (now) => {
-    if (!el.isConnected) { if (onFinish) onFinish(); return; }
-    const t = Math.min(1, (now - startTime) / duration);
-    setAt(t);
-    if (t < 1) requestAnimationFrame(tick);
-    else if (onFinish) onFinish();
-  };
-  requestAnimationFrame(tick);
 }
 async function waitForImageDecode(img) {
   if (!img) return;
@@ -879,17 +854,18 @@ async function playSwapRunIn(incoming, onDone) {
       { transform: `translate(${14 + k * 6}px,-${10 + k * 4}px) scale(${1.8 + k * 0.3})`, opacity: 0 },
     ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
   });
-  // 走り込み本体: WAAPIではなく手動rAF駆動(runManualTransformAnim参照)
-  runManualTransformAnim(stage.mover, [
-    { at: 0, x: w * 1.3, r: -8 },
-    { at: 0.7, x: w * -0.07, r: -3 },
-    { at: 0.88, x: w * 0.03, r: 0 },
-    { at: 1, x: 0, r: 0 },
-  ], 300, cubicBezierEase(0.2, 0.8, 0.4, 1), () => {
+  // 走り込み本体: 常設ステージ上のWAAPI(合成スレッド駆動=モックと同じ滑らかさ)
+  const inAnim = stage.mover.animate([
+    { transform: `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)` },
+    { transform: `translateX(${Math.round(w * -0.07)}px) rotate(-3deg)`, offset: 0.7 },
+    { transform: `translateX(${Math.round(w * 0.03)}px) rotate(0deg)`, offset: 0.88 },
+    { transform: "translateX(0) rotate(0deg)" },
+  ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "both" });
+  inAnim.onfinish = () => {
     // 本物の立ち絵は即座に戻す(ステージのクローンが同じ位置に重なっているので切り替わりは見えない)。
-    // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから片付ける
+    // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから待機位置へ戻す
     stage.img.style.opacity = "";
-    setTimeout(() => stage.box.remove(), 420);
+    setTimeout(() => removePortraitFxStage(stage), 420);
     const bn = document.createElement("span");
     bn.className = "swap-in-banner";
     bn.textContent = `${incoming.name}、参上!`;
@@ -903,7 +879,7 @@ async function playSwapRunIn(incoming, onDone) {
     ], { duration: 900, easing: "ease-out" }).onfinish = () => bn.remove();
     battleActionLocked = false;
     onDone();
-  });
+  };
 }
 
 // 変化の術は戦闘終了(勝利/逃走/全滅)では自動解除されない(ユーザー指示により撤廃)。
