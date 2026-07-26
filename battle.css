@@ -300,7 +300,9 @@
      「膨張」と「押し込み」を別々の動きとして貼り合わせると速度の段差が出て不自然、との指摘を受け、
      全体を一つの物理バネの減衰振動として設計。等倍(1.00)を中心に、
        振れ幅 +0.30 → -0.04(0.96) → +0.06(1.06) → 収束
-     と各スイングの振れ幅が約1/3ずつ等比で減衰し、周期もほぼ一定(0.20/0.18/0.16秒)。
+     と各スイングの振れ幅が約1/3ずつ等比で減衰し、周期もほぼ一定(0.17/0.15/0.13秒。
+     当初は0.20/0.18/0.16秒だったが「バネをもう20%増しで早く」の指示で全周期を1.2で割り、
+     浮いた時間は収束後のタメに回した)。
      振動のリズムが一定なので「膨張だけ速い/押し込みだけ速い」という速度の噛み合わない感じが
      原理的に出ない。各極値(キーフレーム)で速度ゼロになるのはバネの物理そのままなので、
      ease-in-out(初撃のみ打ち出しの勢いを表すease-out)で自然につながる。
@@ -308,10 +310,10 @@
      旧仕様は「4回目の動き」が増えるため廃止)。トータル1秒(+後続の一拍0.3秒)は不変 */
   @keyframes encounterCuePop {
     0% { opacity: 0; transform: scale(0.2) rotate(-8deg); animation-timing-function: ease-out; }
-    20% { opacity: 1; transform: scale(1.30) rotate(-8deg); animation-timing-function: ease-in-out; }
-    38% { opacity: 1; transform: scale(0.96) rotate(-8deg); animation-timing-function: ease-in-out; }
-    54% { opacity: 1; transform: scale(1.06) rotate(-8deg); animation-timing-function: ease-in-out; }
-    64% { opacity: 1; transform: scale(1.0) rotate(-8deg); animation-timing-function: linear; }
+    17% { opacity: 1; transform: scale(1.30) rotate(-8deg); animation-timing-function: ease-in-out; }
+    32% { opacity: 1; transform: scale(0.96) rotate(-8deg); animation-timing-function: ease-in-out; }
+    45% { opacity: 1; transform: scale(1.06) rotate(-8deg); animation-timing-function: ease-in-out; }
+    53% { opacity: 1; transform: scale(1.0) rotate(-8deg); animation-timing-function: linear; }
     80% { opacity: 1; transform: scale(1.0) rotate(-8deg); animation-timing-function: ease-out; }
     100% { opacity: 0; transform: scale(1.0) rotate(-8deg); }
   }
