@@ -1144,7 +1144,6 @@ function renderPartyBar(elId, combatants, actingCharId) {
     }
     updatePartyMemberCard(card, c, c.id === actingCharId, isFreshTurn);
     prevCard = card;
-    resumeAttackLungeOnCard(card, c.id); // 進行中の攻撃踏み込みがあれば、途中から再適用(effects.js参照)
   });
   activateHpTrails(bar);
   combatants.forEach((c) => renderVfxFor(c.id));
