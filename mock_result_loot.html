@@ -239,7 +239,8 @@
             { opacity: 1, transform: "translateX(2px) scale(1.15)", offset: 0.7 },
             { opacity: 1, transform: "translateX(0) scale(1)" } ],
           { duration: 240, easing: "ease-out", fill: "forwards" });
-        sfx("assets/sfx/coin.ogg", 0.22);
+        // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)
+        sfx(item.classList.contains("orb") ? "assets/sfx/loot_rare.mp3" : "assets/sfx/loot_item.mp3", 0.5);
         if (item.classList.contains("orb")) {
           item.animate(
             [ { filter: "drop-shadow(0 0 18px rgba(255,190,60,1)) brightness(1.8)" },
