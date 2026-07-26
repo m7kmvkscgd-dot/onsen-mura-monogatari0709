@@ -102,6 +102,47 @@ const ATTACK_VFX_FRAME_MS = 30; // 1フレームあたりの表示時間。フ�
 // ヒットストップ明けにrenderBattleScreen()でカードが作り直された後、続きのフレームから
 // この関数をもう一度呼んで再開する、という2段構えで使う(renderBattleScreen()は敵カードのDOMを
 // 毎回作り直すため、単純に発火を早めただけでは再描画時にVFXが消えてしまうことへの対策)
+// ============ 攻撃VFXのウォームアップ(iOSの出だし欠け・コマ落ち対策、2026-07-26) ============
+// iOS Safariは「作りたてのDOM要素+即アニメーション」の序盤フレームを描画しないことがあり(交代の
+// 走り込みで実証済み、battle.jsの常設ステージ参照)、さらにsrc差し替え式のコマ送りは各フレーム画像の
+// デコードが間に合わないとコマ落ちする(PCとの体感差の正体)。対策は2段:
+// ①起動時に全フレーム画像をImage.decode()で事前デコードしてメモリに保持(コマ落ち対策)
+// ②表示用のimg要素を起動時に作って画面外に常駐させ、使い回す(作りたて要素の描画飲み込み対策)
+const vfxWarmImages = new Map(); // url -> Image(デコード済みビットマップへの参照を保持し続ける)
+function warmUpAttackVfxAssets() {
+  const addSet = (set) => {
+    if (!set) return;
+    Object.values(set).forEach((c) => {
+      if (!c || !c.prefix) return;
+      for (let f = 1; f <= c.frames; f++) {
+        const url = `${c.prefix}${f}.png`;
+        if (vfxWarmImages.has(url)) continue;
+        const im = new Image();
+        im.src = url;
+        if (im.decode) im.decode().catch(() => {});
+        vfxWarmImages.set(url, im);
+      }
+    });
+  };
+  Object.values(CLASS_ATTACK_VFX).forEach(addSet);
+  Object.values(TRANSFORM_ATTACK_VFX).forEach(addSet);
+}
+// 表示用の常駐プール。範囲攻撃で複数同時に出るためVFX_POOL_SIZE個用意し、使う時だけ対象カードの
+// 中央(実測座標)へ移動する。全部使用中の場合だけ従来の使い切り方式にフォールバックする
+const VFX_POOL_SIZE = 6;
+let attackVfxPool = null;
+function getAttackVfxPool() {
+  if (attackVfxPool) return attackVfxPool;
+  attackVfxPool = [];
+  for (let i = 0; i < VFX_POOL_SIZE; i++) {
+    const img = document.createElement("img");
+    img.className = "slash-vfx-pooled";
+    img.src = "assets/vfx/slash_1.png"; // 何かしら表示させて「描画済みの温まった状態」にしておく
+    document.body.appendChild(img);
+    attackVfxPool.push({ img, busy: false });
+  }
+  return attackVfxPool;
+}
 function playAttackVfx(targetId, actor, kind, startFrame) {
   const transformOverride = actor.transformForm && TRANSFORM_ATTACK_VFX[actor.transformForm];
   const cfg = (transformOverride && transformOverride[kind]) || (CLASS_ATTACK_VFX[actor.classId] && CLASS_ATTACK_VFX[actor.classId][kind]);
@@ -110,6 +151,29 @@ function playAttackVfx(targetId, actor, kind, startFrame) {
   if (!el) return;
   let frame = startFrame || 1;
   if (frame > cfg.frames) return; // 続きが無ければ何も出さない(既に最終フレームまで再生済み)
+  const slot = getAttackVfxPool().find((s) => !s.busy);
+  if (slot) {
+    // 常駐プール方式: 対象カードの中央へ移動してコマ送り、終わったら画面外へ戻す
+    slot.busy = true;
+    const img = slot.img;
+    const rect = el.getBoundingClientRect();
+    img.style.width = cfg.size + "px";
+    img.style.left = (rect.left + rect.width / 2) + "px";
+    img.style.top = (rect.top + rect.height / 2) + "px";
+    img.src = `${cfg.prefix}${frame}.png`;
+    const timer = setInterval(() => {
+      frame++;
+      if (frame > cfg.frames) {
+        clearInterval(timer);
+        img.style.left = "-2000px";
+        slot.busy = false;
+        return;
+      }
+      img.src = `${cfg.prefix}${frame}.png`;
+    }, ATTACK_VFX_FRAME_MS);
+    return;
+  }
+  // プール枯渇時のフォールバック(従来の使い切り方式)
   const img = document.createElement("img");
   img.className = "slash-vfx";
   img.style.width = cfg.size + "px";
@@ -1038,3 +1102,8 @@ function playQuestAcceptStamp(title, onDone) {
     }, QUEST_STAMP_TIMINGS.paperScaleMs + QUEST_STAMP_TIMINGS.holdMs);
   });
 }
+
+// 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。
+// iOSの「作りたて要素のアニメ序盤が描画されない」「フレーム画像のデコード遅延でコマ落ちする」対策)
+warmUpAttackVfxAssets();
+getAttackVfxPool();

@@ -185,6 +185,15 @@
     max-width: none; height: auto; pointer-events: none; z-index: 25;
     filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
   }
+  /* 常駐プール版のヒットエフェクト(effects.js getAttackVfxPool)。カード内ではなくbody直下の
+     fixed要素として常駐し、使う時だけ対象カード中央の実測座標へ移動する(iOSの「作りたて要素の
+     アニメーション序盤が描画されない」問題の回避。待機中はleft:-2000pxの画面外) */
+  .slash-vfx-pooled {
+    position: fixed; left: -2000px; top: 0; z-index: 30;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    max-width: none; height: auto; pointer-events: none;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
   /* 狩人「鷹を呼ぶ」の追撃演出: 狩人の位置から対象へ飛んでいく鷹のイラスト(document.bodyに直接追加され、
      element.animate()でtransform:translateを直接動かす。position:fixedなのでgetBoundingClientRectの
      viewport座標をそのまま使える)。旧🦅絵文字(font-size:33px相当)より20%大きい48pxから、さらに15%
