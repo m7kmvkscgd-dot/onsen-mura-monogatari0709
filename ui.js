@@ -652,8 +652,24 @@ function renderResultScreen(onContinue, isDefeat) {
   const stampEl = document.getElementById("resultRankStamp");
   stampEl.classList.remove("stamp-in");
   stampEl.style.display = "none";
-  const xpHeading = document.getElementById("resultXpHeading");
-  xpHeading.classList.remove("reveal-in");
+  // 素材アイコン行(2026-07-27): 今回の冒険で拾った素材を、文字なしで取れた個数ぶん
+  // アイコン実物を左から並べて見せる(ユーザーのマルアップ準拠)。魂の塊はレア枠として
+  // 末尾に金の光をまとって並ぶ。勝利時は1個ずつポンポンと積む演出(下の時間差リビール参照)、
+  // 敗北(撤退)時は祝祭演出を付けず最初から静止表示
+  const matRowEl = document.getElementById("resultMatRow");
+  matRowEl.innerHTML = "";
+  const matIcons = [];
+  MATERIAL_ORDER.forEach((id) => {
+    for (let i = 0; i < (advMaterialGains[id] || 0); i++) matIcons.push({ src: MATERIALS[id].icon, rare: false });
+  });
+  for (let i = 0; i < advSoulLumpGained; i++) matIcons.push({ src: "assets/items/soul_lump.png", rare: true });
+  matIcons.forEach((m) => {
+    const img = document.createElement("img");
+    img.className = "result-mat-item" + (m.rare ? " rare" : "");
+    img.src = m.src;
+    if (!isDefeat) img.style.opacity = "0"; // 勝利時は時間差の演出側で1個ずつ出す
+    matRowEl.appendChild(img);
+  });
   const list = document.getElementById("resultXpList");
   list.innerHTML = "";
   // 経験値リストは実際に遠征へ出たメンバーだけを出す(ユーザー指示2026-07-26: 道場の分け前を
@@ -667,7 +683,6 @@ function renderResultScreen(onContinue, isDefeat) {
   list.classList.toggle("result-xp-grid-2", participants.length > 4);
   const animQueue = []; // 勝利時のバー演出({row, segs})。画面が出てから順次再生する
   participants.forEach((c) => {
-    const c2 = CLASSES[c.classId];
     const gained = advXpGained[c.id] || 0;
     const isMax = c.level >= MAX_LEVEL;
     const need = isMax ? 0 : xpToNext(c.level);
@@ -678,7 +693,7 @@ function renderResultScreen(onContinue, isDefeat) {
     row.className = "card result-xp-row";
     const headerHtml = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;">
-        <strong>${c.name}(${c2.ja})</strong>
+        <strong>${c.name}</strong>
         <span style="font-size:0.8rem;color:var(--accent);">+${gained} XP</span>
       </div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem;">Lv.${c.level}${isMax ? "(MAX)" : ""}</div>
@@ -718,24 +733,54 @@ function renderResultScreen(onContinue, isDefeat) {
   const myToken = ++resultScreenToken; // 町に戻った後に朱印のSEだけ鳴るのを防ぐ世代トークン
   continueBtn.onclick = () => { resultScreenToken++; onContinue(); };
   showScreen("screen-result");
-  // 依頼達成→収穫(カウントアップ)→戦績→経験値(バー演出)→朱印、の順に時間差で見せていく
+  // 素材アイコンが大量でも1行に収まるよう、実測幅から重なり量を詰め直す(リザルトの
+  // 1画面完結=スクロール禁止の維持)。表示直後でないとclientWidthが取れないためここで行う
+  if (matIcons.length > 1) {
+    const avail = matRowEl.clientWidth;
+    const iw = 40; // .result-mat-itemの幅
+    const step = Math.max(6, Math.min(iw - 10, (avail - iw) / (matIcons.length - 1)));
+    matRowEl.querySelectorAll(".result-mat-item").forEach((el, i) => {
+      if (i < matIcons.length - 1) el.style.marginRight = `${Math.floor(step - iw)}px`;
+    });
+  }
+  // 依頼達成→収穫(カウントアップ)→素材アイコンが左から1個ずつ→戦績→経験値(バー演出)→朱印、
+  // の順に時間差で見せていく(素材ゼロの遠征では素材の待ち時間は挟まない)
   goldEl.textContent = isDefeat ? `収穫: +${advGoldEarned}G` : "収穫: +0G";
   setTimeout(() => { if (questCard.style.display !== "none") questCard.classList.add("reveal-in"); }, 80);
   setTimeout(() => {
     goldEl.classList.add("reveal-in");
     if (!isDefeat) animateGoldCount(goldEl, advGoldEarned);
   }, 260);
-  setTimeout(() => { statsEl.classList.add("reveal-in"); }, 430);
+  const hasMatFx = !isDefeat && matIcons.length > 0;
+  const MAT_START = 1150, MAT_STAGGER = 110; // 開始はゴールドのカウントアップが概ね終わる頃
+  if (hasMatFx) {
+    matRowEl.querySelectorAll(".result-mat-item").forEach((el, i) => {
+      setTimeout(() => {
+        if (myToken !== resultScreenToken) return; // もう町に戻っている(音だけ鳴るのを防ぐ)
+        el.animate(
+          [{ opacity: 0, transform: "translateX(-14px) scale(0.5)" }, { opacity: 1, transform: "translateX(2px) scale(1.15)", offset: 0.7 }, { opacity: 1, transform: "translateX(0) scale(1)" }],
+          { duration: 240, easing: "ease-out", fill: "forwards" });
+        playSfx(el.classList.contains("rare") ? "loot_rare" : "loot_item"); // 置く音/風鈴(ユーザー提供SE)
+        if (el.classList.contains("rare")) {
+          el.animate(
+            [{ filter: "drop-shadow(0 0 18px rgba(255,190,60,1)) brightness(1.8)" }, { filter: "drop-shadow(0 0 7px rgba(255,214,102,0.95)) brightness(1)" }],
+            { duration: 800, easing: "ease-out" });
+        }
+      }, MAT_START + i * MAT_STAGGER);
+    });
+  }
+  const statsDelay = hasMatFx ? MAT_START + matIcons.length * MAT_STAGGER + 200 : 430;
+  const xpDelay = statsDelay + 130;
+  setTimeout(() => { statsEl.classList.add("reveal-in"); }, statsDelay);
   setTimeout(() => {
-    xpHeading.classList.add("reveal-in");
     list.querySelectorAll(".result-xp-row").forEach((row, i) => {
       setTimeout(() => row.classList.add("reveal-in"), i * 90);
     });
     animQueue.forEach((q, i) => setTimeout(() => animateXpRow(q.row, q.segs), i * 90 + 280));
-  }, 560);
+  }, xpDelay);
   if (!isDefeat) {
     // 朱印(松/竹/梅)はバー演出が一通り終わる頃にドンと押す
-    const stampDelay = 560 + animQueue.length * 90 + 1600;
+    const stampDelay = xpDelay + animQueue.length * 90 + 1600;
     setTimeout(() => {
       if (myToken !== resultScreenToken) return; // もう町に戻っている
       stampEl.textContent = computeExpeditionRank();

@@ -1089,6 +1089,85 @@ function playQuestAcceptStamp(title, onDone) {
   });
 }
 
+// ============ 素材ドロップ演出(2026-07-27): 勝利時、落ちた素材のアイコンが敵の位置から
+// 巾着袋(ユーザー提供イラスト)へ放物線で飛んで吸い込まれる。テキストログの「素材を手に入れた」の
+// 置き換え(文章量削減のユーザー方針)。呼び出し元はbattle.js victory()。
+// 演出は一回きりの使い捨てDOM(fixedレイヤーを作って終わったら丸ごと除去)で、戦闘UIの
+// 差分更新デザイン(カードDOMの使い回し)には一切触れない。アニメーションは全てelement.animate()
+// (CSS transition+二重rAFはiOSで不発があるため使わない方針)
+function playMaterialDropFx(gains) {
+  const icons = [];
+  MATERIAL_ORDER.forEach((id) => {
+    for (let i = 0; i < (gains[id] || 0); i++) icons.push(MATERIALS[id].icon);
+  });
+  if (icons.length === 0) return;
+  const layer = document.createElement("div");
+  layer.className = "mat-drop-layer";
+  const pouch = document.createElement("div");
+  pouch.className = "mat-drop-pouch";
+  pouch.innerHTML = `<img src="assets/icons/pouch.png" alt=""><div class="mat-drop-count">0</div>`;
+  layer.appendChild(pouch);
+  document.body.appendChild(layer);
+  const countEl = pouch.querySelector(".mat-drop-count");
+  let bagCount = 0;
+  // 座標は全てレイヤー(=480px幅の中央寄せカラム)基準に変換する
+  const layerRect = () => layer.getBoundingClientRect();
+  const originOf = () => {
+    const row = document.querySelector("#screen-battle .enemy-row") || document.querySelector(".enemy-row");
+    const lr = layerRect();
+    if (!row) return { x: lr.width / 2, y: 120 };
+    const r = row.getBoundingClientRect();
+    return { x: r.left - lr.left + r.width / 2, y: r.top - lr.top + r.height / 2 };
+  };
+  pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
+  const D_POP = 220, D_FLY = 500, STAGGER = 170, START = 600; // 勝利SE/ゴールドポップが先に出るよう少し待つ
+  icons.forEach((src, i) => {
+    setTimeout(() => {
+      if (!layer.isConnected) return;
+      const from = originOf();
+      const pr = pouch.getBoundingClientRect(), lr = layerRect();
+      const to = { x: pr.left - lr.left + pr.width / 2, y: pr.top - lr.top + pr.height / 2 };
+      const wrap = document.createElement("div");
+      wrap.className = "mat-drop-flyx";
+      wrap.style.transform = `translate(${from.x - 16}px, ${from.y - 16}px)`;
+      const inner = document.createElement("div");
+      inner.className = "mat-drop-flyy";
+      inner.innerHTML = `<img src="${src}" alt="">`;
+      wrap.appendChild(inner);
+      layer.appendChild(wrap);
+      // その場にポンと出る→放物線(外側=X等速、内側=Yを山なり)で巾着へ
+      inner.animate(
+        [{ transform: "translateY(0) scale(0)", opacity: 0 }, { transform: "translateY(-14px) scale(1.2)", opacity: 1, offset: 0.65 }, { transform: "translateY(-8px) scale(1)", opacity: 1 }],
+        { duration: D_POP, easing: "ease-out", fill: "forwards" });
+      setTimeout(() => {
+        if (!layer.isConnected) return;
+        wrap.animate(
+          [{ transform: `translate(${from.x - 16}px, ${from.y - 16}px)` }, { transform: `translate(${to.x - 16}px, ${to.y - 16}px)` }],
+          { duration: D_FLY, easing: "linear", fill: "forwards" });
+        inner.animate(
+          [{ transform: "translateY(-8px) scale(1)" }, { transform: "translateY(-40px) scale(0.95)", offset: 0.45 }, { transform: "translateY(0) scale(0.45)" }],
+          { duration: D_FLY, easing: "ease-in", fill: "forwards" });
+        setTimeout(() => {
+          wrap.remove();
+          if (!layer.isConnected) return;
+          bagCount++;
+          countEl.textContent = bagCount;
+          countEl.classList.add("show");
+          playSfx("loot_item"); // 置く音(ユーザー提供SE)
+          pouch.animate(
+            [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
+            { duration: 340, easing: "ease-out" });
+        }, D_FLY);
+      }, D_POP);
+    }, START + i * STAGGER);
+  });
+  // 最後の1個が収まってから少し置いてレイヤーごと退場(探索へ戻るのが早くても取り残されない)
+  setTimeout(() => {
+    if (!layer.isConnected) return;
+    layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" }).onfinish = () => layer.remove();
+  }, START + (icons.length - 1) * STAGGER + D_POP + D_FLY + 900);
+}
+
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。
 // iOSの「作りたて要素のアニメ序盤が描画されない」「フレーム画像のデコード遅延でコマ落ちする」対策)
 warmUpAttackVfxAssets();

@@ -2164,15 +2164,22 @@ function victory() {
   if (soulLumpCount > 0) {
     const before = state.inventory.soulLump || 0;
     state.inventory.soulLump = Math.min(SOUL_LUMP_CAP, before + soulLumpCount);
-    if (state.inventory.soulLump > before) blog(`魂の塊を${state.inventory.soulLump - before}個手に入れた！`);
-    else blog("魂の塊を感じたが、これ以上は持てなかった。");
+    if (state.inventory.soulLump > before) {
+      blog(`魂の塊を${state.inventory.soulLump - before}個手に入れた！`);
+      advSoulLumpGained += state.inventory.soulLump - before; // リザルトのレア演出用(上限で弾かれた分は数えない)
+      playSfx("loot_rare"); // レア入手の風鈴(ユーザー提供SE、2026-07-27)
+    } else blog("魂の塊を感じたが、これ以上は持てなかった。");
   }
-  // 素材(皮/骨/木/鉄)の獲得。表示順はMATERIAL_ORDER(=売店の買取カウンターと同じ並び)
-  const materialGainText = MATERIAL_ORDER.filter((id) => materialGains[id]).map((id) => `${MATERIALS[id].ja}×${materialGains[id]}`).join("、");
-  if (materialGainText) {
+  // 素材(皮/骨/木/鉄)の獲得。テキストログには書かず(文章量削減のユーザー方針、2026-07-27)、
+  // 敵の位置から巾着袋へアイコンが飛んで吸い込まれる演出(effects.js playMaterialDropFx)で見せる
+  if (MATERIAL_ORDER.some((id) => materialGains[id])) {
     if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
-    MATERIAL_ORDER.forEach((id) => { if (materialGains[id]) state.materials[id] = (state.materials[id] || 0) + materialGains[id]; });
-    blog(`素材を手に入れた: ${materialGainText}`);
+    MATERIAL_ORDER.forEach((id) => {
+      if (!materialGains[id]) return;
+      state.materials[id] = (state.materials[id] || 0) + materialGains[id];
+      advMaterialGains[id] = (advMaterialGains[id] || 0) + materialGains[id]; // リザルト画面のアイコン並び用
+    });
+    playMaterialDropFx(materialGains);
   }
   // 大国主命の御守: 戦闘終了後12%でストレスを5回復
   if (hasOmamori("okuninushi") && Math.random() < 0.12) {

@@ -199,6 +199,8 @@ let advQuestCompleted = null; // 今回の冒険で奉行所の依頼を達成�
 let advEnemiesDefeated = 0; // 今回の冒険で倒した敵の数(リザルトの戦績/朱印評価用、battle.js victory()が加算)
 let advMaxFloor = 0; // 今回の冒険で踏破した最大階層(同上。中継ステージをまたいでも単純に各ステージの階層数の最大値)
 let advLostHappened = false; // 今回の冒険で誰かがロストしたか(朱印評価と「全員生還！」表示用、battle.js側が立てる)
+let advMaterialGains = {}; // 今回の冒険で拾った素材(素材id -> 個数)。リザルト画面のアイコン並び表示用(battle.js victory()が加算)
+let advSoulLumpGained = 0; // 今回の冒険で実際に手に入れた魂の塊の数(上限で弾かれた分は含まない)。リザルトのレア演出用
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
 // ============ ボス追撃モード: ボス/中ボスがHPが一定以下になると瀕死のまま逃走し、以後どのフロアでも
 // 一定確率で追いつく(討伐依頼のchasing/carryHpと同じ仕組みを、通常の(討伐依頼ではない)ボス/中ボスにも
@@ -305,6 +307,8 @@ function enterDungeon() {
   advEnemiesDefeated = 0;
   advMaxFloor = 0;
   advLostHappened = false;
+  advMaterialGains = {};
+  advSoulLumpGained = 0;
   resetPeaceDialogueState();
   fieldParty.forEach((c) => { advLevelBefore[c.id] = c.level; });
   dungeonLogLines = [];

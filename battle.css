@@ -431,3 +431,25 @@
     50% { box-shadow: 0 0 16px rgba(201,162,74,0.9); }
   }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+
+  /* ============ 素材ドロップ演出(2026-07-27、effects.js playMaterialDropFx) ============
+     勝利時に落ちた素材アイコンが敵の位置から巾着袋へ放物線で飛んで吸い込まれる。
+     一回きりの使い捨てレイヤー(演出が終わるとDOMごと除去)。z-indexは逃走バナー(30)より下、
+     battle-top(5)より上の20を使用(勝敗に関わらない装飾演出のため他のUIを覆い隠さない) */
+  .mat-drop-layer {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    pointer-events: none; z-index: 20;
+  }
+  .mat-drop-pouch { position: absolute; right: 12px; top: 200px; width: 54px; height: 54px; opacity: 0; }
+  .mat-drop-pouch img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .mat-drop-count {
+    position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 10px;
+    background: #c9a55a; color: #241a0c; font-size: 0.72rem; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6); opacity: 0;
+  }
+  .mat-drop-count.show { opacity: 1; }
+  .mat-drop-flyx { position: absolute; left: 0; top: 0; will-change: transform; }
+  .mat-drop-flyy { display: block; will-change: transform; opacity: 0; }
+  .mat-drop-flyy img { width: 32px; height: 32px; object-fit: contain; display: block; filter: drop-shadow(0 0 5px rgba(255,240,190,0.85)) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }

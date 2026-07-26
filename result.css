@@ -62,6 +62,14 @@
       linear-gradient(180deg, rgba(46,37,26,0.93) 0%, rgba(24,20,16,0.95) 100%);
     box-shadow: 0 6px 24px rgba(0,0,0,0.55);
   }
+  /* 素材の獲得行(2026-07-27): 文字・枠なしで、拾った個数ぶん素材アイコンの実物を左から
+     少し重ねて並べる(ユーザーのマルアップ準拠)。獲得ゼロの遠征では行ごと消えて高さを取らない。
+     重なり量(margin-right)は個数が多い時だけJS(renderResultScreen)が1行に収まるよう詰め直す */
+  #resultMatRow { display: flex; align-items: center; height: 42px; margin-top: 2px; overflow: hidden; }
+  #resultMatRow:empty { display: none; }
+  .result-mat-item { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; margin-right: -10px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)); }
+  .result-mat-item.rare { filter: drop-shadow(0 0 7px rgba(255,214,102,0.95)) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+
   /* 「踏破◯層 ・ 討伐◯体 ・ 全員生還!」の戦績行 */
   #resultStatsLine {
     margin-top: 0.35rem; font-size: 0.82rem; color: #d9c49a; letter-spacing: 0.06em;
@@ -116,7 +124,6 @@
      外し、経験値行をコンパクト化。参加者が5人以上(道場の分け前で最大8人)の時は2列グリッドで畳む */
   #screen-result .body-pad { margin-top: 64px; padding-bottom: 1rem; }
   #resultGold { margin: 0.2rem 0 0; font-size: 1.3rem; }
-  #resultXpHeading { margin: 0.6rem 0 0.45rem; font-size: 1rem; }
   #resultQuestCard { padding: 8px 12px; margin-bottom: 0.5rem; }
   #resultXpList { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
   #resultXpList.result-xp-grid-2 { grid-template-columns: 1fr 1fr; }
