@@ -432,17 +432,23 @@
   }
   .enemy-card .enemy-name { font-weight: 700; margin: 0.2rem 0 0.15rem; font-size: 0.78rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 
-  /* ============ 素材ドロップ演出(2026-07-27、effects.js playMaterialDropFx) ============
-     勝利時に落ちた素材アイコンが敵の位置から巾着袋へ放物線で飛んで吸い込まれる。
-     一回きりの使い捨てレイヤー(演出が終わるとDOMごと除去)。z-indexは逃走バナー(30)より下、
+  /* ============ 素材ドロップ演出(2026-07-27、effects.js spawnMaterialGroundDrop/playMaterialCollectFx) ============
+     敵が死んだ瞬間に素材がその敵の足元へポンっと転がり、勝利すると巾着袋へ1個ずつ吸い込まれる。
+     使い捨てレイヤー(回収/置き去りでDOMごと除去)。z-indexは逃走バナー(30)より下、
      battle-top(5)より上の20を使用(勝敗に関わらない装飾演出のため他のUIを覆い隠さない) */
   /* レイヤーは素のviewport全面(transform/中央寄せ無し)。子要素の座標は全てgetBoundingClientRectの
-     viewport座標をそのまま使えるようにするため、ここに変換を挟まないこと(挟むと発射元計算が狂う) */
-  .mat-drop-layer {
+     viewport座標をそのまま使えるようにするため、ここに変換を挟まないこと(挟むと座標計算が狂う)。
+     敵死亡時の足元ドロップ〜勝利時の巾着回収まで同じレイヤーに載る(effects.js matGroundLayer) */
+  .mat-ground-layer {
     position: fixed; inset: 0;
     pointer-events: none; z-index: 20;
   }
-  /* 巾着の水平位置(left)は表示カラム右端からJS(playMaterialDropFx)が計算してセットする */
+  .mat-ground-item {
+    position: absolute; width: 28px; height: 28px; object-fit: contain;
+    filter: drop-shadow(0 0 4px rgba(255,240,190,0.6)) drop-shadow(0 2px 3px rgba(0,0,0,0.7));
+    will-change: transform;
+  }
+  /* 巾着の水平位置(left)は表示カラム右端からJS(playMaterialCollectFx)が計算してセットする */
   .mat-drop-pouch { position: absolute; top: 200px; width: 54px; height: 54px; opacity: 0; }
   .mat-drop-pouch img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .mat-drop-count {
@@ -452,6 +458,3 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.6); opacity: 0;
   }
   .mat-drop-count.show { opacity: 1; }
-  .mat-drop-flyx { position: absolute; left: 0; top: 0; will-change: transform; }
-  .mat-drop-flyy { display: block; will-change: transform; opacity: 0; }
-  .mat-drop-flyy img { width: 32px; height: 32px; object-fit: contain; display: block; filter: drop-shadow(0 0 5px rgba(255,240,190,0.85)) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }

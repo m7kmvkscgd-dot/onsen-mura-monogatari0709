@@ -1095,85 +1095,97 @@ function playQuestAcceptStamp(title, onDone) {
 // 演出は一回きりの使い捨てDOM(fixedレイヤーを作って終わったら丸ごと除去)で、戦闘UIの
 // 差分更新デザイン(カードDOMの使い回し)には一切触れない。アニメーションは全てelement.animate()
 // (CSS transition+二重rAFはiOSで不発があるため使わない方針)
-function playMaterialDropFx(drops) {
+// ============ 素材ドロップ演出(2026-07-27改・ユーザー提案の2段階方式) ============
+// ①敵が死んだ瞬間: spawnMaterialGroundDrop()で素材アイコンがその敵の足元にポンっと跳ねて転がる
+// ②勝利時: playMaterialCollectFx()で転がっている素材が0.3秒差で1個ずつ巾着袋へ吸い込まれる
+// ③逃走/全滅/ボス逃走: clearMaterialGroundDrops()で置き去り(拾えない)
+// 抽選と入手のロジックはbattle.js側(rollMaterialDropOnDeath/victory)。ここは表示だけ。
+// 座標は全て素のviewport基準(レイヤーはinset:0のfixedで中央寄せ変換なし)。アニメーションは
+// 全てelement.animate()(CSS transition+二重rAFはiOSで不発があるため使わない方針)
+let matGroundLayer = null;
+function ensureMatGroundLayer() {
+  if (matGroundLayer && matGroundLayer.isConnected) return matGroundLayer;
+  matGroundLayer = document.createElement("div");
+  matGroundLayer.className = "mat-ground-layer";
+  document.body.appendChild(matGroundLayer);
+  return matGroundLayer;
+}
+// 敵カードの足元に素材がポンっと跳ねて落ちる。{el, x, y}を返す(勝利時の回収で使う)。
+// カードが無い/実測できない場合はnull(回収時は巾着の位置で直接カウントされる)
+function spawnMaterialGroundDrop(matId, card) {
+  const r = card ? card.getBoundingClientRect() : null;
+  if (!r || r.width === 0) return null;
+  const layer = ensureMatGroundLayer();
+  const img = document.createElement("img");
+  img.className = "mat-ground-item";
+  img.src = MATERIALS[matId].icon;
+  const x = r.left + r.width / 2 + (Math.random() * 16 - 8); // 足元で少し散らばる
+  const y = r.bottom - 13;
+  img.style.left = `${x - 14}px`;
+  img.style.top = `${y - 14}px`;
+  layer.appendChild(img);
+  // ポンっと跳ね上がって落ち、小さくバウンドして静止する
+  img.animate(
+    [
+      { transform: "translateY(0) scale(0.3)", opacity: 0 },
+      { transform: "translateY(-24px) scale(1.15)", opacity: 1, offset: 0.35 },
+      { transform: "translateY(0) scale(1)", offset: 0.68 },
+      { transform: "translateY(-7px) scale(1)", offset: 0.84 },
+      { transform: "translateY(0) scale(1)" },
+    ],
+    { duration: 550, easing: "ease-out", fill: "forwards" });
+  return { el: img, x, y };
+}
+// 置き去り(逃走/全滅/ボス逃走/次の戦闘開始時の掃除): 転がっている素材を表示ごと消す
+function clearMaterialGroundDrops() {
+  if (matGroundLayer) { matGroundLayer.remove(); matGroundLayer = null; }
+}
+// 勝利時の回収: 巾着袋が現れ、転がっている素材が1個ずつ時間差で吸い込まれる
+function playMaterialCollectFx(drops) {
   if (!drops || drops.length === 0) return;
-  // 【重要】発射元(=落とした敵のカード)の座標は、この関数が呼ばれた瞬間(勝利処理中)に
-  // 同期的に確定してしまう。演出開始を遅延させた後にDOMを引き直す方式だと、撃破演出で
-  // 敵カードが消えた後に座標が取れず画面外から飛んでくる不具合があった(実機報告2026-07-27)。
-  // 座標は全て素のviewport基準(レイヤーはinset:0のfixedで、中央寄せの変換を一切しない)
-  const fallbackOrigin = (() => {
-    const row = document.getElementById("enemyRow");
-    if (row) {
-      const r = row.getBoundingClientRect();
-      if (r.width > 0) return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    }
-    return { x: window.innerWidth / 2, y: 130 };
-  })();
-  const items = drops.map((d) => {
-    const card = d.instanceId != null ? findVisibleCard(d.instanceId) : null;
-    const r = card ? card.getBoundingClientRect() : null;
-    const from = r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : fallbackOrigin;
-    return { src: MATERIALS[d.matId].icon, x: from.x, y: from.y };
-  });
-  const layer = document.createElement("div");
-  layer.className = "mat-drop-layer";
+  const layer = ensureMatGroundLayer();
+  const colRight = Math.min(window.innerWidth, window.innerWidth / 2 + 240); // 表示カラム(最大480px)の右端
   const pouch = document.createElement("div");
   pouch.className = "mat-drop-pouch";
-  // 巾着はゲームの表示カラム(最大480px)の右端に置く(レイヤー自体は全画面のため自前で計算)
-  const colRight = Math.min(window.innerWidth, window.innerWidth / 2 + 240);
   pouch.style.left = `${colRight - 54 - 12}px`;
   pouch.innerHTML = `<img src="assets/icons/pouch.png" alt=""><div class="mat-drop-count">0</div>`;
   layer.appendChild(pouch);
-  document.body.appendChild(layer);
   const countEl = pouch.querySelector(".mat-drop-count");
-  let bagCount = 0;
   const to = { x: colRight - 54 - 12 + 27, y: 200 + 27 }; // 巾着(54px角、top:200px)の中心
+  let bagCount = 0;
   pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
-  const D_POP = 220, D_FLY = 500, STAGGER = 170, START = 600; // 勝利SE/ゴールドポップが先に出るよう少し待つ
-  items.forEach((item, i) => {
+  const START = 600, STAGGER = 300, D_FLY = 450; // 吸い込みは同時ではなく1個ずつ0.3秒差(ユーザー指定)
+  drops.forEach((d, i) => {
     setTimeout(() => {
       if (!layer.isConnected) return;
-      const from = { x: item.x, y: item.y };
-      const src = item.src;
-      const wrap = document.createElement("div");
-      wrap.className = "mat-drop-flyx";
-      wrap.style.transform = `translate(${from.x - 16}px, ${from.y - 16}px)`;
-      const inner = document.createElement("div");
-      inner.className = "mat-drop-flyy";
-      inner.innerHTML = `<img src="${src}" alt="">`;
-      wrap.appendChild(inner);
-      layer.appendChild(wrap);
-      // その場にポンと出る→放物線(外側=X等速、内側=Yを山なり)で巾着へ
-      inner.animate(
-        [{ transform: "translateY(0) scale(0)", opacity: 0 }, { transform: "translateY(-14px) scale(1.2)", opacity: 1, offset: 0.65 }, { transform: "translateY(-8px) scale(1)", opacity: 1 }],
-        { duration: D_POP, easing: "ease-out", fill: "forwards" });
-      setTimeout(() => {
-        if (!layer.isConnected) return;
-        wrap.animate(
-          [{ transform: `translate(${from.x - 16}px, ${from.y - 16}px)` }, { transform: `translate(${to.x - 16}px, ${to.y - 16}px)` }],
-          { duration: D_FLY, easing: "linear", fill: "forwards" });
-        inner.animate(
-          [{ transform: "translateY(-8px) scale(1)" }, { transform: "translateY(-40px) scale(0.95)", offset: 0.45 }, { transform: "translateY(0) scale(0.45)" }],
-          { duration: D_FLY, easing: "ease-in", fill: "forwards" });
-        setTimeout(() => {
-          wrap.remove();
-          if (!layer.isConnected) return;
-          bagCount++;
-          countEl.textContent = bagCount;
-          countEl.classList.add("show");
-          playSfx("loot_item"); // 置く音(ユーザー提供SE)
-          pouch.animate(
-            [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
-            { duration: 340, easing: "ease-out" });
-        }, D_FLY);
-      }, D_POP);
+      const arrive = () => {
+        bagCount++;
+        countEl.textContent = bagCount;
+        countEl.classList.add("show");
+        playSfx("loot_item"); // 置く音(ユーザー提供SE)
+        pouch.animate(
+          [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
+          { duration: 340, easing: "ease-out" });
+      };
+      if (!d.el || !d.el.isConnected || d.x == null) { arrive(); return; } // 足元表示なしで抽選された分は直接カウント
+      // 弧を描いて巾着へ(中間点を上へ持ち上げた3点キーフレーム)
+      d.el.animate(
+        [
+          { transform: "translate(0, 0) scale(1)" },
+          { transform: `translate(${(to.x - d.x) * 0.5}px, ${(to.y - d.y) * 0.5 - 46}px) scale(1.05)`, offset: 0.5 },
+          { transform: `translate(${to.x - d.x}px, ${to.y - d.y}px) scale(0.4)`, opacity: 0.9 },
+        ],
+        { duration: D_FLY, easing: "ease-in", fill: "forwards" }).onfinish = () => { d.el.remove(); arrive(); };
     }, START + i * STAGGER);
   });
-  // 最後の1個が収まってから少し置いてレイヤーごと退場(探索へ戻るのが早くても取り残されない)
+  // 最後の1個が収まってから少し置いてレイヤーごと退場
   setTimeout(() => {
     if (!layer.isConnected) return;
-    layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" }).onfinish = () => layer.remove();
-  }, START + (items.length - 1) * STAGGER + D_POP + D_FLY + 900);
+    layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" }).onfinish = () => {
+      layer.remove();
+      if (matGroundLayer === layer) matGroundLayer = null;
+    };
+  }, START + (drops.length - 1) * STAGGER + D_FLY + 900);
 }
 
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。

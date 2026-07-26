@@ -14,7 +14,16 @@ let battleActionLocked = false;
 
 // targetId(キャラのid、または敵のinstanceId)から実体(キャラ/敵オブジェクト)を探す。
 // 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
+// この戦闘で敵が死亡時に落とした素材 [{matId, el, x, y}](el/x/yは足元に転がるアイコンのDOMと座標。
+// 丸呑み中に死ぬなどカードが無いまま抽選された場合はelがnull)。抽選は敵が死んだ瞬間に行い
+// (rollMaterialDropOnDeath、確率は従来の勝利時抽選と同一)、勝利したら巾着袋へ回収される。
+// 逃走・全滅・ボス逃走で戦闘が終わった場合は置き去り=拾えない(ユーザー指定)。
+// なお戦闘中にリロードされた場合、このリスト(DOM参照を含む)は復元されず消える(素材はおまけ
+// 要素のため許容。リロード再開の敵HPなどは従来通り遠征スナップショットが受け持つ)
+let materialGroundDrops = [];
 function startBattle(enemies, pathDef, encounterText) {
+  materialGroundDrops = [];
+  clearMaterialGroundDrops(); // 前の戦闘の置き去り分が画面に残っていたら掃除(effects.js)
   markEnemiesSeen(enemies); // 図鑑: 遭遇した敵を記録する(倒す必要はなく、出会った時点で登録される)
   // 連続戦闘のストレス軽減(ピティ制)用カウンターを、どの経路から始まった戦闘でも必ずここでリセットする
   // (通常のrollEncounter経由はもちろん、討伐依頼の強制遭遇/ボス追跡/イベント戦なども全てstartBattle経由のため)
@@ -317,12 +326,31 @@ function renderBattleScreen() {
   // ではなく「1枚だけの時の中央寄せ位置」を捕まえてしまっていた(2体編成で片方が死ぬと、撃破演出の
   // クローンが2体の中間にワープして見える不具合の原因だった)。全カードをrowに追加し終えて
   // レイアウトが確定してから、まとめて起動することで解決する
-  newlyDeadForReaction.forEach(({ entity, card }) => playEnemyDefeatReaction(entity, card));
+  newlyDeadForReaction.forEach(({ entity, card }) => {
+    playEnemyDefeatReaction(entity, card);
+    // 素材ドロップの抽選+足元にポンっと跳ねて落ちる表示。カード位置が確定しているこの瞬間に
+    // 行う(以前は勝利時にまとめて抽選していたが、その時点ではカードが消えていて
+    // 「どの敵が落としたか」を見せられなかった)
+    rollMaterialDropOnDeath(entity, card);
+  });
   battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
   activateHpTrails(row);
   fieldParty.forEach((c) => renderVfxFor(c.id));
   battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
   positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
+}
+
+// 素材ドロップの抽選(1体1回、敵が死んだ瞬間に呼ばれる)。当選したら足元に転がる表示
+// (effects.js spawnMaterialGroundDrop)を出し、materialGroundDropsに積む。実際の入手は
+// 勝利時(victory)にまとめて確定する=逃走/全滅なら置き去りで入手なし(従来の勝利時抽選と同じ結果)
+function rollMaterialDropOnDeath(e, card) {
+  if (e.__materialDropRolled) return; // 二重抽選防止(勝利時の補完抽選と重なっても1回だけ)
+  e.__materialDropRolled = true;
+  const matId = ENEMY_MATERIAL_DROPS[e.id];
+  if (!matId || e.isBoss) return; // ボス/中ボスは設計保留のため対象外(従来と同じ)
+  if (Math.random() >= (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) return;
+  const ground = spawnMaterialGroundDrop(matId, card);
+  materialGroundDrops.push({ matId, el: ground ? ground.el : null, x: ground ? ground.x : null, y: ground ? ground.y : null });
 }
 
 // aliveField()が0人になった時、それが「全滅」なのか「全員逃げ切った」なのかを判定する
@@ -2108,17 +2136,15 @@ function victory() {
     soulShardCount += 1;
     blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ)");
   }
-  const materialGains = {}; // { 素材id: 個数 } この戦闘で落ちた素材(data.js ENEMY_MATERIAL_DROPS)
-  const materialDrops = []; // [{matId, instanceId}] 落とした敵の対応付き(ドロップ演出が「その敵の位置」から飛ばすのに使う)
+  // 素材ドロップは敵が死んだ瞬間に抽選済み(rollMaterialDropOnDeath、足元に転がっている)。
+  // 丸呑み中に死んだ等でカードが無く抽選が走らなかった敵がいれば、ここで補完抽選する
+  // (足元表示なし・回収演出では巾着の位置で直接カウントされる)
+  battle.enemies.forEach((e) => { if (e.hp <= 0) rollMaterialDropOnDeath(e, findVisibleCard(e.instanceId)); });
+  const materialGains = {}; // { 素材id: 個数 } この戦闘で落ちた素材
+  materialGroundDrops.forEach((d) => { materialGains[d.matId] = (materialGains[d.matId] || 0) + 1; });
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
-    // 素材ドロップ: 1体1種固定・確率制。ボス/中ボスは設計保留のため対象外(データ側にも未登録)
-    const matId = ENEMY_MATERIAL_DROPS[e.id];
-    if (matId && !e.isBoss && Math.random() < (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) {
-      materialGains[matId] = (materialGains[matId] || 0) + 1;
-      materialDrops.push({ matId, instanceId: e.instanceId });
-    }
     if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
     if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
     if ((e.isBoss || e.isMidBoss) && Math.random() < SOUL_LUMP_DROP_CHANCE) soulLumpCount++; // ボス/中ボス討伐時のみ低確率で魂の塊をドロップ(神社の特別祈願用)
@@ -2173,7 +2199,7 @@ function victory() {
     } else blog("魂の塊を感じたが、これ以上は持てなかった。");
   }
   // 素材(皮/骨/木/鉄)の獲得。テキストログには書かず(文章量削減のユーザー方針、2026-07-27)、
-  // 敵の位置から巾着袋へアイコンが飛んで吸い込まれる演出(effects.js playMaterialDropFx)で見せる
+  // 足元ドロップ→巾着袋への回収演出(effects.js playMaterialCollectFx)で見せる
   if (MATERIAL_ORDER.some((id) => materialGains[id])) {
     if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
     MATERIAL_ORDER.forEach((id) => {
@@ -2181,8 +2207,9 @@ function victory() {
       state.materials[id] = (state.materials[id] || 0) + materialGains[id];
       advMaterialGains[id] = (advMaterialGains[id] || 0) + materialGains[id]; // リザルト画面のアイコン並び用
     });
-    // 発射元の敵カード座標はこの呼び出しの瞬間(=撃破演出でカードが消える前)に確定される
-    playMaterialDropFx(materialDrops);
+    // 足元に転がっている素材を、1個ずつ時間差(0.3秒)で巾着袋へ吸い込む
+    playMaterialCollectFx(materialGroundDrops);
+    materialGroundDrops = [];
   }
   // 大国主命の御守: 戦闘終了後12%でストレスを5回復
   if (hasOmamori("okuninushi") && Math.random() < 0.12) {
@@ -2241,6 +2268,9 @@ function markQuestChasingIfFled() {
 // BOSS_FLEE_HP_RATIOのコメント参照)。以後bossPursuitが立ち、tryForceBossPursuitEncounter()
 // (dungeon.js)が同じステージのフロア移動のたびに一定確率で追いつかせる
 function triggerBossFlee(enemy) {
+  // ボス側が戦闘を切り上げた場合も、足元の素材は置き去り=拾えない(勝利ではないため)
+  materialGroundDrops = [];
+  clearMaterialGroundDrops();
   bossPursuit = { enemyId: enemy.id, hp: enemy.hp, maxHp: enemy.maxHp, stage: currentStage };
   // 「◯◯が逃走した！」の告知バナー(effects.js playBossFleeBanner)を挟んでから、
   // 戦闘の後片付け(BGM停止・battle=null・探索画面への遷移)を行う
@@ -2303,6 +2333,9 @@ function escapeBattle() {
   markQuestChasingIfFled();
   updateBossPursuitHpIfFled();
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
+  // 逃げた場合、足元に落ちている素材は置き去り=拾えない(ユーザー指定)
+  materialGroundDrops = [];
+  clearMaterialGroundDrops();
   blog("残った仲間全員が戦闘から逃げ延びた。");
   battle = null;
   saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
@@ -2328,6 +2361,9 @@ function escapeBattle() {
 
 function defeat() {
   fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
+  // 全滅=素材は置き去り(拾えない)
+  materialGroundDrops = [];
+  clearMaterialGroundDrops();
   updateBossPursuitHpIfFled(); // 追撃モードの再戦中に全滅した場合、その時点のダメージを反映してから記録する
   recordBossWoundIfPursuing(); // 全滅で追撃を続けられなくなった場合も「見送った」扱いで手負いのHPを記録する
   stopBattleBgm();
