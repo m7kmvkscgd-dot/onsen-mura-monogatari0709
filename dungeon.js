@@ -456,13 +456,18 @@ document.getElementById("dungeonSwapBtn").onclick = () => {
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
-  // 控えのステータスカード(戦闘の味方カード準拠デザインの共通部品、ui.js)を選択肢の上に表示する。
-  // 演出は無し=誰と入れ替えるかを選ぶだけのシンプルな作り(ユーザー指示2026-07-26)
+  // 控えのステータスカード(コンパクト版=戦闘の味方カードと同サイズ、ui.js)を左、交代相手の
+  // ボタンを右の2列グリッドに並べる横割りレイアウト。説明テキストは置かず縦を詰める
+  // (ユーザー指示2026-07-26: 実機でカードが大きすぎ&下のボタンが画面外に見切れていたため)。
+  // 演出は無し=誰と入れ替えるかを選ぶだけのシンプルな作り
   picker.innerHTML = `
-    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>誰と${reserveFieldMember.name}を交代させますか？</strong></p>
-    <div style="width:100%;display:flex;justify-content:center;">${reserveStatusCardHtml(reserveFieldMember)}</div>
-    ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
-    <button class="big" id="cancelDungeonTargetBtn">やめる</button>
+    <div class="dungeon-swap-row">
+      ${reserveStatusCardHtml(reserveFieldMember, true)}
+      <div class="dungeon-swap-btn-grid">
+        ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+        <button class="big" id="cancelDungeonTargetBtn">やめる</button>
+      </div>
+    </div>
   `;
   targets.forEach((c) => {
     picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {

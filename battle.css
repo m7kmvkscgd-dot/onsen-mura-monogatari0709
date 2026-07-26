@@ -373,6 +373,25 @@
   .reserve-status-card .reserve-status-bars { width: 130px; display: flex; flex-direction: column; gap: 4px; }
   .reserve-status-card .reserve-status-name { font-size: 0.8rem; font-weight: 700; }
   .reserve-status-card .reserve-status-numbers { font-size: 0.7rem; color: var(--text-muted); }
+  /* 探索の交代ピッカー用コンパクト版: 戦闘の味方カード(.party-member、flex-basis 95px)と同じサイズ感。
+     実機で「控えカードだけ大きすぎて下のボタンが見切れる」とのユーザー指摘(2026-07-26)を受けて縮小 */
+  .reserve-status-card.compact { width: 95px; box-sizing: border-box; padding: 0.25rem 0.3rem; gap: 2px; margin: 0; flex-shrink: 0; }
+  .reserve-status-card.compact .card-portrait-img { width: 100%; height: auto; }
+  .reserve-status-card.compact .reserve-status-bars { width: 100%; gap: 3px; }
+  .reserve-status-card.compact .reserve-status-name { font-size: 0.7rem; }
+  .reserve-status-card.compact .reserve-status-numbers { font-size: 0.6rem; }
+  /* 交代ピッカーの横割りレイアウト: 左=控えカード(コンパクト)、右=交代相手ボタンの2列グリッド。
+     縦積みだと実機の可視領域(ボタン群の開始位置〜Safari下部バー)に収まらなかったため */
+  .dungeon-swap-row { width: 100%; display: flex; gap: 0.6rem; align-items: center; justify-content: center; }
+  .dungeon-swap-btn-grid { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .dungeon-swap-btn-grid button { min-width: 0; }
+  /* 対象選択ピッカー(交代/回復共通)の背景パネル。可視領域が狭い実機では見切れ防止クランプ
+     (positionActionsBelowPartyBar)により味方表示の下半分へ重なることがあるため、
+     素のボタンの寄せ集めではなく「浮いた1枚のパネル」に見えるよう地を敷く */
+  #dungeonTargetPicker {
+    background: rgba(20, 17, 14, 0.94); border: 1px solid rgba(217, 196, 154, 0.35);
+    border-radius: 12px; padding: 0.55rem; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
      レイアウトの幅(=他の敵の並び位置)だけ確保したまま見た目だけ消す。実際の演出はbody直下に

@@ -1008,16 +1008,29 @@ function mpBarHtml(entity) {
 // (ポートレート+緑のHPバー+青のMPバー+名前)を縦に組んだデザインに統一する(ユーザー指示2026-07-26)。
 // ポートレートはストレス表情を反映(characterPortraitSrc)。hpBarHtml()を使うため
 // トレイルの記憶(__hpDisplayRatio)も戦闘カードと共有される(表示するだけなら無害)
-function reserveStatusCardHtml(rm) {
+// compact=true(探索の交代ピッカー用)は戦闘の味方カード(.party-member、幅95px)と同じサイズ感に
+// 揃えた縮小版。縦に余裕のあるモーダル(戦闘の交代確認ダイアログ)では従来のフルサイズ版を使う
+function reserveStatusCardHtml(rm, compact) {
   const frenzy = stressTier(rm.fatigue) >= 4 ? " <span style='color:#e08787;'>(発狂中)</span>" : "";
   const mpRatio = rm.maxMp > 0 ? Math.max(0, rm.mp / rm.maxMp) * 100 : 0;
-  return `
-    <div class="reserve-status-card">
-      <img class="card-portrait-img" src="${characterPortraitSrc(rm)}">
+  const barsHtml = `
       <div class="reserve-status-bars">
         ${hpBarHtml(rm)}
         ${rm.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
-      </div>
+      </div>`;
+  if (compact) {
+    // 数値行は置かない(本隊カードと同じ「ポートレート+バー+名前」だけの構成・同じ高さに揃える)
+    return `
+    <div class="reserve-status-card compact">
+      <img class="card-portrait-img" src="${characterPortraitSrc(rm)}">
+      ${barsHtml}
+      <div class="reserve-status-name">${rm.name} Lv${rm.level}${frenzy}</div>
+    </div>`;
+  }
+  return `
+    <div class="reserve-status-card">
+      <img class="card-portrait-img" src="${characterPortraitSrc(rm)}">
+      ${barsHtml}
       <div class="reserve-status-name">${rm.name}(${CLASSES[rm.classId].ja} Lv${rm.level}・${rm.personality || "-"})${frenzy}</div>
       <div class="reserve-status-numbers">HP ${rm.hp}/${rm.maxHp}${rm.maxMp > 0 ? `・MP ${rm.mp}/${rm.maxMp}` : ""}・ストレス ${rm.fatigue || 0}</div>
     </div>`;
@@ -1180,7 +1193,16 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
   if (!partyBar || !actions) return;
   const apply = () => {
     const rect = partyBar.getBoundingClientRect();
-    actions.style.top = `${Math.round(rect.bottom) + 10}px`;
+    let top = Math.round(rect.bottom) + 10;
+    // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、
+    // はみ出したぶんだけ全体を上へずらす。iOS SafariはURL バー/下部バー展開時の可視高さが
+    // 500px台まで縮むことがあり、味方表示の下に置くと下段のボタンが画面外(バーの下)に隠れて
+    // 押せなくなっていた(探索の交代ピッカーで実機発覚、2026-07-26)。ずらした結果、味方表示の
+    // 下端に多少重なることがあるが、ボタンが押せないよりはよい(はみ出さない通常時は従来通り)
+    const actionsHeight = actions.getBoundingClientRect().height;
+    const maxTop = window.innerHeight - actionsHeight - 6;
+    if (top > maxTop) top = Math.max(0, maxTop);
+    actions.style.top = `${top}px`;
   };
   apply();
   lastPartyBarPositionCall = { partyBarId, actionsSelector };
