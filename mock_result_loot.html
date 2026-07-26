@@ -284,8 +284,8 @@
             { opacity: 1, transform: "translateX(2px) scale(1.15)", offset: 0.7 },
             { opacity: 1, transform: "translateX(0) scale(1)" } ],
           { duration: 240, easing: "ease-out", fill: "forwards" });
-        // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)。風鈴は50%指定(ユーザー指示)
-        if (item.classList.contains("orb")) sfx("assets/sfx/loot_rare.mp3", 0.5);
+        // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)。風鈴は30%指定(ユーザー指示)
+        if (item.classList.contains("orb")) sfx("assets/sfx/loot_rare.mp3", 0.3);
         else sfx("assets/sfx/loot_item.mp3", 0.5);
         if (item.classList.contains("orb")) {
           item.animate(
@@ -325,7 +325,7 @@
   }
 
   document.getElementById("btnReplay").addEventListener("click", play);
-  document.getElementById("btnRareTest").addEventListener("click", () => sfx("assets/sfx/loot_rare.mp3", 0.5));
+  document.getElementById("btnRareTest").addEventListener("click", () => sfx("assets/sfx/loot_rare.mp3", 0.3));
   document.getElementById("btnMembers").addEventListener("click", (e) => {
     memberCount = memberCount === 3 ? 4 : 3;
     e.target.textContent = memberCount === 3 ? "👥 4人版で確認" : "👥 3人版に戻す";
