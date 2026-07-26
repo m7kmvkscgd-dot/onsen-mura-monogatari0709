@@ -161,27 +161,43 @@
   // SE再生: 本体audio.jsのplaySfxと同じ「起動時にfetch+decodeAudioDataで事前デコード→
   // 再生ごとにAudioBufferSourceNodeを使い捨て生成」方式。毎回new Audio(src)する旧方式は
   // iOS Safariで再生遅延(音ズレ)+タップ外で生成した音が鳴らない問題があった(実機で発覚)
+  // iOSはWebAudioしか使わないページを「環境音」区分に割り当て、消音スイッチ(マナーモード)で
+  // 完全に無音にする。本体はBGMの<audio>要素があるため自動的に「再生」区分になり鳴るが、
+  // モックにはBGMが無いので明示的に再生区分を指定する(iOS17+のnavigator.audioSession)
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
   const AC = window.AudioContext || window.webkitAudioContext;
   const sfxCtx = AC ? new AC() : null;
   const sfxBuffers = {};
-  ["assets/sfx/result.mp3", "assets/sfx/coin.ogg", "assets/sfx/quest_accept.mp3",
-   "assets/sfx/loot_item.mp3", "assets/sfx/loot_rare.mp3"].forEach((url) => {
+  const SFX_URLS = ["assets/sfx/result.mp3", "assets/sfx/coin.ogg", "assets/sfx/quest_accept.mp3",
+   "assets/sfx/loot_item.mp3", "assets/sfx/loot_rare.mp3"];
+  SFX_URLS.forEach((url) => {
     if (!sfxCtx) return;
     fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d))
       .then((b) => { sfxBuffers[url] = b; }).catch(() => {});
   });
   function sfx(src, vol) {
     if (!sfxCtx || !sfxBuffers[src]) return;
-    if (sfxCtx.state === "suspended") sfxCtx.resume();
-    const s = sfxCtx.createBufferSource();
-    s.buffer = sfxBuffers[src];
-    const g = sfxCtx.createGain();
-    g.gain.value = vol == null ? 0.5 : vol;
-    s.connect(g).connect(sfxCtx.destination);
-    s.start();
+    const start = () => {
+      const s = sfxCtx.createBufferSource();
+      s.buffer = sfxBuffers[src];
+      const g = sfxCtx.createGain();
+      g.gain.value = vol == null ? 0.5 : vol;
+      s.connect(g).connect(sfxCtx.destination);
+      s.start(0);
+    };
+    // 本体playSfxと同じ: suspendedならresume完了を待ってから鳴らす(即start()すると音が捨てられる端末がある)
+    if (sfxCtx.state !== "running") sfxCtx.resume().then(start).catch(() => {});
+    else start();
   }
-  // iOSはユーザー操作までAudioContextがsuspendedのままなので、最初のタッチで解錠しておく
-  document.addEventListener("touchstart", () => { if (sfxCtx && sfxCtx.state === "suspended") sfxCtx.resume(); }, { passive: true });
+  // iOSの音声解錠はtouchstartでは効かないことがあるため、touchend/clickで行う
+  const unlockAudio = () => { if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().catch(() => {}); };
+  document.addEventListener("touchend", unlockAudio, { passive: true });
+  document.addEventListener("click", unlockAudio);
+  // 音声デバッグ表示(モック専用): SEの読み込み数とAudioContextの状態
+  setInterval(() => {
+    const note = document.querySelector(".mock-note");
+    if (note && sfxCtx) note.textContent = `リザルト素材欄モック ｜ SE:${Object.keys(sfxBuffers).length}/${SFX_URLS.length} ctx:${sfxCtx.state}`;
+  }, 800);
 
   function buildXpList() {
     const list = document.getElementById("xpList");

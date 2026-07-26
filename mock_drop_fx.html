@@ -250,6 +250,8 @@
 
   // SE再生: 本体audio.jsのplaySfxと同じ事前デコード+AudioBufferSourceNode方式
   // (毎回new Audio(src)する旧方式はiOS Safariで音ズレ+タイマー内生成分が鳴らない。実機で発覚)
+  // iOSはWebAudioしか使わないページを消音スイッチで無音にするため、再生区分を明示(iOS17+)
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
   const AC = window.AudioContext || window.webkitAudioContext;
   const sfxCtx = AC ? new AC() : null;
   const sfxBuffers = {};
@@ -260,15 +262,20 @@
   });
   function sfx(src, vol) {
     if (!sfxCtx || !sfxBuffers[src]) return;
-    if (sfxCtx.state === "suspended") sfxCtx.resume();
-    const s = sfxCtx.createBufferSource();
-    s.buffer = sfxBuffers[src];
-    const g = sfxCtx.createGain();
-    g.gain.value = vol == null ? 0.5 : vol;
-    s.connect(g).connect(sfxCtx.destination);
-    s.start();
+    const start = () => {
+      const s = sfxCtx.createBufferSource();
+      s.buffer = sfxBuffers[src];
+      const g = sfxCtx.createGain();
+      g.gain.value = vol == null ? 0.5 : vol;
+      s.connect(g).connect(sfxCtx.destination);
+      s.start(0);
+    };
+    if (sfxCtx.state !== "running") sfxCtx.resume().then(start).catch(() => {});
+    else start();
   }
-  document.addEventListener("touchstart", () => { if (sfxCtx && sfxCtx.state === "suspended") sfxCtx.resume(); }, { passive: true });
+  const unlockAudio = () => { if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().catch(() => {}); };
+  document.addEventListener("touchend", unlockAudio, { passive: true });
+  document.addEventListener("click", unlockAudio);
   function stageRect() { return stage.getBoundingClientRect(); }
   function centerOf(el) {
     const r = el.getBoundingClientRect(), s = stageRect();
