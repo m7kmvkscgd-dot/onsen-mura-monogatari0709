@@ -2353,8 +2353,11 @@ function consumeOnsenEggFromInventory() {
   else state.inventory.onsenEgg = Math.max(0, (state.inventory.onsenEgg || 0) - 1);
 }
 
-// かばう(guarding)の身代わり成功率。100%だと絶対に守り切れてしまうため95%に抑えてあり、
-// 5%は守り切れず別の味方が狙われる。挑発(tauntTurns)はタンク側の強制引きつけなので100%のまま変えない
+// かばう(guarding)の身代わり成功率。100%だと絶対に守り切れてしまうため上限を設けてあり、
+// 失敗分は守り切れず別の味方が狙われる。構えてから最初の1回だけ98%(ユーザー指示2026-07-26、
+// 「構えたのに初手からすり抜けた」という理不尽さを減らす)、2人目以降を続けてかばう時は従来の95%。
+// 挑発(tauntTurns)はタンク側の強制引きつけなので100%のまま変えない
+const GUARD_FIRST_REDIRECT_CHANCE = 0.98;
 const GUARD_REDIRECT_CHANCE = 0.95;
 // かばうは元々「1回身代わりになったら構えが解除される」1発仕様だったが、ユーザー指示により、
 // 身代わりになるたびにこの確率で構えが解除されず継続する(=続けてもう1人分かばえる)ようにした。
@@ -2368,7 +2371,9 @@ function findGuardTarget(alive) {
   const taunter = alive.find((t) => t.tauntTurns > 0);
   if (taunter) return taunter;
   const guardian = alive.find((t) => t.guarding);
-  if (guardian && Math.random() < GUARD_REDIRECT_CHANCE) return guardian;
+  if (!guardian) return null;
+  const chance = (guardian.guardProtectCount || 0) === 0 ? GUARD_FIRST_REDIRECT_CHANCE : GUARD_REDIRECT_CHANCE;
+  if (Math.random() < chance) return guardian;
   return null;
 }
 // 陰陽師「式神の加護」: 自分の式神が場に出ている間、ランダム/単体大技の抽選プールから除外する
@@ -2558,8 +2563,12 @@ function peekNextBigAttackProfile(enemy) {
 // 大技の単体ターゲット選定ロジック(enemyBigAttackから抽出。予告時の先読みと実発動時とで
 // 全く同じ結果になるよう共通化した)。aoe技は対象を選ばない(呼び出し元でnullを扱う)
 function pickBigAttackSingleTarget(enemy, alive, profile) {
-  const guardian = resolveForcedTarget(enemy, alive) || (profile.ignoreGuardian ? null : findGuardTarget(alive));
+  const forced = resolveForcedTarget(enemy, alive);
+  const guardian = forced || (profile.ignoreGuardian ? null : findGuardTarget(alive));
   const pool = guardian ? alive : poolExcludingShikigamiProtected(alive);
+  // 水月の強制ターゲットで選ばれたかどうかを予告確定(commitBigAttackTelegraphTarget)側が
+  // 記録できるように印を残す(発動時の「かばうによる引きつけ上書き」を強制ターゲット時だけ抑止するため)
+  enemy.__bigAttackPickWasForced = !!forced;
   return guardian || pool[Math.floor(Math.random() * pool.length)];
 }
 // 予告(bigAttackPending=true)の瞬間に呼ぶ。単体大技なら実際に狙う相手をここで確定し
@@ -2569,9 +2578,11 @@ function pickBigAttackSingleTarget(enemy, alive, profile) {
 // 進めない)ので、実発動時にpickBigAttackProfileが返す技と必ず一致する
 function commitBigAttackTelegraphTarget(enemy, alive) {
   const profile = peekNextBigAttackProfile(enemy);
-  if (!profile || profile.aoe || !alive.length) { enemy.bigAttackTelegraphTargetId = null; return; }
+  if (!profile || profile.aoe || !alive.length) { enemy.bigAttackTelegraphTargetId = null; enemy.bigAttackTelegraphForced = false; return; }
   const target = pickBigAttackSingleTarget(enemy, alive, profile);
   enemy.bigAttackTelegraphTargetId = target ? target.id : null;
+  // 水月の強制ターゲットで確定した予告は、発動時のかばう/挑発の引きつけでも上書きさせない
+  enemy.bigAttackTelegraphForced = !!enemy.__bigAttackPickWasForced;
 }
 // 大技を受けた場合の想定ダメージ(かばう軽減や乱数変動は考慮しない素の見積もり)。
 // mid: 中央値(変動なしの素の計算) / max: 上振れした場合の目安(+15%、rollBasicAttackの変動幅上限と同じ)
@@ -2654,10 +2665,18 @@ function enemyBigAttack(enemy, targets, log) {
   // aoe: 天狗の「扇の突風」のような特別な敵専用の全体大技(生存中の味方全員に当たる。
   // 全員が対象なのでかばう/挑発の引きつけ先選択は行わないが、各自のかばう軽減40%は個別に効く)。
   // 予告時点でcommitBigAttackTelegraphTargetが対象を確定済みならそれを使う(ターゲットマーク表示と
-  // 実際の被弾対象がズレないように)。対象が瀕死等で既にaliveから外れている場合のみ改めて抽選する
+  // 実際の被弾対象がズレないように)。対象が既にaliveから外れている場合のみ改めて抽選する。
+  // 【不具合修正2026-07-26】ただし発動時点でかばう/挑発の引きつけが立っていればそちらを最優先する。
+  // 予告対象の確定は「予告を見てかばうを選ぶ」より時系列で必ず前のため、予告対象を無条件に
+  // 優先すると、かばうが大技に一切反応できなくなっていた(「予告→タンクがかばって受け止める」
+  // という本来の対抗プレイの復旧)。ignoreGuardianの大技と、水月の強制ターゲットで確定した予告
+  // (bigAttackTelegraphForced)は従来通り引きつけを無視する。照準マークの表示位置は予告対象の
+  // ままだが、かばうが成功した=マークの相手を守り切った、という結果なのでズレとしては扱わない
   const telegraphed = enemy.bigAttackTelegraphTargetId != null ? alive.find((t) => t.id === enemy.bigAttackTelegraphTargetId) : null;
-  const singleTarget = !profile.aoe ? (telegraphed || pickBigAttackSingleTarget(enemy, alive, profile)) : null;
+  const interceptor = !profile.aoe && !profile.ignoreGuardian && !(telegraphed && enemy.bigAttackTelegraphForced) ? findGuardTarget(alive) : null;
+  const singleTarget = !profile.aoe ? (interceptor || telegraphed || pickBigAttackSingleTarget(enemy, alive, profile)) : null;
   enemy.bigAttackTelegraphTargetId = null;
+  enemy.bigAttackTelegraphForced = false;
   const hitTargets = profile.aoe ? alive : [singleTarget];
   let mult = profile.mult;
   if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
