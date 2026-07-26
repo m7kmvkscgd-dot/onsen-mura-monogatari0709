@@ -516,6 +516,10 @@ function playEnemyDefeatReaction(entity, card) {
   }
   const clone = card.cloneNode(true);
   clone.classList.remove("targetable", "charging", "entering", "defeat-hidden");
+  // 差分更新化(2026-07-26)でカードDOMが使い回しになったため、直前のダメージポップや会心演出の
+  // 一時要素がカード内に残ったままクローンに写り込むことがある。従来(毎回作りたてのカードの
+  // クローン)と見た目を揃えるため、一時演出要素はクローンから取り除く
+  clone.querySelectorAll(".dmg-pop, .crit-flash-overlay, .crit-shockwave, .crit-spark, .crit-banner").forEach((el) => el.remove());
   clone.onclick = null;
   clone.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; width:${rect.width}px; height:${rect.height}px; margin:0; pointer-events:none; z-index:40;`;
   document.body.appendChild(clone);

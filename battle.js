@@ -175,6 +175,93 @@ function anyCrowScoutActive() {
   return fieldParty.some((c) => c.status === "active" && c.transformForm === "karasu");
 }
 
+// ============ 敵カードの差分更新(生成は戦闘開始時の1回だけ、以後は中身の書き換えのみ) ============
+// 静的な骨組み(名前・立ち絵・各コンテナ)だけを持つカードを生成する。動的な部分(クラス・
+// 状態アイコン・HPバー・大技タップ説明)は毎描画updateEnemyCard()が書き換える
+function createEnemyCard(e) {
+  const card = document.createElement("div");
+  card.className = "enemy-card";
+  card.dataset.id = e.instanceId;
+  card.innerHTML = `
+      <div class="enemy-name">${e.label}</div>
+      <div class="enemy-portrait-box" style="position:relative;">
+        <img class="card-portrait-img" src="${e.image}" alt="${e.label}">
+        <div class="enemy-debuff-icons"></div>
+      </div>
+      <div class="hp-with-warning"></div>
+    `;
+  // タップ(攻撃対象の選択)は生成時に一度だけ張る。対象選択中(targetableクラスが付いている時)だけ
+  // 反応する。クロージャで生成時の敵オブジェクトを直接掴まず、発火時にdata-idから現在の敵を
+  // 引き直す(引き継ぎ文書の地雷リスト3番)
+  card.onclick = () => {
+    if (!pendingEnemyPick || !card.classList.contains("targetable")) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
+    const cur = battle && battle.enemies.find((x) => String(x.instanceId) === card.dataset.id);
+    if (!cur || cur.hp <= 0) return;
+    const picked = pendingEnemyPick;
+    pendingEnemyPick = null;
+    battleActionLocked = true; // 対象を選んだ瞬間から解決完了まで、再度ロックする
+    picked(cur);
+  };
+  return card;
+}
+const HIT_SHAKE_CLASSES = ["hit-shake", "hit-flash", "hit-shake-normal", "hit-shake-strong"];
+function updateEnemyCard(card, e) {
+  const dead = e.hp <= 0;
+  const targetable = !!pendingEnemyPick && !dead;
+  card.classList.toggle("swarm", !!e.isSwarm);
+  card.classList.toggle("midboss", !!e.isMidBoss);
+  card.classList.toggle("quest-target", !!e.isQuestTarget);
+  card.classList.toggle("dead", dead);
+  card.classList.toggle("defeat-hidden", dead);
+  // acting(enemyLunge)のような一回きりのCSSアニメーションは、クラスが「無い→有る」に変わった
+  // 瞬間だけ再生される(付いたままの再描画では再生されない。以前はカード作り直しのたびに
+  // 最初から再生し直されていたが、それはこの差分更新化で直したい症状そのもの)
+  card.classList.toggle("acting", e.instanceId === battle.actingEnemyId);
+  card.classList.toggle("targetable", targetable);
+  card.classList.toggle("charging", !!e.bigAttackPending && !dead);
+  // 出現演出は初回描画だけ。2回目以降の描画でクラスを剥がす(従来はカード作り直しで暗黙に消えていた)
+  if (!battle.justAppeared) card.classList.remove("entering");
+  // 被弾の揺れ: shakeClassFor()は「1回の被弾(__shakeUntil)につき最初の描画だけ」クラス名を返す。
+  // カードが使い回しになったため、新しい揺れはクラスを一度剥がしてリフローを挟んでから付け直して
+  // CSSアニメーションを確実に再発火させる(地雷リスト2番の既存パターン)。空文字の時に剥がすのは、
+  // 従来の「カード作り直しで暗黙にリセットされる」挙動をそのまま再現するため(絆創膏の整理はフェーズ5)
+  const shake = shakeClassFor(e).trim();
+  card.classList.remove(...HIT_SHAKE_CLASSES);
+  if (shake) {
+    void card.offsetWidth;
+    card.classList.add(...shake.split(/\s+/));
+  }
+  // 立ち絵の上に重ねる動的アイコン(飛行/大技予告💢/依頼対象/次ターン行動バッジ)は毎回作り直す。
+  // 全てposition:absoluteの小要素で、アニメーションの起点にはならないため作り直しても問題ない。
+  // DOM上の並び(デバフアイコン列の手前)も従来のマークアップと同じに保つ
+  const box = card.querySelector(".enemy-portrait-box");
+  const debuffIconsEl = card.querySelector(".enemy-debuff-icons");
+  box.querySelectorAll(":scope > .status-icon, :scope > .next-actor-badge").forEach((el) => el.remove());
+  const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
+  let overlayHtml = "";
+  if (e.isFlying) overlayHtml += `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>`;
+  if (e.bigAttackPending && !dead) overlayHtml += `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>`;
+  if (e.isQuestTarget) overlayHtml += `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>`;
+  if (enemyIsNextActor) overlayHtml += '<span class="next-actor-badge">▲次ターン行動</span>';
+  if (overlayHtml) debuffIconsEl.insertAdjacentHTML("beforebegin", overlayHtml);
+  debuffIconsEl.innerHTML = statusIconsFor(e);
+  // HPバーはトレイル(前回表示位置からの追いつき)のfrom/targetを描画のたびに現在値で作り直す
+  // 必要があるため、バー部分のみ従来通りHTMLを組み直す(この後のactivateHpTrails()が拾って動かす)
+  card.querySelector(".hp-with-warning").innerHTML = hpBarHtml(e);
+  // 大技の内容はイラストのタップで確認する(状態異常アイコン等と同じタップ表示/他箇所タップで消える
+  // 仕組みに統一。対象選択中(targetable)はタップが「攻撃対象を選ぶ」動作も兼ねるが、そちらは
+  // card.onclick側で別途処理されるため両立する。ユーザー指示、2026-07-21で長押し方式から変更)
+  const portraitEl = card.querySelector(".card-portrait-img");
+  if (!dead) {
+    portraitEl.classList.add("enemy-bigattack-tap");
+    portraitEl.dataset.enemyName = e.label;
+    portraitEl.dataset.bigattackName = bigAttackPool(e).map((p) => p.name || "大技").join("/");
+    portraitEl.dataset.bigattackDesc = bigAttackSummaryText(e);
+  } else {
+    portraitEl.classList.remove("enemy-bigattack-tap");
+  }
+}
+
 function renderBattleScreen() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていた処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
@@ -185,7 +272,11 @@ function renderBattleScreen() {
   const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled");
   renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
   const row = document.getElementById("enemyRow");
-  row.innerHTML = "";
+  // 【差分更新方式(2026-07-26、iOS演出品質の根本対策)】以前は毎回row.innerHTML=""で全カードを
+  // 作り直していたが、iOS Safariは「挿入したてのDOM要素への即時アニメーション」の序盤フレームを
+  // 描画しない(docs/引き継ぎ_戦闘UI差分更新化.md §3)。カードは敵インスタンス(instanceId)ごとに
+  // 1回だけ生成して使い回し、毎回の描画では中身(クラス・バー・アイコン)だけを書き換える。
+  // 要素の追加/削除は編成が実際に変わった時だけ(戦闘開始・丸呑み・前の戦闘の残骸の掃除)
   // 丸呑みされている敵は敵表示(UI)から完全に消す。hpは残っているため戦闘終了判定(aliveEnemies)には
   // 引き続きカウントされ、丸呑み中の敵が最後の1体でも戦闘は終わらない。撃破された敵は
   // (演出が終わった後も)このリストから外さない=枠は残したままにする。外すと#enemyRowの
@@ -193,52 +284,28 @@ function renderBattleScreen() {
   // 他の敵の並びは動かないでほしい」という指示に反するため
   const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
+  const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
+  [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });
   const newlyDeadForReaction = []; // 撃破リアクションはループを抜けた後にまとめて起動する(下記コメント参照)
+  let prevCard = null;
   visibleEnemies.forEach((e) => {
-    const dead = e.hp <= 0;
-    const targetable = !!pendingEnemyPick && !dead;
-    const card = document.createElement("div");
-    card.className = "enemy-card" + (e.isSwarm ? " swarm" : "") + (e.isMidBoss ? " midboss" : "") + (e.isQuestTarget ? " quest-target" : "") + (dead ? " dead" : "") + (dead ? " defeat-hidden" : "") + (e.instanceId === battle.actingEnemyId ? " acting" : "") + (targetable ? " targetable" : "") + (e.bigAttackPending && !dead ? " charging" : "") + (battle.justAppeared ? " entering" : "") + shakeClassFor(e);
-    card.dataset.id = e.instanceId;
-    const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
-    card.innerHTML = `
-      <div class="enemy-name">${e.label}</div>
-      <div style="position:relative;">
-        <img class="card-portrait-img" src="${e.image}" alt="${e.label}">
-        ${e.isFlying ? `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>` : ""}
-        ${e.bigAttackPending && !dead ? `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>` : ""}
-        ${e.isQuestTarget ? `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>` : ""}
-        ${enemyIsNextActor ? '<span class="next-actor-badge">▲次ターン行動</span>' : ""}
-        <div class="enemy-debuff-icons">${statusIconsFor(e)}</div>
-      </div>
-      <div class="hp-with-warning">
-        ${hpBarHtml(e)}
-      </div>
-    `;
-    // 大技の内容はイラストのタップで確認する(状態異常アイコン等と同じタップ表示/他箇所タップで消える
-    // 仕組みに統一。対象選択中(targetable)はタップが「攻撃対象を選ぶ」動作も兼ねるが、そちらは
-    // card.onclick側で別途処理されるため両立する。ユーザー指示、2026-07-21で長押し方式から変更)
-    if (!dead) {
-      const portraitEl = card.querySelector(".card-portrait-img");
-      const bigAttackName = bigAttackPool(e).map((p) => p.name || "大技").join("/");
-      portraitEl.classList.add("enemy-bigattack-tap");
-      portraitEl.dataset.enemyName = e.label;
-      portraitEl.dataset.bigattackName = bigAttackName;
-      portraitEl.dataset.bigattackDesc = bigAttackSummaryText(e);
+    let card = row.querySelector(`:scope > .enemy-card[data-id="${e.instanceId}"]`);
+    if (!card) {
+      card = createEnemyCard(e);
+      // 出現演出(entering)は戦闘開始直後の初回生成だけ。丸呑みからの解放などで戦闘中に
+      // カードを作り直すケースでは付けない(従来のjustAppeared判定と同じ)
+      if (battle.justAppeared) card.classList.add("entering");
+      // battle.enemiesの並び順を保って挿入する(基本は末尾追加。丸呑みからの解放で列の途中に
+      // 戻るケースだけ実際に途中挿入になる)。既存カードは並べ替えない=再挿入で「作りたて扱い」に
+      // 戻さない(引き継ぎ文書の地雷リスト6番)
+      row.insertBefore(card, prevCard ? prevCard.nextElementSibling : row.firstElementChild);
     }
-    if (targetable) {
-      card.onclick = () => {
-        if (!pendingEnemyPick) return; // 既に別経路(対象一覧のテキストボタン等)で選択済みなら無視する(二重行動防止)
-        const picked = pendingEnemyPick;
-        pendingEnemyPick = null;
-        battleActionLocked = true; // 対象を選んだ瞬間から解決完了まで、再度ロックする
-        picked(e);
-      };
-    }
-    row.appendChild(card);
+    updateEnemyCard(card, e);
+    prevCard = card;
     // 撃破リアクションは「初めて死亡を検知した描画」の時だけ起動する(再描画のたびに再生し直さない、
     // shakeClassFor()と同じ考え方)。起動自体はこのループを抜けた後にまとめて行う(下記参照)
-    if (dead && !e.__defeatReactionState) {
+    if (e.hp <= 0 && !e.__defeatReactionState) {
       e.__defeatReactionState = "playing";
       newlyDeadForReaction.push({ entity: e, card });
     }
