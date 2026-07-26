@@ -286,7 +286,7 @@
           { duration: 240, easing: "ease-out", fill: "forwards" });
         // 通常素材とレア素材で音を分ける(ユーザー提供SE、2026-07-27)。風鈴は30%指定(ユーザー指示)
         if (item.classList.contains("orb")) sfx("assets/sfx/loot_rare.mp3", 0.3);
-        else sfx("assets/sfx/loot_item.mp3", 0.75);
+        else sfx("assets/sfx/loot_item.mp3", 0.5);
         if (item.classList.contains("orb")) {
           item.animate(
             [ { filter: "drop-shadow(0 0 18px rgba(255,190,60,1)) brightness(1.8)" },
