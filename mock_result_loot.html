@@ -53,18 +53,14 @@
 
   #gold { margin: 0.1rem 0 0; font-size: 1.3rem; font-weight: 800; color: #e5c878; }
 
-  /* ★提案の素材チップ行: 高さ約28px、1行に横並び。ここだけが今回の追加要素 */
-  .mat-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-  .mat-chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(64,50,36,0.85); border: 1px solid rgba(217,196,154,0.4);
-    border-radius: 14px; padding: 2px 9px 2px 4px;
-    font-size: 0.78rem; font-weight: 800; color: #ffe9b0;
-    opacity: 0;
+  /* ★提案の素材行(ユーザーのマルアップ準拠): 文字・枠なし。取れた個数ぶんアイコン実物を
+     左から並べるだけ。少し重ねて置く(negative margin)ことで数が多くても1行に収まる */
+  .mat-row { display: flex; align-items: center; margin-top: 4px; height: 46px; overflow: hidden; }
+  .mat-item { width: 46px; height: 46px; object-fit: contain; flex-shrink: 0; margin-right: -10px; opacity: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)); }
+  .mat-item.orb {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; text-shadow: 0 0 12px rgba(255,214,102,1), 0 0 24px rgba(255,190,60,0.7);
   }
-  .mat-chip img { width: 20px; height: 20px; object-fit: contain; }
-  .mat-chip .orb { font-size: 15px; line-height: 20px; text-shadow: 0 0 8px rgba(255,214,102,0.9); }
-  .mat-chip.rare { border-color: rgba(255,214,102,0.95); box-shadow: 0 0 8px rgba(255,190,60,0.5), inset 0 0 8px rgba(255,214,102,0.14); color: #ffd666; }
 
   #stats { margin-top: 0.4rem; font-size: 0.82rem; color: #d9c49a; letter-spacing: 0.06em; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
   #stats .alive { color: #d7b66f; font-weight: 700; }
@@ -154,11 +150,12 @@
     { img: "assets/class_hunter.png", name: "弥助", cls: "狩人", lv: 6, xp: 31, to: 61 },
     { img: "assets/class_ninja.png", name: "霧丸", cls: "忍者", lv: 4, xp: 27, to: 96 },
   ];
+  // 取れた個数ぶんアイコンを繰り返す(皮3・骨2・木2・レア1のサンプル)
   const MATS = [
-    { icon: "assets/icons/materials/kawa.png", name: "皮", n: 3 },
-    { icon: "assets/icons/materials/hone.png", name: "骨", n: 1 },
-    { icon: "assets/icons/materials/tetsu.png", name: "鉄", n: 2 },
-    { rare: true, name: "魂の塊", n: 1 },
+    { icon: "assets/icons/materials/kawa.png", n: 3 },
+    { icon: "assets/icons/materials/hone.png", n: 2 },
+    { icon: "assets/icons/materials/ki.png", n: 2 },
+    { rare: true, n: 1 },
   ];
   let memberCount = 3;
   let genToken = 0; // リプレイ連打対策(古いタイマーの演出を無効化)
@@ -188,12 +185,19 @@
     const row = document.getElementById("matRow");
     row.innerHTML = "";
     MATS.forEach((mt) => {
-      const chip = document.createElement("span");
-      chip.className = "mat-chip" + (mt.rare ? " rare" : "");
-      chip.innerHTML = mt.rare
-        ? `<span class="orb">💠</span>${mt.name}×${mt.n}`
-        : `<img src="${mt.icon}" alt="">${mt.name}×${mt.n}`;
-      row.appendChild(chip);
+      for (let k = 0; k < mt.n; k++) {
+        let el;
+        if (mt.rare) {
+          el = document.createElement("div");
+          el.className = "mat-item orb";
+          el.textContent = "💠";
+        } else {
+          el = document.createElement("img");
+          el.className = "mat-item";
+          el.src = mt.icon;
+        }
+        row.appendChild(el);
+      }
     });
   }
 
@@ -228,22 +232,24 @@
       })(t0);
     }, 260);
 
-    // 2. ★素材チップが1個ずつポンポンと弾んで並ぶ(ここが提案の追加演出)
-    document.querySelectorAll(".mat-chip").forEach((chip, i) => {
+    // 2. ★素材アイコンが左から1個ずつトントントンと積まれていく(ここが提案の追加演出。
+    //    文字なし・枠なし、取れた個数ぶん実物アイコンが並ぶだけ)
+    document.querySelectorAll(".mat-item").forEach((item, i) => {
       setTimeout(() => {
         if (!alive()) return;
-        chip.animate(
-          [ { opacity: 0, transform: "scale(0.4) translateY(6px)" },
-            { opacity: 1, transform: "scale(1.15)", offset: 0.7 },
-            { opacity: 1, transform: "scale(1)" } ],
-          { duration: 280, easing: "ease-out", fill: "forwards" });
-        sfx("assets/sfx/coin.ogg", 0.3);
-        if (chip.classList.contains("rare")) {
-          chip.animate(
-            [ { boxShadow: "0 0 20px rgba(255,190,60,0.95)" }, { boxShadow: "0 0 8px rgba(255,190,60,0.5)" } ],
-            { duration: 800, easing: "ease-out" });
+        item.animate(
+          [ { opacity: 0, transform: "translateX(-16px) scale(0.5)" },
+            { opacity: 1, transform: "translateX(2px) scale(1.15)", offset: 0.7 },
+            { opacity: 1, transform: "translateX(0) scale(1)" } ],
+          { duration: 240, easing: "ease-out", fill: "forwards" });
+        sfx("assets/sfx/coin.ogg", 0.22);
+        if (item.classList.contains("orb")) {
+          item.animate(
+            [ { filter: "drop-shadow(0 0 18px rgba(255,190,60,1)) brightness(1.8)" },
+              { filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(1)" } ],
+          { duration: 800, easing: "ease-out" });
         }
-      }, 1250 + i * 170);
+      }, 1250 + i * 110);
     });
 
     // 3. 戦績行→経験値見出し→各行(バーが伸びる)
