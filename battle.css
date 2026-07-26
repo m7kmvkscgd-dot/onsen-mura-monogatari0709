@@ -292,19 +292,24 @@
   .encounter-cue-mark {
     font-size: 4.2rem; line-height: 1;
     filter: drop-shadow(0 2px 10px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(217,50,40,0.8));
-    animation: encounterCuePop 1s cubic-bezier(0.22, 1.6, 0.4, 1) forwards; /* 表示時間+0.3秒(ユーザー指示、2026-07-26)。戦闘開始までの一拍(ENCOUNTER_CUE_HOLD_MS)も+300して同期 */
+    animation: encounterCuePop 1s forwards; /* イージングは全区間キーフレーム側で指定(下記コメント参照)。表示時間+0.3秒(ユーザー指示、2026-07-26)。戦闘開始までの一拍(ENCOUNTER_CUE_HOLD_MS)も+300して同期 */
   }
   /* 傾きは出現時の-8°のまま固定(ユーザー指示2026-07-26: 途中でまっすぐへ起き上がる動きが引っかかるため、
      傾いたまま出て傾いたまま消える)。
-     「押し込み」(1.25→0.96→1.05と一度縮めて着地させる動き)は削除済み(ユーザー指示2026-07-26:
-     バネ系イージングが縮み側にもオーバーシュートして引っかかって見えるため)。現在は
-     飛び出したらそのサイズのまま静止し、縮まずスッと消える。80%のease-outは消え際の
-     フェードにまでバネが効いて不自然になるのを防ぐ区間指定 */
+     動きの設計(ユーザー指示2026-07-26): 頂点(1.25倍)は「静止点」ではなく「通過点」。以前は
+     バネ系イージング(cubic-bezier(0.22,1.6,0.4,1)の全区間一括指定)が頂点付近で早々に動きを
+     止めてしまい、縮みが始まる55%地点まで最大サイズのまま止まって見える時間があった。それが
+     「引っかかり」の正体(一度「押し込み削除」で対処したが、押し込み自体は残して頂点の静止だけを
+     消すのが正解、との指示で再設計)。現在は、ぼん!と飛び出し(〜0.35秒)→頂点で止まらず即座に
+     押し込み(〜0.55秒)→0.96倍で着地して静止(タメ)→サイズほぼそのままフェードで消える、の
+     一筆書き。イージングを区間ごとのキーフレーム指定に変えたことで、縮み側にまでバネが効いて
+     0.96を通り越して凹む問題も消えている。トータル1秒(と後続の一拍0.3秒)は従来から不変 */
   @keyframes encounterCuePop {
-    0% { opacity: 0; transform: scale(0.2) rotate(-8deg); }
-    40% { opacity: 1; transform: scale(1.15) rotate(-8deg); }
-    80% { opacity: 1; transform: scale(1.15) rotate(-8deg); animation-timing-function: ease-out; }
-    100% { opacity: 0; transform: scale(1.15) rotate(-8deg); }
+    0% { opacity: 0; transform: scale(0.2) rotate(-8deg); animation-timing-function: ease-out; }
+    35% { opacity: 1; transform: scale(1.25) rotate(-8deg); animation-timing-function: ease-out; }
+    55% { opacity: 1; transform: scale(0.96) rotate(-8deg); animation-timing-function: linear; }
+    78% { opacity: 1; transform: scale(0.96) rotate(-8deg); animation-timing-function: ease-out; }
+    100% { opacity: 0; transform: scale(1.05) rotate(-8deg); }
   }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
