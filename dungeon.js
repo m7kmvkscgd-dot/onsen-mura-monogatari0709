@@ -445,40 +445,29 @@ document.getElementById("dungeonSwapBtn").onclick = () => {
   if (!reserveFieldMember || reserveFieldMember.status !== "active") return;
   const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm && !c.isClone && !c.isShikigami);
   if (targets.length === 0) { showInfoModal("交代できる仲間がいません(全員ふさがっています)"); return; }
-  pendingAllyPick = (t) => {
+  // 交代相手は上の本隊カードを直接タップして選ぶ(ユーザー指示2026-07-26: 名前ボタンの一覧は
+  // 置かない。ピッカーには控えのカードと「やめる」だけ=最小構成)。式神/影分身のカードは
+  // 交代相手になれないため、タップされても無視して選択待ちを続ける(カード側のonclickが
+  // pendingAllyPickを先にnullへ戻してから呼ぶ作りのため、無視する時は自分自身を再セットする)
+  const swapPick = (t) => {
+    if (t.isShikigami || t.isClone) { pendingAllyPick = swapPick; return; }
     pendingAllyPick = null;
     closeDungeonTargetPicker();
     swapReserveMember(t, dlog);
     saveState();
     renderDungeon();
   };
+  pendingAllyPick = swapPick;
   renderDungeon();
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
-  // 控えのステータスカード(コンパクト版=戦闘の味方カードと同サイズ、ui.js)を左、交代相手の
-  // ボタンを右の2列グリッドに並べる横割りレイアウト。説明テキストは置かず縦を詰める
-  // (ユーザー指示2026-07-26: 実機でカードが大きすぎ&下のボタンが画面外に見切れていたため)。
-  // 演出は無し=誰と入れ替えるかを選ぶだけのシンプルな作り
   picker.innerHTML = `
     <div class="dungeon-swap-row">
       ${reserveStatusCardHtml(reserveFieldMember, true)}
-      <div class="dungeon-swap-btn-grid">
-        ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
-        <button class="big" id="cancelDungeonTargetBtn">やめる</button>
-      </div>
+      <button class="big" id="cancelDungeonTargetBtn">やめる</button>
     </div>
   `;
-  targets.forEach((c) => {
-    picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
-      if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
-      pendingAllyPick = null;
-      closeDungeonTargetPicker();
-      swapReserveMember(c, dlog);
-      saveState();
-      renderDungeon();
-    };
-  });
   document.getElementById("cancelDungeonTargetBtn").onclick = () => {
     pendingAllyPick = null;
     closeDungeonTargetPicker();
