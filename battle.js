@@ -683,26 +683,35 @@ function showSwapConfirmDialog(actor) {
       </div>
     </div>`;
 }
-// 立ち絵のスライド演出用の下ごしらえ。ゲームの立ち絵<img>はCSSでグレーの台座(background:#353a44)を
-// 持っているため、そのまま動かすと台座ごと滑ってしまう(ユーザー報告2026-07-26「背景も一緒についていく」)。
-// 演出中だけ台座を枠側(.party-portrait-wrap)へ移し、イラストの絵だけが台座の上を走るようにする。
-// overflowも枠側で切る(はみ出しは台座の縁で消える=モックと同じ見た目)
-function beginPortraitSlideStage(card) {
-  const wrap = card.querySelector(".party-portrait-wrap");
-  const img = card.querySelector(".card-portrait-img");
-  if (!wrap || !img) return null;
-  wrap.style.background = "#353a44";
-  wrap.style.borderRadius = "var(--radius-xs)";
-  wrap.style.overflow = "hidden";
-  img.style.background = "transparent";
-  return { wrap, img };
+// 立ち絵のスライド演出用の独立ステージを作る。
+// 当初はカード内の<img>を直接animateしていたが、①立ち絵のCSS背景(グレーの台座)ごと滑る、
+// ②iOS Safari実機でレイヤー合成の影響か動きが画面に反映されない(完了扱いにはなる)、という
+// 2つの問題が出た(ユーザー報告2026-07-26)。そのため撃破リアクション(playEnemyDefeatReaction)と
+// 同じ「body直下にクローンを置いて独立して動かす」方式に変更: 立ち絵の実座標にoverflow:hiddenの
+// 固定ステージ(台座の見た目を再現した箱)を重ね、本物の立ち絵は隠し、ステージ内のクローンを走らせる
+function makePortraitFxStage(card) {
+  const img = card ? card.querySelector(".card-portrait-img") : null;
+  if (!img || img.tagName !== "IMG") return null; // 式神の絵文字ポートレート等、<img>以外は演出をスキップ
+  const rect = img.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const box = document.createElement("div");
+  box.className = "swap-fx-stage";
+  box.style.left = rect.left + "px";
+  box.style.top = rect.top + "px";
+  box.style.width = rect.width + "px";
+  box.style.height = rect.height + "px";
+  const clone = document.createElement("img");
+  clone.src = img.currentSrc || img.src;
+  clone.className = "swap-fx-sprite";
+  box.appendChild(clone);
+  document.body.appendChild(box);
+  img.style.opacity = "0"; // 本物は演出中隠す(台座の見た目はステージ側が描いている)
+  return { box, clone, img };
 }
-function endPortraitSlideStage(stage) {
+function removePortraitFxStage(stage) {
   if (!stage) return;
-  stage.wrap.style.background = "";
-  stage.wrap.style.borderRadius = "";
-  stage.wrap.style.overflow = "";
-  stage.img.style.background = "";
+  stage.img.style.opacity = "";
+  stage.box.remove();
 }
 function performVoluntarySwap(actor) {
   if (battleActionLocked || !battle || (battle.swapCooldown || 0) > 0) return;
@@ -712,8 +721,9 @@ function performVoluntarySwap(actor) {
   playSfx("swap_dash");
   // 退場: 今のカードの立ち絵が右へダッシュ(前傾)。演出後にデータを入れ替えて再描画→走り込み
   const outCard = document.querySelector(`#battlePartyBar .party-member[data-id="${actor.id}"]`);
-  const outStage = outCard ? beginPortraitSlideStage(outCard) : null;
+  const outStage = makePortraitFxStage(outCard);
   const finishSwap = () => {
+    removePortraitFxStage(outStage); // 退場ステージを片付ける(直後の再描画でカード自体も作り直される)
     const incoming = swapReserveMember(actor, blog);
     if (!incoming) { battleActionLocked = false; renderActionButtons(actor); return; }
     // 参加ターン比の経験値: 交代が発生したラウンドは下がった側(ラウンド頭で加算済み)と
@@ -728,7 +738,7 @@ function performVoluntarySwap(actor) {
     playSwapRunIn(incoming, () => { renderActionButtons(incoming); });
   };
   if (outStage) {
-    const outAnim = outStage.img.animate([
+    const outAnim = outStage.clone.animate([
       { transform: "translateX(0) rotate(0deg)", opacity: 1 },
       { transform: "translateX(12%) rotate(4deg)", opacity: 1, offset: 0.3 },
       { transform: "translateX(130%) rotate(8deg)", opacity: 0.9 },
@@ -743,20 +753,20 @@ function performVoluntarySwap(actor) {
 // カードが見つからない場合(理論上の保険)は演出をスキップして即続行する
 function playSwapRunIn(incoming, onDone) {
   const card = document.querySelector(`#battlePartyBar .party-member[data-id="${incoming.id}"]`);
-  const stage = card ? beginPortraitSlideStage(card) : null;
+  const stage = makePortraitFxStage(card);
   if (!stage) { onDone(); return; }
-  const inAnim = stage.img.animate([
+  const inAnim = stage.clone.animate([
     { transform: "translateX(130%) rotate(-8deg)" },
     { transform: "translateX(-7%) rotate(-3deg)", offset: 0.7 },
     { transform: "translateX(3%) rotate(0deg)", offset: 0.88 },
     { transform: "translateX(0) rotate(0deg)" },
   ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
-  // 土埃: 立ち絵の足元(台座の下端)に3つ、時間差で舞い上がる
+  // 土埃: 立ち絵の足元(ステージの下端)に3つ、時間差で舞い上がる
   [0, 1, 2].forEach((k) => {
     const d = document.createElement("div");
     d.className = "swap-dust";
     d.style.left = (22 + k * 18) + "px";
-    stage.wrap.appendChild(d);
+    stage.box.appendChild(d);
     d.animate([
       { transform: "translate(0,0) scale(0.6)", opacity: 0 },
       { transform: `translate(${8 + k * 4}px,-${6 + k * 3}px) scale(${1.3 + k * 0.3})`, opacity: 0.8, offset: 0.4 },
@@ -764,7 +774,10 @@ function playSwapRunIn(incoming, onDone) {
     ], { duration: 420, delay: 180 + k * 40, easing: "ease-out" }).onfinish = () => d.remove();
   });
   inAnim.onfinish = () => {
-    endPortraitSlideStage(stage); // 台座をイラスト側へ戻す(見た目は同じ位置なので切り替わりは分からない)
+    // 本物の立ち絵は即座に戻す(ステージのクローンが同じ位置に重なっているので切り替わりは見えない)。
+    // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから片付ける
+    stage.img.style.opacity = "";
+    setTimeout(() => stage.box.remove(), 420);
     const bn = document.createElement("span");
     bn.className = "swap-in-banner";
     bn.textContent = `${incoming.name}、参上!`;

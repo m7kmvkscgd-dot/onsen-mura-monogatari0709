@@ -326,6 +326,15 @@
     background: radial-gradient(circle, rgba(214,203,178,0.9) 0%, rgba(214,203,178,0) 70%);
     border-radius: 50%; opacity: 0; pointer-events: none; z-index: 3;
   }
+  /* 走り込み演出の独立ステージ(battle.js makePortraitFxStage)。カード内の<img>を直接animateすると
+     iOS Safariでレイヤー合成の影響により動きが反映されないことがあった(実機報告2026-07-26)ため、
+     撃破リアクションと同じ「body直下にクローンを置いて独立して動かす」方式にしてある。
+     ステージ自体が台座(グレー背景+角丸)を描き、その中でクローンの立ち絵だけが走る */
+  .swap-fx-stage {
+    position: fixed; z-index: 40; overflow: hidden; pointer-events: none;
+    background: #353a44; border-radius: var(--radius-xs);
+  }
+  .swap-fx-sprite { width: 100%; height: 100%; object-fit: contain; display: block; }
   .swap-in-banner {
     position: absolute; left: 50%; top: -12px;
     transform: translateX(-50%) scale(0);
