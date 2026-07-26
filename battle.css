@@ -359,15 +359,20 @@
     white-space: nowrap; pointer-events: none; z-index: 4;
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
   }
-  /* 交代確認ダイアログ内の控えステータスカード(genericConfirmExtraへ流し込む) */
-  .swap-confirm-card {
-    display: flex; align-items: center; gap: 0.6rem; text-align: left;
+  /* 交代確認ダイアログ(戦闘)/交代ピッカー(探索)共通の控えステータスカード(reserveStatusCardHtml、ui.js)。
+     宿の名簿風の横並びレイアウトではなく、戦闘の味方カードと同じ縦組み
+     (ポートレート→HP/MPバー→名前)に統一(ユーザー指示2026-07-26)。バー本体の見た目は
+     .hpbar-track/.mpbar-track(戦闘と完全に同じクラス)をそのまま使う */
+  .reserve-status-card {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
     background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 10px; padding: 0.6rem; margin-bottom: 1rem;
+    border-radius: 10px; padding: 0.6rem 1rem; margin: 0 auto 1rem;
+    width: max-content; text-align: center;
   }
-  .swap-confirm-card img { width: 56px; height: 56px; object-fit: contain; background: #353a44; border-radius: 6px; flex-shrink: 0; }
-  .swap-confirm-card .swap-confirm-info { flex: 1; min-width: 0; font-size: 0.8rem; }
-  .swap-confirm-card .swap-confirm-numbers { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
+  .reserve-status-card .card-portrait-img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .reserve-status-card .reserve-status-bars { width: 130px; display: flex; flex-direction: column; gap: 4px; }
+  .reserve-status-card .reserve-status-name { font-size: 0.8rem; font-weight: 700; }
+  .reserve-status-card .reserve-status-numbers { font-size: 0.7rem; color: var(--text-muted); }
   .enemy-card.dead { opacity: 0.25; }
   /* 撃破リアクション(effects.js playEnemyDefeatReaction)が再生されている間、元のカードは
      レイアウトの幅(=他の敵の並び位置)だけ確保したまま見た目だけ消す。実際の演出はbody直下に

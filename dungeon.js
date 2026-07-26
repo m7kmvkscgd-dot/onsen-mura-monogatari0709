@@ -406,6 +406,11 @@ function renderDungeon() {
   // 交代: 控え(reserveFieldMember)が健在の時だけ表示。探索中はいつでも無償で交代できる
   const swapBtn = document.getElementById("dungeonSwapBtn");
   swapBtn.style.display = reserveFieldMember && reserveFieldMember.status === "active" ? "" : "none";
+  // 【重要】戦闘突入・探索イベント等はDUNGEON_BOTTOM_BTN_IDS一括でボタンをdisabledにするが、
+  // このrenderDungeon()は各ボタンを個別に再有効化する作りのため、後から追加された交代ボタンだけ
+  // 再有効化が漏れており「最初の戦闘/イベント以降ずっとグレーのまま押せない」不具合があった
+  // (ユーザー報告2026-07-26、実機スクショで発覚)。他のボタンと同様ここで必ず有効へ戻す
+  swapBtn.disabled = false;
   // 式神帰還: 陰陽師が式神を出している間、探索中もいつでも呼び戻せる(戦闘パートの同名ボタンと同じ関数)
   const activeShikigami = fieldParty.find((c) => c.isShikigami);
   document.getElementById("dungeonShikigamiRecallBtn").style.display = activeShikigami ? "" : "none";
@@ -451,8 +456,11 @@ document.getElementById("dungeonSwapBtn").onclick = () => {
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
+  // 控えのステータスカード(戦闘の味方カード準拠デザインの共通部品、ui.js)を選択肢の上に表示する。
+  // 演出は無し=誰と入れ替えるかを選ぶだけのシンプルな作り(ユーザー指示2026-07-26)
   picker.innerHTML = `
     <p style="width:100%;margin:0;font-size:0.82rem;"><strong>誰と${reserveFieldMember.name}を交代させますか？</strong></p>
+    <div style="width:100%;display:flex;justify-content:center;">${reserveStatusCardHtml(reserveFieldMember)}</div>
     ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
     <button class="big" id="cancelDungeonTargetBtn">やめる</button>
   `;
@@ -488,6 +496,9 @@ function closeDungeonTargetPicker() {
 }
 function pickDungeonAllyTarget(promptText, onPicked) {
   const targets = fieldParty.filter((c) => c.status === "active" && !c.transformForm);
+  // 控え(reserveFieldMember)も回復対象に選べる(ユーザー指示2026-07-26)。カードは戦場に並ばないため
+  // テキストボタンのみ(「控え:」の接頭辞で区別)。選択後の回復処理は通常メンバーと共通
+  const reserveTarget = reserveFieldMember && reserveFieldMember.status === "active" ? reserveFieldMember : null;
   pendingAllyPick = (t) => {
     pendingAllyPick = null;
     closeDungeonTargetPicker();
@@ -500,9 +511,10 @@ function pickDungeonAllyTarget(promptText, onPicked) {
   picker.innerHTML = `
     <p style="width:100%;margin:0;font-size:0.82rem;"><strong>${promptText}</strong></p>
     ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
+    ${reserveTarget ? `<button class="big" data-target-id="${reserveTarget.id}">控え:${reserveTarget.name} (${reserveTarget.hp}/${reserveTarget.maxHp})</button>` : ""}
     <button class="big" id="cancelDungeonTargetBtn">やめる</button>
   `;
-  targets.forEach((c) => {
+  [...targets, ...(reserveTarget ? [reserveTarget] : [])].forEach((c) => {
     picker.querySelector(`button[data-target-id="${c.id}"]`).onclick = () => {
       if (!pendingAllyPick) return; // 既に別経路(味方イラスト直接タップ等)で選択済みなら無視する(二重行動防止)
       pendingAllyPick = null;

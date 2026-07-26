@@ -741,18 +741,9 @@ function showSwapConfirmDialog(actor) {
     { label: "交代する", className: "big primary", onClick: () => performVoluntarySwap(actor) },
     { label: "やめる", className: "big" },
   ]);
-  // ダイアログのテキストとボタンの間に、控えのステータスカードを流し込む(showConfirmModalが毎回クリアする枠)
-  const frenzy = stressTier(rm.fatigue) >= 4 ? " <span style='color:#e08787;'>(発狂中)</span>" : "";
-  document.getElementById("genericConfirmExtra").innerHTML = `
-    <div class="swap-confirm-card">
-      <img src="${characterPortraitSrc(rm)}">
-      <div class="swap-confirm-info">
-        <div><strong>${rm.name}</strong>(${CLASSES[rm.classId].ja} Lv${rm.level}・${rm.personality || "-"})${frenzy}</div>
-        ${hpBarHtml(rm)}
-        ${rm.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${Math.max(0, rm.mp / rm.maxMp) * 100}%"></div></div>` : ""}
-        <div class="swap-confirm-numbers">HP ${rm.hp}/${rm.maxHp}${rm.maxMp > 0 ? `・MP ${rm.mp}/${rm.maxMp}` : ""}・ストレス ${rm.fatigue || 0}</div>
-      </div>
-    </div>`;
+  // ダイアログのテキストとボタンの間に、控えのステータスカードを流し込む(showConfirmModalが毎回クリアする枠)。
+  // カード自体は戦闘の味方カード準拠デザインの共通部品(reserveStatusCardHtml、ui.js)を使う
+  document.getElementById("genericConfirmExtra").innerHTML = reserveStatusCardHtml(rm);
 }
 // 常設ステージ(シングルトン)。一連の実機検証で分かったこと:
 // モック(swap_anim_mock.html)がiPhoneで滑らかだったのは「ページ読み込み時から存在し描画済みの
@@ -1996,6 +1987,13 @@ function renderAllyTargets(actor, kind) {
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
+  // 回復系(治癒の術/回復薬/茶菓子)は控え(reserveFieldMember)も対象に選べる(ユーザー指示2026-07-26)。
+  // hawkGuard(鷹の身代わり)は戦場に出ていない控えを守れないため従来通り対象外。
+  // レイアウトも回復系だけ3列2行にし、控えのボタンは2行目の左端(左下)へ固定配置する
+  // (1行目の余りセルを空要素で埋めて行を折り返す。renderActionButtonsで通常の2列に戻る)
+  const isHealKind = kind !== "hawkGuard";
+  const reserveTarget = isHealKind && reserveFieldMember && reserveFieldMember.status === "active" ? reserveFieldMember : null;
+  if (isHealKind) grid.style.gridTemplateColumns = "1fr 1fr 1fr";
   targets.forEach((target) => {
     const btn = document.createElement("button");
     btn.className = "big";
@@ -2008,6 +2006,20 @@ function renderAllyTargets(actor, kind) {
     };
     grid.appendChild(btn);
   });
+  if (reserveTarget) {
+    const fillers = (3 - (targets.length % 3)) % 3;
+    for (let i = 0; i < fillers; i++) grid.appendChild(document.createElement("div"));
+    const rbtn = document.createElement("button");
+    rbtn.className = "big";
+    rbtn.textContent = `控え:${reserveTarget.name} (${reserveTarget.hp}/${reserveTarget.maxHp})`;
+    rbtn.onclick = () => {
+      if (!pendingAllyPick) return;
+      pendingAllyPick = null;
+      battleActionLocked = true;
+      resolveAllyTarget(actor, kind, reserveTarget);
+    };
+    grid.appendChild(rbtn);
+  }
   const backBtn = document.createElement("button");
   backBtn.className = "big";
   backBtn.textContent = "戻る";

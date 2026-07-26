@@ -1003,6 +1003,26 @@ function mpBarHtml(entity) {
 // renderPartyBar()はinnerHTML=""で毎回DOMを作り直すため、この追跡をしないと技/道具/対象選択などの
 // サブメニューを開くたびに同じキャラのカードが再生成され、そのたびに演出が再生されてしつこくなる
 // (「ぴょんぴょん1」で実際に踏んだ不具合。KAMIKAKUSHI_REVEAL_MSと同じ「フラグで一度きりに絞る」考え方)
+// 交代ダイアログ(戦闘)/交代ピッカー(探索)で表示する控えキャラのステータスカード。
+// 宿の名簿風の「横並びの小さな肖像+テキスト」ではなく、戦闘の味方カードと同じ部品
+// (ポートレート+緑のHPバー+青のMPバー+名前)を縦に組んだデザインに統一する(ユーザー指示2026-07-26)。
+// ポートレートはストレス表情を反映(characterPortraitSrc)。hpBarHtml()を使うため
+// トレイルの記憶(__hpDisplayRatio)も戦闘カードと共有される(表示するだけなら無害)
+function reserveStatusCardHtml(rm) {
+  const frenzy = stressTier(rm.fatigue) >= 4 ? " <span style='color:#e08787;'>(発狂中)</span>" : "";
+  const mpRatio = rm.maxMp > 0 ? Math.max(0, rm.mp / rm.maxMp) * 100 : 0;
+  return `
+    <div class="reserve-status-card">
+      <img class="card-portrait-img" src="${characterPortraitSrc(rm)}">
+      <div class="reserve-status-bars">
+        ${hpBarHtml(rm)}
+        ${rm.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
+      </div>
+      <div class="reserve-status-name">${rm.name}(${CLASSES[rm.classId].ja} Lv${rm.level}・${rm.personality || "-"})${frenzy}</div>
+      <div class="reserve-status-numbers">HP ${rm.hp}/${rm.maxHp}${rm.maxMp > 0 ? `・MP ${rm.mp}/${rm.maxMp}` : ""}・ストレス ${rm.fatigue || 0}</div>
+    </div>`;
+}
+
 const lastPartyBarActingId = {};
 // ============ 味方カードの差分更新(2026-07-26、iOS演出品質の根本対策) ============
 // 以前は毎回bar.innerHTML=""で全カードを作り直していたが、iOS Safariは「挿入したてのDOM要素への
