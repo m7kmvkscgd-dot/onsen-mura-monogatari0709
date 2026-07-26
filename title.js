@@ -326,7 +326,21 @@ function renderSettingsScreen() {
   populateHighDurabilitySelects();
   document.getElementById("settingsHighDurabilityDefSelect").value = String(state.highDurabilityDefBonusPct || 0);
   document.getElementById("settingsHighDurabilityAtkSelect").value = String(state.highDurabilityAtkReductionPct || 0);
+  populateGoldAdjustSelect();
+  document.getElementById("settingsGoldAdjustSelect").value = String(state.goldDropAdjustment || 0);
   renderSettingsDebugWarpSection();
+}
+// 金調整のドロップダウンにOFF/-1〜-10の選択肢を並べる(値は差し引く額を正の数で保持)。
+// 高耐久モード同様、初回だけ中身を作る(選択中の値がリセットされるのを防ぐ)
+function populateGoldAdjustSelect() {
+  const select = document.getElementById("settingsGoldAdjustSelect");
+  if (select.options.length > 0) return;
+  for (let n = 0; n <= 10; n++) {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = n === 0 ? "OFF" : `-${n}`;
+    select.appendChild(opt);
+  }
 }
 // 高耐久モードの2つのドロップダウン(防御力アップ/攻撃力ダウン)に0〜100%・5%刻みの選択肢を並べる。
 // 初回だけ中身を作ればよいので、既に選択肢がある場合は作り直さない(選択中の値がリセットされるのを防ぐ)
@@ -381,6 +395,11 @@ document.getElementById("settingsHighDurabilityDefSelect").onchange = (e) => {
 };
 document.getElementById("settingsHighDurabilityAtkSelect").onchange = (e) => {
   state.highDurabilityAtkReductionPct = Number(e.target.value) || 0;
+  saveState();
+  playSfx("select");
+};
+document.getElementById("settingsGoldAdjustSelect").onchange = (e) => {
+  state.goldDropAdjustment = Number(e.target.value) || 0;
   saveState();
   playSfx("select");
 };

@@ -87,6 +87,7 @@ function defaultState() {
     // 掛けて減らす(乗算。例: 20を選ぶと攻撃力×0.8)。どちらも0=OFF(instantiateEnemy参照)
     highDurabilityDefBonusPct: 0,
     highDurabilityAtkReductionPct: 0,
+    goldDropAdjustment: 0, // 設定画面のドロップダウン「金調整」(0=OFF、1〜10)。敵1体が落とすゴールドからこの値を定額で差し引く(goldReward参照、0未満にはならない)。UI上は「-1」〜「-10」表記
   };
 }
 

@@ -1745,7 +1745,9 @@ function applyGroupNerf(enemies) {
 const TRASH_MOB_GOLD_MULT = 0.9; // 雑魚(非ボス)戦のゴールド報酬を10%ナーフ。ボスはそのまま
 function goldReward(enemy) {
   const base = enemy.goldMin + Math.floor(Math.random() * (enemy.goldMax - enemy.goldMin + 1));
-  return enemy.isBoss ? base : Math.round(base * TRASH_MOB_GOLD_MULT);
+  const reward = enemy.isBoss ? base : Math.round(base * TRASH_MOB_GOLD_MULT);
+  // 設定画面の「金調整」: 敵1体ごとに選んだ額(1〜10)を定額で差し引く。ボスにも適用、0未満にはしない
+  return Math.max(0, reward - (state.goldDropAdjustment || 0));
 }
 
 // 素早さが高いほど回避率が上がる(敵にはfatigueが無いので疲労減衰の影響は受けない)。
