@@ -700,13 +700,19 @@ function makePortraitFxStage(card) {
   box.style.top = rect.top + "px";
   box.style.width = rect.width + "px";
   box.style.height = rect.height + "px";
+  // 動かすのはimgではなく、このmover(div)。iOS WebKitでは<img>(置換要素)への%指定transformが
+  // 正しく解決されず「移動量0の実質静止」になる事象が実機で出たため(2026-07-26)、
+  // ①置換要素を直接animateしない ②移動量は%でなく実測pxで渡す、の2点をここで担保する
+  const mover = document.createElement("div");
+  mover.className = "swap-fx-mover";
   const clone = document.createElement("img");
   clone.src = img.currentSrc || img.src;
   clone.className = "swap-fx-sprite";
-  box.appendChild(clone);
+  mover.appendChild(clone);
+  box.appendChild(mover);
   document.body.appendChild(box);
   img.style.opacity = "0"; // 本物は演出中隠す(台座の見た目はステージ側が描いている)
-  return { box, clone, img };
+  return { box, mover, clone, img, width: rect.width };
 }
 function removePortraitFxStage(stage) {
   if (!stage) return;
@@ -738,10 +744,11 @@ function performVoluntarySwap(actor) {
     playSwapRunIn(incoming, () => { renderActionButtons(incoming); });
   };
   if (outStage) {
-    const outAnim = outStage.clone.animate([
+    const w = outStage.width;
+    const outAnim = outStage.mover.animate([
       { transform: "translateX(0) rotate(0deg)", opacity: 1 },
-      { transform: "translateX(12%) rotate(4deg)", opacity: 1, offset: 0.3 },
-      { transform: "translateX(130%) rotate(8deg)", opacity: 0.9 },
+      { transform: `translateX(${Math.round(w * 0.12)}px) rotate(4deg)`, opacity: 1, offset: 0.3 },
+      { transform: `translateX(${Math.round(w * 1.3)}px) rotate(8deg)`, opacity: 0.9 },
     ], { duration: 250, easing: "cubic-bezier(0.5, 0, 0.9, 0.6)", fill: "forwards" });
     outAnim.onfinish = () => setTimeout(finishSwap, 100); // 一拍(0.1秒)おいてから走り込み
   } else {
@@ -755,10 +762,11 @@ function playSwapRunIn(incoming, onDone) {
   const card = document.querySelector(`#battlePartyBar .party-member[data-id="${incoming.id}"]`);
   const stage = makePortraitFxStage(card);
   if (!stage) { onDone(); return; }
-  const inAnim = stage.clone.animate([
-    { transform: "translateX(130%) rotate(-8deg)" },
-    { transform: "translateX(-7%) rotate(-3deg)", offset: 0.7 },
-    { transform: "translateX(3%) rotate(0deg)", offset: 0.88 },
+  const w = stage.width;
+  const inAnim = stage.mover.animate([
+    { transform: `translateX(${Math.round(w * 1.3)}px) rotate(-8deg)` },
+    { transform: `translateX(${Math.round(w * -0.07)}px) rotate(-3deg)`, offset: 0.7 },
+    { transform: `translateX(${Math.round(w * 0.03)}px) rotate(0deg)`, offset: 0.88 },
     { transform: "translateX(0) rotate(0deg)" },
   ], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" });
   // 土埃: 立ち絵の足元(ステージの下端)に3つ、時間差で舞い上がる
