@@ -84,7 +84,7 @@
     position: absolute; right: 14px; bottom: 222px; z-index: 6;
     width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
   }
-  .pouch svg { width: 46px; height: 46px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .pouch img { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .pouch .count {
     position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px;
     background: #c9a55a; color: #241a0c; font-size: 0.72rem; font-weight: 900;
@@ -207,13 +207,7 @@
   </div>
 
   <div class="pouch" id="pouch">
-    <svg viewBox="0 0 48 48">
-      <path d="M24 10 C14 10 8 20 8 30 C8 40 15 44 24 44 C33 44 40 40 40 30 C40 20 34 10 24 10 Z" fill="#8a5a30" stroke="#4b3020" stroke-width="2"/>
-      <path d="M17 11 C17 6 31 6 31 11 C31 15 17 15 17 11 Z" fill="#6e441f" stroke="#4b3020" stroke-width="2"/>
-      <path d="M14 13 C20 17 28 17 34 13" fill="none" stroke="#d9c49a" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="24" cy="30" r="6" fill="none" stroke="rgba(217,196,154,0.55)" stroke-width="1.5"/>
-      <text x="24" y="34" font-size="9" text-anchor="middle" fill="rgba(217,196,154,0.8)">袋</text>
-    </svg>
+    <img src="assets/icons/pouch.png" alt="">
     <div class="count" id="pouchCount">0</div>
   </div>
 
