@@ -40,20 +40,19 @@
   #barricadeWrap.worn .crack.c1, #barricadeWrap.worn .crack.c2 { opacity: 0.9; }
   #barricadeWrap.critical .crack { opacity: 0.95; }
 
-  /* 耐久バー: 柵の結び目ライン上に浮かぶ木札風ゲージ */
-  #duraPlate {
-    position: absolute; left: 50%; transform: translateX(-50%); top: -14px;
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(30,22,14,0.92); border: 2px solid #6b4a2e; border-radius: 10px;
-    outline: 1px solid rgba(217,196,154,0.5); outline-offset: -4px;
-    padding: 4px 10px; z-index: 2;
-  }
-  #duraPlate .icon { font-size: 14px; }
-  #duraTrack { width: 150px; height: 12px; background: rgba(0,0,0,0.6); border: 1px solid rgba(217,196,154,0.35); border-radius: 6px; overflow: hidden; }
+  /* 耐久ゲージ: 柵の結び目の帯(敵カードの下端とテキストボックスの間=常に見えている高さ)に
+     全幅の細いバーを埋め込む。敵のHPバーとは高さが完全に分かれるので被らない */
+  #duraStrip { position: absolute; left: 8px; right: 8px; top: 36px; z-index: 2; }
+  #duraTrack { height: 7px; background: rgba(0,0,0,0.62); border: 1px solid rgba(217,196,154,0.45); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
   #duraFill { display: block; height: 100%; width: 100%; background: linear-gradient(to bottom, #6cc26c, #3f9e4e); transition: width 0.25s ease-out; }
   #duraFill.mid { background: linear-gradient(to bottom, #d9c25a, #b3963c); }
   #duraFill.low { background: linear-gradient(to bottom, #d9705a, #b84a38); }
-  #duraNum { font-size: 0.78rem; font-weight: 900; color: #e8dcbf; min-width: 30px; text-align: right; }
+  #duraNum {
+    position: absolute; right: 0; top: -17px;
+    font-size: 0.62rem; font-weight: 900; color: #e8dcbf;
+    background: rgba(30,22,14,0.85); border: 1px solid rgba(217,196,154,0.4); border-radius: 8px;
+    padding: 1px 7px;
+  }
 
   .battle-log {
     position: absolute; left: 8px; right: 8px; top: 240px; height: 84px; z-index: 2;
@@ -84,7 +83,7 @@
     <div class="crack c1" style="left:30%; top:34%; height:46%; transform:rotate(7deg);"></div>
     <div class="crack c2" style="left:64%; top:30%; height:52%; transform:rotate(-5deg);"></div>
     <div class="crack c3" style="left:47%; top:36%; height:44%; transform:rotate(12deg);"></div>
-    <div id="duraPlate"><span class="icon">🛡️</span><div id="duraTrack"><i id="duraFill"></i></div><span id="duraNum">100</span></div>
+    <div id="duraStrip"><span id="duraNum">🛡️100</span><div id="duraTrack"><i id="duraFill"></i></div></div>
   </div>
   <div class="battle-log" id="log"><div>猪の群れが柵に体当たりしている！</div></div>
   <div class="party-bar" id="partyBar"></div>
@@ -149,7 +148,7 @@
     const r = Math.max(0, hp) / MAX;
     fill.style.width = (r * 100) + "%";
     fill.className = r <= 0.25 ? "low" : r <= 0.5 ? "mid" : "";
-    num.textContent = Math.max(0, hp);
+    num.textContent = "🛡️" + Math.max(0, hp);
     wrap.classList.toggle("worn", hp <= 50 && hp > 25);
     wrap.classList.toggle("critical", hp <= 25 && hp > 0);
   }
