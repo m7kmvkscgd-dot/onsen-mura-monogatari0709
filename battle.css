@@ -422,8 +422,8 @@
   /* 大規模戦モード: バリケードの結び目まで見えるよう、テキストボックスと味方バーを下げる
      (ユーザーの理想図準拠2026-07-27)。ボタン列は味方バーの実測位置に追従するJS
      (positionActionsBelowPartyBar)が自動で付いてくるためCSSはこの2つだけでよい */
-  .battle-top.raid-battle #battleLog { position: relative; z-index: 2; margin-top: 31px; }
-  #battlePartyBar.raid-battle-bar { top: 305px; }
+  .battle-top.raid-battle #battleLog { position: relative; z-index: 2; margin-top: 30px; }
+  #battlePartyBar.raid-battle-bar { top: 303px; }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
   /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、
      height:auto)と詳細度が同じ(クラス2つ+タグ)ため、CSSの記述順で後にあるこちらが勝ってしまい、
