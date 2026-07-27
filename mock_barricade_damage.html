@@ -42,17 +42,13 @@
 
   /* 耐久ゲージ: 柵の結び目の帯(敵カードの下端とテキストボックスの間=常に見えている高さ)に
      全幅の細いバーを埋め込む。敵のHPバーとは高さが完全に分かれるので被らない */
-  #duraStrip { position: absolute; left: 8px; right: 8px; top: 36px; z-index: 2; }
-  #duraTrack { height: 7px; background: rgba(0,0,0,0.62); border: 1px solid rgba(217,196,154,0.45); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  /* テキストボックスのすぐ真上・中央に、半分幅の控えめなゲージ+小さな数値(ユーザー指示で縮小) */
+  #duraStrip { position: absolute; left: 50%; transform: translateX(-50%); top: 84px; z-index: 2; display: flex; align-items: center; gap: 5px; }
+  #duraTrack { width: 170px; height: 7px; background: rgba(0,0,0,0.62); border: 1px solid rgba(217,196,154,0.45); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
   #duraFill { display: block; height: 100%; width: 100%; background: linear-gradient(to bottom, #6cc26c, #3f9e4e); transition: width 0.25s ease-out; }
   #duraFill.mid { background: linear-gradient(to bottom, #d9c25a, #b3963c); }
   #duraFill.low { background: linear-gradient(to bottom, #d9705a, #b84a38); }
-  #duraNum {
-    position: absolute; right: 0; top: -17px;
-    font-size: 0.62rem; font-weight: 900; color: #e8dcbf;
-    background: rgba(30,22,14,0.85); border: 1px solid rgba(217,196,154,0.4); border-radius: 8px;
-    padding: 1px 7px;
-  }
+  #duraNum { font-size: 0.62rem; font-weight: 900; color: #e8dcbf; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
 
   .battle-log {
     position: absolute; left: 8px; right: 8px; top: 240px; height: 84px; z-index: 2;
@@ -83,7 +79,7 @@
     <div class="crack c1" style="left:30%; top:34%; height:46%; transform:rotate(7deg);"></div>
     <div class="crack c2" style="left:64%; top:30%; height:52%; transform:rotate(-5deg);"></div>
     <div class="crack c3" style="left:47%; top:36%; height:44%; transform:rotate(12deg);"></div>
-    <div id="duraStrip"><span id="duraNum">🛡️100</span><div id="duraTrack"><i id="duraFill"></i></div></div>
+    <div id="duraStrip"><div id="duraTrack"><i id="duraFill"></i></div><span id="duraNum">🛡️100</span></div>
   </div>
   <div class="battle-log" id="log"><div>猪の群れが柵に体当たりしている！</div></div>
   <div class="party-bar" id="partyBar"></div>
