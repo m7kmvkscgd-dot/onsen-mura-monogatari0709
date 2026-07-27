@@ -7,7 +7,9 @@
 <style>
   /* 襲撃カウントダウン表示のモック(ゲーム本体には未実装)。
      ①町画面: 日付の横に「襲撃まで◯日」バッジ ②出発準備画面: 出発ボタンの直上に同じバッジ
-     残り日数で色が段階変化(3日以上=通常/2日=黄/1日=赤+点滅/当日=出発ボタンが襲撃戦に変化) */
+     明朝型(ユーザー合意2026-07-27): 襲撃は常に当日の朝発生=寝ると始まる。そのため「あと1日」は
+     存在せず「明朝、襲撃！」表記になる(…3日=通常/2日=黄/明朝=赤+点滅)。当日の町画面も無い
+     (目覚めた瞬間に襲撃戦のため) */
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #14100c; color: #e8e0d0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; }
   .wrap { position: relative; width: 100%; max-width: 480px; min-height: 100dvh; padding-bottom: 90px; }
@@ -111,19 +113,18 @@
   const BASE_DAY = 12; // 4月12日起点(表示用)
 
   function render() {
-    const cls = daysLeft <= 0 ? "today" : daysLeft === 1 ? "danger" : daysLeft === 2 ? "warn" : "";
-    const text = daysLeft <= 0 ? "👹 襲撃当日！" : `👹 襲撃まで${daysLeft}日`;
+    // 明朝型: 残り1日=「明朝、襲撃！」(赤点滅)。当日の町は存在しない(寝る=朝=襲撃戦開始)
+    const cls = daysLeft <= 1 ? "danger" : daysLeft === 2 ? "warn" : "";
+    const text = daysLeft <= 1 ? "👹 明朝、襲撃！" : `👹 襲撃まで${daysLeft}日`;
     badges.forEach((b) => { b.className = "raid-badge" + (cls ? " " + cls : ""); b.textContent = text; });
     dateLabel.textContent = `4月${BASE_DAY + (3 - daysLeft)}日`;
-    if (daysLeft <= 0) {
-      departBtn.className = "depart-btn raid-today";
-      departBtn.innerHTML = '村を守る(襲撃戦へ)<span class="sub">今日は遠征に出られない</span>';
-    } else {
-      departBtn.className = "depart-btn";
-      departBtn.innerHTML = '深淵の森へ出発する<span class="sub">最高到達: 15層</span>';
-    }
+    // 明朝襲撃の日中もまだ普通に動ける(最後の遠征・買い物・鍛冶)。出発ボタンは変えない
+    departBtn.className = "depart-btn";
+    departBtn.innerHTML = daysLeft <= 1
+      ? '深淵の森へ出発する<span class="sub">※寝ると襲撃戦が始まる</span>'
+      : '深淵の森へ出発する<span class="sub">最高到達: 15層</span>';
   }
-  document.getElementById("btnNext").onclick = () => { daysLeft = Math.max(0, daysLeft - 1); render(); };
+  document.getElementById("btnNext").onclick = () => { daysLeft = Math.max(1, daysLeft - 1); render(); };
   document.getElementById("btnPrev").onclick = () => { daysLeft = Math.min(5, daysLeft + 1); render(); };
   render();
 })();
