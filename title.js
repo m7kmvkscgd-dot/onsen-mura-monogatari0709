@@ -365,6 +365,28 @@ document.getElementById("titleTest2Btn").onclick = () => {
   const raiders = [];
   for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));
   startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");
+  // 【診断(テストモード限定・実機で敵カード縮小が効かない問題の調査用)】この端末が実行している
+  // JS/CSSの実態をログに出す: ①mass-battleクラスが付いたか(=battle.jsが新版か)
+  // ②スタイルシートに縮小ルールが存在するか(=battle.cssが新版か) ③実際の計算済み画像サイズ
+  setTimeout(() => {
+    try {
+      const row = document.getElementById("enemyRow");
+      const img = row && row.querySelector(".enemy-card img");
+      let ruleFound = false;
+      try {
+        for (const sh of document.styleSheets) {
+          let rules;
+          try { rules = sh.cssRules; } catch (e) { continue; }
+          for (const r of rules || []) {
+            if (r.selectorText && r.selectorText.indexOf("mass-battle") !== -1 && r.cssText.indexOf("60px") !== -1) { ruleFound = true; break; }
+          }
+          if (ruleFound) break;
+        }
+      } catch (e) {}
+      const cs = img ? getComputedStyle(img) : null;
+      blog(`[診断] JS新版:${row ? row.classList.contains("mass-battle") : "?"} CSS縮小ルール:${ruleFound} 画像実寸:${cs ? cs.width + "×" + cs.height : "?"}`);
+    } catch (e) { blog(`[診断] エラー: ${e.message}`); }
+  }, 600);
 };
 
 // ============ 設定画面 ============
