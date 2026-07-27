@@ -14,6 +14,11 @@ let battleActionLocked = false;
 
 // targetId(キャラのid、または敵のinstanceId)から実体(キャラ/敵オブジェクト)を探す。
 // 揺れの状態はDOM要素ではなくこのオブジェクト自身に持たせる(再描画でDOM要素が作り直されても消えない)
+// 大規模戦(村襲撃)モード: trueの間は敵の頭数に関係なく敵カードを常に縮小サイズ(mass-battle)で
+// 統一する(ユーザー指定2026-07-27: 襲撃では敵が1体でも同じ大きさに。頭数でサイズが変わると
+// ウェーブ間や撃破途中で見た目がガタつくため)。タイトルの大規模戦テスト(title.js)が立てる。
+// 通常探索の戦闘は従来通り「5体以上の時だけ」縮小
+let massBattleSizingForced = false;
 // この戦闘で敵が死亡時に落とした素材 [{matId, el, x, y}](el/x/yは足元に転がるアイコンのDOMと座標。
 // 丸呑み中に死ぬなどカードが無いまま抽選された場合はelがnull)。抽選は敵が死んだ瞬間に行い
 // (rollMaterialDropOnDeath、確率は従来の勝利時抽選と同一)、勝利したら巾着袋へ回収される。
@@ -296,7 +301,7 @@ function renderBattleScreen() {
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
   // 5体以上の大規模戦は敵カードを味方カード(5人表示)と同格のサイズへ縮小し、折り返さず1行に収める
   // (2026-07-27実機報告: 通常サイズのまま5体並べると2行に折り返してテキストボックスと衝突していた)
-  row.classList.toggle("mass-battle", visibleEnemies.length >= 5);
+  row.classList.toggle("mass-battle", massBattleSizingForced || visibleEnemies.length >= 5);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });

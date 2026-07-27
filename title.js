@@ -361,6 +361,7 @@ document.getElementById("titleTest2Btn").onclick = () => {
   // enterDungeon()内の背景更新は上書き代入より先に走っているため、代入後にもう一度反映する
   battleBgOverrideSet = BG_SETS.departure;
   battleBgmOverrideKey = "raid_battle";
+  massBattleSizingForced = true; // 襲撃戦は敵が何体でも敵カードを縮小サイズで統一(ユーザー指定)
   updateSceneBackgrounds();
   const raiders = [];
   for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));
