@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>バリケード被弾モック</title>
+<style>
+  /* バリケードの被弾演出+耐久力表示のモック(ゲーム本体には未実装)。
+     実際の大規模戦のレイアウト(敵カード縮小・バリケードtop137px・ログ・味方バー)を再現し、
+     ①被弾: 揺れ+木片+ヒットSE ②耐久バー(柵の上に常設、色が緑→黄→赤) ③50%以下で柵が
+     傷んで見える(暗化+ひび) ④0で倒壊(大揺れ→傾いて崩れ落ちる+倒壊SE) を確認する */
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #14100c; color: #e8e0d0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; }
+  .stage { position: relative; width: 100%; max-width: 480px; height: 100dvh; overflow: hidden; }
+  .bg { position: absolute; inset: 0; background: url("assets/bg/departure_gate.jpg") center / cover no-repeat #1a1410; }
+  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9)); }
+
+  .enemy-row { position: absolute; top: 0; left: 0; right: 0; z-index: 1; display: flex; justify-content: center; gap: 3px; padding: 38px 0.4rem 10px; }
+  .enemy-card {
+    position: relative; text-align: center; border-radius: 10px; padding: 0.25rem;
+    flex: 1 1 0; min-width: 0; max-width: 78px;
+    border: 2px solid transparent;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+  }
+  .enemy-card .ename { font-size: 0.62rem; font-weight: 700; }
+  .enemy-card img { width: 100%; max-width: 60px; aspect-ratio: 1/1; object-fit: contain; display: block; margin: 0 auto; }
+  .enemy-card .hpbar { height: 5px; margin-top: 3px; background: rgba(0,0,0,0.55); border-radius: 3px; overflow: hidden; }
+  .enemy-card .hpbar i { display: block; height: 100%; width: 100%; background: linear-gradient(to bottom, #6cc26c, #3f9e4e); }
+
+  /* バリケード(本実装と同じtop:137px・全幅) */
+  #barricadeWrap { position: absolute; left: 0; right: 0; top: 137px; z-index: 1; pointer-events: none; }
+  #barricadeImg { display: block; width: 100%; height: auto; }
+  /* 50%以下: 傷んだ見た目(暗化+コントラスト低下)。25%以下でさらに強く */
+  #barricadeWrap.worn #barricadeImg { filter: brightness(0.82) saturate(0.85); }
+  #barricadeWrap.critical #barricadeImg { filter: brightness(0.65) saturate(0.7) contrast(0.95); }
+  /* ひび割れ(画像素材なしのCSS表現: 黒い亀裂線を数本重ねる) */
+  .crack { position: absolute; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.85), transparent); width: 3px; opacity: 0; transform-origin: top center; }
+  #barricadeWrap.worn .crack.c1, #barricadeWrap.worn .crack.c2 { opacity: 0.9; }
+  #barricadeWrap.critical .crack { opacity: 0.95; }
+
+  /* 耐久バー: 柵の結び目ライン上に浮かぶ木札風ゲージ */
+  #duraPlate {
+    position: absolute; left: 50%; transform: translateX(-50%); top: -14px;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(30,22,14,0.92); border: 2px solid #6b4a2e; border-radius: 10px;
+    outline: 1px solid rgba(217,196,154,0.5); outline-offset: -4px;
+    padding: 4px 10px; z-index: 2;
+  }
+  #duraPlate .icon { font-size: 14px; }
+  #duraTrack { width: 150px; height: 12px; background: rgba(0,0,0,0.6); border: 1px solid rgba(217,196,154,0.35); border-radius: 6px; overflow: hidden; }
+  #duraFill { display: block; height: 100%; width: 100%; background: linear-gradient(to bottom, #6cc26c, #3f9e4e); transition: width 0.25s ease-out; }
+  #duraFill.mid { background: linear-gradient(to bottom, #d9c25a, #b3963c); }
+  #duraFill.low { background: linear-gradient(to bottom, #d9705a, #b84a38); }
+  #duraNum { font-size: 0.78rem; font-weight: 900; color: #e8dcbf; min-width: 30px; text-align: right; }
+
+  .battle-log {
+    position: absolute; left: 8px; right: 8px; top: 240px; height: 84px; z-index: 2;
+    border: 2px solid #4b3728; border-radius: 10px;
+    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
+    background: rgba(26,20,14,0.9); padding: 10px 12px; font-size: 0.74rem; line-height: 1.5;
+  }
+  .party-bar { position: absolute; left: 0; right: 0; top: 358px; display: flex; justify-content: center; gap: 8px; z-index: 1; }
+  .pcard { width: 76px; border-radius: 10px; padding: 4px; text-align: center; background: linear-gradient(160deg, rgba(38,46,52,0.92), rgba(24,30,36,0.92)); border: 1px solid rgba(255,255,255,0.14); }
+  .pcard img { width: 52px; display: block; margin: 0 auto; }
+  .pcard .bar { height: 4px; border-radius: 2px; overflow: hidden; background: rgba(0,0,0,0.5); margin-top: 2px; }
+  .pcard .bar i { display: block; height: 100%; width: 85%; background: #5fae6e; }
+
+  .wood-chip { position: absolute; width: 7px; height: 4px; background: #8a5a30; border-radius: 1px; pointer-events: none; z-index: 3; box-shadow: 0 0 2px rgba(0,0,0,0.6); }
+
+  .controls { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 10; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .controls button { font-family: inherit; font-size: 0.78rem; font-weight: 700; color: #e8e0d0; background: linear-gradient(160deg, #3a4750, #26313a); border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; padding: 11px 4px; }
+  .controls button:active { transform: scale(0.96); }
+  .mock-note { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); z-index: 10; font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.4); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="bg"></div>
+  <div class="enemy-row" id="enemyRow"></div>
+  <div id="barricadeWrap">
+    <img id="barricadeImg" src="assets/battle_barricade.png" alt="">
+    <div class="crack c1" style="left:30%; top:34%; height:46%; transform:rotate(7deg);"></div>
+    <div class="crack c2" style="left:64%; top:30%; height:52%; transform:rotate(-5deg);"></div>
+    <div class="crack c3" style="left:47%; top:36%; height:44%; transform:rotate(12deg);"></div>
+    <div id="duraPlate"><span class="icon">🛡️</span><div id="duraTrack"><i id="duraFill"></i></div><span id="duraNum">100</span></div>
+  </div>
+  <div class="battle-log" id="log"><div>猪の群れが柵に体当たりしている！</div></div>
+  <div class="party-bar" id="partyBar"></div>
+  <div class="mock-note">バリケード被弾モック(本体には未実装)</div>
+  <div class="controls">
+    <button id="btnHit">攻撃(-12)</button>
+    <button id="btnBig">大技(-30)</button>
+    <button id="btnReset">リセット</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // SE(本体playSfxと同じ事前デコード+WebAudio方式)
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const sfxCtx = AC ? new AC() : null;
+  const sfxBuffers = {};
+  ["assets/sfx/barricade_hit.mp3", "assets/sfx/barricade_break.wav"].forEach((url) => {
+    if (!sfxCtx) return;
+    fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d)).then((b) => { sfxBuffers[url] = b; }).catch(() => {});
+  });
+  function sfx(src, vol) {
+    if (!sfxCtx || !sfxBuffers[src]) return;
+    const start = () => {
+      const s = sfxCtx.createBufferSource();
+      s.buffer = sfxBuffers[src];
+      const g = sfxCtx.createGain();
+      g.gain.value = vol == null ? 0.5 : vol;
+      s.connect(g).connect(sfxCtx.destination);
+      s.start(0);
+    };
+    if (sfxCtx.state !== "running") sfxCtx.resume().then(start).catch(() => {});
+    else start();
+  }
+  document.addEventListener("touchend", () => { if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().catch(() => {}); }, { passive: true });
+
+  // 敵と味方のダミー表示
+  document.getElementById("enemyRow").innerHTML = Array.from({ length: 5 }, () =>
+    '<div class="enemy-card"><div class="ename">猪</div><img src="assets/enemies/inoshishi.png"><div class="hpbar"><i></i></div></div>').join("");
+  const P = [["onmyoji"], ["spearman"], ["naginata"], ["ninja"], ["gunner"]];
+  document.getElementById("partyBar").innerHTML = P.map(([c]) =>
+    `<div class="pcard"><img src="assets/class_${c}.png"><div class="bar"><i></i></div></div>`).join("");
+
+  const MAX = 100;
+  let hp;
+  const wrap = document.getElementById("barricadeWrap");
+  const img = document.getElementById("barricadeImg");
+  const fill = document.getElementById("duraFill");
+  const num = document.getElementById("duraNum");
+  const logEl = document.getElementById("log");
+  let dead = false;
+
+  function addLog(t) {
+    const d = document.createElement("div");
+    d.textContent = t;
+    logEl.appendChild(d);
+    while (logEl.children.length > 3) logEl.removeChild(logEl.firstChild);
+  }
+
+  function updateBar() {
+    const r = Math.max(0, hp) / MAX;
+    fill.style.width = (r * 100) + "%";
+    fill.className = r <= 0.25 ? "low" : r <= 0.5 ? "mid" : "";
+    num.textContent = Math.max(0, hp);
+    wrap.classList.toggle("worn", hp <= 50 && hp > 25);
+    wrap.classList.toggle("critical", hp <= 25 && hp > 0);
+  }
+
+  function chips(n, cx, cy) {
+    const stage = document.getElementById("stage");
+    for (let i = 0; i < n; i++) {
+      const c = document.createElement("div");
+      c.className = "wood-chip";
+      c.style.left = cx + "px"; c.style.top = cy + "px";
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      stage.appendChild(c);
+      const dx = (Math.random() - 0.5) * 120;
+      const dy = -30 - Math.random() * 60;
+      c.animate(
+        [{ transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
+         { transform: `translate(${dx * 0.6}px, ${dy}px) rotate(${dx * 3}deg)`, opacity: 1, offset: 0.45 },
+         { transform: `translate(${dx}px, ${dy + 110}px) rotate(${dx * 6}deg)`, opacity: 0 }],
+        { duration: 620 + Math.random() * 200, easing: "ease-out" }).onfinish = () => c.remove();
+    }
+  }
+
+  function hit(dmg) {
+    if (dead) return;
+    hp -= dmg;
+    sfx("assets/sfx/barricade_hit.mp3", 0.6);
+    // 揺れ(被弾の強さで振れ幅を変える)
+    const amp = dmg >= 30 ? 7 : 4;
+    wrap.animate(
+      [{ transform: "translate(0,0)" }, { transform: `translate(${-amp}px,1px)` }, { transform: `translate(${amp}px,-1px)` }, { transform: `translate(${-amp * 0.5}px,0)` }, { transform: "translate(0,0)" }],
+      { duration: 280, easing: "ease-out" });
+    // 木片(柵の上端あたりからランダムな位置で散る)
+    const rect = wrap.getBoundingClientRect();
+    const stageRect = document.getElementById("stage").getBoundingClientRect();
+    const cx = rect.left - stageRect.left + rect.width * (0.25 + Math.random() * 0.5);
+    const cy = rect.top - stageRect.top + rect.height * 0.35;
+    chips(dmg >= 30 ? 12 : 6, cx, cy);
+    if (hp <= 0) { updateBar(); collapse(); return; }
+    updateBar();
+  }
+
+  function collapse() {
+    dead = true;
+    sfx("assets/sfx/barricade_break.wav", 0.7);
+    addLog("バリケードが崩れ落ちた！");
+    const rect = wrap.getBoundingClientRect();
+    const stageRect = document.getElementById("stage").getBoundingClientRect();
+    chips(26, rect.left - stageRect.left + rect.width * 0.5, rect.top - stageRect.top + rect.height * 0.4);
+    // 大きく揺れてから、傾きつつ崩れ落ちて消える
+    wrap.animate(
+      [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+       { transform: "translate(-8px,2px) rotate(-1deg)", offset: 0.15 },
+       { transform: "translate(8px,-1px) rotate(1deg)", offset: 0.3 },
+       { transform: "translate(-4px,14px) rotate(-2.5deg)", opacity: 1, offset: 0.55 },
+       { transform: "translate(2px,70px) rotate(4deg)", opacity: 0 }],
+      { duration: 1000, easing: "ease-in", fill: "forwards" });
+  }
+
+  function reset() {
+    dead = false;
+    hp = MAX;
+    wrap.getAnimations().forEach((a) => a.cancel());
+    wrap.classList.remove("worn", "critical");
+    updateBar();
+    logEl.innerHTML = "<div>猪の群れが柵に体当たりしている！</div>";
+  }
+
+  document.getElementById("btnHit").onclick = () => hit(12);
+  document.getElementById("btnBig").onclick = () => hit(30);
+  document.getElementById("btnReset").onclick = reset;
+  reset();
+})();
+</script>
+</body>
+</html>
