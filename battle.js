@@ -352,9 +352,12 @@ function rollMaterialDropOnDeath(e, card) {
     const ground = spawnMaterialGroundDrop(iconSrc, card, rare);
     materialGroundDrops.push({ ...entry, rare, el: ground ? ground.el : null, x: ground ? ground.x : null, y: ground ? ground.y : null });
   };
+  // どの敵が何を何%で落とすかは完全にテーブル駆動(ENEMY_MATERIAL_DROPS/ENEMY_MATERIAL_DROP_CHANCES、
+  // 敵エディターで編集可能)。ボスも登録すれば落とす(現状は未登録=落とさない、従来と同じ)
   const matId = ENEMY_MATERIAL_DROPS[e.id];
-  if (matId && !e.isBoss && Math.random() < (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) {
-    push({ kind: "material", matId }, MATERIALS[matId].icon, false);
+  if (matId) {
+    const chance = ENEMY_MATERIAL_DROP_CHANCES[e.id] != null ? ENEMY_MATERIAL_DROP_CHANCES[e.id] : (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE);
+    if (Math.random() < chance) push({ kind: "material", matId }, MATERIALS[matId].icon, false);
   }
   const droppedShard = (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) || (e.isBoss && hasOmamori("omononushi"));
   if (droppedShard) push({ kind: "soulShard" }, "assets/items/soul_shard.png", true);
