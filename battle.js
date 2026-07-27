@@ -340,17 +340,24 @@ function renderBattleScreen() {
   positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
 }
 
-// 素材ドロップの抽選(1体1回、敵が死んだ瞬間に呼ばれる)。当選したら足元に転がる表示
+// 素材/魂のかけらのドロップ抽選(1体1回、敵が死んだ瞬間に呼ばれる)。当選したら足元に転がる表示
 // (effects.js spawnMaterialGroundDrop)を出し、materialGroundDropsに積む。実際の入手は
-// 勝利時(victory)にまとめて確定する=逃走/全滅なら置き去りで入手なし(従来の勝利時抽選と同じ結果)
+// 勝利時(victory)にまとめて確定する=逃走/全滅なら置き去りで入手なし(従来の勝利時抽選と同じ結果)。
+// 魂のかけら(鬼火の確率ドロップ/大物主神の御守のボス撃破確定分)はレア扱い: 金の光をまとって
+// 転がり、巾着に入る時の音が置く音ではなく風鈴になる(2026-07-27ユーザー指示)
 function rollMaterialDropOnDeath(e, card) {
   if (e.__materialDropRolled) return; // 二重抽選防止(勝利時の補完抽選と重なっても1回だけ)
   e.__materialDropRolled = true;
+  const push = (entry, iconSrc, rare) => {
+    const ground = spawnMaterialGroundDrop(iconSrc, card, rare);
+    materialGroundDrops.push({ ...entry, rare, el: ground ? ground.el : null, x: ground ? ground.x : null, y: ground ? ground.y : null });
+  };
   const matId = ENEMY_MATERIAL_DROPS[e.id];
-  if (!matId || e.isBoss) return; // ボス/中ボスは設計保留のため対象外(従来と同じ)
-  if (Math.random() >= (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) return;
-  const ground = spawnMaterialGroundDrop(matId, card);
-  materialGroundDrops.push({ matId, el: ground ? ground.el : null, x: ground ? ground.x : null, y: ground ? ground.y : null });
+  if (matId && !e.isBoss && Math.random() < (e.isSwarm ? MATERIAL_DROP_CHANCE_SWARM : MATERIAL_DROP_CHANCE)) {
+    push({ kind: "material", matId }, MATERIALS[matId].icon, false);
+  }
+  const droppedShard = (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) || (e.isBoss && hasOmamori("omononushi"));
+  if (droppedShard) push({ kind: "soulShard" }, "assets/items/soul_shard.png", true);
 }
 
 // aliveField()が0人になった時、それが「全滅」なのか「全員逃げ切った」なのかを判定する
@@ -2129,24 +2136,23 @@ function victory() {
   // ボス追撃モード: 追いついて仕留めきった戦闘なら追撃状態を終了する(通常のgold/xp報酬は
   // 下のbattle.enemies.forEachで他の敵と同じように処理されるため、ここでは状態のクリアのみ)
   if (battle.bossPursuitEnemyId) bossPursuit = null;
-  let soulShardCount = 0;
   let soulLumpCount = 0;
-  // 探索イベント「天狗の腕試し」に勝利: 魂のかけら1つ(胸のすく勝利)
+  // 探索イベント「天狗の腕試し」に勝利: 魂のかけら1つ(胸のすく勝利)。特定の敵の足元ではなく
+  // 巾着への回収時に直接カウントされる(el:nullの扱い、風鈴の音はドロップ分と同じ)
   if (battle.tenguChallenge) {
-    soulShardCount += 1;
+    materialGroundDrops.push({ kind: "soulShard", rare: true, el: null, x: null, y: null });
     blog("見事！天狗は扇を収め、深々と一礼した。「その腕、覚えておこう」(魂のかけら1つ)");
   }
-  // 素材ドロップは敵が死んだ瞬間に抽選済み(rollMaterialDropOnDeath、足元に転がっている)。
+  // 素材/魂のかけらのドロップは敵が死んだ瞬間に抽選済み(rollMaterialDropOnDeath、足元に転がっている)。
   // 丸呑み中に死んだ等でカードが無く抽選が走らなかった敵がいれば、ここで補完抽選する
   // (足元表示なし・回収演出では巾着の位置で直接カウントされる)
   battle.enemies.forEach((e) => { if (e.hp <= 0) rollMaterialDropOnDeath(e, findVisibleCard(e.instanceId)); });
   const materialGains = {}; // { 素材id: 個数 } この戦闘で落ちた素材
-  materialGroundDrops.forEach((d) => { materialGains[d.matId] = (materialGains[d.matId] || 0) + 1; });
+  materialGroundDrops.forEach((d) => { if (d.kind === "material") materialGains[d.matId] = (materialGains[d.matId] || 0) + 1; });
+  const soulShardCount = materialGroundDrops.filter((d) => d.kind === "soulShard").length;
   battle.enemies.forEach((e) => {
     const g = goldReward(e);
     totalGold += g;
-    if (e.id === "onibi" && Math.random() < ONIBI_SOUL_SHARD_DROP_CHANCE) soulShardCount++; // 鬼火は一定確率で魂のかけらをドロップする(討伐数ぶん)
-    if (e.isBoss && hasOmamori("omononushi")) soulShardCount++; // 大物主神の御守: ボスを倒すと必ず魂のかけらを落とす
     if ((e.isBoss || e.isMidBoss) && Math.random() < SOUL_LUMP_DROP_CHANCE) soulLumpCount++; // ボス/中ボス討伐時のみ低確率で魂の塊をドロップ(神社の特別祈願用)
     xpParticipants().forEach((c) => {
       const share = Math.round(e.xp * xpRatioOf(c));
@@ -2185,9 +2191,11 @@ function victory() {
   state.gold += totalGold;
   advGoldEarned += totalGold;
   blog(`敵を全て倒した！ ${totalGold}Gを手に入れた。`);
+  // 魂のかけら: テキストログには書かず(文章量削減方針)、素材と同じ足元ドロップ→巾着回収の
+  // 演出(レア扱い=金の光+風鈴の音)で見せる。リザルト画面のアイコン並びにも出す
   if (soulShardCount > 0) {
     state.inventory.soulShard = (state.inventory.soulShard || 0) + soulShardCount;
-    blog(`魂のかけらを${soulShardCount}個手に入れた。`);
+    advSoulShardGained += soulShardCount;
   }
   if (soulLumpCount > 0) {
     const before = state.inventory.soulLump || 0;
@@ -2207,7 +2215,9 @@ function victory() {
       state.materials[id] = (state.materials[id] || 0) + materialGains[id];
       advMaterialGains[id] = (advMaterialGains[id] || 0) + materialGains[id]; // リザルト画面のアイコン並び用
     });
-    // 足元に転がっている素材を、1個ずつ時間差(0.3秒)で巾着袋へ吸い込む
+  }
+  // 足元に転がっている素材/魂のかけらを、1個ずつ時間差(0.3秒)で巾着袋へ吸い込む
+  if (materialGroundDrops.length > 0) {
     playMaterialCollectFx(materialGroundDrops);
     materialGroundDrops = [];
   }
@@ -2225,13 +2235,13 @@ function victory() {
   if (hasOmamori("amenominakanushi")) {
     fieldParty.forEach((c) => { if (c.status === "active" && c.maxMp > 0) c.mp = Math.min(c.maxMp, c.mp + 1); });
   }
-  if (totalGold > 0 || soulShardCount > 0 || soulLumpCount > 0) {
+  if (totalGold > 0 || soulLumpCount > 0) {
     if (totalGold > 0) playSfx("coin");
     // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
     // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)。
-    // 魂のかけら/魂の塊を入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
-    // (塊の方が激レアなので、両方同時に落ちた場合は塊を優先して見せる)
-    const extraImg = soulLumpCount > 0 ? "assets/items/soul_lump.png" : soulShardCount > 0 ? "assets/items/soul_shard.png" : null;
+    // 魂の塊を入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
+    // (魂のかけらは2026-07-27から素材と同じ足元ドロップ→巾着回収の演出に移行したためここには出さない)
+    const extraImg = soulLumpCount > 0 ? "assets/items/soul_lump.png" : null;
     showTreasurePopup(Math.round(totalGold / battle.enemies.length), extraImg);
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく

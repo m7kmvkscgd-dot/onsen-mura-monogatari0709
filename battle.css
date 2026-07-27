@@ -448,6 +448,10 @@
     filter: drop-shadow(0 0 4px rgba(255,240,190,0.6)) drop-shadow(0 2px 3px rgba(0,0,0,0.7));
     will-change: transform;
   }
+  /* レア(魂のかけら等): 金の光をまとって転がる */
+  .mat-ground-item.rare {
+    filter: drop-shadow(0 0 8px rgba(255,214,102,0.95)) drop-shadow(0 0 16px rgba(255,190,60,0.5)) drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+  }
   /* 巾着の水平位置(left)は表示カラム右端からJS(playMaterialCollectFx)が計算してセットする */
   .mat-drop-pouch { position: absolute; top: 200px; width: 54px; height: 54px; opacity: 0; }
   .mat-drop-pouch img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }

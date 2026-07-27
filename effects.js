@@ -1110,15 +1110,16 @@ function ensureMatGroundLayer() {
   document.body.appendChild(matGroundLayer);
   return matGroundLayer;
 }
-// 敵カードの足元に素材がポンっと跳ねて落ちる。{el, x, y}を返す(勝利時の回収で使う)。
-// カードが無い/実測できない場合はnull(回収時は巾着の位置で直接カウントされる)
-function spawnMaterialGroundDrop(matId, card) {
+// 敵カードの足元にドロップ品(素材/魂のかけら)がポンっと跳ねて落ちる。{el, x, y}を返す
+// (勝利時の回収で使う)。カードが無い/実測できない場合はnull(回収時は巾着の位置で直接
+// カウントされる)。rare=trueなら金の光をまとって転がる(魂のかけら用)
+function spawnMaterialGroundDrop(iconSrc, card, rare) {
   const r = card ? card.getBoundingClientRect() : null;
   if (!r || r.width === 0) return null;
   const layer = ensureMatGroundLayer();
   const img = document.createElement("img");
-  img.className = "mat-ground-item";
-  img.src = MATERIALS[matId].icon;
+  img.className = "mat-ground-item" + (rare ? " rare" : "");
+  img.src = iconSrc;
   const x = r.left + r.width / 2 + (Math.random() * 16 - 8); // 足元で少し散らばる
   const y = r.bottom - 13;
   img.style.left = `${x - 20}px`;
@@ -1162,7 +1163,7 @@ function playMaterialCollectFx(drops) {
         bagCount++;
         countEl.textContent = bagCount;
         countEl.classList.add("show");
-        playSfx("loot_item"); // 置く音(ユーザー提供SE)
+        playSfx(d.rare ? "loot_rare" : "loot_item"); // 通常=置く音/レア(魂のかけら等)=風鈴(ユーザー提供SE)
         pouch.animate(
           [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
           { duration: 340, easing: "ease-out" });

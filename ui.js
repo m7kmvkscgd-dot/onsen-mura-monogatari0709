@@ -662,6 +662,8 @@ function renderResultScreen(onContinue, isDefeat) {
   MATERIAL_ORDER.forEach((id) => {
     for (let i = 0; i < (advMaterialGains[id] || 0); i++) matIcons.push({ src: MATERIALS[id].icon, rare: false });
   });
+  // レア枠は末尾にまとめる(かけら→塊の順=レア度の低い順)
+  for (let i = 0; i < advSoulShardGained; i++) matIcons.push({ src: "assets/items/soul_shard.png", rare: true });
   for (let i = 0; i < advSoulLumpGained; i++) matIcons.push({ src: "assets/items/soul_lump.png", rare: true });
   matIcons.forEach((m) => {
     const img = document.createElement("img");
