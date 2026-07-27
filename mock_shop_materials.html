@@ -62,7 +62,6 @@
   .cost-chip img { width: 22px; height: 22px; object-fit: contain; }
   .cost-chip.gold-chip { color: #e5c878; }
   .cost-chip.lack { color: #e66; }
-  .cost-chip.lack .have { font-size: 0.68rem; font-weight: 700; }
   .buy-btn {
     flex-shrink: 0; font-family: inherit; font-size: 0.88rem; font-weight: 900; color: #241a0c;
     background: linear-gradient(160deg, #e0c078, #b8924a); border: 1px solid rgba(255,240,200,0.5);
@@ -200,7 +199,7 @@
       const need = mats[id];
       const have = wallet.mats[id];
       const lack = have < need;
-      html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MAT[id].icon}">×${need}${lack ? `<span class="have">(所持${have})</span>` : ""}</span>`;
+      html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MAT[id].icon}">×${need}</span>`;
     });
     return html;
   }
