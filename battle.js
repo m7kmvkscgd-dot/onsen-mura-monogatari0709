@@ -302,6 +302,9 @@ function renderBattleScreen() {
   // 5体以上の大規模戦は敵カードを味方カード(5人表示)と同格のサイズへ縮小し、折り返さず1行に収める
   // (2026-07-27実機報告: 通常サイズのまま5体並べると2行に折り返してテキストボックスと衝突していた)
   row.classList.toggle("mass-battle", massBattleSizingForced || visibleEnemies.length >= 5);
+  // 襲撃バリケードの表示(大規模戦モードのみ。バリケードimgとログの重ねスタイルをまとめて切り替える)
+  const battleTop = row.closest(".battle-top");
+  if (battleTop) battleTop.classList.toggle("raid-battle", massBattleSizingForced);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });
