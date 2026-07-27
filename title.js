@@ -322,6 +322,39 @@ document.getElementById("titleTestBtn").onclick = () => {
   enterDungeon(); // 画面遷移・BGM・遠征トラッカーのリセットまで通常の出発と同じ
 };
 
+// ============ 大規模戦テスト(2026-07-27) ============
+// 村襲撃システム(5人戦)のプロトタイプ確認用。侍/槍士/薙刀士/忍者/砲術士(=見張り台枠の想定)の
+// 5人・控えなし・全員Lv2(Lv2スキルは毎回ランダムに選択)で、探索を経由せず即・猪5体との戦闘に入る。
+// 敵は頭数ナーフなし(襲撃はウェーブの編成コスト(枠合計10、猪=2枠×5)で難易度を設計する方針の検証)。
+// テストモード1と同じくsaveState無効(実セーブ保護)、全滅/帰還でタイトルへ戻る
+document.getElementById("titleTest2Btn").onclick = () => {
+  playSfx("select");
+  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
+  state = defaultState();
+  const specs = [["小太郎", "samurai"], ["権六", "spearman"], ["巴", "naginata"], ["霧丸", "ninja"], ["玄蕃", "gunner"]];
+  const chars = specs.map(([name, classId]) => {
+    const c = createCharacter(name, classId, state.classUpgrades);
+    grantXp(c, xpToNext(1), () => {}); // Lv2へ
+    const choice = SKILL_TREES[classId] && SKILL_TREES[classId][2];
+    if (choice) {
+      const side = Math.random() < 0.5 ? "left" : "right";
+      applySkillChoice(c, { ...choice[side], side }, 2); // スキルは毎回ランダム(ユーザー指定)
+    }
+    return c;
+  });
+  state.roster.push(...chars);
+  state.activePartyIds = chars.map((c) => c.id);
+  state.pendingSkillChoices = []; // 上でスキルは選択済みのため、レベルアップで積まれた選択待ちは消す
+  currentStage = "forest";
+  enterDungeon();
+  // enterDungeonは4人目以降を控えへ回すため、5人全員を戦闘参加に上書きする(襲撃戦は控えなしの5人)
+  fieldParty = chars;
+  reserveFieldMember = null;
+  const raiders = [];
+  for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));
+  startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");
+};
+
 // ============ 設定画面 ============
 // 既存のミュート機能(#muteBtn/audio.js)をON/OFFトグルとして見せるだけの最小限の設定画面。
 // (チュートリアル表示トグルは機能ごと削除した、2026-07-18)
