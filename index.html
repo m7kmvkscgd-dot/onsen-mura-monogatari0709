@@ -550,7 +550,8 @@
     </div>
     <div class="body-pad">
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
-      <p class="gold" id="extensionGold">0G</p>
+      <!-- 財布ストリップ: ゴールド+所持素材4種(鍛冶屋と共通、素材経済・2026-07-27) -->
+      <div class="shop-wallet" id="extensionWallet"></div>
       <h2>🏠村 Lv<span id="extensionLevel"></span></h2>
       <div class="card house-status-card">
         <div class="house-status-section house-status-next" id="extensionNextSection">
@@ -561,7 +562,9 @@
           </div>
         </div>
       </div>
-      <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.8rem;"></button>
+      <!-- 増築コスト(ゴールド+素材のチップ、不足は赤。素材経済・2026-07-27) -->
+      <div class="equip-cost" id="extensionCostChips" style="margin-top:0.8rem;"></div>
+      <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.5rem;"></button>
       <p class="house-upgrade-reason" id="extensionUpgradeReason" style="display:none;"></p>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0.6rem 0 0;" id="extensionDesc"></p>
 
@@ -1210,7 +1213,9 @@
       <div id="buildingDetailIconWrap"></div>
       <div class="bestiary-detail-name" id="buildingDetailName"></div>
       <div class="building-detail-desc" id="buildingDetailDesc"></div>
-      <button class="big primary" id="buildingDetailActionBtn" style="margin-top:0.8rem;width:100%;"></button>
+      <!-- 建築コスト(ゴールド+素材のチップ、不足は赤。素材経済・2026-07-27) -->
+      <div class="equip-cost" id="buildingDetailCost" style="margin-top:0.7rem;justify-content:center;"></div>
+      <button class="big primary" id="buildingDetailActionBtn" style="margin-top:0.6rem;width:100%;"></button>
       <p class="house-upgrade-reason" id="buildingDetailReason" style="display:none;"></p>
     </div>
   </div>

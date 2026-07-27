@@ -1764,21 +1764,21 @@ const BUILDING_DEFS = [
     unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL, costs: [MAGISTRATE_COST],
     desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。" },
   { key: "shop", levelField: "shopLevel", name: "鍛冶屋", icon: "⚒️", iconImg: "assets/icons/town_kajiya.png",
-    unlock: SHOP_UNLOCK_HOUSE_LEVEL, costs: [SHOP_COST],
+    unlock: SHOP_UNLOCK_HOUSE_LEVEL, costs: [SHOP_COST], mats: [{ ki: 1 }],
     desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)" },
   // 旅支度屋だけは専用の建物イラストではなく、既存の野営具アイテムアイコンを流用する(ユーザー指示)
   { key: "travelPrepShop", levelField: "travelPrepShopLevel", name: "旅支度屋", icon: "🏕️", iconImg: "assets/items/camping_kit.png",
-    unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST],
+    unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST], mats: [{ ki: 4 }],
     desc: "出発画面で野営具を購入できるようになります。" },
   { key: "dojo", levelField: "dojoLevel", name: "道場", icon: "🥋", iconImg: "assets/icons/buildings/dojo.png",
-    unlock: DOJO_UNLOCK_HOUSE_LEVEL, costs: [DOJO_LEVEL1_COST, DOJO_LEVEL2_COST], classUnlock: "naginata",
+    unlock: DOJO_UNLOCK_HOUSE_LEVEL, costs: [DOJO_LEVEL1_COST, DOJO_LEVEL2_COST], mats: [{ ki: 1 }, null], classUnlock: "naginata",
     desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。",
     levelEffectLabel: "分け前", levelEffect: (lv) => `${Math.round(DOJO_XP_SHARE_BY_LEVEL[lv] * 100)}%` },
   { key: "karakuri", levelField: "karakuriLevel", name: "からくり屋敷", icon: "🎎", iconImg: "assets/icons/buildings/karakuri.png",
-    unlock: KARAKURI_UNLOCK_HOUSE_LEVEL, costs: [KARAKURI_COST], classUnlock: "ninja",
+    unlock: KARAKURI_UNLOCK_HOUSE_LEVEL, costs: [KARAKURI_COST], mats: [{ ki: 1 }], classUnlock: "ninja",
     desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。" },
   { key: "bagShop", levelField: "bagShopLevel", name: "鞄屋", icon: "🧳", iconImg: "assets/icons/buildings/bagShop.png",
-    unlock: BAG_SHOP_UNLOCK_HOUSE_LEVEL, costs: [BAG_SHOP_LEVEL1_COST, BAG_SHOP_LEVEL2_COST, BAG_SHOP_LEVEL3_COST],
+    unlock: BAG_SHOP_UNLOCK_HOUSE_LEVEL, costs: [BAG_SHOP_LEVEL1_COST, BAG_SHOP_LEVEL2_COST, BAG_SHOP_LEVEL3_COST], mats: [null, null, { kawa: 12 }],
     desc: "支援物資の所持上限が増えます。",
     levelEffectLabel: "所持上限", levelEffect: (lv) => `+${lv}` },
   { key: "watchtower", levelField: "watchtowerLevel", name: "見張り台", icon: "🏹", iconImg: "assets/icons/buildings/watchtower.png",
@@ -1797,7 +1797,7 @@ const BUILDING_DEFS = [
     unlock: GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, costs: [GUNPOWDER_STORE_COST], classUnlock: "gunner",
     desc: "砲術士が雇えるようになります。" },
   { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
-    unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST],
+    unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST], mats: [{ ki: 10 }],
     desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
   { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
     unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
@@ -1855,14 +1855,15 @@ function renderBuildingGrid(houseLevel) {
     } else if (unlocked) {
       card.className = "building-card";
       const cost = def.costs[0];
-      const canAfford = state.gold >= cost;
+      const mats0 = def.mats ? def.mats[0] : null;
+      const canAfford = state.gold >= cost && matsCostOk(mats0);
       card.innerHTML = `
         ${buildingIconHtml(def)}
         ${buildingNewBadgeHtml(def, unlocked, built)}
         <div class="building-card-name">${def.name}</div>
         <div class="building-card-action">${canAfford
           ? `<button class="building-build-btn" type="button">建築する</button>`
-          : `<div class="building-need-gold">必要：${cost}G</div>`}</div>
+          : `<div class="building-need-cost">${costChipsHtml(cost, mats0)}</div>`}</div>
       `;
       if (canAfford) {
         card.querySelector(".building-build-btn").onclick = (e) => { e.stopPropagation(); buildOrUpgradeBuilding(def.key); };
@@ -1895,20 +1896,27 @@ function openBuildingDetail(key) {
   document.getElementById("buildingDetailDesc").textContent = [def.desc, effectLine].filter(Boolean).join("\n");
   const btn = document.getElementById("buildingDetailActionBtn");
   const reasonEl = document.getElementById("buildingDetailReason");
+  const costEl = document.getElementById("buildingDetailCost");
   if (lv >= def.costs.length) {
     btn.style.display = "none";
     reasonEl.style.display = "none";
+    costEl.style.display = "none";
   } else {
     const cost = def.costs[lv];
-    const canAfford = state.gold >= cost;
+    const mats = def.mats ? def.mats[lv] : null;
+    const goldOk = state.gold >= cost;
+    const matsOk = matsCostOk(mats);
+    // コストはゴールド+素材のチップ表示(鍛冶屋と同じ型。不足分は赤)
+    costEl.style.display = "";
+    costEl.innerHTML = costChipsHtml(cost, mats);
     btn.style.display = "";
-    btn.textContent = `${lv === 0 ? "建築する" : "増築する"}（${cost}G）`;
-    btn.disabled = !canAfford;
-    // 押せない理由は所持金不足の時だけボタン直下に表示する(家カードと同じ文言パターン)
-    if (canAfford) {
+    btn.textContent = lv === 0 ? "建築する" : "増築する";
+    btn.disabled = !goldOk || !matsOk;
+    // 押せない理由はボタン直下に表示する(家カードと同じ文言パターン)
+    if (goldOk && matsOk) {
       reasonEl.style.display = "none";
     } else {
-      reasonEl.textContent = `所持金が不足しています（${state.gold}/${cost}G）`;
+      reasonEl.textContent = !goldOk ? `所持金が不足しています（${state.gold}/${cost}G）` : "素材が足りません";
       reasonEl.style.display = "";
     }
     btn.onclick = () => {
@@ -1927,7 +1935,7 @@ function renderExtension() {
   if (facilityHomeScreen === "screen-town") playTownAreaBgm();
   updateSceneBackgrounds();
   renderDwHeader("extension", "増築", () => { renderFacilityHome(); });
-  document.getElementById("extensionGold").textContent = state.gold + "G";
+  renderWalletStrip("extensionWallet");
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
   document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）";
@@ -1943,6 +1951,7 @@ function renderExtension() {
     btn.textContent = "これ以上は増築できません(上限)";
     btn.disabled = true;
     reasonEl.style.display = "none";
+    document.getElementById("extensionCostChips").style.display = "none";
   } else {
     // 解放される施設が無いレベルは増築の意味が無いため、次のセクションごと隠す
     nextSection.style.display = unlocksAtNextLevel.length > 0 ? "" : "none";
@@ -1950,15 +1959,21 @@ function renderExtension() {
     document.getElementById("extensionNextUnlockList").innerHTML = unlocksAtNextLevel
       .map((name) => `<div class="house-status-unlock">・${name}</div>`).join("");
     const cost = houseUpgradeCost(level);
-    const canAfford = state.gold >= cost;
-    btn.textContent = `増築する（${cost}G）`;
-    btn.disabled = !canAfford;
-    // 押せない理由は所持金不足の時だけ、ボタン直下に「所持金が不足しています（70/200G）」の形で表示する
-    // (以前は赤字で「200G必要（所持80G）」だったが、赤は警告が強すぎるとの指摘で色・文言とも変更した)
-    if (canAfford) {
+    const mats = houseUpgradeMats(level);
+    const goldOk = state.gold >= cost;
+    const matsOk = matsCostOk(mats);
+    // コストはゴールド+素材のチップ表示(鍛冶屋と同じ型。不足分は赤)
+    const costEl = document.getElementById("extensionCostChips");
+    costEl.style.display = "";
+    costEl.innerHTML = costChipsHtml(cost, mats);
+    btn.textContent = "増築する";
+    btn.disabled = !goldOk || !matsOk;
+    // 押せない理由は不足の時だけ、ボタン直下に表示する
+    // (以前は赤字で「200G必要(所持80G)」だったが、赤は警告が強すぎるとの指摘で色・文言とも変更した)
+    if (goldOk && matsOk) {
       reasonEl.style.display = "none";
     } else {
-      reasonEl.textContent = `所持金が不足しています（${state.gold}/${cost}G）`;
+      reasonEl.textContent = !goldOk ? `所持金が不足しています（${state.gold}/${cost}G）` : "素材が足りません";
       reasonEl.style.display = "";
     }
   }
@@ -2057,8 +2072,11 @@ function buildOrUpgradeBuilding(key) {
   if (lv >= def.costs.length) return;
   if (lv === 0 && houseLevel < def.unlock) return;
   const cost = def.costs[lv];
+  const mats = def.mats ? def.mats[lv] : null;
   if (state.gold < cost) return;
+  if (!matsCostOk(mats)) return;
   state.gold -= cost;
+  consumeMatsCost(mats);
   state[def.levelField] = lv + 1;
   saveState();
   renderExtension();
@@ -2075,9 +2093,11 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   if (level >= HOUSE_MAX_LEVEL) return;
   const cost = houseUpgradeCost(level);
   if (state.gold < cost) return;
+  if (!matsCostOk(houseUpgradeMats(level))) return;
   const nextLevel = level + 1;
   const unlockedNames = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => `${def.name} 解禁`);
   state.gold -= cost;
+  consumeMatsCost(houseUpgradeMats(level));
   state.houseLevel = nextLevel;
   saveState();
   renderExtension();
@@ -2292,26 +2312,38 @@ function renderShop() {
 // 鍛冶屋の財布ストリップ: ゴールド+所持素材4種を常時表示(素材経済フェーズ1、2026-07-27)。
 // 装備行の不足チップは赤くなるだけで所持数を書かない(改行防止・情報重複回避のユーザー指示)ため、
 // 所持数はここでだけ確認する
-function renderShopWallet() {
+function renderShopWallet() { renderWalletStrip("shopWallet"); }
+// ゴールド+所持素材4種の財布ストリップ(鍛冶屋/増築画面で共用)
+function renderWalletStrip(elementId) {
   const mats = state.materials || {};
-  document.getElementById("shopWallet").innerHTML =
+  document.getElementById(elementId).innerHTML =
     `<span class="shop-wallet-gold">💰${state.gold}G</span>` +
     MATERIAL_ORDER.map((id) => `<span class="shop-wallet-mat"><img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}">×${mats[id] || 0}</span>`).join("");
 }
 
-function equipCostChipsHtml(next) {
-  const mats = state.materials || {};
-  let html = `<span class="cost-chip gold-chip${state.gold < next.price ? " lack" : ""}">💰${next.price}G</span>`;
-  Object.keys(next.mats || {}).forEach((id) => {
-    const lack = (mats[id] || 0) < next.mats[id];
-    html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}">×${next.mats[id]}</span>`;
+// ゴールド+素材のコストチップ表示/判定/消費(鍛冶屋・建築・増築で共通。素材経済フェーズ、2026-07-27)。
+// mats={素材id:個数}(null/空={}なら素材不要)。不足チップは赤くするだけで所持数は書かない(財布ストリップ参照)
+function costChipsHtml(gold, mats) {
+  const owned = state.materials || {};
+  let html = `<span class="cost-chip gold-chip${state.gold < gold ? " lack" : ""}">💰${gold}G</span>`;
+  Object.keys(mats || {}).forEach((id) => {
+    if (!mats[id]) return; // 0個の素材はチップ自体を出さない
+    const lack = (owned[id] || 0) < mats[id];
+    html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}">×${mats[id]}</span>`;
   });
   return html;
 }
-function equipMatsOk(next) {
-  const mats = state.materials || {};
-  return Object.keys(next.mats || {}).every((id) => (mats[id] || 0) >= next.mats[id]);
+function matsCostOk(mats) {
+  const owned = state.materials || {};
+  return Object.keys(mats || {}).every((id) => (owned[id] || 0) >= (mats[id] || 0));
 }
+function consumeMatsCost(mats) {
+  if (!mats) return;
+  if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+  Object.keys(mats).forEach((id) => { if (mats[id]) state.materials[id] = (state.materials[id] || 0) - mats[id]; });
+}
+function equipCostChipsHtml(next) { return costChipsHtml(next.price, next.mats); }
+function equipMatsOk(next) { return matsCostOk(next.mats); }
 function equipRowHtml(classId, slot, slotLabel) {
   const tiers = EQUIPMENT[classId][slot];
   state.classUpgrades[classId] = state.classUpgrades[classId] || { weapon: 0, armor: 0 };

@@ -504,6 +504,10 @@
   .cost-chip.gold-chip { color: var(--accent); }
   .cost-chip.lack { color: #e66; }
   .equip-lock-reason { color: #c9a55a; }
+  /* 建築グリッドの「建築可能だが足りない」カード内の必要コスト表示(チップの縮小版) */
+  .building-need-cost { display: flex; flex-wrap: wrap; gap: 3px 6px; justify-content: center; }
+  .building-need-cost .cost-chip { font-size: 0.66rem; gap: 2px; }
+  .building-need-cost .cost-chip img { width: 15px; height: 15px; }
   /* 出発準備画面: 支援物資/パーティ/出発の3ブロックを視覚的に完全分離するための区切り線 */
   .dw-divider { border: none; border-top: 1px solid var(--dw-card-border); margin: 16px 0; }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }

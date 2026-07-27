@@ -93,7 +93,13 @@ function defaultState() {
 
 const HOUSE_MAX_LEVEL = 7; // 村レベルを基準に解禁される施設のうち最も高い要求値(馬屋/渡し船=7)に合わせた上限。それ以上は建物の解禁に使い道が無いため増築できない
 // [0]=レベル1→2、[1]=2→3、…、[5]=6→7。建築エディタのdiff反映(2026-07-26)で計算式から配列直書きに変更
-const HOUSE_UPGRADE_COSTS = [30, 100, 350, 450, 550, 800];
+const HOUSE_UPGRADE_COSTS = [10, 100, 250, 450, 550, 800]; // 2026-07-27建築エディターでユーザー改定(Lv1→2を30→10、Lv3→4を350→250)
+// 村レベル増築に必要な素材(素材経済・2026-07-27建築エディターでユーザー設定)。
+// nullは素材不要。インデックスはHOUSE_UPGRADE_COSTSと同じ(0=Lv1→2 … 5=Lv6→7)
+const HOUSE_UPGRADE_MATS = [null, { ki: 4 }, null, null, null, { tetsu: 5 }];
+function houseUpgradeMats(level) {
+  return HOUSE_UPGRADE_MATS[level - 1] || null;
+}
 function houseUpgradeCost(level) {
   const cost = HOUSE_UPGRADE_COSTS[level - 1];
   return cost != null ? cost : HOUSE_UPGRADE_COSTS[HOUSE_UPGRADE_COSTS.length - 1];
@@ -103,7 +109,7 @@ const ROSTER_CAPACITY = 8; // 仲間を雇える上限。以前は村レベル�
 function rosterCapacity() {
   return ROSTER_CAPACITY;
 }
-const DOJO_LEVEL1_COST = 10; // 道場レベル1の建築費用
+const DOJO_LEVEL1_COST = 30; // 道場レベル1の建築費用(2026-07-27ユーザー改定10→30)
 const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
 const DOJO_MAX_LEVEL = 2;
 const DOJO_UNLOCK_HOUSE_LEVEL = 3; // 村レベルがこの値に達するまで道場は建築できない
@@ -115,14 +121,14 @@ const BESTIARY_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 10;
 // 鍛冶屋: 建築すると装備の購入ができるようになる
-const SHOP_UNLOCK_HOUSE_LEVEL = 4;
+const SHOP_UNLOCK_HOUSE_LEVEL = 2; // 2026-07-27ユーザー改定(4→2。鍛冶屋を序盤から使えるように)
 const SHOP_COST = 10;
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 4;
 const TRAVEL_PREP_SHOP_COST = 30;
 // 鞄屋: 道場と同じ多段階建築。1レベルにつき支援物資の所持上限が1増える(レベル1=30G/レベル2=100G/レベル3=200G)
 const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 5;
-const BAG_SHOP_LEVEL1_COST = 30;
+const BAG_SHOP_LEVEL1_COST = 50; // 2026-07-27ユーザー改定(30→50)
 const BAG_SHOP_LEVEL2_COST = 100;
 const BAG_SHOP_LEVEL3_COST = 200;
 const BAG_SHOP_MAX_LEVEL = 3;
@@ -156,7 +162,7 @@ const HEN_HOUSE_LEVEL1_COST = 100;
 const HEN_HOUSE_LEVEL2_COST = 200;
 const HEN_HOUSE_MAX_LEVEL = 2;
 // 茶屋: 効果は未定(建物のみ、未実装)
-const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 6;
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 5; // 2026-07-27ユーザー改定(6→5)
 const TEA_HOUSE_COST = 250;
 // 湯守屋: 建築すると温泉のストレス回復量が50→70に上がる(実際に効果があるレベル1の施設)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 5;
@@ -166,7 +172,7 @@ const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 4;
 const GUNPOWDER_STORE_COST = 30;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
 const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
-const KARAKURI_COST = 10;
+const KARAKURI_COST = 30; // 2026-07-27ユーザー改定(10→30)
 // 養蜂場: 道場と同じ多段階建築。1段階につき回復薬の回復量+2%(最大5段階で+10%)、各段階とも100G
 const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
 const BEE_FARM_COST = 100;
