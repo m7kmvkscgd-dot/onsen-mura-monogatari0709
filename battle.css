@@ -411,11 +411,15 @@
   .enemy-row.mass-battle .enemy-card img:not(.slash-vfx) { width: 100%; max-width: 60px; height: auto; aspect-ratio: 1 / 1; display: block; margin: 0 auto; }
   .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; white-space: nowrap; overflow: hidden; }
   /* 襲撃バリケード(村襲撃/大規模戦モードのみ)。敵カードの列とテキストボックスの間に全幅で立てる。
-     杭の先端が敵カードの足元に少し重なるようマイナスマージンで引き上げ(敵列z1の背後)、
-     テキストボックスはバリケードの下半分に重ねる(モック準拠) */
-  #raidBarricade { display: none; width: 100%; height: auto; margin: -14px 0 0; position: relative; z-index: 0; pointer-events: none; }
-  .battle-top.raid-battle #raidBarricade { display: block; }
-  .battle-top.raid-battle #battleLog { margin-top: -58px; position: relative; z-index: 2; }
+     【重要】通常フローに置くとテキストボックス以下が全部押し下げられて味方カードに被る(実機事故
+     2026-07-27)ため、絶対配置=フロー外にしてレイアウトへ一切影響させない。敵の列(z1)の背後で
+     杭の先端が敵カードの足元に食い込み、テキストボックス(z2)がバリケードの下半分に重なる */
+  #raidBarricade { display: none; }
+  .battle-top.raid-battle #raidBarricade {
+    display: block; position: absolute; left: 0; right: 0; top: 112px;
+    width: 100%; height: auto; z-index: 0; pointer-events: none;
+  }
+  .battle-top.raid-battle #battleLog { position: relative; z-index: 2; }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
   /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、
      height:auto)と詳細度が同じ(クラス2つ+タグ)ため、CSSの記述順で後にあるこちらが勝ってしまい、
