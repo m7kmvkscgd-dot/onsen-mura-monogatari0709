@@ -1727,9 +1727,13 @@ function applyGroupNerf(enemies) {
     const nerfTable = { 2: 0.8, 3: 0.65, 4: 0.55, 5: 0.48, 6: 0.42 };
     const nerf = nerfTable[enemies.length] || 0.4;
     enemies.forEach((e) => {
-      e.hp = Math.max(1, Math.round(e.hp * nerf));
+      // 大群(isSwarm)は元からステータスを弱く設計してあるため、頭数ナーフまでフルに掛けると
+      // 二重弱体化で雑魚すぎる(ユーザー指摘2026-07-27)。効き量(100%からの減少幅)を半分にする。
+      // 例: 6体戦は通常敵42%のところ大群は71%、5体戦は48%→74%
+      const factor = e.isSwarm ? (1 + nerf) / 2 : nerf;
+      e.hp = Math.max(1, Math.round(e.hp * factor));
       e.maxHp = e.hp;
-      e.atk = Math.max(1, Math.round(e.atk * nerf));
+      e.atk = Math.max(1, Math.round(e.atk * factor));
     });
   }
   return enemies;
