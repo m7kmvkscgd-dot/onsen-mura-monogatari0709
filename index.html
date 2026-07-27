@@ -425,10 +425,11 @@
     </div>
     <div class="body-pad">
       <button class="big" id="shopBackBtnTop" style="margin-bottom:0.8rem;">出発準備に戻る</button>
-      <p class="gold" id="shopGold">0G</p>
+      <!-- 財布ストリップ: ゴールド+所持素材4種の常時表示(素材経済フェーズ1、2026-07-27) -->
+      <div class="shop-wallet" id="shopWallet"></div>
 
       <h2>職業別 武器・防具</h2>
-      <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.5rem;">一度買えばその職業全員、永久に効果があります。</p>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.5rem;">一度買えば自動的に装備され、その職業全員に効果があります。</p>
       <div id="equipmentList"></div>
 
       <button class="big" id="shopBackBtn">出発準備に戻る</button>

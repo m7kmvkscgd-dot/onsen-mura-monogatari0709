@@ -2286,18 +2286,40 @@ function renderShop() {
   if (facilityHomeScreen === "screen-town") playTownAreaBgm();
   updateSceneBackgrounds();
   renderDwHeader("shop", "鍛冶屋", () => { renderFacilityHome(); });
-  document.getElementById("shopGold").textContent = state.gold + "G";
+  renderShopWallet();
   renderEquipmentList();
 }
+// 鍛冶屋の財布ストリップ: ゴールド+所持素材4種を常時表示(素材経済フェーズ1、2026-07-27)。
+// 装備行の不足チップは赤くなるだけで所持数を書かない(改行防止・情報重複回避のユーザー指示)ため、
+// 所持数はここでだけ確認する
+function renderShopWallet() {
+  const mats = state.materials || {};
+  document.getElementById("shopWallet").innerHTML =
+    `<span class="shop-wallet-gold">💰${state.gold}G</span>` +
+    MATERIAL_ORDER.map((id) => `<span class="shop-wallet-mat"><img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}">×${mats[id] || 0}</span>`).join("");
+}
 
+function equipCostChipsHtml(next) {
+  const mats = state.materials || {};
+  let html = `<span class="cost-chip gold-chip${state.gold < next.price ? " lack" : ""}">💰${next.price}G</span>`;
+  Object.keys(next.mats || {}).forEach((id) => {
+    const lack = (mats[id] || 0) < next.mats[id];
+    html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MATERIALS[id].icon}" alt="${MATERIALS[id].ja}">×${next.mats[id]}</span>`;
+  });
+  return html;
+}
+function equipMatsOk(next) {
+  const mats = state.materials || {};
+  return Object.keys(next.mats || {}).every((id) => (mats[id] || 0) >= next.mats[id]);
+}
 function equipRowHtml(classId, slot, slotLabel) {
   const tiers = EQUIPMENT[classId][slot];
   state.classUpgrades[classId] = state.classUpgrades[classId] || { weapon: 0, armor: 0 };
   const ownedTier = state.classUpgrades[classId][slot] || 0;
-  const ownedName = ownedTier > 0 ? tiers[ownedTier - 1].name : "なし";
-  const slotIcon = `<span class="btn-icon">${slot === "armor" ? ICONS.def : ICONS.atk}</span>`;
+  // 職業別の武器/防具イラスト(ユーザー提供、2026-07-27)。行の左に出す
+  const iconHtml = `<img class="equip-icon" src="assets/icons/${slot === "weapon" ? "weapons" : "armors"}/${classId}.png" alt="${slotLabel}">`;
   if (ownedTier >= tiers.length) {
-    return `<div class="equip-row"><div class="equip-row-info"><strong>${slotIcon}${slotLabel}: ${ownedName}</strong> <span class="desc">最大強化済み</span></div></div>`;
+    return `<div class="equip-row">${iconHtml}<div class="equip-row-info"><strong>${tiers[tiers.length - 1].name}</strong> <span class="desc">最大強化済み</span></div></div>`;
   }
   const next = tiers[ownedTier];
   // 装備は上位を買うと下位から加算ではなく差し替えになるため(computeEquipBonus参照)、
@@ -2308,16 +2330,20 @@ function equipRowHtml(classId, slot, slotLabel) {
   const statLabel = next.statKey === "mag" ? "魔力" : next.statKey === "def" ? "防御力" : "攻撃力";
   const levelOk = classHasReachedLevel(state.roster, classId, next.level);
   const goldOk = state.gold >= next.price;
-  const disabled = !levelOk || !goldOk;
-  const reason = !levelOk ? `Lv${next.level}到達で解禁` : (!goldOk ? "お金が足りません" : "");
+  const matsOk = equipMatsOk(next);
+  const disabled = !levelOk || !goldOk || !matsOk;
   const mpNote = slot === "armor" ? "、MP上限+2" : "";
+  // 表示は次に買える装備の名前だけ(「旧→新」の併記は廃止、ユーザー指示)。コストはゴールド+素材の
+  // チップ行で見せ、不足分は赤表示のみ(所持数は上の財布ストリップ参照)
   return `
     <div class="equip-row">
+      ${iconHtml}
       <div class="equip-row-info">
-        <strong>${slotIcon}${slotLabel}: ${ownedName} → ${next.name}</strong>
-        <span class="desc">${statLabel}+${gain}${mpNote} ${!levelOk ? `/ ${reason}` : ""}</span>
+        <strong>${next.name}</strong>
+        <span class="desc">${statLabel}+${gain}${mpNote}${!levelOk ? ` <span class="equip-lock-reason">/ Lv${next.level}到達で解禁</span>` : ""}</span>
+        <div class="equip-cost">${equipCostChipsHtml(next)}</div>
       </div>
-      <button class="big" data-class="${classId}" data-slot="${slot}" ${disabled ? "disabled" : ""}>${next.price}G</button>
+      <button class="big" data-class="${classId}" data-slot="${slot}" ${disabled ? "disabled" : ""}>購入</button>
     </div>
   `;
 }
@@ -2350,11 +2376,16 @@ function buyEquipment(classId, slot) {
   const next = tiers[ownedTier];
   if (!classHasReachedLevel(state.roster, classId, next.level)) { showInfoModal(`Lv${next.level}に到達した${CLASSES[classId].ja}が必要です`); return; }
   if (state.gold < next.price) { showInfoModal("お金が足りません"); return; }
+  if (!equipMatsOk(next)) { showInfoModal("素材が足りません"); return; }
   state.gold -= next.price;
+  // 素材の消費(素材経済フェーズ1)
+  if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+  Object.keys(next.mats || {}).forEach((id) => { state.materials[id] = (state.materials[id] || 0) - next.mats[id]; });
   state.classUpgrades[classId][slot] = ownedTier + 1;
   refreshEquipBonus(state.roster, classId, state.classUpgrades);
   saveState();
   playSfx("coin");
+  playSfx("extension_build"); // 鍛冶らしい槌音(モックでユーザー確認済みの組み合わせ)
   renderShop();
   const purchasedImg = document.querySelector(`#equipmentList img[data-class="${classId}"]`);
   if (purchasedImg) retriggerEntryAnim(purchasedImg, "purchase-glint");

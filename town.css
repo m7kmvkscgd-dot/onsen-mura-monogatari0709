@@ -482,10 +482,28 @@
   }
   /* 武器/防具/価格ボタンを一直線に揃える。infoブロックにflex:1+min-width:0を与えて
      長い説明文があっても価格ボタン側が押し出されない(浮かない)ようにしてある */
-  .equip-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
+  .equip-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.35rem 0; }
   .equip-row-info { flex: 1; min-width: 0; }
   .equip-row button { flex-shrink: 0; }
-  .equip-row .desc { font-size: 13px; color: var(--dw-caption-color); }
+  .equip-row .desc { font-size: 13px; color: var(--dw-caption-color); display: block; }
+  /* ============ 素材経済フェーズ1(2026-07-27): 財布ストリップ・装備イラスト・コストチップ ============ */
+  .shop-wallet {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--dw-card-bg); border: 1px solid var(--dw-card-border); border-radius: 12px;
+    padding: 8px 12px; margin-bottom: 0.8rem;
+  }
+  .shop-wallet-gold { font-size: 1.05rem; font-weight: 900; color: var(--accent); margin-right: 2px; }
+  .shop-wallet-mat { display: inline-flex; align-items: center; gap: 3px; font-size: 0.85rem; font-weight: 800; }
+  .shop-wallet-mat img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+  /* 職業別の武器/防具イラスト(assets/icons/weapons|armors/職業id.png、ユーザー提供) */
+  .equip-icon { width: 44px; height: 52px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+  /* コスト行: ゴールド+素材チップ。不足分は赤くするだけで所持数は書かない(改行防止、所持数は財布ストリップで見る) */
+  .equip-cost { display: flex; align-items: center; gap: 7px; margin-top: 3px; flex-wrap: wrap; }
+  .cost-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.8rem; font-weight: 800; }
+  .cost-chip img { width: 22px; height: 22px; object-fit: contain; }
+  .cost-chip.gold-chip { color: var(--accent); }
+  .cost-chip.lack { color: #e66; }
+  .equip-lock-reason { color: #c9a55a; }
   /* 出発準備画面: 支援物資/パーティ/出発の3ブロックを視覚的に完全分離するための区切り線 */
   .dw-divider { border: none; border-top: 1px solid var(--dw-card-border); margin: 16px 0; }
   .equip-row button.owned { background: var(--surface-2); color: var(--text-muted); }
