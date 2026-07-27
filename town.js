@@ -1873,7 +1873,7 @@ function renderBuildingGrid(houseLevel) {
       card.className = "building-card locked";
       card.innerHTML = `
         ${buildingIconHtml(def, { silhouette: true })}
-        <div class="building-card-locked-label">🔒家Lv${def.unlock}で解放</div>
+        <div class="building-card-locked-label">🔒村Lv${def.unlock}で解放</div>
       `;
       lockedEl.appendChild(card);
     }
@@ -1931,7 +1931,7 @@ function renderExtension() {
   const level = state.houseLevel || 1;
   document.getElementById("extensionLevel").textContent = level;
   document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）";
-  // 次の家レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
+  // 次の村レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
   const nextLevel = level + 1;
   const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
   const btn = document.getElementById("extensionUpgradeBtn");
@@ -1969,7 +1969,7 @@ function renderExtension() {
 // 職業解放を伴う建築(からくり屋敷/火薬庫/神社/道場の初回建築)は、通常の建築演出の代わりに
 // 新しい職業が雇えるお知らせを出す(二重に演出しない、というユーザー指示)
 const FACILITY_DISPLAY = {
-  houseLevel: { icon: "🏠", name: "家" },
+  houseLevel: { icon: "🏠", name: "村" },
   magistrateLevel: { icon: "🏯", name: "奉行所" },
   shopLevel: { icon: "⚒️", name: "鍛冶屋" },
   travelPrepShopLevel: { icon: "🏕️", name: "旅支度屋" },

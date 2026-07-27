@@ -99,7 +99,7 @@ function loadState() {
       delete loaded.halfDayStep; // 旧・瀕死システム時代の残骸(瀕死自体を2026-07-26に廃止)
       if (loaded.clockMinutes == null) loaded.clockMinutes = 12 * 60; // 旧セーブ用の初期値(正午扱い。次の町帰還/宿泊で実際の時間帯に同期される)
       if (loaded.dayCount == null) loaded.dayCount = 1; // 旧セーブ用の初期値(4月1日扱い)
-      if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、家レベルで解禁される施設を再度お金を払わず使えるよう最大レベル扱いにする
+      if (loaded.houseLevel == null) loaded.houseLevel = HOUSE_MAX_LEVEL; // 増築実装前の旧セーブは、村レベルで解禁される施設を再度お金を払わず使えるよう最大レベル扱いにする
       if (loaded.dojoLevel == null) loaded.dojoLevel = 0; // 旧セーブ用の初期値(道場未建築)
       if (loaded.magistrateLevel == null) loaded.magistrateLevel = 0; // 旧セーブ用の初期値(奉行所未建築)
       if (loaded.magistrateQuestDate == null) loaded.magistrateQuestDate = 0; // 旧セーブ用の初期値(依頼未生成)
@@ -140,7 +140,7 @@ function loadState() {
       if (loaded.gunpowderStoreLevel == null) loaded.gunpowderStoreLevel = 0; // 旧セーブ用の初期値(火薬庫未建築)
       if (loaded.karakuriLevel == null) loaded.karakuriLevel = 0; // 旧セーブ用の初期値(からくり屋敷未建築)
       if (loaded.ferryLevel == null) loaded.ferryLevel = 0; // 旧セーブ用の初期値(渡し船未建築)
-      // 鍛冶屋の解禁制はこの機能追加より後から導入したため、それ以前のセーブは家レベルに関わらず
+      // 鍛冶屋の解禁制はこの機能追加より後から導入したため、それ以前のセーブは村レベルに関わらず
       // 既に鍛冶屋を使えていた。互換性のため、旧セーブ(この項目が無い=既存プレイヤー)は
       // 建築済み(1)扱いにする。新規セーブはdefaultState()通り0(未建築)から始まる
       if (loaded.shopLevel == null) loaded.shopLevel = 1;

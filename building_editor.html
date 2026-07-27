@@ -162,7 +162,7 @@ const BUILDING_DATA = {
   house: {
     maxLevel: 7,
     rosterCapacity: 8,
-    // 家レベルNからN+1への増築費用(N=1〜6)。コード上はhouseUpgradeCost(level)という区分式の関数だが、
+    // 村レベルNからN+1への増築費用(N=1〜6)。コード上はhouseUpgradeCost(level)という区分式の関数だが、
     // エディタ上は計算済みの値をそのまま並べて編集させる(適用時にこちらで関数側へ反映する)
     upgradeCosts: [30, 100, 350, 450, 550, 800],
   },
@@ -237,7 +237,7 @@ function buildBuildingCard(id) {
     <summary>
       <span class="building-emoji-badge">${escapeHtml(icon || "🏚")}</span>
       <span class="building-title-preview">${escapeHtml(name || "(無題)")}</span>
-      <span class="building-unlock-badge">家Lv${unlockHouseLevel}〜</span>
+      <span class="building-unlock-badge">村Lv${unlockHouseLevel}〜</span>
       ${classUnlock ? `<span class="building-meta-badge">${escapeHtml(classLabel)}解禁</span>` : ""}
       <span class="building-id-badge">${escapeHtml(id)}</span>
       <span class="building-edit-dot"></span>
@@ -260,7 +260,7 @@ function buildBuildingCard(id) {
       </div>
       <div class="field-pair">
         <div class="field-row">
-          <label>解禁に必要な家レベル(unlockHouseLevel)</label>
+          <label>解禁に必要な村レベル(unlockHouseLevel)</label>
           <input type="number" data-field="unlockHouseLevel" value="${unlockHouseLevel}" min="1" max="${BUILDING_DATA.house.maxLevel}">
         </div>
         <div class="field-row">
@@ -363,7 +363,7 @@ function renderHouseSection() {
   const container = document.createElement("div");
   const note = document.createElement("div");
   note.className = "section-note";
-  note.textContent = "家(住居)のレベルは、各施設の解禁条件(家Lv〜)のベースになっています。増築費用はレベル1→2から6→7までの6段階ぶんです。";
+  note.textContent = "村のレベルは、各施設の解禁条件(村Lv〜)のベースになっています。増築費用はレベル1→2から6→7までの6段階ぶんです。";
   container.appendChild(note);
   const grid = document.createElement("div");
   grid.className = "settings-grid";
@@ -371,7 +371,7 @@ function renderHouseSection() {
   const rosterCap = currentHouseValue("rosterCapacity", BUILDING_DATA.house.rosterCapacity);
   [
     { key: "maxLevel", name: "家の最大レベル", desc: "施設解禁の基準として使われる上限レベル", value: maxLevel },
-    { key: "rosterCapacity", name: "仲間の雇用上限人数", desc: "家レベルとは切り離されている固定値", value: rosterCap },
+    { key: "rosterCapacity", name: "仲間の雇用上限人数", desc: "村レベルとは切り離されている固定値", value: rosterCap },
   ].forEach((def) => {
     const edited = Object.prototype.hasOwnProperty.call(edits.house, def.key);
     const row = document.createElement("div");
