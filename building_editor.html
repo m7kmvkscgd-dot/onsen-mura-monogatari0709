@@ -73,6 +73,16 @@
   .cost-levels { display: flex; gap: 6px; flex-wrap: wrap; }
   .cost-levels .field-row { flex: 1 1 80px; min-width: 70px; }
   .wood-hint { font-size: 0.68rem; color: var(--caption); align-self: center; white-space: nowrap; }
+    /* 全素材(皮/骨/木/鉄)の入力グリッド。村レベル欄はラベル+入力群を縦積みにして
+       横はみ出し/ラベルの縦潰れを防ぐ(setting-row-stack) */
+    .setting-row-stack { flex-direction: column; align-items: stretch; }
+    .mats-levels { display: flex; flex-direction: column; gap: 6px; }
+    .mats-level-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .mats-level-label { font-size: 0.7rem; color: var(--caption); min-width: 52px; flex-shrink: 0; }
+    .mats-cell { display: inline-flex; align-items: center; gap: 3px; }
+    .mats-cell img { width: 20px; height: 20px; object-fit: contain; }
+    .mats-cell input { width: 46px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.85rem; padding: 6px 4px; text-align: right; }
+    .mats-cell input:focus { outline: none; border-color: var(--gold); }
     .same-cost-hint { font-size: 0.66rem; color: var(--caption); }
   .extra-fields-title { font-size: 0.74rem; color: var(--gold); font-weight: bold; margin-top: 4px; }
   .building-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 2px; }
@@ -143,22 +153,22 @@
 // classUnlock: 建築で解禁される職業。侍/槍士/狩人/陰陽師は最初から雇えるためnull
 const BUILDING_DATA = {
   buildings: {
-    magistrate: { name: "奉行所", icon: "🏯", desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。", unlockHouseLevel: 2, costs: [10], classUnlock: null, woodCosts: [0] },
-    shop: { name: "鍛冶屋", icon: "⚒️", desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)", unlockHouseLevel: 4, costs: [10], classUnlock: null, woodCosts: [0] },
-    travelPrepShop: { name: "旅支度屋", icon: "🏕️", desc: "出発画面で野営具を購入できるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: null, woodCosts: [0] },
-    dojo: { name: "道場", icon: "🥋", desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。", unlockHouseLevel: 3, costs: [10, 100], classUnlock: "naginata", extra: { xpShareLv1: 0.3, xpShareLv2: 0.35 }, woodCosts: [0, 0] },
-    karakuri: { name: "からくり屋敷", icon: "🎎", desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。", unlockHouseLevel: 3, costs: [10], classUnlock: "ninja", woodCosts: [0] },
-    bagShop: { name: "鞄屋", icon: "🧳", desc: "支援物資の所持上限が増えます。", unlockHouseLevel: 5, costs: [30, 100, 200], classUnlock: null, extra: { supplyCapBase: 10 }, woodCosts: [0, 0, 0] },
-    watchtower: { name: "見張り台", icon: "🏹", desc: "(詳細は未定)", unlockHouseLevel: 6, costs: [200], classUnlock: null, woodCosts: [0] },
-    henHouse: { name: "鶏小屋", icon: "🐓", desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。", unlockHouseLevel: 5, costs: [100, 200], classUnlock: null, woodCosts: [0, 0] },
-    shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "priest", woodCosts: [0] },
-    hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→70)。", unlockHouseLevel: 5, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 70 }, woodCosts: [0] },
-    gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner", woodCosts: [0] },
-    teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 6, costs: [250], classUnlock: null, woodCosts: [0] },
-    stable: { name: "馬屋", icon: "🐎", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [200], classUnlock: null, woodCosts: [0] },
-    beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 6, costs: [100, 100, 100, 100, 100], classUnlock: null, sameCostAllLevels: true, extra: { potionBonusPerLevel: 0.015 }, woodCosts: [0, 0, 0, 0, 0] },
-    ferry: { name: "渡し船", icon: "⛴️", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [250], classUnlock: null, woodCosts: [0] },
-    ryodanki: { name: "旅団旗", icon: "🚩", desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。", unlockHouseLevel: 6, costs: [100], classUnlock: null, woodCosts: [0] },
+    magistrate: { name: "奉行所", icon: "🏯", desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。", unlockHouseLevel: 2, costs: [10], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    shop: { name: "鍛冶屋", icon: "⚒️", desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)", unlockHouseLevel: 4, costs: [10], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    travelPrepShop: { name: "旅支度屋", icon: "🏕️", desc: "出発画面で野営具を購入できるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    dojo: { name: "道場", icon: "🥋", desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。", unlockHouseLevel: 3, costs: [10, 100], classUnlock: "naginata", extra: { xpShareLv1: 0.3, xpShareLv2: 0.35 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    karakuri: { name: "からくり屋敷", icon: "🎎", desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。", unlockHouseLevel: 3, costs: [10], classUnlock: "ninja", matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    bagShop: { name: "鞄屋", icon: "🧳", desc: "支援物資の所持上限が増えます。", unlockHouseLevel: 5, costs: [30, 100, 200], classUnlock: null, extra: { supplyCapBase: 10 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    watchtower: { name: "見張り台", icon: "🏹", desc: "(詳細は未定)", unlockHouseLevel: 6, costs: [200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    henHouse: { name: "鶏小屋", icon: "🐓", desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。", unlockHouseLevel: 5, costs: [100, 200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "priest", matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→70)。", unlockHouseLevel: 5, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 70 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner", matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 6, costs: [250], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    stable: { name: "馬屋", icon: "🐎", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 6, costs: [100, 100, 100, 100, 100], classUnlock: null, sameCostAllLevels: true, extra: { potionBonusPerLevel: 0.015 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    ferry: { name: "渡し船", icon: "⛴️", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [250], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    ryodanki: { name: "旅団旗", icon: "🚩", desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。", unlockHouseLevel: 6, costs: [100], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
   },
   house: {
     maxLevel: 7,
@@ -166,9 +176,9 @@ const BUILDING_DATA = {
     // 村レベルNからN+1への増築費用(N=1〜6)。コード上はhouseUpgradeCost(level)という区分式の関数だが、
     // エディタ上は計算済みの値をそのまま並べて編集させる(適用時にこちらで関数側へ反映する)
     upgradeCosts: [30, 100, 350, 450, 550, 800],
-    // 増築に必要な木材(素材経済、2026-07-27設計中)。ゲーム側は未実装のため現状の基準値は全て0。
+    // 増築に必要な素材(皮/骨/木/鉄、素材経済・2026-07-27設計中)。ゲーム側は未実装のため現状の基準値は全て0。
     // エディタで値を決めてエクスポート→ゲーム実装、の順で使う
-    upgradeWoodCosts: [0, 0, 0, 0, 0, 0],
+    upgradeMatsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }],
   },
 };
 const CLASS_UNLOCK_OPTIONS = [
@@ -225,7 +235,9 @@ function sectionHasEdits(sec) {
 }
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-// 木材のたたき台(価格帯基準の提案値。入力欄の横に「案:N」として出すだけで、値そのものは編集で決める)
+const MAT_IDS = ["kawa", "hone", "ki", "tetsu"];
+const MAT_LABEL = { kawa: "皮", hone: "骨", ki: "木", tetsu: "鉄" };
+// 木材のたたき台(価格帯基準の提案値。木の入力欄の横に「木の案:N」として出すだけで、値そのものは編集で決める)
 function suggestWood(price) {
   if (price >= 250) return 15;
   if (price >= 200) return 12;
@@ -240,7 +252,7 @@ function buildBuildingCard(id) {
   const desc = currentBuildingValue(id, "desc", src.desc);
   const unlockHouseLevel = currentBuildingValue(id, "unlockHouseLevel", src.unlockHouseLevel);
   const costs = currentBuildingValue(id, "costs", src.costs);
-  const woodCosts = currentBuildingValue(id, "woodCosts", src.woodCosts);
+  const matsCosts = currentBuildingValue(id, "matsCosts", src.matsCosts);
   const classUnlock = currentBuildingValue(id, "classUnlock", src.classUnlock) || "";
   const edited = isBuildingEdited(id);
   const node = document.createElement("details");
@@ -291,9 +303,9 @@ function buildBuildingCard(id) {
         ${src.sameCostAllLevels ? '<span class="same-cost-hint">※このコードでは全レベル共通の1つの定数を使っています。レベルごとに個別の値へ分けたい場合はコード側の対応が必要になるため、その旨も含めてエクスポート内容に書き添えます</span>' : ""}
       </div>
       <div class="field-row">
-        <label>建築/増築に必要な木材🌲(レベルごと、素材経済・ゲーム側は未実装)</label>
-        <div class="cost-levels">
-          ${woodCosts.map((c, i) => `<div class="field-row"><label>${woodCosts.length > 1 ? `Lv${i + 1}` : "木材"}</label><input type="number" data-wood-index="${i}" value="${c}" min="0"><span class="wood-hint">案:${suggestWood(costs[i])}</span></div>`).join("")}
+        <label>建築/増築に必要な素材(レベルごと、素材経済・ゲーム側は未実装)</label>
+        <div class="mats-levels">
+          ${matsCosts.map((m, i) => `<div class="mats-level-row">${matsCosts.length > 1 ? `<span class="mats-level-label">Lv${i + 1}</span>` : ""}${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-mats-index="${i}" data-mats-id="${mid}" value="${m[mid] || 0}" min="0"></span>`).join("")}<span class="wood-hint">木の案:${suggestWood(costs[i])}</span></div>`).join("")}
         </div>
       </div>
       ${src.extra ? buildExtraFieldsHtml(id, src.extra) : ""}
@@ -323,12 +335,13 @@ function buildBuildingCard(id) {
       node.querySelector(".reset-btn").style.display = isBuildingEdited(id) ? "inline-block" : "none";
     });
   });
-  node.querySelectorAll("[data-wood-index]").forEach((el) => {
-    const idx = Number(el.dataset.woodIndex);
+  node.querySelectorAll("[data-mats-index]").forEach((el) => {
+    const idx = Number(el.dataset.matsIndex);
+    const mid = el.dataset.matsId;
     el.addEventListener("input", () => {
-      const newWood = woodCosts.slice();
-      newWood[idx] = el.value === "" ? src.woodCosts[idx] : Number(el.value);
-      setBuildingEdit(id, "woodCosts", newWood, src.woodCosts);
+      const newMats = matsCosts.map((o) => Object.assign({}, o));
+      newMats[idx][mid] = el.value === "" ? src.matsCosts[idx][mid] : Number(el.value);
+      setBuildingEdit(id, "matsCosts", newMats, src.matsCosts);
       node.classList.toggle("edited", isBuildingEdited(id));
       node.querySelector(".reset-btn").style.display = isBuildingEdited(id) ? "inline-block" : "none";
     });
@@ -375,7 +388,7 @@ function renderBuildingsSection() {
   const container = document.createElement("div");
   const note = document.createElement("div");
   note.className = "section-note";
-  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な木材🌲」は素材経済の要求数(ゲーム側は未実装、値を決めてエクスポートすると実装に反映されます)。横の「案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。";
+  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な素材」は素材経済の要求数(皮/骨/木/鉄、ゲーム側は未実装。値を決めてエクスポートすると実装に反映されます)。「木の案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。";
   container.appendChild(note);
   const ids = buildingIds().filter(matchesSearch);
   if (!ids.length) {
@@ -419,7 +432,7 @@ function renderHouseSection() {
   const upgradeCosts = currentHouseValue("upgradeCosts", BUILDING_DATA.house.upgradeCosts);
   const costRow = document.createElement("div");
   const costEdited = Object.prototype.hasOwnProperty.call(edits.house, "upgradeCosts");
-  costRow.className = "setting-row" + (costEdited ? " edited" : "");
+  costRow.className = "setting-row setting-row-stack" + (costEdited ? " edited" : "");
   costRow.innerHTML = `
     <div class="setting-label"><div class="setting-name">家の増築費用(レベルごと)</div><div class="setting-desc">左からLv1→2、2→3…Lv6→7</div></div>
     <div class="setting-multi">
@@ -436,28 +449,29 @@ function renderHouseSection() {
     });
   });
   grid.appendChild(costRow);
-  // 増築に必要な木材(素材経済)。たたき台: 0/6/9/14/21/32(Lv1→2は巨木到達前のため0、以降×1.5複利)
+  // 増築に必要な素材(素材経済)。木のたたき台: 0/6/9/14/21/32(Lv1→2は巨木到達前のため0、以降×1.5複利)
   const woodHints = [0, 6, 9, 14, 21, 32];
-  const upgradeWoodCosts = currentHouseValue("upgradeWoodCosts", BUILDING_DATA.house.upgradeWoodCosts);
-  const woodRow = document.createElement("div");
-  const woodEdited = Object.prototype.hasOwnProperty.call(edits.house, "upgradeWoodCosts");
-  woodRow.className = "setting-row" + (woodEdited ? " edited" : "");
-  woodRow.innerHTML = `
-    <div class="setting-label"><div class="setting-name">増築に必要な木材🌲(レベルごと)</div><div class="setting-desc">素材経済(ゲーム側は未実装)。左からLv1→2、2→3…Lv6→7</div></div>
-    <div class="setting-multi">
-      ${upgradeWoodCosts.map((c, i) => `<div class="multi-item"><span>Lv${i + 1}→${i + 2}</span><input type="number" class="setting-input" data-house-wood-index="${i}" value="${c}" min="0"><span class="wood-hint">案:${woodHints[i]}</span></div>`).join("")}
+  const upgradeMatsCosts = currentHouseValue("upgradeMatsCosts", BUILDING_DATA.house.upgradeMatsCosts);
+  const matsRow = document.createElement("div");
+  const matsEdited = Object.prototype.hasOwnProperty.call(edits.house, "upgradeMatsCosts");
+  matsRow.className = "setting-row setting-row-stack" + (matsEdited ? " edited" : "");
+  matsRow.innerHTML = `
+    <div class="setting-label"><div class="setting-name">増築に必要な素材(レベルごと)</div><div class="setting-desc">素材経済(ゲーム側は未実装)。皮/骨/木/鉄をレベルごとに設定</div></div>
+    <div class="mats-levels">
+      ${upgradeMatsCosts.map((m, i) => `<div class="mats-level-row"><span class="mats-level-label">Lv${i + 1}→${i + 2}</span>${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-house-mats-index="${i}" data-house-mats-id="${mid}" value="${m[mid] || 0}" min="0"></span>`).join("")}<span class="wood-hint">木の案:${woodHints[i]}</span></div>`).join("")}
     </div>
   `;
-  woodRow.querySelectorAll("[data-house-wood-index]").forEach((el) => {
-    const idx = Number(el.dataset.houseWoodIndex);
+  matsRow.querySelectorAll("[data-house-mats-index]").forEach((el) => {
+    const idx = Number(el.dataset.houseMatsIndex);
+    const mid = el.dataset.houseMatsId;
     el.addEventListener("input", () => {
-      const newWood = upgradeWoodCosts.slice();
-      newWood[idx] = el.value === "" ? BUILDING_DATA.house.upgradeWoodCosts[idx] : Number(el.value);
-      setHouseEdit("upgradeWoodCosts", newWood, BUILDING_DATA.house.upgradeWoodCosts);
-      woodRow.classList.toggle("edited", Object.prototype.hasOwnProperty.call(edits.house, "upgradeWoodCosts"));
+      const newMats = upgradeMatsCosts.map((o) => Object.assign({}, o));
+      newMats[idx][mid] = el.value === "" ? BUILDING_DATA.house.upgradeMatsCosts[idx][mid] : Number(el.value);
+      setHouseEdit("upgradeMatsCosts", newMats, BUILDING_DATA.house.upgradeMatsCosts);
+      matsRow.classList.toggle("edited", Object.prototype.hasOwnProperty.call(edits.house, "upgradeMatsCosts"));
     });
   });
-  grid.appendChild(woodRow);
+  grid.appendChild(matsRow);
   container.appendChild(grid);
   return container;
 }
