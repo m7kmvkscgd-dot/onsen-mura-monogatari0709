@@ -2453,6 +2453,16 @@ function handleGuardSynergyPassives(target, enemy, log) {
   return counterDmg;
 }
 function enemyAttack(enemy, targets, log) {
+  // 【村襲撃】バリケードが立っている間、飛行以外の敵は味方ではなくバリケード自体を攻撃対象にする
+  // (以前は味方を狙った攻撃を着弾時に柵へ差し替えていたため、味方の回避判定で柵が無傷になったり
+  // 見切り反撃が柵越しに発動する矛盾があった。ユーザー指摘2026-07-27)。柵は動けないので必中、
+  // ダメージは防御0相当の素の攻撃ロール。通常プレイはraidBarricadeHp=0のためこの分岐は素通り
+  if (typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0 && !enemy.isFlying) {
+    const dmg = rollBasicAttack(enemy.atk, 0);
+    log(`${enemy.label}はバリケードに${dmg}ダメージ！`);
+    applyRaidBarricadeDamage(dmg);
+    return { target: null, dmg, hit: true, barricade: true };
+  }
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return null;
   const guardian = resolveForcedTarget(enemy, alive) || findGuardTarget(alive);
@@ -2669,6 +2679,18 @@ function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return [];
   const profile = pickBigAttackProfile(enemy);
+  // 【村襲撃】バリケードが立っている間は大技も柵に叩き込まれる(1発ぶんを柵が丸ごと受ける。必中)。
+  // 飛行の敵は従来通り柵を飛び越えて味方を狙う
+  if (typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0 && !enemy.isFlying) {
+    let bMult = profile.mult;
+    if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) bMult = Math.max(0.2, bMult - BIG_ATTACK_DOT_REDUCTION);
+    const dmg = Math.max(1, Math.round(rollBasicAttack(enemy.atk, 0) * bMult));
+    enemy.bigAttackTelegraphTargetId = null;
+    enemy.bigAttackTelegraphForced = false;
+    log(`${enemy.label}の${profile.name || "大技"}！ バリケードに${dmg}ダメージ！`);
+    applyRaidBarricadeDamage(dmg);
+    return [{ target: null, dmg, hit: true, barricade: true }];
+  }
   // 大技は敵1体につき1人だけを狙う(以前は「かばう中の人がいなければ全員に当たる」実質AOEに
   // なっていて難易度が高くなりすぎていたため単体攻撃に統一した)。ignoreGuardian: 鬼火の業火など
   // 「誰か1人が庇っても防ぎきれない」大技は、かばう/挑発による引きつけを無視してランダムな1人を狙う。

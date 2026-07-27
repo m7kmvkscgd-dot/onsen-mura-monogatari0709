@@ -536,6 +536,7 @@ function processNext() {
           // 八咫鏡の御守: 戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する
           let prevented = 0;
           results.forEach((r) => {
+            if (r.barricade) return; // 柵が受けた大技は八咫鏡の対象外(味方は無傷のため)
             if (r.hit && r.dmg > 0) {
               const before = hpBeforeBig[r.target.id];
               const actualLoss = before - r.target.hp;
@@ -551,6 +552,7 @@ function processNext() {
           }
         } else {
           results.forEach((r) => {
+            if (r.barricade) return; // 柵が受けた: 味方向けの演出は不要
             if (r.hit) {
               popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
               playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
@@ -595,7 +597,9 @@ function processNext() {
       const hpBeforeAtk = {};
       alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
       const result = enemyAttack(actor, alive, blog);
-      if (result && result.hit) {
+      if (result && result.barricade) {
+        // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
+      } else if (result && result.hit) {
         popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
         playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
         checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
