@@ -401,12 +401,15 @@
      巻き込まれて演出が途中で切れるのを防ぐため) */
   .enemy-card.defeat-hidden { visibility: hidden; }
   .enemy-card img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
-  /* 5体以上の大規模戦(村襲撃プロトタイプ/大群6体戦にも適用): 敵カードを味方カードと同格まで縮小し
-     1行に収める。上の92px指定より必ず後に置くこと(定義順でも確実に勝たせる) */
-  .enemy-row.mass-battle { gap: 3px; }
-  .enemy-row.mass-battle .enemy-card { padding: 0.25rem; }
-  .enemy-row.mass-battle .enemy-card img:not(.slash-vfx) { width: 60px; height: 60px; }
-  .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; }
+  /* 5体以上の大規模戦(村襲撃プロトタイプ/大群6体戦にも適用): 敵カードを縮小して必ず1行に収める。
+     【教訓2026-07-27】固定px(60px)で設計したところ、PC(最大幅480px)では収まるがiPhoneの実画面
+     (390px等)では合計が約10pxはみ出して5枚目が折り返す実機不具合になった。固定幅ではなく
+     flex:1+min-width:0で「画面幅を等分して収まるまで縮む」方式にする(nowrapで折り返し自体を禁止)。
+     上の92px指定より必ず後に置くこと(定義順でも確実に勝たせる) */
+  .enemy-row.mass-battle { gap: 3px; flex-wrap: nowrap; padding-left: 0.4rem; padding-right: 0.4rem; }
+  .enemy-row.mass-battle .enemy-card { padding: 0.25rem; flex: 1 1 0; min-width: 0; max-width: 78px; }
+  .enemy-row.mass-battle .enemy-card img:not(.slash-vfx) { width: 100%; max-width: 60px; height: auto; aspect-ratio: 1 / 1; display: block; margin: 0 auto; }
+  .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; white-space: nowrap; overflow: hidden; }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
   /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、
      height:auto)と詳細度が同じ(クラス2つ+タグ)ため、CSSの記述順で後にあるこちらが勝ってしまい、
