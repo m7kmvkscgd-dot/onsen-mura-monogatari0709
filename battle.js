@@ -305,6 +305,9 @@ function renderBattleScreen() {
   // 襲撃バリケードの表示(大規模戦モードのみ。バリケードimgとログの重ねスタイルをまとめて切り替える)
   const battleTop = row.closest(".battle-top");
   if (battleTop) battleTop.classList.toggle("raid-battle", massBattleSizingForced);
+  // 大規模戦はテキストボックスと一緒に味方バーも下げる(結び目を見せるレイアウト。ボタン列は実測追従)
+  const bpb = document.getElementById("battlePartyBar");
+  if (bpb) bpb.classList.toggle("raid-battle-bar", massBattleSizingForced);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });
