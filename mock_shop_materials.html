@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>鍛冶屋 素材要求モック</title>
+<style>
+  /* 鍛冶屋への素材要求(フェーズ1)のUIモック(ゲーム本体には未実装)。
+     本物のscreen-shop(town.css .equip-class-card等)の見た目を簡略コピーし、
+     ①所持素材ストリップ ②装備行の武器アイコン(ユーザー提供) ③ゴールド+素材のコスト行
+     ④不足素材の赤表示+ボタン無効 を確認するための単独ページ。タップで実際に買える(モック内だけ) */
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: #14100c; color: #e8e0d0;
+    display: flex; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .wrap { position: relative; width: 100%; max-width: 480px; min-height: 100dvh; }
+  .hero {
+    position: relative; height: 150px;
+    background: url("assets/bg/town_dusk.jpg") center 30% / cover no-repeat;
+  }
+  .hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(16,12,8,0.25), rgba(20,16,12,0.6) 60%, #14100c); }
+  .dw-header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; font-size: 0.8rem; color: #d9c49a; }
+  .dw-header .back { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(217,196,154,0.4); background: rgba(0,0,0,0.35); color: #d9c49a; display: flex; align-items: center; justify-content: center; }
+  .hero h1 { position: relative; z-index: 2; text-align: center; font-size: 1.3rem; font-weight: 900; letter-spacing: 0.3em; color: #e8dcbf; text-shadow: 0 2px 8px rgba(0,0,0,0.8); margin-top: 6px; }
+  .body-pad { position: relative; padding: 12px 12px 40px; }
+
+  /* ★所持素材ストリップ(ゴールドの横に常時表示) */
+  .wallet {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(38,32,24,0.85); border: 1px solid rgba(217,196,154,0.3); border-radius: 12px;
+    padding: 8px 12px; margin-bottom: 12px;
+  }
+  .wallet .gold { font-size: 1.05rem; font-weight: 900; color: #e5c878; margin-right: 2px; }
+  .wallet .mat { display: inline-flex; align-items: center; gap: 3px; font-size: 0.85rem; font-weight: 800; color: #e8e0d0; }
+  .wallet .mat img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+
+  .note { font-size: 0.7rem; color: rgba(232,224,208,0.55); margin: 0 0 10px; }
+
+  .equip-class-card {
+    background: linear-gradient(170deg, rgba(46,38,28,0.92), rgba(30,24,18,0.94));
+    border: 2px solid #4b3728; border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4); padding: 13px 14px; margin-bottom: 12px;
+  }
+  .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 800; margin-bottom: 0.5rem; color: #e8dcbf; }
+  .equip-class-title img { width: 32px; height: 32px; object-fit: contain; background: #353a44; border-radius: 6px; }
+
+  .equip-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed rgba(217,196,154,0.18); }
+  .equip-row:first-of-type { border-top: none; }
+  /* ★武器アイコン(ユーザー提供)。防具はアート未提供のため仮の盾マーク */
+  .equip-icon { width: 44px; height: 52px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+  .equip-icon-placeholder { width: 44px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; opacity: 0.85; }
+  .equip-main { flex: 1; min-width: 0; }
+  .equip-name { font-size: 0.85rem; font-weight: 800; }
+  .equip-name .arrow { color: rgba(232,224,208,0.5); font-weight: 400; }
+  .equip-effect { font-size: 0.72rem; color: rgba(232,224,208,0.6); margin-top: 1px; }
+  /* ★コスト行: ゴールド+素材チップ。不足分は赤+所持数を出す */
+  .equip-cost { display: flex; align-items: center; gap: 7px; margin-top: 4px; flex-wrap: wrap; }
+  .cost-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.8rem; font-weight: 800; }
+  .cost-chip img { width: 22px; height: 22px; object-fit: contain; }
+  .cost-chip.gold-chip { color: #e5c878; }
+  .cost-chip.lack { color: #e66; }
+  .cost-chip.lack .have { font-size: 0.68rem; font-weight: 700; }
+  .buy-btn {
+    flex-shrink: 0; font-family: inherit; font-size: 0.88rem; font-weight: 900; color: #241a0c;
+    background: linear-gradient(160deg, #e0c078, #b8924a); border: 1px solid rgba(255,240,200,0.5);
+    border-radius: 10px; padding: 10px 16px;
+  }
+  .buy-btn:disabled { background: #3a332a; color: rgba(232,224,208,0.35); border-color: rgba(255,255,255,0.12); }
+  .buy-btn:not(:disabled):active { transform: scale(0.95); }
+  .equip-done { font-size: 0.78rem; color: rgba(232,224,208,0.5); }
+  .lock-reason { font-size: 0.7rem; color: #c9a55a; }
+
+  .mock-ctrl { position: fixed; right: 8px; bottom: 8px; z-index: 10; display: flex; gap: 6px; }
+  .mock-ctrl button { font-family: inherit; font-size: 0.68rem; font-weight: 700; color: #e8e0d0; background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 6px 10px; }
+  .mock-note { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="dw-header">
+      <div class="back">←</div>
+      <div>鍛冶屋</div>
+      <div id="headerGold">💰0G ・ 夕</div>
+    </div>
+    <h1>鍛冶屋</h1>
+  </div>
+  <div class="body-pad">
+    <div class="wallet" id="wallet"></div>
+    <p class="note">一度買えばその職業全員、永久に効果があります。</p>
+    <div id="equipmentList"></div>
+  </div>
+  <div class="mock-ctrl"><button id="btnReset">リセット</button></div>
+  <div class="mock-note">鍛冶屋素材要求モック(本体には未実装)</div>
+</div>
+
+<script>
+(() => {
+  // ---- SE(本体playSfxと同じ事前デコード+WebAudio方式) ----
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const sfxCtx = AC ? new AC() : null;
+  const sfxBuffers = {};
+  ["assets/sfx/coin.ogg", "assets/sfx/extension_build.mp3"].forEach((url) => {
+    if (!sfxCtx) return;
+    fetch(url).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d)).then((b) => { sfxBuffers[url] = b; }).catch(() => {});
+  });
+  function sfx(src, vol) {
+    if (!sfxCtx || !sfxBuffers[src]) return;
+    const start = () => {
+      const s = sfxCtx.createBufferSource();
+      s.buffer = sfxBuffers[src];
+      const g = sfxCtx.createGain();
+      g.gain.value = vol == null ? 0.5 : vol;
+      s.connect(g).connect(sfxCtx.destination);
+      s.start(0);
+    };
+    if (sfxCtx.state !== "running") sfxCtx.resume().then(start).catch(() => {});
+    else start();
+  }
+  document.addEventListener("touchend", () => { if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().catch(() => {}); }, { passive: true });
+
+  // ---- モックデータ(確定表の数字) ----
+  const MAT = {
+    kawa: { ja: "皮", icon: "assets/icons/materials/kawa.png" },
+    hone: { ja: "骨", icon: "assets/icons/materials/hone.png" },
+    ki: { ja: "木", icon: "assets/icons/materials/ki.png" },
+    tetsu: { ja: "鉄", icon: "assets/icons/materials/tetsu.png" },
+  };
+  const START = { gold: 320, mats: { kawa: 7, hone: 2, ki: 5, tetsu: 4 } };
+  let wallet;
+
+  // tiers: [名前, 効果, ゴールド, 素材{}, 解禁Lv]
+  const CLASSES_MOCK = [
+    { id: "samurai", ja: "侍", img: "assets/class_samurai.png", weaponIcon: "assets/icons/weapons/samurai.png", maxLevel: 6,
+      weapon: [
+        ["業物の刀", "攻撃力+2", 20, { ki: 1 }, 1],
+        ["業物の太刀", "攻撃力+2", 90, { tetsu: 6 }, 3],
+        ["妖刀", "攻撃力+1", 125, { tetsu: 9 }, 5],
+        ["鬼哭の刀", "攻撃力+1", 160, { tetsu: 14 }, 7],
+        ["伝説の名刀", "攻撃力+1", 200, { tetsu: 21 }, 9],
+      ], weaponOwned: 1,
+      armor: [
+        ["当世具足", "防御力+2、MP上限+2", 10, { kawa: 1 }, 1],
+        ["強化当世具足", "防御力+2、MP上限+2", 70, { tetsu: 3, kawa: 3 }, 3],
+        ["上級当世具足", "防御力+2、MP上限+2", 100, { tetsu: 4, kawa: 5 }, 5],
+        ["鬼哭の甲冑", "防御力+2、MP上限+2", 130, { tetsu: 6, kawa: 8 }, 7],
+        ["伝説の甲冑", "防御力+2、MP上限+2", 160, { tetsu: 10, kawa: 11 }, 9],
+      ], armorOwned: 1 },
+    { id: "hunter", ja: "狩人", img: "assets/class_hunter.png", weaponIcon: "assets/icons/weapons/hunter.png", maxLevel: 6,
+      weapon: [
+        ["鍛えの弓", "攻撃力+2", 20, { ki: 1 }, 1],
+        ["業物の弓", "攻撃力+1", 70, { ki: 6 }, 3],
+        ["強弓", "攻撃力+1", 100, { ki: 9 }, 5],
+        ["鬼哭の弓", "攻撃力+1", 130, { ki: 14 }, 7],
+        ["伝説の弓", "攻撃力+1", 170, { ki: 21 }, 9],
+      ], weaponOwned: 1,
+      armor: [
+        ["強化猟師装束", "防御力+2、MP上限+2", 10, { kawa: 1 }, 1],
+        ["精鋭猟師装束", "防御力+2、MP上限+2", 55, { kawa: 6 }, 3],
+        ["上級猟師装束", "防御力+2、MP上限+2", 80, { kawa: 9 }, 5],
+        ["鬼哭の猟師装束", "防御力+2、MP上限+2", 105, { kawa: 14 }, 7],
+        ["伝説の猟師装束", "防御力+2、MP上限+2", 135, { kawa: 21 }, 9],
+      ], armorOwned: 0 },
+    { id: "onmyoji", ja: "陰陽師", img: "assets/class_onmyoji.png", weaponIcon: "assets/icons/weapons/onmyoji.png", maxLevel: 4,
+      weapon: [
+        ["式神の御幣", "魔力+3", 35, { ki: 1 }, 1],
+        ["精霊の御幣", "魔力+2", 110, { ki: 3, hone: 3 }, 3],
+        ["上級御幣", "魔力+1", 140, { ki: 5, hone: 4 }, 5],
+        ["秘伝の御幣", "魔力+2", 205, { ki: 7, hone: 7 }, 7],
+        ["大陰陽の御幣", "魔力+1", 245, { ki: 11, hone: 10 }, 9],
+      ], weaponOwned: 0,
+      armor: [
+        ["浄衣", "防御力+2、MP上限+2", 10, { kawa: 1 }, 1],
+        ["精霊の浄衣", "防御力+2、MP上限+2", 90, { kawa: 4 }, 3],
+        ["上級浄衣", "防御力+2、MP上限+2", 110, { kawa: 6 }, 5],
+        ["秘伝の浄衣", "防御力+2、MP上限+2", 165, { kawa: 9 }, 7],
+        ["大陰陽の浄衣", "防御力+2、MP上限+2", 195, { kawa: 14 }, 9],
+      ], armorOwned: 1 },
+  ];
+  let state;
+  function resetState() {
+    wallet = { gold: START.gold, mats: { ...START.mats } };
+    state = CLASSES_MOCK.map((c) => ({ weaponOwned: c.weaponOwned, armorOwned: c.armorOwned }));
+  }
+
+  function renderWallet() {
+    document.getElementById("wallet").innerHTML =
+      `<span class="gold">💰${wallet.gold}G</span>` +
+      ["kawa", "hone", "ki", "tetsu"].map((id) => `<span class="mat"><img src="${MAT[id].icon}">×${wallet.mats[id]}</span>`).join("");
+    document.getElementById("headerGold").textContent = `💰${wallet.gold}G ・ 夕`;
+  }
+
+  function costChipsHtml(gold, mats) {
+    let html = `<span class="cost-chip gold-chip">💰${gold}G</span>`;
+    Object.keys(mats).forEach((id) => {
+      const need = mats[id];
+      const have = wallet.mats[id];
+      const lack = have < need;
+      html += `<span class="cost-chip${lack ? " lack" : ""}"><img src="${MAT[id].icon}">×${need}${lack ? `<span class="have">(所持${have})</span>` : ""}</span>`;
+    });
+    return html;
+  }
+
+  function rowHtml(ci, c, slot) {
+    const tiers = c[slot];
+    const owned = state[ci][slot + "Owned"];
+    const slotLabel = slot === "weapon" ? "武器" : "防具";
+    const iconHtml = slot === "weapon"
+      ? `<img class="equip-icon" src="${c.weaponIcon}" alt="">`
+      : `<div class="equip-icon-placeholder">🛡️</div>`;
+    if (owned >= tiers.length) {
+      return `<div class="equip-row">${iconHtml}<div class="equip-main"><div class="equip-name">${slotLabel}: ${tiers[tiers.length - 1][0]}</div><div class="equip-done">最大強化済み</div></div></div>`;
+    }
+    const [name, effect, gold, mats, lv] = tiers[owned];
+    const ownedName = owned > 0 ? tiers[owned - 1][0] : "なし";
+    const levelOk = c.maxLevel >= lv;
+    const goldOk = wallet.gold >= gold;
+    const matsOk = Object.keys(mats).every((id) => wallet.mats[id] >= mats[id]);
+    const disabled = !levelOk || !goldOk || !matsOk;
+    return `
+      <div class="equip-row">
+        ${iconHtml}
+        <div class="equip-main">
+          <div class="equip-name">${ownedName} <span class="arrow">→</span> ${name}</div>
+          <div class="equip-effect">${effect}${!levelOk ? ` <span class="lock-reason">/ Lv${lv}到達で解禁</span>` : ""}</div>
+          <div class="equip-cost">${costChipsHtml(gold, mats)}</div>
+        </div>
+        <button class="buy-btn" data-ci="${ci}" data-slot="${slot}" ${disabled ? "disabled" : ""}>打つ</button>
+      </div>`;
+  }
+
+  function render() {
+    renderWallet();
+    const list = document.getElementById("equipmentList");
+    list.innerHTML = "";
+    CLASSES_MOCK.forEach((c, ci) => {
+      const card = document.createElement("div");
+      card.className = "equip-class-card";
+      card.innerHTML = `
+        <div class="equip-class-title"><img src="${c.img}">${c.ja}<span style="font-size:0.7rem;font-weight:400;color:rgba(232,224,208,0.5);">(最高Lv${c.maxLevel})</span></div>
+        ${rowHtml(ci, c, "weapon")}
+        ${rowHtml(ci, c, "armor")}
+      `;
+      list.appendChild(card);
+    });
+    list.querySelectorAll(".buy-btn").forEach((btn) => {
+      btn.onclick = () => {
+        const ci = +btn.dataset.ci, slot = btn.dataset.slot;
+        const c = CLASSES_MOCK[ci];
+        const [, , gold, mats] = c[slot][state[ci][slot + "Owned"]];
+        wallet.gold -= gold;
+        Object.keys(mats).forEach((id) => { wallet.mats[id] -= mats[id]; });
+        state[ci][slot + "Owned"]++;
+        sfx("assets/sfx/coin.ogg", 0.5);
+        sfx("assets/sfx/extension_build.mp3", 0.4);
+        render();
+      };
+    });
+  }
+
+  document.getElementById("btnReset").onclick = () => { resetState(); render(); };
+  resetState();
+  render();
+})();
+</script>
+</body>
+</html>
