@@ -1221,6 +1221,10 @@ function playBarricadeHitFx(dmg) {
   const wrap = document.getElementById("raidBarricadeWrap");
   if (!wrap || wrap.classList.contains("collapsed")) return;
   playSfx("barricade_hit");
+  // 被弾フラッシュ: 柵の絵の形どおりに一瞬白く光る(filterなのでPNGの透過部分は光らない)。
+  // アニメーション中だけclassの傷みfilter(worn/critical)を上書きし、終わると自動で元に戻る
+  const img = document.getElementById("raidBarricade");
+  if (img) img.animate([{ filter: "brightness(2.1) saturate(0.75)" }, { filter: "brightness(1)" }], { duration: 220, easing: "ease-out" });
   const amp = dmg >= 25 ? 7 : 4;
   wrap.animate(
     [{ transform: "translate(0,0)" }, { transform: `translate(${-amp}px,1px)` }, { transform: `translate(${amp}px,-1px)` }, { transform: `translate(${-amp * 0.5}px,0)` }, { transform: "translate(0,0)" }],

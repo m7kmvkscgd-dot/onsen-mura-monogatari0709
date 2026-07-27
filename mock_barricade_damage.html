@@ -171,6 +171,7 @@
     if (dead) return;
     hp -= dmg;
     sfx("assets/sfx/barricade_hit.mp3", 0.6);
+    img.animate([{ filter: "brightness(2.1) saturate(0.75)" }, { filter: "brightness(1)" }], { duration: 220, easing: "ease-out" });
     // 揺れ(被弾の強さで振れ幅を変える)
     const amp = dmg >= 30 ? 7 : 4;
     wrap.animate(
