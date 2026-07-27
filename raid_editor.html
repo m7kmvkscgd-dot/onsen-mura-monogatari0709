@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>温泉村物語 襲撃エディタ</title>
+<style>
+  :root { --bg:#141414; --card-bg:#1d2126; --card-border:#3a3f46; --gold:#c9a55a; --title:#e8dcbf; --body:#d5cfc2; --caption:#8f9aa5; --danger:#e06c60; --success:#7bc96b; --info:#7db3d5; --radius:10px; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--body); padding-bottom:80px; }
+  .container { max-width:640px; margin:0 auto; padding:12px; }
+  h1 { font-size:1.05rem; color:var(--title); padding:12px 12px 0; max-width:640px; margin:0 auto; }
+  .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:640px; margin:0 auto; padding:10px 12px 0; }
+  .topbar button { font-family:inherit; font-size:0.78rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; }
+  .topbar button.primary { background:#7a6234; color:#fff; border-color:#a08347; }
+  .note { font-size:0.7rem; color:var(--caption); line-height:1.6; margin:8px 0; }
+  .card { background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+  .card h2 { font-size:0.9rem; color:var(--title); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  label { font-size:0.72rem; color:var(--caption); display:block; margin-bottom:2px; }
+  input[type=number], input[type=text] { background:rgba(0,0,0,0.25); border:1px solid var(--card-border); border-radius:6px; color:var(--body); font-size:0.9rem; padding:7px 8px; }
+  input[type=number] { width:90px; text-align:right; }
+  input[type=text] { width:100%; text-align:left; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+  .wave { background:rgba(0,0,0,0.18); border:1px solid var(--card-border); border-radius:8px; padding:9px; margin-top:8px; }
+  .wave-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .wave-head .ttl { font-size:0.78rem; font-weight:700; color:var(--title); }
+  .slot-sum { font-size:0.72rem; color:var(--info); }
+  .enemy-line { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px dashed rgba(255,255,255,0.08); }
+  .enemy-line img { width:34px; height:34px; object-fit:contain; background:#2a2f36; border-radius:6px; flex-shrink:0; }
+  .enemy-line .nm { flex:1; min-width:0; font-size:0.82rem; }
+  .enemy-line .meta { font-size:0.62rem; color:var(--caption); }
+  .cnt { display:flex; align-items:center; gap:4px; }
+  .cnt button { width:30px; height:30px; font-size:1rem; font-weight:900; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:6px; }
+  .cnt .v { min-width:26px; text-align:center; font-weight:900; }
+  .small { font-size:0.68rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:7px; padding:6px 10px; font-family:inherit; }
+  .small.danger { color:#f0b0a8; border-color:#5c3a36; }
+  .add-line { margin-top:6px; }
+  .badge { font-size:0.58rem; border:1px solid var(--card-border); border-radius:6px; padding:0 4px; color:var(--caption); margin-left:4px; }
+  .badge.swarm { color:#a8d5f0; }
+  .badge.boss { color:#f0b0a8; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; z-index:50; padding:14px; }
+  .modal.open { display:flex; }
+  .modal-inner { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; width:100%; max-width:560px; max-height:86dvh; display:flex; flex-direction:column; padding:12px; }
+  .modal-inner h3 { font-size:0.9rem; color:var(--title); margin-bottom:8px; }
+  #pickSearch { width:100%; margin-bottom:8px; }
+  #pickList { overflow-y:auto; flex:1; }
+  .pick-item { display:flex; align-items:center; gap:8px; padding:7px 4px; border-top:1px dashed rgba(255,255,255,0.08); cursor:pointer; }
+  .pick-item img { width:34px; height:34px; object-fit:contain; background:#2a2f36; border-radius:6px; }
+  .pick-item .nm { flex:1; font-size:0.85rem; }
+  textarea { width:100%; height:200px; background:#0f1214; color:#cfe3cf; border:1px solid var(--card-border); border-radius:8px; font-size:0.68rem; font-family:ui-monospace,monospace; padding:8px; }
+  .modal-actions { display:flex; gap:8px; margin-top:8px; }
+  .modal-actions button { flex:1; font-family:inherit; font-size:0.8rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:10px; }
+</style>
+</head>
+<body>
+<h1>👹 温泉村物語 襲撃エディタ</h1>
+<div class="topbar">
+  <button id="addRaidBtn" class="primary">＋襲撃を追加</button>
+  <button id="exportBtn">📋 エクスポート</button>
+  <button id="importBtn">📥 読み込み</button>
+  <button id="resetBtn">全て初期化</button>
+</div>
+<div class="container">
+  <p class="note">襲撃スケジュールとウェーブ編成の設計ツール(ゲーム側は未実装。ここで決めてエクスポートしたJSONを実装に反映します)。編集内容はこの端末に自動保存されます。<br>枠の目安: 通常の敵=2枠 / 大群=1枠 / ボス級=4枠(表示上の目安で、上限チェックはしません)</p>
+  <div class="card" id="scheduleCard">
+    <h2>スケジュール</h2>
+    <div class="row">
+      <div><label>初回襲撃日(◯日目の朝)</label><input type="number" id="firstDay" min="2"></div>
+      <div><label>以降の周期(日ごと)</label><input type="number" id="repeatDays" min="1"></div>
+    </div>
+    <p class="note">襲撃N回目の定義が下の一覧に無い場合は、最後の襲撃定義を繰り返し使う想定。</p>
+  </div>
+  <div id="raidList"></div>
+</div>
+
+<div class="modal" id="pickModal">
+  <div class="modal-inner">
+    <h3>敵を選ぶ</h3>
+    <input type="text" id="pickSearch" placeholder="名前で検索...">
+    <div id="pickList"></div>
+    <div class="modal-actions"><button id="pickCloseBtn">閉じる</button></div>
+  </div>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-inner">
+    <h3>エクスポート(このJSONをClaudeに貼る)</h3>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyBtn">コピー</button>
+      <button id="exportCloseBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="importModal">
+  <div class="modal-inner">
+    <h3>読み込み(エクスポートしたJSONを貼り付け)</h3>
+    <textarea id="importJson"></textarea>
+    <div class="modal-actions">
+      <button id="importDoBtn">読み込む</button>
+      <button id="importCloseBtn">閉じる</button>
+    </div>
+    <p class="note" id="importStatus"></p>
+  </div>
+</div>
+
+<script>
+const ENEMY_LIST = [{"id":"yaken","ja":"野犬","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":48,"atk":12,"image":"assets/enemies/yaken.png"},{"id":"inoshishi","ja":"猪","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":62,"atk":15,"image":"assets/enemies/inoshishi.png"},{"id":"dokuhebi","ja":"毒蛇","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":44,"atk":14,"image":"assets/enemies/dokuhebi.png"},{"id":"oogumo","ja":"大蜘蛛","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":58,"atk":14,"image":"assets/enemies/oogumo.png"},{"id":"kodama","ja":"木霊","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":50,"atk":12,"image":"assets/enemies/kodama.png"},{"id":"kappa","ja":"河童","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":55,"atk":15,"image":"assets/enemies/kappa.png"},{"id":"hitotsume_kozo","ja":"一つ目小僧","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":48,"atk":15,"image":"assets/enemies/hitotsume_kozo.png"},{"id":"bake_danuki","ja":"化け狸","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":62,"atk":15,"image":"assets/enemies/bake_danuki.png"},{"id":"onibi","ja":"鬼火","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":40,"atk":15,"image":"assets/enemies/onibi.png"},{"id":"kamaitachi","ja":"かまいたち","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":55,"atk":18,"image":"assets/enemies/kamaitachi.png"},{"id":"oo_inoshishi","ja":"大猪","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":true,"isFlying":false,"hp":431,"atk":23,"image":"assets/enemies/oo_inoshishi.png"},{"id":"q_arakuma","ja":"荒熊","stage":"valley","isSwarm":false,"isBoss":true,"isMidBoss":true,"isFlying":false,"hp":133,"atk":21,"image":"assets/enemies/q_arakuma.png"},{"id":"q_daija","ja":"大蛇","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":true,"isFlying":false,"hp":75,"atk":24,"image":"assets/enemies/q_daija.png"},{"id":"q_oni","ja":"鬼","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":true,"isFlying":false,"hp":923,"atk":27,"image":"assets/enemies/q_oni.png"},{"id":"q_gashadokuro","ja":"がしゃどくろ","stage":"cave","isSwarm":false,"isBoss":true,"isMidBoss":true,"isFlying":false,"hp":492,"atk":20,"image":"assets/enemies/q_gashadokuro.png"},{"id":"ochimusha","ja":"落武者","stage":"castle","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":116,"atk":21,"image":"assets/enemies/ochimusha.png"},{"id":"kamaitachi2","ja":"かまいたち","stage":"yama","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":96,"atk":24,"image":"assets/enemies/kamaitachi2.png"},{"id":"youko","ja":"妖狐","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":89,"atk":27,"image":"assets/enemies/youko.png"},{"id":"rokurokubi","ja":"ろくろ首","stage":"ruins","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":103,"atk":21,"image":"assets/enemies/rokurokubi.png"},{"id":"yukionna","ja":"雪女","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":92,"atk":24,"image":"assets/enemies/yukionna.png"},{"id":"yamauba","ja":"山姥","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":123,"atk":21,"image":"assets/enemies/yamauba.png"},{"id":"onryo","ja":"怨霊","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":82,"atk":30,"image":"assets/enemies/onryo.png"},{"id":"kasha","ja":"火車","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":116,"atk":27,"image":"assets/enemies/kasha.png"},{"id":"oni","ja":"鬼","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":198,"atk":30,"image":"assets/enemies/oni.png"},{"id":"karasu_tengu","ja":"烏天狗","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":true,"hp":164,"atk":30,"image":"assets/enemies/karasu_tengu.png"},{"id":"yamauba2","ja":"山姥","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":192,"atk":27,"image":"assets/enemies/yamauba2.png"},{"id":"gyuki","ja":"牛鬼","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":239,"atk":33,"image":"assets/enemies/gyuki.png"},{"id":"nue","ja":"ぬえ","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":true,"hp":178,"atk":30,"image":"assets/enemies/nue.png"},{"id":"wanyudo","ja":"輪入道","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":171,"atk":30,"image":"assets/enemies/wanyudo.png"},{"id":"gaikotsu_musha","ja":"骸骨武者","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":185,"atk":30,"image":"assets/enemies/gaikotsu_musha.png"},{"id":"orochi","ja":"大蛇","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":212,"atk":30,"image":"assets/enemies/orochi.png"},{"id":"gashadokuro","ja":"がしゃどくろ","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":false,"isFlying":false,"hp":581,"atk":43,"image":"assets/enemies/gashadokuro.png"},{"id":"kyubi_no_kitsune","ja":"九尾の狐","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":false,"isFlying":false,"hp":530,"atk":46,"image":"assets/enemies/kyubi_no_kitsune.png"},{"id":"shuten_doji","ja":"酒呑童子","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":315,"atk":46,"image":"assets/enemies/shuten_doji.png"},{"id":"ibaraki_doji","ja":"茨木童子","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":335,"atk":49,"image":"assets/enemies/ibaraki_doji.png"},{"id":"dai_tengu","ja":"大天狗","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":291,"atk":49,"image":"assets/enemies/dai_tengu.png"},{"id":"yamata_no_orochi","ja":"八岐大蛇","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":376,"atk":52,"image":"assets/enemies/yamata_no_orochi.png"},{"id":"tamamo_no_mae","ja":"玉藻前","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":280,"atk":49,"image":"assets/enemies/tamamo_no_mae.png"},{"id":"giou","ja":"鵺王","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":342,"atk":49,"image":"assets/enemies/giou.png"},{"id":"kyubi_shin","ja":"九尾の狐(真)","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":325,"atk":52,"image":"assets/enemies/kyubi_shin.png"},{"id":"gashadokuro_shin","ja":"がしゃどくろ(真)","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":410,"atk":49,"image":"assets/enemies/gashadokuro_shin.png"},{"id":"yomi_no_onryo","ja":"黄泉の怨霊","stage":"forest","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":301,"atk":58,"image":"assets/enemies/yomi_no_onryo.png"},{"id":"kishin_rasetsuo","ja":"鬼神・羅刹王","stage":"forest","isSwarm":false,"isBoss":true,"isMidBoss":false,"isFlying":false,"hp":958,"atk":61,"image":"assets/enemies/kishin_rasetsuo.png"},{"id":"nurari_koumori","ja":"ぬらりこうもり","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":true,"hp":23,"atk":10,"image":"assets/enemies/nurari_koumori.png"},{"id":"chochin_obake","ja":"提灯おばけ","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":30,"atk":7,"image":"assets/enemies/chochin_obake.png"},{"id":"kawappa","ja":"かわっぱ","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":49,"atk":13,"image":"assets/enemies/kawappa.png"},{"id":"chibi_oni","ja":"ちび鬼","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":46,"atk":13,"image":"assets/enemies/chibi_oni.png"},{"id":"karakasa","ja":"からかさ","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":103,"atk":17,"image":"assets/enemies/karakasa.png"},{"id":"kogitsune","ja":"こぎつね","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":84,"atk":17,"image":"assets/enemies/kogitsune.png"},{"id":"warashibe_ningyo","ja":"わらしべ人形","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":179,"atk":23,"image":"assets/enemies/warashibe_ningyo.png"},{"id":"medama_kozou","ja":"目玉こぞう","stage":"forest","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":152,"atk":27,"image":"assets/enemies/medama_kozou.png"},{"id":"cave_tsuchigumo","ja":"土蜘蛛","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":66,"atk":15,"image":"assets/enemies/tsuchigumo.png"},{"id":"cave_oomukade","ja":"大百足","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":77,"atk":18,"image":"assets/enemies/oomukade.png"},{"id":"cave_nurarikoumori","ja":"ぬらりこうもり","stage":"cave","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":true,"hp":30,"atk":10,"image":"assets/enemies/nurari_koumori.png"},{"id":"doukutsu_shokujinsou","ja":"洞窟食人草","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":69,"atk":13,"image":"assets/enemies/doukutsu_shokujinsou.png"},{"id":"doukutsu_chouchinbi","ja":"洞窟の提灯火","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":54,"atk":17,"image":"assets/enemies/doukutsu_chouchinbi.png"},{"id":"bake_nezumi","ja":"化け鼠","stage":"cave","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":29,"atk":11,"image":"assets/enemies/bake_nezumi.png"},{"id":"bake_take","ja":"化け茸","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":60,"atk":13,"image":"assets/enemies/bake_take.png"},{"id":"doukutsu_bourei","ja":"洞窟の亡霊","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":59,"atk":17,"image":"assets/enemies/doukutsu_bourei.png"},{"id":"doukutsu_inoshishi","ja":"洞窟イノシシ","stage":"cave","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":83,"atk":18,"image":"assets/enemies/doukutsu_inoshishi.png"},{"id":"iso_gani","ja":"磯ガニ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":48,"atk":12,"image":"assets/enemies/iso_gani.png"},{"id":"yadokari","ja":"ヤドカリ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":55,"atk":12,"image":"assets/enemies/yadokari.png"},{"id":"isozakana","ja":"磯魚","stage":"coast","isSwarm":true,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":27,"atk":7,"image":"assets/enemies/isozakana.png"},{"id":"kurage_bou","ja":"くらげ坊","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":44,"atk":12,"image":"assets/enemies/kurage_bou.png"},{"id":"kaiyose","ja":"貝寄せ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":44,"atk":12,"image":"assets/enemies/kaiyose.png"},{"id":"hama_tako","ja":"浜タコ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":58,"atk":15,"image":"assets/enemies/hama_tako.png"},{"id":"kaisou_douji","ja":"海藻童子","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":48,"atk":15,"image":"assets/enemies/kaisou_douji.png"},{"id":"harifugu","ja":"ハリフグ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":51,"atk":18,"image":"assets/enemies/harifugu.png"},{"id":"umineko","ja":"ウミネコ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":true,"hp":44,"atk":15,"image":"assets/enemies/umineko.png"},{"id":"kaizoku_gaikotsu","ja":"海賊骸骨","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":103,"atk":24,"image":"assets/enemies/kaizoku_gaikotsu.png"},{"id":"iso_inu","ja":"磯犬","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":92,"atk":27,"image":"assets/enemies/iso_inu.png"},{"id":"oo_dako_1","ja":"大ダコ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":123,"atk":24,"image":"assets/enemies/oo_dako_1.png"},{"id":"iwa_gani","ja":"岩ガニ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":103,"atk":24,"image":"assets/enemies/iwa_gani.png"},{"id":"gyojin","ja":"魚人","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":99,"atk":30,"image":"assets/enemies/gyojin.png"},{"id":"shell_slime","ja":"シェルスライム","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":109,"atk":21,"image":"assets/enemies/shell_slime.png"},{"id":"kaisou_no_sei","ja":"海藻の精","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":89,"atk":24,"image":"assets/enemies/kaisou_no_sei.png"},{"id":"same","ja":"鮫","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":96,"atk":30,"image":"assets/enemies/same.png"},{"id":"iso_onna_1","ja":"磯女","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":86,"atk":30,"image":"assets/enemies/iso_onna_1.png"},{"id":"oo_kai","ja":"大貝","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":116,"atk":24,"image":"assets/enemies/oo_kai.png"},{"id":"umibouzu","ja":"海坊主","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":205,"atk":30,"image":"assets/enemies/umibouzu.png"},{"id":"iso_onna_2","ja":"磯女","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":185,"atk":33,"image":"assets/enemies/iso_onna_2.png"},{"id":"iwagaki_ou","ja":"岩ガキ翁","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":198,"atk":27,"image":"assets/enemies/iwagaki_ou.png"},{"id":"umihebi","ja":"海蛇","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":171,"atk":33,"image":"assets/enemies/umihebi.png"},{"id":"umigumo","ja":"海蜘蛛","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":178,"atk":30,"image":"assets/enemies/umigumo.png"},{"id":"ryuuguu_no_shisha","ja":"竜宮の使者","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":164,"atk":33,"image":"assets/enemies/ryuuguu_no_shisha.png"},{"id":"oo_dako_2","ja":"大ダコ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":212,"atk":30,"image":"assets/enemies/oo_dako_2.png"},{"id":"same_bito","ja":"鮫人","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":185,"atk":36,"image":"assets/enemies/same_bito.png"},{"id":"shinkai_no_bourei","ja":"深海の亡霊","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":157,"atk":36,"image":"assets/enemies/shinkai_no_bourei.png"},{"id":"oo_kani_ou","ja":"大蟹王","stage":"coast","isSwarm":false,"isBoss":true,"isMidBoss":false,"isFlying":false,"hp":564,"atk":46,"image":"assets/enemies/oo_kani_ou.png"},{"id":"kaima_daiou","ja":"海魔大王","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":325,"atk":52,"image":"assets/enemies/kaima_daiou.png"},{"id":"youen_na_isoonna","ja":"妖艶な磯女","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":291,"atk":49,"image":"assets/enemies/youen_na_isoonna.png"},{"id":"kyokai_no_oodako","ja":"巨海の大ダコ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":359,"atk":49,"image":"assets/enemies/kyokai_no_oodako.png"},{"id":"oni_harifugu","ja":"鬼ハリフグ","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":301,"atk":49,"image":"assets/enemies/oni_harifugu.png"},{"id":"oo_kani_shougun","ja":"大蟹将軍","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":342,"atk":49,"image":"assets/enemies/oo_kani_shougun.png"},{"id":"kairyuu_ou","ja":"海龍王","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":376,"atk":52,"image":"assets/enemies/kairyuu_ou.png"},{"id":"same_no_bujin","ja":"鮫の武人","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":315,"atk":52,"image":"assets/enemies/same_no_bujin.png"},{"id":"umi_no_souryo","ja":"海の僧侶","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":291,"atk":46,"image":"assets/enemies/umi_no_souryo.png"},{"id":"uzushio_no_onryou","ja":"渦潮の怨霊","stage":"coast","isSwarm":false,"isBoss":false,"isMidBoss":false,"isFlying":false,"hp":308,"atk":49,"image":"assets/enemies/uzushio_no_onryou.png"},{"id":"kaiyoujo_ou","ja":"海妖女王","stage":"coast","isSwarm":false,"isBoss":true,"isMidBoss":false,"isFlying":false,"hp":1026,"atk":64,"image":"assets/enemies/kaiyoujo_ou.png"}];
+const ENEMY_BY_ID = {};
+ENEMY_LIST.forEach((e) => { ENEMY_BY_ID[e.id] = e; });
+const STAGE_JA = { forest: "🌲森", coast: "🌊海岸", cave: "🕳️洞窟", valley: "🎋渓流", bamboo: "🎍竹林", shugendo: "⛰️修験道", yama: "🏔️山", ruins: "🏚️廃城下町", gate: "🚪門", castle: "🏯古城", ruinsforest: "🌿少し森" };
+const STORAGE_KEY = "onsen_raid_editor_v1";
+
+const DEFAULT_CONFIG = {
+  schedule: { firstRaidDay: 8, repeatEveryDays: 7 },
+  raids: [
+    { memo: "初回(お試し)", waves: [[{ id: "inoshishi", count: 5 }]] },
+  ],
+};
+let config;
+try { config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { config = null; }
+if (!config || !config.schedule || !Array.isArray(config.raids)) config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); }
+function slotOf(e) { return e ? (e.isBoss || e.isMidBoss ? 4 : e.isSwarm ? 1 : 2) : 2; }
+function waveSlotSum(wave) { return wave.reduce((s, r) => s + slotOf(ENEMY_BY_ID[r.id]) * r.count, 0); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function render() {
+  document.getElementById("firstDay").value = config.schedule.firstRaidDay;
+  document.getElementById("repeatDays").value = config.schedule.repeatEveryDays;
+  const list = document.getElementById("raidList");
+  list.innerHTML = "";
+  config.raids.forEach((raid, ri) => {
+    const day = config.schedule.firstRaidDay + ri * config.schedule.repeatEveryDays;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <h2><span>襲撃 ${ri + 1}回目 <span class="badge">${day}日目の朝</span></span><button class="small danger" data-act="delRaid">襲撃を削除</button></h2>
+      <label>メモ</label><input type="text" data-act="memo" value="${esc(raid.memo)}" placeholder="この襲撃の狙いなど">
+      <div data-waves></div>
+      <div class="add-line"><button class="small" data-act="addWave">＋ウェーブを追加</button></div>
+    `;
+    const wavesEl = card.querySelector("[data-waves]");
+    raid.waves.forEach((wave, wi) => {
+      const wv = document.createElement("div");
+      wv.className = "wave";
+      wv.innerHTML = `
+        <div class="wave-head">
+          <span class="ttl">ウェーブ${wi + 1}</span>
+          <span><span class="slot-sum">枠合計: ${waveSlotSum(wave)}</span> <button class="small danger" data-act="delWave">削除</button></span>
+        </div>
+        <div data-lines></div>
+        <div class="add-line"><button class="small" data-act="addEnemy">＋敵を追加</button></div>
+      `;
+      const linesEl = wv.querySelector("[data-lines]");
+      wave.forEach((line, li) => {
+        const e = ENEMY_BY_ID[line.id];
+        const el = document.createElement("div");
+        el.className = "enemy-line";
+        el.innerHTML = `
+          <img src="${e ? esc(e.image) : ""}" onerror="this.style.visibility='hidden'">
+          <div class="nm">${e ? esc(e.ja) : esc(line.id)}<span class="badge">${e ? (STAGE_JA[e.stage] || e.stage) : "?"}</span>${e && e.isSwarm ? '<span class="badge swarm">大群1枠</span>' : ""}${e && (e.isBoss || e.isMidBoss) ? '<span class="badge boss">ボス級4枠</span>' : ""}
+            <div class="meta">${e ? `HP${e.hp} 攻${e.atk} ・ ${slotOf(e)}枠×${line.count}=${slotOf(e) * line.count}` : ""}</div>
+          </div>
+          <div class="cnt"><button data-act="minus">−</button><span class="v">${line.count}</span><button data-act="plus">＋</button></div>
+          <button class="small danger" data-act="delEnemy">✕</button>
+        `;
+        el.querySelector('[data-act="minus"]').onclick = () => { if (line.count > 1) { line.count--; save(); render(); } };
+        el.querySelector('[data-act="plus"]').onclick = () => { if (line.count < 10) { line.count++; save(); render(); } };
+        el.querySelector('[data-act="delEnemy"]').onclick = () => { wave.splice(li, 1); save(); render(); };
+        linesEl.appendChild(el);
+      });
+      wv.querySelector('[data-act="addEnemy"]').onclick = () => openPick((id) => { wave.push({ id, count: 1 }); save(); render(); });
+      wv.querySelector('[data-act="delWave"]').onclick = () => { if (raid.waves.length <= 1) { alert("ウェーブは最低1つ必要です"); return; } raid.waves.splice(wi, 1); save(); render(); };
+      wavesEl.appendChild(wv);
+    });
+    card.querySelector('[data-act="addWave"]').onclick = () => { raid.waves.push([]); save(); render(); };
+    card.querySelector('[data-act="delRaid"]').onclick = () => { if (!confirm(`襲撃${ri + 1}回目を削除しますか？`)) return; config.raids.splice(ri, 1); save(); render(); };
+    card.querySelector('[data-act="memo"]').addEventListener("input", (ev) => { raid.memo = ev.target.value; save(); });
+    list.appendChild(card);
+  });
+}
+document.getElementById("firstDay").addEventListener("input", (e) => { config.schedule.firstRaidDay = Number(e.target.value) || 1; save(); render(); });
+document.getElementById("repeatDays").addEventListener("input", (e) => { config.schedule.repeatEveryDays = Number(e.target.value) || 1; save(); render(); });
+document.getElementById("addRaidBtn").onclick = () => { config.raids.push({ memo: "", waves: [[]] }); save(); render(); };
+document.getElementById("resetBtn").onclick = () => { if (!confirm("全ての編集を破棄して初期状態に戻します。よろしいですか？")) return; config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); save(); render(); };
+
+// 敵ピッカー
+let pickCallback = null;
+function openPick(cb) {
+  pickCallback = cb;
+  document.getElementById("pickSearch").value = "";
+  renderPickList("");
+  document.getElementById("pickModal").classList.add("open");
+}
+function renderPickList(q) {
+  const list = document.getElementById("pickList");
+  list.innerHTML = "";
+  ENEMY_LIST.filter((e) => !q || e.ja.includes(q) || e.id.includes(q)).forEach((e) => {
+    const el = document.createElement("div");
+    el.className = "pick-item";
+    el.innerHTML = `<img src="${esc(e.image)}" onerror="this.style.visibility='hidden'"><span class="nm">${esc(e.ja)}</span><span class="badge">${STAGE_JA[e.stage] || e.stage}</span>${e.isSwarm ? '<span class="badge swarm">大群</span>' : ""}${e.isBoss || e.isMidBoss ? '<span class="badge boss">ボス級</span>' : ""}<span class="badge">${slotOf(e)}枠</span>`;
+    el.onclick = () => { document.getElementById("pickModal").classList.remove("open"); if (pickCallback) pickCallback(e.id); };
+    list.appendChild(el);
+  });
+}
+document.getElementById("pickSearch").addEventListener("input", (e) => renderPickList(e.target.value.trim()));
+document.getElementById("pickCloseBtn").onclick = () => document.getElementById("pickModal").classList.remove("open");
+
+// エクスポート/読み込み
+document.getElementById("exportBtn").onclick = () => {
+  const out = "// 襲撃スケジュール+ウェーブ編成(襲撃エディタのエクスポート。ゲーム実装時にRAID_CONFIGとして反映)\n" +
+    "const RAID_CONFIG = " + JSON.stringify(config, null, 2) + ";\n";
+  document.getElementById("exportJson").value = out;
+  document.getElementById("exportModal").classList.add("open");
+};
+document.getElementById("copyBtn").onclick = () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  document.execCommand("copy");
+  document.getElementById("copyBtn").textContent = "コピーしました";
+  setTimeout(() => { document.getElementById("copyBtn").textContent = "コピー"; }, 1200);
+};
+document.getElementById("exportCloseBtn").onclick = () => document.getElementById("exportModal").classList.remove("open");
+document.getElementById("importBtn").onclick = () => { document.getElementById("importJson").value = ""; document.getElementById("importStatus").textContent = ""; document.getElementById("importModal").classList.add("open"); };
+document.getElementById("importCloseBtn").onclick = () => document.getElementById("importModal").classList.remove("open");
+document.getElementById("importDoBtn").onclick = () => {
+  const raw = document.getElementById("importJson").value.trim().replace(/^[^{]*/, "").replace(/;\s*$/, "");
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed.schedule || !Array.isArray(parsed.raids)) throw new Error("形式が違います");
+    config = parsed;
+    save(); render();
+    document.getElementById("importStatus").textContent = "読み込みました";
+  } catch (e) {
+    document.getElementById("importStatus").textContent = "読み込み失敗: " + e.message;
+  }
+};
+
+render();
+</script>
+</body>
+</html>
