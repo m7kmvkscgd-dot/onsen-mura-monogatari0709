@@ -29,7 +29,8 @@
 4. 作業を続ける際は本ファイル(CLAUDE.md)の「バージョン履歴」と各見出しの実装メモを読めば経緯を追える。gitログ(`git log --oneline`)も各コミットが1機能単位でまとまっている
 
 ## Cloudflare Pages本番デプロイ(重要な運用ルール)
-このプロジェクトは`https://onsen-mura-monogatari.pages.dev`にCloudflare Pagesとして常時公開されており、ユーザーは主にこのURLを実機Safariで開いて動作確認する(トンネルより優先度が高い確認手段)。デプロイは以下のコマンドで行う:
+このプロジェクトは`https://onsen-mura-monogatari.pages.dev`にCloudflare Pagesとして常時公開されており、ユーザーは主にこのURLを実機Safariで開いて動作確認する(トンネルより優先度が高い確認手段)。
+**css/jsを変更した時はデプロイ前に必ず`node tools/stamp_asset_version.js`を実行し、index.htmlの参照に付くバージョン印(?v=タイムスタンプ)を更新してからコミットすること。** iOS Safariはリロードしてもcss/jsのキャッシュを使い回すことがあり、これを怠ると「デプロイしたのに実機だけ古いまま」事故が起きる(2026-07-27に実際に発生、このスクリプトで根本対策済み)。デプロイは以下のコマンドで行う:
 ```
 npx wrangler pages deploy . --project-name=onsen-mura-monogatari --branch=main --commit-dirty=true
 ```
