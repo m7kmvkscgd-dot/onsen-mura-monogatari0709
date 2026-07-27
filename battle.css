@@ -412,12 +412,12 @@
   .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; white-space: nowrap; overflow: hidden; }
   /* 襲撃バリケード(村襲撃/大規模戦モードのみ)。敵カードの列とテキストボックスの間に全幅で立てる。
      【重要】通常フローに置くとテキストボックス以下が全部押し下げられて味方カードに被る(実機事故
-     2026-07-27)ため、絶対配置=フロー外にしてレイアウトへ一切影響させない。敵の列(z1)の背後で
-     杭の先端が敵カードの足元に食い込み、テキストボックス(z2)がバリケードの下半分に重なる */
+     2026-07-27)ため、絶対配置=フロー外にしてレイアウトへ一切影響させない。重なり順はユーザー指定で
+     「敵イラストより手前・テキストボックスより奥」(z1同士だがDOM順で敵列より後=手前に描画、ログはz2) */
   #raidBarricade { display: none; }
   .battle-top.raid-battle #raidBarricade {
-    display: block; position: absolute; left: 0; right: 0; top: 112px;
-    width: 100%; height: auto; z-index: 0; pointer-events: none;
+    display: block; position: absolute; left: 0; right: 0; top: 162px;
+    width: 100%; height: auto; z-index: 1; pointer-events: none; /* 敵カード(z1・DOM順で先)より手前、テキストボックス(z2)より奥 */
   }
   .battle-top.raid-battle #battleLog { position: relative; z-index: 2; }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
