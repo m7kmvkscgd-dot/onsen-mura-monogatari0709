@@ -503,32 +503,32 @@ const ENEMY_MATERIAL_DROP_CHANCES = {};
 // 鬼火は既存の魂のかけら枠があるため素材とは重複させない)と、設計保留中のボス/中ボス
 const ENEMY_MATERIAL_DROPS = {
   // 森ルート
-  yaken: "kawa", inoshishi: "kawa", dokuhebi: "kawa", oogumo: "kawa", kodama: "ki",
-  kappa: "kawa", hitotsume_kozo: "kawa", bake_danuki: "kawa", kamaitachi: "kawa",
+  yaken: "kawa", inoshishi: "kawa", dokuhebi: "kawa", oogumo: "hone", kodama: "ki",
+  kappa: "kawa", hitotsume_kozo: "hone", bake_danuki: "kawa", kamaitachi: "kawa",
   ochimusha: "hone", kamaitachi2: "kawa", youko: "kawa", rokurokubi: "hone",
-  yamauba: "kawa", onryo: "hone", kasha: "tetsu", oni: "tetsu", karasu_tengu: "tetsu",
-  yamauba2: "kawa", gyuki: "kawa", nue: "kawa", wanyudo: "ki", gaikotsu_musha: "hone",
+  yamauba: "hone", onryo: "hone", kasha: "tetsu", oni: "tetsu", karasu_tengu: "tetsu",
+  yamauba2: "hone", gyuki: "kawa", nue: "kawa", wanyudo: "ki", gaikotsu_musha: "hone",
   orochi: "kawa", shuten_doji: "tetsu", ibaraki_doji: "tetsu", dai_tengu: "tetsu",
-  yamata_no_orochi: "kawa", tamamo_no_mae: "kawa", giou: "kawa", kyubi_shin: "kawa",
+  yamata_no_orochi: "kawa", tamamo_no_mae: "kawa", giou: "hone", kyubi_shin: "kawa",
   gashadokuro_shin: "hone", yomi_no_onryo: "hone",
   // 大群
   nurari_koumori: "kawa", chochin_obake: "ki", kawappa: "kawa", chibi_oni: "tetsu",
-  karakasa: "ki", kogitsune: "kawa", warashibe_ningyo: "ki", medama_kozou: "kawa",
+  karakasa: "ki", kogitsune: "kawa", warashibe_ningyo: "ki", 
   // 鍾乳洞
-  cave_tsuchigumo: "kawa", cave_oomukade: "kawa", cave_nurarikoumori: "kawa",
+  cave_tsuchigumo: "hone", cave_oomukade: "hone", cave_nurarikoumori: "kawa",
   doukutsu_shokujinsou: "ki", bake_nezumi: "kawa", bake_take: "ki",
   doukutsu_bourei: "hone", doukutsu_inoshishi: "kawa",
   // 海ルート
-  iso_gani: "kawa", yadokari: "kawa", isozakana: "kawa", kurage_bou: "kawa",
-  kaiyose: "kawa", hama_tako: "kawa", kaisou_douji: "ki", harifugu: "kawa",
-  umineko: "kawa", kaizoku_gaikotsu: "hone", iso_inu: "kawa", oo_dako_1: "kawa",
-  iwa_gani: "kawa", gyojin: "tetsu", shell_slime: "kawa", kaisou_no_sei: "ki",
-  same: "kawa", iso_onna_1: "kawa", oo_kai: "kawa", iso_onna_2: "kawa",
-  iwagaki_ou: "kawa", umihebi: "kawa", umigumo: "kawa", ryuuguu_no_shisha: "tetsu",
-  oo_dako_2: "kawa", same_bito: "kawa", shinkai_no_bourei: "hone",
-  kaima_daiou: "tetsu", youen_na_isoonna: "kawa", kyokai_no_oodako: "kawa",
-  oni_harifugu: "kawa", oo_kani_shougun: "kawa", kairyuu_ou: "kawa",
-  same_no_bujin: "tetsu", umi_no_souryo: "kawa", uzushio_no_onryou: "hone",
+  iso_gani: "hone", yadokari: "hone", isozakana: "kawa", 
+  kaiyose: "hone", kaisou_douji: "ki", harifugu: "kawa",
+  umineko: "kawa", kaizoku_gaikotsu: "hone", iso_inu: "kawa", 
+  iwa_gani: "hone", gyojin: "tetsu", kaisou_no_sei: "ki",
+  same: "kawa", iso_onna_1: "hone", oo_kai: "hone", iso_onna_2: "hone",
+  iwagaki_ou: "hone", umihebi: "kawa", umigumo: "hone", ryuuguu_no_shisha: "tetsu",
+  same_bito: "kawa", shinkai_no_bourei: "hone",
+  kaima_daiou: "tetsu", youen_na_isoonna: "hone", 
+  oni_harifugu: "kawa", oo_kani_shougun: "hone", kairyuu_ou: "kawa",
+  same_no_bujin: "tetsu", umi_no_souryo: "hone", uzushio_no_onryou: "hone",
 };
 
 // 図鑑用のテキスト(生態の説明+大技の内容)。ENEMIES本体(ステータス・戦闘用の数値)とは意図的に
