@@ -1153,7 +1153,16 @@ function playMaterialCollectFx(drops) {
   layer.appendChild(pouch);
   const countEl = pouch.querySelector(".mat-drop-count");
   const to = { x: colRight - 54 - 12 + 27, y: 200 + 27 }; // 巾着(54px角、top:200px)の中心
+  // バッジは戦闘ごとの0スタートではなく「この遠征で拾った累計」の蓄積表示(ユーザー指示2026-07-27)。
+  // victory()はこの演出を呼ぶ前に遠征集計(advMaterialGains/advSoulShardGained)へ今回の分を
+  // 加算済みなので、「累計-今回の個数」から始めて1個収まるたびに+1すると最終値=累計になる
   let bagCount = 0;
+  try {
+    const matTotal = Object.values(advMaterialGains || {}).reduce((a, b) => a + b, 0);
+    bagCount = Math.max(0, matTotal + (advSoulShardGained || 0) - drops.length);
+  } catch (e) {}
+  countEl.textContent = bagCount;
+  if (bagCount > 0) countEl.classList.add("show"); // 前の戦闘までの蓄積があれば最初から見せる
   pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
   const START = 600, STAGGER = 300, D_FLY = 450; // 吸い込みは同時ではなく1個ずつ0.3秒差(ユーザー指定)
   drops.forEach((d, i) => {
