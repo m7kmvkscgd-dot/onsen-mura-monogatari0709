@@ -79,7 +79,7 @@
     <div class="crack c1" style="left:30%; top:34%; height:46%; transform:rotate(7deg);"></div>
     <div class="crack c2" style="left:64%; top:30%; height:52%; transform:rotate(-5deg);"></div>
     <div class="crack c3" style="left:47%; top:36%; height:44%; transform:rotate(12deg);"></div>
-    <div id="duraStrip"><div id="duraTrack"><i id="duraFill"></i></div><span id="duraNum">🛡️100</span></div>
+    <div id="duraStrip"><div id="duraTrack"><i id="duraFill"></i></div><span id="duraNum">100</span></div>
   </div>
   <div class="battle-log" id="log"><div>猪の群れが柵に体当たりしている！</div></div>
   <div class="party-bar" id="partyBar"></div>
@@ -144,7 +144,7 @@
     const r = Math.max(0, hp) / MAX;
     fill.style.width = (r * 100) + "%";
     fill.className = r <= 0.25 ? "low" : r <= 0.5 ? "mid" : "";
-    num.textContent = "🛡️" + Math.max(0, hp);
+    num.textContent = Math.max(0, hp);
     wrap.classList.toggle("worn", hp <= 50 && hp > 25);
     wrap.classList.toggle("critical", hp <= 25 && hp > 0);
   }
