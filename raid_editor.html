@@ -12,19 +12,21 @@
   h1 { font-size:1.05rem; color:var(--title); padding:12px 12px 0; max-width:640px; margin:0 auto; }
   .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:640px; margin:0 auto; padding:10px 12px 0; }
   .topbar button { font-family:inherit; font-size:0.78rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; }
-  .topbar button.primary { background:#7a6234; color:#fff; border-color:#a08347; }
   .note { font-size:0.7rem; color:var(--caption); line-height:1.6; margin:8px 0; }
   .card { background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
   .card h2 { font-size:0.9rem; color:var(--title); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
   label { font-size:0.72rem; color:var(--caption); display:block; margin-bottom:2px; }
   input[type=number], input[type=text] { background:rgba(0,0,0,0.25); border:1px solid var(--card-border); border-radius:6px; color:var(--body); font-size:0.9rem; padding:7px 8px; }
-  input[type=number] { width:90px; text-align:right; }
+  input[type=number] { width:80px; text-align:right; }
   input[type=text] { width:100%; text-align:left; }
   .row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
   .wave { background:rgba(0,0,0,0.18); border:1px solid var(--card-border); border-radius:8px; padding:9px; margin-top:8px; }
-  .wave-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .wave-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:6px; flex-wrap:wrap; }
   .wave-head .ttl { font-size:0.78rem; font-weight:700; color:var(--title); }
   .slot-sum { font-size:0.72rem; color:var(--info); }
+  .prob { font-size:0.72rem; color:var(--success); font-weight:700; }
+  .weight-row { display:flex; align-items:center; gap:8px; margin:4px 0 2px; }
+  .weight-row label { margin:0; }
   .enemy-line { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px dashed rgba(255,255,255,0.08); }
   .enemy-line img { width:34px; height:34px; object-fit:contain; background:#2a2f36; border-radius:6px; flex-shrink:0; }
   .enemy-line .nm { flex:1; min-width:0; font-size:0.82rem; }
@@ -38,6 +40,7 @@
   .badge { font-size:0.58rem; border:1px solid var(--card-border); border-radius:6px; padding:0 4px; color:var(--caption); margin-left:4px; }
   .badge.swarm { color:#a8d5f0; }
   .badge.boss { color:#f0b0a8; }
+  .empty-pool { font-size:0.7rem; color:var(--caption); padding:6px 0; }
   .modal { position:fixed; inset:0; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; z-index:50; padding:14px; }
   .modal.open { display:flex; }
   .modal-inner { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; width:100%; max-width:560px; max-height:86dvh; display:flex; flex-direction:column; padding:12px; }
@@ -55,22 +58,22 @@
 <body>
 <h1>👹 温泉村物語 襲撃エディタ</h1>
 <div class="topbar">
-  <button id="addRaidBtn" class="primary">＋襲撃を追加</button>
   <button id="exportBtn">📋 エクスポート</button>
   <button id="importBtn">📥 読み込み</button>
   <button id="resetBtn">全て初期化</button>
 </div>
 <div class="container">
-  <p class="note">襲撃スケジュールとウェーブ編成の設計ツール(ゲーム側は未実装。ここで決めてエクスポートしたJSONを実装に反映します)。編集内容はこの端末に自動保存されます。<br>枠の目安: 通常の敵=2枠 / 大群=1枠 / ボス級=4枠(表示上の目安で、上限チェックはしません)</p>
+  <p class="note">襲撃スケジュールと「村レベル別ウェーブプール」の設計ツール(ゲーム側は未実装。エクスポートしたJSONを実装に反映します)。編集は端末に自動保存。<br>
+  仕組み: 襲撃発生時、<b>その時の村レベルのプールから重み付きランダムで1つ抽選</b>。そのレベルにプールが無い場合は、それ以下で一番近いレベルのプールを使う想定。<br>
+  枠の目安: 通常の敵=2枠 / 大群=1枠 / ボス級=4枠(表示のみ、上限チェックなし)</p>
   <div class="card" id="scheduleCard">
     <h2>スケジュール</h2>
     <div class="row">
       <div><label>初回襲撃日(◯日目の朝)</label><input type="number" id="firstDay" min="2"></div>
       <div><label>以降の周期(日ごと)</label><input type="number" id="repeatDays" min="1"></div>
     </div>
-    <p class="note">襲撃N回目の定義が下の一覧に無い場合は、最後の襲撃定義を繰り返し使う想定。</p>
   </div>
-  <div id="raidList"></div>
+  <div id="poolList"></div>
 </div>
 
 <div class="modal" id="pickModal">
@@ -110,52 +113,58 @@ const ENEMY_LIST = [{"id":"yaken","ja":"野犬","stage":"forest","isSwarm":false
 const ENEMY_BY_ID = {};
 ENEMY_LIST.forEach((e) => { ENEMY_BY_ID[e.id] = e; });
 const STAGE_JA = { forest: "🌲森", coast: "🌊海岸", cave: "🕳️洞窟", valley: "🎋渓流", bamboo: "🎍竹林", shugendo: "⛰️修験道", yama: "🏔️山", ruins: "🏚️廃城下町", gate: "🚪門", castle: "🏯古城", ruinsforest: "🌿少し森" };
-const STORAGE_KEY = "onsen_raid_editor_v1";
+const STORAGE_KEY = "onsen_raid_editor_v2"; // v1(襲撃回数ベース)から村レベル別プール方式に刷新
+const MAX_VILLAGE_LEVEL = 7;
 
 const DEFAULT_CONFIG = {
   schedule: { firstRaidDay: 8, repeatEveryDays: 7 },
-  raids: [
-    { memo: "初回(お試し)", waves: [[{ id: "inoshishi", count: 5 }]] },
-  ],
+  // pools: 村レベル(文字列キー"1"〜"7") → ウェーブ候補の配列。各候補は{weight(重み), memo, enemies:[{id,count}]}
+  pools: {
+    "1": [{ weight: 1, memo: "お試し", enemies: [{ id: "inoshishi", count: 5 }] }],
+  },
 };
 let config;
 try { config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { config = null; }
-if (!config || !config.schedule || !Array.isArray(config.raids)) config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+if (!config || !config.schedule || !config.pools) config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); }
 function slotOf(e) { return e ? (e.isBoss || e.isMidBoss ? 4 : e.isSwarm ? 1 : 2) : 2; }
-function waveSlotSum(wave) { return wave.reduce((s, r) => s + slotOf(ENEMY_BY_ID[r.id]) * r.count, 0); }
+function waveSlotSum(wave) { return wave.enemies.reduce((s, r) => s + slotOf(ENEMY_BY_ID[r.id]) * r.count, 0); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 function render() {
   document.getElementById("firstDay").value = config.schedule.firstRaidDay;
   document.getElementById("repeatDays").value = config.schedule.repeatEveryDays;
-  const list = document.getElementById("raidList");
+  const list = document.getElementById("poolList");
   list.innerHTML = "";
-  config.raids.forEach((raid, ri) => {
-    const day = config.schedule.firstRaidDay + ri * config.schedule.repeatEveryDays;
+  for (let lv = 1; lv <= MAX_VILLAGE_LEVEL; lv++) {
+    const key = String(lv);
+    const pool = config.pools[key] || [];
+    const totalWeight = pool.reduce((s, w) => s + (Number(w.weight) || 0), 0);
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <h2><span>襲撃 ${ri + 1}回目 <span class="badge">${day}日目の朝</span></span><button class="small danger" data-act="delRaid">襲撃を削除</button></h2>
-      <label>メモ</label><input type="text" data-act="memo" value="${esc(raid.memo)}" placeholder="この襲撃の狙いなど">
+      <h2><span>🏠村レベル${lv} のウェーブプール <span class="badge">${pool.length}件</span></span><button class="small" data-act="addWave">＋候補を追加</button></h2>
+      ${pool.length === 0 ? '<div class="empty-pool">未設定(このレベルで襲撃が起きた場合、下のレベルのプールを流用する想定)</div>' : ""}
       <div data-waves></div>
-      <div class="add-line"><button class="small" data-act="addWave">＋ウェーブを追加</button></div>
     `;
     const wavesEl = card.querySelector("[data-waves]");
-    raid.waves.forEach((wave, wi) => {
+    pool.forEach((wave, wi) => {
+      const prob = totalWeight > 0 ? Math.round((Number(wave.weight) || 0) / totalWeight * 100) : 0;
       const wv = document.createElement("div");
       wv.className = "wave";
       wv.innerHTML = `
         <div class="wave-head">
-          <span class="ttl">ウェーブ${wi + 1}</span>
-          <span><span class="slot-sum">枠合計: ${waveSlotSum(wave)}</span> <button class="small danger" data-act="delWave">削除</button></span>
+          <span class="ttl">候補${wi + 1}</span>
+          <span><span class="prob">出現率${prob}%</span> <span class="slot-sum">枠合計: ${waveSlotSum(wave)}</span> <button class="small danger" data-act="delWave">削除</button></span>
         </div>
+        <div class="weight-row"><label>重み</label><input type="number" data-act="weight" value="${Number(wave.weight) || 0}" min="0" style="width:70px;"><label style="flex:1;">メモ</label></div>
+        <input type="text" data-act="memo" value="${esc(wave.memo)}" placeholder="この編成の狙いなど">
         <div data-lines></div>
         <div class="add-line"><button class="small" data-act="addEnemy">＋敵を追加</button></div>
       `;
       const linesEl = wv.querySelector("[data-lines]");
-      wave.forEach((line, li) => {
+      wave.enemies.forEach((line, li) => {
         const e = ENEMY_BY_ID[line.id];
         const el = document.createElement("div");
         el.className = "enemy-line";
@@ -169,22 +178,37 @@ function render() {
         `;
         el.querySelector('[data-act="minus"]').onclick = () => { if (line.count > 1) { line.count--; save(); render(); } };
         el.querySelector('[data-act="plus"]').onclick = () => { if (line.count < 10) { line.count++; save(); render(); } };
-        el.querySelector('[data-act="delEnemy"]').onclick = () => { wave.splice(li, 1); save(); render(); };
+        el.querySelector('[data-act="delEnemy"]').onclick = () => { wave.enemies.splice(li, 1); save(); render(); };
         linesEl.appendChild(el);
       });
-      wv.querySelector('[data-act="addEnemy"]').onclick = () => openPick((id) => { wave.push({ id, count: 1 }); save(); render(); });
-      wv.querySelector('[data-act="delWave"]').onclick = () => { if (raid.waves.length <= 1) { alert("ウェーブは最低1つ必要です"); return; } raid.waves.splice(wi, 1); save(); render(); };
+      wv.querySelector('[data-act="weight"]').addEventListener("input", (ev) => { wave.weight = Math.max(0, Number(ev.target.value) || 0); save(); renderProbOnly(); });
+      wv.querySelector('[data-act="memo"]').addEventListener("input", (ev) => { wave.memo = ev.target.value; save(); });
+      wv.querySelector('[data-act="addEnemy"]').onclick = () => openPick((id) => { wave.enemies.push({ id, count: 1 }); save(); render(); });
+      wv.querySelector('[data-act="delWave"]').onclick = () => { if (!confirm(`村レベル${lv}の候補${wi + 1}を削除しますか？`)) return; pool.splice(wi, 1); if (pool.length === 0) delete config.pools[key]; save(); render(); };
       wavesEl.appendChild(wv);
     });
-    card.querySelector('[data-act="addWave"]').onclick = () => { raid.waves.push([]); save(); render(); };
-    card.querySelector('[data-act="delRaid"]').onclick = () => { if (!confirm(`襲撃${ri + 1}回目を削除しますか？`)) return; config.raids.splice(ri, 1); save(); render(); };
-    card.querySelector('[data-act="memo"]').addEventListener("input", (ev) => { raid.memo = ev.target.value; save(); });
+    card.querySelector('[data-act="addWave"]').onclick = () => {
+      if (!config.pools[key]) config.pools[key] = [];
+      config.pools[key].push({ weight: 1, memo: "", enemies: [] });
+      save(); render();
+    };
     list.appendChild(card);
+  }
+}
+// 重み入力中はフォーカスを奪わないよう、出現率の表示だけ更新する(全再描画しない)
+function renderProbOnly() {
+  document.querySelectorAll("#poolList .card").forEach((card, idx) => {
+    const key = String(idx + 1);
+    const pool = config.pools[key] || [];
+    const totalWeight = pool.reduce((s, w) => s + (Number(w.weight) || 0), 0);
+    card.querySelectorAll(".wave").forEach((wv, wi) => {
+      const prob = totalWeight > 0 ? Math.round((Number(pool[wi].weight) || 0) / totalWeight * 100) : 0;
+      wv.querySelector(".prob").textContent = `出現率${prob}%`;
+    });
   });
 }
-document.getElementById("firstDay").addEventListener("input", (e) => { config.schedule.firstRaidDay = Number(e.target.value) || 1; save(); render(); });
-document.getElementById("repeatDays").addEventListener("input", (e) => { config.schedule.repeatEveryDays = Number(e.target.value) || 1; save(); render(); });
-document.getElementById("addRaidBtn").onclick = () => { config.raids.push({ memo: "", waves: [[]] }); save(); render(); };
+document.getElementById("firstDay").addEventListener("input", (e) => { config.schedule.firstRaidDay = Number(e.target.value) || 1; save(); });
+document.getElementById("repeatDays").addEventListener("input", (e) => { config.schedule.repeatEveryDays = Number(e.target.value) || 1; save(); });
 document.getElementById("resetBtn").onclick = () => { if (!confirm("全ての編集を破棄して初期状態に戻します。よろしいですか？")) return; config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); save(); render(); };
 
 // 敵ピッカー
@@ -211,7 +235,8 @@ document.getElementById("pickCloseBtn").onclick = () => document.getElementById(
 
 // エクスポート/読み込み
 document.getElementById("exportBtn").onclick = () => {
-  const out = "// 襲撃スケジュール+ウェーブ編成(襲撃エディタのエクスポート。ゲーム実装時にRAID_CONFIGとして反映)\n" +
+  const out = "// 襲撃スケジュール+村レベル別ウェーブプール(襲撃エディタのエクスポート。ゲーム実装時にRAID_CONFIGとして反映)\n" +
+    "// 発生時、その時点の村レベルのプールから重み付きランダムで1候補を抽選(プール未設定のレベルは下位レベルへフォールバック)\n" +
     "const RAID_CONFIG = " + JSON.stringify(config, null, 2) + ";\n";
   document.getElementById("exportJson").value = out;
   document.getElementById("exportModal").classList.add("open");
@@ -230,7 +255,7 @@ document.getElementById("importDoBtn").onclick = () => {
   const raw = document.getElementById("importJson").value.trim().replace(/^[^{]*/, "").replace(/;\s*$/, "");
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed.schedule || !Array.isArray(parsed.raids)) throw new Error("形式が違います");
+    if (!parsed.schedule || !parsed.pools) throw new Error("形式が違います");
     config = parsed;
     save(); render();
     document.getElementById("importStatus").textContent = "読み込みました";
