@@ -331,7 +331,10 @@ document.getElementById("titleTest2Btn").onclick = () => {
   playSfx("select");
   testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
   state = defaultState();
-  const specs = [["小太郎", "samurai"], ["権六", "spearman"], ["巴", "naginata"], ["霧丸", "ninja"], ["玄蕃", "gunner"]];
+  // 陰陽師はLv3で式神召喚(3右)を必ず取得(式神=6人目の召喚テスト用、ユーザー指定)。
+  // 6人が上限: 既存の召喚ガード(分身/式神が1体でもいると追加召喚不可)により、式神が出ている間は
+  // 忍者の影分身は使えない=7人には絶対にならない
+  const specs = [["晴明", "onmyoji"], ["権六", "spearman"], ["巴", "naginata"], ["霧丸", "ninja"], ["玄蕃", "gunner"]];
   const chars = specs.map(([name, classId]) => {
     const c = createCharacter(name, classId, state.classUpgrades);
     grantXp(c, xpToNext(1), () => {}); // Lv2へ
@@ -339,6 +342,10 @@ document.getElementById("titleTest2Btn").onclick = () => {
     if (choice) {
       const side = Math.random() < 0.5 ? "left" : "right";
       applySkillChoice(c, { ...choice[side], side }, 2); // スキルは毎回ランダム(ユーザー指定)
+    }
+    if (classId === "onmyoji") {
+      grantXp(c, xpToNext(2), () => {}); // Lv3へ
+      applySkillChoice(c, { ...SKILL_TREES.onmyoji[3].right, side: "right" }, 3); // 式神召喚を確定取得
     }
     return c;
   });
@@ -350,6 +357,11 @@ document.getElementById("titleTest2Btn").onclick = () => {
   // enterDungeonは4人目以降を控えへ回すため、5人全員を戦闘参加に上書きする(襲撃戦は控えなしの5人)
   fieldParty = chars;
   reserveFieldMember = null;
+  // 襲撃らしい見た目と音: 背景は村の出発画面(departure)、BGMはユーザー提供の専用曲。
+  // enterDungeon()内の背景更新は上書き代入より先に走っているため、代入後にもう一度反映する
+  battleBgOverrideSet = BG_SETS.departure;
+  battleBgmOverrideKey = "raid_battle";
+  updateSceneBackgrounds();
   const raiders = [];
   for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));
   startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");

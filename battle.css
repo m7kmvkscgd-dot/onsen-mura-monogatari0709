@@ -36,6 +36,12 @@
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
   .enemy-row.crowded { gap: 0.25rem; }
+  /* 5体以上の大規模戦(村襲撃プロトタイプ/大群6体戦にも適用): 敵カードを味方カードと同格まで縮小。
+     6体でも480px幅の1行に収まるサイズ(カード実効幅約72px×6+隙間) */
+  .enemy-row.mass-battle { gap: 3px; }
+  .enemy-row.mass-battle .enemy-card { padding: 0.25rem; }
+  .enemy-row.mass-battle .enemy-card img:not(.slash-vfx) { width: 60px; }
+  .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; }
   .enemy-card {
     position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;
     border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;

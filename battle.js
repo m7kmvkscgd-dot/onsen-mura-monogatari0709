@@ -294,6 +294,9 @@ function renderBattleScreen() {
   // 他の敵の並びは動かないでほしい」という指示に反するため
   const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  // 5体以上の大規模戦は敵カードを味方カード(5人表示)と同格のサイズへ縮小し、折り返さず1行に収める
+  // (2026-07-27実機報告: 通常サイズのまま5体並べると2行に折り返してテキストボックスと衝突していた)
+  row.classList.toggle("mass-battle", visibleEnemies.length >= 5);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });

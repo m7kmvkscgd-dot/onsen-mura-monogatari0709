@@ -25,6 +25,7 @@ const BGM_TRACKS = {
   mid_boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
   quest_target_battle: "assets/bgm/quest_target_only_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用(中ボス/ボスを除く)。ただし中ボス/ボスの方が優先度が高い
   tengu_battle: "assets/bgm/tengu_battle_bgm.mp3", // 天狗の腕試し(イベント戦)専用(ユーザー提供曲、2026-07-18追加)
+  raid_battle: "assets/bgm/yokai_no_shutai.mp3", // 大規模戦(村襲撃プロトタイプ)専用(ユーザー提供曲「yokai-no-shūtai」、2026-07-27追加)
 };
 // 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
 // 最終ボス(kishin_rasetsuo/kaiyoujo_ou)や序盤緊急依頼ボス(isBoss:trueだがこのSetには含めない)は
@@ -45,7 +46,16 @@ function playExplorationAreaBgm() {
 function isContinuingBossChase() {
   return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit);
 }
+// 戦闘BGMの強制上書きキー(大規模戦テスト/将来の村襲撃用)。nullなら通常のステージ別選曲
+let battleBgmOverrideKey = null;
 function playBattleBgm() {
+  if (battleBgmOverrideKey) {
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions[battleBgmOverrideKey] = 0; // 毎回頭から再生(天狗戦と同じ)
+    playBgm(battleBgmOverrideKey);
+    return;
+  }
   // 洞窟内は戦闘BGMをミュートする(ユーザー指示、2026-07-21)。cave_ambient(環境音)は戦闘中も鳴り続ける
   if (currentStage === "cave") {
     if (currentBgmKey) stopBattleBgm();
