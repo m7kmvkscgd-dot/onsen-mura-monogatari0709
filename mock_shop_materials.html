@@ -215,7 +215,6 @@
       return `<div class="equip-row">${iconHtml}<div class="equip-main"><div class="equip-name">${slotLabel}: ${tiers[tiers.length - 1][0]}</div><div class="equip-done">最大強化済み</div></div></div>`;
     }
     const [name, effect, gold, mats, lv] = tiers[owned];
-    const ownedName = owned > 0 ? tiers[owned - 1][0] : "なし";
     const levelOk = c.maxLevel >= lv;
     const goldOk = wallet.gold >= gold;
     const matsOk = Object.keys(mats).every((id) => wallet.mats[id] >= mats[id]);
@@ -224,11 +223,11 @@
       <div class="equip-row">
         ${iconHtml}
         <div class="equip-main">
-          <div class="equip-name">${ownedName} <span class="arrow">→</span> ${name}</div>
+          <div class="equip-name">${name}</div>
           <div class="equip-effect">${effect}${!levelOk ? ` <span class="lock-reason">/ Lv${lv}到達で解禁</span>` : ""}</div>
           <div class="equip-cost">${costChipsHtml(gold, mats)}</div>
         </div>
-        <button class="buy-btn" data-ci="${ci}" data-slot="${slot}" ${disabled ? "disabled" : ""}>打つ</button>
+        <button class="buy-btn" data-ci="${ci}" data-slot="${slot}" ${disabled ? "disabled" : ""}>購入</button>
       </div>`;
   }
 
