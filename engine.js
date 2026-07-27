@@ -1974,6 +1974,13 @@ function anyOtherAllyGuarding(entity) {
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
 function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName, isMagic) {
   logSuffix = logSuffix || "";
+  // 【村襲撃/大規模戦】バリケードが立っている間、飛行以外の敵→味方の攻撃は全てバリケードが肩代わりする
+  // (ユーザー確定仕様2026-07-27: 全肩代わり。攻撃ごと受け止めるため付随する状態異常も味方には届かない)。
+  // raidBarricadeHpは通常プレイでは常に0なので、襲撃時以外この分岐は素通りする
+  if (actor && actor.instanceId !== undefined && target.instanceId === undefined && !actor.isFlying && typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0) {
+    applyRaidBarricadeDamage(dmg);
+    return 0;
+  }
   // 狩人「鷹を呼ぶ」の「味方を守れ」: 敵からの攻撃に限り、鷹が庇っている対象なら身代わりになって消滅する
   if (actor && actor.instanceId !== undefined && target.__allies) {
     const hawkOwner = target.__allies.find((c) => c.hawkGuardTargetId === target.id && c.hawkTurnsLeft > 0);

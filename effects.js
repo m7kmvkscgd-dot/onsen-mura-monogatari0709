@@ -1198,6 +1198,49 @@ function playMaterialCollectFx(drops) {
   }, START + (drops.length - 1) * STAGGER + D_FLY + 900);
 }
 
+// ============ 村襲撃バリケードの演出(2026-07-27、mock_barricade_damage.htmlでユーザー確認済み) ============
+// 被弾: 揺れ+木片+ヒットSE。倒壊: 大揺れ→傾いて崩れ落ちる+倒壊SE→collapsedで非表示。
+// 状態(HP)はbattle.js側、ここは見た目だけ
+function spawnBarricadeChips(wrap, n) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("div");
+    c.className = "wood-chip";
+    c.style.left = (18 + Math.random() * 64) + "%";
+    c.style.top = (28 + Math.random() * 18) + "%";
+    wrap.appendChild(c);
+    const dx = (Math.random() - 0.5) * 120;
+    const dy = -30 - Math.random() * 60;
+    c.animate(
+      [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+       { transform: `translate(${dx * 0.6}px, ${dy}px) rotate(${dx * 3}deg)`, opacity: 1, offset: 0.45 },
+       { transform: `translate(${dx}px, ${dy + 110}px) rotate(${dx * 6}deg)`, opacity: 0 }],
+      { duration: 620 + Math.random() * 200, easing: "ease-out" }).onfinish = () => c.remove();
+  }
+}
+function playBarricadeHitFx(dmg) {
+  const wrap = document.getElementById("raidBarricadeWrap");
+  if (!wrap || wrap.classList.contains("collapsed")) return;
+  playSfx("barricade_hit");
+  const amp = dmg >= 25 ? 7 : 4;
+  wrap.animate(
+    [{ transform: "translate(0,0)" }, { transform: `translate(${-amp}px,1px)` }, { transform: `translate(${amp}px,-1px)` }, { transform: `translate(${-amp * 0.5}px,0)` }, { transform: "translate(0,0)" }],
+    { duration: 280, easing: "ease-out" });
+  spawnBarricadeChips(wrap, dmg >= 25 ? 12 : 6);
+}
+function playBarricadeCollapseFx() {
+  const wrap = document.getElementById("raidBarricadeWrap");
+  if (!wrap || wrap.classList.contains("collapsed")) return;
+  playSfx("barricade_break");
+  spawnBarricadeChips(wrap, 26);
+  wrap.animate(
+    [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+     { transform: "translate(-8px,2px) rotate(-1deg)", offset: 0.15 },
+     { transform: "translate(8px,-1px) rotate(1deg)", offset: 0.3 },
+     { transform: "translate(-4px,14px) rotate(-2.5deg)", opacity: 1, offset: 0.55 },
+     { transform: "translate(2px,70px) rotate(4deg)", opacity: 0 }],
+    { duration: 1000, easing: "ease-in", fill: "forwards" }).onfinish = () => wrap.classList.add("collapsed");
+}
+
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。
 // iOSの「作りたて要素のアニメ序盤が描画されない」「フレーム画像のデコード遅延でコマ落ちする」対策)
 warmUpAttackVfxAssets();

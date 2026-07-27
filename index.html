@@ -957,8 +957,15 @@
     <div id="screenWarningFlash"></div>
     <div class="battle-top" id="battleTop">
       <div class="enemy-row" id="enemyRow"></div>
-      <!-- 襲撃バリケード(大規模戦モードのみ表示、ユーザー提供イラスト2026-07-27。両端の杭が画像端=画面端に合う設計) -->
-      <img id="raidBarricade" src="assets/battle_barricade.png" alt="">
+      <!-- 襲撃バリケード(大規模戦モードのみ表示、ユーザー提供イラスト2026-07-27。両端の杭が画像端=画面端に合う設計)。
+           耐久50%以下でひび(CSS)、0で倒壊演出後にcollapsedで消える。耐久ゲージはテキストボックスの直上 -->
+      <div id="raidBarricadeWrap">
+        <img id="raidBarricade" src="assets/battle_barricade.png" alt="">
+        <div class="crack c1" style="left:30%; top:34%; height:46%; transform:rotate(7deg);"></div>
+        <div class="crack c2" style="left:64%; top:30%; height:52%; transform:rotate(-5deg);"></div>
+        <div class="crack c3" style="left:47%; top:36%; height:44%; transform:rotate(12deg);"></div>
+      </div>
+      <div id="raidDuraStrip"><div id="raidDuraTrack"><i id="raidDuraFill"></i></div><span id="raidDuraNum"></span></div>
       <div id="battleLog"></div>
     </div>
     <div class="party-bar" id="battlePartyBar"></div>

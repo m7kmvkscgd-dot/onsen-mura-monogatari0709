@@ -414,11 +414,32 @@
      【重要】通常フローに置くとテキストボックス以下が全部押し下げられて味方カードに被る(実機事故
      2026-07-27)ため、絶対配置=フロー外にしてレイアウトへ一切影響させない。重なり順はユーザー指定で
      「敵イラストより手前・テキストボックスより奥」(z1同士だがDOM順で敵列より後=手前に描画、ログはz2) */
-  #raidBarricade { display: none; }
-  .battle-top.raid-battle #raidBarricade {
+  #raidBarricadeWrap { display: none; }
+  .battle-top.raid-battle #raidBarricadeWrap {
     display: block; position: absolute; left: 0; right: 0; top: 137px;
-    width: 100%; height: auto; z-index: 1; pointer-events: none; /* 敵カード(z1・DOM順で先)より手前、テキストボックス(z2)より奥 */
+    z-index: 1; pointer-events: none; /* 敵カード(z1・DOM順で先)より手前、テキストボックス(z2)より奥 */
   }
+  .battle-top.raid-battle #raidBarricadeWrap.collapsed { display: none; } /* 倒壊演出後 */
+  #raidBarricade { display: block; width: 100%; height: auto; }
+  /* 耐久50%以下: 傷んだ見た目。25%以下でさらに悪化(mock_barricade_damage.htmlでユーザー確認済み) */
+  #raidBarricadeWrap.worn #raidBarricade { filter: brightness(0.82) saturate(0.85); }
+  #raidBarricadeWrap.critical #raidBarricade { filter: brightness(0.65) saturate(0.7) contrast(0.95); }
+  #raidBarricadeWrap .crack { position: absolute; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.85), transparent); width: 3px; opacity: 0; transform-origin: top center; }
+  #raidBarricadeWrap.worn .crack.c1, #raidBarricadeWrap.worn .crack.c2 { opacity: 0.9; }
+  #raidBarricadeWrap.critical .crack { opacity: 0.95; }
+  /* 耐久ゲージ: テキストボックスのすぐ真上・中央、半分幅+右横に数値(盾マークなし、ユーザー確定デザイン) */
+  #raidDuraStrip { display: none; }
+  .battle-top.raid-battle #raidDuraStrip {
+    display: flex; align-items: center; gap: 5px;
+    position: absolute; left: 50%; transform: translateX(-50%); top: 188px; z-index: 2;
+  }
+  #raidDuraTrack { width: 170px; height: 7px; background: rgba(0,0,0,0.62); border: 1px solid rgba(217,196,154,0.45); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  #raidDuraFill { display: block; height: 100%; width: 100%; background: linear-gradient(to bottom, #6cc26c, #3f9e4e); transition: width 0.25s ease-out; }
+  #raidDuraFill.mid { background: linear-gradient(to bottom, #d9c25a, #b3963c); }
+  #raidDuraFill.low { background: linear-gradient(to bottom, #d9705a, #b84a38); }
+  #raidDuraNum { font-size: 0.62rem; font-weight: 900; color: #e8dcbf; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+  /* 被弾時に飛び散る木片(effects.js playBarricadeHitFx) */
+  .wood-chip { position: absolute; width: 7px; height: 4px; background: #8a5a30; border-radius: 1px; pointer-events: none; z-index: 3; box-shadow: 0 0 2px rgba(0,0,0,0.6); }
   /* 大規模戦モード: バリケードの結び目まで見えるよう、テキストボックスと味方バーを下げる
      (ユーザーの理想図準拠2026-07-27)。ボタン列は味方バーの実測位置に追従するJS
      (positionActionsBelowPartyBar)が自動で付いてくるためCSSはこの2つだけでよい */

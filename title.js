@@ -362,6 +362,7 @@ document.getElementById("titleTest2Btn").onclick = () => {
   battleBgOverrideSet = BG_SETS.departure;
   battleBgmOverrideKey = "raid_battle";
   massBattleSizingForced = true; // 襲撃戦は敵が何体でも敵カードを縮小サイズで統一(ユーザー指定)
+  resetRaidBarricade(100); // 柵HP(テスト用の仮値100。建築レベル連動・バランス数値はユーザーが後日調整)
   updateSceneBackgrounds();
   const raiders = [];
   for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));

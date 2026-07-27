@@ -19,6 +19,48 @@ let battleActionLocked = false;
 // ウェーブ間や撃破途中で見た目がガタつくため)。タイトルの大規模戦テスト(title.js)が立てる。
 // 通常探索の戦闘は従来通り「5体以上の時だけ」縮小
 let massBattleSizingForced = false;
+// ============ 村襲撃バリケード(2026-07-27ユーザー確定仕様、モックで演出確認済み) ============
+// 柵が立っている間(raidBarricadeHp>0)、飛行(isFlying)以外の敵の攻撃は全てバリケードが肩代わりする
+// (横取りはengine.js applyDamageToTargetの先頭)。HP0で倒壊し、以降は通常戦闘。
+// 通常プレイでは常に0のため一切影響しない。HPの初期値は大規模戦テスト(title.js)が設定する仮値で、
+// 建築レベル由来の段階値(木の柵/鉄杭柵…)への接続とバランス数値はユーザーが後日調整する
+let raidBarricadeHp = 0;
+let raidBarricadeMaxHp = 0;
+function resetRaidBarricade(hp) {
+  raidBarricadeHp = raidBarricadeMaxHp = hp;
+  const wrap = document.getElementById("raidBarricadeWrap");
+  if (wrap) {
+    wrap.classList.remove("collapsed", "worn", "critical");
+    wrap.getAnimations().forEach((a) => a.cancel());
+    wrap.style.opacity = "";
+    wrap.style.transform = "";
+  }
+  updateRaidBarricadeUi();
+}
+function updateRaidBarricadeUi() {
+  const wrap = document.getElementById("raidBarricadeWrap");
+  const strip = document.getElementById("raidDuraStrip");
+  if (!wrap || !strip) return;
+  const r = raidBarricadeMaxHp > 0 ? raidBarricadeHp / raidBarricadeMaxHp : 0;
+  strip.style.display = raidBarricadeHp > 0 ? "" : "none"; // 基本の表示可否はCSS(.raid-battle)側、ここは倒壊後に消す用
+  const fill = document.getElementById("raidDuraFill");
+  fill.style.width = (Math.max(0, r) * 100) + "%";
+  fill.className = r <= 0.25 ? "low" : r <= 0.5 ? "mid" : "";
+  document.getElementById("raidDuraNum").textContent = Math.max(0, raidBarricadeHp);
+  wrap.classList.toggle("worn", r <= 0.5 && r > 0.25);
+  wrap.classList.toggle("critical", r <= 0.25 && r > 0);
+}
+// 敵の攻撃を柵が肩代わりした時の処理(engine.jsから呼ばれる)
+function applyRaidBarricadeDamage(dmg) {
+  raidBarricadeHp = Math.max(0, raidBarricadeHp - dmg);
+  updateRaidBarricadeUi();
+  if (raidBarricadeHp <= 0) {
+    playBarricadeCollapseFx();
+    blog("バリケードが崩れ落ちた！");
+  } else {
+    playBarricadeHitFx(dmg);
+  }
+}
 // この戦闘で敵が死亡時に落とした素材 [{matId, el, x, y}](el/x/yは足元に転がるアイコンのDOMと座標。
 // 丸呑み中に死ぬなどカードが無いまま抽選された場合はelがnull)。抽選は敵が死んだ瞬間に行い
 // (rollMaterialDropOnDeath、確率は従来の勝利時抽選と同一)、勝利したら巾着袋へ回収される。
