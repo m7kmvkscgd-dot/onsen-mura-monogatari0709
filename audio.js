@@ -140,7 +140,7 @@ try {
 }
 function setBgmAudioVolume(value) {
   if (bgmGainNode) bgmGainNode.gain.value = value;
-  else bgmAudio.volume = value;
+  else bgmAudio.volume = Math.min(1, value); // <audio>.volumeは1超えで例外になるためクランプ(GainNode側は100%超の増幅を許容)
 }
 function getBgmAudioVolume() {
   return bgmGainNode ? bgmGainNode.gain.value : bgmAudio.volume;
@@ -306,7 +306,7 @@ if (!ambientGainNode) ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
 if (!openingGainNode) openingBgmAudio.volume = OPENING_BGM_VOLUME;
 function setChannelVolume(el, gainNode, v) {
   if (gainNode) gainNode.gain.value = v;
-  else el.volume = v;
+  else el.volume = Math.min(1, v); // <audio>.volumeは1超えで例外になるためクランプ(GainNode側は100%超の増幅を許容)
 }
 function getChannelVolume(el, gainNode) {
   return gainNode ? gainNode.gain.value : el.volume;
