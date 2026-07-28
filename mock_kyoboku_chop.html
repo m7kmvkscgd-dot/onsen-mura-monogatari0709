@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>木を切るアニメーションモック</title>
 <style>
-  /* 木を切るモック v2(ユーザー指摘で全面シンプル化):
-     ①モーダル廃止→下部固定バー(出たり消えたりしない) ②文章を最短に ③作業者は顔アイコンで選ぶ
-     ④選んだら他のアイコンは消える ⑤切るたびに顔の下のストレスバーが伸びて溜まりが見える */
+  /* 木を切るモック v3(ユーザー指摘反映):
+     ①「巨木を見つけた」は探索パートのテキストボックス(上部の木枠ログ)に表示 ②木材の飛び先は
+     いつもの巾着袋(戦闘の素材回収と同じ位置・同じ吸い込み演出) ③下部固定バー+顔アイコン選択+
+     ストレスバー常設はv2のまま */
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
   body { font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #14100c; color: #e8e0d0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; }
@@ -15,27 +16,36 @@
   .bg { position: absolute; inset: 0; background: url("assets/bg/kyoboku_day.jpg") center / cover no-repeat #1a1410; }
   .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,24,27,0.05), rgba(20,24,27,0.25) 70%, rgba(20,24,27,0.55)); }
 
-  /* 上部: 見つけたメッセージ(常設・短文) */
-  .found-line {
-    position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5;
-    text-align: center; white-space: nowrap;
-    font-size: 0.9rem; font-weight: 900; color: #f0e6cc; text-shadow: 0 1px 4px rgba(0,0,0,0.95);
-    background: rgba(26,20,14,0.75); border: 1px solid rgba(217,196,154,0.4); border-radius: 12px;
-    padding: 6px 16px;
+  /* 階層バッジ(実ゲームの雰囲気再現) */
+  .floor-badge {
+    position: absolute; top: 12px; left: 12px; z-index: 5;
+    font-size: 0.72rem; font-weight: 800; color: #e8dcbf;
+    background: rgba(26,20,14,0.8); border: 1px solid rgba(217,196,154,0.4); border-radius: 10px;
+    padding: 4px 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.9);
   }
-  .found-line small { display: block; font-size: 0.68rem; font-weight: 700; color: rgba(232,224,208,0.85); margin-top: 2px; }
+  .reset-btn { position: absolute; top: 12px; right: 12px; z-index: 10; font-family: inherit; font-size: 0.7rem; font-weight: 700; color: #e8e0d0; background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 9px; padding: 7px 12px; }
 
-  /* 右上: 所持数(木材アイコンの飛び先) */
-  .wallet-chip {
-    position: absolute; top: 78px; right: 12px; z-index: 5;
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.82rem; font-weight: 900; color: #e8dcbf;
-    background: rgba(26,20,14,0.85); border: 1px solid rgba(217,196,154,0.5); border-radius: 12px;
-    padding: 4px 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  /* 探索パートのテキストボックス(実ゲームの#dungeonLogと同じ位置感・木枠スタイル) */
+  .dungeon-log {
+    position: absolute; left: 14px; right: 14px; top: 52px; z-index: 5; height: 78px;
+    border: 2px solid #4b3728; border-radius: 10px;
+    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
+    background: rgba(26,20,14,0.9); padding: 8px 12px; font-size: 0.74rem; line-height: 1.55;
+    display: flex; flex-direction: column; justify-content: center;
   }
-  .wallet-chip img { width: 20px; height: 20px; object-fit: contain; }
-  .wallet-chip.bump { animation: walletBump 0.3s ease-out; }
-  @keyframes walletBump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+  /* 巾着袋(戦闘の素材回収と同じ: 右端・top200px・54px角+個数バッジ) */
+  .pouch {
+    position: absolute; right: 12px; top: 200px; width: 54px; z-index: 6; opacity: 0;
+  }
+  .pouch img { width: 54px; height: 54px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+  .pouch .cnt {
+    position: absolute; right: -4px; bottom: -4px; min-width: 20px; text-align: center;
+    font-size: 0.7rem; font-weight: 900; color: #241a0c;
+    background: linear-gradient(160deg, #e0c078, #b8924a); border-radius: 10px; padding: 1px 5px;
+    border: 1px solid rgba(255,240,200,0.6); display: none;
+  }
+  .pouch .cnt.show { display: block; }
 
   /* 下部固定バー(常設。出たり消えたりしない) */
   .bottom-bar {
@@ -57,7 +67,6 @@
   .face .nm { font-size: 0.62rem; font-weight: 700; margin-top: 2px; }
   .face.gone { opacity: 0; transform: scale(0.7); pointer-events: none; }
   .face:active img { transform: scale(0.95); }
-  /* ストレスバー(顔の下に常設。切るたびに伸びる) */
   .stress-wrap { margin-top: 3px; }
   .stress-track { height: 6px; border-radius: 3px; background: rgba(0,0,0,0.6); overflow: hidden; border: 1px solid rgba(255,255,255,0.15); }
   .stress-fill { display: block; height: 100%; width: 0%; background: #7ec96f; transition: width 0.4s ease-out, background-color 0.4s; }
@@ -65,7 +74,6 @@
   .stress-fill.high { background: #ff6b5a; }
   .stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; }
 
-  /* 選択後のレイアウト: 左=作業者の顔+ストレス、右=ボタン2つ */
   .work-row { display: none; align-items: center; gap: 10px; }
   .bottom-bar.working .ask, .bottom-bar.working .faces { display: none; }
   .bottom-bar.working .work-row { display: flex; }
@@ -87,7 +95,7 @@
     color: #e8e0d0; padding: 8px; font-size: 0.78rem; font-weight: 700;
   }
 
-  /* 伐採エフェクト(v1から流用。パネルの出入りは無し) */
+  /* 伐採エフェクト */
   .axe { position: absolute; z-index: 6; font-size: 58px; line-height: 1; pointer-events: none; transform-origin: 85% 85%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6)); }
   .slash {
     position: absolute; z-index: 6; width: 120px; height: 5px; border-radius: 3px; pointer-events: none;
@@ -98,19 +106,19 @@
     background: radial-gradient(rgba(255,248,214,0.95), rgba(255,214,120,0.5) 45%, transparent 70%); }
   .wood-chip { position: absolute; width: 8px; height: 4px; background: #8a5a30; border-radius: 1px; pointer-events: none; z-index: 6; box-shadow: 0 0 2px rgba(0,0,0,0.6); }
   .wood-chip.big { width: 12px; height: 6px; background: #9c6a38; }
-  .ki-fly { position: absolute; z-index: 7; width: 42px; height: 42px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+  .ki-fly { position: absolute; z-index: 7; width: 40px; height: 40px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .stress-pop { position: absolute; z-index: 7; font-size: 0.72rem; font-weight: 900; color: #ff8a72; text-shadow: 0 1px 3px rgba(0,0,0,0.95); pointer-events: none; white-space: nowrap; }
 
-  .mock-note { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); z-index: 10; font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
-  .reset-btn { position: absolute; top: 78px; left: 12px; z-index: 10; font-family: inherit; font-size: 0.7rem; font-weight: 700; color: #e8e0d0; background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 9px; padding: 7px 12px; }
+  .mock-note { position: absolute; left: 50%; top: 140px; transform: translateX(-50%); z-index: 10; font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <div class="bg" id="bgLayer"></div>
-  <div class="found-line">巨木を見つけた<small>木を切ることができる</small></div>
+  <div class="floor-badge">昼 12:30　12層目</div>
   <button class="reset-btn" id="resetBtn">リセット</button>
-  <div class="wallet-chip" id="walletChip"><img src="assets/icons/materials/ki.png" alt="木">×<span id="kiCount">0</span></div>
+  <div class="dungeon-log" id="log"></div>
+  <div class="pouch" id="pouch"><img src="assets/icons/pouch.png" alt=""><div class="cnt" id="pouchCnt">0</div></div>
 
   <div class="bottom-bar" id="bottomBar">
     <div class="ask">誰が切りますか？</div>
@@ -130,7 +138,7 @@
     </div>
   </div>
 
-  <div class="mock-note">木を切るモック v2(本体には未実装)</div>
+  <div class="mock-note">木を切るモック v3(本体には未実装)</div>
 </div>
 
 <script>
@@ -161,13 +169,23 @@
   const stage = document.getElementById("stage");
   const bar = document.getElementById("bottomBar");
   const bgLayer = document.getElementById("bgLayer");
+  const logEl = document.getElementById("log");
+  const pouch = document.getElementById("pouch");
+  const pouchCnt = document.getElementById("pouchCnt");
   const MEMBERS = [
     { name: "小太郎", img: "assets/class_samurai.png", stress: 0 },
     { name: "弥助", img: "assets/class_hunter.png", stress: 20 },
     { name: "静", img: "assets/class_onmyoji.png", stress: 35 },
   ];
   const MAX = 4, STRESS = 15;
-  let left, ki, busy, worker;
+  let left, ki, busy, worker, pouchShown;
+
+  function addLog(t) {
+    const p = document.createElement("p");
+    p.textContent = t;
+    logEl.appendChild(p);
+    while (logEl.children.length > 3) logEl.removeChild(logEl.firstChild);
+  }
 
   function fillClass(v) { return v >= 80 ? "stress-fill high" : v >= 50 ? "stress-fill mid" : "stress-fill"; }
   function stressBarHtml(v) {
@@ -185,7 +203,6 @@
       btn.onclick = () => {
         if (worker) return;
         worker = MEMBERS[Number(btn.dataset.i)];
-        // 選ばれなかった顔はふっと消え、少し間を置いて作業レイアウトへ切り替える(バー自体は出たり消えたりしない)
         document.querySelectorAll(".face").forEach((b) => { if (b !== btn) b.classList.add("gone"); });
         setTimeout(() => {
           bar.classList.add("working");
@@ -215,10 +232,17 @@
     }
   }
 
+  function showPouch() {
+    if (pouchShown) return;
+    pouchShown = true;
+    pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
+  }
+
   function chop() {
     if (busy || !worker || left <= 0 || worker.stress + STRESS > 100) return;
     busy = true;
     left--;
+    showPouch(); // 最初の1回で巾着袋が現れる(戦闘の回収と同じ登場アニメ)
     const W = stage.clientWidth, H = stage.clientHeight;
     const ix = W * 0.52, iy = H * 0.42; // 幹の命中点
     const axe = document.createElement("div");
@@ -260,33 +284,34 @@
       bgLayer.animate(
         [{ transform: "translate(0,0)" }, { transform: "translate(-5px,2px)" }, { transform: "translate(5px,-2px)" }, { transform: "translate(-2px,1px)" }, { transform: "translate(0,0)" }],
         { duration: 300, easing: "ease-out" });
-      // 木材が飛んで右上の所持数へ
+      // 木材が幹からポンっと跳ねて、弧を描いて巾着袋へ(戦闘の素材回収と同じ3点キーフレーム)
       setTimeout(() => {
         const kiImg = document.createElement("img");
         kiImg.className = "ki-fly";
         kiImg.src = "assets/icons/materials/ki.png";
-        kiImg.style.left = (ix - 21) + "px"; kiImg.style.top = (iy - 21) + "px";
+        kiImg.style.left = (ix - 20) + "px"; kiImg.style.top = (iy - 20) + "px";
         stage.appendChild(kiImg);
-        const chip = document.getElementById("walletChip");
-        const cr = chip.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-        const tx = cr.left - sr.left + cr.width / 2 - ix;
-        const ty = cr.top - sr.top + cr.height / 2 - iy;
+        const pr = pouch.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+        const tx = pr.left - sr.left + pr.width / 2 - ix;
+        const ty = pr.top - sr.top + pr.height / 2 - iy;
         kiImg.animate(
           [{ transform: "translate(0,0) scale(0.3)", opacity: 0 },
-           { transform: "translate(0,-34px) scale(1.15)", opacity: 1, offset: 0.3 },
-           { transform: "translate(0,-30px) scale(1)", opacity: 1, offset: 0.45 },
-           { transform: `translate(${tx}px, ${ty}px) scale(0.35)`, opacity: 1 }],
-          { duration: 620, easing: "cubic-bezier(0.4, 0, 0.7, 1)", fill: "forwards" }).onfinish = () => {
+           { transform: "translate(0,-30px) scale(1.1)", opacity: 1, offset: 0.3 },
+           { transform: `translate(${tx * 0.5}px, ${ty * 0.5 - 46}px) scale(1.05)`, opacity: 1, offset: 0.65 },
+           { transform: `translate(${tx}px, ${ty}px) scale(0.4)`, opacity: 0.9 }],
+          { duration: 640, easing: "ease-in", fill: "forwards" }).onfinish = () => {
             kiImg.remove();
             sfx("assets/sfx/loot_item.mp3", 0.5);
             ki++;
-            document.getElementById("kiCount").textContent = ki;
-            chip.classList.remove("bump");
-            void chip.offsetWidth;
-            chip.classList.add("bump");
-            // ストレスがバーで伸びるのを見せる(バーは常設、transitionで滑らかに)
+            pouchCnt.textContent = ki;
+            pouchCnt.classList.add("show");
+            // 巾着の受け取り揺れ(戦闘の回収と同じ)
+            pouch.animate(
+              [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
+              { duration: 340, easing: "ease-out" });
             worker.stress += STRESS;
             refreshWork();
+            addLog(`${worker.name}は木材を切り出した。`);
             const wf = document.querySelector(".work-face");
             const wr = wf.getBoundingClientRect();
             const pop = document.createElement("div");
@@ -306,10 +331,16 @@
   document.getElementById("chopBtn").onclick = chop;
   document.getElementById("leaveBtn").onclick = () => { document.getElementById("resetBtn").onclick(); };
   document.getElementById("resetBtn").onclick = () => {
-    left = MAX; ki = 0; busy = false; worker = null;
+    left = MAX; ki = 0; busy = false; worker = null; pouchShown = false;
     MEMBERS[0].stress = 0; MEMBERS[1].stress = 20; MEMBERS[2].stress = 35;
     bar.classList.remove("working");
-    document.getElementById("kiCount").textContent = 0;
+    pouch.style.opacity = "0";
+    pouch.getAnimations().forEach((a) => a.cancel());
+    pouchCnt.textContent = 0;
+    pouchCnt.classList.remove("show");
+    logEl.innerHTML = "";
+    addLog("巨木を見つけた。");
+    addLog("木を切ることができる。");
     renderFaces();
   };
   document.getElementById("resetBtn").onclick();
