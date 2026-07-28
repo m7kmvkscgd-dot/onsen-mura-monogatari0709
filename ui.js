@@ -7,6 +7,8 @@ const BG_SETS = {
   onsen: { day: "assets/bg/onsen.jpg", night: "assets/bg/onsen_night.jpg" },
   departure: { dawn: "assets/bg/departure_gate_dawn.jpg", asa: "assets/bg/departure_gate_asa.jpg", day: "assets/bg/departure_gate.jpg", dusk: "assets/bg/departure_gate_dusk.jpg", night: "assets/bg/departure_gate_night.jpg" },
   teaHouse: { dawn: "assets/bg/teahouse_dawn.jpg", asa: "assets/bg/teahouse_asa.jpg", day: "assets/bg/teahouse_day.jpg", dusk: "assets/bg/teahouse_dusk.jpg", night: "assets/bg/teahouse_night.jpg" },
+  // 巨木の伐採場(深淵の森12層の採掘場、ユーザー提供イラスト2026-07-28)。この階に立っている間だけ森の絵と差し替える
+  kyoboku: { dawn: "assets/bg/kyoboku_dawn.jpg", asa: "assets/bg/kyoboku_asa.jpg", day: "assets/bg/kyoboku_day.jpg", dusk: "assets/bg/kyoboku_dusk.jpg", night: "assets/bg/kyoboku_night.jpg" },
   // 洞窟の入口/出口だけ、森や海岸と同じく時間帯で絵が変わる(1層目=森との境目、行きは入口/帰りは出口を使う)
   caveEntrance: { dawn: "assets/bg/cave_entrance_dawn.jpg", asa: "assets/bg/cave_entrance_asa.jpg", day: "assets/bg/cave_entrance_day.jpg", dusk: "assets/bg/cave_entrance_dusk.jpg", night: "assets/bg/cave_entrance_night.jpg" },
   caveExit: { dawn: "assets/bg/cave_exit_dawn.jpg", asa: "assets/bg/cave_exit_asa.jpg", day: "assets/bg/cave_exit_day.jpg", dusk: "assets/bg/cave_exit_dusk.jpg", night: "assets/bg/cave_exit_night.jpg" },
@@ -49,6 +51,9 @@ function yamaBgSetForCurrentState() {
 }
 // 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城/渓流/光る竹林/修験道/山のどのステージ中かで出し分ける
 function currentAreaBgSet() {
+  // 深淵の森12層(巨木の伐採場)は専用の一枚絵に差し替える(前進/帰還どちらで立ち寄っても)。
+  // typeofガードはMINING_DEFS(dungeon.js)を読み込まないツール系スクリプトからの誤呼び出し対策
+  if (currentStage === "forest" && typeof MINING_DEFS !== "undefined" && currentFloor === MINING_DEFS.wood.floor) return BG_SETS.kyoboku;
   if (currentStage === "coast") return BG_SETS.coast;
   if (currentStage === "cave") return caveBgSetForCurrentState();
   // 少し森の1層目は洞窟を抜けた直後の場面のため、廃城下町/海の村どちらへ向かう場合も

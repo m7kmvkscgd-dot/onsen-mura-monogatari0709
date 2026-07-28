@@ -115,6 +115,8 @@ function collectExpeditionSnapshot() {
     warashiLuckActive,
     koOniRepayFloorsLeft,
     seenEventIds: [...expeditionSeenEventIds],
+    miningLeft: { ...miningLeft }, // 採掘場の残り回数(遠征単位)
+    miningDiggerId,
   };
 }
 // 遠征の終了(帰還完了/全滅)時に呼ぶ。スナップショットを消して「次回は町から」に戻す
@@ -151,11 +153,15 @@ function resumeExpeditionFromSave() {
   advEnemiesDefeated = snap.advEnemiesDefeated || 0;
   advMaxFloor = snap.advMaxFloor || 0;
   advLostHappened = !!snap.advLostHappened;
+  resetPeaceDialogueState(); // セリフの既出記録とイベント/採掘の遠征内状態を一旦初期化(復元はこの後で行う)
+  // 【注意】遠征内状態の復元は必ずresetPeaceDialogueState()より後に行うこと。以前はseenEventIdsの復元が
+  // リセットより前にあり、リロードのたびに既出イベントが再抽選対象へ戻る不具合があった(2026-07-28修正)
   jizoBlessingActive = !!snap.jizoBlessingActive;
   warashiLuckActive = !!snap.warashiLuckActive;
   koOniRepayFloorsLeft = snap.koOniRepayFloorsLeft || 0;
   expeditionSeenEventIds = new Set(snap.seenEventIds || []);
-  resetPeaceDialogueState();
+  if (snap.miningLeft) miningLeft = { wood: snap.miningLeft.wood || 0, iron: snap.miningLeft.iron || 0 };
+  miningDiggerId = snap.miningDiggerId != null ? snap.miningDiggerId : null;
   dungeonLogLines = [];
   document.getElementById("dungeonLog").innerHTML = "";
   stopTownBgm();
@@ -892,6 +898,16 @@ function runAutoRetreatTick() {
     });
     return;
   }
+  // 採掘場(森12層の巨木/洞窟6層の鉄鉱石)に残り回数があれば、帰り道でも歩みを止めて立ち寄る
+  // (ユーザー指定: 行きで使い切らなかった分は帰りに消化できる)。茶屋と同じカットで停止し、
+  // 1階層進んだ到着処理(resolveFloorArrival)が採掘パネルを開く。続きの帰還は「帰還」ボタンで再開
+  if (miningKeyForFloor(currentStage, targetFloor)) {
+    playAutoRetreatCutFade(() => {
+      stopAutoRetreat();
+      performAutoRetreatFloorMove(false);
+    });
+    return;
+  }
   performAutoRetreatFloorMove(false);
 }
 function startAutoRetreat() {
@@ -1188,6 +1204,7 @@ function tryForceBossPursuitEncounter() {
 function resolveFloorArrival(pathBias) {
   if (tryForceQuestEncounter()) return;
   if (tryForceBossPursuitEncounter()) return;
+  if (tryOfferMiningSite()) return; // 採掘場(森12層の巨木/洞窟6層の鉄鉱石)。討伐依頼・追撃より優先度は下
   rollEncounter(pathBias);
 }
 // 探索画面に、受注中の依頼の討伐対象と残り層数(or 追跡中)を常時表示するバッジ
@@ -1815,6 +1832,7 @@ function resetExpeditionEventState() {
   jizoBlessingActive = false;
   warashiLuckActive = false;
   koOniRepayFloorsLeft = 0;
+  resetMiningState(); // 採掘場(巨木/鉄鉱石)の残り回数・作業者も遠征単位でリセット
 }
 // 財宝の基準額(rollEncounterの財宝発見と同じ式)。イベントの金銭報酬はこれの倍数で決める
 function eventTreasureBase() {
@@ -2176,6 +2194,152 @@ function showDungeonEvent(ev) {
       setTimeout(() => { close(); choices[idx].onPick(); }, 170);
     };
   });
+}
+
+// ============ 採掘場(巨木/鉄鉱石)(2026-07-28、仕様は2026-07-27ユーザー合意) ============
+// 巨木=深淵の森12層、鉄鉱石=洞窟6層。該当の階に前進で到着すると(戦闘/財宝抽選の代わりに)
+// 確定で採掘パネルが開く。1回の作業で素材1個+作業者にストレス(木15/鉄20)、回数は遠征ごとに
+// 巨木4回/鉄鉱石3回まで。作業者は遠征を通して同じ1人に固定(分散不可=ストレスを1人に集中させる
+// リスク設計)。森10層の洞窟分岐×森12層の巨木で「1遠征で木か鉄か」が排他になるのは意図的設計。
+// 帰還中(retreating)は先を急ぐ設定で立ち寄らない(残り回数は遠征中保持されるが、帰還では消化できない)
+const MINING_DEFS = {
+  wood: {
+    stage: "forest", floor: 12, max: 4, stress: 15, matId: "ki",
+    title: "巨木の伐採場", icon: "🪓", actLabel: "木を切る", sfx: "barricade_hit",
+    flavor: "そびえ立つ巨木。切り株には誰かが残した斧が刺さっている。",
+    exhaustLabel: "斧が限界だ", exhaustDesc: "刃こぼれして、この遠征ではもう切れない",
+    arriveLog: "そびえ立つ巨木を見つけた。",
+    digLog: (name) => `${name}は斧を振るい、木材を切り出した。`,
+  },
+  iron: {
+    stage: "cave", floor: 6, max: 3, stress: 20, matId: "tetsu",
+    title: "鉄鉱石の岩場", icon: "⛏️", actLabel: "鉄を掘る", sfx: "extension_build",
+    flavor: "岩肌に鉄鉱石の鉱脈が覗いている。掘り出せば鍛冶の材料になる。",
+    exhaustLabel: "岩場が限界だ", exhaustDesc: "掘れそうな鉱脈は、この遠征ではもう無い",
+    arriveLog: "鉄鉱石の鉱脈を見つけた。",
+    digLog: (name) => `${name}は岩を砕き、鉄鉱石を掘り出した。`,
+  },
+};
+let miningLeft = { wood: MINING_DEFS.wood.max, iron: MINING_DEFS.iron.max }; // 遠征内の残り採掘回数(行きで使った分は帰りに残らない=遠征内で共有)
+let miningDiggerId = null; // この遠征の作業者(キャラid)。最初の1回で確定し、以後固定
+function resetMiningState() {
+  miningLeft = { wood: MINING_DEFS.wood.max, iron: MINING_DEFS.iron.max };
+  miningDiggerId = null;
+}
+// その階が採掘場(残り回数あり)か。前進でも帰還でも立ち寄れる(ユーザー指定2026-07-28:
+// 「行きに3回取ったら帰りしなは1回」=残数は遠征内で記憶され、帰り道でも消化できる)
+function miningKeyForFloor(stage, floor) {
+  return Object.keys(MINING_DEFS).find((key) => {
+    const d = MINING_DEFS[key];
+    return d.stage === stage && d.floor === floor && (miningLeft[key] || 0) > 0;
+  }) || null;
+}
+function currentMiningKey() {
+  return miningKeyForFloor(currentStage, currentFloor);
+}
+// 作業できるか(ユーザー指定: 採取するとストレスが100を超えてしまう場合は採取できない)
+function canDigWithStress(c, def) {
+  return ((c.fatigue || 0) + def.stress) <= FATIGUE_MAX;
+}
+// resolveFloorArrivalから呼ぶ入り口。採掘場ならパネルを開いてtrue(その階の戦闘/財宝抽選は行わない)
+function tryOfferMiningSite() {
+  const key = currentMiningKey();
+  if (!key) return false;
+  dlog(MINING_DEFS[key].arriveLog);
+  showMiningSite(key);
+  return true;
+}
+// 採掘パネル。イベントカード(showDungeonEvent)と同じ#criticalAlert+固定モーダルの枠を使い回すが、
+// 「掘る→数値が変わる→また掘る」を繰り返せるよう、選択即クローズではなくパネル内で完結する
+function showMiningSite(key) {
+  const def = MINING_DEFS[key];
+  const div = document.getElementById("criticalAlert");
+  document.getElementById("dungeonLog").style.display = "none";
+  document.body.classList.add("path-choice-active");
+  document.body.classList.add("dungeon-event-active");
+  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
+  // 作業者の候補: 戦闘に出ている3人+控え(全員この場に居るため)。既に確定済みならその1人だけ
+  const candidates = visibleFieldParty().filter((c) => c.status === "active").concat(
+    reserveFieldMember && reserveFieldMember.status === "active" ? [reserveFieldMember] : []
+  );
+  let selectedId = miningDiggerId != null && candidates.some((c) => c.id === miningDiggerId)
+    ? miningDiggerId
+    : (candidates[0] ? candidates[0].id : null);
+  function close() {
+    document.body.classList.remove("path-choice-active");
+    document.body.classList.remove("dungeon-event-active");
+    div.innerHTML = "";
+    document.getElementById("dungeonLog").style.display = "";
+    saveState();
+    renderDungeon();
+  }
+  function render() {
+    const locked = miningDiggerId != null;
+    const left = miningLeft[key] || 0;
+    const owned = (state.materials && state.materials[def.matId]) || 0;
+    const selected = candidates.find((c) => String(c.id) === String(selectedId)) || null;
+    // 採掘ボタンが押せない理由(優先順): 残り回数切れ > ストレス限界(採取すると100を超える)
+    const stressBlocked = left > 0 && selected && !canDigWithStress(selected, def);
+    const digDisabled = left <= 0 || !selected || stressBlocked;
+    div.innerHTML = `
+      <div class="path-choice-panel path-tags-panel dungeon-event-panel">
+        <p class="path-choice-title">${def.title}</p>
+        <p class="dungeon-event-flavor">${def.flavor}<br>1回の作業で${MATERIALS[def.matId].ja}1個・作業した人にストレス+${def.stress}。この遠征では同じ1人しか作業できない。</p>
+        <div class="mining-info">残り${left}回　|　所持 ${MATERIALS[def.matId].ja}×${owned}</div>
+        <div class="mining-diggers">
+          ${candidates.map((c) => {
+            const isSel = c.id === selectedId;
+            const overStress = !canDigWithStress(c, def);
+            const disabled = (locked && c.id !== miningDiggerId) || overStress;
+            return `<button class="mining-digger-btn${isSel ? " selected" : ""}${disabled ? " disabled" : ""}" data-id="${c.id}">
+              ${c.name}${c === reserveFieldMember ? "(控え)" : ""}<span class="mining-digger-stress${overStress ? " over" : ""}">スト ${Math.round(c.fatigue || 0)}${overStress ? "⚠️" : ""}</span>
+            </button>`;
+          }).join("")}
+        </div>
+        <div class="path-choice-cards path-tags-stack">
+          <button class="path-card path-tag${digDisabled ? " path-tag-disabled" : ""}" id="miningDigBtn">
+            <span class="path-card-icon">${def.icon}</span>
+            <span class="path-tag-text">
+              <span class="path-card-label">${left <= 0 ? def.exhaustLabel : stressBlocked ? "ストレスが限界だ" : def.actLabel}</span>
+              <span class="path-card-desc">${left <= 0 ? def.exhaustDesc : stressBlocked ? `採取するとストレスが100を超えてしまう` : `${MATERIALS[def.matId].ja}+1・ストレス+${def.stress}`}</span>
+            </span>
+          </button>
+          <span class="path-tag-rope" aria-hidden="true"></span>
+          <button class="path-card path-tag" id="miningLeaveBtn">
+            <span class="path-card-icon">🚶</span>
+            <span class="path-tag-text"><span class="path-card-label">先へ進む</span></span>
+          </button>
+        </div>
+      </div>
+    `;
+    div.querySelectorAll(".mining-digger-btn").forEach((btn) => {
+      btn.onclick = () => {
+        if (miningDiggerId != null) return; // 作業者確定後は変更不可(1人固定)
+        // キャラidが数値/文字列どちらでも一致するよう、候補から引き直して正規化する
+        const found = candidates.find((c) => String(c.id) === String(btn.dataset.id));
+        if (found) selectedId = found.id;
+        render();
+      };
+    });
+    document.getElementById("miningDigBtn").onclick = () => {
+      if ((miningLeft[key] || 0) <= 0) return;
+      const digger = candidates.find((c) => String(c.id) === String(selectedId));
+      if (!digger) return;
+      if (!canDigWithStress(digger, def)) return; // ストレスが100を超えてしまうなら採取不可(ユーザー指定)
+      miningDiggerId = digger.id; // 最初の1回で作業者を確定(以後この遠征では固定)
+      miningLeft[key]--;
+      if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+      state.materials[def.matId] = (state.materials[def.matId] || 0) + 1;
+      advMaterialGains[def.matId] = (advMaterialGains[def.matId] || 0) + 1; // リザルト画面の素材集計にも乗せる
+      digger.fatigue = (digger.fatigue || 0) + def.stress; // canDigWithStressで100以下が保証されている
+      playSfx(def.sfx);
+      dlog(def.digLog(digger.name));
+      saveState();
+      render();
+    };
+    document.getElementById("miningLeaveBtn").onclick = () => { playSfx("select"); close(); };
+  }
+  render();
 }
 
 // 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く。

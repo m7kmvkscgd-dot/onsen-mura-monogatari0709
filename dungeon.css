@@ -610,3 +610,20 @@
     text-shadow: 0 2px 0 #7a5200, 0 0 14px rgba(255,200,80,0.55), 0 4px 14px rgba(0,0,0,0.85);
   }
   .hikaru-spark { position: absolute; left: 50%; top: 50%; font-size: 1.25rem; opacity: 0; }
+
+/* ============ 採掘場(巨木/鉄鉱石)パネル(2026-07-28) ============ */
+/* イベントカード(dungeon-event-panel)の枠を使い回し、作業者選択チップと情報行だけ専用スタイル */
+.mining-info {
+  text-align: center; font-size: 0.72rem; font-weight: 800; color: #e8dcbf;
+  background: rgba(0,0,0,0.35); border-radius: 8px; padding: 3px 8px; margin: 0.35rem 0 0.45rem;
+}
+.mining-diggers { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 0.55rem; }
+.mining-digger-btn {
+  font-family: inherit; font-size: 0.68rem; font-weight: 700; color: #e8e0d0;
+  background: rgba(24,30,36,0.9); border: 2px solid rgba(255,255,255,0.18); border-radius: 9px;
+  padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px;
+}
+.mining-digger-btn.selected { border-color: var(--accent); background: rgba(201,162,74,0.16); }
+.mining-digger-btn.disabled { opacity: 0.35; }
+.mining-digger-stress { font-size: 0.6rem; font-weight: 800; color: #d98f7a; }
+.mining-digger-stress.over { color: #ff6b5a; }
