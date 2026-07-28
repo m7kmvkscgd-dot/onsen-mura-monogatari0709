@@ -1734,12 +1734,13 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 // ============ 村襲撃(RAID_CONFIG) ============
 // 襲撃スケジュール+村レベル別ウェーブプール。襲撃エディタ(raid_editor.html)のエクスポートを
 // そのままここへ貼り付けて差し替える運用(エディタ側の基準値も同じ形式)。
-// schedule: firstRaidDay=初回襲撃が来るdayCount、repeatEveryDays=以降の周期(襲撃終了時に「その日+周期」で次回を予約)
+// schedule: firstRaidDay=初回襲撃が来るdayCount、repeatMinDays/repeatMaxDays=以降の周期の範囲
+// (襲撃終了時に「その日+最短〜最長からの等確率抽選」で次回を予約する。ユーザー指示2026-07-28: 日数をばらけさせる)
 // pools: 村レベル(文字列キー"1"〜"7")→ウェーブ候補の配列。発生時にその時点の村レベルのプールから
 // 重み(weight)付きランダムで1候補を抽選する。プール未設定のレベルは下位レベルのプールへフォールバック。
 // ※現在の中身はユーザーのウェーブ設計エクスポート待ちの仮データ(大規模戦テストと同じ猪5体)
 const RAID_CONFIG = {
-  schedule: { firstRaidDay: 8, repeatEveryDays: 7 },
+  schedule: { firstRaidDay: 8, repeatMinDays: 7, repeatMaxDays: 9 },
   pools: {
     "1": [{ weight: 1, memo: "仮: エクスポート待ち", enemies: [{ id: "inoshishi", count: 5 }] }],
   },

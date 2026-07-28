@@ -70,7 +70,9 @@
     <h2>スケジュール</h2>
     <div class="row">
       <div><label>初回襲撃日(◯日目の朝)</label><input type="number" id="firstDay" min="2"></div>
-      <div><label>以降の周期(日ごと)</label><input type="number" id="repeatDays" min="1"></div>
+      <div><label>周期・最短(日)</label><input type="number" id="repeatMinDays" min="1"></div>
+      <div><label>周期・最長(日)</label><input type="number" id="repeatMaxDays" min="1"></div>
+      <div class="note" style="grid-column:1/-1;">次回の襲撃日は「襲撃終了時に最短〜最長から等確率で抽選」される(例: 7〜9なら7・8・9日後のどれか)。最短=最長にすれば固定周期</div>
     </div>
   </div>
   <div id="poolList"></div>
@@ -117,7 +119,7 @@ const STORAGE_KEY = "onsen_raid_editor_v2"; // v1(襲撃回数ベース)から�
 const MAX_VILLAGE_LEVEL = 7;
 
 const DEFAULT_CONFIG = {
-  schedule: { firstRaidDay: 8, repeatEveryDays: 7 },
+  schedule: { firstRaidDay: 8, repeatMinDays: 7, repeatMaxDays: 9 },
   // pools: 村レベル(文字列キー"1"〜"7") → ウェーブ候補の配列。各候補は{weight(重み), memo, enemies:[{id,count}]}
   pools: {
     "1": [{ weight: 1, memo: "お試し", enemies: [{ id: "inoshishi", count: 5 }] }],
@@ -126,6 +128,12 @@ const DEFAULT_CONFIG = {
 let config;
 try { config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { config = null; }
 if (!config || !config.schedule || !config.pools) config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+// 旧形式(repeatEveryDays固定周期)からの移行: 最短=最長として引き継ぐ
+if (config.schedule.repeatMinDays == null) {
+  config.schedule.repeatMinDays = config.schedule.repeatEveryDays || 7;
+  config.schedule.repeatMaxDays = config.schedule.repeatEveryDays || 9;
+  delete config.schedule.repeatEveryDays;
+}
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); }
 function slotOf(e) { return e ? (e.isBoss || e.isMidBoss ? 4 : e.isSwarm ? 1 : 2) : 2; }
@@ -134,7 +142,8 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
 
 function render() {
   document.getElementById("firstDay").value = config.schedule.firstRaidDay;
-  document.getElementById("repeatDays").value = config.schedule.repeatEveryDays;
+  document.getElementById("repeatMinDays").value = config.schedule.repeatMinDays;
+  document.getElementById("repeatMaxDays").value = config.schedule.repeatMaxDays;
   const list = document.getElementById("poolList");
   list.innerHTML = "";
   for (let lv = 1; lv <= MAX_VILLAGE_LEVEL; lv++) {
@@ -208,7 +217,8 @@ function renderProbOnly() {
   });
 }
 document.getElementById("firstDay").addEventListener("input", (e) => { config.schedule.firstRaidDay = Number(e.target.value) || 1; save(); });
-document.getElementById("repeatDays").addEventListener("input", (e) => { config.schedule.repeatEveryDays = Number(e.target.value) || 1; save(); });
+document.getElementById("repeatMinDays").addEventListener("input", (e) => { config.schedule.repeatMinDays = Number(e.target.value) || 1; save(); });
+document.getElementById("repeatMaxDays").addEventListener("input", (e) => { config.schedule.repeatMaxDays = Number(e.target.value) || 1; save(); });
 document.getElementById("resetBtn").onclick = () => { if (!confirm("全ての編集を破棄して初期状態に戻します。よろしいですか？")) return; config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); save(); render(); };
 
 // 敵ピッカー

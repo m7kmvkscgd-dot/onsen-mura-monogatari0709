@@ -201,7 +201,7 @@ function loadState() {
       if (loaded.materials == null) loaded.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 }; // 旧セーブ用の初期値(素材ドロップ実装以前は所持0から)
       // 村襲撃(2026-07-28): 日付系は必ず「現在のdayCount基準」で補完する(絶対値で補完すると読み込んだ瞬間に襲撃日が過ぎていて即発火するため)。
       // 旧セーブは現在日+1周期の猶予を与える(初回襲撃の準備期間に相当)
-      if (loaded.nextRaidDay == null) loaded.nextRaidDay = (loaded.dayCount || 1) + RAID_CONFIG.schedule.repeatEveryDays;
+      if (loaded.nextRaidDay == null) loaded.nextRaidDay = (loaded.dayCount || 1) + (RAID_CONFIG.schedule.repeatMaxDays || RAID_CONFIG.schedule.repeatEveryDays || 7);
       if (loaded.barricadeLevel == null) loaded.barricadeLevel = 0; // 旧セーブ用の初期値(バリケード未建築)
       if (loaded.barricadeHp == null) loaded.barricadeHp = 0;
       if (loaded.lastIncomeDay == null) loaded.lastIncomeDay = loaded.dayCount || 1; // 過去日数分の収入を遡って支払わない(現在日から精算開始)

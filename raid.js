@@ -37,6 +37,15 @@ function timeSkipWillTriggerRaid(min) {
   return afterIdx > lastMorningIndex() && afterIdx >= state.nextRaidDay;
 }
 
+// 次回襲撃までの日数を抽選する(最短〜最長の等確率。旧形式repeatEveryDaysのエクスポートにも対応)
+function rollRaidIntervalDays() {
+  const sch = RAID_CONFIG.schedule || {};
+  const min = sch.repeatMinDays != null ? sch.repeatMinDays : (sch.repeatEveryDays || 7);
+  const max = sch.repeatMaxDays != null ? sch.repeatMaxDays : (sch.repeatEveryDays || min);
+  const lo = Math.min(min, max), hi = Math.max(min, max);
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
 // ============ カウントダウンバッジ(町ヘッダー+出発準備画面) ============
 // モックmock_raid_countdown.htmlでユーザー確認済みのデザイン: 3日以上=通常/2日=黄(warn)/
 // 残り1日以下=「明朝、襲撃！」赤点滅(danger)。「あと1日」「当日」表記は存在しない(明朝型のため)
@@ -188,7 +197,7 @@ function startRaidBattleFromPrep() {
   if (!wave) {
     // プールが空(設計データ未投入)なら発生させず次回へ順延する
     state.raidPrepPending = false;
-    state.nextRaidDay = (state.dayCount || 1) + RAID_CONFIG.schedule.repeatEveryDays;
+    state.nextRaidDay = (state.dayCount || 1) + rollRaidIntervalDays();
     saveState();
     renderTown();
     return;
@@ -233,7 +242,7 @@ function finishRaidBattle(won) {
   battleBgmOverrideKey = null;
   massBattleSizingForced = false;
   resetRaidBarricade(0);
-  state.nextRaidDay = (state.dayCount || 1) + RAID_CONFIG.schedule.repeatEveryDays;
+  state.nextRaidDay = (state.dayCount || 1) + rollRaidIntervalDays(); // 次回は最短〜最長からランダム(日数をばらけさせる、ユーザー指示2026-07-28)
   if (!won) state.houseLevel = Math.max(1, (state.houseLevel || 1) - 1); // 敗北=村レベル低下。建築済み施設はそのまま残す(ユーザー確定)
   saveState();
 }
