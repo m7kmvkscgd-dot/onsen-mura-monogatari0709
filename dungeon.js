@@ -2462,8 +2462,11 @@ function applyEncounterPity(baseChance) {
 }
 // 帰還専用の「片側ピティ」(2026-07-28)。戦闘直後の抑制ランプ(PITY_MIN_MULT→PITY_RAMP_FLOORS階で
 // 通常倍率)だけを通常ピティと共有し、6階確定発生(PITY_GUARANTEE_FLOORS)は適用しない。
-// 帰還のRETREAT_BATTLE_CHANCEは元々低く、確定発生を入れるとむしろ戦闘数が増えるため(2026-07-21の判断)
+// 帰還のRETREAT_BATTLE_CHANCEは元々低く、確定発生を入れるとむしろ戦闘数が増えるため(2026-07-21の判断)。
+// さらに初回テストプレイの感想(2026-07-28)を受けて連戦ガードを追加: 戦闘直後の次のフロアは遭遇率0%
+// (帰還中の2連戦を構造的に禁止する。カウンターはrollEncounter側で先に++されるため、値1=直前のフロアで戦闘)
 function applyRetreatEncounterPity(baseChance) {
+  if (floorsSinceLastBattle <= 1) return 0;
   if (floorsSinceLastBattle >= PITY_RAMP_FLOORS) return baseChance;
   return baseChance * (PITY_MIN_MULT + (1 - PITY_MIN_MULT) * (floorsSinceLastBattle / PITY_RAMP_FLOORS));
 }

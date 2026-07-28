@@ -336,11 +336,11 @@ const ENEMIES = {
     bigAttack: { name: "黄泉の呪詛", mult: 1.3, debuff: { type: "dmgTakenUp", chance: 0.55, value: 0.25, turns: 3 } } },
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 958, atk: 61, def: 35, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 62, maxFloor: 1498, isBoss: true,
     bigAttack: { name: "羅刹の薙ぎ払い", mult: 1.4, ignoreGuardian: true, debuff: { type: "stun", chance: 0.45, turns: 1 } } },
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 23, atk: 10, def: 10, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 18, isFlying: true, isSwarm: true,
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 13, atk: 10, def: 10, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 18, isFlying: true, isSwarm: true,
     bigAttack: { name: "羽ばたきの乱舞", mult: 0.85, debuff: { type: "stun", chance: 0.3, turns: 1 } },
     bigAttackCycle: { min: 2, max: 8 },
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
-  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 30, atk: 7, def: 10, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
+  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 20, atk: 7, def: 10, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
     bigAttack: { name: "かがり火", mult: 0.75, debuff: { type: "burn", chance: 1, value: 1, turns: 1 } },
     bigAttackCycle: { min: 2, max: 8 } },
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 49, atk: 13, def: 10, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 13, maxFloor: 43, isSwarm: true,
@@ -496,7 +496,7 @@ const MATERIAL_DROP_CHANCE = 0.4; // 雑魚1体あたりのドロップ率
 const MATERIAL_DROP_CHANCE_SWARM = 0.2;
 // 敵ごとのドロップ率の上書き(enemyId -> 0〜1)。未登録の敵は従来の一律値(通常40%/大群20%)を使う。
 // 敵エディターの「素材ドロップ 確率%」を適用する時は、百分率÷100の値でここに登録する(2026-07-27)
-const ENEMY_MATERIAL_DROP_CHANCES = {};
+const ENEMY_MATERIAL_DROP_CHANCES = { chochin_obake: 0.3 }; // 提灯おばけ=木30%(大群既定20%から引き上げ、序盤の木不足対策。ユーザー指定2026-07-28)
 // 敵→素材の対応(1体につき1種固定)。体感ルールは
 //   皮=生身の生き物 / 骨=骸骨・亡者 / 木=植物・木製の器物 / 鉄=鬼・武具持ち・金属もの。
 // ここに載っていない敵はドロップ無し: 純粋な霊体(鬼火・雪女・海坊主・洞窟の提灯火。
