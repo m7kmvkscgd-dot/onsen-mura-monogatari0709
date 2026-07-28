@@ -40,10 +40,11 @@ function timeSkipWillTriggerRaid(min) {
 // ============ カウントダウンバッジ(町ヘッダー+出発準備画面) ============
 // モックmock_raid_countdown.htmlでユーザー確認済みのデザイン: 3日以上=通常/2日=黄(warn)/
 // 残り1日以下=「明朝、襲撃！」赤点滅(danger)。「あと1日」「当日」表記は存在しない(明朝型のため)
+const RAID_BADGE_SHOW_DAYS = 5; // カウントダウンバッジは残りこの日数以下になってから表示(常時表示はうるさい、ユーザー指示2026-07-28)
 function updateRaidBadge(el) {
   if (!el) return;
-  if (state.nextRaidDay == null) { el.style.display = "none"; return; }
-  const left = state.nextRaidDay - (state.dayCount || 1);
+  const left = state.nextRaidDay != null ? state.nextRaidDay - (state.dayCount || 1) : null;
+  if (left == null || left > RAID_BADGE_SHOW_DAYS) { el.style.display = "none"; return; }
   el.style.display = "";
   el.className = "raid-badge" + (left <= 1 ? " danger" : left === 2 ? " warn" : "");
   el.textContent = left <= 1 ? "👹 明朝、襲撃！" : `👹 襲撃まで${left}日`;
