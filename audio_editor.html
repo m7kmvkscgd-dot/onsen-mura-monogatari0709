@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>音量エディタ - 温泉村物語</title>
+<style>
+  /* 音量エディタ(2026-07-28): BGM/効果音/別チャンネルのあらゆる音量をスライダー+試聴で調整し、
+     変更点だけをJSONエクスポート→Claudeが audio.js に反映する(既存エディタと同じ運用)。
+     基準値(BASELINE)はゲーム実値と同期させること(feedback-onsen-editor-tool-baseline-sync) */
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --bg: #14100c; --panel: #221a12; --border: #4b3728; --accent: #c9a24a; --text: #e8e0d0; --caption: rgba(232,224,208,0.6); }
+  body { font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: var(--bg); color: var(--text); padding-bottom: 90px; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 12px; }
+  h1 { font-size: 1.05rem; letter-spacing: 0.06em; padding: 4px 0 8px; }
+  .note { font-size: 0.7rem; color: var(--caption); line-height: 1.6; margin-bottom: 10px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; position: sticky; top: 0; background: var(--bg); padding: 6px 0; z-index: 5; }
+  .tab { flex: 1; font-family: inherit; font-size: 0.8rem; font-weight: 800; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 9px 4px; position: relative; }
+  .tab.active { border-color: var(--accent); color: var(--accent); }
+  .tab .dot { display: none; position: absolute; top: 4px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .tab.has-edits .dot { display: block; }
+  .row {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 9px 10px; margin-bottom: 8px;
+  }
+  .row.edited { border-color: var(--accent); }
+  .row-head { display: flex; align-items: center; gap: 8px; }
+  .row-name { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 800; }
+  .row-key { font-size: 0.6rem; color: var(--caption); font-weight: 400; margin-left: 4px; }
+  .ios-warn { font-size: 0.58rem; color: #f2d94e; border: 1px solid rgba(242,217,78,0.5); border-radius: 8px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
+  .play-btn {
+    font-family: inherit; font-size: 0.85rem; font-weight: 800; color: var(--text);
+    background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 9px;
+    width: 44px; height: 34px; flex-shrink: 0;
+  }
+  .play-btn.playing { border-color: var(--accent); color: var(--accent); }
+  .val { width: 52px; text-align: right; font-size: 0.8rem; font-weight: 900; color: var(--accent); flex-shrink: 0; }
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); height: 28px; }
+  .reset-one { font-family: inherit; font-size: 0.62rem; font-weight: 700; color: var(--caption); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; flex-shrink: 0; }
+  .row.edited .reset-one { color: var(--accent); border-color: var(--accent); }
+  .section-note { font-size: 0.66rem; color: var(--caption); line-height: 1.6; margin: 4px 0 10px; }
+  .footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: rgba(20,16,12,0.97); border-top: 1px solid var(--border);
+    display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    max-width: 584px; margin: 0 auto;
+  }
+  .footer button { flex: 1; font-family: inherit; font-size: 0.8rem; font-weight: 800; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 11px 4px; }
+  .footer button.primary { border-color: var(--accent); color: var(--accent); }
+  #editCount { font-size: 0.7rem; color: var(--caption); align-self: center; white-space: nowrap; }
+  .modal { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.8); padding: 16px; overflow-y: auto; }
+  .modal.open { display: block; }
+  .modal-panel { max-width: 560px; margin: 30px auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 14px; }
+  .modal-panel h3 { font-size: 0.9rem; margin-bottom: 8px; }
+  textarea { width: 100%; height: 200px; background: #14100c; color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 0.68rem; padding: 8px; font-family: monospace; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .modal-actions button { flex: 1; font-family: inherit; font-size: 0.78rem; font-weight: 700; color: var(--text); background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 9px; padding: 10px 4px; }
+  #importStatus { font-size: 0.7rem; min-height: 1.2em; color: var(--caption); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔊 音量エディタ</h1>
+  <p class="note">BGM・効果音・別チャンネルの音量を調整し、変更点だけをエクスポートしてClaudeに貼る(audio.jsへ反映+基準値同期)。編集は端末に自動保存。▶で試聴(スライダーは再生中もリアルタイムに効く)。</p>
+  <div class="tabs" id="tabs"></div>
+  <div id="mainArea"></div>
+</div>
+<div class="footer">
+  <span id="editCount"></span>
+  <button id="resetAllBtn">全リセット</button>
+  <button id="importBtn">読み込み</button>
+  <button class="primary" id="exportBtn">📋 エクスポート</button>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-panel">
+    <h3>エクスポート(このJSONをClaudeに貼る)</h3>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyExportBtn">コピー</button>
+      <button id="exportCloseBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="importModal">
+  <div class="modal-panel">
+    <h3>読み込み(エクスポートしたJSONを貼り付け)</h3>
+    <textarea id="importInput" placeholder="ここに貼り付け"></textarea>
+    <div id="importStatus"></div>
+    <div class="modal-actions">
+      <button id="importDoBtn">読み込む</button>
+      <button id="importCloseBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 基準値(ゲーム実値と同期させること) ============
+// BGM: ゲーム側はBGM_BASE_VOLUME(0.8)×キー別倍率の式だが、エディタでは「キーごとの実効音量」で
+// 編集する(適用時にゲーム側をテーブル方式に置き換える予定)。max=1.0(audio要素の上限)
+const BGM_ITEMS = [
+  { key: "town", ja: "町(朝・昼・夕)", file: "assets/bgm/town_bgm.mp3", vol: 0.56 },
+  { key: "town_dawn", ja: "町(早朝)", file: "assets/bgm/town_dawn_bgm.mp3", vol: 0.8 },
+  { key: "town_night", ja: "町(夜)", file: "assets/bgm/town_night_bgm.mp3", vol: 0.8 },
+  { key: "dungeon", ja: "森の戦闘(昼)", file: "assets/bgm/dungeon_bgm.mp3", vol: 0.96 },
+  { key: "dungeon_night", ja: "森の戦闘(夜)", file: "assets/bgm/dungeon_night_bgm.mp3", vol: 0.96 },
+  { key: "coast", ja: "海岸の探索(昼)", file: "assets/bgm/coast_bgm.mp3", vol: 1.0 },
+  { key: "coast_night", ja: "海岸の探索(夜)", file: "assets/bgm/coast_night_bgm.mp3", vol: 1.0 },
+  { key: "coast_battle", ja: "海岸の戦闘", file: "assets/bgm/coast_battle_bgm.mp3", vol: 1.0 },
+  { key: "valley", ja: "渓流の探索(昼)", file: "assets/bgm/valley_bgm.mp3", vol: 0.8 },
+  { key: "valley_night", ja: "渓流の探索(夜)", file: "assets/bgm/valley_night_bgm.mp3", vol: 0.8 },
+  { key: "boss_battle", ja: "ボス戦", file: "assets/bgm/quest_target_battle_bgm.mp3", vol: 0.8 },
+  { key: "mid_boss_battle", ja: "中ボス戦", file: "assets/bgm/quest_target_battle_bgm.mp3", vol: 0.8 },
+  { key: "quest_target_battle", ja: "討伐依頼対象戦(🎯)", file: "assets/bgm/quest_target_only_battle_bgm.mp3", vol: 0.8 },
+  { key: "tengu_battle", ja: "天狗の腕試し", file: "assets/bgm/tengu_battle_bgm.mp3", vol: 0.8 },
+  { key: "raid_battle", ja: "襲撃戦", file: "assets/bgm/yokai_no_shutai.mp3", vol: 0.8 },
+];
+// 別チャンネル(bgmAudioとは別の<audio>要素)。【注意】iOS実機はJSからの.volume指定を無視するため、
+// このチャンネルの音量変更は現状PCでしか効かない(GainNode移行は過去に事故があり慎重案件)
+const CHANNEL_ITEMS = [
+  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5, ios: true },
+  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5, ios: true },
+  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45, ios: true },
+  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, ios: true, max: 1 },
+  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55, ios: true },
+];
+// 効果音: ゲーム側はSFX_GAIN表(未記載は1.0)。WebAudioのGainNodeなのでiOS実機でも効く。max=2.0
+const SFX_ITEMS = [
+  { key: "select", ja: "決定/タップ", vol: 1 },
+  { key: "title_tap", ja: "タイトル開始タップ", vol: 1 },
+  { key: "coin", ja: "ゴールド入手", vol: 1 },
+  { key: "heal", ja: "回復", vol: 1 },
+  { key: "rest_heal", ja: "休憩の回復", vol: 1 },
+  { key: "attack", ja: "攻撃(汎用)", vol: 1 },
+  { key: "attack_samurai", ja: "攻撃(侍)", vol: 1 },
+  { key: "attack_ninja", ja: "攻撃(忍)", vol: 1 },
+  { key: "attack_spearman", ja: "攻撃(槍士)", vol: 1 },
+  { key: "attack_naginata", ja: "攻撃(薙刀士)", vol: 1 },
+  { key: "attack_hunter", ja: "攻撃(狩人)", vol: 1 },
+  { key: "attack_gunner", ja: "攻撃(砲術士)", vol: 1 },
+  { key: "attack_caster", ja: "攻撃(陰陽師/僧侶)", vol: 1 },
+  { key: "crit_slash", ja: "会心(斬撃)", vol: 1 },
+  { key: "crit_ninja", ja: "会心(忍)", vol: 1 },
+  { key: "crit_hunter", ja: "会心(狩人)", vol: 1 },
+  { key: "crit_gunner", ja: "会心(砲術士)", vol: 1 },
+  { key: "crit_caster", ja: "会心(陰陽師/僧侶)", vol: 1 },
+  { key: "hit_taken_1", ja: "被弾1", vol: 1 },
+  { key: "hit_taken_2", ja: "被弾2", vol: 1 },
+  { key: "hit_taken_3", ja: "被弾3", vol: 1 },
+  { key: "hit_taken_4", ja: "被弾4", vol: 1 },
+  { key: "evade", ja: "回避", vol: 1 },
+  { key: "guard", ja: "かばう/防御", vol: 1 },
+  { key: "flee", ja: "逃走", vol: 1 },
+  { key: "smoke_bomb", ja: "煙玉", vol: 1 },
+  { key: "shoot_down", ja: "撃ち落とし", vol: 1 },
+  { key: "transform", ja: "変身", vol: 1 },
+  { key: "swap_dash", ja: "交代のダッシュ", vol: 1 },
+  { key: "big_attack_warning", ja: "大技の予告", vol: 1 },
+  { key: "encounter_alert", ja: "遭遇アラート", vol: 1 },
+  { key: "swish_sharp_1", ja: "素振り(鋭)1", vol: 0.35 },
+  { key: "swish_sharp_2", ja: "素振り(鋭)2", vol: 0.35 },
+  { key: "swish_sharp_3", ja: "素振り(鋭)3", vol: 0.35 },
+  { key: "swish_heavy_1", ja: "素振り(重)1", vol: 0.35 },
+  { key: "swish_heavy_2", ja: "素振り(重)2", vol: 0.35 },
+  { key: "victory", ja: "勝利", vol: 1 },
+  { key: "result", ja: "リザルト", vol: 1 },
+  { key: "loot_item", ja: "素材の回収(巾着)", vol: 0.5 },
+  { key: "loot_rare", ja: "レア回収(風鈴)", vol: 0.3 },
+  { key: "barricade_hit", ja: "柵の被弾/木を切る", vol: 0.6 },
+  { key: "barricade_break", ja: "柵の倒壊", vol: 0.7 },
+  { key: "extension_build", ja: "建築の槌音/鉄を掘る", vol: 1 },
+  { key: "skill_confirm", ja: "スキル決定", vol: 1 },
+  { key: "quest_accept", ja: "依頼受注", vol: 1 },
+  { key: "departure", ja: "出発", vol: 1 },
+  { key: "footstep", ja: "足音(森)", vol: 1 },
+  { key: "footstep_valley", ja: "足音(渓流)", vol: 1 },
+  { key: "footstep_coast", ja: "足音(海岸)", vol: 1 },
+  { key: "morning_chime", ja: "朝のチャイム", vol: 1 },
+  { key: "onsen_enter", ja: "温泉に入る", vol: 1 },
+  { key: "onsen", ja: "温泉(入浴)", vol: 1 },
+  { key: "onsen_relief", ja: "入浴の効果", vol: 1 },
+  { key: "omikuji_normal", ja: "おみくじ(通常)", vol: 1 },
+  { key: "omikuji_daikichi", ja: "おみくじ(大吉)", vol: 1 },
+  { key: "hawk_summon", ja: "鷹を呼ぶ/式神SE元", vol: 1 },
+  { key: "shikigami_summon", ja: "式神召喚", vol: 1 },
+  { key: "carry", ja: "(旧)担ぐ", vol: 1 },
+];
+const SFX_EXT = { select: "ogg", coin: "ogg", heal: "ogg", attack: "ogg", victory: "ogg", barricade_break: "wav" }; // それ以外はmp3
+
+const STORAGE_KEY = "onsen_audio_editor_v1";
+let edits = { bgm: {}, channels: {}, sfx: {} };
+try { edits = Object.assign({ bgm: {}, channels: {}, sfx: {} }, JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}); } catch (e) {}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
+
+const SECTIONS = [
+  { key: "bgm", label: "🎵 BGM", items: BGM_ITEMS, max: 1, note: "実効音量(0〜100%)。ゲーム側は基準0.8×倍率の式だが、ここではキーごとの実際の音量をそのまま編集する。" },
+  { key: "sfx", label: "🔔 効果音", items: SFX_ITEMS, max: 2, note: "100%=等倍。200%まで上げられる(WebAudioのゲイン。iOS実機でも効く)。" },
+  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "⚠️このタブの音量は現状iOS実機ではJSから変更できない(PCのみ反映)。変更したい場合はGainNode移行が必要で、過去に事故があるため慎重に相談。" },
+];
+let activeSection = "bgm";
+
+function currentVol(sec, item) {
+  const e = edits[sec][item.key];
+  return e != null ? e : item.vol;
+}
+function countEdits() {
+  return Object.keys(edits.bgm).length + Object.keys(edits.channels).length + Object.keys(edits.sfx).length;
+}
+
+// ---- 試聴 ----
+const previewAudio = new Audio(); // BGM/チャンネル用(1本を使い回し)
+previewAudio.loop = true;
+let previewBtnEl = null;
+let previewRowKey = null;
+const AC = window.AudioContext || window.webkitAudioContext;
+const sfxCtx = AC ? new AC() : null;
+const sfxBuffers = {};
+function sfxFile(key) { return `assets/sfx/${key}.${SFX_EXT[key] || "mp3"}`; }
+function playSfxPreview(key, gain) {
+  if (!sfxCtx) return;
+  const start = (buf) => {
+    const s = sfxCtx.createBufferSource();
+    s.buffer = buf;
+    const g = sfxCtx.createGain();
+    g.gain.value = gain;
+    s.connect(g).connect(sfxCtx.destination);
+    s.start(0);
+  };
+  const go = () => {
+    if (sfxBuffers[key]) { start(sfxBuffers[key]); return; }
+    fetch(sfxFile(key)).then((r) => r.arrayBuffer()).then((d) => sfxCtx.decodeAudioData(d)).then((b) => { sfxBuffers[key] = b; start(b); }).catch(() => {});
+  };
+  if (sfxCtx.state !== "running") sfxCtx.resume().then(go).catch(go);
+  else go();
+}
+function stopBgmPreview() {
+  previewAudio.pause();
+  if (previewBtnEl) previewBtnEl.classList.remove("playing");
+  if (previewBtnEl) previewBtnEl.textContent = "▶";
+  previewBtnEl = null;
+  previewRowKey = null;
+}
+function toggleBgmPreview(btn, sec, item) {
+  if (previewRowKey === sec + ":" + item.key) { stopBgmPreview(); return; }
+  stopBgmPreview();
+  previewAudio.src = item.file;
+  previewAudio.volume = Math.min(1, currentVol(sec, item));
+  previewAudio.currentTime = 0;
+  previewAudio.play().catch(() => {});
+  previewBtnEl = btn;
+  previewRowKey = sec + ":" + item.key;
+  btn.classList.add("playing");
+  btn.textContent = "⏸";
+}
+
+// ---- 描画 ----
+function render() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = SECTIONS.map((s) => `
+    <button class="tab${s.key === activeSection ? " active" : ""}${Object.keys(edits[s.key]).length ? " has-edits" : ""}" data-sec="${s.key}">${s.label}<span class="dot"></span></button>`).join("");
+  tabs.querySelectorAll(".tab").forEach((b) => { b.onclick = () => { stopBgmPreview(); activeSection = b.dataset.sec; render(); }; });
+
+  const sec = SECTIONS.find((s) => s.key === activeSection);
+  const main = document.getElementById("mainArea");
+  main.innerHTML = `<p class="section-note">${sec.note}</p>` + sec.items.map((item) => {
+    const v = currentVol(sec.key, item);
+    const edited = edits[sec.key][item.key] != null;
+    const max = item.max != null ? item.max : sec.max;
+    return `
+      <div class="row${edited ? " edited" : ""}" data-key="${item.key}">
+        <div class="row-head">
+          <button class="play-btn" data-act="play">▶</button>
+          <div class="row-name">${item.ja}<span class="row-key">${item.key}</span>${item.ios ? '<span class="ios-warn">iOS非対応</span>' : ""}</div>
+          <div class="val">${Math.round(v * 100)}%</div>
+          <button class="reset-one" data-act="reset">戻す</button>
+        </div>
+        <div class="slider-row">
+          <input type="range" min="0" max="${max}" step="0.05" value="${v}" data-act="slider">
+        </div>
+      </div>`;
+  }).join("");
+
+  main.querySelectorAll(".row").forEach((row) => {
+    const key = row.dataset.key;
+    const item = sec.items.find((i) => i.key === key);
+    const slider = row.querySelector('[data-act="slider"]');
+    const valEl = row.querySelector(".val");
+    slider.addEventListener("input", () => {
+      const v = Math.round(Number(slider.value) * 100) / 100;
+      if (Math.abs(v - item.vol) < 0.001) delete edits[sec.key][key];
+      else edits[sec.key][key] = v;
+      valEl.textContent = Math.round(v * 100) + "%";
+      row.classList.toggle("edited", edits[sec.key][key] != null);
+      // 再生中の試聴へリアルタイム反映
+      if (sec.key === "sfx") { /* 効果音は次の再生から反映(短いのでそのままでよい) */ }
+      else if (previewRowKey === sec.key + ":" + key) previewAudio.volume = Math.min(1, v);
+      save();
+      refreshCount();
+      document.querySelectorAll(".tab").forEach((b, i) => b.classList.toggle("has-edits", Object.keys(edits[SECTIONS[i].key]).length > 0));
+    });
+    slider.addEventListener("change", () => {
+      if (sec.key === "sfx") playSfxPreview(key, currentVol("sfx", item)); // 指を離したら新しい音量で1回鳴らして確認
+    });
+    row.querySelector('[data-act="play"]').onclick = (e) => {
+      if (sec.key === "sfx") playSfxPreview(key, currentVol("sfx", item));
+      else toggleBgmPreview(e.currentTarget, sec.key, item);
+    };
+    row.querySelector('[data-act="reset"]').onclick = () => {
+      delete edits[sec.key][key];
+      save();
+      stopBgmPreview();
+      render();
+    };
+  });
+  refreshCount();
+}
+function refreshCount() {
+  document.getElementById("editCount").textContent = "変更: " + countEdits() + "件";
+}
+
+// ---- エクスポート/読み込み ----
+document.getElementById("exportBtn").onclick = () => {
+  const out = {};
+  ["bgm", "sfx", "channels"].forEach((k) => { if (Object.keys(edits[k]).length) out[k] = edits[k]; });
+  document.getElementById("exportJson").value =
+    "// 音量エディタのエクスポート(変更点のみ)。audio.jsへ反映+エディタ基準値の同期をClaudeに依頼\n" +
+    JSON.stringify(out, null, 2);
+  document.getElementById("exportModal").classList.add("open");
+};
+document.getElementById("copyExportBtn").onclick = () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  document.execCommand("copy");
+};
+document.getElementById("exportCloseBtn").onclick = () => document.getElementById("exportModal").classList.remove("open");
+document.getElementById("importBtn").onclick = () => document.getElementById("importModal").classList.add("open");
+document.getElementById("importCloseBtn").onclick = () => document.getElementById("importModal").classList.remove("open");
+document.getElementById("importDoBtn").onclick = () => {
+  const status = document.getElementById("importStatus");
+  try {
+    const text = document.getElementById("importInput").value.replace(/^\s*\/\/.*$/gm, "");
+    const data = JSON.parse(text);
+    edits = { bgm: data.bgm || {}, channels: data.channels || {}, sfx: data.sfx || {} };
+    save();
+    status.textContent = "読み込みました";
+    stopBgmPreview();
+    render();
+  } catch (e) {
+    status.textContent = "JSONの解析に失敗: " + e.message;
+  }
+};
+document.getElementById("resetAllBtn").onclick = () => {
+  if (countEdits() === 0) return;
+  if (!confirm("全ての変更を破棄して基準値に戻します。よろしいですか？")) return;
+  edits = { bgm: {}, channels: {}, sfx: {} };
+  save();
+  stopBgmPreview();
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
