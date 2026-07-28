@@ -154,28 +154,28 @@
 const BUILDING_DATA = {
   buildings: {
     magistrate: { name: "奉行所", icon: "🏯", desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。", unlockHouseLevel: 2, costs: [10], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    shop: { name: "鍛冶屋", icon: "⚒️", desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)", unlockHouseLevel: 2, costs: [10], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }] },
-    travelPrepShop: { name: "旅支度屋", icon: "🏕️", desc: "出発画面で野営具を購入できるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 4, tetsu: 0 }] },
-    dojo: { name: "道場", icon: "🥋", desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。", unlockHouseLevel: 3, costs: [30, 100], classUnlock: "naginata", extra: { xpShareLv1: 0.3, xpShareLv2: 0.35 }, matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    karakuri: { name: "からくり屋敷", icon: "🎎", desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。", unlockHouseLevel: 3, costs: [30], classUnlock: "ninja", matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }] },
-    bagShop: { name: "鞄屋", icon: "🧳", desc: "支援物資の所持上限が増えます。", unlockHouseLevel: 5, costs: [50, 100, 200], classUnlock: null, extra: { supplyCapBase: 10 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 12, hone: 0, ki: 0, tetsu: 0 }] },
-    watchtower: { name: "見張り台", icon: "🏹", desc: "(詳細は未定)", unlockHouseLevel: 6, costs: [200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    shop: { name: "鍛冶屋", icon: "⚒️", desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)", unlockHouseLevel: 1, costs: [30], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }] },
+    travelPrepShop: { name: "旅支度屋", icon: "🏕️", desc: "冒険中に宿泊ができる「野営具」が出発画面で購入できるようになります。", unlockHouseLevel: 4, costs: [50], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 2, tetsu: 0 }] },
+    dojo: { name: "道場", icon: "🥋", desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。", unlockHouseLevel: 2, costs: [30, 60], classUnlock: "naginata", extra: { xpShareLv1: 0.25, xpShareLv2: 0.3 }, matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }, { kawa: 0, hone: 0, ki: 3, tetsu: 0 }] },
+    karakuri: { name: "からくり屋敷", icon: "🎎", desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。", unlockHouseLevel: 2, costs: [20], classUnlock: "ninja", matsCosts: [{ kawa: 0, hone: 0, ki: 1, tetsu: 0 }] },
+    bagShop: { name: "鞄屋", icon: "🧳", desc: "支援物資の所持上限が増えます。", unlockHouseLevel: 4, costs: [50, 100, 200], classUnlock: null, extra: { supplyCapBase: 10 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 12, hone: 0, ki: 0, tetsu: 0 }] },
+    watchtower: { name: "見張り台", icon: "🏹", desc: "襲撃された時に、狩人か砲術士が支援射撃できる。", unlockHouseLevel: 4, costs: [100], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 1 }] },
     henHouse: { name: "鶏小屋", icon: "🐓", desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。", unlockHouseLevel: 5, costs: [100, 200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "priest", matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→70)。", unlockHouseLevel: 5, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 70 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner", matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 5, costs: [250], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 10, tetsu: 0 }] },
+    shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 3, costs: [30], classUnlock: "priest", matsCosts: [{ kawa: 0, hone: 0, ki: 2, tetsu: 0 }] },
+    hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→65)。", unlockHouseLevel: 5, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 65 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 5 }] },
+    gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner", matsCosts: [{ kawa: 0, hone: 0, ki: 3, tetsu: 0 }] },
+    teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 3, costs: [50], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 5, tetsu: 0 }] },
     stable: { name: "馬屋", icon: "🐎", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 6, costs: [100, 100, 100, 100, 100], classUnlock: null, sameCostAllLevels: true, extra: { potionBonusPerLevel: 0.015 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 5, costs: [100, 100, 100, 125, 100], classUnlock: null, extra: { potionBonusPerLevel: 0.015 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 8, tetsu: 0 }] },
     ferry: { name: "渡し船", icon: "⛴️", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [250], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
-    ryodanki: { name: "旅団旗", icon: "🚩", desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。", unlockHouseLevel: 6, costs: [100], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
+    ryodanki: { name: "旅団旗", icon: "🚩", desc: "出発パーティの上限が4人から5人になります。5人目は戦闘に参加しない交代要員です。", unlockHouseLevel: 7, costs: [100], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
   },
   house: {
     maxLevel: 7,
     rosterCapacity: 8,
     // 村レベルNからN+1への増築費用(N=1〜6)。コード上はhouseUpgradeCost(level)という区分式の関数だが、
     // エディタ上は計算済みの値をそのまま並べて編集させる(適用時にこちらで関数側へ反映する)
-    upgradeCosts: [10, 100, 250, 450, 550, 800],
+    upgradeCosts: [50, 100, 250, 450, 550, 800],
     // 増築に必要な素材(皮/骨/木/鉄、素材経済・2026-07-27設計中)。ゲーム側は未実装のため現状の基準値は全て0。
     // エディタで値を決めてエクスポート→ゲーム実装、の順で使う
     upgradeMatsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 4, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 5 }],

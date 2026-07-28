@@ -35,19 +35,19 @@ function defaultState() {
     rescueQuestAccepted: false, // 破綻寸前パーティ救済クエスト(薬草摘み)を受注中かどうか
     rescueQuestItemObtained: false, // 森の対象階層で薬草を入手済みかどうか(受注中のみ意味を持つ)
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。村レベル4で解禁)。出発画面で野営具を購入できるようになる
-    bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。村レベル5で解禁)。支援物資の所持上限が1増える
-    watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。村レベル6で解禁)。村襲撃時の援護射撃(未実装、建物のみ)
-    ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。村レベル6で解禁)。旧: 出発上限4→5人。3人+控え標準化で効果は一旦無効(maxActivePartySize参照)、再設計待ち
+    bagShopLevel: 0, // 増築の1つ、鞄屋のレベル(0=未建築、1=建築済み。村レベル4で解禁)。支援物資の所持上限が1増える
+    watchtowerLevel: 0, // 増築の1つ、見張り台のレベル(0=未建築、1=建築済み。村レベル4で解禁)。襲撃された時に狩人か砲術士が支援射撃できる(建物のみ、襲撃システム自体は未実装)
+    ryodankiLevel: 0, // 増築の1つ、旅団旗のレベル(0=未建築、1=建築済み。村レベル7で解禁)。旧: 出発上限4→5人。3人+控え標準化で効果は一旦無効(maxActivePartySize参照)、再設計待ち
     stableLevel: 0, // 増築の1つ、馬小屋のレベル(0=未建築、1=建築済み。村レベル7で解禁)。馬購入で移動速度アップ(未実装、建物のみ)
     henHouseLevel: 0, // 増築の1つ、鶏小屋のレベル(0=未建築、1〜2=建築済み。村レベル5で解禁)。温泉卵の回復量+2%/段階+売店の毎日の在庫+1
-    teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。村レベル6で解禁)。深淵の森15層の進路選択に「茶屋」が必ず現れ、一休み(HP/MP回復)や買い物ができるようになる
-    hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。村レベル5で解禁)。温泉のストレス回復量が50→70に上がる
-    beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。村レベル8で解禁)。効果は未定(建物のみ)
-    shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。村レベル4で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
+    teaHouseLevel: 0, // 増築の1つ、茶屋のレベル(0=未建築、1=建築済み。村レベル3で解禁)。深淵の森15層の進路選択に「茶屋」が必ず現れ、一休み(HP/MP回復)や買い物ができるようになる
+    hotSpringKeeperLevel: 0, // 増築の1つ、湯守屋のレベル(0=未建築、1=建築済み。村レベル5で解禁)。温泉のストレス回復量が50→65に上がる
+    beeFarmLevel: 0, // 増築の1つ、養蜂場のレベル(0=未建築、1=建築済み。村レベル5で解禁)。効果は未定(建物のみ)
+    shrineLevel: 0, // 増築の1つ、神社のレベル(0=未建築、1=建築済み。村レベル3で解禁)。僧侶が雇えるようになり、おみくじを引けるようになる
     gunpowderStoreLevel: 0, // 増築の1つ、火薬庫のレベル(0=未建築、1=建築済み。村レベル4で解禁)。砲術士が雇えるようになる(旧: 出発画面で爆弾を購入できる効果はユーザー指示により廃止)
-    karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。村レベル3で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
+    karakuriLevel: 0, // 増築の1つ、からくり屋敷のレベル(0=未建築、1=建築済み。村レベル2で解禁)。忍が雇えるようになり、戦闘中の「消火」が使えるようになる
     ferryLevel: 0, // 増築の1つ、渡し船のレベル(0=未建築、1=建築済み。村レベル7で解禁)。効果は未定(建物のみ)
-    shopLevel: 0, // 増築の1つ、鍛冶屋のレベル(0=未建築、1=建築済み。村レベル2で解禁)。他の施設と同じく解禁前は町画面にボタン自体を表示しない。
+    shopLevel: 0, // 増築の1つ、鍛冶屋のレベル(0=未建築、1=建築済み。村レベル1で解禁)。他の施設と同じく解禁前は町画面にボタン自体を表示しない。
     // ただし新規追加した制限のため、この機能追加より前からのセーブでは常に鍛冶屋が使えていたので、
     // loadState()側で「旧セーブは既に建築済み扱いにする」互換処理を入れてある(save.js参照)
     pendingSkillChoices: [], // レベルアップで未選択のスキル({characterId, level}の配列)。宿屋の名簿から選ぶ
@@ -93,7 +93,7 @@ function defaultState() {
 
 const HOUSE_MAX_LEVEL = 7; // 村レベルを基準に解禁される施設のうち最も高い要求値(馬屋/渡し船=7)に合わせた上限。それ以上は建物の解禁に使い道が無いため増築できない
 // [0]=レベル1→2、[1]=2→3、…、[5]=6→7。建築エディタのdiff反映(2026-07-26)で計算式から配列直書きに変更
-const HOUSE_UPGRADE_COSTS = [10, 100, 250, 450, 550, 800]; // 2026-07-27建築エディターでユーザー改定(Lv1→2を30→10、Lv3→4を350→250)
+const HOUSE_UPGRADE_COSTS = [50, 100, 250, 450, 550, 800]; // 2026-07-28建築エディターでユーザー改定(Lv1→2を10→50)
 // 村レベル増築に必要な素材(素材経済・2026-07-27建築エディターでユーザー設定)。
 // nullは素材不要。インデックスはHOUSE_UPGRADE_COSTSと同じ(0=Lv1→2 … 5=Lv6→7)
 const HOUSE_UPGRADE_MATS = [null, { ki: 4 }, null, null, null, { tetsu: 5 }];
@@ -110,10 +110,10 @@ function rosterCapacity() {
   return ROSTER_CAPACITY;
 }
 const DOJO_LEVEL1_COST = 30; // 道場レベル1の建築費用(2026-07-27ユーザー改定10→30)
-const DOJO_LEVEL2_COST = 100; // 道場レベル1→2の増築費用
+const DOJO_LEVEL2_COST = 60; // 道場レベル1→2の増築費用(2026-07-28ユーザー改定100→60)
 const DOJO_MAX_LEVEL = 2;
-const DOJO_UNLOCK_HOUSE_LEVEL = 3; // 村レベルがこの値に達するまで道場は建築できない
-const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.3, 2: 0.35 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合
+const DOJO_UNLOCK_HOUSE_LEVEL = 2; // 村レベルがこの値に達するまで道場は建築できない(2026-07-28ユーザー改定3→2)
+const DOJO_XP_SHARE_BY_LEVEL = { 1: 0.25, 2: 0.3 }; // 道場のレベルごとの、同行しなかった仲間が受け取る経験値の割合(2026-07-28ユーザー改定)
 
 // 図鑑: 出発準備画面のタブとして使えるようになる(建物ではなく村レベルのみで解禁)
 const BESTIARY_UNLOCK_HOUSE_LEVEL = 2;
@@ -121,13 +121,13 @@ const BESTIARY_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_UNLOCK_HOUSE_LEVEL = 2;
 const MAGISTRATE_COST = 10;
 // 鍛冶屋: 建築すると装備の購入ができるようになる
-const SHOP_UNLOCK_HOUSE_LEVEL = 2; // 2026-07-27ユーザー改定(4→2。鍛冶屋を序盤から使えるように)
-const SHOP_COST = 10;
+const SHOP_UNLOCK_HOUSE_LEVEL = 1; // 2026-07-28ユーザー改定(2→1)
+const SHOP_COST = 30; // 2026-07-28ユーザー改定(10→30)
 // 旅支度屋: 建築すると出発画面で野営具を購入できるようになる(実際に効果があるレベル1の施設)
 const TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL = 4;
-const TRAVEL_PREP_SHOP_COST = 30;
+const TRAVEL_PREP_SHOP_COST = 50; // 2026-07-28ユーザー改定(30→50)
 // 鞄屋: 道場と同じ多段階建築。1レベルにつき支援物資の所持上限が1増える(レベル1=30G/レベル2=100G/レベル3=200G)
-const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 5;
+const BAG_SHOP_UNLOCK_HOUSE_LEVEL = 4; // 2026-07-28ユーザー改定(5→4)
 const BAG_SHOP_LEVEL1_COST = 50; // 2026-07-27ユーザー改定(30→50)
 const BAG_SHOP_LEVEL2_COST = 100;
 const BAG_SHOP_LEVEL3_COST = 200;
@@ -144,11 +144,11 @@ function supplyItemTotal() {
   return total;
 }
 // 見張り台: 村襲撃時の援護射撃(建物のみ、襲撃システム自体は未実装)
-const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 6;
-const WATCHTOWER_COST = 200;
+const WATCHTOWER_UNLOCK_HOUSE_LEVEL = 4; // 2026-07-28ユーザー改定(6→4)
+const WATCHTOWER_COST = 100; // 2026-07-28ユーザー改定(200→100)
 // 旅団旗: 旧仕様では出発パーティの上限が4人→5人になる建物だったが、3人+控え1人が標準になったため
 // 効果は一旦無効化(maxActivePartySize参照)。建物自体は残置、再設計はユーザーが別途行う
-const RYODANKI_UNLOCK_HOUSE_LEVEL = 6;
+const RYODANKI_UNLOCK_HOUSE_LEVEL = 7; // 2026-07-28ユーザー改定(6→7)
 const RYODANKI_COST = 100;
 // 馬屋: 馬を購入すると出発時の移動速度が上がる(建物のみ、馬購入・移動速度アップ自体は未実装)
 const STABLE_UNLOCK_HOUSE_LEVEL = 7;
@@ -162,24 +162,24 @@ const HEN_HOUSE_LEVEL1_COST = 100;
 const HEN_HOUSE_LEVEL2_COST = 200;
 const HEN_HOUSE_MAX_LEVEL = 2;
 // 茶屋: 効果は未定(建物のみ、未実装)
-const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 5; // 2026-07-27ユーザー改定(6→5)
-const TEA_HOUSE_COST = 250;
-// 湯守屋: 建築すると温泉のストレス回復量が50→70に上がる(実際に効果があるレベル1の施設)
+const TEA_HOUSE_UNLOCK_HOUSE_LEVEL = 3; // 2026-07-28ユーザー改定(5→3)
+const TEA_HOUSE_COST = 50; // 2026-07-28ユーザー改定(250→50)
+// 湯守屋: 建築すると温泉のストレス回復量が50→65に上がる(実際に効果があるレベル1の施設)
 const HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL = 5;
 const HOT_SPRING_KEEPER_COST = 200;
 // 火薬庫: 建築すると砲術士が雇えるようになる。旧効果(出発画面で爆弾を購入できる)はユーザー指示で廃止した
 const GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL = 4;
 const GUNPOWDER_STORE_COST = 30;
 // からくり屋敷: 建築すると忍が雇えるようになり、戦闘中の「消火」が使えるようになる
-const KARAKURI_UNLOCK_HOUSE_LEVEL = 3;
-const KARAKURI_COST = 30; // 2026-07-27ユーザー改定(10→30)
-// 養蜂場: 道場と同じ多段階建築。1段階につき回復薬の回復量+2%(最大5段階で+10%)、各段階とも100G
-const BEE_FARM_UNLOCK_HOUSE_LEVEL = 6;
-const BEE_FARM_COST = 100;
+const KARAKURI_UNLOCK_HOUSE_LEVEL = 2; // 2026-07-28ユーザー改定(3→2)
+const KARAKURI_COST = 20; // 2026-07-28ユーザー改定(30→20)
+// 養蜂場: 道場と同じ多段階建築。1段階につき回復薬の回復量+2%(最大5段階で+10%)。レベル4のみ125G、他は100G(2026-07-28ユーザー改定)
+const BEE_FARM_UNLOCK_HOUSE_LEVEL = 5; // 2026-07-28ユーザー改定(6→5)
+const BEE_FARM_COSTS = [100, 100, 100, 125, 100];
 const BEE_FARM_MAX_LEVEL = 5;
 // 神社: 建築すると僧侶が雇えるようになり、出発画面でおみくじを引けるようになる。温泉から入れる
 // お守りガチャ(魂のかけらを捧げるとお守りがもらえる)もここで解禁される
-const SHRINE_UNLOCK_HOUSE_LEVEL = 4;
+const SHRINE_UNLOCK_HOUSE_LEVEL = 3; // 2026-07-28ユーザー改定(4→3)
 const SHRINE_COST = 30;
 // 渡し船: 効果は未定(建物のみ、未実装)
 const FERRY_UNLOCK_HOUSE_LEVEL = 7;

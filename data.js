@@ -1562,7 +1562,7 @@ const FATIGUE_MAX = 100;
 // (ユーザー指摘)ため、ロックを2時間の固定時間から「翌朝まで」に延長し、控えを併用しないと
 // 運用が回らないようにした(具体的な計算はstate.jsのnextMorningAbsoluteMinutes参照)
 const ONSEN_FATIGUE_RELIEF = 50;
-const HOT_SPRING_KEEPER_FATIGUE_RELIEF = 70; // 湯守屋を建てると回復量が50→70に上がる
+const HOT_SPRING_KEEPER_FATIGUE_RELIEF = 65; // 湯守屋を建てると回復量が50→65に上がる(2026-07-28ユーザー改定70→65)
 const ONSEN_FLAT_COST = 15;
 const ONSEN_COST_PER_LEVEL = 7;
 // 宿屋の宿泊はHP/MP全回復に加えて、ストレスも少量(10)回復する
