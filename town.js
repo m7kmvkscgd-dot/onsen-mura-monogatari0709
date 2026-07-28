@@ -1138,7 +1138,11 @@ function renderPartySelect() {
   document.getElementById("partySelectBackBtnTop").style.display = raidPrep ? "none" : "";
   pruneActiveParty();
   renderSupplies();
-  if (raidPrep) document.getElementById("partySelectMaxHint").textContent = `タップで防衛隊に入れる(最大${RAID_PARTY_MAX}人・控えなし・全員が戦闘に出る)`;
+  if (raidPrep) {
+    document.getElementById("partySelectMaxHint").textContent = (state.watchtowerLevel || 0) > 0
+      ? `タップで防衛隊に入れる(最大4人+見張り台枠1人・控えなし)。5人目の枠は狩人か砲術士が見張り台に立つ`
+      : `タップで防衛隊に入れる(最大4人・控えなし)。見張り台を建てると5人目(狩人か砲術士)を置ける`;
+  }
   document.getElementById("partySelectOmikujiTabBtn").style.display = !raidPrep && (state.shrineLevel || 0) > 0 ? "" : "none";
   document.getElementById("omikujiTabNewBadge").style.display = !raidPrep && (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
   const bestiaryUnlocked = !raidPrep && (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
@@ -1169,6 +1173,10 @@ function renderPartySelect() {
     return;
   }
   const now = absoluteGameMinutes();
+  // 襲撃の5人編成時: 見張り台担当(選択順で最初の狩人/砲術士)が誰かをタグで見せる(現状は表示のみ、挙動は通常参戦)
+  const watchtowerMemberId = raidPrep && raidDefenderIds.length > RAID_PARTY_BASE_MAX
+    ? (raidDefenderIds.map((id) => getRosterChar(id)).find(isRaidWatchtowerClass) || {}).id
+    : null;
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
     // 襲撃モードでは選択リストを防衛隊(raidDefenderIds、raid.js)に切り替える。出発パーティ(activePartyIds)には触れない
@@ -1183,7 +1191,7 @@ function renderPartySelect() {
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">控え</span>' : ""}</div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">控え</span>' : ""}${c.id === watchtowerMemberId ? ' <span class="status-tag bathing">🏹見張り台</span>' : ""}</div>
         <div class="roster-sub">${rosterSubWithLevelBadge(c)}</div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
@@ -1193,11 +1201,22 @@ function renderPartySelect() {
       if (e.target.closest(".onsen-buff-tag")) return; // 温泉効果タグのタップはツールチップ表示のみ、パーティ選択を巻き込まない
       if (!selectable) return;
       if (raidPrep) {
-        // 防衛隊の選択はセーブ対象外のセッション状態(raidDefenderIds)。開戦時に確定する
+        // 防衛隊の選択はセーブ対象外のセッション状態(raidDefenderIds)。開戦時に確定する。
+        // 基本4人+見張り台枠1人(枠が開くのは見張り台建築済みの時だけ、5人編成には狩人/砲術士が必須)
         if (inParty) {
           raidDefenderIds = raidDefenderIds.filter((id) => id !== c.id);
         } else {
-          if (raidDefenderIds.length >= RAID_PARTY_MAX) { showInfoModal(`防衛隊は最大${RAID_PARTY_MAX}人までです`); return; }
+          const cap = raidPartyMax();
+          if (raidDefenderIds.length >= cap) {
+            showInfoModal(cap === RAID_PARTY_BASE_MAX
+              ? `防衛隊は最大${RAID_PARTY_BASE_MAX}人までです。\n(見張り台を建てると、狩人か砲術士を5人目に置けるようになります)`
+              : `防衛隊は最大${cap}人までです`);
+            return;
+          }
+          if (!raidPartyCompositionOk([...raidDefenderIds.map((id) => getRosterChar(id)).filter(Boolean), c])) {
+            showInfoModal("5人目の枠は見張り台に立つ狩人か砲術士の担当です。\n狩人か砲術士を入れた編成にしてください");
+            return;
+          }
           raidDefenderIds.push(c.id);
         }
         renderPartySelect();

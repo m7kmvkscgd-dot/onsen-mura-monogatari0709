@@ -129,18 +129,39 @@ function pickRaidWave() {
 // 防衛隊選択(最大RAID_PARTY_MAX人・控えなし)+赤い「迎え撃つ」ボタン。町へは戻れない
 // (明朝型=目覚めた瞬間に襲撃のため当日の町画面は無い)。renderTown()はraidPrepPendingを見て
 // この画面へリダイレクトするので、リロードしても踏み倒せない
-const RAID_PARTY_MAX = 5;
-let raidDefenderIds = []; // 迎撃準備画面で選択中の防衛隊(キャラid)。初期値はレベル上位最大5人
+// 防衛隊の人数制限(ユーザー指示2026-07-28): 基本は最大4人。見張り台を建てていれば5人目の枠が開くが、
+// その枠=見張り台に立つ支援射撃要員のため、5人編成には狩人か砲術士が最低1人含まれている必要がある
+// (5人の中の狩人/砲術士が見張り台担当。現状は特殊な挙動は無く通常の5人目として戦闘参加する)
+const RAID_PARTY_BASE_MAX = 4;
+const RAID_WATCHTOWER_CLASSES = ["hunter", "gunner"];
+function raidPartyMax() {
+  return (state.watchtowerLevel || 0) > 0 ? RAID_PARTY_BASE_MAX + 1 : RAID_PARTY_BASE_MAX;
+}
+function isRaidWatchtowerClass(c) {
+  return !!c && RAID_WATCHTOWER_CLASSES.includes(c.classId);
+}
+// 5人編成として成立するか(=狩人か砲術士が最低1人いるか)。4人以下は無条件で成立
+function raidPartyCompositionOk(chars) {
+  return chars.length <= RAID_PARTY_BASE_MAX || chars.some(isRaidWatchtowerClass);
+}
+let raidDefenderIds = []; // 迎撃準備画面で選択中の防衛隊(キャラid)。初期値はレベル上位
 function showRaidPrep() {
   state.raidPrepPending = true;
   saveState();
-  // 初期選択: 選出可能(ロスト/入浴中を除く)な仲間からレベル上位最大5人。プレイヤーが自由に組み替えられる
+  // 初期選択: 選出可能(ロスト/入浴中を除く)な仲間からレベル上位最大4人。プレイヤーが自由に組み替えられる。
+  // 見張り台があれば5人目も自動で埋める(4人の中に狩人/砲術士がいれば残りのレベル最上位を、
+  // いなければ残りから狩人/砲術士のレベル最上位を。どちらも居なければ4人のまま)
   const now = absoluteGameMinutes();
-  raidDefenderIds = state.roster
+  const avail = state.roster
     .filter((c) => isAvailable(c, now))
-    .sort((a, b) => (b.level || 1) - (a.level || 1))
-    .slice(0, RAID_PARTY_MAX)
-    .map((c) => c.id);
+    .sort((a, b) => (b.level || 1) - (a.level || 1));
+  const picked = avail.slice(0, RAID_PARTY_BASE_MAX);
+  if (raidPartyMax() > RAID_PARTY_BASE_MAX) {
+    const rest = avail.slice(RAID_PARTY_BASE_MAX);
+    const fifth = picked.some(isRaidWatchtowerClass) ? rest[0] : rest.find(isRaidWatchtowerClass);
+    if (fifth) picked.push(fifth);
+  }
+  raidDefenderIds = picked.map((c) => c.id);
   renderPartySelect();
   showScreen("screen-party-select");
 }
@@ -154,6 +175,11 @@ function startRaidBattleFromPrep() {
   const defenders = raidDefenderIds.map((id) => getRosterChar(id)).filter(Boolean);
   if (defenders.length === 0) {
     showInfoModal("防衛隊を1人以上選んでください");
+    return;
+  }
+  // 選択時にもガードしているが、開戦時にも最終チェック(人数上限と5人編成の見張り台条件)
+  if (defenders.length > raidPartyMax() || !raidPartyCompositionOk(defenders)) {
+    showInfoModal(`5人編成には見張り台に立つ狩人か砲術士が必要です(最大${raidPartyMax()}人)`);
     return;
   }
   const wave = pickRaidWave();
