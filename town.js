@@ -1846,17 +1846,19 @@ document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderFacilit
 // だったが、costsを「レベルごとの建築費配列」として持たせることで単発建築(costs長さ1)も
 // 多段階建築(costs長さ2以上)も同じロジックで扱えるようにした)。
 // iconImgが無い施設(まだ専用イラストが無いもの)は絵文字にフォールバックする
+// 並び順は解禁レベルの昇順(2026-07-29ユーザー指示。同レベル内の順もこの配列順=表示順。
+// Lv2内は道場→からくり屋敷→奉行所の指定順)。解禁リスト(openVillageDetailの【解禁】)も
+// この配列順で出るため、エディターでunlockを変えた時は並びも合わせてここを直すこと
 const BUILDING_DEFS = [
-  { key: "magistrate", levelField: "magistrateLevel", name: "奉行所", icon: "🏯", iconImg: "assets/icons/town_bugyosho.png",
-    unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL, costs: [MAGISTRATE_COST],
-    desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。" },
   { key: "shop", levelField: "shopLevel", name: "鍛冶屋", icon: "⚒️", iconImg: "assets/icons/town_kajiya.png",
     unlock: SHOP_UNLOCK_HOUSE_LEVEL, costs: [SHOP_COST], mats: [{ ki: 1 }],
     desc: "武器・防具を購入できるようになります。(出発準備画面から入れます)" },
-  // 旅支度屋だけは専用の建物イラストではなく、既存の野営具アイテムアイコンを流用する(ユーザー指示)
-  { key: "travelPrepShop", levelField: "travelPrepShopLevel", name: "旅支度屋", icon: "🏕️", iconImg: "assets/items/camping_kit.png",
-    unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST], mats: [{ ki: 2 }],
-    desc: "冒険中に宿泊ができる「野営具」が出発画面で購入できるようになります。" },
+  // バリケード: 襲撃戦で敵の攻撃を全肩代わりする柵(ゴールド不要・素材のみ、数値はユーザー指定2026-07-28)。
+  // 耐久は襲撃をまたいで持ち越され、詳細モーダルの「修理」で直す(コストは失った耐久に比例、raid.js参照)
+  { key: "barricade", levelField: "barricadeLevel", name: "バリケード", icon: "🪵", iconImg: "assets/battle_barricade.png",
+    unlock: BARRICADE_UNLOCK_HOUSE_LEVEL, costs: [0, 0], mats: BARRICADE_TIERS.map((t) => t.mats),
+    desc: "襲撃の時、村の入り口に柵を立てて敵の攻撃を受け止めます。(空を飛ぶ敵には効かない)\n壊れた分は素材で修理できます。",
+    levelEffectLabel: "耐久", levelEffect: (lv) => `${BARRICADE_TIERS[lv - 1].name}(最大${BARRICADE_TIERS[lv - 1].hp})` },
   { key: "dojo", levelField: "dojoLevel", name: "道場", icon: "🥋", iconImg: "assets/icons/buildings/dojo.png",
     unlock: DOJO_UNLOCK_HOUSE_LEVEL, costs: [DOJO_LEVEL1_COST, DOJO_LEVEL2_COST], mats: [{ ki: 1 }, { ki: 3 }], classUnlock: "naginata",
     desc: "薙刀士が雇えるようになります。また、冒険に同行しなかった仲間も経験値の分け前をもらえます。",
@@ -1864,6 +1866,19 @@ const BUILDING_DEFS = [
   { key: "karakuri", levelField: "karakuriLevel", name: "からくり屋敷", icon: "🎎", iconImg: "assets/icons/buildings/karakuri.png",
     unlock: KARAKURI_UNLOCK_HOUSE_LEVEL, costs: [KARAKURI_COST], mats: [{ ki: 1 }], classUnlock: "ninja",
     desc: "忍が雇えるようになります。また、戦闘中に煙玉で仲間全員の炎上を消す「消火」が使えるようになります。" },
+  { key: "magistrate", levelField: "magistrateLevel", name: "奉行所", icon: "🏯", iconImg: "assets/icons/town_bugyosho.png",
+    unlock: MAGISTRATE_UNLOCK_HOUSE_LEVEL, costs: [MAGISTRATE_COST],
+    desc: "依頼を受けられるようになります。依頼は毎日入れ替わります。" },
+  { key: "shrine", levelField: "shrineLevel", name: "神社", icon: "⛩️", iconImg: "assets/icons/buildings/shrine.png",
+    unlock: SHRINE_UNLOCK_HOUSE_LEVEL, costs: [SHRINE_COST], mats: [{ ki: 2 }], classUnlock: "priest",
+    desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。" },
+  { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
+    unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST], mats: [{ ki: 5 }],
+    desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
+  // 旅支度屋だけは専用の建物イラストではなく、既存の野営具アイテムアイコンを流用する(ユーザー指示)
+  { key: "travelPrepShop", levelField: "travelPrepShopLevel", name: "旅支度屋", icon: "🏕️", iconImg: "assets/items/camping_kit.png",
+    unlock: TRAVEL_PREP_SHOP_UNLOCK_HOUSE_LEVEL, costs: [TRAVEL_PREP_SHOP_COST], mats: [{ ki: 2 }],
+    desc: "冒険中に宿泊ができる「野営具」が出発画面で購入できるようになります。" },
   { key: "bagShop", levelField: "bagShopLevel", name: "鞄屋", icon: "🧳", iconImg: "assets/icons/buildings/bagShop.png",
     unlock: BAG_SHOP_UNLOCK_HOUSE_LEVEL, costs: [BAG_SHOP_LEVEL1_COST, BAG_SHOP_LEVEL2_COST, BAG_SHOP_LEVEL3_COST], mats: [null, null, { kawa: 12 }],
     desc: "支援物資の所持上限が増えます。",
@@ -1871,34 +1886,22 @@ const BUILDING_DEFS = [
   { key: "watchtower", levelField: "watchtowerLevel", name: "見張り台", icon: "🏹", iconImg: "assets/icons/buildings/watchtower.png",
     unlock: WATCHTOWER_UNLOCK_HOUSE_LEVEL, costs: [WATCHTOWER_COST], mats: [{ tetsu: 1 }],
     desc: "襲撃された時に、狩人か砲術士が支援射撃できる。" },
-  // バリケード: 襲撃戦で敵の攻撃を全肩代わりする柵(ゴールド不要・素材のみ、数値はユーザー指定2026-07-28)。
-  // 耐久は襲撃をまたいで持ち越され、詳細モーダルの「修理」で直す(コストは失った耐久に比例、raid.js参照)
-  { key: "barricade", levelField: "barricadeLevel", name: "バリケード", icon: "🪵", iconImg: "assets/battle_barricade.png",
-    unlock: BARRICADE_UNLOCK_HOUSE_LEVEL, costs: [0, 0], mats: BARRICADE_TIERS.map((t) => t.mats),
-    desc: "襲撃の時、村の入り口に柵を立てて敵の攻撃を受け止めます。(空を飛ぶ敵には効かない)\n壊れた分は素材で修理できます。",
-    levelEffectLabel: "耐久", levelEffect: (lv) => `${BARRICADE_TIERS[lv - 1].name}(最大${BARRICADE_TIERS[lv - 1].hp})` },
-  { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
-    unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_LEVEL1_COST, HEN_HOUSE_LEVEL2_COST],
-    desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。" },
-  { key: "shrine", levelField: "shrineLevel", name: "神社", icon: "⛩️", iconImg: "assets/icons/buildings/shrine.png",
-    unlock: SHRINE_UNLOCK_HOUSE_LEVEL, costs: [SHRINE_COST], mats: [{ ki: 2 }], classUnlock: "priest",
-    desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。" },
-  { key: "hotSpringKeeper", levelField: "hotSpringKeeperLevel", name: "湯守屋", icon: "♨️", iconImg: "assets/icons/buildings/hotSpringKeeper.png",
-    unlock: HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, costs: [HOT_SPRING_KEEPER_COST], mats: [{ tetsu: 5 }],
-    desc: "温泉で回復するストレスの量が上がります(50→65)。" },
   { key: "gunpowderStore", levelField: "gunpowderStoreLevel", name: "火薬庫", icon: "💣", iconImg: "assets/icons/buildings/gunpowderStore.png",
     unlock: GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, costs: [GUNPOWDER_STORE_COST], mats: [{ ki: 3 }], classUnlock: "gunner",
     desc: "砲術士が雇えるようになります。" },
-  { key: "teaHouse", levelField: "teaHouseLevel", name: "茶屋", icon: "🍡", iconImg: "assets/icons/buildings/teaHouse.png",
-    unlock: TEA_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [TEA_HOUSE_COST], mats: [{ ki: 5 }],
-    desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。" },
-  { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
-    unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
-    desc: "(詳細は未定)" },
+  { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
+    unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_LEVEL1_COST, HEN_HOUSE_LEVEL2_COST],
+    desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。" },
+  { key: "hotSpringKeeper", levelField: "hotSpringKeeperLevel", name: "湯守屋", icon: "♨️", iconImg: "assets/icons/buildings/hotSpringKeeper.png",
+    unlock: HOT_SPRING_KEEPER_UNLOCK_HOUSE_LEVEL, costs: [HOT_SPRING_KEEPER_COST], mats: [{ tetsu: 5 }],
+    desc: "温泉で回復するストレスの量が上がります(50→65)。" },
   { key: "beeFarm", levelField: "beeFarmLevel", name: "養蜂場", icon: "🐝", iconImg: "assets/icons/buildings/beeFarm.png",
     unlock: BEE_FARM_UNLOCK_HOUSE_LEVEL, costs: BEE_FARM_COSTS, mats: [null, null, null, null, { ki: 8 }],
     desc: "回復薬の回復量が段階ごとに上がります。",
     levelEffectLabel: "回復薬", levelEffect: (lv) => `+${parseFloat((BEE_FARM_POTION_BONUS_PER_LEVEL * 100 * lv).toFixed(1))}%` }, // 1.5%/段階になったのでMath.roundだと表示が狂う(1.5→2%)。小数1桁まで正確に出す
+  { key: "stable", levelField: "stableLevel", name: "馬屋", icon: "🐎", iconImg: "assets/icons/buildings/stable.png",
+    unlock: STABLE_UNLOCK_HOUSE_LEVEL, costs: [STABLE_COST],
+    desc: "(詳細は未定)" },
   { key: "ferry", levelField: "ferryLevel", name: "渡し船", icon: "⛴️", iconImg: "assets/icons/buildings/ferry.png",
     unlock: FERRY_UNLOCK_HOUSE_LEVEL, costs: [FERRY_COST],
     desc: "(詳細は未定)" },
@@ -1940,7 +1943,7 @@ function renderBuildingGrid(houseLevel) {
   `;
   villageCard.onclick = () => openVillageDetail();
   gridEl.appendChild(villageCard);
-  BUILDING_DEFS.forEach((def) => {
+  [...BUILDING_DEFS].sort((a, b) => a.unlock - b.unlock).forEach((def) => { // 安定ソート: 同unlock内は配列順のまま
     const lv = state[def.levelField] || 0;
     const unlocked = houseLevel >= def.unlock;
     const built = lv > 0;
@@ -1995,7 +1998,7 @@ function openVillageDetail() {
     descLines.push(`レベル${level}\n日/${level * DAILY_INCOME_PER_LEVEL}ゴールド`);
     descLines.push("これ以上は増築できません（上限）。");
   } else {
-    descLines.push(`レベル${level}\n日/${level * DAILY_INCOME_PER_LEVEL}ゴールド→レベル${nextLevel}\n日/${nextLevel * DAILY_INCOME_PER_LEVEL}ゴールド`);
+    descLines.push(`レベル${level}→レベル${nextLevel}\n日/${level * DAILY_INCOME_PER_LEVEL}ゴールド→日/${nextLevel * DAILY_INCOME_PER_LEVEL}ゴールド`);
     if (unlocksAtNextLevel.length > 0) descLines.push(`【解禁】${unlocksAtNextLevel.join("・")}`);
   }
   document.getElementById("buildingDetailDesc").textContent = descLines.join("\n\n");
