@@ -50,9 +50,10 @@
      持ち上げた分の下の空間に「やぐら」を描く(案A)か、建物イラストを敷く(案B) */
   .tower-slot { position: relative; width: 76px; }
   .tower-slot .pcard { transform: translateY(-48px); z-index: 2; box-shadow: 0 6px 12px rgba(0,0,0,0.55); }
-  /* カードの下端に低い手すり(柵)を重ねて「台の上に立っている」感を出す */
+  /* カードのすぐ下に低い手すり(柵)を置いて「台の上に立っている」感を出す。
+     カードに重ねるとHPバーが見えにくい(ユーザー指摘2026-07-28)ため、カードの外(下)に出した */
   .tower-slot .pcard::after {
-    content: ''; position: absolute; left: 4px; right: 4px; bottom: -2px; height: 10px;
+    content: ''; position: absolute; left: 4px; right: 4px; bottom: -12px; height: 10px; z-index: 2;
     background:
       repeating-linear-gradient(to right, #7a5230 0 5px, transparent 5px 14px),
       linear-gradient(to bottom, transparent 0 3px, #5d3f24 3px 6px, transparent 6px);

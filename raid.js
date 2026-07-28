@@ -171,6 +171,7 @@ function showRaidPrep() {
 // startBattle()自身が画面遷移(screen-battle)とBGM開始を行うため、fieldPartyと演出フックを
 // 直接セットするだけでよい。勝敗処理はbattle.jsのvictory()/defeat()がraidBattleActiveで分岐する
 let raidBattleActive = false; // 襲撃戦中フラグ(battle.js/engine.jsが参照)
+let raidWatchtowerCharId = null; // 見張り台担当(5人編成時の選択順で最初の狩人/砲術士)のキャラid。カードの高所表示(ui.js/battle.css)に使う。挙動は他の4人と同じ(ユーザー確定2026-07-28)
 function startRaidBattleFromPrep() {
   const defenders = raidDefenderIds.map((id) => getRosterChar(id)).filter(Boolean);
   if (defenders.length === 0) {
@@ -190,6 +191,17 @@ function startRaidBattleFromPrep() {
     saveState();
     renderTown();
     return;
+  }
+  // 見張り台担当を確定(5人編成時のみ。選択順で最初の狩人/砲術士=迎撃準備画面の🏹タグと同じ決め方)。
+  // 高所のやぐら表示は右端が映えるため、担当を隊列の末尾へ回す(戦闘の手番順はspd依存なので影響なし)
+  raidWatchtowerCharId = null;
+  if (defenders.length > RAID_PARTY_BASE_MAX) {
+    const wt = defenders.find(isRaidWatchtowerClass);
+    if (wt) {
+      raidWatchtowerCharId = wt.id;
+      defenders.splice(defenders.indexOf(wt), 1);
+      defenders.push(wt);
+    }
   }
   raidBattleActive = true;
   fieldParty = defenders;
@@ -213,6 +225,7 @@ function startRaidBattleFromPrep() {
 // 襲撃戦の後始末(勝敗どちらでも通る)。演出フックの解除・柵耐久の永続化・次回襲撃の予約・敗北ペナルティ
 function finishRaidBattle(won) {
   raidBattleActive = false;
+  raidWatchtowerCharId = null; // 高所表示の解除(ui.jsのrenderPartyBarが次の描画でクラスを外す)
   state.raidPrepPending = false; // 迎撃準備状態を解除(戦闘中リロードはフラグが残っているため準備画面からやり直しになる=踏み倒し不可)
   state.barricadeHp = Math.max(0, raidBarricadeHp); // 戦闘中に受けた柵ダメージを持ち帰る(修理は建築画面)
   battleBgOverrideSet = null;

@@ -1226,6 +1226,9 @@ function renderPartyBar(elId, combatants, actingCharId) {
       bar.insertBefore(card, prevCard ? prevCard.nextElementSibling : bar.firstElementChild);
     }
     updatePartyMemberCard(card, c, c.id === actingCharId, isFreshTurn);
+    // 襲撃戦の見張り台担当(raid.jsのraidWatchtowerCharId)だけカードを高所配置にする(battle.cssのwatchtower-slot)。
+    // toggleで毎回同期するため、襲撃後の通常戦闘で同じキャラのカードが使い回されても自然に外れる
+    card.classList.toggle("watchtower-slot", elId === "battlePartyBar" && typeof raidWatchtowerCharId !== "undefined" && raidWatchtowerCharId != null && c.id === raidWatchtowerCharId);
     prevCard = card;
   });
   activateHpTrails(bar);
