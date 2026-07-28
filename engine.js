@@ -2460,6 +2460,38 @@ function handleGuardSynergyPassives(target, enemy, log) {
   }
   return counterDmg;
 }
+// ============ 襲撃戦の集中狙い分散(2026-07-28、初回テストプレイの感想対応) ============
+// 襲撃戦(raidBattleActive)のみ: 同一ラウンド内で既に敵の攻撃対象になった味方は、以降の敵の
+// ターゲット抽選で選ばれる重みが下がる(2回目0.70倍、3回目以降0.35倍。ユーザー指定値)。
+// 完全禁止ではなく「偏りの裾を刈る」ソフト分散のため、集中砲火の緊張感は残しつつ事故死を減らす。
+// カウントはラウンドの節目(nextRound)でリセット。通常戦闘は従来通りの等確率のまま。
+// 大技の予告時ターゲット確定(pickBigAttackSingleTarget)は従来通り等確率(予告→かばうの対抗プレイを
+// 変えないため)だが、着弾はカウントに含めるので同ラウンドの通常攻撃はその味方を避けやすくなる
+const RAID_FOCUS_WEIGHTS = [1, 0.70, 0.35];
+function raidFocusSpreadActive() {
+  return typeof raidBattleActive !== "undefined" && raidBattleActive
+    && typeof battle !== "undefined" && battle && battle.raidRoundTargetCounts;
+}
+function pickRaidSpreadTarget(pool) {
+  if (!pool.length) return null;
+  if (!raidFocusSpreadActive()) return pool[Math.floor(Math.random() * pool.length)];
+  const weights = pool.map((m) => {
+    const n = battle.raidRoundTargetCounts[m.id] || 0;
+    return RAID_FOCUS_WEIGHTS[Math.min(n, RAID_FOCUS_WEIGHTS.length - 1)];
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r < 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+function noteRaidFocusTarget(member) {
+  if (!member || !raidFocusSpreadActive()) return;
+  battle.raidRoundTargetCounts[member.id] = (battle.raidRoundTargetCounts[member.id] || 0) + 1;
+}
+
 function enemyAttack(enemy, targets, log) {
   // 【村襲撃】バリケードが立っている間、飛行以外の敵は味方ではなくバリケード自体を攻撃対象にする
   // (以前は味方を狙った攻撃を着弾時に柵へ差し替えていたため、味方の回避判定で柵が無傷になったり
@@ -2475,7 +2507,8 @@ function enemyAttack(enemy, targets, log) {
   if (!alive.length) return null;
   const guardian = resolveForcedTarget(enemy, alive) || findGuardTarget(alive);
   const pickPool = guardian ? alive : poolExcludingShikigamiProtected(alive);
-  const target = guardian || pickPool[Math.floor(Math.random() * pickPool.length)];
+  const target = guardian || pickRaidSpreadTarget(pickPool);
+  noteRaidFocusTarget(target); // 襲撃戦の集中狙い分散用カウント(かばう/挑発で引きつけた分も対象)
   // 戦闘中1回だけ確実に攻撃を回避する受動(分身など)。dodgeChance(確率式)とは別枠の確定回避
   if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
     target.passives.onceGuardUsed = true;
@@ -2715,6 +2748,7 @@ function enemyBigAttack(enemy, targets, log) {
   const telegraphed = enemy.bigAttackTelegraphTargetId != null ? alive.find((t) => t.id === enemy.bigAttackTelegraphTargetId) : null;
   const interceptor = !profile.aoe && !profile.ignoreGuardian && !(telegraphed && enemy.bigAttackTelegraphForced) ? findGuardTarget(alive) : null;
   const singleTarget = !profile.aoe ? (interceptor || telegraphed || pickBigAttackSingleTarget(enemy, alive, profile)) : null;
+  noteRaidFocusTarget(singleTarget); // 襲撃戦の集中狙い分散用カウント(全体大技はカウント対象外)
   enemy.bigAttackTelegraphTargetId = null;
   enemy.bigAttackTelegraphForced = false;
   const hitTargets = profile.aoe ? alive : [singleTarget];

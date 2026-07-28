@@ -80,7 +80,7 @@ function startBattle(enemies, pathDef, encounterText) {
   if (omikujiGuaranteedCrits > 0) state.omikujiGuaranteedCritsLeft = 0;
   // swapCooldown: 交代コマンドの残りクールダウン(ラウンドの節目で1減る、0で使用可、開幕から使用可)。
   // roundsTotal/presence: 参加ターン比の経験値配分用(そのラウンドに戦場へ出ていたキャラのカウント。nextRound/victory参照)
-  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, swapCooldown: 0, roundsTotal: 0, presence: {} };
+  battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, swapCooldown: 0, roundsTotal: 0, presence: {}, raidRoundTargetCounts: {} };
   // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
   // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
   lastPartyBarActingId.battlePartyBar = null;
@@ -429,6 +429,7 @@ function handleNoOneLeftToFight() {
 }
 
 function nextRound(forceFirstStrike) {
+  if (battle) battle.raidRoundTargetCounts = {}; // 襲撃戦の集中狙い分散カウントはラウンド単位でリセット(engine.js参照)
   // このラウンド中に「逃走準備」に入った仲間は、次のラウンドが始まる前にまとめて実際に逃げ出す。
   // 以前は本人の次の手番(=次のラウンドの自分の順番)まで待ってから逃げていたため、運が悪いと
   // 敵の攻撃をラウンドを跨いで2回受けてから逃げる、ということが起きていた。ラウンドの節目で
