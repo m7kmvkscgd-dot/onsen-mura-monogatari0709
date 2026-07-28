@@ -444,7 +444,11 @@
      (ユーザーの理想図準拠2026-07-27)。ボタン列は味方バーの実測位置に追従するJS
      (positionActionsBelowPartyBar)が自動で付いてくるためCSSはこの2つだけでよい */
   .battle-top.raid-battle #battleLog { position: relative; z-index: 2; margin-top: 30px; }
-  #battlePartyBar.raid-battle-bar { top: 295px; }
+  /* z-index:6は.battle-top(z5、テキストボックスを含む)より手前にするため: 見張り台の5人目は
+     カードを48px持ち上げるためログ枠と少し重なるが、キャラが枠の下に潜ると見えないという
+     ユーザー指摘(2026-07-28)で、襲撃戦の味方バーごとログより手前に出す(位置的な重なりは
+     見張り台カードの上端だけなので、ログの可読性への影響はない) */
+  #battlePartyBar.raid-battle-bar { top: 295px; z-index: 6; }
   /* 見張り台の5人目(2026-07-28、mock_watchtower_battle.html案Aでユーザー採用): 襲撃戦で見張り台担当
      (raidWatchtowerCharId、raid.js)のカードだけ48px持ち上げ、下の空間にやぐら(SVG)を描く。
      持ち上げはtransformではなくtopで行う(.party-memberへの常時transformはiOSのポップアップ描画を
