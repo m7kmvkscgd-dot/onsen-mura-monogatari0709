@@ -62,6 +62,9 @@ function renderTown() {
   refillHenHouseEggPouchIfNewDay();
   saveState();
   if (checkGameOver()) return;
+  // 迎撃準備中(襲撃日の朝を迎えた後、まだ開戦していない)は町画面を出さず準備画面へ戻す。
+  // リロードや鍛冶屋帰り等でrenderTown()に流れ着いても、開戦するまで町には戻れない(踏み倒し防止)
+  if (state.raidPrepPending) { showRaidPrep(); return; }
   const townIncome = settleDailyIncome(); // 村レベル連動の日次収入(前回精算からの日数分をまとめて受け取る)
   document.getElementById("townGold").textContent = (debugNoEncounters ? "🚫" : "") + state.gold + "G";
   if (townIncome > 0) showTownIncomePopup(townIncome);
@@ -291,8 +294,8 @@ function startTimeSkipAnimation(totalMin) {
       pruneActiveParty();
       saveState();
       document.getElementById("timeSkipOverlay").style.display = "none";
-      // 明朝型の襲撃: このスキップで襲撃日(以降)の朝を跨いだら、村画面へ戻らず襲撃戦を開始する
-      if (raidIsDue() && lastMorningIndex() > morningIdxBeforeSkip) { startRaidBattle(); return; }
+      // 明朝型の襲撃: このスキップで襲撃日(以降)の朝を跨いだら、村画面へ戻らず迎撃準備画面へ
+      if (raidIsDue() && lastMorningIndex() > morningIdxBeforeSkip) { showRaidPrep(); return; }
       timeSkipReturnFn(timeSkipVillage)();
       return;
     }
@@ -492,9 +495,9 @@ function performLodging(targets, bgSet, onDone) {
           showLodgingRestSummary(beforeSnapshot, () => {
             revealLodgingMorning(() => {
               if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
-              // 明朝型の襲撃: 襲撃日(以降)の朝を迎えた=目覚めた瞬間に襲撃戦へ(当日の町画面は無い)。
+              // 明朝型の襲撃: 襲撃日(以降)の朝を迎えた=目覚めた瞬間に迎撃準備画面へ(当日の町画面は無い)。
               // 遠征中に襲撃日が過ぎていた場合も、帰還後この最初の宿泊の朝に発生する(持ち越し)
-              if (raidIsDue()) { startRaidBattle(); return; }
+              if (raidIsDue()) { showRaidPrep(); return; }
               onDone();
             });
           });
@@ -984,9 +987,9 @@ function showPartySelectTab(tab) {
   document.getElementById("partySelectBestiaryTab").style.display = tab === "bestiary" ? "" : "none";
   document.getElementById("partySelectBestiaryTabBtn").className = "omikuji-chip-btn" + (tab === "bestiary" ? " active" : "");
   // 図鑑タブを開いている間はおみくじタブを隠す(ユーザー指示)。mainタブに戻った時だけ、
-  // 神社建築済みかどうかの本来の条件で再表示する
+  // 神社建築済みかどうかの本来の条件で再表示する(襲撃の迎撃準備中はおみくじ自体を出さない)
   document.getElementById("partySelectOmikujiTabBtn").style.display =
-    tab === "bestiary" ? "none" : ((state.shrineLevel || 0) > 0 ? "" : "none");
+    tab === "bestiary" || state.raidPrepPending ? "none" : ((state.shrineLevel || 0) > 0 ? "" : "none");
 }
 // おみくじはもう別画面に切り替わらない(ユーザー指示によりテンポ重視で撤廃)。ボタンを押すと
 // その場でカードが更新されるだけで、支援物資/出発メンバー選択/出発ボタンはそのまま下に続けて操作できる。
@@ -1124,23 +1127,34 @@ document.getElementById("bestiaryDetailNextBtn").onclick = () => {
 document.getElementById("bestiaryDetailCloseBtn").onclick = () => { playSfx("select"); document.getElementById("bestiaryDetailOverlay").style.display = "none"; };
 
 function renderPartySelect() {
+  // 襲撃モード(迎撃準備): 同じ画面を「防衛隊選択+支度の買い物」として使い回す(ユーザー指示2026-07-28)。
+  // 町へ戻る導線を全て隠し、出発ボタンの代わりに「迎え撃つ」ボタンを出す
+  const raidPrep = !!state.raidPrepPending;
   playTownAreaBgm();
   updateSceneBackgrounds();
-  renderDwHeader("partySelect", "パーティ編成", () => { renderTown(); });
+  renderDwHeader("partySelect", raidPrep ? "襲撃を迎え撃て" : "パーティ編成", () => { renderTown(); });
+  document.getElementById("partySelectHeaderBack").style.display = raidPrep ? "none" : "";
+  document.getElementById("partySelectBackBtn").style.display = raidPrep ? "none" : "";
+  document.getElementById("partySelectBackBtnTop").style.display = raidPrep ? "none" : "";
   pruneActiveParty();
   renderSupplies();
-  document.getElementById("partySelectOmikujiTabBtn").style.display = (state.shrineLevel || 0) > 0 ? "" : "none";
-  document.getElementById("omikujiTabNewBadge").style.display = (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
-  const bestiaryUnlocked = (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
+  if (raidPrep) document.getElementById("partySelectMaxHint").textContent = `タップで防衛隊に入れる(最大${RAID_PARTY_MAX}人・控えなし・全員が戦闘に出る)`;
+  document.getElementById("partySelectOmikujiTabBtn").style.display = !raidPrep && (state.shrineLevel || 0) > 0 ? "" : "none";
+  document.getElementById("omikujiTabNewBadge").style.display = !raidPrep && (state.shrineLevel || 0) > 0 && !state.seenOmikujiTab ? "" : "none";
+  const bestiaryUnlocked = !raidPrep && (state.houseLevel || 1) >= BESTIARY_UNLOCK_HOUSE_LEVEL;
   document.getElementById("partySelectBestiaryTabBtn").style.display = bestiaryUnlocked ? "" : "none";
   document.getElementById("bestiaryNewBadge").style.display = bestiaryUnlocked && bestiaryHasNew() ? "" : "none";
   const maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
   // 明朝襲撃の日中も出発は自由(最後の遠征・買い物ができる)が、出発ボタンの注記で
   // 「寝ると襲撃戦が始まる」ことだけ伝える(モックmock_raid_countdown.htmlで確認済みの文言)
-  updateRaidBadge(document.getElementById("raidBadgePrep"));
+  const prepBadge = document.getElementById("raidBadgePrep");
+  updateRaidBadge(prepBadge);
+  if (raidPrep) { prepBadge.style.display = ""; prepBadge.className = "raid-badge danger"; prepBadge.textContent = "👹 襲撃が来た！"; }
   const raidTomorrow = state.nextRaidDay != null && state.nextRaidDay - (state.dayCount || 1) <= 1;
   document.getElementById("forestMaxFloorLabel").textContent = raidTomorrow ? "※寝ると襲撃戦が始まる" : (maxFloorReached.forest > 0 ? `最高${maxFloorReached.forest}層` : "");
   document.getElementById("coastMaxFloorLabel").textContent = raidTomorrow ? "※寝ると襲撃戦が始まる" : (maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "");
+  document.getElementById("departForestBtn").style.display = raidPrep ? "none" : "";
+  document.getElementById("raidDefendBtn").style.display = raidPrep ? "" : "none";
   // 海岸への直接出発は廃止(ユーザー指示、2026-07-19)。今後は森→洞窟の先で海の村を発見してから
   // 辿り着く経路にする予定のため、そのルートができるまで出発画面からは一旦隠す
   document.getElementById("departCoastBtn").style.display = "none";
@@ -1157,14 +1171,15 @@ function renderPartySelect() {
   const now = absoluteGameMinutes();
   state.roster.forEach((c) => {
     const c2 = CLASSES[c.classId];
-    const inParty = state.activePartyIds.includes(c.id);
+    // 襲撃モードでは選択リストを防衛隊(raidDefenderIds、raid.js)に切り替える。出発パーティ(activePartyIds)には触れない
+    const inParty = raidPrep ? raidDefenderIds.includes(c.id) : state.activePartyIds.includes(c.id);
     const selectable = isAvailable(c, now);
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
     const tagText = c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
-    // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする
-    const isReserveSlot = inParty && state.activePartyIds.length >= 4 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
+    // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする(襲撃戦は控えなしのため出さない)
+    const isReserveSlot = !raidPrep && inParty && state.activePartyIds.length >= 4 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
@@ -1177,6 +1192,17 @@ function renderPartySelect() {
     row.onclick = (e) => {
       if (e.target.closest(".onsen-buff-tag")) return; // 温泉効果タグのタップはツールチップ表示のみ、パーティ選択を巻き込まない
       if (!selectable) return;
+      if (raidPrep) {
+        // 防衛隊の選択はセーブ対象外のセッション状態(raidDefenderIds)。開戦時に確定する
+        if (inParty) {
+          raidDefenderIds = raidDefenderIds.filter((id) => id !== c.id);
+        } else {
+          if (raidDefenderIds.length >= RAID_PARTY_MAX) { showInfoModal(`防衛隊は最大${RAID_PARTY_MAX}人までです`); return; }
+          raidDefenderIds.push(c.id);
+        }
+        renderPartySelect();
+        return;
+      }
       if (inParty) {
         state.activePartyIds = state.activePartyIds.filter((id) => id !== c.id);
       } else {
@@ -1350,6 +1376,15 @@ function showDepartConfirm(stage) {
 }
 document.getElementById("departForestBtn").onclick = () => showDepartConfirm("forest");
 document.getElementById("departCoastBtn").onclick = () => showDepartConfirm("coast");
+// 襲撃の迎撃準備画面(renderPartySelectの襲撃モード)の開戦ボタン。誤タップ防止に確認を挟む
+document.getElementById("raidDefendBtn").onclick = () => {
+  const count = raidDefenderIds.length;
+  if (count === 0) { showInfoModal("防衛隊を1人以上選んでください"); return; }
+  showConfirmModal(`この${count}人で迎え撃ちますか？`, [
+    { label: "迎え撃つ", className: "big primary", onClick: () => startRaidBattleFromPrep() },
+    { label: "まだ準備する", className: "big" },
+  ]);
+};
 document.getElementById("departConfirmYesBtn").onclick = () => {
   // 出発演出の途中(モーダルが閉じてからボタンが実際にdisabledになるまでの間)に連打すると
   // startDeparture()が二重に走り、同じDOM要素(演出オーバーレイ等)を取り合って

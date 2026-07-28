@@ -904,3 +904,10 @@
   75% { opacity: 1; }
   100% { opacity: 0; translate: 0 -8px; }
 }
+/* 襲撃の迎撃準備画面の開戦ボタン(モックのdepart-btn.raid-todayと同じ赤基調+点滅) */
+.depart-btn.raid-defend-btn {
+  color: #fff;
+  background: linear-gradient(160deg, #b83a2c, #7e2318);
+  border-color: rgba(255,150,130,0.7);
+  animation: raidPulse 0.8s ease-in-out infinite;
+}

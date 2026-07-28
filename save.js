@@ -205,6 +205,7 @@ function loadState() {
       if (loaded.barricadeLevel == null) loaded.barricadeLevel = 0; // 旧セーブ用の初期値(バリケード未建築)
       if (loaded.barricadeHp == null) loaded.barricadeHp = 0;
       if (loaded.lastIncomeDay == null) loaded.lastIncomeDay = loaded.dayCount || 1; // 過去日数分の収入を遡って支払わない(現在日から精算開始)
+      if (loaded.raidPrepPending == null) loaded.raidPrepPending = false;
       // 新チュートリアル導線も、旧セーブ(既にある程度進んでいるプレイヤー)にいきなり降ってこないよう、
       // 既存のセーブは全て「見た」扱いにする(defaultStateでは新規プレイヤーのみfalseスタート)
       delete loaded.worldStep;

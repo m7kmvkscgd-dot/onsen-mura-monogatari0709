@@ -323,6 +323,11 @@
         <span class="depart-btn-main">海岸へ出発する</span>
         <span class="depart-btn-sub" id="coastMaxFloorLabel"></span>
       </button>
+      <!-- 襲撃の迎撃準備中(raidPrepPending)だけ出す開戦ボタン。出発ボタンとは排他表示(town.jsのrenderPartySelect参照) -->
+      <button class="big primary depart-btn raid-defend-btn" id="raidDefendBtn" style="width:100%; display:none;">
+        <span class="depart-btn-main">👹 襲撃を迎え撃つ</span>
+        <span class="depart-btn-sub">選んだ防衛隊で開戦する(控えなし)</span>
+      </button>
       <button class="big ghost-btn" id="partySelectBackBtn" style="margin-top:0.9rem;">町に戻る</button>
       </div>
 

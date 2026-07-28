@@ -92,6 +92,7 @@ function defaultState() {
     barricadeLevel: 0, // 増築の1つ、バリケードのレベル(0=未建築、1=木の柵、2=鉄杭柵)。襲撃戦で敵の攻撃を全肩代わりする柵(battle.jsのraidBarricade参照)
     barricadeHp: 0, // バリケードの現在耐久。襲撃で受けたダメージは戦闘をまたいで永続し、建築画面で素材を払って修理する(コストは失った耐久に比例)
     lastIncomeDay: 1, // 村レベル連動の日次収入を最後に精算したdayCount(raid.jsのsettleDailyIncome参照)
+    raidPrepPending: false, // 襲撃日の朝を迎え、迎撃準備画面(防衛隊選択+支度)に入るべき状態。開戦後の後始末(finishRaidBattle)で解除。リロードしてもrenderTown()がこのフラグを見て準備画面へ戻すため、襲撃の踏み倒しはできない
   };
 }
 

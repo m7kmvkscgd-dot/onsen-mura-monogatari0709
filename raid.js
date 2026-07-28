@@ -123,26 +123,48 @@ function pickRaidWave() {
   return null;
 }
 
+// ============ 迎撃準備画面(襲撃日の朝に出す) ============
+// ユーザー指示(2026-07-28): 防衛隊はプレイヤーが選べること・回復薬等の買い物もできること。
+// 出発準備画面(screen-party-select)を「襲撃モード」で使い回す: 支度(物資購入)+鍛冶屋+
+// 防衛隊選択(最大RAID_PARTY_MAX人・控えなし)+赤い「迎え撃つ」ボタン。町へは戻れない
+// (明朝型=目覚めた瞬間に襲撃のため当日の町画面は無い)。renderTown()はraidPrepPendingを見て
+// この画面へリダイレクトするので、リロードしても踏み倒せない
+const RAID_PARTY_MAX = 5;
+let raidDefenderIds = []; // 迎撃準備画面で選択中の防衛隊(キャラid)。初期値はレベル上位最大5人
+function showRaidPrep() {
+  state.raidPrepPending = true;
+  saveState();
+  // 初期選択: 選出可能(ロスト/入浴中を除く)な仲間からレベル上位最大5人。プレイヤーが自由に組み替えられる
+  const now = absoluteGameMinutes();
+  raidDefenderIds = state.roster
+    .filter((c) => isAvailable(c, now))
+    .sort((a, b) => (b.level || 1) - (a.level || 1))
+    .slice(0, RAID_PARTY_MAX)
+    .map((c) => c.id);
+  renderPartySelect();
+  showScreen("screen-party-select");
+}
+
 // ============ 襲撃戦の開始/終了 ============
 // 大規模戦テスト(title.js)で検証済みの起動手順を実データで行う。探索(enterDungeon)は経由しない:
 // startBattle()自身が画面遷移(screen-battle)とBGM開始を行うため、fieldPartyと演出フックを
 // 直接セットするだけでよい。勝敗処理はbattle.jsのvictory()/defeat()がraidBattleActiveで分岐する
 let raidBattleActive = false; // 襲撃戦中フラグ(battle.js/engine.jsが参照)
-function startRaidBattle() {
+function startRaidBattleFromPrep() {
+  const defenders = raidDefenderIds.map((id) => getRosterChar(id)).filter(Boolean);
+  if (defenders.length === 0) {
+    showInfoModal("防衛隊を1人以上選んでください");
+    return;
+  }
   const wave = pickRaidWave();
-  // 次回予約は開始時点で済ませる(戦闘中リロードでの踏み倒しはraidIsDueが拾い直すが、
-  // 勝敗処理側での予約漏れが起きないよう終了時にも同じ値を上書きする)
   if (!wave) {
     // プールが空(設計データ未投入)なら発生させず次回へ順延する
+    state.raidPrepPending = false;
     state.nextRaidDay = (state.dayCount || 1) + RAID_CONFIG.schedule.repeatEveryDays;
     saveState();
     renderTown();
     return;
   }
-  // 防衛隊: 名簿からレベル上位最大5人が自動で立つ(控えなし)。編成画面は挟まない
-  // (明朝の急襲という設定+襲撃戦は「村の総力戦」のため。人数が5人未満なら全員)
-  const defenders = state.roster.slice().sort((a, b) => (b.level || 1) - (a.level || 1)).slice(0, 5);
-  if (defenders.length === 0) return; // 名簿が空(通常はゲームオーバー済みで到達しない)
   raidBattleActive = true;
   fieldParty = defenders;
   reserveFieldMember = null;
@@ -165,6 +187,7 @@ function startRaidBattle() {
 // 襲撃戦の後始末(勝敗どちらでも通る)。演出フックの解除・柵耐久の永続化・次回襲撃の予約・敗北ペナルティ
 function finishRaidBattle(won) {
   raidBattleActive = false;
+  state.raidPrepPending = false; // 迎撃準備状態を解除(戦闘中リロードはフラグが残っているため準備画面からやり直しになる=踏み倒し不可)
   state.barricadeHp = Math.max(0, raidBarricadeHp); // 戦闘中に受けた柵ダメージを持ち帰る(修理は建築画面)
   battleBgOverrideSet = null;
   battleBgmOverrideKey = null;
