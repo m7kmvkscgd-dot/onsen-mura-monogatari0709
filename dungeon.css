@@ -645,7 +645,7 @@ body.mining-active #dungeonPartyBar { display: none; }
 .mining-stress-fill { display: block; height: 100%; width: 0%; background: #7ec96f; transition: width 0.4s ease-out, background-color 0.4s; }
 .mining-stress-fill.mid { background: #f2d94e; }
 .mining-stress-fill.high { background: #ff6b5a; }
-.mining-stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; text-align: center; }
+.mining-stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; text-align: center; white-space: nowrap; }
 .mining-work-row { display: flex; align-items: center; gap: 10px; }
 .mining-work-face { width: 64px; flex-shrink: 0; }
 .mining-work-face img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 10px; border: 2px solid var(--accent); display: block; }

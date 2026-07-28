@@ -2314,7 +2314,7 @@ function renderMiningBar() {
         <img src="${characterPortraitSrc(c)}" alt="">
         <div class="nm">${c.name}${c === reserveFieldMember ? "(控え)" : ""}</div>
         <div class="mining-stress-track"><i class="${miningStressFillClass(st)}" style="width:${st}%"></i></div>
-        <div class="mining-stress-num">スト ${st}</div>
+        <div class="mining-stress-num">ストレス ${st}</div>
       </button>`;
     }).join("");
     facesEl.querySelectorAll(".mining-face").forEach((btn) => {
@@ -2340,7 +2340,7 @@ function renderMiningBar() {
   const fill = document.getElementById("miningWorkFill");
   fill.className = miningStressFillClass(st);
   fill.style.width = st + "%";
-  document.getElementById("miningWorkNum").textContent = `スト ${st}`;
+  document.getElementById("miningWorkNum").textContent = `ストレス ${st}`;
   const btn = document.getElementById("miningDigActBtn");
   const left = miningLeft[miningUiKey] || 0;
   const stressBlocked = left > 0 && !canDigWithStress(worker, def);
