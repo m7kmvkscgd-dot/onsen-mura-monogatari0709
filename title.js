@@ -218,7 +218,6 @@ async function runTitleSequence(full) {
   await sleep(100);
   if (myToken !== titleSeqToken) return;
 
-  els.menu.style.pointerEvents = "";
   els.buttons.forEach((b, i) => {
     setTimeout(() => {
       if (myToken !== titleSeqToken) return;
@@ -228,6 +227,12 @@ async function runTitleSequence(full) {
   });
   await sleep(Math.max(0, els.buttons.length - 1) * 80 + 300);
   if (myToken !== titleSeqToken) return;
+  // 【誤タップ防止の構造修正2026-07-28】pointerEventsの解除はボタンのフェードイン完了後に行う。
+  // 以前はフェード開始前に解除していたため「透明なボタンが先に押せる状態で立っている」時間があり、
+  // 開始タップ直後の素早い2回目のタップが見えないボタン(製作者より/テストモード等)に命中して
+  // 画面が切り替わってしまうバグがあった(タップ後の静止1秒がこの穴を偶然隠していただけで、
+  // 静止を0.1秒に短縮したことで露呈した)
+  els.menu.style.pointerEvents = "";
   titleAnimate(els.footer, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out", fill: "forwards" }, { opacity: "1" });
 }
 
