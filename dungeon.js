@@ -2207,6 +2207,13 @@ function applyEncounterPity(baseChance) {
   const mult = pityBattleChanceMultiplier();
   return mult === Infinity ? 1 : Math.min(1, baseChance * mult);
 }
+// 帰還専用の「片側ピティ」(2026-07-28)。戦闘直後の抑制ランプ(PITY_MIN_MULT→PITY_RAMP_FLOORS階で
+// 通常倍率)だけを通常ピティと共有し、6階確定発生(PITY_GUARANTEE_FLOORS)は適用しない。
+// 帰還のRETREAT_BATTLE_CHANCEは元々低く、確定発生を入れるとむしろ戦闘数が増えるため(2026-07-21の判断)
+function applyRetreatEncounterPity(baseChance) {
+  if (floorsSinceLastBattle >= PITY_RAMP_FLOORS) return baseChance;
+  return baseChance * (PITY_MIN_MULT + (1 - PITY_MIN_MULT) * (floorsSinceLastBattle / PITY_RAMP_FLOORS));
+}
 function rollEncounter(pathBias) {
   // ここでの1回の呼び出しが「1階層分の抽選」に対応するため、まず経過階層を進めておく。
   // 実際に戦闘が発生した場合はstartBattle()側で0にリセットされる(このrollEncounter内の
@@ -2235,10 +2242,11 @@ function rollEncounter(pathBias) {
   // 設定画面の「高遭遇モード」ON時は遭遇確率を1.5倍にする(帰還中/通常どちらの基準値にも一律で掛ける)
   const encounterModeMult = state.highEncounterMode ? 1.5 : 1;
   const rawBattleChance = (!debugNoEncounters && stageHasEnemies(currentStage)) ? Math.min(1, (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) * encounterModeMult) : 0;
-  // ピティ制は帰還中には適用しない(シミュレーションの結果、帰還のRETREAT_BATTLE_CHANCEは元々低いため
-  // 6階確定発生がむしろ戦闘数を増やす方向に働くと判明。帰還はもともと3連続以上の発生率も低く
-  // 導入の必要性が薄いという判断。ユーザー指示、2026-07-21)
-  const battleChance = rawBattleChance > 0 ? (retreating ? rawBattleChance : applyEncounterPity(rawBattleChance)) : 0;
+  // 帰還中は片側ピティ(戦闘直後の抑制のみ、確定発生なし)を適用する(ユーザー指示、2026-07-28)。
+  // 2026-07-21時点では帰還はピティ制の完全対象外だったが、「帰還中の連続遭遇がストレス」という
+  // ユーザー報告を受けて抑制側だけ導入。シミュレーション(帰還10フロア)では平均戦闘数1.80→1.66回
+  // (高遭遇モード2.70→2.41回)、連続遭遇(2フロア連戦)が1度でも起きる帰還の割合23%→15%(高遭遇43%→29%)
+  const battleChance = rawBattleChance > 0 ? (retreating ? applyRetreatEncounterPity(rawBattleChance) : applyEncounterPity(rawBattleChance)) : 0;
   // 座敷わらしの幸運(イベント): この遠征中は財宝発見率1.5倍(戦闘率は不変、合計が1を超えないよう上限あり)
   const goldChance = retreating ? RETREAT_GOLD_CHANCE : Math.min(baseGold * (warashiLuckActive ? 1.5 : 1), Math.max(0, 1 - battleChance));
   // 探索イベントの取り分(静寂の枠から削る。帰還中・進路選択なし(依頼対象接近等)の時は出ない)
