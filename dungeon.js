@@ -2535,8 +2535,11 @@ function rollEncounter(pathBias) {
       showTreasurePopup(g);
     }
     // 財宝発見時も(戦闘に遭遇していなければ)平和/疲弊の掛け合いの対象にする(帰還中の「帰還」ボタンは対象外)。
-    // 両者はストレス条件が相互排他(平和=全員元気、疲弊=疲労キャラを含むペア)のため、同時には発火しない
-    if (!retreating) { maybeTriggerPeaceDialogue(); maybeTriggerTiredDialogue(); }
+    // 両者はストレス条件が相互排他(平和=全員元気、疲弊=疲労キャラを含むペア)のため、同時には発火しない。
+    // 【絆創膏(ユーザー指示2026-07-28)】「何かが光る道」の宝箱だけは特別演出(playHikaruTreasureCelebration)の
+    // レイヤーが吹き出しより手前にあり、セリフが演出の下に隠れて読めないため発火自体を止める
+    // (根本対応するなら演出後の直列化か字幕帯方式=2026-07-28の改善案メモ参照)
+    if (!retreating && pathBias !== "hikaru") { maybeTriggerPeaceDialogue(); maybeTriggerTiredDialogue(); }
   } else if (roll < battleChance + goldChance + eventChance && tryStartDungeonEvent()) {
     lastFloorMoveOutcome = "event"; // 未消化イベントが無い場合はtryStartDungeonEventがfalseを返し、下の静寂へ落ちる
   } else {
