@@ -311,11 +311,15 @@ function setChannelVolume(el, gainNode, v) {
 function getChannelVolume(el, gainNode) {
   return gainNode ? gainNode.gain.value : el.volume;
 }
-// これらの要素もWeb Audio経由になったため、再生時はAudioContextのresumeを挟む(bgmAudioと同じ理由)
+// これらの要素もWeb Audio経由になったため、再生時はAudioContextのresumeを添える(bgmAudioと同じ理由)。
+// 【重要・実機バグ修正2026-07-28】resume().then(play)の直列にしてはいけない: play()がタップ操作
+// (トラステッドイベント)の呼び出しスタックの外で実行されることになり、iOSが再生を拒否して
+// タイトルBGMが無音になった。さらにiOSは拒否したplay()を保留し、後で別の曲の再生でページの
+// 再生許可が下りた瞬間に保留分を発火させるため、「町BGMと並行してタイトルBGMが鳴り出す」
+// 二重再生も起きた。play()は必ず同期的に呼び、resumeは並行で投げっぱなしにする
 function playChannelAudio(el) {
-  const doPlay = () => el.play().catch(() => {});
-  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().then(doPlay).catch(doPlay);
-  else doPlay();
+  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().catch(() => {});
+  el.play().catch(() => {});
 }
 let audioUnlocked = false;
 let currentBgmKey = null;
@@ -390,7 +394,13 @@ function bgmVolumeForKey(key) {
 // 自動的に呼ばれる。0.6秒で滑らかに消し、二重再生や急なブツ切りにならないようにする
 let openingBgmFadeToken = 0;
 function fadeOutOpeningBgm() {
-  if (openingBgmAudio.paused) return;
+  if (openingBgmAudio.paused) {
+    // 見かけ上pausedでも、iOSに拒否されたplay()が「保留」のまま残っている可能性がある
+    // (後で再生許可が下りた瞬間に勝手に鳴り出す)。pause()を呼ぶと保留中のplay()の約束が
+    // AbortErrorで破棄されるため、ここで確実に握りつぶしておく(既に停止中なら無害)
+    openingBgmAudio.pause();
+    return;
+  }
   const startVol = getChannelVolume(openingBgmAudio, openingGainNode);
   const startTime = performance.now();
   const myToken = ++openingBgmFadeToken;
