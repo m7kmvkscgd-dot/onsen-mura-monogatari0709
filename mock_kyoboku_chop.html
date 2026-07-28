@@ -5,111 +5,136 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>木を切るアニメーションモック</title>
 <style>
-  /* 採掘場(巨木)の「木を切る」アニメーションのモック(ゲーム本体には未実装)。
-     流れ: ①採掘パネルが一瞬引っ込む ②斧が弧を描いて幹へ振り抜かれる ③命中の瞬間に
-     斬撃の閃光+木片+画面揺れ+SE(barricade_hit) ④木材アイコンが飛び出して右上の
-     所持数チップへ吸い込まれる(戦闘の素材ドロップ→巾着回収と同じ気持ちよさ) ⑤パネル復帰。
-     全体で約1.1秒、連打しても壊れないよう再生中は入力ロック */
+  /* 木を切るモック v2(ユーザー指摘で全面シンプル化):
+     ①モーダル廃止→下部固定バー(出たり消えたりしない) ②文章を最短に ③作業者は顔アイコンで選ぶ
+     ④選んだら他のアイコンは消える ⑤切るたびに顔の下のストレスバーが伸びて溜まりが見える */
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
   body { font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #14100c; color: #e8e0d0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; }
   .stage { position: relative; width: 100%; max-width: 480px; height: 100dvh; overflow: hidden; }
   .bg { position: absolute; inset: 0; background: url("assets/bg/kyoboku_day.jpg") center / cover no-repeat #1a1410; }
-  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,24,27,0.05), rgba(20,24,27,0.35) 70%, rgba(20,24,27,0.6)); }
+  .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,24,27,0.05), rgba(20,24,27,0.25) 70%, rgba(20,24,27,0.55)); }
 
-  /* 右上の所持数チップ(木材アイコンの飛び先) */
+  /* 上部: 見つけたメッセージ(常設・短文) */
+  .found-line {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5;
+    text-align: center; white-space: nowrap;
+    font-size: 0.9rem; font-weight: 900; color: #f0e6cc; text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+    background: rgba(26,20,14,0.75); border: 1px solid rgba(217,196,154,0.4); border-radius: 12px;
+    padding: 6px 16px;
+  }
+  .found-line small { display: block; font-size: 0.68rem; font-weight: 700; color: rgba(232,224,208,0.85); margin-top: 2px; }
+
+  /* 右上: 所持数(木材アイコンの飛び先) */
   .wallet-chip {
-    position: absolute; top: 12px; right: 12px; z-index: 5;
+    position: absolute; top: 78px; right: 12px; z-index: 5;
     display: inline-flex; align-items: center; gap: 4px;
     font-size: 0.82rem; font-weight: 900; color: #e8dcbf;
-    background: rgba(26,20,14,0.88); border: 1px solid rgba(217,196,154,0.5); border-radius: 12px;
+    background: rgba(26,20,14,0.85); border: 1px solid rgba(217,196,154,0.5); border-radius: 12px;
     padding: 4px 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.9);
   }
   .wallet-chip img { width: 20px; height: 20px; object-fit: contain; }
   .wallet-chip.bump { animation: walletBump 0.3s ease-out; }
-  @keyframes walletBump {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.3); }
-    100% { transform: scale(1); }
-  }
+  @keyframes walletBump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 
-  /* ---- 採掘パネル(本体のdungeon-event-panel相当の簡易再現) ---- */
-  .panel {
-    position: absolute; left: 14px; right: 14px; top: 50%; transform: translateY(-50%); z-index: 4;
-    background: rgba(26,20,14,0.93); border: 2px solid #4b3728; border-radius: 14px;
-    outline: 1px solid rgba(217,196,154,0.75); outline-offset: -5px;
-    padding: 14px 12px; text-align: center;
-    transition: opacity 0.15s ease, translate 0.15s ease;
+  /* 下部固定バー(常設。出たり消えたりしない) */
+  .bottom-bar {
+    position: absolute; left: 10px; right: 10px; bottom: 12px; z-index: 5;
+    background: rgba(26,20,14,0.92); border: 2px solid #4b3728; border-radius: 14px;
+    outline: 1px solid rgba(217,196,154,0.7); outline-offset: -5px;
+    padding: 10px;
   }
-  .panel.hidden { opacity: 0; translate: 0 16px; pointer-events: none; }
-  .panel h2 { font-size: 1.05rem; color: #e8dcbf; letter-spacing: 0.08em; }
-  .panel .flavor { font-size: 0.72rem; line-height: 1.6; color: rgba(232,224,208,0.85); margin: 6px 0 8px; }
-  .mining-info { font-size: 0.72rem; font-weight: 800; background: rgba(0,0,0,0.35); border-radius: 8px; padding: 3px 8px; margin-bottom: 8px; }
-  .diggers { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
-  .digger {
-    position: relative; font-size: 0.68rem; font-weight: 700; color: #e8e0d0;
-    background: rgba(24,30,36,0.9); border: 2px solid rgba(255,255,255,0.18); border-radius: 9px; padding: 5px 8px;
+  .ask { text-align: center; font-size: 0.8rem; font-weight: 900; margin-bottom: 8px; }
+  .faces { display: flex; justify-content: center; gap: 10px; }
+  .face {
+    width: 64px; border: 0; background: none; font-family: inherit; color: #e8e0d0; padding: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
   }
-  .digger.selected { border-color: #c9a24a; background: rgba(201,162,74,0.16); }
-  .digger .st { font-size: 0.6rem; font-weight: 800; color: #d98f7a; margin-left: 4px; }
-  .btn {
-    display: block; width: 100%; font-family: inherit; text-align: left;
+  .face img {
+    width: 64px; height: 64px; object-fit: contain; background: #353a44;
+    border-radius: 10px; border: 2px solid rgba(255,255,255,0.25); display: block;
+  }
+  .face .nm { font-size: 0.62rem; font-weight: 700; margin-top: 2px; }
+  .face.gone { opacity: 0; transform: scale(0.7); pointer-events: none; }
+  .face:active img { transform: scale(0.95); }
+  /* ストレスバー(顔の下に常設。切るたびに伸びる) */
+  .stress-wrap { margin-top: 3px; }
+  .stress-track { height: 6px; border-radius: 3px; background: rgba(0,0,0,0.6); overflow: hidden; border: 1px solid rgba(255,255,255,0.15); }
+  .stress-fill { display: block; height: 100%; width: 0%; background: #7ec96f; transition: width 0.4s ease-out, background-color 0.4s; }
+  .stress-fill.mid { background: #f2d94e; }
+  .stress-fill.high { background: #ff6b5a; }
+  .stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; }
+
+  /* 選択後のレイアウト: 左=作業者の顔+ストレス、右=ボタン2つ */
+  .work-row { display: none; align-items: center; gap: 10px; }
+  .bottom-bar.working .ask, .bottom-bar.working .faces { display: none; }
+  .bottom-bar.working .work-row { display: flex; }
+  .work-face { width: 64px; flex-shrink: 0; text-align: center; }
+  .work-face img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 10px; border: 2px solid #c9a24a; display: block; }
+  .work-btns { flex: 1; min-width: 0; }
+  .chop-btn {
+    display: block; width: 100%; font-family: inherit; text-align: center;
     background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
-    border: 2px solid rgba(217,196,154,0.35); border-radius: 12px; color: #e8e0d0;
-    padding: 10px 12px; margin-top: 7px;
+    border: 2px solid rgba(217,196,154,0.4); border-radius: 12px; color: #e8e0d0;
+    padding: 11px 8px; font-size: 0.95rem; font-weight: 900;
   }
-  .btn:active { transform: scale(0.98); }
-  .btn.disabled { opacity: 0.45; }
-  .btn .lb { font-size: 0.9rem; font-weight: 900; }
-  .btn .ds { display: block; font-size: 0.66rem; color: rgba(232,224,208,0.75); margin-top: 2px; }
-  .btn.leave { background: linear-gradient(155deg, #3a4750, #26313a); }
+  .chop-btn small { font-weight: 700; font-size: 0.68rem; color: rgba(232,224,208,0.75); margin-left: 6px; }
+  .chop-btn:active { transform: scale(0.98); }
+  .chop-btn.disabled { opacity: 0.45; }
+  .leave-btn {
+    display: block; width: 100%; margin-top: 6px; font-family: inherit; text-align: center;
+    background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px;
+    color: #e8e0d0; padding: 8px; font-size: 0.78rem; font-weight: 700;
+  }
 
-  /* ---- 伐採アニメーション ---- */
+  /* 伐採エフェクト(v1から流用。パネルの出入りは無し) */
   .axe { position: absolute; z-index: 6; font-size: 58px; line-height: 1; pointer-events: none; transform-origin: 85% 85%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6)); }
   .slash {
     position: absolute; z-index: 6; width: 120px; height: 5px; border-radius: 3px; pointer-events: none;
     background: linear-gradient(to right, transparent, #fff8e0 30%, #ffffff 55%, transparent);
     box-shadow: 0 0 12px rgba(255,244,200,0.9);
   }
-  .impact {
-    position: absolute; z-index: 5; width: 60px; height: 60px; border-radius: 50%; pointer-events: none;
-    background: radial-gradient(rgba(255,248,214,0.95), rgba(255,214,120,0.5) 45%, transparent 70%);
-  }
+  .impact { position: absolute; z-index: 5; width: 60px; height: 60px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(rgba(255,248,214,0.95), rgba(255,214,120,0.5) 45%, transparent 70%); }
   .wood-chip { position: absolute; width: 8px; height: 4px; background: #8a5a30; border-radius: 1px; pointer-events: none; z-index: 6; box-shadow: 0 0 2px rgba(0,0,0,0.6); }
   .wood-chip.big { width: 12px; height: 6px; background: #9c6a38; }
-  .leaf { position: absolute; z-index: 6; font-size: 14px; pointer-events: none; }
   .ki-fly { position: absolute; z-index: 7; width: 42px; height: 42px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
   .stress-pop { position: absolute; z-index: 7; font-size: 0.72rem; font-weight: 900; color: #ff8a72; text-shadow: 0 1px 3px rgba(0,0,0,0.95); pointer-events: none; white-space: nowrap; }
 
-  .mock-note { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 10; font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
-  .reset-btn { position: absolute; top: 12px; left: 12px; z-index: 10; font-family: inherit; font-size: 0.7rem; font-weight: 700; color: #e8e0d0; background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 9px; padding: 7px 12px; }
+  .mock-note { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); z-index: 10; font-size: 0.6rem; color: rgba(232,224,208,0.6); background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 10px; white-space: nowrap; }
+  .reset-btn { position: absolute; top: 78px; left: 12px; z-index: 10; font-family: inherit; font-size: 0.7rem; font-weight: 700; color: #e8e0d0; background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 9px; padding: 7px 12px; }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <div class="bg" id="bgLayer"></div>
+  <div class="found-line">巨木を見つけた<small>木を切ることができる</small></div>
   <button class="reset-btn" id="resetBtn">リセット</button>
   <div class="wallet-chip" id="walletChip"><img src="assets/icons/materials/ki.png" alt="木">×<span id="kiCount">0</span></div>
 
-  <div class="panel" id="panel">
-    <h2>巨木の伐採場</h2>
-    <p class="flavor">そびえ立つ巨木。切り株には誰かが残した斧が刺さっている。<br>1回の作業で木材1個・作業した人にストレス+15。この遠征では同じ1人しか作業できない。</p>
-    <div class="mining-info" id="miningInfo"></div>
-    <div class="diggers">
-      <div class="digger selected" id="diggerChip">小太郎<span class="st" id="diggerStress">スト 0</span></div>
-      <div class="digger">弥助<span class="st">スト 20</span></div>
-      <div class="digger">静<span class="st">スト 35</span></div>
+  <div class="bottom-bar" id="bottomBar">
+    <div class="ask">誰が切りますか？</div>
+    <div class="faces" id="faces"></div>
+    <div class="work-row">
+      <div class="work-face">
+        <img id="workImg" src="" alt="">
+        <div class="stress-wrap">
+          <div class="stress-track"><i class="stress-fill" id="workFill"></i></div>
+          <div class="stress-num" id="workNum"></div>
+        </div>
+      </div>
+      <div class="work-btns">
+        <button class="chop-btn" id="chopBtn"></button>
+        <button class="leave-btn" id="leaveBtn">先へ進む</button>
+      </div>
     </div>
-    <button class="btn" id="chopBtn"></button>
-    <button class="btn leave"><span class="lb">🚶 先へ進む</span></button>
   </div>
 
-  <div class="mock-note">木を切るアニメーションモック(本体には未実装)</div>
+  <div class="mock-note">木を切るモック v2(本体には未実装)</div>
 </div>
 
 <script>
 (() => {
-  // SE(本体playSfxと同じ事前デコード+WebAudio方式)
   try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
   const AC = window.AudioContext || window.webkitAudioContext;
   const sfxCtx = AC ? new AC() : null;
@@ -134,66 +159,68 @@
   document.addEventListener("touchend", () => { if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().catch(() => {}); }, { passive: true });
 
   const stage = document.getElementById("stage");
-  const panel = document.getElementById("panel");
+  const bar = document.getElementById("bottomBar");
   const bgLayer = document.getElementById("bgLayer");
+  const MEMBERS = [
+    { name: "小太郎", img: "assets/class_samurai.png", stress: 0 },
+    { name: "弥助", img: "assets/class_hunter.png", stress: 20 },
+    { name: "静", img: "assets/class_onmyoji.png", stress: 35 },
+  ];
   const MAX = 4, STRESS = 15;
-  let left, stress, ki, busy;
+  let left, ki, busy, worker;
 
-  function refresh() {
-    document.getElementById("miningInfo").textContent = `残り${left}回　|　所持 木材×${ki}`;
-    document.getElementById("kiCount").textContent = ki;
-    document.getElementById("diggerStress").textContent = `スト ${stress}`;
+  function fillClass(v) { return v >= 80 ? "stress-fill high" : v >= 50 ? "stress-fill mid" : "stress-fill"; }
+  function stressBarHtml(v) {
+    return `<div class="stress-track"><i class="${fillClass(v)}" style="width:${v}%"></i></div><div class="stress-num">スト ${v}</div>`;
+  }
+
+  function renderFaces() {
+    document.getElementById("faces").innerHTML = MEMBERS.map((m, i) => `
+      <button class="face" data-i="${i}">
+        <img src="${m.img}" alt="">
+        <div class="nm">${m.name}</div>
+        <div class="stress-wrap">${stressBarHtml(m.stress)}</div>
+      </button>`).join("");
+    document.querySelectorAll(".face").forEach((btn) => {
+      btn.onclick = () => {
+        if (worker) return;
+        worker = MEMBERS[Number(btn.dataset.i)];
+        // 選ばれなかった顔はふっと消え、少し間を置いて作業レイアウトへ切り替える(バー自体は出たり消えたりしない)
+        document.querySelectorAll(".face").forEach((b) => { if (b !== btn) b.classList.add("gone"); });
+        setTimeout(() => {
+          bar.classList.add("working");
+          refreshWork();
+        }, 260);
+      };
+    });
+  }
+
+  function refreshWork() {
+    document.getElementById("workImg").src = worker.img;
+    const fill = document.getElementById("workFill");
+    fill.className = fillClass(worker.stress);
+    fill.style.width = worker.stress + "%";
+    document.getElementById("workNum").textContent = `スト ${worker.stress}`;
     const btn = document.getElementById("chopBtn");
-    if (left > 0) {
-      btn.className = "btn";
-      btn.innerHTML = '<span class="lb">🪓 木を切る</span><span class="ds">木材+1・ストレス+15</span>';
+    const stressBlocked = worker.stress + STRESS > 100;
+    if (left <= 0) {
+      btn.className = "chop-btn disabled";
+      btn.innerHTML = "斧が限界だ";
+    } else if (stressBlocked) {
+      btn.className = "chop-btn disabled";
+      btn.innerHTML = "ストレスが限界だ";
     } else {
-      btn.className = "btn disabled";
-      btn.innerHTML = '<span class="lb">斧が限界だ</span><span class="ds">刃こぼれして、この遠征ではもう切れない</span>';
-    }
-  }
-
-  function spawnChips(cx, cy, n) {
-    for (let i = 0; i < n; i++) {
-      const c = document.createElement("div");
-      c.className = "wood-chip" + (Math.random() < 0.3 ? " big" : "");
-      c.style.left = cx + "px"; c.style.top = cy + "px";
-      stage.appendChild(c);
-      const dx = (Math.random() - 0.5) * 170;
-      const dy = -40 - Math.random() * 70;
-      c.animate(
-        [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
-         { transform: `translate(${dx * 0.6}px, ${dy}px) rotate(${dx * 3}deg)`, opacity: 1, offset: 0.45 },
-         { transform: `translate(${dx}px, ${dy + 130}px) rotate(${dx * 6}deg)`, opacity: 0 }],
-        { duration: 640 + Math.random() * 220, easing: "ease-out" }).onfinish = () => c.remove();
-    }
-  }
-  function spawnLeaves(cx) {
-    for (let i = 0; i < 5; i++) {
-      const l = document.createElement("div");
-      l.className = "leaf";
-      l.textContent = "🍃";
-      const x = cx + (Math.random() - 0.5) * 180;
-      l.style.left = x + "px"; l.style.top = (40 + Math.random() * 60) + "px";
-      stage.appendChild(l);
-      const drift = (Math.random() - 0.5) * 60;
-      l.animate(
-        [{ transform: "translate(0,0) rotate(0deg)", opacity: 0 },
-         { transform: `translate(${drift * 0.4}px, 70px) rotate(120deg)`, opacity: 1, offset: 0.3 },
-         { transform: `translate(${drift}px, 210px) rotate(320deg)`, opacity: 0 }],
-        { duration: 1100 + Math.random() * 500, easing: "ease-in", delay: 60 + Math.random() * 200 }).onfinish = () => l.remove();
+      btn.className = "chop-btn";
+      btn.innerHTML = `🪓 木を切る<small>残り${left}回</small>`;
     }
   }
 
   function chop() {
-    if (busy || left <= 0) return;
+    if (busy || !worker || left <= 0 || worker.stress + STRESS > 100) return;
     busy = true;
     left--;
-    // ①パネルが一瞬引っ込む(巨木を見せる)
-    panel.classList.add("hidden");
     const W = stage.clientWidth, H = stage.clientHeight;
-    const ix = W * 0.52, iy = H * 0.47; // 幹の命中点(画面中央やや上)
-    // ②斧のスイング(右下から弧を描いて振り抜く)
+    const ix = W * 0.52, iy = H * 0.42; // 幹の命中点
     const axe = document.createElement("div");
     axe.className = "axe";
     axe.textContent = "🪓";
@@ -205,29 +232,35 @@
        { transform: "translate(0px, 0px) rotate(-14deg)", opacity: 1, offset: 0.72 },
        { transform: "translate(-4px, 2px) rotate(-6deg)", opacity: 1 }],
       { duration: 340, easing: "cubic-bezier(0.5, 0, 0.2, 1)", fill: "forwards" });
-    // ③命中の瞬間(スイング完了のタイミングに合わせる)
     setTimeout(() => {
       sfx("assets/sfx/barricade_hit.mp3", 0.65);
-      // 斬撃の閃光
       const slash = document.createElement("div");
       slash.className = "slash";
       slash.style.left = (ix - 60) + "px"; slash.style.top = iy + "px";
-      slash.style.transform = "rotate(-38deg)";
       stage.appendChild(slash);
       slash.animate([{ opacity: 0, transform: "rotate(-38deg) scaleX(0.4)" }, { opacity: 1, transform: "rotate(-38deg) scaleX(1)", offset: 0.35 }, { opacity: 0, transform: "rotate(-38deg) scaleX(1.05)" }], { duration: 200, easing: "ease-out" }).onfinish = () => slash.remove();
-      // 命中フラッシュ
       const imp = document.createElement("div");
       imp.className = "impact";
       imp.style.left = (ix - 30) + "px"; imp.style.top = (iy - 30) + "px";
       stage.appendChild(imp);
       imp.animate([{ opacity: 1, transform: "scale(0.5)" }, { opacity: 0, transform: "scale(1.6)" }], { duration: 260, easing: "ease-out" }).onfinish = () => imp.remove();
-      // 木片+葉+画面揺れ(背景ごと揺らして「幹に響いた」感)
-      spawnChips(ix, iy, 10);
-      spawnLeaves(ix);
+      for (let i = 0; i < 10; i++) {
+        const c = document.createElement("div");
+        c.className = "wood-chip" + (Math.random() < 0.3 ? " big" : "");
+        c.style.left = ix + "px"; c.style.top = iy + "px";
+        stage.appendChild(c);
+        const dx = (Math.random() - 0.5) * 170;
+        const dy = -40 - Math.random() * 70;
+        c.animate(
+          [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+           { transform: `translate(${dx * 0.6}px, ${dy}px) rotate(${dx * 3}deg)`, opacity: 1, offset: 0.45 },
+           { transform: `translate(${dx}px, ${dy + 130}px) rotate(${dx * 6}deg)`, opacity: 0 }],
+          { duration: 640 + Math.random() * 220, easing: "ease-out" }).onfinish = () => c.remove();
+      }
       bgLayer.animate(
         [{ transform: "translate(0,0)" }, { transform: "translate(-5px,2px)" }, { transform: "translate(5px,-2px)" }, { transform: "translate(-2px,1px)" }, { transform: "translate(0,0)" }],
         { duration: 300, easing: "ease-out" });
-      // ④木材アイコンが飛び出して右上の所持数チップへ
+      // 木材が飛んで右上の所持数へ
       setTimeout(() => {
         const kiImg = document.createElement("img");
         kiImg.className = "ki-fly";
@@ -236,8 +269,8 @@
         stage.appendChild(kiImg);
         const chip = document.getElementById("walletChip");
         const cr = chip.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-        const tx = cr.left - sr.left + cr.width / 2 - (ix);
-        const ty = cr.top - sr.top + cr.height / 2 - (iy);
+        const tx = cr.left - sr.left + cr.width / 2 - ix;
+        const ty = cr.top - sr.top + cr.height / 2 - iy;
         kiImg.animate(
           [{ transform: "translate(0,0) scale(0.3)", opacity: 0 },
            { transform: "translate(0,-34px) scale(1.15)", opacity: 1, offset: 0.3 },
@@ -246,20 +279,21 @@
           { duration: 620, easing: "cubic-bezier(0.4, 0, 0.7, 1)", fill: "forwards" }).onfinish = () => {
             kiImg.remove();
             sfx("assets/sfx/loot_item.mp3", 0.5);
-            ki++; stress += STRESS;
+            ki++;
+            document.getElementById("kiCount").textContent = ki;
             chip.classList.remove("bump");
-            void chip.offsetWidth; // 連続再生でも毎回バウンドさせるためのリフロー
+            void chip.offsetWidth;
             chip.classList.add("bump");
-            // ⑤パネル復帰+作業者チップにストレスの浮き文字
-            panel.classList.remove("hidden");
-            refresh();
-            const dc = document.getElementById("diggerChip");
-            const dr = dc.getBoundingClientRect();
+            // ストレスがバーで伸びるのを見せる(バーは常設、transitionで滑らかに)
+            worker.stress += STRESS;
+            refreshWork();
+            const wf = document.querySelector(".work-face");
+            const wr = wf.getBoundingClientRect();
             const pop = document.createElement("div");
             pop.className = "stress-pop";
-            pop.textContent = "ストレス+15";
-            pop.style.left = (dr.left - sr.left + dr.width / 2 - 30) + "px";
-            pop.style.top = (dr.top - sr.top - 16) + "px";
+            pop.textContent = `+${STRESS}`;
+            pop.style.left = (wr.left - sr.left + wr.width / 2 - 12) + "px";
+            pop.style.top = (wr.top - sr.top - 14) + "px";
             stage.appendChild(pop);
             pop.animate([{ transform: "translateY(4px)", opacity: 0 }, { transform: "translateY(-4px)", opacity: 1, offset: 0.3 }, { transform: "translateY(-18px)", opacity: 0 }], { duration: 800, easing: "ease-out" }).onfinish = () => pop.remove();
             busy = false;
@@ -270,7 +304,14 @@
   }
 
   document.getElementById("chopBtn").onclick = chop;
-  document.getElementById("resetBtn").onclick = () => { left = MAX; stress = 0; ki = 0; busy = false; refresh(); };
+  document.getElementById("leaveBtn").onclick = () => { document.getElementById("resetBtn").onclick(); };
+  document.getElementById("resetBtn").onclick = () => {
+    left = MAX; ki = 0; busy = false; worker = null;
+    MEMBERS[0].stress = 0; MEMBERS[1].stress = 20; MEMBERS[2].stress = 35;
+    bar.classList.remove("working");
+    document.getElementById("kiCount").textContent = 0;
+    renderFaces();
+  };
   document.getElementById("resetBtn").onclick();
 })();
 </script>
