@@ -37,11 +37,14 @@ const BG_SETS = {
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";
 const CAVE_DEEP_BG_URL = "assets/bg/cave_deep.jpg";
 const CAVE_CAMP_BG_URL = "assets/bg/cave_camp.jpg";
+// 鉄鉱石の岩場(洞窟6層の採掘場、ユーザー提供イラスト2026-07-28)。巨木の12層と同じく階固定
+const CAVE_IRON_MINE_BG_URL = "assets/bg/tekkouseki.jpg";
 // 洞窟ステージ中の現在地(階層・進行方向)に応じて、森/海岸と同じ「時間帯キーで引けるセット」の形に組み立てる。
 // 1層目(森との境目)だけ行き/帰りで絵を出し分け、それ以外は階層帯に応じた1枚絵を5つの時間帯キー全てに割り当てる
 function caveBgSetForCurrentState() {
   if (currentFloor <= 1) return retreating ? BG_SETS.caveExit : BG_SETS.caveEntrance;
-  const url = currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
+  const isIronMine = typeof MINING_DEFS !== "undefined" && currentFloor === MINING_DEFS.iron.floor;
+  const url = isIronMine ? CAVE_IRON_MINE_BG_URL : currentFloor <= 7 ? CAVE_SHALLOW_BG_URL : CAVE_DEEP_BG_URL;
   return { dawn: url, asa: url, day: url, dusk: url, night: url };
 }
 // 山ステージ中の現在地(階層)に応じて、前半(yama)/後半(yama2、YAMA_STAGE2_FLOOR以降)の
