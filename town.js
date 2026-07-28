@@ -62,8 +62,11 @@ function renderTown() {
   refillHenHouseEggPouchIfNewDay();
   saveState();
   if (checkGameOver()) return;
+  const townIncome = settleDailyIncome(); // 村レベル連動の日次収入(前回精算からの日数分をまとめて受け取る)
   document.getElementById("townGold").textContent = (debugNoEncounters ? "🚫" : "") + state.gold + "G";
+  if (townIncome > 0) showTownIncomePopup(townIncome);
   document.getElementById("townDateLabel").textContent = formatGameDate(state.dayCount);
+  updateRaidBadge(document.getElementById("raidBadgeTown")); // 襲撃カウントダウン(👹襲撃まで◯日/明朝、襲撃！)
   document.getElementById("townTimeLabel").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   document.getElementById("toMagistrateBtn").style.display = state.magistrateLevel ? "" : "none";
   // 鍛冶屋ボタンは出発準備画面へ移設(2026-07-18)。表示切替はrenderPartySelect側で行う
@@ -241,9 +244,23 @@ document.getElementById("timeSkipCancelBtn").onclick = () => {
   document.getElementById("timeSkipOverlay").style.display = "none";
 };
 document.getElementById("timeSkipConfirmBtn").onclick = () => {
-  const tag = document.querySelector(".time-skip-tag");
-  if (tag) tag.classList.add("pressed");
-  setTimeout(() => { startTimeSkipAnimation(timeSkipSelectedMin); }, 130);
+  // 明朝型の襲撃: 待機で朝(5:30)を跨いでも襲撃は発生する(踏み倒し防止)。
+  // うっかり開戦を防ぐため、跨ぐ場合だけ確認を挟む(ユーザー確定仕様2026-07-27)
+  const proceed = () => {
+    const tag = document.querySelector(".time-skip-tag");
+    if (tag) tag.classList.add("pressed");
+    setTimeout(() => { startTimeSkipAnimation(timeSkipSelectedMin); }, 130);
+  };
+  // どの村で待機しても発生する(宿泊も全村共通のperformLodgingで発生する扱いと揃える。
+  // 海の村/山伏の里に居座って襲撃日をやり過ごす抜け道を作らないため)
+  if (timeSkipWillTriggerRaid(timeSkipSelectedMin)) {
+    showConfirmModal("朝になると襲撃が始まります。\nそれでも時間を進めますか？", [
+      { label: "進める", className: "big primary", onClick: proceed },
+      { label: "やめる", className: "big" },
+    ], "#ff6b5a");
+    return;
+  }
+  proceed();
 };
 function startTimeSkipAnimation(totalMin) {
   document.getElementById("timeSkipPickerView").style.display = "none";
@@ -267,12 +284,15 @@ function startTimeSkipAnimation(totalMin) {
     steps.push(step);
     remaining -= step;
   }
+  const morningIdxBeforeSkip = lastMorningIndex(); // 襲撃判定用: このスキップで朝(5:30)を跨いだかを完了時に比較する
   function runStep(i) {
     if (i >= steps.length) {
       checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
       pruneActiveParty();
       saveState();
       document.getElementById("timeSkipOverlay").style.display = "none";
+      // 明朝型の襲撃: このスキップで襲撃日(以降)の朝を跨いだら、村画面へ戻らず襲撃戦を開始する
+      if (raidIsDue() && lastMorningIndex() > morningIdxBeforeSkip) { startRaidBattle(); return; }
       timeSkipReturnFn(timeSkipVillage)();
       return;
     }
@@ -472,6 +492,9 @@ function performLodging(targets, bgSet, onDone) {
           showLodgingRestSummary(beforeSnapshot, () => {
             revealLodgingMorning(() => {
               if (checkGameOver()) return; // 宿泊で最後の稼働可能な仲間がロストになった場合はここで詰みを検出する
+              // 明朝型の襲撃: 襲撃日(以降)の朝を迎えた=目覚めた瞬間に襲撃戦へ(当日の町画面は無い)。
+              // 遠征中に襲撃日が過ぎていた場合も、帰還後この最初の宿泊の朝に発生する(持ち越し)
+              if (raidIsDue()) { startRaidBattle(); return; }
               onDone();
             });
           });
@@ -480,6 +503,12 @@ function performLodging(targets, bgSet, onDone) {
     },
     { label: "いいえ", className: "big" },
   ]);
+  // 明朝襲撃の宿泊は「うっかり開戦」を防ぐため、確認モーダルに赤い注意書きを追加する
+  // (拡張枠#genericConfirmExtraはshowConfirmModalが毎回クリアするので、呼び出し後に流し込む)
+  if (lodgingWillTriggerRaid()) {
+    document.getElementById("genericConfirmExtra").innerHTML =
+      '<div style="color:#ff6b5a;font-weight:800;text-align:center;margin-top:0.5rem;">👹 朝になると襲撃が始まります</div>';
+  }
 }
 
 // 宿泊時の演出。現在の時間帯から朝を迎えるまでの残りの時間帯(例: 朝スタートなら昼→夕→夜)を
@@ -1106,8 +1135,12 @@ function renderPartySelect() {
   document.getElementById("partySelectBestiaryTabBtn").style.display = bestiaryUnlocked ? "" : "none";
   document.getElementById("bestiaryNewBadge").style.display = bestiaryUnlocked && bestiaryHasNew() ? "" : "none";
   const maxFloorReached = state.maxFloorReached || { forest: 0, coast: 0 };
-  document.getElementById("forestMaxFloorLabel").textContent = maxFloorReached.forest > 0 ? `最高${maxFloorReached.forest}層` : "";
-  document.getElementById("coastMaxFloorLabel").textContent = maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "";
+  // 明朝襲撃の日中も出発は自由(最後の遠征・買い物ができる)が、出発ボタンの注記で
+  // 「寝ると襲撃戦が始まる」ことだけ伝える(モックmock_raid_countdown.htmlで確認済みの文言)
+  updateRaidBadge(document.getElementById("raidBadgePrep"));
+  const raidTomorrow = state.nextRaidDay != null && state.nextRaidDay - (state.dayCount || 1) <= 1;
+  document.getElementById("forestMaxFloorLabel").textContent = raidTomorrow ? "※寝ると襲撃戦が始まる" : (maxFloorReached.forest > 0 ? `最高${maxFloorReached.forest}層` : "");
+  document.getElementById("coastMaxFloorLabel").textContent = raidTomorrow ? "※寝ると襲撃戦が始まる" : (maxFloorReached.coast > 0 ? `最高${maxFloorReached.coast}層` : "");
   // 海岸への直接出発は廃止(ユーザー指示、2026-07-19)。今後は森→洞窟の先で海の村を発見してから
   // 辿り着く経路にする予定のため、そのルートができるまで出発画面からは一旦隠す
   document.getElementById("departCoastBtn").style.display = "none";
@@ -1784,6 +1817,12 @@ const BUILDING_DEFS = [
   { key: "watchtower", levelField: "watchtowerLevel", name: "見張り台", icon: "🏹", iconImg: "assets/icons/buildings/watchtower.png",
     unlock: WATCHTOWER_UNLOCK_HOUSE_LEVEL, costs: [WATCHTOWER_COST], mats: [{ tetsu: 1 }],
     desc: "襲撃された時に、狩人か砲術士が支援射撃できる。" },
+  // バリケード: 襲撃戦で敵の攻撃を全肩代わりする柵(ゴールド不要・素材のみ、数値はユーザー指定2026-07-28)。
+  // 耐久は襲撃をまたいで持ち越され、詳細モーダルの「修理」で直す(コストは失った耐久に比例、raid.js参照)
+  { key: "barricade", levelField: "barricadeLevel", name: "バリケード", icon: "🪵", iconImg: "assets/battle_barricade.png",
+    unlock: BARRICADE_UNLOCK_HOUSE_LEVEL, costs: [0, 0], mats: BARRICADE_TIERS.map((t) => t.mats),
+    desc: "襲撃の時、村の入り口に柵を立てて敵の攻撃を受け止めます。(空を飛ぶ敵には効かない)\n壊れた分は素材で修理できます。",
+    levelEffectLabel: "耐久", levelEffect: (lv) => `${BARRICADE_TIERS[lv - 1].name}(最大${BARRICADE_TIERS[lv - 1].hp})` },
   { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
     unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_LEVEL1_COST, HEN_HOUSE_LEVEL2_COST],
     desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。" },
@@ -1894,6 +1933,7 @@ function openBuildingDetail(key) {
   document.getElementById("buildingDetailName").textContent = def.name + (lv > 0 && def.costs.length > 1 ? ` Lv.${lv}` : "");
   const effectLine = (lv > 0 && def.levelEffect) ? `${def.levelEffectLabel}${def.levelEffect(lv)}` : "";
   document.getElementById("buildingDetailDesc").textContent = [def.desc, effectLine].filter(Boolean).join("\n");
+  renderBarricadeRepairSection(def, lv); // バリケードのみ: 現在の耐久+修理ボタン(他の施設では非表示にするだけ)
   const btn = document.getElementById("buildingDetailActionBtn");
   const reasonEl = document.getElementById("buildingDetailReason");
   const costEl = document.getElementById("buildingDetailCost");
@@ -1929,6 +1969,33 @@ function openBuildingDetail(key) {
 document.getElementById("buildingDetailCloseBtn").onclick = () => {
   document.getElementById("buildingDetailOverlay").style.display = "none";
 };
+// バリケードの詳細モーダル専用セクション: 現在の耐久バー+修理ボタン。
+// 修理コストは「失った耐久の割合×その段階の建築素材」の切り上げ(ユーザー指定の耐久比例方式、raid.js参照)
+function renderBarricadeRepairSection(def, lv) {
+  const wrap = document.getElementById("buildingDetailRepair");
+  if (def.key !== "barricade" || lv <= 0) { wrap.style.display = "none"; wrap.innerHTML = ""; return; }
+  const max = barricadeMaxHp();
+  const hp = Math.max(0, state.barricadeHp || 0);
+  const ratio = max > 0 ? hp / max : 0;
+  const barColor = ratio > 0.5 ? "#7ec96f" : ratio > 0.25 ? "#f2d94e" : "#ff6b5a";
+  const repairMats = barricadeRepairMats();
+  wrap.style.display = "";
+  wrap.innerHTML = `
+    <div style="margin-top:0.7rem;font-size:0.8rem;">耐久 ${hp}/${max}${hp <= 0 ? '<span style="color:#ff6b5a;font-weight:800;"> (倒壊)</span>' : ""}</div>
+    <div class="hpbar-track" style="margin-top:0.2rem;"><div style="width:${Math.round(ratio * 100)}%;height:100%;border-radius:inherit;background:${barColor};"></div></div>
+    ${repairMats ? `
+      <div class="equip-cost" style="margin-top:0.6rem;justify-content:center;">${costChipsHtml(0, repairMats)}</div>
+      <button class="big" id="barricadeRepairBtn" style="margin-top:0.4rem;width:100%;" ${matsCostOk(repairMats) ? "" : "disabled"}>修理する</button>
+    ` : '<div style="margin-top:0.5rem;font-size:0.75rem;color:var(--dw-caption-color);">無傷のため修理は不要です</div>'}
+  `;
+  const btn = document.getElementById("barricadeRepairBtn");
+  if (btn) btn.onclick = () => {
+    if (!repairBarricade()) return;
+    playSfx("extension_build");
+    renderBarricadeRepairSection(def, state[def.levelField] || 0); // 修理後の耐久・ボタン状態を出し直す
+    renderExtension(); // 背後の財布ストリップ(素材数)も更新する
+  };
+}
 function renderExtension() {
   // 温泉村から開いた時だけ町のBGMへ切り替える(海の村/山伏の里から開いた場合はその村で
   // 鳴っていた音をそのまま邪魔しない。村自体のBGM設計は今回のスコープ外)
@@ -1992,6 +2059,7 @@ const FACILITY_DISPLAY = {
   karakuriLevel: { icon: "🎎", name: "からくり屋敷" },
   bagShopLevel: { icon: "🧳", name: "鞄屋" },
   watchtowerLevel: { icon: "🏹", name: "見張り台" },
+  barricadeLevel: { icon: "🪵", name: "バリケード" },
   henHouseLevel: { icon: "🐓", name: "鶏小屋" },
   shrineLevel: { icon: "⛩️", name: "神社" },
   hotSpringKeeperLevel: { icon: "♨️", name: "湯守屋" },
@@ -2078,6 +2146,7 @@ function buildOrUpgradeBuilding(key) {
   state.gold -= cost;
   consumeMatsCost(mats);
   state[def.levelField] = lv + 1;
+  if (def.key === "barricade") state.barricadeHp = barricadeMaxHp(); // 建築/増築は建て直し=耐久全快(修理はraid.jsのrepairBarricade)
   saveState();
   renderExtension();
   if (lv === 0) {
@@ -2325,7 +2394,8 @@ function renderWalletStrip(elementId) {
 // mats={素材id:個数}(null/空={}なら素材不要)。不足チップは赤くするだけで所持数は書かない(財布ストリップ参照)
 function costChipsHtml(gold, mats) {
   const owned = state.materials || {};
-  let html = `<span class="cost-chip gold-chip${state.gold < gold ? " lack" : ""}">💰${gold}G</span>`;
+  // ゴールド0のコスト(バリケードの建築/修理=素材のみ)はゴールドチップ自体を出さない
+  let html = gold > 0 ? `<span class="cost-chip gold-chip${state.gold < gold ? " lack" : ""}">💰${gold}G</span>` : "";
   Object.keys(mats || {}).forEach((id) => {
     if (!mats[id]) return; // 0個の素材はチップ自体を出さない
     const lack = (owned[id] || 0) < mats[id];

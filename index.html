@@ -171,6 +171,7 @@
       </div>
       <div class="hero-title-row">
         <span class="time-of-day-label" id="townDateLabel"></span>
+        <span class="raid-badge" id="raidBadgeTown" style="display:none;"></span>
         <h1>湯乃里温泉</h1>
       </div>
       <div class="hero-title-row" style="margin-top:0.2rem;">
@@ -313,6 +314,7 @@
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;" id="partySelectMaxHint">タップで出発パーティに入れる(最大4人・4人目に選んだ人は控え)</p>
       <div id="partySelectList"></div>
       <hr class="dw-divider">
+      <div style="text-align:center;"><span class="raid-badge" id="raidBadgePrep" style="display:none; margin-bottom:8px;"></span></div>
       <button class="big primary depart-btn" id="departForestBtn" style="width:100%;">
         <span class="depart-btn-main">深淵の森へ出発する</span>
         <span class="depart-btn-sub" id="forestMaxFloorLabel"></span>
@@ -1231,6 +1233,8 @@
       <div class="equip-cost" id="buildingDetailCost" style="margin-top:0.7rem;justify-content:center;"></div>
       <button class="big primary" id="buildingDetailActionBtn" style="margin-top:0.6rem;width:100%;"></button>
       <p class="house-upgrade-reason" id="buildingDetailReason" style="display:none;"></p>
+      <!-- バリケード専用: 現在の耐久+修理(コストは失った耐久に比例、raid.js参照)。他の施設では常に非表示 -->
+      <div id="buildingDetailRepair" style="display:none;"></div>
     </div>
   </div>
 
@@ -1257,6 +1261,7 @@
 <script src="camp.js"></script>
 <script src="town.js"></script>
 <script src="umimura.js"></script>
+<script src="raid.js"></script>
 <script src="title.js"></script>
 </body>
 </html>

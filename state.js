@@ -88,6 +88,10 @@ function defaultState() {
     highDurabilityAtkReductionPct: 0,
     goldDropAdjustment: 0, // 設定画面のドロップダウン「金調整」(0=OFF、1〜10)。敵1体が落とすゴールドからこの値を定額で差し引く(goldReward参照、0未満にはならない)。UI上は「-1」〜「-10」表記
     materials: { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, // 敵ドロップ素材(皮/骨/木/鉄)の所持数。鞄(支援物資枠)は圧迫しない別枠で、温泉の売店の買取カウンターで売却できる(data.js MATERIALS参照)
+    nextRaidDay: RAID_CONFIG.schedule.firstRaidDay, // 次の村襲撃が発生するdayCount(明朝型: この日の朝を村で迎えると襲撃戦が始まる)。遠征中に過ぎた場合は帰還後の次の朝に持ち越し(raid.js参照)
+    barricadeLevel: 0, // 増築の1つ、バリケードのレベル(0=未建築、1=木の柵、2=鉄杭柵)。襲撃戦で敵の攻撃を全肩代わりする柵(battle.jsのraidBarricade参照)
+    barricadeHp: 0, // バリケードの現在耐久。襲撃で受けたダメージは戦闘をまたいで永続し、建築画面で素材を払って修理する(コストは失った耐久に比例)
+    lastIncomeDay: 1, // 村レベル連動の日次収入を最後に精算したdayCount(raid.jsのsettleDailyIncome参照)
   };
 }
 
@@ -109,6 +113,17 @@ const ROSTER_CAPACITY = 8; // 仲間を雇える上限。以前は村レベル�
 function rosterCapacity() {
   return ROSTER_CAPACITY;
 }
+// バリケード: 襲撃戦で敵の攻撃を全肩代わりする柵。多段階建築(Lv1=木の柵/Lv2=鉄杭柵)で、
+// 数値はユーザー指定(2026-07-28): 木の柵=木5でHP100、鉄杭柵=木5+鉄5でHP250。ゴールドは不要。
+// 修理コストは「失った耐久の割合×その段階の建築素材」の切り上げ(barricadeRepairMats参照)
+const BARRICADE_UNLOCK_HOUSE_LEVEL = 1; // 初回襲撃(8日目)までに建てられるよう最初から解禁(仮決め、建築エディタで調整可)
+const BARRICADE_TIERS = [
+  { name: "木の柵", hp: 100, mats: { ki: 5 } },
+  { name: "鉄杭柵", hp: 250, mats: { ki: 5, tetsu: 5 } },
+];
+// 村レベル連動の日次収入(村が仲間を養う構図、2026-07-28ユーザー確定: 村Lv×5G/日)。
+// 精算は日数差でまとめて行うため、寝て日数を回しても遠征で日数が過ぎても取りこぼしはない
+const DAILY_INCOME_PER_LEVEL = 5;
 const DOJO_LEVEL1_COST = 30; // 道場レベル1の建築費用(2026-07-27ユーザー改定10→30)
 const DOJO_LEVEL2_COST = 60; // 道場レベル1→2の増築費用(2026-07-28ユーザー改定100→60)
 const DOJO_MAX_LEVEL = 2;

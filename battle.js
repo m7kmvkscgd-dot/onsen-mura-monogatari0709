@@ -2007,15 +2007,19 @@ function renderActionButtons(actor) {
     grid.appendChild(extinguishBtn);
   }
 
-  const fleeBtn = document.createElement("button");
-  fleeBtn.className = "big";
-  fleeBtn.textContent = "逃げる";
-  fleeBtn.onclick = () => {
-    if (battleActionLocked) return;
-    battleActionLocked = true;
-    fleeAction(actor);
-  };
-  grid.appendChild(fleeBtn);
+  // 襲撃戦(村の防衛)では「逃げる」を出さない。自分の村から逃げる先が無く、
+  // 逃走=実質敗北の踏み倒しになってしまうため(raid.js参照)
+  if (!raidBattleActive) {
+    const fleeBtn = document.createElement("button");
+    fleeBtn.className = "big";
+    fleeBtn.textContent = "逃げる";
+    fleeBtn.onclick = () => {
+      if (battleActionLocked) return;
+      battleActionLocked = true;
+      fleeAction(actor);
+    };
+    grid.appendChild(fleeBtn);
+  }
 }
 
 // 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
@@ -2309,7 +2313,9 @@ function victory() {
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく
   saveState();
-  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${currentStageName()}に戻る</button>`;
+  // 襲撃戦の勝利は探索画面ではなく町へ直帰する(探索を経由していないため)。
+  // 演出フックの解除・柵耐久の永続化・次回襲撃の予約はfinishRaidBattle(raid.js)が行う
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : currentStageName() + "に戻る"}</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
     battle = null;
     saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
@@ -2317,6 +2323,13 @@ function victory() {
     clearGuardState(fieldParty);
     clearOmamoriIwanagaBonus(fieldParty);
     fieldParty.forEach((c) => { c.fleeState = null; }); // 戦闘中に個別に逃げた仲間も、戦闘が終われば行動の対象に戻す
+    if (raidBattleActive) {
+      stopBattleBgm();
+      finishRaidBattle(true);
+      bgmPositions.town = 0;
+      renderTown();
+      return;
+    }
     showScreen("screen-dungeon");
     renderDungeon();
   };
@@ -2448,12 +2461,29 @@ function defeat() {
   clearOmamoriIwanagaBonus(fieldParty);
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
-  blog(`パーティは全滅した...誰も帰ってこなかった。`);
-  document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">町に戻る</button>`;
+  blog(raidBattleActive ? `防衛隊は全滅した...村は荒らされてしまった。` : `パーティは全滅した...誰も帰ってこなかった。`);
+  document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : "町に戻る"}</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
     stopAmbientBgm();
     stopCoastAreaBgm();
     battle = null;
+    // 襲撃戦の敗北はゲームオーバーではなく「村レベル低下」のペナルティで続行する(ユーザー確定)。
+    // 遠征していないので遠征スナップショットのクリアも時間送りも行わない(時刻は既に襲撃日の朝)
+    if (raidBattleActive) {
+      const levelBefore = state.houseLevel || 1;
+      finishRaidBattle(false);
+      bgmPositions.town = 0;
+      playDefeatBanner(() => {
+        renderResultScreen(() => {
+          if (testModeActive) { location.reload(); return; }
+          renderTown();
+          if ((state.houseLevel || 1) < levelBefore) {
+            showInfoModal(`襲撃者に村を荒らされてしまった…\n村レベルが${levelBefore}から${state.houseLevel}に下がった。\n(建築済みの施設はそのまま使える)`);
+          }
+        }, true);
+      });
+      return;
+    }
     clearExpeditionSnapshot(); // 全滅で遠征終了。リロードしても町スタートに戻る
     saveState();
     toggleTimeOfDay();

@@ -1731,6 +1731,20 @@ const TRANSFORM_ANIMAL_SOUNDS = {
   hebi: ["シャー…", "シャアッ！", "シュル…"],
 };
 
+// ============ 村襲撃(RAID_CONFIG) ============
+// 襲撃スケジュール+村レベル別ウェーブプール。襲撃エディタ(raid_editor.html)のエクスポートを
+// そのままここへ貼り付けて差し替える運用(エディタ側の基準値も同じ形式)。
+// schedule: firstRaidDay=初回襲撃が来るdayCount、repeatEveryDays=以降の周期(襲撃終了時に「その日+周期」で次回を予約)
+// pools: 村レベル(文字列キー"1"〜"7")→ウェーブ候補の配列。発生時にその時点の村レベルのプールから
+// 重み(weight)付きランダムで1候補を抽選する。プール未設定のレベルは下位レベルのプールへフォールバック。
+// ※現在の中身はユーザーのウェーブ設計エクスポート待ちの仮データ(大規模戦テストと同じ猪5体)
+const RAID_CONFIG = {
+  schedule: { firstRaidDay: 8, repeatEveryDays: 7 },
+  pools: {
+    "1": [{ weight: 1, memo: "仮: エクスポート待ち", enemies: [{ id: "inoshishi", count: 5 }] }],
+  },
+};
+
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT,
@@ -1746,5 +1760,6 @@ if (typeof module !== "undefined") {
     RESCUE_QUEST_DEF, RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,
     QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE, QUEST_COOLDOWN_DAYS,
     QUEST_DEADLINE_DAYS, QUEST_CONTRACT_FEE_DIVISOR, questContractFee,
+    RAID_CONFIG,
   };
 }
