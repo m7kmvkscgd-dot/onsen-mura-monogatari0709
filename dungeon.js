@@ -2223,7 +2223,7 @@ function showDungeonEvent(ev) {
 // 帰還中(retreating)は先を急ぐ設定で立ち寄らない(残り回数は遠征中保持されるが、帰還では消化できない)
 const MINING_DEFS = {
   wood: {
-    stage: "forest", floor: 12, max: 4, stress: 15, matId: "ki",
+    stage: "forest", floor: 12, max: 5, stress: 12, matId: "ki", // 2026-07-28ユーザー調整: 15スト×4回→12スト×5回(負担総量60は同じまま収穫+25%、木不足対策)
     icon: "🪓", actLabel: "木を切る", askLabel: "誰が切りますか？", reopenLabel: "🪓 木を切る",
     exhaustLabel: "斧が限界だ",
     arriveLog: "巨木を見つけた。", arriveLog2: "木を切ることができる。",
