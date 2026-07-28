@@ -456,7 +456,10 @@
      完全に同じ(敵から普通に狙われる)で、あくまで見た目のみ */
   /* 名前ラベルを消した分(約18px)だけ持ち上げ量を緩め、やぐらの接地位置が味方バーの基準線に揃うようにする
      (ユーザー指示2026-07-28: タグと名前は消してイラストを少し下へ) */
-  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot { top: -46px; } /* ユーザー指示2026-07-28: 位置は実機を見ながら調整中(-30→-34→-46px) */
+  /* topで見た目を持ち上げた分、margin-bottomの同値マイナスでレイアウト上の高さも相殺する。
+     これが無いと(やぐらが通常フローでカードを長くしているため)味方バーの箱が下へ伸び、
+     ボタン列との間に黒い空白ができる(ユーザー報告2026-07-28)。2つの値は必ず同じ数字で揃えること */
+  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot { top: -46px; margin-bottom: -46px; }
   #battlePartyBar.raid-battle-bar .party-member.watchtower-slot .nm { display: none; }
   /* やぐら: 手すり(柵)+梁+2本脚+筋交いを1枚のSVG(通常フローの実DOM子要素)で描く。
      以前はカードの::before(絶対配置top:100%)だったが、iOS実機でカードの持ち上げ(top:-30px)に
