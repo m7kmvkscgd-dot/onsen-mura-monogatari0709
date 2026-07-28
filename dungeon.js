@@ -2278,8 +2278,8 @@ function openMiningUi(key) {
   miningUiSelectedId = miningDiggerId != null && cands.some((c) => c.id === miningDiggerId) ? miningDiggerId : null;
   document.body.classList.add("mining-active");
   document.getElementById("miningBar").style.display = "";
-  renderMiningBar();
   renderDungeon(); // 🪓ボタンの表示状態(バー表示中は隠す)も含めて出し直す
+  renderMiningBar(); // renderDungeonの後に呼ぶ(バーの配置計算が最後に走るように)
 }
 function closeMiningUi() {
   if (miningUiBusy) return; // 演出中は閉じられない(素材の飛行中に巾着が消えるのを防ぐ)
@@ -2328,6 +2328,7 @@ function renderMiningBar() {
         setTimeout(() => renderMiningBar(), 260);
       };
     });
+    positionMiningBar();
     return;
   }
   askEl.style.display = "none";
@@ -2352,6 +2353,13 @@ function renderMiningBar() {
     btn.className = "mining-dig-btn";
     btn.innerHTML = `${def.icon} ${def.actLabel}<small>残り${left}回</small>`;
   }
+  positionMiningBar();
+}
+// バーの縦位置を.bottom-actionsと同じ仕組み(味方アイコンの実測位置の下+見切れ防止クランプ)で決める。
+// 顔選択⇄作業レイアウトで高さが変わるため、renderMiningBarのたびに置き直す
+function positionMiningBar() {
+  if (!miningUiActive) return;
+  positionActionsBelowPartyBar("dungeonPartyBar", "#miningBar");
 }
 function miningStressFillClass(v) {
   return "mining-stress-fill" + (v >= 80 ? " high" : v >= 50 ? " mid" : "");

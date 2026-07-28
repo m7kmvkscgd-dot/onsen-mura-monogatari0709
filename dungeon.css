@@ -616,9 +616,14 @@
    作業者は顔アイコンで選び、選ぶと他の顔は消える。ストレスバーは顔の下に常設で切るたびに伸びる */
 body.mining-active .bottom-actions { display: none; }
 #miningBar {
+  /* .bottom-actionsと同じ配置方式: fixed+topはJS(positionActionsBelowPartyBar)が味方アイコンの
+     実測位置から計算する。staticのままだと通常フローで画面上部に流れ込み、しかも上部を覆う
+     .dungeon-top(fixed・z5・透明)にタップを横取りされて一切押せなかった(実機バグ2026-07-28) */
+  position: fixed; top: 500px; left: 50%; transform: translateX(-50%) translateZ(0);
+  width: calc(100% - 20px); max-width: 460px; box-sizing: border-box; z-index: 3;
   background: rgba(26,20,14,0.92); border: 2px solid #4b3728; border-radius: 14px;
   outline: 1px solid rgba(217,196,154,0.7); outline-offset: -5px;
-  padding: 10px; margin: 0.5rem 1rem;
+  padding: 10px;
 }
 .mining-ask { text-align: center; font-size: 0.8rem; font-weight: 900; margin-bottom: 8px; color: #e8dcbf; }
 .mining-faces { display: flex; justify-content: center; gap: 10px; }
