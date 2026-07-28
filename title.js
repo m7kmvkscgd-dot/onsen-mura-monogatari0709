@@ -213,7 +213,9 @@ async function runTitleSequence(full) {
   els.tapPrompt.style.display = "none";
   if (myToken !== titleSeqToken) return;
 
-  await sleep(1000);
+  // 【リリース前に1000へ戻すこと】本来の演出指示は「タップ後1秒の間」だが、テスト期間中は
+  // 起動を速くするため0.1秒に短縮している(ユーザー指示2026-07-28、CLAUDE.mdにも戻し忘れ防止メモあり)
+  await sleep(100);
   if (myToken !== titleSeqToken) return;
 
   els.menu.style.pointerEvents = "";
