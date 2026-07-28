@@ -116,14 +116,13 @@ const BGM_ITEMS = [
   { key: "tengu_battle", ja: "天狗の腕試し", file: "assets/bgm/tengu_battle_bgm.mp3", vol: 0.8 },
   { key: "raid_battle", ja: "襲撃戦", file: "assets/bgm/yokai_no_shutai.mp3", vol: 0.8 },
 ];
-// 別チャンネル(bgmAudioとは別の<audio>要素)。【注意】iOS実機はJSからの.volume指定を無視するため、
-// このチャンネルの音量変更は現状PCでしか効かない(GainNode移行は過去に事故があり慎重案件)
+// 別チャンネル(bgmAudioとは別の<audio>要素)。2026-07-28にGainNode移行済みでiOS実機でも音量変更が効く
 const CHANNEL_ITEMS = [
-  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5, ios: true },
-  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5, ios: true },
-  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45, ios: true },
-  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, ios: true, max: 1 },
-  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55, ios: true },
+  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5 },
+  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5 },
+  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45 },
+  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, max: 1 },
+  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55 },
 ];
 // 効果音: ゲーム側はSFX_GAIN表(未記載は1.0)。WebAudioのGainNodeなのでiOS実機でも効く。max=2.0
 const SFX_ITEMS = [
@@ -196,7 +195,7 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
 const SECTIONS = [
   { key: "bgm", label: "🎵 BGM", items: BGM_ITEMS, max: 1, note: "実効音量(0〜100%)。ゲーム側は基準0.8×倍率の式だが、ここではキーごとの実際の音量をそのまま編集する。" },
   { key: "sfx", label: "🔔 効果音", items: SFX_ITEMS, max: 2, note: "100%=等倍。200%まで上げられる(WebAudioのゲイン。iOS実機でも効く)。" },
-  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "⚠️このタブの音量は現状iOS実機ではJSから変更できない(PCのみ反映)。変更したい場合はGainNode移行が必要で、過去に事故があるため慎重に相談。" },
+  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "宿泊/野営/環境音/オープニングの各チャンネル。GainNode移行済み(2026-07-28)でiOS実機でも反映される。" },
 ];
 let activeSection = "bgm";
 

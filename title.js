@@ -533,7 +533,7 @@ function initOpeningSequence() {
   // タイミングで再試行する(この関数はcatchだけしてエラーを握りつぶさず、そちらに委ねる)
   if (openingBgmAudio.paused) {
     openingBgmAudio.currentTime = 0;
-    openingBgmAudio.play().catch(() => {});
+    playChannelAudio(openingBgmAudio); // GainNode経由になったためAudioContextのresumeを挟む(audio.js)
   }
 
   // 音声付き再生を試み、自動再生制限で拒否された場合はミュートで再試行する(動画自体は見せる)
