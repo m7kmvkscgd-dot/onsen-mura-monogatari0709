@@ -171,7 +171,6 @@
       </div>
       <div class="hero-title-row">
         <span class="time-of-day-label" id="townDateLabel"></span>
-        <span class="raid-badge" id="raidBadgeTown" style="display:none;"></span>
         <h1>湯乃里温泉</h1>
       </div>
       <div class="hero-title-row" style="margin-top:0.2rem;">
@@ -179,6 +178,9 @@
         <button class="time-skip-btn" id="timeSkipBtn">⌛️</button>
       </div>
       <span class="gold town-gold-badge" id="townGold" style="margin-top:0.5rem;">0G</span>
+      <!-- 襲撃カウントダウン: タイトル行に入れると「湯乃里温泉」のレイアウトが崩れるため(実機報告2026-07-28)、
+           画面中央寄りの独立オーバーレイにした。日次収入ポップ(.town-income-pop)とは高さをずらしてある -->
+      <span class="raid-badge" id="raidBadgeTown" style="display:none;"></span>
     </div>
     <div class="body-pad village-top-panel">
       <!-- 商業クラス化(2026-07-18): 施設ボタンを「漆×金カード(メダルアイコン+機能キャプション)」に、
@@ -326,7 +328,6 @@
       <!-- 襲撃の迎撃準備中(raidPrepPending)だけ出す開戦ボタン。出発ボタンとは排他表示(town.jsのrenderPartySelect参照) -->
       <button class="big primary depart-btn raid-defend-btn" id="raidDefendBtn" style="width:100%; display:none;">
         <span class="depart-btn-main">👹 襲撃を迎え撃つ</span>
-        <span class="depart-btn-sub">選んだ防衛隊で開戦する(控えなし)</span>
       </button>
       <button class="big ghost-btn" id="partySelectBackBtn" style="margin-top:0.9rem;">町に戻る</button>
       </div>
