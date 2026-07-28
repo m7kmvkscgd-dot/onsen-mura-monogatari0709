@@ -456,7 +456,7 @@
      完全に同じ(敵から普通に狙われる)で、あくまで見た目のみ */
   /* 名前ラベルを消した分(約18px)だけ持ち上げ量を緩め、やぐらの接地位置が味方バーの基準線に揃うようにする
      (ユーザー指示2026-07-28: タグと名前は消してイラストを少し下へ) */
-  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot { top: -30px; }
+  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot { top: -34px; } /* ユーザー指示2026-07-28: 全体をもう4px上へ */
   #battlePartyBar.raid-battle-bar .party-member.watchtower-slot .nm { display: none; }
   /* やぐら: 手すり(柵)+梁+2本脚+筋交いを1枚のSVG(通常フローの実DOM子要素)で描く。
      以前はカードの::before(絶対配置top:100%)だったが、iOS実機でカードの持ち上げ(top:-30px)に
