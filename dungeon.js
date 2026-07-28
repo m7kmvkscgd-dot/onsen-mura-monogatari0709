@@ -361,6 +361,12 @@ function renderDungeon() {
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("dungeonLog").style.display = "";
   document.getElementById("criticalAlert").innerHTML = ""; // 選択パネル(進路/イベント)の使い回し枠。表示中の再描画ガードはpath-choice-active側で行う
+  // 採掘場の階(森12層/洞窟6層)に居て残り回数がある間だけ「🪓木を切る/⛏️鉄を掘る」ボタンを出す
+  // (伐採バーを閉じた後や、野営で休んだ後にいつでも作業を再開できる導線。バー表示中は隠す)
+  const miningKey = currentMiningKey();
+  const miningBtn = document.getElementById("dungeonMiningBtn");
+  miningBtn.style.display = miningKey && !miningUiActive ? "" : "none";
+  if (miningKey) miningBtn.textContent = MINING_DEFS[miningKey].reopenLabel;
   // 森は「虫の声」、海岸は「波音」のアンビエントを、探索中・戦闘中を通して流し続ける(playAmbientBgm内でstage判定)。
   // BGM(森:dungeon系/海岸:coast/coast_battle)はこれとは別チャンネル(bgmAudio)で、startBattleでのみ切り替わり、
   // stopBattleBgmで探索用に戻る。どちらのチャンネルも戦闘中に止めない
@@ -492,7 +498,7 @@ document.getElementById("dungeonSwapBtn").onclick = () => {
 // 選択肢は#criticalAlert(画面上部)ではなく味方バーの下の.bottom-actionsに出す。上部に出すと
 // 選択肢が増えた時に味方イラストへ重なってタップを奪ってしまう(実際に発生したバグ)ため、
 // 戦闘画面の対象選択(味方バーの下に出る)と同じ位置関係に揃えてある
-const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonToolsBtn", "dungeonSwapBtn"];
+const DUNGEON_BOTTOM_BTN_IDS = ["advanceBtn", "retreatBtn", "dungeonPotionBtn", "dungeonHealBtn", "dungeonToolsBtn", "dungeonSwapBtn", "dungeonMiningBtn"];
 function closeDungeonTargetPicker() {
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "none";
@@ -2205,19 +2211,19 @@ function showDungeonEvent(ev) {
 const MINING_DEFS = {
   wood: {
     stage: "forest", floor: 12, max: 4, stress: 15, matId: "ki",
-    title: "巨木の伐採場", icon: "🪓", actLabel: "木を切る", sfx: "barricade_hit",
-    flavor: "そびえ立つ巨木。切り株には誰かが残した斧が刺さっている。",
-    exhaustLabel: "斧が限界だ", exhaustDesc: "刃こぼれして、この遠征ではもう切れない",
-    arriveLog: "そびえ立つ巨木を見つけた。",
-    digLog: (name) => `${name}は斧を振るい、木材を切り出した。`,
+    icon: "🪓", actLabel: "木を切る", askLabel: "誰が切りますか？", reopenLabel: "🪓 木を切る",
+    exhaustLabel: "斧が限界だ",
+    arriveLog: "巨木を見つけた。", arriveLog2: "木を切ることができる。",
+    digLog: (name) => `${name}は木材を切り出した。`,
+    fx: { tool: "🪓", sfx: "barricade_hit", matIcon: "assets/icons/materials/ki.png", chipColor: "#8a5a30", chipColorBig: "#9c6a38" },
   },
   iron: {
     stage: "cave", floor: 6, max: 3, stress: 20, matId: "tetsu",
-    title: "鉄鉱石の岩場", icon: "⛏️", actLabel: "鉄を掘る", sfx: "extension_build",
-    flavor: "岩肌に鉄鉱石の鉱脈が覗いている。掘り出せば鍛冶の材料になる。",
-    exhaustLabel: "岩場が限界だ", exhaustDesc: "掘れそうな鉱脈は、この遠征ではもう無い",
-    arriveLog: "鉄鉱石の鉱脈を見つけた。",
-    digLog: (name) => `${name}は岩を砕き、鉄鉱石を掘り出した。`,
+    icon: "⛏️", actLabel: "鉄を掘る", askLabel: "誰が掘りますか？", reopenLabel: "⛏️ 鉄を掘る",
+    exhaustLabel: "岩場が限界だ",
+    arriveLog: "鉄鉱石の鉱脈を見つけた。", arriveLog2: "鉄を掘ることができる。",
+    digLog: (name) => `${name}は鉄鉱石を掘り出した。`,
+    fx: { tool: "⛏️", sfx: "extension_build", matIcon: "assets/icons/materials/tetsu.png", chipColor: "#8f939c", chipColorBig: "#6b6f78" },
   },
 };
 let miningLeft = { wood: MINING_DEFS.wood.max, iron: MINING_DEFS.iron.max }; // 遠征内の残り採掘回数(行きで使った分は帰りに残らない=遠征内で共有)
@@ -2246,101 +2252,156 @@ function tryOfferMiningSite() {
   const key = currentMiningKey();
   if (!key) return false;
   dlog(MINING_DEFS[key].arriveLog);
-  showMiningSite(key);
+  dlog(MINING_DEFS[key].arriveLog2);
+  openMiningUi(key);
   return true;
 }
-// 採掘パネル。イベントカード(showDungeonEvent)と同じ#criticalAlert+固定モーダルの枠を使い回すが、
-// 「掘る→数値が変わる→また掘る」を繰り返せるよう、選択即クローズではなくパネル内で完結する
-function showMiningSite(key) {
-  const def = MINING_DEFS[key];
-  const div = document.getElementById("criticalAlert");
-  document.getElementById("dungeonLog").style.display = "none";
-  document.body.classList.add("path-choice-active");
-  document.body.classList.add("dungeon-event-active");
-  DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).disabled = true; });
-  // 作業者の候補: 戦闘に出ている3人+控え(全員この場に居るため)。既に確定済みならその1人だけ
-  const candidates = visibleFieldParty().filter((c) => c.status === "active").concat(
+// ============ 伐採バーUI(mock_kyoboku_chop.html v3でユーザー採用、2026-07-28) ============
+// モーダルは使わない。探索画面の下部ボタン群(.bottom-actions)と入れ替わりで#miningBarを出し、
+// 背景(12層=巨木の絵)もテキストボックスもそのまま。「先へ進む」でバーを閉じると同じ階のまま
+// 通常の探索UIに戻る(野営や道具も普通に使える)。残り回数がある間は下部ボタンの「🪓木を切る」で
+// いつでもバーを開き直せる(野営でストレスを回復してから続きを切る、という流れを成立させるため)
+let miningUiActive = false; // バー表示中(body.mining-activeと同期)
+let miningUiKey = null;
+let miningUiBusy = false; // 伐採演出の再生中(連打と退出をロック)
+let miningUiSelectedId = null; // 作業者が未確定の間の選択中キャラid
+function miningCandidates() {
+  return visibleFieldParty().filter((c) => c.status === "active").concat(
     reserveFieldMember && reserveFieldMember.status === "active" ? [reserveFieldMember] : []
   );
-  let selectedId = miningDiggerId != null && candidates.some((c) => c.id === miningDiggerId)
-    ? miningDiggerId
-    : (candidates[0] ? candidates[0].id : null);
-  function close() {
-    document.body.classList.remove("path-choice-active");
-    document.body.classList.remove("dungeon-event-active");
-    div.innerHTML = "";
-    document.getElementById("dungeonLog").style.display = "";
-    saveState();
-    renderDungeon();
-  }
-  function render() {
-    const locked = miningDiggerId != null;
-    const left = miningLeft[key] || 0;
-    const owned = (state.materials && state.materials[def.matId]) || 0;
-    const selected = candidates.find((c) => String(c.id) === String(selectedId)) || null;
-    // 採掘ボタンが押せない理由(優先順): 残り回数切れ > ストレス限界(採取すると100を超える)
-    const stressBlocked = left > 0 && selected && !canDigWithStress(selected, def);
-    const digDisabled = left <= 0 || !selected || stressBlocked;
-    div.innerHTML = `
-      <div class="path-choice-panel path-tags-panel dungeon-event-panel">
-        <p class="path-choice-title">${def.title}</p>
-        <p class="dungeon-event-flavor">${def.flavor}<br>1回の作業で${MATERIALS[def.matId].ja}1個・作業した人にストレス+${def.stress}。この遠征では同じ1人しか作業できない。</p>
-        <div class="mining-info">残り${left}回　|　所持 ${MATERIALS[def.matId].ja}×${owned}</div>
-        <div class="mining-diggers">
-          ${candidates.map((c) => {
-            const isSel = c.id === selectedId;
-            const overStress = !canDigWithStress(c, def);
-            const disabled = (locked && c.id !== miningDiggerId) || overStress;
-            return `<button class="mining-digger-btn${isSel ? " selected" : ""}${disabled ? " disabled" : ""}" data-id="${c.id}">
-              ${c.name}${c === reserveFieldMember ? "(控え)" : ""}<span class="mining-digger-stress${overStress ? " over" : ""}">スト ${Math.round(c.fatigue || 0)}${overStress ? "⚠️" : ""}</span>
-            </button>`;
-          }).join("")}
-        </div>
-        <div class="path-choice-cards path-tags-stack">
-          <button class="path-card path-tag${digDisabled ? " path-tag-disabled" : ""}" id="miningDigBtn">
-            <span class="path-card-icon">${def.icon}</span>
-            <span class="path-tag-text">
-              <span class="path-card-label">${left <= 0 ? def.exhaustLabel : stressBlocked ? "ストレスが限界だ" : def.actLabel}</span>
-              <span class="path-card-desc">${left <= 0 ? def.exhaustDesc : stressBlocked ? `採取するとストレスが100を超えてしまう` : `${MATERIALS[def.matId].ja}+1・ストレス+${def.stress}`}</span>
-            </span>
-          </button>
-          <span class="path-tag-rope" aria-hidden="true"></span>
-          <button class="path-card path-tag" id="miningLeaveBtn">
-            <span class="path-card-icon">🚶</span>
-            <span class="path-tag-text"><span class="path-card-label">先へ進む</span></span>
-          </button>
-        </div>
-      </div>
-    `;
-    div.querySelectorAll(".mining-digger-btn").forEach((btn) => {
+}
+function openMiningUi(key) {
+  miningUiActive = true;
+  miningUiKey = key;
+  miningUiBusy = false;
+  const cands = miningCandidates();
+  miningUiSelectedId = miningDiggerId != null && cands.some((c) => c.id === miningDiggerId) ? miningDiggerId : null;
+  document.body.classList.add("mining-active");
+  document.getElementById("miningBar").style.display = "";
+  renderMiningBar();
+  renderDungeon(); // 🪓ボタンの表示状態(バー表示中は隠す)も含めて出し直す
+}
+function closeMiningUi() {
+  if (miningUiBusy) return; // 演出中は閉じられない(素材の飛行中に巾着が消えるのを防ぐ)
+  miningUiActive = false;
+  miningUiKey = null;
+  document.body.classList.remove("mining-active");
+  document.getElementById("miningBar").style.display = "none";
+  hideMiningPouch();
+  saveState();
+  renderDungeon();
+}
+function renderMiningBar() {
+  if (!miningUiActive) return;
+  const def = MINING_DEFS[miningUiKey];
+  const askEl = document.getElementById("miningAsk");
+  const facesEl = document.getElementById("miningFaces");
+  const workRow = document.getElementById("miningWorkRow");
+  const cands = miningCandidates();
+  const worker = miningDiggerId != null ? getRosterChar(miningDiggerId)
+    : miningUiSelectedId != null ? cands.find((c) => c.id === miningUiSelectedId) : null;
+  if (!worker) {
+    // 作業者の選択フェーズ: 顔アイコンを並べる(ストレスが限界の人は暗くして選べない)
+    askEl.style.display = "";
+    askEl.textContent = def.askLabel;
+    facesEl.style.display = "";
+    workRow.style.display = "none";
+    facesEl.innerHTML = cands.map((c) => {
+      const blocked = !canDigWithStress(c, def);
+      const st = Math.round(c.fatigue || 0);
+      return `<button class="mining-face${blocked ? " blocked" : ""}" data-id="${c.id}">
+        <img src="${characterPortraitSrc(c)}" alt="">
+        <div class="nm">${c.name}${c === reserveFieldMember ? "(控え)" : ""}</div>
+        <div class="mining-stress-track"><i class="${miningStressFillClass(st)}" style="width:${st}%"></i></div>
+        <div class="mining-stress-num">スト ${st}</div>
+      </button>`;
+    }).join("");
+    facesEl.querySelectorAll(".mining-face").forEach((btn) => {
       btn.onclick = () => {
-        if (miningDiggerId != null) return; // 作業者確定後は変更不可(1人固定)
-        // キャラidが数値/文字列どちらでも一致するよう、候補から引き直して正規化する
-        const found = candidates.find((c) => String(c.id) === String(btn.dataset.id));
-        if (found) selectedId = found.id;
-        render();
+        if (miningDiggerId != null || miningUiSelectedId != null) return;
+        const found = cands.find((c) => String(c.id) === String(btn.dataset.id));
+        if (!found || !canDigWithStress(found, def)) return;
+        miningUiSelectedId = found.id;
+        playSfx("select");
+        // 選ばれなかった顔はふっと消え、少し間を置いて作業レイアウトへ(バー自体は動かさない)
+        facesEl.querySelectorAll(".mining-face").forEach((b) => { if (b !== btn) b.classList.add("gone"); });
+        setTimeout(() => renderMiningBar(), 260);
       };
     });
-    document.getElementById("miningDigBtn").onclick = () => {
-      if ((miningLeft[key] || 0) <= 0) return;
-      const digger = candidates.find((c) => String(c.id) === String(selectedId));
-      if (!digger) return;
-      if (!canDigWithStress(digger, def)) return; // ストレスが100を超えてしまうなら採取不可(ユーザー指定)
-      miningDiggerId = digger.id; // 最初の1回で作業者を確定(以後この遠征では固定)
-      miningLeft[key]--;
-      if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
-      state.materials[def.matId] = (state.materials[def.matId] || 0) + 1;
-      advMaterialGains[def.matId] = (advMaterialGains[def.matId] || 0) + 1; // リザルト画面の素材集計にも乗せる
-      digger.fatigue = (digger.fatigue || 0) + def.stress; // canDigWithStressで100以下が保証されている
-      playSfx(def.sfx);
-      dlog(def.digLog(digger.name));
-      saveState();
-      render();
-    };
-    document.getElementById("miningLeaveBtn").onclick = () => { playSfx("select"); close(); };
+    return;
   }
-  render();
+  askEl.style.display = "none";
+  facesEl.style.display = "none";
+  workRow.style.display = "flex";
+  document.getElementById("miningWorkImg").src = characterPortraitSrc(worker);
+  const st = Math.round(worker.fatigue || 0);
+  const fill = document.getElementById("miningWorkFill");
+  fill.className = miningStressFillClass(st);
+  fill.style.width = st + "%";
+  document.getElementById("miningWorkNum").textContent = `スト ${st}`;
+  const btn = document.getElementById("miningDigActBtn");
+  const left = miningLeft[miningUiKey] || 0;
+  const stressBlocked = left > 0 && !canDigWithStress(worker, def);
+  if (left <= 0) {
+    btn.className = "mining-dig-btn disabled";
+    btn.innerHTML = def.exhaustLabel;
+  } else if (stressBlocked) {
+    btn.className = "mining-dig-btn disabled";
+    btn.innerHTML = "ストレスが限界だ";
+  } else {
+    btn.className = "mining-dig-btn";
+    btn.innerHTML = `${def.icon} ${def.actLabel}<small>残り${left}回</small>`;
+  }
 }
+function miningStressFillClass(v) {
+  return "mining-stress-fill" + (v >= 80 ? " high" : v >= 50 ? " mid" : "");
+}
+function miningDig() {
+  if (!miningUiActive || miningUiBusy) return;
+  const key = miningUiKey;
+  const def = MINING_DEFS[key];
+  if ((miningLeft[key] || 0) <= 0) return;
+  const cands = miningCandidates();
+  const worker = miningDiggerId != null ? getRosterChar(miningDiggerId)
+    : miningUiSelectedId != null ? cands.find((c) => c.id === miningUiSelectedId) : null;
+  if (!worker || !canDigWithStress(worker, def)) return; // ストレスが100を超えてしまうなら採取不可(ユーザー指定)
+  // 取り分と代償はボタンを押した瞬間に確定する(演出は装飾。演出中にリロードされても入手分は保存済み)
+  miningUiBusy = true;
+  miningDiggerId = worker.id; // 最初の1回で作業者を確定(以後この遠征では固定)
+  miningLeft[key]--;
+  if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+  state.materials[def.matId] = (state.materials[def.matId] || 0) + 1;
+  advMaterialGains[def.matId] = (advMaterialGains[def.matId] || 0) + 1; // リザルト画面の素材集計にも乗せる
+  worker.fatigue = (worker.fatigue || 0) + def.stress; // canDigWithStressで100以下が保証されている
+  saveState();
+  renderMiningBar(); // 残り回数とストレスバー(transitionで伸びる)を即時反映
+  playMiningChopFx(def.fx, () => {
+    // 素材が巾着に収まった瞬間: ログ+作業者の頭上にストレスの浮き文字
+    dlog(def.digLog(worker.name));
+    const face = document.getElementById("miningWorkImg");
+    if (face && face.getBoundingClientRect) {
+      const r = face.getBoundingClientRect();
+      const pop = document.createElement("div");
+      pop.className = "mining-stress-pop";
+      pop.textContent = `+${def.stress}`;
+      pop.style.left = (r.left + r.width / 2 - 12) + "px";
+      pop.style.top = (r.top - 16) + "px";
+      document.body.appendChild(pop);
+      pop.animate([{ transform: "translateY(4px)", opacity: 0 }, { transform: "translateY(-4px)", opacity: 1, offset: 0.3 }, { transform: "translateY(-18px)", opacity: 0 }], { duration: 800, easing: "ease-out" }).onfinish = () => pop.remove();
+      setTimeout(() => { if (pop.isConnected) pop.remove(); }, 900);
+    }
+    miningUiBusy = false;
+    renderMiningBar(); // 取り尽くし/ストレス限界の最新状態に更新
+  });
+}
+document.getElementById("miningDigActBtn").onclick = () => miningDig();
+document.getElementById("miningLeaveActBtn").onclick = () => { if (miningUiBusy) return; playSfx("select"); closeMiningUi(); };
+document.getElementById("dungeonMiningBtn").onclick = () => {
+  const key = currentMiningKey();
+  if (!key) return;
+  playSfx("select");
+  openMiningUi(key);
+};
 
 // 茶屋の階に確定で到着した時、通常の戦闘/財宝抽選(resolveFloorArrival)を行わず茶屋画面を開く。
 // 商品在庫は来訪のたびにリセットするのではなく日付単位で持続する(resetTeahouseStockIfNewDay、

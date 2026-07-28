@@ -1198,6 +1198,139 @@ function playMaterialCollectFx(drops) {
   }, START + (drops.length - 1) * STAGGER + D_FLY + 900);
 }
 
+// ============ 採掘場の伐採/採掘エフェクト(2026-07-28、mock_kyoboku_chop.html v3でユーザー採用) ============
+// 道具(斧/ツルハシ)のスイング→命中(閃光+破片+背景揺れ+SE)→素材が弧を描いて巾着袋へ。
+// 巾着袋は戦闘の素材回収(playMaterialCollectFx)と同じ見た目・位置(.mat-drop-pouch、右端top200px)で、
+// 採掘バーが開いている間は出しっぱなしにする(閉じる時にhideMiningPouch)。バッジは遠征累計(戦闘と同じ)。
+// アニメーション不発環境(テスト等)でも進行が止まらないよう、回収コールバックはonfinishとsetTimeoutの両輪で駆動する
+let miningPouchEl = null;
+function miningPouchTotal() {
+  try {
+    return Object.values(advMaterialGains || {}).reduce((a, b) => a + b, 0) + (advSoulShardGained || 0);
+  } catch (e) { return 0; }
+}
+function ensureMiningPouch() {
+  if (miningPouchEl && miningPouchEl.isConnected) return miningPouchEl;
+  const colRight = Math.min(window.innerWidth, window.innerWidth / 2 + 240); // 表示カラム(最大480px)の右端
+  const pouch = document.createElement("div");
+  pouch.className = "mat-drop-pouch";
+  pouch.style.position = "fixed"; // 戦闘と違いfixedレイヤーを介さず単体で置く
+  pouch.style.zIndex = "20";
+  pouch.style.left = `${colRight - 54 - 12}px`;
+  pouch.innerHTML = `<img src="assets/icons/pouch.png" alt=""><div class="mat-drop-count">0</div>`;
+  document.body.appendChild(pouch);
+  const cnt = pouch.querySelector(".mat-drop-count");
+  const total = miningPouchTotal();
+  cnt.textContent = total;
+  if (total > 0) cnt.classList.add("show");
+  pouch.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 250, easing: "ease-out", fill: "forwards" });
+  miningPouchEl = pouch;
+  return pouch;
+}
+function hideMiningPouch() {
+  if (!miningPouchEl || !miningPouchEl.isConnected) { miningPouchEl = null; return; }
+  const el = miningPouchEl;
+  miningPouchEl = null;
+  el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, easing: "ease-out", fill: "forwards" }).onfinish = () => el.remove();
+  setTimeout(() => { if (el.isConnected) el.remove(); }, 400); // アニメ不発環境の保険
+}
+// fx = MINING_DEFSのfx定義({tool, sfx, matIcon, chipColor, chipColorBig})。onCollectは素材が巾着に収まった瞬間に1回呼ばれる
+function playMiningChopFx(fx, onCollect) {
+  const pouch = ensureMiningPouch();
+  const W = window.innerWidth, H = window.innerHeight;
+  const ix = W / 2 + 8, iy = H * 0.4; // 命中点(画面中央やや上=巨木の幹/岩壁のあたり)
+  const tool = document.createElement("div");
+  tool.className = "mining-fx-tool";
+  tool.textContent = fx.tool;
+  tool.style.left = (ix - 20) + "px";
+  tool.style.top = (iy - 26) + "px";
+  document.body.appendChild(tool);
+  tool.animate(
+    [{ transform: "translate(90px, 130px) rotate(120deg)", opacity: 0 },
+     { transform: "translate(70px, 100px) rotate(105deg)", opacity: 1, offset: 0.25 },
+     { transform: "translate(0px, 0px) rotate(-14deg)", opacity: 1, offset: 0.72 },
+     { transform: "translate(-4px, 2px) rotate(-6deg)", opacity: 1 }],
+    { duration: 340, easing: "cubic-bezier(0.5, 0, 0.2, 1)", fill: "forwards" });
+  setTimeout(() => { // 命中の瞬間
+    playSfx(fx.sfx);
+    const slash = document.createElement("div");
+    slash.className = "mining-fx-slash";
+    slash.style.left = (ix - 60) + "px";
+    slash.style.top = iy + "px";
+    document.body.appendChild(slash);
+    slash.animate([{ opacity: 0, transform: "rotate(-38deg) scaleX(0.4)" }, { opacity: 1, transform: "rotate(-38deg) scaleX(1)", offset: 0.35 }, { opacity: 0, transform: "rotate(-38deg) scaleX(1.05)" }], { duration: 200, easing: "ease-out" }).onfinish = () => slash.remove();
+    setTimeout(() => { if (slash.isConnected) slash.remove(); }, 300);
+    const imp = document.createElement("div");
+    imp.className = "mining-fx-impact";
+    imp.style.left = (ix - 30) + "px";
+    imp.style.top = (iy - 30) + "px";
+    document.body.appendChild(imp);
+    imp.animate([{ opacity: 1, transform: "scale(0.5)" }, { opacity: 0, transform: "scale(1.6)" }], { duration: 260, easing: "ease-out" }).onfinish = () => imp.remove();
+    setTimeout(() => { if (imp.isConnected) imp.remove(); }, 360);
+    for (let i = 0; i < 10; i++) {
+      const c = document.createElement("div");
+      const big = Math.random() < 0.3;
+      c.className = "mining-fx-chip" + (big ? " big" : "");
+      c.style.background = big ? fx.chipColorBig : fx.chipColor;
+      c.style.left = ix + "px";
+      c.style.top = iy + "px";
+      document.body.appendChild(c);
+      const dx = (Math.random() - 0.5) * 170;
+      const dy = -40 - Math.random() * 70;
+      c.animate(
+        [{ transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+         { transform: `translate(${dx * 0.6}px, ${dy}px) rotate(${dx * 3}deg)`, opacity: 1, offset: 0.45 },
+         { transform: `translate(${dx}px, ${dy + 130}px) rotate(${dx * 6}deg)`, opacity: 0 }],
+        { duration: 640 + Math.random() * 220, easing: "ease-out" }).onfinish = () => c.remove();
+      setTimeout(() => { if (c.isConnected) c.remove(); }, 900);
+    }
+    // 背景揺れ: 帰還ズーム(fill:forwardsのscale)と衝突しないようcomposite:addで重ねる(非対応環境は通常適用)
+    const shakeKF = [{ transform: "translate(0,0)" }, { transform: "translate(-5px,2px)" }, { transform: "translate(5px,-2px)" }, { transform: "translate(-2px,1px)" }, { transform: "translate(0,0)" }];
+    ["dungeonBgInner", "dungeonBgInner2"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      try { el.animate(shakeKF, { duration: 300, easing: "ease-out", composite: "add" }); }
+      catch (e) { el.animate(shakeKF, { duration: 300, easing: "ease-out" }); }
+    });
+    // 素材が幹/岩からポンっと跳ねて、弧を描いて巾着袋へ(戦闘の素材回収と同じ3点キーフレーム)
+    setTimeout(() => {
+      const mat = document.createElement("img");
+      mat.className = "mining-fx-mat";
+      mat.src = fx.matIcon;
+      mat.style.left = (ix - 20) + "px";
+      mat.style.top = (iy - 20) + "px";
+      document.body.appendChild(mat);
+      const pr = pouch.getBoundingClientRect();
+      const tx = pr.left + pr.width / 2 - ix;
+      const ty = pr.top + pr.height / 2 - iy;
+      let collected = false;
+      const collect = () => {
+        if (collected) return;
+        collected = true;
+        mat.remove();
+        playSfx("loot_item");
+        const cnt = pouch.querySelector(".mat-drop-count");
+        if (cnt) {
+          cnt.textContent = miningPouchTotal();
+          cnt.classList.add("show");
+        }
+        pouch.animate(
+          [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-9deg) scale(1.14)", offset: 0.3 }, { transform: "rotate(7deg) scale(1.07)", offset: 0.6 }, { transform: "rotate(0) scale(1)" }],
+          { duration: 340, easing: "ease-out" });
+        if (onCollect) onCollect();
+      };
+      mat.animate(
+        [{ transform: "translate(0,0) scale(0.3)", opacity: 0 },
+         { transform: "translate(0,-30px) scale(1.1)", opacity: 1, offset: 0.3 },
+         { transform: `translate(${tx * 0.5}px, ${ty * 0.5 - 46}px) scale(1.05)`, opacity: 1, offset: 0.65 },
+         { transform: `translate(${tx}px, ${ty}px) scale(0.4)`, opacity: 0.9 }],
+        { duration: 640, easing: "ease-in", fill: "forwards" }).onfinish = collect;
+      setTimeout(collect, 720); // アニメ不発環境でも回収が止まらない保険
+    }, 160);
+    setTimeout(() => { if (tool.isConnected) tool.remove(); }, 380);
+  }, 300);
+}
+
 // ============ 村襲撃バリケードの演出(2026-07-27、mock_barricade_damage.htmlでユーザー確認済み) ============
 // 被弾: 揺れ+木片+ヒットSE。倒壊: 大揺れ→傾いて崩れ落ちる+倒壊SE→collapsedで非表示。
 // 状態(HP)はbattle.js側、ここは見た目だけ

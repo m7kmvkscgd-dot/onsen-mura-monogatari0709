@@ -611,19 +611,62 @@
   }
   .hikaru-spark { position: absolute; left: 50%; top: 50%; font-size: 1.25rem; opacity: 0; }
 
-/* ============ 採掘場(巨木/鉄鉱石)パネル(2026-07-28) ============ */
-/* イベントカード(dungeon-event-panel)の枠を使い回し、作業者選択チップと情報行だけ専用スタイル */
-.mining-info {
-  text-align: center; font-size: 0.72rem; font-weight: 800; color: #e8dcbf;
-  background: rgba(0,0,0,0.35); border-radius: 8px; padding: 3px 8px; margin: 0.35rem 0 0.45rem;
+/* ============ 採掘場(巨木/鉄鉱石)の伐採バー(2026-07-28、mock_kyoboku_chop.html v3でユーザー採用) ============ */
+/* 探索画面の下部ボタン群(.bottom-actions)と入れ替わりで出す常設バー(モーダルの出入りはしない)。
+   作業者は顔アイコンで選び、選ぶと他の顔は消える。ストレスバーは顔の下に常設で切るたびに伸びる */
+body.mining-active .bottom-actions { display: none; }
+#miningBar {
+  background: rgba(26,20,14,0.92); border: 2px solid #4b3728; border-radius: 14px;
+  outline: 1px solid rgba(217,196,154,0.7); outline-offset: -5px;
+  padding: 10px; margin: 0.5rem 1rem;
 }
-.mining-diggers { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 0.55rem; }
-.mining-digger-btn {
-  font-family: inherit; font-size: 0.68rem; font-weight: 700; color: #e8e0d0;
-  background: rgba(24,30,36,0.9); border: 2px solid rgba(255,255,255,0.18); border-radius: 9px;
-  padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px;
+.mining-ask { text-align: center; font-size: 0.8rem; font-weight: 900; margin-bottom: 8px; color: #e8dcbf; }
+.mining-faces { display: flex; justify-content: center; gap: 10px; }
+.mining-face {
+  width: 64px; border: 0; background: none; font-family: inherit; color: #e8e0d0; padding: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
-.mining-digger-btn.selected { border-color: var(--accent); background: rgba(201,162,74,0.16); }
-.mining-digger-btn.disabled { opacity: 0.35; }
-.mining-digger-stress { font-size: 0.6rem; font-weight: 800; color: #d98f7a; }
-.mining-digger-stress.over { color: #ff6b5a; }
+.mining-face img {
+  width: 64px; height: 64px; object-fit: contain; background: #353a44;
+  border-radius: 10px; border: 2px solid rgba(255,255,255,0.25); display: block;
+}
+.mining-face .nm { font-size: 0.62rem; font-weight: 700; margin-top: 2px; text-align: center; }
+.mining-face.gone { opacity: 0; transform: scale(0.7); pointer-events: none; }
+.mining-face.blocked img { filter: grayscale(0.7) brightness(0.6); }
+.mining-face:active img { transform: scale(0.95); }
+.mining-stress-track { height: 6px; border-radius: 3px; background: rgba(0,0,0,0.6); overflow: hidden; border: 1px solid rgba(255,255,255,0.15); margin-top: 3px; }
+.mining-stress-fill { display: block; height: 100%; width: 0%; background: #7ec96f; transition: width 0.4s ease-out, background-color 0.4s; }
+.mining-stress-fill.mid { background: #f2d94e; }
+.mining-stress-fill.high { background: #ff6b5a; }
+.mining-stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; text-align: center; }
+.mining-work-row { display: flex; align-items: center; gap: 10px; }
+.mining-work-face { width: 64px; flex-shrink: 0; }
+.mining-work-face img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 10px; border: 2px solid var(--accent); display: block; }
+.mining-work-btns { flex: 1; min-width: 0; }
+.mining-dig-btn {
+  display: block; width: 100%; font-family: inherit; text-align: center;
+  background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+  border: 2px solid rgba(217,196,154,0.4); border-radius: 12px; color: #e8e0d0;
+  padding: 11px 8px; font-size: 0.95rem; font-weight: 900;
+}
+.mining-dig-btn small { font-weight: 700; font-size: 0.68rem; color: rgba(232,224,208,0.75); margin-left: 6px; }
+.mining-dig-btn:active { transform: scale(0.98); }
+.mining-dig-btn.disabled { opacity: 0.45; }
+.mining-leave-btn {
+  display: block; width: 100%; margin-top: 6px; font-family: inherit; text-align: center;
+  background: rgba(20,26,32,0.9); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px;
+  color: #e8e0d0; padding: 8px; font-size: 0.78rem; font-weight: 700;
+}
+/* 伐採エフェクト(effects.jsのplayMiningChopFx)。使い捨てDOM、fixedレイヤー上 */
+.mining-fx-tool { position: fixed; z-index: 21; font-size: 58px; line-height: 1; pointer-events: none; transform-origin: 85% 85%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6)); }
+.mining-fx-slash {
+  position: fixed; z-index: 21; width: 120px; height: 5px; border-radius: 3px; pointer-events: none;
+  background: linear-gradient(to right, transparent, #fff8e0 30%, #ffffff 55%, transparent);
+  box-shadow: 0 0 12px rgba(255,244,200,0.9);
+}
+.mining-fx-impact { position: fixed; z-index: 20; width: 60px; height: 60px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(rgba(255,248,214,0.95), rgba(255,214,120,0.5) 45%, transparent 70%); }
+.mining-fx-chip { position: fixed; width: 8px; height: 4px; border-radius: 1px; pointer-events: none; z-index: 21; box-shadow: 0 0 2px rgba(0,0,0,0.6); }
+.mining-fx-chip.big { width: 12px; height: 6px; }
+.mining-fx-mat { position: fixed; z-index: 22; width: 40px; height: 40px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); }
+.mining-stress-pop { position: fixed; z-index: 22; font-size: 0.72rem; font-weight: 900; color: #ff8a72; text-shadow: 0 1px 3px rgba(0,0,0,0.95); pointer-events: none; white-space: nowrap; }

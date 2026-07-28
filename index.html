@@ -649,7 +649,26 @@
         <button class="big" id="dungeonToolsBtn">道具</button>
         <button class="big" id="dungeonSwapBtn" style="display:none;">交代</button>
         <button class="big" id="dungeonShikigamiRecallBtn" style="display:none;">式神帰還</button>
+        <!-- 採掘場の階(森12層/洞窟6層)に居て残り回数がある時だけ表示。伐採バーを(再)オープンする -->
+        <button class="big" id="dungeonMiningBtn" style="display:none;">🪓 木を切る</button>
         <div id="dungeonTargetPicker" style="display:none;width:100%;flex-wrap:wrap;gap:0.6rem;"></div>
+      </div>
+      <!-- 採掘バー(mock_kyoboku_chop.html v3でユーザー採用のUI)。表示中はbody.mining-activeで
+           bottom-actionsと入れ替わる。作業者の顔選択→選ぶと他の顔は消えて作業レイアウトへ -->
+      <div id="miningBar" style="display:none;">
+        <div class="mining-ask" id="miningAsk">誰が切りますか？</div>
+        <div class="mining-faces" id="miningFaces"></div>
+        <div class="mining-work-row" id="miningWorkRow" style="display:none;">
+          <div class="mining-work-face">
+            <img id="miningWorkImg" src="" alt="">
+            <div class="mining-stress-track"><i class="mining-stress-fill" id="miningWorkFill"></i></div>
+            <div class="mining-stress-num" id="miningWorkNum"></div>
+          </div>
+          <div class="mining-work-btns">
+            <button class="mining-dig-btn" id="miningDigActBtn"></button>
+            <button class="mining-leave-btn" id="miningLeaveActBtn">先へ進む</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
