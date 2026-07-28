@@ -615,6 +615,8 @@
 /* 探索画面の下部ボタン群(.bottom-actions)と入れ替わりで出す常設バー(モーダルの出入りはしない)。
    作業者は顔アイコンで選び、選ぶと他の顔は消える。ストレスバーは顔の下に常設で切るたびに伸びる */
 body.mining-active .bottom-actions { display: none; }
+/* 採掘中は探索パーティの3人アイコンも消す(作業者は伐採バーの顔アイコンで見えているため冗長、ユーザー指示2026-07-28) */
+body.mining-active #dungeonPartyBar { display: none; }
 #miningBar {
   /* .bottom-actionsと同じ配置方式: fixed+topはJS(positionActionsBelowPartyBar)が味方アイコンの
      実測位置から計算する。staticのままだと通常フローで画面上部に流れ込み、しかも上部を覆う

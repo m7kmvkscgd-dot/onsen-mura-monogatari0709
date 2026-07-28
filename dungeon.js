@@ -2214,7 +2214,6 @@ const MINING_DEFS = {
     icon: "🪓", actLabel: "木を切る", askLabel: "誰が切りますか？", reopenLabel: "🪓 木を切る",
     exhaustLabel: "斧が限界だ",
     arriveLog: "巨木を見つけた。", arriveLog2: "木を切ることができる。",
-    digLog: (name) => `${name}は木材を切り出した。`,
     fx: { tool: "🪓", sfx: "barricade_hit", matIcon: "assets/icons/materials/ki.png", chipColor: "#8a5a30", chipColorBig: "#9c6a38" },
   },
   iron: {
@@ -2222,7 +2221,6 @@ const MINING_DEFS = {
     icon: "⛏️", actLabel: "鉄を掘る", askLabel: "誰が掘りますか？", reopenLabel: "⛏️ 鉄を掘る",
     exhaustLabel: "岩場が限界だ",
     arriveLog: "鉄鉱石の鉱脈を見つけた。", arriveLog2: "鉄を掘ることができる。",
-    digLog: (name) => `${name}は鉄鉱石を掘り出した。`,
     fx: { tool: "⛏️", sfx: "extension_build", matIcon: "assets/icons/materials/tetsu.png", chipColor: "#8f939c", chipColorBig: "#6b6f78" },
   },
 };
@@ -2300,6 +2298,9 @@ function renderMiningBar() {
   const cands = miningCandidates();
   const worker = miningDiggerId != null ? getRosterChar(miningDiggerId)
     : miningUiSelectedId != null ? cands.find((c) => c.id === miningUiSelectedId) : null;
+  // 作業者を選んだらテキストボックスも消す(伐採はアニメーションで分かるため、ユーザー指示2026-07-28)。
+  // 選択前は「巨木を見つけた。/木を切ることができる。」の案内を見せておく。復帰はcloseMiningUi→renderDungeon
+  document.getElementById("dungeonLog").style.display = worker ? "none" : "";
   if (!worker) {
     // 作業者の選択フェーズ: 顔アイコンを並べる(ストレスが限界の人は暗くして選べない)
     askEl.style.display = "";
@@ -2355,11 +2356,15 @@ function renderMiningBar() {
   }
   positionMiningBar();
 }
-// バーの縦位置を.bottom-actionsと同じ仕組み(味方アイコンの実測位置の下+見切れ防止クランプ)で決める。
+// バーの縦位置: 採掘中はパーティアイコン(#dungeonPartyBar)を消すため(ユーザー指示)、
+// アイコン基準ではなく可視領域の下端基準で置く(innerHeightから自身の高さを引く。
+// iOSのURLバー伸縮で可視高さが変わる問題への対処はpositionActionsBelowPartyBarのクランプと同じ考え方)。
 // 顔選択⇄作業レイアウトで高さが変わるため、renderMiningBarのたびに置き直す
 function positionMiningBar() {
   if (!miningUiActive) return;
-  positionActionsBelowPartyBar("dungeonPartyBar", "#miningBar");
+  const bar = document.getElementById("miningBar");
+  const h = bar.getBoundingClientRect().height;
+  bar.style.top = Math.max(10, window.innerHeight - h - 10) + "px";
 }
 function miningStressFillClass(v) {
   return "mining-stress-fill" + (v >= 80 ? " high" : v >= 50 ? " mid" : "");
@@ -2384,8 +2389,8 @@ function miningDig() {
   saveState();
   renderMiningBar(); // 残り回数とストレスバー(transitionで伸びる)を即時反映
   playMiningChopFx(def.fx, () => {
-    // 素材が巾着に収まった瞬間: ログ+作業者の頭上にストレスの浮き文字
-    dlog(def.digLog(worker.name));
+    // 素材が巾着に収まった瞬間: 作業者の頭上にストレスの浮き文字
+    // (「◯◯は木材を切り出した」のログは廃止。アニメーションで分かるため文字は出さない=ユーザー指示2026-07-28)
     const face = document.getElementById("miningWorkImg");
     if (face && face.getBoundingClientRect) {
       const r = face.getBoundingClientRect();
