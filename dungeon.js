@@ -1370,12 +1370,20 @@ document.getElementById("advanceBtn").onclick = () => {
   const offerCaveFork = !offerTeahouse && !questApproach && currentStage === "forest" && targetFloor === CAVE_FORK_FLOOR;
   // 深淵の森21層目(VALLEY_FORK_FLOOR、20層目の次)へ進む時だけ、渓流への分かれ道を追加の選択肢として出す
   const offerValleyFork = !offerTeahouse && !questApproach && currentStage === "forest" && targetFloor === VALLEY_FORK_FLOOR;
+  // 採掘場の階(残り回数あり)へ進む時は、どの道を選んでも到着が確定で採掘イベントになり選択が無意味なため、
+  // 「🌲巨木」/「⛏️鉱脈」の一択に差し替える(洞窟/渓流の分かれ道と重なる階ではないので同時成立は考えない)
+  const miningApproachKey = !offerTeahouse && !questApproach && !offerCaveFork && !offerValleyFork
+    ? miningKeyForFloor(currentStage, targetFloor) : null;
   showPathChoice((pathBias) => {
     if (pathBias === TEAHOUSE_PATH_KEY) {
       playDungeonMoveTransition(() => moveOneFloor(null, true));
       return;
     }
     if (pathBias === QUEST_APPROACH_KEY) {
+      playDungeonMoveTransition(() => moveOneFloor(null));
+      return;
+    }
+    if (pathBias === MINING_APPROACH_KEY) {
       playDungeonMoveTransition(() => moveOneFloor(null));
       return;
     }
@@ -1392,7 +1400,7 @@ document.getElementById("advanceBtn").onclick = () => {
     const chosen = currentPathDefs()[pathBias];
     if (chosen) dlog(`${chosen.icon}${chosen.label}を選んだ。`);
     playDungeonMoveTransition(() => moveOneFloor(pathBias));
-  }, offerTeahouse, questApproach, offerCaveFork, offerValleyFork);
+  }, offerTeahouse, questApproach, offerCaveFork, offerValleyFork, miningApproachKey);
 };
 
 // スレイ・ザ・スパイア風の「進む前に道を選ぶ」システム。選んだ道ごとに戦闘/財宝/静寂の出現率を
@@ -1624,6 +1632,7 @@ function weightedPickPathKey(weights) {
 // そのまま野営へ抜ける(=道が選ばれなかったことになるが、キャンセルではなく別行動を選んだ扱い)
 const TEAHOUSE_PATH_KEY = "__teahouse__"; // 通常の進路キーとは別枠の特別な選択肢(茶屋)を表す番人値
 const QUEST_APPROACH_KEY = "__quest_approach__"; // 討伐対象の階に確定で到達する時専用の番人値(道の選択自体が無意味になるため単一選択肢にする)
+const MINING_APPROACH_KEY = "__mining_approach__"; // 採掘場の階(森12層の巨木/洞窟6層の鉱脈、残り回数あり)へ進む時専用の番人値。到着は確定で採掘イベントになり道の戦闘/財宝率が機能しないため、討伐依頼の接近と同じく単一選択肢にする(ユーザー指示2026-07-28)
 const CAVE_FORK_KEY = "__cave_fork__"; // 深淵の森の分かれ道で「洞窟」を選んだ時専用の番人値
 const CAVE_FORK_FLOOR = 10; // 深淵の森でこの階に進む時、洞窟への分かれ道を追加の選択肢として提示する
 // 森→渓流の分かれ道(2026-07-19、ユーザー指示で20層目の次(21層目)に変更)。洞窟の分かれ道
@@ -1662,7 +1671,7 @@ const STAGE_CHAIN_NEXT = { cave: "ruinsforest", ruins: "gate", valley: "bamboo",
 const STAGE_CHAIN_MAX = { cave: CAVE_MAX_FLOOR, ruins: RUINS_MAX_FLOOR, gate: GATE_MAX_FLOOR, castle: CASTLE_MAX_FLOOR, ruinsforest: RUINSFOREST_MAX_FLOOR, valley: VALLEY_MAX_FLOOR, bamboo: BAMBOO_MAX_FLOOR, shugendo: SHUGENDO_MAX_FLOOR, yama: YAMA_MAX_FLOOR, coast: COAST_MAX_FLOOR };
 const STAGE_CHAIN_ENTER_LOG = { cave: "🌲森が少しだけ戻ってきた。", ruins: "🚪古城へ続く門にたどり着いた。", valley: "🎋光る竹林へ足を踏み入れた。", shugendo: "⛰️山へ足を踏み入れた。" };
 const KAMIKAKUSHI_REVEAL_MS = 900; // 神隠しの道の「顕現」演出の長さ。この間は誤タップ防止のため選べない
-function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, offerValleyFork) {
+function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, offerValleyFork, miningApproachKey) {
   const div = document.getElementById("criticalAlert");
   // このポップアップの下に隠れているはずの探索ログが透けて見えてしまうため、表示中は非表示にする
   document.getElementById("dungeonLog").style.display = "none";
@@ -1671,6 +1680,9 @@ function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, o
     // 受注中の依頼の対象階へ進む時は、道の分岐(battle/gold率の傾き)がどれを選んでも確定でその群れと
     // 戦闘になり選択が無意味になるため、通常の抽選は行わず「目標接近！」の単一選択肢だけを出す
     picked = [QUEST_APPROACH_KEY];
+  } else if (miningApproachKey) {
+    // 採掘場の階へ進む時も同じ理屈(到着=確定で採掘イベント)で一択にする
+    picked = [MINING_APPROACH_KEY];
   } else {
     let count = pickPathChoiceCount();
     // 洞窟/渓流への分かれ道は、通常の道を選ぶという選択肢自体を必ず残す必要がある
@@ -1715,12 +1727,13 @@ function showPathChoice(onChosen, offerTeahouse, questApproach, offerCaveFork, o
           ${picked.map((key, idx) => {
             const isTeahouse = key === TEAHOUSE_PATH_KEY;
             const isQuestApproach = key === QUEST_APPROACH_KEY;
+            const isMiningApproach = key === MINING_APPROACH_KEY;
             const isCaveFork = key === CAVE_FORK_KEY;
             const isValleyFork = key === VALLEY_FORK_KEY;
             const isKamikakushi = key === "kamikakushi";
             const isHikaru = key === "hikaru";
-            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : isCaveFork ? { icon: "🕳️", label: "洞窟" } : isValleyFork ? { icon: "🎋", label: "渓流" } : currentPathDefs()[key];
-            const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : isCaveFork ? "岩肌に空いた洞窟の入り口が見える" : isValleyFork ? "水音のする細い道が分かれている" : (flavor[key] || "");
+            const p = isTeahouse ? { icon: "🍡", label: "茶屋" } : isQuestApproach ? { icon: "🎯", label: "接近する" } : isMiningApproach ? MINING_DEFS[miningApproachKey].pathCard : isCaveFork ? { icon: "🕳️", label: "洞窟" } : isValleyFork ? { icon: "🎋", label: "渓流" } : currentPathDefs()[key];
+            const desc = isTeahouse ? "一休みできる茶屋が見える" : isQuestApproach ? "獲物の気配が急速に近づいてくる…" : isMiningApproach ? MINING_DEFS[miningApproachKey].pathCard.desc : isCaveFork ? "岩肌に空いた洞窟の入り口が見える" : isValleyFork ? "水音のする細い道が分かれている" : (flavor[key] || "");
             let extraClass = "";
             if (isTeahouse) extraClass = " path-tag-teahouse";
             else if (isCaveFork) extraClass = " path-tag-cave";
@@ -2214,6 +2227,7 @@ const MINING_DEFS = {
     icon: "🪓", actLabel: "木を切る", askLabel: "誰が切りますか？", reopenLabel: "🪓 木を切る",
     exhaustLabel: "斧が限界だ",
     arriveLog: "巨木を見つけた。", arriveLog2: "木を切ることができる。",
+    pathCard: { icon: "🌲", label: "巨木", desc: "そびえ立つ巨木が見えてきた" },
     fx: { tool: "🪓", sfx: "barricade_hit", matIcon: "assets/icons/materials/ki.png", chipColor: "#8a5a30", chipColorBig: "#9c6a38" },
   },
   iron: {
@@ -2221,6 +2235,7 @@ const MINING_DEFS = {
     icon: "⛏️", actLabel: "鉄を掘る", askLabel: "誰が掘りますか？", reopenLabel: "⛏️ 鉄を掘る",
     exhaustLabel: "岩場が限界だ",
     arriveLog: "鉄鉱石の鉱脈を見つけた。", arriveLog2: "鉄を掘ることができる。",
+    pathCard: { icon: "⛏️", label: "鉱脈", desc: "岩肌に鉱脈の輝きが見えてきた" },
     fx: { tool: "⛏️", sfx: "extension_build", matIcon: "assets/icons/materials/tetsu.png", chipColor: "#8f939c", chipColorBig: "#6b6f78" },
   },
 };
