@@ -1226,12 +1226,21 @@ function renderPartyBar(elId, combatants, actingCharId) {
   let prevCard = null;
   combatants.forEach((c) => {
     let card = bar.querySelector(`:scope > .party-member[data-id="${c.id}"]`);
+    const expectedPos = prevCard ? prevCard.nextElementSibling : bar.firstElementChild;
     if (!card) {
       card = createPartyMemberCard(c);
-      // combatantsの並び順を保って挿入する(基本は末尾追加。交代でカードの中身が別キャラに変わる
-      // ケースは「同じ位置に新しいidのカードを挿入」として自然に処理される)。既存カードは
-      // 並べ替えない=再挿入で「作りたて扱い」に戻さない(引き継ぎ文書の地雷リスト6番)
-      bar.insertBefore(card, prevCard ? prevCard.nextElementSibling : bar.firstElementChild);
+      // combatantsの並び順を保って挿入する(交代でカードの中身が別キャラに変わる
+      // ケースは「同じ位置に新しいidのカードを挿入」として自然に処理される)
+      bar.insertBefore(card, expectedPos);
+    } else if (card !== expectedPos) {
+      // 【並び順の強制(2026-07-28、ユーザー報告)】既存カードでもDOM上の位置がデータ(combatants)の
+      // 並びとズレていたら正しい位置へ移動する。以前は「既存カードは絶対に並べ替えない」方針
+      // (再挿入=作りたて扱いでアニメが再発火する地雷、引き継ぎ文書リスト6番)だったが、その結果
+      // 探索バー/戦闘バー/野営バーがそれぞれ別時点の並びを凍結し、戦闘の開始/終了のたびに
+      // 「2つの固定並びを行き来する」形で毎回並びが入れ替わって見えるバグになっていた。
+      // 移動はズレを検出した時だけ行うので、並びが安定している通常の再描画では従来通り一切触らない
+      // (=地雷を踏むのはデータ上の並びが実際に変わった瞬間のみで、その瞬間は見た目も変わるべき時)
+      bar.insertBefore(card, expectedPos);
     }
     updatePartyMemberCard(card, c, c.id === actingCharId, isFreshTurn);
     // 襲撃戦の見張り台担当(raid.jsのraidWatchtowerCharId)だけカードを高所配置にする(battle.cssのwatchtower-slot)。
