@@ -1564,16 +1564,24 @@ function useTreeSkill(actor, target, skill, log) {
 // onlyBoss=trueの場合はそのフロアで出現可能なボスだけに絞る(ボスフロアで確実にボスを出すため)
 // mode: true(旧onlyBossの後方互換) = ボスのみ、"swarm" = 大群系のみ、それ以外 = 通常(大群系は除外。
 // 大群系はpickEncounterForFloorの枠抽選経由でのみ出す)
-// 大技が来るまでの残りターン数を、敵ごとの間隔設定(bigAttackCycle: {avg, variance, instant}、
+// 大技が来るまでの残りターン数を、敵ごとの間隔設定(bigAttackCycle: {min, max, instant}、
 // data.js側で敵ごとに個別指定。未設定なら全敵共通デフォルトBIG_ATTACK_CYCLE_LENGTHの固定間隔)から
-// 1回分だけ抽選する。avg±variance(最低1)の範囲でランダムな間隔を選び、そこから「発動ターン自体」の
-// 1を引いた値がカウントダウンの初期値になる(残り1で予告、残り0で発動)
+// 1回分だけ抽選する。最短〜最長(最低1)の範囲でランダムな間隔を選び、そこから「発動ターン自体」の
+// 1を引いた値がカウントダウンの初期値になる(残り1で予告、残り0で発動)。
+// 2026-07-28にavg±variance方式から最短/最長の直接指定へ変更(「5〜7ターンおき」のような指定を可能に、
+// ユーザー要望)。エディタの古いエクスポート(avg/variance)が貼られても読めるよう後方互換を残してある
 function rollBigAttackCountdown(def) {
   const cfg = def && def.bigAttackCycle;
-  const avg = cfg && cfg.avg != null ? cfg.avg : BIG_ATTACK_CYCLE_LENGTH;
-  const variance = (cfg && cfg.variance) || 0;
-  const lo = Math.max(1, avg - variance);
-  const hi = Math.max(lo, avg + variance);
+  let lo, hi;
+  if (cfg && cfg.min != null) {
+    lo = Math.max(1, cfg.min);
+    hi = Math.max(lo, cfg.max != null ? cfg.max : cfg.min);
+  } else {
+    const avg = cfg && cfg.avg != null ? cfg.avg : BIG_ATTACK_CYCLE_LENGTH;
+    const variance = (cfg && cfg.variance) || 0;
+    lo = Math.max(1, avg - variance);
+    hi = Math.max(lo, avg + variance);
+  }
   const interval = lo + Math.floor(Math.random() * (hi - lo + 1));
   return interval - 1;
 }
