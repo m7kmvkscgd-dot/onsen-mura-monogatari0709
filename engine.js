@@ -1735,13 +1735,13 @@ function applyGroupNerf(enemies) {
     const nerfTable = { 2: 0.8, 3: 0.65, 4: 0.55, 5: 0.48, 6: 0.42 };
     const nerf = nerfTable[enemies.length] || 0.4;
     enemies.forEach((e) => {
-      // 大群(isSwarm)は元からステータスを弱く設計してあるため、頭数ナーフまでフルに掛けると
-      // 二重弱体化で雑魚すぎる(ユーザー指摘2026-07-27)。効き量(100%からの減少幅)を半分にする。
-      // 例: 6体戦は通常敵42%のところ大群は71%、5体戦は48%→74%
-      const factor = e.isSwarm ? (1 + nerf) / 2 : nerf;
-      e.hp = Math.max(1, Math.round(e.hp * factor));
+      // 大群(isSwarm)は頭数ナーフの完全対象外(2026-07-28ユーザー指示。以前は効き半分だった)。
+      // 「元から弱い代わりに数で来る」のが大群の設計で、カタログHP=実戦HPになることで
+      // 敵エディタでの確殺ライン調整(例: こうもり13=薙ぎ払いほぼ2確)がそのまま実戦に効く
+      if (e.isSwarm) return;
+      e.hp = Math.max(1, Math.round(e.hp * nerf));
       e.maxHp = e.hp;
-      e.atk = Math.max(1, Math.round(e.atk * factor));
+      e.atk = Math.max(1, Math.round(e.atk * nerf));
     });
   }
   return enemies;
