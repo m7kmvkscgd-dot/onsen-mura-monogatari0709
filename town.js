@@ -1989,13 +1989,16 @@ function openVillageDetail() {
   document.getElementById("buildingDetailName").textContent = `村 Lv.${level}`;
   const nextLevel = level + 1;
   const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
-  const descLines = ["新しい施設が解禁される基準になります。（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）"];
+  // 文言はユーザー指定(2026-07-29)。収入額は日次収入の実値(村Lv×DAILY_INCOME_PER_LEVEL)から出す
+  const descLines = ["レベルに応じて毎日ゴールド収入が入り、他の施設を解禁できます。"];
   if (level >= HOUSE_MAX_LEVEL) {
+    descLines.push(`レベル${level}\n日/${level * DAILY_INCOME_PER_LEVEL}ゴールド`);
     descLines.push("これ以上は増築できません（上限）。");
-  } else if (unlocksAtNextLevel.length > 0) {
-    descLines.push(`【次の増築（Lv${nextLevel}）で解禁】\n${unlocksAtNextLevel.map((n) => `・${n}`).join("\n")}`);
+  } else {
+    descLines.push(`レベル${level}\n日/${level * DAILY_INCOME_PER_LEVEL}ゴールド→レベル${nextLevel}\n日/${nextLevel * DAILY_INCOME_PER_LEVEL}ゴールド`);
+    if (unlocksAtNextLevel.length > 0) descLines.push(`【解禁】${unlocksAtNextLevel.join("・")}`);
   }
-  document.getElementById("buildingDetailDesc").textContent = descLines.join("\n");
+  document.getElementById("buildingDetailDesc").textContent = descLines.join("\n\n");
   renderBarricadeRepairSection({ key: "village" }, 0); // バリケード専用セクションを非表示にするためだけの呼び出し
   const btn = document.getElementById("buildingDetailActionBtn");
   const reasonEl = document.getElementById("buildingDetailReason");
