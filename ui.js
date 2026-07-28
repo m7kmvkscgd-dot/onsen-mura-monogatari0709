@@ -1236,7 +1236,18 @@ function renderPartyBar(elId, combatants, actingCharId) {
     updatePartyMemberCard(card, c, c.id === actingCharId, isFreshTurn);
     // 襲撃戦の見張り台担当(raid.jsのraidWatchtowerCharId)だけカードを高所配置にする(battle.cssのwatchtower-slot)。
     // toggleで毎回同期するため、襲撃後の通常戦闘で同じキャラのカードが使い回されても自然に外れる
-    card.classList.toggle("watchtower-slot", elId === "battlePartyBar" && typeof raidWatchtowerCharId !== "undefined" && raidWatchtowerCharId != null && c.id === raidWatchtowerCharId);
+    const isWatchtower = elId === "battlePartyBar" && typeof raidWatchtowerCharId !== "undefined" && raidWatchtowerCharId != null && c.id === raidWatchtowerCharId;
+    card.classList.toggle("watchtower-slot", isWatchtower);
+    // やぐらの絵はカード内の通常フロー要素(MPバーの直後)として持つ(::before絶対配置はiOS実機で
+    // カードの持ち上げに追従しない症状が出たため)。クラスと同じライフサイクルで注入/除去する
+    let yagura = card.querySelector(":scope > .watchtower-yagura");
+    if (isWatchtower && !yagura) {
+      yagura = document.createElement("div");
+      yagura.className = "watchtower-yagura";
+      card.appendChild(yagura);
+    } else if (!isWatchtower && yagura) {
+      yagura.remove();
+    }
     prevCard = card;
   });
   activateHpTrails(bar);

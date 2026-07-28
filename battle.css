@@ -458,13 +458,17 @@
      (ユーザー指示2026-07-28: タグと名前は消してイラストを少し下へ) */
   #battlePartyBar.raid-battle-bar .party-member.watchtower-slot { top: -30px; }
   #battlePartyBar.raid-battle-bar .party-member.watchtower-slot .nm { display: none; }
-  /* やぐら: 手すり(柵)+梁+2本脚+筋交いを1枚のSVGで、持ち上げた48pxの空間に敷く。
-     手すりはカードに重ねるとHPバーが見えにくい(ユーザー指摘)ため、カードの外(下)=SVGの最上段に置く */
-  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot::before {
-    content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 48px;
-    pointer-events: none;
+  /* やぐら: 手すり(柵)+梁+2本脚+筋交いを1枚のSVG(通常フローの実DOM子要素)で描く。
+     以前はカードの::before(絶対配置top:100%)だったが、iOS実機でカードの持ち上げ(top:-30px)に
+     追従せず約30px下に取り残される症状が出たため(ユーザー報告2026-07-28)、位置指定に頼らない
+     通常フロー(MPバーの直後に並ぶ)へ変更した。これなら必ずMPバーのほんの少し下に付く。
+     margin左右-4pxはカードのpadding(4px)を打ち消してカード全幅に広げるため */
+  .party-member .watchtower-yagura { display: none; }
+  #battlePartyBar.raid-battle-bar .party-member.watchtower-slot .watchtower-yagura {
+    display: block; height: 48px; margin: 2px -4px 0;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 48' preserveAspectRatio='none'%3E%3Crect x='4' y='3' width='68' height='3' fill='%235d3f24'/%3E%3Cg fill='%237a5230'%3E%3Crect x='6' y='0' width='4' height='9'/%3E%3Crect x='15' y='0' width='4' height='9'/%3E%3Crect x='24' y='0' width='4' height='9'/%3E%3Crect x='33' y='0' width='4' height='9'/%3E%3Crect x='42' y='0' width='4' height='9'/%3E%3Crect x='51' y='0' width='4' height='9'/%3E%3Crect x='60' y='0' width='4' height='9'/%3E%3Crect x='66' y='0' width='4' height='9'/%3E%3C/g%3E%3Crect x='2' y='9' width='72' height='6' rx='2' fill='%238a5f38'/%3E%3Crect x='2' y='12' width='72' height='3' rx='1' fill='%235d3f24'/%3E%3Cline x1='14' y1='15' x2='62' y2='45' stroke='%236d4a2b' stroke-width='4'/%3E%3Cline x1='62' y1='15' x2='14' y2='45' stroke='%236d4a2b' stroke-width='4'/%3E%3Cline x1='11' y1='15' x2='17' y2='48' stroke='%237a5230' stroke-width='7'/%3E%3Cline x1='65' y1='15' x2='59' y2='48' stroke='%237a5230' stroke-width='7'/%3E%3C/svg%3E") center top / 100% 100% no-repeat;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+    pointer-events: none;
   }
   .enemy-card.swarm { width: 56px; padding: 0.2rem; }
   /* :not(.slash-vfx)で除外する理由: このセレクタは".enemy-card img.slash-vfx"(width/height指定なし、
