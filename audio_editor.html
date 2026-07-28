@@ -98,7 +98,7 @@
 <script>
 // ============ 基準値(ゲーム実値と同期させること) ============
 // BGM: ゲーム側はBGM_BASE_VOLUME(0.8)×キー別倍率の式だが、エディタでは「キーごとの実効音量」で
-// 編集する(適用時にゲーム側をテーブル方式に置き換える予定)。GainNode経由のため200%まで増幅可
+// 編集する(適用時にゲーム側をテーブル方式に置き換える予定)。max=1.0(audio要素の上限)
 const BGM_ITEMS = [
   { key: "town", ja: "町(朝・昼・夕)", file: "assets/bgm/town_bgm.mp3", vol: 0.56 },
   { key: "town_dawn", ja: "町(早朝)", file: "assets/bgm/town_dawn_bgm.mp3", vol: 0.8 },
@@ -116,13 +116,14 @@ const BGM_ITEMS = [
   { key: "tengu_battle", ja: "天狗の腕試し", file: "assets/bgm/tengu_battle_bgm.mp3", vol: 0.8 },
   { key: "raid_battle", ja: "襲撃戦", file: "assets/bgm/yokai_no_shutai.mp3", vol: 0.8 },
 ];
-// 別チャンネル(bgmAudioとは別の<audio>要素)。2026-07-28にGainNode移行済みでiOS実機でも音量変更が効く
+// 別チャンネル(bgmAudioとは別の<audio>要素)。【注意】iOS実機はJSからの.volume指定を無視するため、
+// このチャンネルの音量変更は現状PCでしか効かない(GainNode移行は過去に事故があり慎重案件)
 const CHANNEL_ITEMS = [
-  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5 },
-  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5 },
-  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45 },
-  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, max: 1 }, // 比率のためこの項目だけ上限100%
-  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55 },
+  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5, ios: true },
+  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5, ios: true },
+  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45, ios: true },
+  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, ios: true, max: 1 },
+  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55, ios: true },
 ];
 // 効果音: ゲーム側はSFX_GAIN表(未記載は1.0)。WebAudioのGainNodeなのでiOS実機でも効く。max=2.0
 const SFX_ITEMS = [
@@ -193,9 +194,9 @@ try { edits = Object.assign({ bgm: {}, channels: {}, sfx: {} }, JSON.parse(local
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
 
 const SECTIONS = [
-  { key: "bgm", label: "🎵 BGM", items: BGM_ITEMS, max: 2, note: "100%=等倍、200%まで増幅できる(GainNode)。上げすぎると音割れ(クリップ)するので試聴で確認を。" },
+  { key: "bgm", label: "🎵 BGM", items: BGM_ITEMS, max: 1, note: "実効音量(0〜100%)。ゲーム側は基準0.8×倍率の式だが、ここではキーごとの実際の音量をそのまま編集する。" },
   { key: "sfx", label: "🔔 効果音", items: SFX_ITEMS, max: 2, note: "100%=等倍。200%まで上げられる(WebAudioのゲイン。iOS実機でも効く)。" },
-  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 2, note: "宿泊/野営/環境音/オープニングの各チャンネル。GainNode移行済み(2026-07-28)でiOS実機でも反映され、200%まで増幅可。" },
+  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "⚠️このタブの音量は現状iOS実機ではJSから変更できない(PCのみ反映)。変更したい場合はGainNode移行が必要で、過去に事故があるため慎重に相談。" },
 ];
 let activeSection = "bgm";
 
@@ -214,20 +215,6 @@ let previewBtnEl = null;
 let previewRowKey = null;
 const AC = window.AudioContext || window.webkitAudioContext;
 const sfxCtx = AC ? new AC() : null;
-// BGM試聴も本体と同じGainNode経由にする(100%超の増幅を試聴で確認できるように)。失敗時は.volume(上限100%)
-let previewGainNode = null;
-try {
-  if (sfxCtx) {
-    const src = sfxCtx.createMediaElementSource(previewAudio);
-    previewGainNode = sfxCtx.createGain();
-    src.connect(previewGainNode).connect(sfxCtx.destination);
-    previewAudio.volume = 1;
-  }
-} catch (e) { previewGainNode = null; }
-function setPreviewVolume(v) {
-  if (previewGainNode) previewGainNode.gain.value = v;
-  else previewAudio.volume = Math.min(1, v);
-}
 const sfxBuffers = {};
 function sfxFile(key) { return `assets/sfx/${key}.${SFX_EXT[key] || "mp3"}`; }
 function playSfxPreview(key, gain) {
@@ -258,11 +245,9 @@ function toggleBgmPreview(btn, sec, item) {
   if (previewRowKey === sec + ":" + item.key) { stopBgmPreview(); return; }
   stopBgmPreview();
   previewAudio.src = item.file;
-  setPreviewVolume(currentVol(sec, item));
+  previewAudio.volume = Math.min(1, currentVol(sec, item));
   previewAudio.currentTime = 0;
-  const doPlay = () => previewAudio.play().catch(() => {});
-  if (sfxCtx && sfxCtx.state !== "running") sfxCtx.resume().then(doPlay).catch(doPlay);
-  else doPlay();
+  previewAudio.play().catch(() => {});
   previewBtnEl = btn;
   previewRowKey = sec + ":" + item.key;
   btn.classList.add("playing");
@@ -309,7 +294,7 @@ function render() {
       row.classList.toggle("edited", edits[sec.key][key] != null);
       // 再生中の試聴へリアルタイム反映
       if (sec.key === "sfx") { /* 効果音は次の再生から反映(短いのでそのままでよい) */ }
-      else if (previewRowKey === sec.key + ":" + key) setPreviewVolume(v);
+      else if (previewRowKey === sec.key + ":" + key) previewAudio.volume = Math.min(1, v);
       save();
       refreshCount();
       document.querySelectorAll(".tab").forEach((b, i) => b.classList.toggle("has-edits", Object.keys(edits[SECTIONS[i].key]).length > 0));

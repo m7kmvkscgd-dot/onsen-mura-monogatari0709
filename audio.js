@@ -116,14 +116,13 @@ const campBgmAudio = document.getElementById("campBgmAudio");
 const ambientBgmAudio = document.getElementById("ambientBgmAudio");
 const openingBgmAudio = document.getElementById("openingBgmAudio");
 
-// ============ Web Audio API(GainNode)による音量制御 ============
-// AudioContext → MediaElementAudioSourceNode → GainNode → destination の1本道。
-// まずbgmAudio(町・冒険中BGM)だけを最小構成で移行し、PC・iPhone実機での正常動作を確認済み。
-// 2026-07-28、実証済みのこのパターンのまま残り4要素(opening/lodging/camp/ambient)も移行した
-// (ユーザー指示「iOSでも音量エディタの変更を効かせたい」)。過去の5要素一斉移行の事故を踏まえ、
-// ①AudioContextは増やさずこの1つへ相乗り(iOSは同時コンテキスト数に上限がある) ②要素ごとに
-// try/catchで独立させ、失敗した要素だけ従来の.volume方式へフォールバック、の2点を守っている。
-// GainNode構築に失敗した場合(古いブラウザ等)は、各要素の.volumeへの直接代入にフォールバックする。
+// ============ bgmAudio専用: Web Audio API(GainNode)による音量制御【最小構成】 ============
+// AudioContext → MediaElementAudioSourceNode → GainNode → destination の1本道のみ。
+// まずbgmAudio(町・冒険中BGM)だけをこの経路に乗せる。他のBGM要素(openingBgmAudio/
+// lodgingBgmAudio/campBgmAudio/ambientBgmAudio)は今回は触らず、従来通り<audio>.volumeの
+// ままにしておく(bgmAudio単体でPC・iPhoneとも正常動作することを確認してから、
+// 同じパターンを他の要素にも1つずつ広げる方針)。
+// GainNode構築に失敗した場合(古いブラウザ等)は、bgmAudio.volumeへの直接代入にフォールバックする。
 let bgmAudioCtx = null;
 let bgmGainNode = null;
 try {
@@ -140,7 +139,7 @@ try {
 }
 function setBgmAudioVolume(value) {
   if (bgmGainNode) bgmGainNode.gain.value = value;
-  else bgmAudio.volume = Math.min(1, value); // <audio>.volumeは1超えで例外になるためクランプ(GainNode側は100%超の増幅を許容)
+  else bgmAudio.volume = value;
 }
 function getBgmAudioVolume() {
   return bgmGainNode ? bgmGainNode.gain.value : bgmAudio.volume;
@@ -247,8 +246,8 @@ const AMBIENT_BGM_VOLUME = 0.45;
 const OPENING_BGM_VOLUME = 0.55;
 // ============ 音量調整(右上のスピーカーアイコン→0〜10のボタン) ============
 // 0(ミュート)〜1の倍率、0.1刻み。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
-// 他のBGM要素(opening/lodging/camp/ambient)もGainNode化済み(2026-07-28)だが、マスター倍率は
-// 従来通りbgmAudioにのみ掛け、他チャンネルは0の時だけ.mutedで完全に黙らせる(挙動は従来から変えない)
+// 他のBGM要素(opening/lodging/camp/ambient)はGainNode化していないため、この値では音量までは
+// 変えられないが、0の時だけ.mutedで完全に黙らせる(0ボタン=ミュート、という直感的な挙動に合わせるため)
 let masterBgmVolume = 0.6; // ユーザー指示で初期値は6(10段階中)
 let lastMasterBgmVolumeBeforeMute = 0.6; // ミュート前の音量を覚えておき、設定画面のON/OFFトグルで復元する
 function targetBgmVolume(key) {
@@ -280,47 +279,10 @@ function toggleMute() {
   setMasterBgmVolume(masterBgmVolume > 0 ? 0 : (lastMasterBgmVolumeBeforeMute || 1));
 }
 setBgmAudioVolume(baseTargetVolume());
-// 4チャンネル(宿泊/野営/環境音/オープニング)のGainNode接続。bgmAudioと同じAudioContextへ相乗りし、
-// 成功した要素は実音量をGainNodeが担う(要素側の.volumeも掛かると二重に減衰するため1に固定)。
-// 失敗した要素は従来通り.volumeで設定する(iOSでは効かないが、少なくとも今まで通り鳴る)
-function attachChannelGain(el, initialVolume) {
-  if (!bgmAudioCtx) return null;
-  try {
-    const src = bgmAudioCtx.createMediaElementSource(el);
-    const g = bgmAudioCtx.createGain();
-    g.gain.value = initialVolume;
-    src.connect(g).connect(bgmAudioCtx.destination);
-    el.volume = 1;
-    return g;
-  } catch (e) {
-    return null;
-  }
-}
-const lodgingGainNode = attachChannelGain(lodgingBgmAudio, LODGING_BGM_VOLUME);
-const campGainNode = attachChannelGain(campBgmAudio, CAMP_BGM_VOLUME);
-const ambientGainNode = attachChannelGain(ambientBgmAudio, AMBIENT_BGM_VOLUME);
-const openingGainNode = attachChannelGain(openingBgmAudio, OPENING_BGM_VOLUME);
-if (!lodgingGainNode) lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
-if (!campGainNode) campBgmAudio.volume = CAMP_BGM_VOLUME;
-if (!ambientGainNode) ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
-if (!openingGainNode) openingBgmAudio.volume = OPENING_BGM_VOLUME;
-function setChannelVolume(el, gainNode, v) {
-  if (gainNode) gainNode.gain.value = v;
-  else el.volume = Math.min(1, v); // <audio>.volumeは1超えで例外になるためクランプ(GainNode側は100%超の増幅を許容)
-}
-function getChannelVolume(el, gainNode) {
-  return gainNode ? gainNode.gain.value : el.volume;
-}
-// これらの要素もWeb Audio経由になったため、再生時はAudioContextのresumeを添える(bgmAudioと同じ理由)。
-// 【重要・実機バグ修正2026-07-28】resume().then(play)の直列にしてはいけない: play()がタップ操作
-// (トラステッドイベント)の呼び出しスタックの外で実行されることになり、iOSが再生を拒否して
-// タイトルBGMが無音になった。さらにiOSは拒否したplay()を保留し、後で別の曲の再生でページの
-// 再生許可が下りた瞬間に保留分を発火させるため、「町BGMと並行してタイトルBGMが鳴り出す」
-// 二重再生も起きた。play()は必ず同期的に呼び、resumeは並行で投げっぱなしにする
-function playChannelAudio(el) {
-  if (bgmAudioCtx && bgmAudioCtx.state === "suspended") bgmAudioCtx.resume().catch(() => {});
-  el.play().catch(() => {});
-}
+lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
+campBgmAudio.volume = CAMP_BGM_VOLUME;
+ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
+openingBgmAudio.volume = OPENING_BGM_VOLUME;
 let audioUnlocked = false;
 let currentBgmKey = null;
 // 場面ごとの再生位置記憶(例: 町の曲は町に戻るたびに続きから再生される)。
@@ -350,12 +312,12 @@ function unlockAudio() {
   if (currentBgmKey) {
     // 既に町/冒険用のBGMキーが決まっている(=タイトルより先に進んでいる)場合はそちらを再開する
     resumeAndPlayBgmAudio();
-    playChannelAudio(ambientBgmAudio);
+    ambientBgmAudio.play().catch(() => {});
   } else {
     // まだタイトル/オープニング中(currentBgmKeyは最初のplayBgm()呼び出しまでnullのまま)。
     // オープニングBGMの再生を試みる。起動直後の自動再生が制限で失敗していた場合、
     // ユーザーの最初の操作によるこの呼び出しが確実な再試行のタイミングになる
-    playChannelAudio(openingBgmAudio);
+    openingBgmAudio.play().catch(() => {});
   }
   // iPhone Safari対策: SE用/BGM用、両方のAudioContextともユーザーの最初のタップの中でresume()する必要がある
   if (sfxAudioCtx && sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().catch(() => {});
@@ -394,27 +356,21 @@ function bgmVolumeForKey(key) {
 // 自動的に呼ばれる。0.6秒で滑らかに消し、二重再生や急なブツ切りにならないようにする
 let openingBgmFadeToken = 0;
 function fadeOutOpeningBgm() {
-  if (openingBgmAudio.paused) {
-    // 見かけ上pausedでも、iOSに拒否されたplay()が「保留」のまま残っている可能性がある
-    // (後で再生許可が下りた瞬間に勝手に鳴り出す)。pause()を呼ぶと保留中のplay()の約束が
-    // AbortErrorで破棄されるため、ここで確実に握りつぶしておく(既に停止中なら無害)
-    openingBgmAudio.pause();
-    return;
-  }
-  const startVol = getChannelVolume(openingBgmAudio, openingGainNode);
+  if (openingBgmAudio.paused) return;
+  const startVol = openingBgmAudio.volume;
   const startTime = performance.now();
   const myToken = ++openingBgmFadeToken;
   const durationMs = 600;
   function step() {
     if (openingBgmFadeToken !== myToken) return;
     const t = Math.min(1, (performance.now() - startTime) / durationMs);
-    setChannelVolume(openingBgmAudio, openingGainNode, startVol * (1 - t));
+    openingBgmAudio.volume = startVol * (1 - t);
     if (t < 1) {
       requestAnimationFrame(step);
     } else {
       openingBgmAudio.pause();
       openingBgmAudio.currentTime = 0;
-      setChannelVolume(openingBgmAudio, openingGainNode, OPENING_BGM_VOLUME);
+      openingBgmAudio.volume = OPENING_BGM_VOLUME;
     }
   }
   step();
@@ -510,9 +466,9 @@ function playAmbientBgm(forceKey) {
   if (currentAmbientKey === key) return;
   currentAmbientKey = key;
   ambientBgmAudio.src = key === "coast" ? COAST_AMBIENT_TRACK : key === "cave" ? CAVE_AMBIENT_TRACK : AMBIENT_BGM_TRACKS[key];
-  setChannelVolume(ambientBgmAudio, ambientGainNode, key === "cave" ? AMBIENT_BGM_VOLUME * CAVE_AMBIENT_VOLUME_RATIO : AMBIENT_BGM_VOLUME);
+  ambientBgmAudio.volume = key === "cave" ? AMBIENT_BGM_VOLUME * CAVE_AMBIENT_VOLUME_RATIO : AMBIENT_BGM_VOLUME;
   ambientBgmAudio.currentTime = 0;
-  if (audioUnlocked) playChannelAudio(ambientBgmAudio);
+  if (audioUnlocked) ambientBgmAudio.play().catch(() => {});
 }
 function stopAmbientBgm() {
   ambientBgmAudio.pause();
@@ -587,7 +543,7 @@ function playLodgingBgm() {
       // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
       setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150);
       lodgingBgmAudio.currentTime = 0;
-      if (audioUnlocked) playChannelAudio(lodgingBgmAudio);
+      if (audioUnlocked) lodgingBgmAudio.play().catch(() => {});
     }
   }
   fadeStep();
@@ -618,22 +574,22 @@ function playCampBgm() {
       // 残留オーディオがフルボリュームで一瞬鳴る不具合対策(stopBattleBgm()と同じ理由、150ms猶予)
       setTimeout(() => setBgmAudioVolume(baseTargetVolume()), 150);
       campBgmAudio.currentTime = 0;
-      if (audioUnlocked) playChannelAudio(campBgmAudio);
+      if (audioUnlocked) campBgmAudio.play().catch(() => {});
     }
   }
   fadeStep();
 }
 function stopCampBgm(onDone) {
-  const startVol = getChannelVolume(campBgmAudio, campGainNode);
+  const startVol = campBgmAudio.volume;
   const startTime = performance.now();
   function fadeStep() {
     const t = Math.min(1, (performance.now() - startTime) / CAMP_BGM_FADE_MS);
-    setChannelVolume(campBgmAudio, campGainNode, startVol * (1 - t));
+    campBgmAudio.volume = startVol * (1 - t);
     if (t < 1) {
       requestAnimationFrame(fadeStep);
     } else {
       campBgmAudio.pause();
-      setChannelVolume(campBgmAudio, campGainNode, CAMP_BGM_VOLUME);
+      campBgmAudio.volume = CAMP_BGM_VOLUME;
       if (onDone) onDone();
     }
   }
