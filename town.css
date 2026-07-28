@@ -625,6 +625,9 @@
      background-colorも含めて丸ごと暗くしてしまうため、img自体の背景は透明にし、フィルターの
      掛からない親(.building-card-icon-wrap、背景#353a44)側で輪郭とのコントラストを出している */
   .building-icon-img.silhouette { filter: brightness(0); background: transparent; }
+  /* 建築可能(未建築)はモノクロで表示し、建築するとカラーになる(2026-07-29ユーザー指示の
+     黒塗り→白黒→カラーの3状態)。silhouetteと同じ理由でフィルターはimg/絵文字側にだけ掛ける */
+  .building-icon-img.grayscale, .building-icon-emoji.grayscale { filter: grayscale(1) brightness(0.92); background: transparent; }
   .building-icon-emoji { font-size: 2rem; line-height: 1; }
   .building-detail-icon-wrap .building-icon-emoji { font-size: 4rem; }
   .building-icon-emoji.silhouette { filter: brightness(0); }

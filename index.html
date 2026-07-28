@@ -565,37 +565,11 @@
       <button class="big" id="extensionBackBtnTop" style="margin-bottom:0.8rem;">町に戻る</button>
       <!-- 財布ストリップ: ゴールド+所持素材4種(鍛冶屋と共通、素材経済・2026-07-27) -->
       <div class="shop-wallet" id="extensionWallet"></div>
-      <h2>🏠村 Lv<span id="extensionLevel"></span></h2>
-      <div class="card house-status-card">
-        <div class="house-status-section house-status-next" id="extensionNextSection">
-          <div class="house-status-label" id="extensionNextLabel"></div>
-          <div class="house-status-facility-block" id="extensionFacilityBlock">
-            <div class="house-status-facility-label">新施設</div>
-            <div id="extensionNextUnlockList"></div>
-          </div>
-        </div>
-      </div>
-      <!-- 増築コスト(ゴールド+素材のチップ、不足は赤。素材経済・2026-07-27) -->
-      <div class="equip-cost" id="extensionCostChips" style="margin-top:0.8rem;"></div>
-      <button class="big primary" id="extensionUpgradeBtn" style="margin-top:0.5rem;"></button>
-      <p class="house-upgrade-reason" id="extensionUpgradeReason" style="display:none;"></p>
-      <p style="font-size:13px;color:var(--dw-caption-color);margin:0.6rem 0 0;" id="extensionDesc"></p>
-
-      <!-- 施設一覧: 「仲間を雇う」画面と同じ4列アイコングリッドを、建築済み/建築可能/未解放の
-           3セクションに分けて表示する(BUILDING_DEFS/renderBuildingGrid、town.js参照)。
-           セクションは空の時タイトルごとJSで非表示にする -->
-      <div id="buildingSectionBuilt" style="display:none;">
-        <h2 style="margin-top:20px;">建築済み</h2>
-        <div class="building-grid" id="buildingGridBuilt"></div>
-      </div>
-      <div id="buildingSectionAvailable" style="display:none;">
-        <h2 style="margin-top:20px;">建築可能</h2>
-        <div class="building-grid" id="buildingGridAvailable"></div>
-      </div>
-      <div id="buildingSectionLocked" style="display:none;">
-        <h2 style="margin-top:20px;">未解放</h2>
-        <div class="building-grid" id="buildingGridLocked"></div>
-      </div>
+      <!-- 施設一覧: 建築済み/建築可能/未解放の3セクションを1枚のグリッドに統合(2026-07-29ユーザー指示の
+           すっきり化)。カード位置は固定のまま 未解放=黒シルエット→建築可能=モノクロ→建築済み=カラー と
+           状態だけが変わる。先頭は村レベル増築の「村」カード(旧・専用パネルの置き換え。次の解禁施設・
+           コスト・増築ボタンは村カードタップの詳細モーダルへ集約)。BUILDING_DEFS/renderBuildingGrid参照 -->
+      <div class="building-grid" id="buildingGridAll" style="margin-top:0.9rem;"></div>
 
       <button class="big" id="extensionBackBtn" style="margin-top:1rem;">町に戻る</button>
     </div>

@@ -1913,7 +1913,7 @@ const BUILDING_DEFS = [
 function buildingIconHtml(def, opts) {
   opts = opts || {};
   const wrapCls = opts.large ? "building-detail-icon-wrap" : "building-card-icon-wrap";
-  const silCls = opts.silhouette ? " silhouette" : "";
+  const silCls = opts.silhouette ? " silhouette" : opts.grayscale ? " grayscale" : "";
   if (def.iconImg) return `<div class="${wrapCls}"><img class="building-icon-img${silCls}" src="${def.iconImg}"></div>`;
   return `<div class="${wrapCls}"><div class="building-icon-emoji${silCls}">${def.icon}</div></div>`;
 }
@@ -1924,12 +1924,22 @@ function buildingNewBadgeHtml(def, unlocked, built) {
   if (isNew) state.seenUnlockedBuildings[def.levelField] = true;
   return isNew ? '<span class="new-badge building-new-badge">NEW</span>' : "";
 }
-// 「建築済み/建築可能/未解放」の3グリッドを描画する。空のグループはタイトルごと非表示にする
+// 施設一覧を1枚のグリッドで描画する(2026-07-29ユーザー指示で建築済み/建築可能/未解放の
+// 3セクションを統合)。カードの位置はBUILDING_DEFSの順で固定のまま、状態だけが
+// 未解放=黒シルエット → 建築可能=モノクロ → 建築済み=カラー と変わる(「建築済み」バッジは
+// カラー化が建築済みの印になったため廃止)。先頭には村レベル増築を「村」カードとして置く
 function renderBuildingGrid(houseLevel) {
-  const builtEl = document.getElementById("buildingGridBuilt");
-  const availEl = document.getElementById("buildingGridAvailable");
-  const lockedEl = document.getElementById("buildingGridLocked");
-  builtEl.innerHTML = ""; availEl.innerHTML = ""; lockedEl.innerHTML = "";
+  const gridEl = document.getElementById("buildingGridAll");
+  gridEl.innerHTML = "";
+  const villageCard = document.createElement("div");
+  villageCard.className = "building-card";
+  villageCard.innerHTML = `
+    <div class="building-card-icon-wrap"><img class="building-icon-img" src="assets/icons/buildings/village.png"></div>
+    <div class="building-card-name">村</div>
+    <div class="building-card-lv">Lv${houseLevel}</div>
+  `;
+  villageCard.onclick = () => openVillageDetail();
+  gridEl.appendChild(villageCard);
   BUILDING_DEFS.forEach((def) => {
     const lv = state[def.levelField] || 0;
     const unlocked = houseLevel >= def.unlock;
@@ -1939,19 +1949,17 @@ function renderBuildingGrid(houseLevel) {
       card.className = "building-card";
       card.innerHTML = `
         ${buildingIconHtml(def)}
-        <span class="building-badge built">建築済み</span>
         <div class="building-card-name">${def.name}</div>
         ${def.costs.length > 1 ? `<div class="building-card-lv">Lv${lv}</div>` : ""}
       `;
       card.onclick = () => openBuildingDetail(def.key);
-      builtEl.appendChild(card);
     } else if (unlocked) {
       card.className = "building-card";
       const cost = def.costs[0];
       const mats0 = def.mats ? def.mats[0] : null;
       const canAfford = state.gold >= cost && matsCostOk(mats0);
       card.innerHTML = `
-        ${buildingIconHtml(def)}
+        ${buildingIconHtml(def, { grayscale: true })}
         ${buildingNewBadgeHtml(def, unlocked, built)}
         <div class="building-card-name">${def.name}</div>
         <div class="building-card-action">${canAfford
@@ -1962,19 +1970,62 @@ function renderBuildingGrid(houseLevel) {
         card.querySelector(".building-build-btn").onclick = (e) => { e.stopPropagation(); buildOrUpgradeBuilding(def.key); };
       }
       card.onclick = (e) => { if (e.target.closest(".building-build-btn")) return; openBuildingDetail(def.key); };
-      availEl.appendChild(card);
     } else {
       card.className = "building-card locked";
       card.innerHTML = `
         ${buildingIconHtml(def, { silhouette: true })}
         <div class="building-card-locked-label">🔒村Lv${def.unlock}で解放</div>
       `;
-      lockedEl.appendChild(card);
     }
+    gridEl.appendChild(card);
   });
-  document.getElementById("buildingSectionBuilt").style.display = builtEl.children.length > 0 ? "" : "none";
-  document.getElementById("buildingSectionAvailable").style.display = availEl.children.length > 0 ? "" : "none";
-  document.getElementById("buildingSectionLocked").style.display = lockedEl.children.length > 0 ? "" : "none";
+}
+// 村カードタップで開く増築モーダル。旧・増築画面の専用パネル(次の解禁施設リスト+コスト+
+// 増築ボタン+説明文)をここへ集約した(2026-07-29)。施設詳細モーダルのDOMを共用する
+function openVillageDetail() {
+  const level = state.houseLevel || 1;
+  document.getElementById("buildingDetailIconWrap").innerHTML =
+    '<div class="building-detail-icon-wrap"><img class="building-icon-img" src="assets/icons/buildings/village.png"></div>';
+  document.getElementById("buildingDetailName").textContent = `村 Lv.${level}`;
+  const nextLevel = level + 1;
+  const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
+  const descLines = ["新しい施設が解禁される基準になります。（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）"];
+  if (level >= HOUSE_MAX_LEVEL) {
+    descLines.push("これ以上は増築できません（上限）。");
+  } else if (unlocksAtNextLevel.length > 0) {
+    descLines.push(`【次の増築（Lv${nextLevel}）で解禁】\n${unlocksAtNextLevel.map((n) => `・${n}`).join("\n")}`);
+  }
+  document.getElementById("buildingDetailDesc").textContent = descLines.join("\n");
+  renderBarricadeRepairSection({ key: "village" }, 0); // バリケード専用セクションを非表示にするためだけの呼び出し
+  const btn = document.getElementById("buildingDetailActionBtn");
+  const reasonEl = document.getElementById("buildingDetailReason");
+  const costEl = document.getElementById("buildingDetailCost");
+  if (level >= HOUSE_MAX_LEVEL) {
+    btn.style.display = "none";
+    reasonEl.style.display = "none";
+    costEl.style.display = "none";
+  } else {
+    const cost = houseUpgradeCost(level);
+    const mats = houseUpgradeMats(level);
+    const goldOk = state.gold >= cost;
+    const matsOk = matsCostOk(mats);
+    costEl.style.display = "";
+    costEl.innerHTML = costChipsHtml(cost, mats);
+    btn.style.display = "";
+    btn.textContent = "増築する";
+    btn.disabled = !goldOk || !matsOk;
+    if (goldOk && matsOk) {
+      reasonEl.style.display = "none";
+    } else {
+      reasonEl.textContent = !goldOk ? `所持金が不足しています（${state.gold}/${cost}G）` : "素材が足りません";
+      reasonEl.style.display = "";
+    }
+    btn.onclick = () => {
+      document.getElementById("buildingDetailOverlay").style.display = "none";
+      upgradeVillageLevel();
+    };
+  }
+  document.getElementById("buildingDetailOverlay").style.display = "flex";
 }
 // 施設タップで開く詳細モーダル。建築済みなら現在の効果+次の段階への増築ボタン(あれば)、
 // 建築可能なら効果説明+建築ボタンを表示する。図鑑のモンスター詳細モーダルと同じ
@@ -2057,48 +2108,7 @@ function renderExtension() {
   updateSceneBackgrounds();
   renderDwHeader("extension", "増築", () => { renderFacilityHome(); });
   renderWalletStrip("extensionWallet");
-  const level = state.houseLevel || 1;
-  document.getElementById("extensionLevel").textContent = level;
-  document.getElementById("extensionDesc").innerHTML = "新しい施設が解禁される基準になります。<br>（仲間を雇える上限は最初から8人、冒険に出発できる人数は最大4人=戦闘に出る3人+控え1人です。）";
-  // 次の村レベルで解禁される施設があれば「◯◯ 解放」の形で「次の増築」セクションに列挙する
-  const nextLevel = level + 1;
-  const unlocksAtNextLevel = BUILDING_DEFS.filter((def) => (state[def.levelField] || 0) === 0 && nextLevel === def.unlock).map((def) => def.name);
-  const btn = document.getElementById("extensionUpgradeBtn");
-  const reasonEl = document.getElementById("extensionUpgradeReason");
-  const nextSection = document.getElementById("extensionNextSection");
-  if (level >= HOUSE_MAX_LEVEL) {
-    // これ以上増築できない=「次」が存在しないので、次の増築セクション自体を非表示にする
-    nextSection.style.display = "none";
-    btn.textContent = "これ以上は増築できません(上限)";
-    btn.disabled = true;
-    reasonEl.style.display = "none";
-    document.getElementById("extensionCostChips").style.display = "none";
-  } else {
-    // 解放される施設が無いレベルは増築の意味が無いため、次のセクションごと隠す
-    nextSection.style.display = unlocksAtNextLevel.length > 0 ? "" : "none";
-    document.getElementById("extensionNextLabel").innerHTML = `次の増築（<span class="house-next-level">Lv${nextLevel}</span>）`;
-    document.getElementById("extensionNextUnlockList").innerHTML = unlocksAtNextLevel
-      .map((name) => `<div class="house-status-unlock">・${name}</div>`).join("");
-    const cost = houseUpgradeCost(level);
-    const mats = houseUpgradeMats(level);
-    const goldOk = state.gold >= cost;
-    const matsOk = matsCostOk(mats);
-    // コストはゴールド+素材のチップ表示(鍛冶屋と同じ型。不足分は赤)
-    const costEl = document.getElementById("extensionCostChips");
-    costEl.style.display = "";
-    costEl.innerHTML = costChipsHtml(cost, mats);
-    btn.textContent = "増築する";
-    btn.disabled = !goldOk || !matsOk;
-    // 押せない理由は不足の時だけ、ボタン直下に表示する
-    // (以前は赤字で「200G必要(所持80G)」だったが、赤は警告が強すぎるとの指摘で色・文言とも変更した)
-    if (goldOk && matsOk) {
-      reasonEl.style.display = "none";
-    } else {
-      reasonEl.textContent = !goldOk ? `所持金が不足しています（${state.gold}/${cost}G）` : "素材が足りません";
-      reasonEl.style.display = "";
-    }
-  }
-  renderBuildingGrid(level);
+  renderBuildingGrid(state.houseLevel || 1);
   saveState();
 }
 // ============ 建築/増築の完了演出 ============
@@ -2211,7 +2221,9 @@ function buildOrUpgradeBuilding(key) {
     showBuildCompleteForUpgrade(def.levelField, state[def.levelField], [deltaLine].filter(Boolean));
   }
 }
-document.getElementById("extensionUpgradeBtn").onclick = () => {
+// 村レベルの増築本体。旧・増築画面の専用ボタン(extensionUpgradeBtn)から
+// 村カードの詳細モーダル(openVillageDetail)へ移設した(2026-07-29)
+function upgradeVillageLevel() {
   const level = state.houseLevel || 1;
   if (level >= HOUSE_MAX_LEVEL) return;
   const cost = houseUpgradeCost(level);
@@ -2225,7 +2237,7 @@ document.getElementById("extensionUpgradeBtn").onclick = () => {
   saveState();
   renderExtension();
   showBuildCompleteForUpgrade("houseLevel", state.houseLevel, unlockedNames);
-};
+}
 document.getElementById("toExtensionBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderExtension(); showScreen("screen-extension"); };
 document.getElementById("toMagistrateBtn").onclick = () => { playSfx("select"); facilityHomeScreen = "screen-town"; renderMagistrateScreen(); };
 document.getElementById("extensionBackBtn").onclick = () => { renderFacilityHome(); };
