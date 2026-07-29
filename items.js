@@ -162,7 +162,7 @@ function useSmokeBomb(actor) {
   saveState();
   blog(`${actor.label}は煙玉を使った！パーティは戦闘から一斉に逃げ出した！`);
   playSfx("smoke_bomb");
-  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  clearDotEffects(fieldParty); clearBattleTransientForms(); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   clearOmamoriIwanagaBonus(fieldParty);

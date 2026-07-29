@@ -26,6 +26,18 @@ let massBattleSizingForced = false;
 // 建築レベル由来の段階値(木の柵/鉄杭柵…)への接続とバランス数値はユーザーが後日調整する
 let raidBarricadeHp = 0;
 let raidBarricadeMaxHp = 0;
+// 戦闘終了時(勝利/敗北/逃走/煙玉)に、戦闘中限定の変身・構え・カウンタを解除する。
+// 鬼神化は「その戦闘が終わったら解ける」(ユーザー確定2026-07-30、忍者の変化の術と違い持ち越さない)。
+// 各clearDotEffects(fieldParty)の呼び出し(=戦闘の後始末マーカー)とセットで呼ぶ
+function clearBattleTransientForms() {
+  fieldParty.forEach((c) => {
+    c.kishinTurns = 0;
+    c.meikyoTurns = 0;
+    c.hyakkaActive = false;
+    c.__hyakkaExtraUsedThisTurn = false;
+    c.__battleHitCount = 0;
+  });
+}
 function resetRaidBarricade(hp) {
   raidBarricadeHp = raidBarricadeMaxHp = hp;
   const wrap = document.getElementById("raidBarricadeWrap");
@@ -113,6 +125,9 @@ function startBattle(enemies, pathDef, encounterText) {
     c.turnStackAtkStacks = 0; // 百戦錬磨など、ターン経過で積み上がる攻撃力バフも戦闘をまたいで持ち越さない
     c.nullifyCounterTurnsLeft = 0; // 心眼の構えなど、このターン限定の無効化反撃も戦闘をまたいで持ち越さない
     c.nullifyCounterMult = null;
+    c.kishinTurns = 0; c.meikyoTurns = 0; // 鬼神化/明鏡止水(通常は戦闘終了時に解除済み、開始時の保険)
+    c.hyakkaActive = false; c.__hyakkaExtraUsedThisTurn = false; // 百花繚乱はその戦闘中のみ
+    c.__battleHitCount = 0; // 千本桜の威力スケール用ヒット数(戦闘ごとにゼロから)
     c.migawariShieldActive = false; // 身代わりの術も戦闘をまたいで持ち越さない
     c.barrierHp = 0; c.barrierMaxHp = 0; // 結界術の数値シールドも戦闘をまたいで持ち越さない
     c.hasBeenHitThisBattle = false; // 忍足など、初被弾までの回避バフを毎戦闘リセットする
@@ -713,6 +728,8 @@ function processNext() {
     // 自分のターンが回ってきたら、かばうの構え(と身代わり回数のカウント)は無条件でリセットする
     actor.guarding = false;
     actor.guardProtectCount = 0;
+    actor.__hyakkaExtraUsedThisTurn = false; // 百花繚乱の追加行動は1手番につき1回まで(2026-07-30)
+    tickSamuraiForms(actor, blog); // 鬼神化/明鏡止水のターン経過(残りターン消化・明鏡のストレス回復)
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
     const dot = tickTurnStartEffects(actor, blog);
@@ -1219,7 +1236,7 @@ function runTreeSkill(actor, skill) {
   }
   // 八幡神の御守: 戦闘中最初に使う技のMP消費が0になる(消費前にコスト分を先に補充しておき、
   // useTreeSkill内の通常の減算と相殺させることで実質無償化する)
-  const cost = skillMpCost(actor, skill.mp);
+  const cost = skillMpCost(actor, skill.mp, skill.action);
   if (cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman) {
     actor.mp += cost;
     battle.omamoriUsed.hachiman = true;
@@ -1320,6 +1337,20 @@ function runTreeSkill(actor, skill) {
     });
     return;
   }
+  // 鬼神化(2026-07-30): 遠征中一度だけの変身。ターンを消費しない(発動後そのまま行動を選べる)
+  if (action.kind === "kishinka") {
+    if (actor.kishinkaUsed) {
+      blog(`${actor.label}は既に鬼の力を使い果たしている！`);
+      renderActionButtons(actor);
+      return;
+    }
+    const result = useTreeSkill(actor, actor, skill, blog);
+    if (result && result.failed) { battleActionLocked = false; return; }
+    playSfx("transform");
+    renderBattleScreen(); // 立ち絵が鬼神化差分(characterPortraitSrc)に切り替わる
+    renderActionButtons(actor);
+    return;
+  }
   if (action.kind === "buffSelf") {
     playSfx("select");
     useTreeSkill(actor, actor, skill, blog);
@@ -1403,6 +1434,41 @@ function runTreeSkill(actor, skill) {
     renderBattleScreen();
     hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
     triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
+    return;
+  }
+  // 迅雷突き(2026-07-30): 敵を2回指定して1体ずつ100%威力で攻撃する(同じ敵を2回選んでもよい)。
+  // 2体選び終えてから技を1回だけ実行し(MP消費も1回)、演出は乱れ斬りと同じずらし再生
+  if (action.pickTargets === 2) {
+    pickSingleEnemyTarget((t1) => {
+      pickSingleEnemyTarget((t2) => {
+        playAttackSfxWithSwish(actor.classId);
+        const picked = [t1, t2];
+        const result = useTreeSkill(actor, picked, skill, blog);
+        const rs = (result && result.dmgs) || [];
+        document.getElementById("actionGrid").innerHTML = "";
+        renderBattleScreen();
+        const STAGGER_MS = 260;
+        let anyCrit = false;
+        rs.forEach((h, i) => {
+          setTimeout(() => {
+            const t = picked[i];
+            if (h.hit && h.dmg > 0) {
+              popupOn(t.instanceId, `-${h.dmg}`, "dmg", dmgShakeIntensity(true));
+              playScreenShakeOnHit(t, h.crit);
+              playSfx(hitTakenSfxFor(h.dmg, t.maxHp, t.isSwarm));
+              if (h.crit) { anyCrit = true; playCritEffects(t.instanceId, actor, h.dmg); }
+              playAttackVfx(t.instanceId, actor, "skill");
+            } else if (!h.hit && t.hp > 0) playSfx("evade");
+            renderBattleScreen();
+            if (i === 0) playAttackerLunge(actor.id);
+          }, i * STAGGER_MS);
+        });
+        setTimeout(() => {
+          if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
+          finishPlayerAction(anyCrit);
+        }, rs.length * STAGGER_MS + 50);
+      });
+    });
     return;
   }
   pickSingleEnemyTarget((target) => {
@@ -1922,11 +1988,14 @@ function renderActionButtons(actor) {
         skillButtons.push(abBtn);
       });
 
-      // スキルツリーで選んだ能動スキル(沈黙中は使えない)
-      (actor.silenceTurns > 0 ? [] : (actor.unlockedSkills || [])).forEach((skill) => {
+      // スキルツリーで選んだ能動スキル(沈黙中は使えない)。
+      // 鬼神化中は専用技「鬼神斬り」(KISHIN_SLASH_SKILL)を一覧の先頭に差し込む(2026-07-30)
+      (actor.silenceTurns > 0 ? [] : [...(actor.kishinTurns > 0 ? [KISHIN_SLASH_SKILL] : []), ...(actor.unlockedSkills || [])]).forEach((skill) => {
         const btn = document.createElement("button");
         btn.className = "big";
-        const cost = skillMpCost(actor, skill.mp);
+        const cost = skillMpCost(actor, skill.mp, skill.action);
+        // 鬼神化は遠征中一度だけ(使用済みなら押せない)
+        if (skill.action && skill.action.kind === "kishinka" && actor.kishinkaUsed) btn.disabled = true;
         const hawkActive = skill.action && skill.action.kind === "summonHawk" && actor.hawkTurnsLeft > 0;
         // 八幡神の御守: 戦闘中最初に使う技はMP消費が0になるため、MP不足でもボタンを押せるようにする
         const hachimanFree = cost > 0 && hasOmamori("hachiman") && !battle.omamoriUsed.hachiman;
@@ -2187,6 +2256,18 @@ function finishPlayerAction(wasCrit) {
 function afterPlayerAction() {
   const newlyCritical = handleFieldDeaths();
   autoDeployReserveIfNeeded(newlyCritical, () => {
+    if (!battle) return;
+    // 百花繚乱(2026-07-30): 行動終了時、50%の確率でもう一度行動できる(1手番につき追加は1回まで。
+    // 追加行動は攻撃/技/道具など何でも選べる=通常の行動選択メニューをそのまま出し直す)
+    const actor = battle.order[battle.orderIndex];
+    if (actor && actor.instanceId === undefined && actor.hyakkaActive && !actor.__hyakkaExtraUsedThisTurn &&
+        actor.hp > 0 && actor.status === "active" && actor.fleeState !== "fled" && aliveEnemies().length > 0 && Math.random() < 0.5) {
+      actor.__hyakkaExtraUsedThisTurn = true;
+      blog(`${actor.label}は舞うように身を翻した！百花繚乱、もう一度行動できる！`);
+      renderBattleScreen();
+      renderActionButtons(actor);
+      return;
+    }
     battle.orderIndex++;
     processNext();
   });
@@ -2200,7 +2281,7 @@ function victory() {
   playSfx("victory");
   unlockPeaceDialogueAfterVictory(); // 平和な掛け合い: この勝利をもって次に条件を満たした時1回だけ発火できるようにする
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
-  clearDotEffects(fieldParty); // 戦闘に勝ったので毒/炎上は持ち越さず治す
+  clearDotEffects(fieldParty); clearBattleTransientForms(); // 戦闘に勝ったので毒/炎上は持ち越さず治す
   let totalGold = 0;
   const leveledUp = []; // [{character, level}] レベルアップが起きた分だけ積む(スキル選択に使う)
   // 参加ターン比の経験値(2026-07-26): 獲得経験値=敵xp×(出場ラウンド数÷戦闘の総ラウンド数)。
@@ -2409,7 +2490,7 @@ function triggerBossFlee(enemy) {
     saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     pendingEnemyPick = null;
     pendingAllyPick = null;
-    clearDotEffects(fieldParty);
+    clearDotEffects(fieldParty); clearBattleTransientForms();
     clearHawkState(fieldParty);
     clearGuardState(fieldParty);
     clearOmamoriIwanagaBonus(fieldParty);
@@ -2436,7 +2517,7 @@ function triggerQuestBossFlee(enemy) {
     saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     pendingEnemyPick = null;
     pendingAllyPick = null;
-    clearDotEffects(fieldParty);
+    clearDotEffects(fieldParty); clearBattleTransientForms();
     clearHawkState(fieldParty);
     clearGuardState(fieldParty);
     clearOmamoriIwanagaBonus(fieldParty);
@@ -2470,7 +2551,7 @@ function escapeBattle() {
   saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
   pendingEnemyPick = null;
   pendingAllyPick = null;
-  clearDotEffects(fieldParty); // 戦闘から逃げたので毒/炎上は持ち越さず治す
+  clearDotEffects(fieldParty); clearBattleTransientForms(); // 戦闘から逃げたので毒/炎上は持ち越さず治す
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   clearOmamoriIwanagaBonus(fieldParty);
@@ -2498,7 +2579,7 @@ function defeat() {
   stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
-  clearDotEffects(fieldParty); // 毒/炎上を持ち越さないよう治しておく
+  clearDotEffects(fieldParty); clearBattleTransientForms(); // 毒/炎上を持ち越さないよう治しておく
   clearHawkState(fieldParty);
   clearGuardState(fieldParty);
   clearOmamoriIwanagaBonus(fieldParty);

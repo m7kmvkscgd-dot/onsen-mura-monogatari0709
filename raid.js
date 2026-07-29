@@ -281,6 +281,7 @@ function startRaidBattleFromPrep() {
   raidBattleActive = true;
   fieldParty = defenders;
   reserveFieldMember = null;
+  fieldParty.forEach((c) => { c.kishinkaUsed = false; }); // 鬼神化は襲撃戦でも1回使える(遠征とは別枠扱い)
   stopTownBgm();
   // 襲撃戦の見た目と音(大規模戦テストで確定した演出フック一式)
   battleBgOverrideSet = BG_SETS.departure; // 背景=村の出発画面(村の入り口で迎え撃つ)

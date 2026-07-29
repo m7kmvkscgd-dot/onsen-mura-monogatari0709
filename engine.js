@@ -297,6 +297,10 @@ function stressTier(fatigue) {
 // 50%超=軽度、75%超=重度、100=発狂。表情の切り替えはstressTier()(セリフ判定等で使う40/60/80/100の
 // 4段階)とは別基準のため、ここでは直接fatigueの値を見る
 function characterPortraitSrc(c) {
+  // 鬼神化/明鏡止水中は専用立ち絵(ユーザー提供2026-07-30)がストレス差分より優先される
+  // (鬼神化中はストレスの影響を受けない設定なので、ストレス表情に切り替わらないのは仕様とも整合する)
+  if (c.kishinTurns > 0) return "assets/class_samurai_kishin.png";
+  if (c.meikyoTurns > 0) return "assets/class_samurai_meikyo.png";
   const cls = CLASSES[c.classId];
   const f = c.fatigue || 0;
   const variants = CLASS_STRESS_IMAGES[c.classId];
@@ -309,6 +313,7 @@ function characterPortraitSrc(c) {
 // ステータス詳細画面専用。ストレス無し(50%以下)の時だけCLASS_STATUS_PORTRAITを使い、
 // ストレスがある時はcharacterPortraitSrc()と同じくCLASS_STRESS_IMAGESを使う
 function statusPortraitSrc(c) {
+  if (c.kishinTurns > 0 || c.meikyoTurns > 0) return characterPortraitSrc(c); // 変身中は戦闘と同じ専用立ち絵
   if ((c.fatigue || 0) <= 50) return CLASS_STATUS_PORTRAIT[c.classId];
   return characterPortraitSrc(c);
 }
@@ -335,7 +340,9 @@ function effectiveStat(entity, key) {
   if (entity.fatigue == null) {
     result = base; // 敵など疲労を持たない対象はそのまま
   } else {
-    const fatigued = base * (1 - fatigueMalus(entity.fatigue));
+    // 鬼神化/明鏡止水中はストレスの能力低下を受けない(ユーザー仕様2026-07-30)
+    const stressImmune = entity.kishinTurns > 0 || entity.meikyoTurns > 0;
+    const fatigued = base * (1 - (stressImmune ? 0 : fatigueMalus(entity.fatigue)));
     const equip = (entity.equipBonus && entity.equipBonus[key]) || 0;
     result = Math.max(1, Math.round(fatigued + equip));
   }
@@ -1298,7 +1305,7 @@ function rollCritMultiplier(actor, extraCritRate, target) {
   return 1;
 }
 // スキルツリーの技のMPコストに、そのキャラのMP割引を適用する
-function skillMpCost(actor, baseMp) {
+function skillMpCost(actor, baseMp, action) {
   // 変化の術で変身中はMPの概念自体が無くなる(変身をかけるための消費自体はtransformFormがまだnullの
   // 状態で判定されるため、ここでの0化は「変身後の他の技」向けの安全策)
   if (actor.transformForm) return 0;
@@ -1312,8 +1319,24 @@ function skillMpCost(actor, baseMp) {
     const d = actor.passives.discountWhileFlag;
     if (actor.statMods.some((m) => m.stat === d.statModName)) discount += d.pct;
   }
-  const flat = (actor.passives && actor.passives.mpDiscountFlat) || 0;
+  let flat = (actor.passives && actor.passives.mpDiscountFlat) || 0;
+  // 明鏡止水中: 心眼のMP消費-1(ユーザー仕様2026-07-30。actionは呼び出し元が任意で渡す)
+  if (action && action.kind === "guardCounterSelf" && actor.meikyoTurns > 0) flat += 1;
   return Math.max(0, Math.round(baseMp * (1 - discount)) - flat);
+}
+
+// 侍の変身/構え(鬼神化・明鏡止水)のターン経過。自分のターンの頭でbattle.jsが呼ぶ。
+// 発動ターンを1ターン目と数え、設定ターン数ぶん行動したら次の自分のターンの頭で解ける
+function tickSamuraiForms(actor, log) {
+  if (actor.meikyoTurns > 0) {
+    actor.fatigue = Math.max(0, (actor.fatigue || 0) - 1); // 毎ターンストレスを1回復
+    actor.meikyoTurns--;
+    if (actor.meikyoTurns === 0) log(`${actor.label}の明鏡止水が静かに解けた。`);
+  }
+  if (actor.kishinTurns > 0) {
+    actor.kishinTurns--;
+    if (actor.kishinTurns === 0) log(`${actor.label}の鬼の力が抜けていった…`);
+  }
 }
 // 状態異常の付与確率に、対象の耐性(statusResistMult)を適用する。
 // typeが"stun"かつ対象がスタン抵抗中(stunResistTurns>0、直近でスタンされた直後)の場合は、
@@ -1363,7 +1386,7 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${actor.label}は${(ITEMS[action.item] && ITEMS[action.item].ja) || "道具"}を持っていない！`);
     return { failed: true };
   }
-  const cost = skillMpCost(actor, skill.mp);
+  const cost = skillMpCost(actor, skill.mp, skill.action);
   if (actor.nextSkillFreeMp) actor.nextSkillFreeMp = false; // 残心: 次に使う技1回だけ無償化、ここで消費する
   if (cost > 0) {
     if (actor.mp < cost) { log(`${actor.label}はMPが足りない！`); return { failed: true }; }
@@ -1458,8 +1481,23 @@ function useTreeSkill(actor, target, skill, log) {
     log(`${target.label}は${actor.label}の${skill.name}をかわした！`);
     return { stunned: false, noCost: true };
   }
+  // 鬼神化(2026-07-30): 遠征中一度だけの変身。全快+全状態異常解除+ストレス+100(発動時に即座に乗るが、
+  // 鬼神化中はストレスの影響を受けない=解けた後に一気に重さが来るデザイン、ユーザー確定)。
+  // ターン消費なし(battle.js側がnoCostで行動選択へ戻す)。戦闘終了で必ず解除(clearBattleTransientForms)
+  if (action.kind === "kishinka") {
+    actor.kishinkaUsed = true;
+    actor.kishinTurns = action.turns || 5;
+    actor.hp = actor.maxHp;
+    actor.poison = 0; actor.burnTurns = 0; actor.bleed = 0; actor.stunTurns = 0; actor.silenceTurns = 0;
+    actor.fatigue = Math.min(FATIGUE_MAX, (actor.fatigue || 0) + 100);
+    log(`${actor.label}は鬼の力を解放した！傷が癒え、目が赤く染まっていく…！`);
+    return { buffed: true };
+  }
   if (action.kind === "buffSelf" || action.kind === "buffParty" || action.kind === "buffPartyConsumeItem" || action.kind === "buffPartyNoCost") {
     if (action.kind === "buffPartyConsumeItem") state.inventory[action.item]--;
+    // 明鏡止水/百花繚乱(2026-07-30): statMods以外の状態フラグもここで立てる
+    if (action.meikyo) actor.meikyoTurns = action.turns || 3;
+    if (action.hyakka) actor.hyakkaActive = true;
     const targets = action.kind === "buffSelf" ? [actor] : target;
     targets.forEach((t) => {
       (action.stats || []).forEach((s) => applyStatMod(t, s.stat, s.mult, action.turns));
@@ -1523,8 +1561,15 @@ function useTreeSkill(actor, target, skill, log) {
   // 守り槍など: 攻撃と同時に自分もかばう体勢に入る
   if (action.alsoGuard) { actor.guarding = true; actor.guardProtectCount = 0; }
   // ダメージ系(単体/範囲/連撃)。会心判定/被ダメージ軽減/覚悟等の一度きり効果/反撃はapplyDamageToTarget側で一括処理する
-  const targets = action.aoe ? target : [target];
+  // 迅雷突き(pickTargets:2)は呼び出し元が選んだ対象の配列をそのまま渡してくる(同じ敵2回も可)
+  const targets = action.aoe ? target : (Array.isArray(target) ? target : [target]);
   const skillRange = skillRangeType(actor, skill);
+  // 千本桜(scalingPerHitMult): この戦闘で敵に命中させた回数(__battleHitCount)に応じて威力が積み上がる。
+  // 倍率はこの技自身のヒットで増える前の値で固定する(ループ前に1回だけ計算)
+  let actionMult = action.mult;
+  if (action.scalingPerHitMult) {
+    actionMult += Math.min(action.scalingMaxHits || 30, actor.__battleHitCount || 0) * action.scalingPerHitMult;
+  }
   // hitChance: 通常のrollHit(相手の回避率で変動)を使わず、固定の命中率で判定したい技用
   // (痺れ矢・豪雨など、命中率とスタン率を独立した数値としてユーザーが明示指定したい場合に使う)
   const rolledHit = (t) => {
@@ -1533,6 +1578,8 @@ function useTreeSkill(actor, target, skill, log) {
     return rollHit(actor, t, skillRange);
   };
   const results = targets.map((t) => {
+    // 迅雷突きで同じ敵を2回選び、1発目で倒した場合など: 既に倒れている対象への振りは空振り扱い
+    if (t.hp <= 0) return { hit: false, dmg: 0, crit: false, hawkTargetId: null };
     if (!rolledHit(t)) {
       log(`${t.label}は${actor.label}の${skill.name}をかわした！`);
       // 技が外れても鷹は独立して追撃する(全体攻撃は除く)
@@ -1561,12 +1608,19 @@ function useTreeSkill(actor, target, skill, log) {
     const deferHitLog = !action.aoe && hits > 1;
     for (let i = 0; i < hits; i++) {
       if (t.hp <= 0) break; // 既に倒している相手には残りの振りを空撃ちしない
-      let rawHit = Math.max(1, Math.round(withVariance(atkStat * (action.mult / hits) * mitigation(def, 15), 0.15)));
+      let rawHit = Math.max(1, Math.round(withVariance(atkStat * (actionMult / hits) * mitigation(def, 15), 0.15)));
       const hpPct = t.maxHp > 0 ? t.hp / t.maxHp : 1;
       if (action.executeBonus && hpPct <= action.executeBonus.belowPct) rawHit = Math.round(rawHit * action.executeBonus.mult);
       const hitLogLines = [];
       const hitLog = deferHitLog ? (msg) => hitLogLines.push(msg) : log;
-      const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor, null, null, null, action.useMag);
+      // 鬼神斬りなど: action.extraCritRateで追加会心率を乗せられる
+      const dmg = applyDamageToTarget(t, rawHit, hitLog, actor.label, actor, null, action.extraCritRate || null, null, action.useMag);
+      // 鬼神斬り(lifestealPct): 与えたダメージの一部を吸収して回復する
+      if (action.lifestealPct && dmg > 0 && actor.hp > 0) {
+        const drained = Math.max(1, Math.round(dmg * action.lifestealPct));
+        actor.hp = Math.min(actor.maxHp, actor.hp + drained);
+        hitLog(`${actor.label}は${drained}のHPを吸収した！`);
+      }
       const crit = lastHitWasCrit; // このヒット固有の会心判定を確保しておく(この後のデバフ付与処理はlastHitWasCritに影響しない)
       if (crit) anyCrit = true;
       totalDmg += dmg;
@@ -2220,6 +2274,11 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   if (actor && actor.instanceId === undefined && target.instanceId !== undefined && actor.passives && actor.passives.onHitAilmentSelfSpdBuff && hasSpecificAilment(target, undefined)) {
     const hb = actor.passives.onHitAilmentSelfSpdBuff;
     applyStatMod(actor, "spd", hb.mult, hb.turns);
+  }
+  // 千本桜の威力スケール用: この戦闘で敵に攻撃を命中させた回数(多段/範囲は1ヒット=1カウント。
+  // 反撃・投石器・鷹はapplyDamageToTargetを通らない/actorが敵側のため数えない)
+  if (actor && actor.instanceId === undefined && target.instanceId !== undefined && dmg > 0) {
+    actor.__battleHitCount = (actor.__battleHitCount || 0) + 1;
   }
   // かばう中(logSuffix==="(かばう)")かつ「会心の返し」(guardCounter、100%確定反撃)持ちの場合は、
   // ここでの汎用「迎撃」(counterChance、被弾時の確率反撃)を重ねて発動させない。

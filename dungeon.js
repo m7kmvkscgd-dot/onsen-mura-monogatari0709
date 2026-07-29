@@ -306,6 +306,9 @@ function enterDungeon() {
   }
   fieldParty.forEach((c) => applyOnsenHpBuffOnDeparture(c)); // 温泉バフ「ぽかぽか」(最大HP+7%)をこの遠征分だけ加算する
   if (reserveFieldMember) applyOnsenHpBuffOnDeparture(reserveFieldMember);
+  // 鬼神化は「遠征中一度だけ」(2026-07-30)。新しい遠征の開始でリセットする(控えも含む)
+  fieldParty.forEach((c) => { c.kishinkaUsed = false; });
+  if (reserveFieldMember) reserveFieldMember.kishinkaUsed = false;
   applyOmikujiExpeditionStart();
   advGoldEarned = 0;
   advXpGained = {};

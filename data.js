@@ -884,11 +884,18 @@ const SKILL_TREES = {
     },
     6: {
       // 鬼神化は過去に無断実装してユーザー指示でrevertした経緯があるため、今回も仕組みは実装せずテキストのみ反映(2026-07-25引き継ぎ参照、要確認)
-      left: { name: "鬼神化", desc: "遠征中一度だけ使える。5ターンの間、鬼の力を発現する。発動時、全ての状態異常、HPを全回復する。鬼神化中はストレスの影響を受けない。鬼神斬り:mp消費0。威力110%会心率＋40%が利用可能。この技で敵を倒すとHPを20%回復。ストレス＋100。ターンを消費しない。", mp: 3 },
+      // 鬼神化(スキルエディタ2026-07-30、ユーザー仕様確定でフル実装): 遠征中一度だけの変身。
+      // 発動時に全快+全状態異常解除+ストレス+100(鬼神化中はストレスの影響を受けない=解けた後に
+      // 一気に重さが来るデザイン)。変身中は専用立ち絵(class_samurai_kishin.png)+専用技「鬼神斬り」
+      // (KISHIN_SLASH_SKILL)が技メニューに出る。忍者の変化の術と違い、その戦闘が終わると必ず解ける
+      left: { name: "鬼神化", desc: "遠征中一度だけ使える。5ターンの間、鬼の力を発現する。発動時、全ての状態異常、HPを全回復する。鬼神化中はストレスの影響を受けない。鬼神斬り:mp消費0。威力110%会心率＋40%が利用可能。この技で敵に与えたダメージの50パーセントを吸収して回復する。ストレス＋100。ターンを消費しない。", mp: 3, action: { kind: "kishinka", turns: 5, noCost: true } },
       // 新規スキル(旧・百戦錬磨の名前枠を置き換え、百戦錬磨自体はLv10右「天衣無縫」へ移動)。
       // 会心率+25%/5ターン/ターン消費なしの部分のみ実装。「心眼のmp消費-1」「ストレス免疫/毎ターン回復」は
       // 別途ストレス無効化の仕組み自体が必要なため今回は見送り、テキストのみ反映(2026-07-25引き継ぎ参照、要確認)
-      right: { name: "明鏡止水", desc: "3ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 3, noCost: true } },
+      // 明鏡止水(2026-07-30ストレス系フル実装): meikyo:trueで3ターンのmeikyoTurnsが立ち、その間
+      // ストレスの能力低下を受けず(effectiveStat)・毎ターンストレス1回復(tickSamuraiForms)・
+      // 心眼のMP-1(skillMpCost)・専用立ち絵(class_samurai_meikyo.png)。戦闘終了で必ず解除
+      right: { name: "明鏡止水", desc: "3ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 3, noCost: true, meikyo: true } },
     },
     7: {
       // 連斬はLv8左から移動(内容はそのまま、覇気と入れ替え)
@@ -972,7 +979,9 @@ const SKILL_TREES = {
       right: { name: "砦の構え", desc: "かばうが敵の攻撃を防いだ瞬間、確実に反撃する", mp: 0, passive: { guardCounter: true } },
     },
     4: {
-      left: { name: "迅雷突き", desc: "敵単体へ240%ダメージ 相手の防御力を３ターン20%低下。(40%まで蓄積する)", mp: 4, action: { kind: "damage", mult: 2.4, inflict: { type: "defDownStack", chance: 1.0, value: 0.2, maxStacks: 2, turns: 3 } } },
+      // 迅雷突き(スキルエディタ2026-07-30): 240%単体+防御デバフ蓄積→「指定した2体を100%威力で攻撃」へ全面差し替え。
+      // 同じ敵を2回選んでもよい(ユーザー確定)。対象選択はbattle.js runTreeSkillのpickTargets:2分岐
+      left: { name: "迅雷突き", desc: "指定した2体の敵を100%威力で攻撃する。", mp: 2, action: { kind: "damage", mult: 1.0, pickTargets: 2 } },
       right: { name: "守り槍", desc: "敵一体に攻撃をしつつ同時に庇うを発動する", mp: 2, action: { kind: "damage", mult: 1.0, alsoGuard: true } },
     },
     5: {
@@ -1040,11 +1049,17 @@ const SKILL_TREES = {
       right: { name: "乱心", desc: "通常攻撃時、15%の確率で敵をスタンさせる", mp: 0, passive: { onHitInflict: { type: "stun", chance: 0.15, turns: 1 } } },
     },
     9: {
-      left: { name: "百花繚乱", desc: "スタン中の敵へのダメージ+20%", mp: 0, passive: { woundBonus: { mult: 1.2, ailment: "stun" } } },
+      // 百花繚乱(スキルエディタ2026-07-30): スタン特効パッシブ→アクティブに全面差し替え。一度使うと
+      // その戦闘中ずっと、行動終了時50%でもう一度行動できる(追加行動は何でも選べる、ユーザー確定。
+      // battle.js afterPlayerActionが判定、1手番につき追加は1回まで)
+      left: { name: "百花繚乱", desc: "この戦闘中、50%の確率で１ターンに2度行動できる。", mp: 4, action: { kind: "buffSelf", stats: [], hyakka: true } },
       right: { name: "静寂", desc: "状態異常にかかる確率が35%減少する", mp: 0, passive: { statusResistMult: 0.35 } },
     },
     10: {
-      left: { name: "千本桜", desc: "敵全体へ220%ダメージ", mp: 7, action: { kind: "damage", aoe: true, mult: 2.2 } },
+      // 千本桜(スキルエディタ2026-07-30): 全体220%→攻撃回数スケールの単体奥義へ全面差し替え。
+      // この戦闘で敵に「命中させた回数」(通常攻撃も技も、薙ぎ払いは命中した敵の数ぶん全カウント=
+      // applyDamageToTargetの__battleHitCount)×10%が基礎200%に加算される(最大30回=最大500%)
+      left: { name: "千本桜", desc: "敵単体に大ダメージ。(200%)この戦闘中、敵を攻撃した回数に応じて威力が追加される。(1回につきプラス10%。最大30回。最大威力500%)", mp: 5, action: { kind: "damage", mult: 2.0, scalingPerHitMult: 0.1, scalingMaxHits: 30 } },
       right: { name: "天女の舞", desc: "5ターンの間、味方全体の攻撃力・防御力・素早さ+15%", mp: 6, action: { kind: "buffParty", stats: [{ stat: "atk", mult: 1.15 }, { stat: "def", mult: 1.15 }, { stat: "spd", mult: 1.15 }], turns: 5 } },
     },
   },
@@ -1232,6 +1247,15 @@ const SKILL_TREES = {
     },
   },
 };
+// 鬼神化中だけ技メニューに現れる専用技(battle.jsが技一覧の先頭に差し込む)。
+// 威力110%・会心+40%・与ダメージの50%を吸収回復・MP0(ユーザー仕様2026-07-30)
+const KISHIN_SLASH_SKILL = {
+  name: "鬼神斬り",
+  desc: "鬼神化中のみ。威力110%・会心率+40%で斬りつけ、与えたダメージの50%を吸収して回復する。MP消費なし。",
+  mp: 0,
+  action: { kind: "damage", mult: 1.1, extraCritRate: 0.4, lifestealPct: 0.5 },
+};
+
 // パッシブ(passiveのみでactionを持たない)スキルはMPを消費しない。スキルエディタ側でmpが
 // 誤入力されても(忍足のmp4、裂傷矢のmp1が実例)ここで一律0に正規化する(ユーザー指示2026-07-30
 // 「パッシブの時はmp0になるようにして」)。表示(ステータス画面の「パッシブ」表記等)も正しくなる
