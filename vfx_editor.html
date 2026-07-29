@@ -46,9 +46,12 @@
   #stage .grid-line.h { left:0; right:0; top:50%; height:1px; }
   #stage .grid-line.v { top:0; bottom:0; left:50%; width:1px; }
   #cardImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:96px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5)); pointer-events:none; }
-  #vfxLayer { position:absolute; left:50%; top:50%; cursor:grab; touch-action:none; }
+  /* stage全域を覆う当たり判定にする(以前はimg自身に合わせた0x0のまま=どこを触っても
+     反応しないバグだった。position:absoluteな子はサイズに寄与しないため親が潰れていた) */
+  #vfxLayer { position:absolute; inset:0; cursor:grab; touch-action:none; }
   #vfxLayer.dragging { cursor:grabbing; }
-  #vfxLayer img { display:block; position:absolute; left:50%; top:50%; pointer-events:none; }
+  #vfxLayer img { display:block; position:absolute; left:50%; top:50%; pointer-events:none; mix-blend-mode:normal; }
+  #vfxLayer img.blend-screen { mix-blend-mode:screen; }
   .stage-hint { text-align:center; font-size:0.62rem; color:var(--caption); margin-top:4px; }
 
   .assign-controls { display:flex; flex-direction:column; gap:8px; }
@@ -93,7 +96,10 @@
     <code>python import_vfx_library.py</code>をもう一度実行してこのページを開き直してください(自動反映ではありません)。<br>
     今のゲーム側(effects.js)は「クラスごとに通常攻撃/スキルの2種類だけ」VFXを持てる作りです。ここではスキル単位で
     割り当てられますが、実際にゲームへ反映する時はエンジン側の対応も必要になる場合がある点だけ了承しておいてください。
-    調整した位置・サイズはエクスポートしたJSONにそのまま残るので、反映作業自体はスムーズです。</p>
+    調整した位置・サイズはエクスポートしたJSONにそのまま残るので、反映作業自体はスムーズです。<br>
+    炎・爆発・煙などのflipbook素材は黒背景+低い透明度で作られており(ゲームエンジンでの「加算合成」前提の作り方、
+    素材自体は壊れていません)、そのまま重ねると黒っぽい箱が透けて見えます。「光る素材として重ねる(加算風)」に
+    チェックを入れると黒が消えて発光だけが残ります(flipbookは既定でON、particleは素材によるので手動で調整してください)。</p>
   </details>
 
   <div class="card">
@@ -150,6 +156,7 @@
         <button class="small" id="replayBtn">▶ 再生し直す</button>
         <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="loopCheck" checked style="width:auto;">ループ再生</label>
       </div>
+      <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="blendScreenCheck" style="width:auto;">光る素材として重ねる(加算風、mix-blend-mode:screen)</label>
       <button class="small primary" id="saveAssignBtn">✓ この割り当てを保存</button>
     </div>
   </div>
@@ -261,8 +268,16 @@ function selectVfx(v) {
   selectedVfx = v;
   document.getElementById("assignCard").style.display = "";
   const a = assignments[assignKey()];
-  if (a && a.vfxId === v.id) { stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY }; }
-  else { stageSize = 120; stageOffset = { x: 0, y: 0 }; }
+  if (a && a.vfxId === v.id) {
+    stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY };
+    document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
+  } else {
+    stageSize = 120; stageOffset = { x: 0, y: 0 };
+    // 既定値: flipbook(炎・爆発・雲・煙など発光系が中心)は加算風、particleは通常のまま。
+    // 元素材が黒背景+低アルファのため、加算(screen)にしないと黒っぽい四角が透けて見える
+    // (ユーザー報告: 背景の黒が透過できてない、に対する対処。個別に手動で切り替えられる)
+    document.getElementById("blendScreenCheck").checked = v.category === "flipbook";
+  }
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
   setOffsetInputs();
@@ -271,9 +286,16 @@ function selectVfx(v) {
   playVfx();
 }
 function applyVfxLayerTransform() {
+  // vfxLayerはstage全域を覆う当たり判定用の箱(inset:0)なので-50%補正は不要。
+  // 中のimg自身がleft:50%/top:50%+マイナスマージンで既に中央基準になっている
   const layer = document.getElementById("vfxLayer");
-  layer.style.transform = `translate(calc(-50% + ${stageOffset.x}px), calc(-50% + ${stageOffset.y}px))`;
+  layer.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px)`;
 }
+// 単発(particle)素材はコマが1枚しか無いが、ただ貼るだけだと「静止画」にしか見えない
+// (ユーザー指摘: これもアニメーション素材のはず)。パッと出てフッと消える簡易フラッシュ演出を
+// Web Animations APIで付ける。ループONなら一定間隔で繰り返す
+const PARTICLE_FLASH_MS = 650;
+const PARTICLE_FLASH_INTERVAL_MS = 900;
 function playVfx() {
   stopPlayback();
   if (!selectedVfx) return;
@@ -285,11 +307,23 @@ function playVfx() {
   img.style.height = Math.round(stageSize * ratio) + "px";
   img.style.marginLeft = -(stageSize / 2) + "px";
   img.style.marginTop = -(Math.round(stageSize * ratio) / 2) + "px";
+  img.classList.toggle("blend-screen", document.getElementById("blendScreenCheck").checked);
   layer.appendChild(img);
   applyVfxLayerTransform();
   curFrame = 1;
   const loop = document.getElementById("loopCheck").checked;
-  if (selectedVfx.category === "particle") { img.src = selectedVfx.singleSrc; return; }
+  if (selectedVfx.category === "particle") {
+    img.src = selectedVfx.singleSrc;
+    const flash = () => img.animate(
+      [ { opacity: 0, transform: "scale(0.6)" },
+        { opacity: 1, transform: "scale(1.05)", offset: 0.25 },
+        { opacity: 1, transform: "scale(1)", offset: 0.55 },
+        { opacity: 0, transform: "scale(1.15)" } ],
+      { duration: PARTICLE_FLASH_MS, easing: "ease-out" });
+    flash();
+    if (loop) playTimer = setInterval(flash, PARTICLE_FLASH_INTERVAL_MS);
+    return;
+  }
   img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
   playTimer = setInterval(() => {
     curFrame++;
@@ -301,6 +335,7 @@ function playVfx() {
 }
 document.getElementById("replayBtn").addEventListener("click", playVfx);
 document.getElementById("loopCheck").addEventListener("change", playVfx);
+document.getElementById("blendScreenCheck").addEventListener("change", playVfx);
 
 document.getElementById("sizeSlider").addEventListener("input", (e) => {
   stageSize = Number(e.target.value);
@@ -353,6 +388,7 @@ function syncStageToCurrentSelection() {
   document.getElementById("assignCard").style.display = "";
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
+  document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
   setOffsetInputs();
   renderLibList();
   updateCardPortrait();
@@ -368,6 +404,7 @@ document.getElementById("saveAssignBtn").addEventListener("click", () => {
     vfxId: selectedVfx.id, vfxLabel: selectedVfx.label, category: selectedVfx.category,
     framePrefix: selectedVfx.framePrefix, singleSrc: selectedVfx.singleSrc, frameCount: selectedVfx.frameCount,
     size: stageSize, offsetX: stageOffset.x, offsetY: stageOffset.y,
+    blendScreen: document.getElementById("blendScreenCheck").checked,
   };
   save();
   renderAssignList();
@@ -387,7 +424,7 @@ function renderAssignList() {
       <img src="${esc(thumb)}" onerror="this.style.visibility='hidden'">
       <div class="info">
         <div class="who">${esc(a.classLabel)} / ${esc(a.skillLabel)}</div>
-        <div class="what">${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY})</div>
+        <div class="what">${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY})${a.blendScreen ? " ・ 加算" : ""}</div>
       </div>
       <button class="small danger" data-act="del">削除</button>
     `;
@@ -408,7 +445,8 @@ document.getElementById("resetBtn").onclick = () => {
 document.getElementById("exportBtn").onclick = () => {
   const out = "// VFXアニメーションエディタのエクスポート(職業×スキル -> VFX割り当て)\n" +
     "// 注意: 今のeffects.jsはクラスごとに通常攻撃/スキルの2種類しかVFXスロットを持たないため、\n" +
-    "// スキル単位の割り当てを実際にゲームへ反映するにはengine.js/effects.js側の対応も必要な場合があります\n" +
+    "// スキル単位の割り当てを実際にゲームへ反映するにはengine.js/effects.js側の対応も必要な場合があります。\n" +
+    "// blendScreen:trueの項目は実装時にCSSのmix-blend-mode:screenを付ける想定です\n" +
     JSON.stringify(Object.values(assignments), null, 2) + "\n";
   document.getElementById("exportJson").value = out;
   document.getElementById("exportModal").classList.add("open");
