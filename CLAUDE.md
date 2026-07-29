@@ -36,6 +36,14 @@ npx wrangler pages deploy . --project-name=onsen-mura-monogatari --branch=main -
 **`--branch=main`を必ず明示すること。** このオプションを省略すると、wranglerはgitの現在のローカルブランチ名(このリポジトリでは`master`)を使ってデプロイしてしまい、Cloudflare Pages側のProduction環境は`main`ブランチにひも付いているため、`--branch`未指定だとPreview環境にしか反映されず本番URLが更新されない(実際にこれで「直したのにスマホでは直っていない」という事故が一度発生した)。
 デプロイ後は必ず`curl -sL https://onsen-mura-monogatari.pages.dev/index.html`等でファイル内容を取得し、ローカルの該当ファイルと`diff`で完全一致することを確認してから完了報告すること(SPAフォールバックにより存在しないパスでも200が返るため、ステータスコードだけでは正しくデプロイされたか判別できない)。本番エイリアスURL(`onsen-mura-monogatari.pages.dev`)は個別デプロイURL(`https://<hash>.onsen-mura-monogatari.pages.dev`)よりCDNキャッシュの反映が数秒〜数十秒遅れることがあるため、diffが一致しない場合は15〜20秒待って再確認する。
 
+## 要望・バグ報告リスト(2026-07-29新設、重要な運用ルール)
+ユーザーはClaude Codeを起動していない時に見つけたバグ/要望を`https://onsen-mura-monogatari.pages.dev/requests.html`(tools.htmlからもリンク)に書き込む(スクショ添付可)。保存先はCloudflare KV(REQUESTS_KV、wrangler.tomlでバインド)、API実装はfunctions/api/。
+**ユーザーが「要望修正して」「要望リスト見て」等と言ったら**:
+1. `curl -sL https://onsen-mura-monogatari.pages.dev/api/requests`で一覧取得(`status:"open"`が未対応。画像付き項目は`/api/requests/<id>`で画像込みJSONを取得し、base64をデコードした画像ファイルをReadで見る)
+2. 対応が終わった項目は`curl -X PATCH .../api/requests/<id> -H "Content-Type: application/json" -d '{"status":"done","note":"..."}'`で対応済みにする。**noteはユーザーがページで読む報告文**なので、日本語で「何をどう直したか+デプロイ済みか」を書く(PATCHボディはUTF-8ファイルに書いて`--data-binary @file`で送るとシェルの文字化けを避けられる)
+3. 対応しない/できない/仕様どおり、と判断した項目も黙って放置せず、理由をnoteに書いてdoneにする
+ユーザーがページ側で「確認OK」を押すとclosedになり一覧から消える。テスト項目等の物理削除は`npx wrangler kv key delete --namespace-id=ea3db5084ac34bbcb359c988ff4729cb "req:<id>" --remote`。
+
 ## ダンジョン1から引き継いだ仕組み(ゲームエンジン部分は共通)
 - **3人パーティ+控え1人**制、ターン制バトル(2026-07-26の大転換で4人制から変更。出発時に4人選び、4人目=控え。戦闘中は「交代」コマンド=ターン非消費で出たキャラが即行動・パーティ共有CD3ターン。倒れたら控えが無料で自動登場しCDが3にリセット。経験値は参加ターン比=出場ターン数÷戦闘総ターン数で按分)
 - MP制(魔法系だけでなく物理必殺技もMP消費。町でのみ回復)

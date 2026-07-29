@@ -1,0 +1,11 @@
+# Cloudflare Pages設定ファイル。
+# 要望・バグ報告リスト(/api/requests、functions/api/)がKVを使うためのバインディング定義。
+# これが無いとPages FunctionsからREQUESTS_KVにアクセスできない。
+# デプロイコマンドは従来どおり(CLAUDE.mdの「Cloudflare Pages本番デプロイ」参照)。
+name = "onsen-mura-monogatari"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "REQUESTS_KV"
+id = "ea3db5084ac34bbcb359c988ff4729cb"

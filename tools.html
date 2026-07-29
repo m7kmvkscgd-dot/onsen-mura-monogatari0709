@@ -36,6 +36,7 @@
   <h2>ゲーム</h2>
   <div class="grid">
     <a class="tool game" href="index.html"><span class="ic">♨️</span><span class="nm">ゲーム本体<small>温泉村物語を起動</small></span></a>
+    <a class="tool game" id="card-requests" href="requests.html"><span class="ic">📮</span><span class="nm">要望・バグ報告<span class="chg" hidden id="reqCount"></span><small>気づいたことを放り投げる</small></span></a>
   </div>
 
   <h2>エディタ</h2>
@@ -157,6 +158,15 @@
   try { mark("card-enemy", hasEnemyChanges()); } catch (e) {}
   try { mark("card-skill", hasSkillChanges()); } catch (e) {}
   try { mark("card-raid", hasRaidChanges()); } catch (e) {}
+
+  // 要望・バグ報告の未対応件数(サーバー保存のためfetch。file://起動や圏外では黙って諦める)
+  try {
+    fetch("api/requests").then((r) => r.json()).then((items) => {
+      const n = items.filter((it) => it.status === "open").length;
+      const el = document.getElementById("reqCount");
+      if (el && n > 0) { el.textContent = "未対応" + n + "件"; el.hidden = false; }
+    }).catch(() => {});
+  } catch (e) {}
 })();
 </script>
 </body>
