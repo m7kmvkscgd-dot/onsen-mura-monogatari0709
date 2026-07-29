@@ -377,17 +377,24 @@ document.getElementById("titleTest2Btn").onclick = () => {
   startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");
 };
 
-// ============ 襲撃テストモード(2026-07-29) ============
-// 「平均レベルだけ決めて、あとは全部サイコロ任せ」で襲撃戦を試せるテストモード。ボタンを押すたびに
-// 防衛隊の人数(見張り台の有無で上限4〜5、raidPartyMaxをそのまま使う)・職業・スキル(各レベルで
-// 左右ランダム)・見張り台/バリケード(木の柵)/投石器の有無(各50%)・村レベル(1〜7、ウェーブ抽選用)
-// を振り直す。5人編成になった場合は本番と同じく狩人/砲術士を1人保証する(raidPartyCompositionOk)。
-// 回復薬は5個固定(ユーザー指定)。実際の開戦処理(startRaidBattleFromPrep、raid.js)をそのまま呼ぶため
-// ウェーブ抽選・バリケードの肩代わり・投石器の自動発動など本番と全く同じロジックで動く。
-// 他のテストモードと同じくtestModeActiveでセーブ保護、全滅/帰還でタイトルへ戻る
+// ============ 襲撃テストモード(2026-07-29、2026-07-29ユーザー指摘で村レベル/防衛設備を指定制に変更) ============
+// 平均レベル・襲撃相手の村レベル・見張り台/バリケード(木の柵)/投石器の有無はユーザーが指定する
+// (当初は全部ランダムにしたが「村レベルは指定させろ・防衛設備の有無もこっちで指定させろ・
+// 味方の人数は必ず最低4人」と修正指示があったため)。ボタンを押すたびにランダムに振るのは
+// 防衛隊の職業とスキル(各レベルで左右ランダム)だけ。人数は見張り台OFF時=4人固定、ON時=
+// raidPartyMax()いっぱいの5人固定(ユーザー指定の「最低4人」を満たしつつ常に全員出す)。
+// 5人編成の時は本番と同じく狩人/砲術士を1人保証する(raidPartyCompositionOk)。回復薬は5個固定。
+// 実際の開戦処理(startRaidBattleFromPrep、raid.js)をそのまま呼ぶため、ウェーブ抽選・バリケードの
+// 肩代わり・投石器の自動発動など本番と全く同じロジックで動く。他のテストモードと同じく
+// testModeActiveでセーブ保護、全滅/帰還でタイトルへ戻る
+let raidTestWatchtowerOn = true;
+let raidTestBarricadeOn = true;
+let raidTestCatapultOn = true;
 document.getElementById("titleRaidTestBtn").onclick = () => {
   playSfx("select");
   populateRaidTestLevelSelect();
+  populateRaidTestHouseLevelSelect();
+  renderRaidTestScreen();
   showScreen("screen-raid-test");
 };
 document.getElementById("raidTestBackBtn").onclick = () => {
@@ -395,6 +402,18 @@ document.getElementById("raidTestBackBtn").onclick = () => {
   showScreen("screen-title");
   renderTitleScreen();
 };
+function renderRaidTestScreen() {
+  [["raidTestWatchtowerToggle", "raidTestWatchtowerOn"], ["raidTestBarricadeToggle", "raidTestBarricadeOn"], ["raidTestCatapultToggle", "raidTestCatapultOn"]]
+    .forEach(([btnId, varName]) => {
+      const btn = document.getElementById(btnId);
+      const on = varName === "raidTestWatchtowerOn" ? raidTestWatchtowerOn : varName === "raidTestBarricadeOn" ? raidTestBarricadeOn : raidTestCatapultOn;
+      btn.textContent = on ? "ON" : "OFF";
+      btn.classList.toggle("is-on", on);
+    });
+}
+document.getElementById("raidTestWatchtowerToggle").onclick = () => { playSfx("select"); raidTestWatchtowerOn = !raidTestWatchtowerOn; renderRaidTestScreen(); };
+document.getElementById("raidTestBarricadeToggle").onclick = () => { playSfx("select"); raidTestBarricadeOn = !raidTestBarricadeOn; renderRaidTestScreen(); };
+document.getElementById("raidTestCatapultToggle").onclick = () => { playSfx("select"); raidTestCatapultOn = !raidTestCatapultOn; renderRaidTestScreen(); };
 function populateRaidTestLevelSelect() {
   const select = document.getElementById("raidTestLevelSelect");
   if (select.options.length > 0) return;
@@ -405,6 +424,17 @@ function populateRaidTestLevelSelect() {
     select.appendChild(opt);
   }
   select.value = "5";
+}
+function populateRaidTestHouseLevelSelect() {
+  const select = document.getElementById("raidTestHouseLevelSelect");
+  if (select.options.length > 0) return;
+  for (let lv = 1; lv <= HOUSE_MAX_LEVEL; lv++) {
+    const opt = document.createElement("option");
+    opt.value = String(lv);
+    opt.textContent = `村Lv.${lv}`;
+    select.appendChild(opt);
+  }
+  select.value = "1";
 }
 const RAID_TEST_CLASS_IDS = Object.keys(CLASSES);
 const RAID_TEST_NAMES = ["小太郎", "弥助", "静", "権六", "巴", "霧丸", "玄蕃", "晴明"]; // 表示用の仮名、重複しても支障はない
@@ -430,18 +460,19 @@ function createRaidTestCharacter(name, classId, targetLevel) {
 document.getElementById("raidTestRollBtn").onclick = () => {
   playSfx("select");
   const avgLevel = Math.max(1, Math.min(MAX_LEVEL, Number(document.getElementById("raidTestLevelSelect").value) || 5));
+  const houseLevel = Math.max(1, Math.min(HOUSE_MAX_LEVEL, Number(document.getElementById("raidTestHouseLevelSelect").value) || 1));
 
   testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
   state = defaultState();
-  state.houseLevel = 1 + Math.floor(Math.random() * HOUSE_MAX_LEVEL); // ウェーブ抽選(RAID_CONFIG)に使う村レベルもサイコロ
-  state.watchtowerLevel = Math.random() < 0.5 ? 1 : 0;
-  state.barricadeLevel = Math.random() < 0.5 ? 1 : 0; // ONの時は木の柵(Tier1)固定
-  state.catapultLevel = Math.random() < 0.5 ? 1 : 0;
+  state.houseLevel = houseLevel; // ウェーブ抽選(RAID_CONFIG)に使う村レベル。ユーザー指定
+  state.watchtowerLevel = raidTestWatchtowerOn ? 1 : 0;
+  state.barricadeLevel = raidTestBarricadeOn ? 1 : 0; // ONの時は木の柵(Tier1)固定
+  state.catapultLevel = raidTestCatapultOn ? 1 : 0;
   state.barricadeHp = state.barricadeLevel > 0 ? BARRICADE_TIERS[state.barricadeLevel - 1].hp : 0;
   state.inventory.potion = 5; // ユーザー指定: 回復薬は常に5個
 
-  const maxParty = raidPartyMax(); // watchtowerLevelを見た本番と同じ上限(4 or 5、raid.js)
-  const partySize = 1 + Math.floor(Math.random() * maxParty);
+  // 人数は「必ず最低4人」(ユーザー指定): 見張り台OFFなら4人固定、ONならraidPartyMax()いっぱいの5人固定
+  const partySize = raidPartyMax();
   const names = [...RAID_TEST_NAMES].sort(() => Math.random() - 0.5);
   const chars = [];
   for (let i = 0; i < partySize; i++) chars.push(createRaidTestCharacter(names[i] || `防衛隊${i + 1}`, raidTestRandomClass(), avgLevel));

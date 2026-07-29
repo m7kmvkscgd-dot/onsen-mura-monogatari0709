@@ -151,10 +151,26 @@
     <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.webp')"></div>
     <div class="title-sub-panel">
       <h1>襲撃テスト</h1>
-      <p class="title-setting-caption">平均レベルだけ決めれば、防衛隊の人数・職業・スキル・見張り台/バリケード/投石器の有無を全部ランダムに振って襲撃戦を始めます。押すたびに違う組み合わせになります。回復薬は5個固定です。</p>
+      <p class="title-setting-caption">平均レベル・襲撃相手の村レベル・防衛設備の有無を決めれば、防衛隊の人数(見張り台OFF時4人/ON時4〜5人)・職業・スキルをランダムに振って襲撃戦を始めます。回復薬は5個固定です。</p>
       <div class="title-setting-row">
         <span>平均レベル</span>
         <select class="title-select" id="raidTestLevelSelect"></select>
+      </div>
+      <div class="title-setting-row">
+        <span>襲撃相手の村レベル</span>
+        <select class="title-select" id="raidTestHouseLevelSelect"></select>
+      </div>
+      <div class="title-setting-row">
+        <span>見張り台</span>
+        <button class="title-toggle-btn" id="raidTestWatchtowerToggle"></button>
+      </div>
+      <div class="title-setting-row">
+        <span>バリケード(木の柵)</span>
+        <button class="title-toggle-btn" id="raidTestBarricadeToggle"></button>
+      </div>
+      <div class="title-setting-row">
+        <span>投石器</span>
+        <button class="title-toggle-btn" id="raidTestCatapultToggle"></button>
       </div>
       <button class="big" id="raidTestRollBtn" style="margin-top:1rem;">🎲 サイコロを振って開始</button>
       <button class="big title-sub-back-btn" id="raidTestBackBtn">戻る</button>

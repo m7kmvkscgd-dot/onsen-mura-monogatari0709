@@ -30,7 +30,11 @@ function resetRaidBarricade(hp) {
   raidBarricadeHp = raidBarricadeMaxHp = hp;
   const wrap = document.getElementById("raidBarricadeWrap");
   if (wrap) {
-    wrap.classList.remove("collapsed", "worn", "critical");
+    wrap.classList.remove("worn", "critical");
+    // hp<=0(バリケード未建築、または既に全壊している)は絵自体を隠す。倒壊演出(playBarricadeCollapseFx)
+    // の終了時にも同じ.collapsedが付くため、ここで無条件除去すると「柵が無いのに絵だけ表示される」
+    // バグになっていた(ユーザー実機発見2026-07-29: 襲撃テストで木の柵OFFにしても絵が出た)
+    wrap.classList.toggle("collapsed", hp <= 0);
     wrap.getAnimations().forEach((a) => a.cancel());
     wrap.style.opacity = "";
     wrap.style.transform = "";
