@@ -99,7 +99,11 @@
     調整した位置・サイズはエクスポートしたJSONにそのまま残るので、反映作業自体はスムーズです。<br>
     炎・爆発・煙などのflipbook素材は黒背景+低い透明度で作られており(ゲームエンジンでの「加算合成」前提の作り方、
     素材自体は壊れていません)、そのまま重ねると黒っぽい箱が透けて見えます。「光る素材として重ねる(加算風)」に
-    チェックを入れると黒が消えて発光だけが残ります(flipbookは既定でON、particleは素材によるので手動で調整してください)。</p>
+    チェックを入れると黒が消えて発光だけが残ります(flipbookは既定でON、particleは素材によるので手動で調整してください)。<br>
+    本体(battle.js)の実際のタイミング: 通常攻撃は命中と同時に1コマ目を表示→90ms静止(ヒットストップ)→
+    続きのコマから再開、会心/空振りは静止せず頭から通常再生、スキルは静止なしで命中と同時に頭から再生します。
+    再生速度は本体は全VFX共通30ms/コマ固定ですが、ここでは「速さ」欄でVFXごとに変えて試せます
+    (実際にゲームへ反映する場合はengine.js側にVFXごとの速度指定を追加する対応が必要です)。</p>
   </details>
 
   <div class="card">
@@ -152,10 +156,17 @@
           <input type="number" id="offsetYInput" value="0">
         </div>
       </div>
+      <div class="row">
+        <div>
+          <label>速さ(ms/コマ、本体既定30ms)</label>
+          <input type="number" id="frameMsInput" value="30" min="5" max="200">
+        </div>
+      </div>
       <div class="playback-row">
         <button class="small" id="replayBtn">▶ 再生し直す</button>
         <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="loopCheck" checked style="width:auto;">ループ再生</label>
       </div>
+      <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="hitstopCheck" style="width:auto;">通常攻撃のヒットストップを再現(命中で1コマ止め→90ms後に再開)</label>
       <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="blendScreenCheck" style="width:auto;">光る素材として重ねる(加算風、mix-blend-mode:screen)</label>
       <button class="small primary" id="saveAssignBtn">✓ この割り当てを保存</button>
     </div>
@@ -289,6 +300,7 @@ function selectVfx(v) {
   if (a && a.vfxId === v.id) {
     stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY };
     document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
+    document.getElementById("frameMsInput").value = a.frameMs || 30;
   } else {
     stageSize = 120; stageOffset = { x: 0, y: 0 };
     // 既定値はsource(データの出どころ)で判断する。spritesheet(flipbooksの元TGA)は
@@ -296,7 +308,9 @@ function selectVfx(v) {
     // (particle_sequence/particle_single)はちゃんとしたアルファで作られているため既定OFF
     // (個別に手動で切り替えられる)
     document.getElementById("blendScreenCheck").checked = v.source === "spritesheet";
+    document.getElementById("frameMsInput").value = 30; // 本体既定のATTACK_VFX_FRAME_MSと同じ
   }
+  document.getElementById("hitstopCheck").checked = false; // ヒットストップ再現はプレビュー専用のフラグなので毎回OFFに戻す
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
   setOffsetInputs();
@@ -316,6 +330,27 @@ function applyVfxLayerTransform() {
 // Web Animations APIで付ける。ループONなら一定間隔で繰り返す
 const PARTICLE_FLASH_MS = 650;
 const PARTICLE_FLASH_INTERVAL_MS = 900;
+// 本体battle.jsの通常攻撃と同じ選択: 命中と同時に1コマ目→90ms静止(ヒットストップ)→
+// 続きのコマ(経過フレーム数+1)から再開。NORMAL_ATTACK_HITSTOP_MSと同じ90msを使う
+const HITSTOP_DEMO_MS = 90;
+function runHitstopChoreography(img, frameMs, loop) {
+  const resumeFrame = Math.min(selectedVfx.frameCount, Math.floor(HITSTOP_DEMO_MS / frameMs) + 1);
+  curFrame = 1;
+  img.src = `${selectedVfx.framePrefix}1.png`;
+  playTimer = setTimeout(() => {
+    curFrame = resumeFrame;
+    img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
+    playTimer = setInterval(() => {
+      curFrame++;
+      if (curFrame > selectedVfx.frameCount) {
+        clearInterval(playTimer);
+        if (loop) runHitstopChoreography(img, frameMs, loop);
+        return;
+      }
+      img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
+    }, frameMs);
+  }, HITSTOP_DEMO_MS);
+}
 function playVfx() {
   stopPlayback();
   if (!selectedVfx) return;
@@ -344,6 +379,11 @@ function playVfx() {
     if (loop) playTimer = setInterval(flash, PARTICLE_FLASH_INTERVAL_MS);
     return;
   }
+  const frameMs = Math.max(5, Number(document.getElementById("frameMsInput").value) || 30);
+  if (document.getElementById("hitstopCheck").checked) {
+    runHitstopChoreography(img, frameMs, loop);
+    return;
+  }
   img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
   playTimer = setInterval(() => {
     curFrame++;
@@ -351,11 +391,13 @@ function playVfx() {
       if (loop) { curFrame = 1; } else { stopPlayback(); return; }
     }
     img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
-  }, 30); // ゲーム本体のATTACK_VFX_FRAME_MSと同じ30ms
+  }, frameMs);
 }
 document.getElementById("replayBtn").addEventListener("click", playVfx);
 document.getElementById("loopCheck").addEventListener("change", playVfx);
 document.getElementById("blendScreenCheck").addEventListener("change", playVfx);
+document.getElementById("frameMsInput").addEventListener("change", playVfx);
+document.getElementById("hitstopCheck").addEventListener("change", playVfx);
 
 document.getElementById("sizeSlider").addEventListener("input", (e) => {
   stageSize = Number(e.target.value);
@@ -409,6 +451,8 @@ function syncStageToCurrentSelection() {
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
   document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
+  document.getElementById("frameMsInput").value = a.frameMs || 30;
+  document.getElementById("hitstopCheck").checked = false;
   setOffsetInputs();
   renderLibList();
   updateCardPortrait();
@@ -426,6 +470,7 @@ document.getElementById("saveAssignBtn").addEventListener("click", () => {
     framePrefix: selectedVfx.framePrefix, singleSrc: selectedVfx.singleSrc, frameCount: selectedVfx.frameCount,
     size: stageSize, offsetX: stageOffset.x, offsetY: stageOffset.y,
     blendScreen: document.getElementById("blendScreenCheck").checked,
+    frameMs: Math.max(5, Number(document.getElementById("frameMsInput").value) || 30),
   };
   save();
   renderAssignList();
@@ -445,7 +490,7 @@ function renderAssignList() {
       <img src="${esc(thumb)}" onerror="this.style.visibility='hidden'">
       <div class="info">
         <div class="who">${esc(a.classLabel)} / ${esc(a.skillLabel)}</div>
-        <div class="what">${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY})${a.blendScreen ? " ・ 加算" : ""}</div>
+        <div class="what">${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY}) ・ ${a.frameMs || 30}ms/コマ${a.blendScreen ? " ・ 加算" : ""}</div>
       </div>
       <button class="small danger" data-act="del">削除</button>
     `;
@@ -467,7 +512,9 @@ document.getElementById("exportBtn").onclick = () => {
   const out = "// VFXアニメーションエディタのエクスポート(職業×スキル -> VFX割り当て)\n" +
     "// 注意: 今のeffects.jsはクラスごとに通常攻撃/スキルの2種類しかVFXスロットを持たないため、\n" +
     "// スキル単位の割り当てを実際にゲームへ反映するにはengine.js/effects.js側の対応も必要な場合があります。\n" +
-    "// blendScreen:trueの項目は実装時にCSSのmix-blend-mode:screenを付ける想定です\n" +
+    "// blendScreen:trueの項目は実装時にCSSのmix-blend-mode:screenを付ける想定です。\n" +
+    "// frameMsは1コマの表示時間(本体の既定は全VFX共通ATTACK_VFX_FRAME_MS=30msのため、\n" +
+    "// 個別の値を反映するにはengine.js/effects.js側にVFXごとの速度指定を追加する対応が必要です)\n" +
     JSON.stringify(Object.values(assignments), null, 2) + "\n";
   document.getElementById("exportJson").value = out;
   document.getElementById("exportModal").classList.add("open");
