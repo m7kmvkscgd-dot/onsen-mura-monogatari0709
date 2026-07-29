@@ -658,6 +658,14 @@ function initOpeningSequence() {
       video.play().catch(() => finish(false, true));
     });
   }
+
+  // 【立ち上がらないバグの根本対策2026-07-29】opening.mp4は現状リポジトリに存在しない(将来追加予定)。
+  // 存在しないsrcはSPAフォールバックで200+HTMLが返るため、ブラウザ/回線の状況によっては
+  // onerrorがいつまでも発火せずreadyState=0のまま黒画面で止まる(「ゲームが立ち上がらない」の正体。
+  // 立ち上がるかはエラー発火のタイミング運だった)。2秒待ってもデータが1バイトも来ていなければ
+  // 動画なしでタイトルへ進む。将来本物の動画を追加した場合も、メタデータは通常2秒以内に届き
+  // readyStateが1以上になるため誤発動しない(readyState 0=HAVE_NOTHINGの時だけ諦める)
+  setTimeout(() => { if (video.readyState === 0) finish(false, true); }, 2000);
 }
 
 // ============ タップして開始ゲート ============
