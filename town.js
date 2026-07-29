@@ -381,15 +381,13 @@ function renderInnRosterList(ids, membersFn, onBack) {
       <div class="roster-info">
         <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span></div>
         <div class="roster-sub">${rosterSubWithLevelBadge(c)}</div>
-        ${hasPendingSkill ? `<div class="levelup-badge-small"><span class="nowrap">レベルアップ！</span> <span class="nowrap">Lv.${levelUpFrom}→${c.level}</span></div>` : ""}
         ${c.status === "active" ? `
           <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>
           ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${mpRatio}%"></div></div>` : ""}
         ` : ""}
       </div>
       <div class="roster-actions">
-        <button class="detail-btn" data-id="${c.id}">詳細</button>
-        ${hasPendingSkill ? `<button class="skill-pending-btn">🎓スキル選択</button>` : ""}
+        <button class="detail-btn${hasPendingSkill ? " sparkle-glow" : ""}" data-id="${c.id}">詳細</button>
       </div>
     `;
     // 戻り先(onBack)を明示して渡す。renderStatusScreenのstatusScreenOnBackは「前回の戻り先を
@@ -403,13 +401,9 @@ function renderInnRosterList(ids, membersFn, onBack) {
     };
     // 宿の名簿ではアイコン写真タップでの詳細遷移はしない(ユーザー指示2026-07-18で無効化。
     // 詳細を見たい時は「詳細」ボタンから。出発準備画面のアイコンタップも2026-07-19に同様に無効化した)
-    const skillBtn = row.querySelector(".skill-pending-btn");
-    if (skillBtn) {
-      skillBtn.onclick = (e) => {
-        e.stopPropagation();
-        openSkillChoiceFor(c.id);
-      };
-    }
+    // 旧・紫のレベルアップバー+🎓スキル選択ボタンは2026-07-29に廃止: 代わりに「詳細」ボタンが
+    // キラキラ光り(sparkle-glow)、詳細→成長の道→スキル選択という動線に統一した(ユーザー指示:
+    // キャラのモーダルを開く回数=性格を見る機会を増やすため)
     // 宿泊の全員一括化(2026-07-18)に伴い、行タップでの宿泊選択トグルは廃止した
     list.appendChild(row);
   });
@@ -762,8 +756,17 @@ function renderStatusScreen(charId, onBack) {
 
   [document.getElementById("statusXpCard"), document.getElementById("statusStatCard"), document.getElementById("statusSkillCard")].forEach((el) => retriggerEntryAnim(el, "status-card-in"));
 
-  document.getElementById("statusViewSkillTreeBtn").onclick = () => {
-    viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
+  // スキル選択待ちがあれば「成長の道」ボタンをキラキラ光らせ、タップで選択UIへ直行させる
+  // (名簿の「詳細」キラキラ→ここ、と光を辿ればスキル選択に着く動線。ユーザー指示2026-07-29)
+  const hasPendingChoice = state.pendingSkillChoices.some((e) => e.characterId === charId);
+  const treeBtn = document.getElementById("statusViewSkillTreeBtn");
+  treeBtn.classList.toggle("sparkle-glow", hasPendingChoice);
+  treeBtn.onclick = () => {
+    if (state.pendingSkillChoices.some((e) => e.characterId === charId)) {
+      openSkillChoiceFor(charId);
+    } else {
+      viewSkillTree(charId, () => { renderStatusScreen(charId); showScreen("screen-status"); });
+    }
   };
   const takigyoCount = state.inventory.takigyo || 0;
   document.getElementById("statusTakigyoCount").textContent = takigyoCount;

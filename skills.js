@@ -44,7 +44,14 @@ function resolveSkillChoice(character, level, side, skill) {
     openSkillChoiceFor(character.id);
   } else {
     document.getElementById("skillChoiceOverlay").style.display = "none";
-    renderRosterList();
+    // 旧renderRosterList()呼び出しは「どこにも定義されていない関数」で、ここへ来るたび静かに
+    // ReferenceErrorを投げていた潜在バグ(2026-07-30発見)。従来は例外の後に画面遷移時の
+    // 再描画が偶然フォローしていたため無症状だった。現在スキル選択はステータス詳細画面
+    // (成長の道)からしか開けないため、その画面の再描画だけで習得スキル欄への反映と
+    // キラキラ(sparkle-glow)の解除が揃う。宿の名簿側のキラキラは宿へ戻る時の
+    // renderInnRosterListが反映する
+    const statusScreen = document.getElementById("screen-status");
+    if (statusScreen && statusScreen.classList.contains("active")) renderStatusScreen(character.id);
   }
 }
 // スキル決定時のテンションを上げる演出。決定ボタンの位置から青緑の光の粒を弾き飛ばし、
@@ -143,8 +150,10 @@ function renderSkillTreeContent(character, pendingLevel, onClose) {
   `;
   document.getElementById("skillTreeBackBtn").onclick = () => {
     document.getElementById("skillChoiceOverlay").style.display = "none";
+    // onCloseが無い経路(ステータス画面の成長の道から開いた選択待ち)は、オーバーレイを閉じれば
+    // 背後にステータス画面がそのまま見えるので追加の再描画は不要(旧renderRosterList()は
+    // 未定義関数の潜在バグだったため撤去、2026-07-30)
     if (onClose) onClose();
-    else renderRosterList();
   };
   // スキル名をタップすると、そのスキルの真下にだけ説明(+選択待ちの行なら決定ボタン)を開く。
   // 別のスキルをタップすると前に開いていたものは閉じる(アコーディオン式、同時に1つだけ開く)

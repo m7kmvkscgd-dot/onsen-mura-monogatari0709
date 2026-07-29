@@ -434,3 +434,22 @@
     font-size: 0.95rem; line-height: 1.9; color: var(--dw-body-color);
     text-align: left; margin: 0 0 1.1rem;
   }
+
+/* ============ レベルアップの導線キラキラ(2026-07-29) ============
+   スキル選択待ちのキャラは、名簿の「詳細」ボタンとステータス画面の「成長の道」ボタンが金色に
+   明滅する(旧・紫のレベルアップバー+🎓スキル選択ボタンの置き換え。ユーザー指示: キャラの詳細を
+   開く回数=性格を見る機会を増やすため、光を辿るとスキル選択に着く動線にする) */
+.sparkle-glow { position: relative; border-color: rgba(240,216,150,0.9) !important; animation: sparkleGlowPulse 1.6s ease-in-out infinite; }
+@keyframes sparkleGlowPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(240,216,150,0.35); }
+  50% { box-shadow: 0 0 13px rgba(240,216,150,0.85), 0 0 26px rgba(240,216,150,0.35); }
+}
+.sparkle-glow::after {
+  content: "✨"; position: absolute; top: -9px; right: -7px; font-size: 13px; pointer-events: none;
+  animation: sparkleTwinkle 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+}
+@keyframes sparkleTwinkle {
+  0%, 100% { opacity: 0.55; transform: scale(0.9) rotate(-8deg); }
+  50% { opacity: 1; transform: scale(1.18) rotate(8deg); }
+}
