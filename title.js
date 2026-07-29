@@ -377,6 +377,84 @@ document.getElementById("titleTest2Btn").onclick = () => {
   startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");
 };
 
+// ============ 襲撃テストモード(2026-07-29) ============
+// 「平均レベルだけ決めて、あとは全部サイコロ任せ」で襲撃戦を試せるテストモード。ボタンを押すたびに
+// 防衛隊の人数(見張り台の有無で上限4〜5、raidPartyMaxをそのまま使う)・職業・スキル(各レベルで
+// 左右ランダム)・見張り台/バリケード(木の柵)/投石器の有無(各50%)・村レベル(1〜7、ウェーブ抽選用)
+// を振り直す。5人編成になった場合は本番と同じく狩人/砲術士を1人保証する(raidPartyCompositionOk)。
+// 回復薬は5個固定(ユーザー指定)。実際の開戦処理(startRaidBattleFromPrep、raid.js)をそのまま呼ぶため
+// ウェーブ抽選・バリケードの肩代わり・投石器の自動発動など本番と全く同じロジックで動く。
+// 他のテストモードと同じくtestModeActiveでセーブ保護、全滅/帰還でタイトルへ戻る
+document.getElementById("titleRaidTestBtn").onclick = () => {
+  playSfx("select");
+  populateRaidTestLevelSelect();
+  showScreen("screen-raid-test");
+};
+document.getElementById("raidTestBackBtn").onclick = () => {
+  playSfx("select");
+  showScreen("screen-title");
+  renderTitleScreen();
+};
+function populateRaidTestLevelSelect() {
+  const select = document.getElementById("raidTestLevelSelect");
+  if (select.options.length > 0) return;
+  for (let lv = 1; lv <= MAX_LEVEL; lv++) {
+    const opt = document.createElement("option");
+    opt.value = String(lv);
+    opt.textContent = `Lv.${lv}`;
+    select.appendChild(opt);
+  }
+  select.value = "5";
+}
+const RAID_TEST_CLASS_IDS = Object.keys(CLASSES);
+const RAID_TEST_NAMES = ["小太郎", "弥助", "静", "権六", "巴", "霧丸", "玄蕃", "晴明"]; // 表示用の仮名、重複しても支障はない
+function raidTestRandomClass() {
+  return RAID_TEST_CLASS_IDS[Math.floor(Math.random() * RAID_TEST_CLASS_IDS.length)];
+}
+// 指定レベルまで、SKILL_TREESにある分だけ各レベルの選択を左右ランダムに取らせながらキャラを作る
+// (resetAllSkills(engine.js)と同じ「Lv1からlevelUpを繰り返す」方式で、その場でapplySkillChoiceする)
+function createRaidTestCharacter(name, classId, targetLevel) {
+  const c = createCharacter(name, classId, state.classUpgrades);
+  for (let lv = 2; lv <= targetLevel; lv++) {
+    levelUp(c, () => {});
+    const choice = SKILL_TREES[classId] && SKILL_TREES[classId][lv];
+    if (choice) {
+      const side = Math.random() < 0.5 ? "left" : "right";
+      applySkillChoice(c, { ...choice[side], side }, lv);
+    }
+  }
+  c.hp = c.maxHp;
+  c.mp = c.maxMp;
+  return c;
+}
+document.getElementById("raidTestRollBtn").onclick = () => {
+  playSfx("select");
+  const avgLevel = Math.max(1, Math.min(MAX_LEVEL, Number(document.getElementById("raidTestLevelSelect").value) || 5));
+
+  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
+  state = defaultState();
+  state.houseLevel = 1 + Math.floor(Math.random() * HOUSE_MAX_LEVEL); // ウェーブ抽選(RAID_CONFIG)に使う村レベルもサイコロ
+  state.watchtowerLevel = Math.random() < 0.5 ? 1 : 0;
+  state.barricadeLevel = Math.random() < 0.5 ? 1 : 0; // ONの時は木の柵(Tier1)固定
+  state.catapultLevel = Math.random() < 0.5 ? 1 : 0;
+  state.barricadeHp = state.barricadeLevel > 0 ? BARRICADE_TIERS[state.barricadeLevel - 1].hp : 0;
+  state.inventory.potion = 5; // ユーザー指定: 回復薬は常に5個
+
+  const maxParty = raidPartyMax(); // watchtowerLevelを見た本番と同じ上限(4 or 5、raid.js)
+  const partySize = 1 + Math.floor(Math.random() * maxParty);
+  const names = [...RAID_TEST_NAMES].sort(() => Math.random() - 0.5);
+  const chars = [];
+  for (let i = 0; i < partySize; i++) chars.push(createRaidTestCharacter(names[i] || `防衛隊${i + 1}`, raidTestRandomClass(), avgLevel));
+  // 5人編成(見張り台あり)は本番と同じく狩人/砲術士が最低1人必要。いなければ1人を差し替える
+  if (partySize > RAID_PARTY_BASE_MAX && !chars.some(isRaidWatchtowerClass)) {
+    const idx = Math.floor(Math.random() * chars.length);
+    chars[idx] = createRaidTestCharacter(chars[idx].name, Math.random() < 0.5 ? "hunter" : "gunner", avgLevel);
+  }
+  state.roster.push(...chars);
+  raidDefenderIds = chars.map((c) => c.id);
+  startRaidBattleFromPrep();
+};
+
 // ============ 設定画面 ============
 // 既存のミュート機能(#muteBtn/audio.js)をON/OFFトグルとして見せるだけの最小限の設定画面。
 // (チュートリアル表示トグルは機能ごと削除した、2026-07-18)

@@ -94,6 +94,13 @@
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
         <span>大規模戦テスト</span>
       </button>
+      <!-- 襲撃テスト(2026-07-29): 平均レベルだけ指定し、防衛隊の人数/職業/スキル/見張り台・
+           バリケード・投石器の有無を全てランダムに振って即・実際の襲撃戦(raid.js本番ロジック)を
+           開始するテストモード。押すたびに違う組み合わせで試せる(ユーザー指定「サイコロを振る」) -->
+      <button class="title-menu-btn" id="titleRaidTestBtn" style="opacity:0.65;">
+        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
+        <span>襲撃テスト(サイコロ)</span>
+      </button>
     </div>
     <div class="title-footer">Ver 1.0　© 温泉村物語</div>
   </div>
@@ -133,6 +140,24 @@
         <div id="settingsDebugWarpList" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
       </div>
       <button class="big title-sub-back-btn" id="settingsBackBtn">戻る</button>
+    </div>
+  </div>
+
+  <!-- 襲撃テスト(2026-07-29): 平均レベルだけ決めると、あとは防衛隊の人数・職業・スキル・
+       見張り台/バリケード(木の柵)/投石器の有無・村レベル(ウェーブ抽選用)を全部ランダムに振って
+       即・襲撃戦を開始する。実際の開戦処理(startRaidBattleFromPrep、raid.js)をそのまま呼ぶため
+       ウェーブ抽選・バリケードの肩代わり・投石器の自動発動など本番と同じロジックで動く -->
+  <div class="screen" id="screen-raid-test">
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.webp')"></div>
+    <div class="title-sub-panel">
+      <h1>襲撃テスト</h1>
+      <p class="title-setting-caption">平均レベルだけ決めれば、防衛隊の人数・職業・スキル・見張り台/バリケード/投石器の有無を全部ランダムに振って襲撃戦を始めます。押すたびに違う組み合わせになります。回復薬は5個固定です。</p>
+      <div class="title-setting-row">
+        <span>平均レベル</span>
+        <select class="title-select" id="raidTestLevelSelect"></select>
+      </div>
+      <button class="big" id="raidTestRollBtn" style="margin-top:1rem;">🎲 サイコロを振って開始</button>
+      <button class="big title-sub-back-btn" id="raidTestBackBtn">戻る</button>
     </div>
   </div>
 
