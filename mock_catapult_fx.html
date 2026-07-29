@@ -82,11 +82,11 @@
 
   /* 石(放物線飛翔) */
   .stone-fly { position: absolute; z-index: 15; pointer-events: none; will-change: transform; }
-  .stone-fly img { width: 26px; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)); }
+  .stone-fly img { width: 34px; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)); }
   .stone-fly.spin img { animation: stoneSpin 0.35s linear infinite; }
   @keyframes stoneSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .stone-shadow {
-    position: absolute; z-index: 3; width: 26px; height: 8px; border-radius: 50%;
+    position: absolute; z-index: 3; width: 30px; height: 9px; border-radius: 50%;
     background: rgba(0,0,0,0.45); filter: blur(1px); pointer-events: none;
   }
   .impact-burst { position: absolute; z-index: 14; pointer-events: none; }
@@ -280,7 +280,7 @@
     wrap.className = "stone-fly spin";
     wrap.style.left = "0px"; wrap.style.top = "0px";
     const img = document.createElement("img");
-    img.src = "assets/icons/materials/tetsu.png"; // 石アイコン代用(専用素材は今後差し替え)
+    img.src = "assets/vfx/catapult_stone.png"; // ユーザー提供の投石アイコン
     wrap.appendChild(img);
     stage.appendChild(wrap);
 
@@ -296,8 +296,8 @@
       // 山なり: sin弧で高さを付け、着地直前に少し加速する(ease-in寄り)
       const arcHeight = 120;
       const y = from.y + (to.y - from.y) * p - Math.sin(Math.PI * p) * arcHeight;
-      wrap.style.transform = `translate(${x - 13}px, ${y - 13}px)`;
-      shadow.style.transform = `translate(${x - 13}px, ${to.y - 4}px) scale(${0.5 + p * 0.5})`;
+      wrap.style.transform = `translate(${x - 17}px, ${y - 17}px)`;
+      shadow.style.transform = `translate(${x - 15}px, ${to.y - 4}px) scale(${0.5 + p * 0.5})`;
       shadow.style.opacity = 0.15 + p * 0.35;
       if (p < 1) requestAnimationFrame(frame);
       else {
