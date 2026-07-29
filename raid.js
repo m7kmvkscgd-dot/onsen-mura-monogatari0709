@@ -120,22 +120,33 @@ function repairBarricade() {
 // で計算する(村レベルはHOUSE_MAX_LEVEL=7が上限のため、キャラクターのレベル成長式をそのまま
 // 流用しても破綻しない)。地上の敵が1体もいない(全滅済み、または敵が全員飛行)時は不発になる。
 // battle.jsのnextRound()から、ラウンドが1つ完了した直後(次のラウンドの手番順を組む前)に呼ばれる
+// 戻り値: 投擲演出の所要ms(発動しなかった時は0)。battle.jsのnextRound側がこの時間だけ
+// 次ラウンドの手番開始を待つ(=着弾でダメージが確定してから手番順が組まれる)
 function fireCatapultOnRoundEnd() {
-  if (!raidBattleActive || (state.catapultLevel || 0) <= 0) return;
+  if (!raidBattleActive || (state.catapultLevel || 0) <= 0) return 0;
   const groundTargets = aliveEnemies().filter((e) => !e.isFlying);
   if (groundTargets.length === 0) {
     // 対象がいない時も黙って不発にせず理由をログに出す(「投石器が機能してない」と見えてしまった
     // 実機報告2026-07-29への対応。敵が全員飛行=コウモリ等だけの場面で毎ラウンド出るのは
     // 情報として正しいのでそのまま)
     if (aliveEnemies().length > 0) blog("投石器は空を飛ぶ敵に狙いを付けられない…！");
-    return;
+    return 0;
   }
   const target = groundTargets[Math.floor(Math.random() * groundTargets.length)];
   const atk = Math.round(CLASSES.spearman.atk * (1 + ((state.houseLevel || 1) - 1) * 0.075));
   const dmg = rollBasicAttack(atk, target.def);
-  target.hp = Math.max(0, target.hp - dmg);
-  blog(`投石器が${target.label}に岩を撃ち込んだ！${dmg}のダメージ！`);
-  popupOn(target.instanceId, `-${dmg}`, "dmg");
+  const applyHit = () => {
+    if (!battle) return; // 演出中に戦闘が終わっていたら何もしない(保険)
+    target.hp = Math.max(0, target.hp - dmg);
+    blog(`投石器が${target.label}に岩を撃ち込んだ！${dmg}のダメージ！`);
+    popupOn(target.instanceId, `-${dmg}`, "dmg");
+    renderBattleScreen(); // HPバー反映+撃破していればリアクション起動
+  };
+  // 投擲演出(effects.js、モック移植2026-07-29)。カードが見つからない場合は演出なしの即時適用
+  const card = document.querySelector(`#enemyRow .enemy-card[data-id="${target.instanceId}"]`);
+  if (!card || typeof playCatapultStoneFx !== "function") { applyHit(); return 0; }
+  playCatapultStoneFx(card, applyHit);
+  return 950; // 飛翔620ms+着弾の余韻
 }
 
 // ============ ウェーブ抽選 ============

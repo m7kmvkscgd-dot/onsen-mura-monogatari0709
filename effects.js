@@ -1378,6 +1378,67 @@ function playBarricadeCollapseFx() {
     { duration: 1000, easing: "ease-in", fill: "forwards" }).onfinish = () => wrap.classList.add("collapsed");
 }
 
+// ============ 投石器の投擲演出(2026-07-29、mock_catapult_fx.htmlでユーザー確認済みのデザインを移植) ============
+// 村(画面下方=味方バーの奥)から石が放物線を描いて敵カードへ飛び、着弾で土煙+カード揺れ+SE。
+// ダメージ適用とログは呼び出し元(raid.jsのfireCatapultOnRoundEnd)がonImpactの中で行う。
+// 石はposition:fixedでbody直下に置く(戦闘レイアウトのスタッキングコンテキストに影響されず画面を横断できる。
+// 撃破演出のクローン(playEnemyDefeatReaction)と同じ考え方)
+function playCatapultStoneFx(card, onImpact) {
+  const rect = card.getBoundingClientRect();
+  if (rect.width === 0) { onImpact(); return; } // カードが描画されていなければ演出なしで即適用
+  const to = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  const from = { x: window.innerWidth / 2, y: window.innerHeight - 150 };
+  const stone = document.createElement("div");
+  stone.style.cssText = "position:fixed; left:0; top:0; z-index:40; pointer-events:none; will-change:transform;";
+  const img = document.createElement("img");
+  img.src = "assets/vfx/catapult_stone.png";
+  img.style.cssText = "width:26px; display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.7));";
+  img.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 350, iterations: Infinity });
+  stone.appendChild(img);
+  document.body.appendChild(stone);
+  const D = 620, arcHeight = 120, startT = performance.now();
+  // 着弾処理は一度きり(landed)にした上で、rAFとは別にsetTimeoutでも必ず呼ぶ。
+  // rAFはタブが隠れると完全に停止するため、飛翔ループの完走だけに頼ると
+  // 「ラウンドは進んだのにダメージが適用されない」という不整合が起きうる
+  // (Chrome検証で実際に発生)。演出は止まってもゲーム進行は必ず正しく完了させる
+  let landed = false;
+  function land() {
+    if (landed) return;
+    landed = true;
+    stone.remove();
+    playSfx("barricade_hit");
+    setTimeout(() => playSfx("hit_taken_2"), 40);
+    spawnCatapultDust(to.x, to.y, 10);
+    card.animate(
+      [{ transform: "translate(0,0)" }, { transform: "translate(-3px,1px)" }, { transform: "translate(3px,-1px)" }, { transform: "translate(0,0)" }],
+      { duration: 240, easing: "ease-out" });
+    onImpact();
+  }
+  function frame(now) {
+    if (landed) return;
+    const p = Math.min(1, (now - startT) / D);
+    const x = from.x + (to.x - from.x) * p;
+    // 山なり: sin弧で高さを付ける(モックで確定した軌道そのまま)
+    const y = from.y + (to.y - from.y) * p - Math.sin(Math.PI * p) * arcHeight;
+    stone.style.transform = `translate(${x - 13}px, ${y - 13}px)`;
+    if (p < 1) requestAnimationFrame(frame);
+    else land();
+  }
+  requestAnimationFrame(frame);
+  setTimeout(land, D + 80); // rAF停止時の保証(通常はrAF側が先に着弾させるので何もしない)
+}
+function spawnCatapultDust(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("div");
+    d.style.cssText = `position:fixed; left:${x - 4}px; top:${y - 4}px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle, rgba(220,205,175,0.95), rgba(160,140,110,0)); pointer-events:none; z-index:39;`;
+    document.body.appendChild(d);
+    const dx = (Math.random() - 0.5) * 46, dy = -8 - Math.random() * 26;
+    d.animate(
+      [{ opacity: 0.9, transform: "translate(0,0) scale(1)" }, { opacity: 0, transform: `translate(${dx}px,${dy}px) scale(1.8)` }],
+      { duration: 480 + Math.random() * 180, easing: "ease-out" }).onfinish = () => d.remove();
+  }
+}
+
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。
 // iOSの「作りたて要素のアニメ序盤が描画されない」「フレーム画像のデコード遅延でコマ落ちする」対策)
 warmUpAttackVfxAssets();

@@ -461,24 +461,29 @@ function nextRound(forceFirstStrike) {
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
   // 投石器: ラウンドが1つ完了した直後に発動する(battle.roundsTotal>0=このnextRound呼び出しが
   // 戦闘開始直後の初回ではないことの目印。0のままなら開戦直後なのでまだ何も起きていない)。
-  // ここで最後の敵を倒しても、直後のaliveEnemies()===0判定(このすぐ上)がvictory()/次ウェーブ
-  // 湧きのどちらかを自然に処理するため、この関数側で改めて判定をする必要はない
-  if (battle.roundsTotal > 0) fireCatapultOnRoundEnd();
+  // 戻り値は投擲演出の所要ms(2026-07-29に演出化)。石が飛んでいる間は次ラウンドの手番開始を
+  // 待たせ、着弾でダメージが確定してから手番順を組む(=石で倒した敵が行動順に混ざらない)
+  const catapultFxMs = battle.roundsTotal > 0 ? fireCatapultOnRoundEnd() : 0;
   // 交代コマンドのクールダウンはラウンドの節目で1減る
   if (battle.swapCooldown > 0) battle.swapCooldown--;
   // 参加ターン比の経験値配分用: このラウンドに戦場へ出ていたメンバーを記録する。
   // ラウンド途中で交代したキャラは出た側にも別途加算する(=交代ターンは双方にカウント、victory参照)
   battle.roundsTotal++;
   alive.forEach((c) => { battle.presence[c.id] = (battle.presence[c.id] || 0) + 1; });
-  battle.order = turnOrder([...alive, ...aliveEnemies()]);
-  // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
-  if (forceFirstStrike) {
-    const allies = battle.order.filter((e) => e.instanceId === undefined);
-    const foes = battle.order.filter((e) => e.instanceId !== undefined);
-    battle.order = [...allies, ...foes];
-  }
-  battle.orderIndex = 0;
-  processNext();
+  const beginRound = () => {
+    if (!battle) return; // 演出待ちの間に戦闘が終了していた場合の保険
+    battle.order = turnOrder([...aliveField(), ...aliveEnemies()]);
+    // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
+    if (forceFirstStrike) {
+      const allies = battle.order.filter((e) => e.instanceId === undefined);
+      const foes = battle.order.filter((e) => e.instanceId !== undefined);
+      battle.order = [...allies, ...foes];
+    }
+    battle.orderIndex = 0;
+    processNext();
+  };
+  if (catapultFxMs > 0) setTimeout(beginRound, catapultFxMs);
+  else beginRound();
 }
 
 function processNext() {
