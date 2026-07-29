@@ -326,6 +326,14 @@ function warmUpVfxFrames(v) {
     vfxWarmCache.set(url, im);
   });
 }
+// 保存済み割り当てを復元する時のblendScreen判定。blendScreenフィールドが無い(この機能を
+// 追加する前に保存された古い割り当て)場合は、単純に!!undefined=falseになって加算合成なしに
+// 固定されてしまい、fire_01_8x8のようなアルファ皆無(TGA自体がRGB、透過情報ゼロ)の素材だと
+// 真っ黒な四角のままになるバグがあった(ユーザー報告)。フィールドが未設定の時だけ
+// source基準の既定値へフォールバックし、明示的にfalseへ変更した場合はそれを尊重する
+function resolveBlendScreen(a, vfx) {
+  return a.blendScreen !== undefined ? a.blendScreen : vfx.source === "spritesheet";
+}
 // VFXライブラリから選んだ時: 今の職業/スキルに「その同じVFX」の保存済み調整があれば復元、
 // 無ければ既定値(120px・中央)にリセットする(前に別のVFXで動かした位置を誤って引き継がないため)
 function selectVfx(v) {
@@ -334,7 +342,7 @@ function selectVfx(v) {
   const a = assignments[assignKey()];
   if (a && a.vfxId === v.id) {
     stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY };
-    document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
+    document.getElementById("blendScreenCheck").checked = resolveBlendScreen(a, v);
     setFrameMsUi(a.frameMs || 30);
     setTargetUi(a.target || defaultTargetForSkill(classSelect.value, skillSelect.value));
   } else {
@@ -494,7 +502,7 @@ function syncStageToCurrentSelection() {
   document.getElementById("assignCard").style.display = "";
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
-  document.getElementById("blendScreenCheck").checked = !!a.blendScreen;
+  document.getElementById("blendScreenCheck").checked = resolveBlendScreen(a, vfx);
   setFrameMsUi(a.frameMs || 30);
   document.getElementById("hitstopCheck").checked = false;
   setTargetUi(a.target || defaultTargetForSkill(classSelect.value, skillSelect.value));
