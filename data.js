@@ -96,6 +96,29 @@ const PERSONALITIES = ["優しい", "熱血", "冷静", "生意気", "のんび�
 // 行うため、勝手に別の性格へ再割り当てされることはない
 const ACTIVE_PERSONALITIES = PERSONALITIES.filter((p) => p !== "世話好き");
 
+// ============ 性格の戦闘癖(2026-07-29ユーザー確定) ============
+// 雇用時にランダムで付く性格に、1つずつ小さな戦闘上の癖を持たせる(性格=人柄+個性の源)。
+// 設計ルール(ユーザーとの議論で確定、経緯はdocs/開発履歴.md参照):
+// - 全て「小さなプラス、状況依存」で統一。マイナス効果は入れない(ランダム雇用でハズレを引く事態を構造的に排除)
+// - 回復量/MP強化は帯域超えのため禁止、ヘイト操作(味方に被弾を押し付ける)も禁止
+// - 数値調整はこのテーブルだけで完結する(エンジン側はフィールド名を参照するのみ)
+// ※世話好きは選択プール外のため癖なし(復活させる時にここへ追加する)
+const PERSONALITY_QUIRKS = {
+  "熱血": { label: "危地で燃える", desc: "HPが30%以下の間、与えるダメージ+10%", lowHpDmg: { belowPct: 0.3, mult: 1.10 } },
+  "怖がり": { label: "用心深い", desc: "戦闘1ターン目の間、回避+15%", firstRoundEvasionAdd: 0.15 },
+  "のんびり": { label: "どっしり構え", desc: "受けるダメージ-3%", dmgTakenMult: 0.97 },
+  "冷静": { label: "動じない", desc: "状態異常へのかかりにくさ+10%", statusResistAdd: 0.10 },
+  "真面目": { label: "丁寧な仕事", desc: "命中+3%", accuracyAdd: 0.03 },
+  "優しい": { label: "守りたい一心", desc: "HP30%以下の仲間がいる間、素早さ+20%", allyLowHpSpd: { belowPct: 0.3, mult: 1.20 } },
+  "お調子者": { label: "ノリで戦う", desc: "会心を出すと、次の自分のターンの与ダメージ+10%", afterCritDmg: { mult: 1.10 } },
+  "生意気": { label: "減らず口", desc: "会心率+3%", critRateAdd: 0.03 },
+  "無口": { label: "元より無口", desc: "沈黙が効かない(元から喋らないため)", silenceImmune: true },
+};
+// そのキャラの性格に対応する癖を返す(敵・式神・分身などpersonalityを持たない対象はnull)
+function personalityQuirk(entity) {
+  return (entity && entity.personality && PERSONALITY_QUIRKS[entity.personality]) || null;
+}
+
 // 吹き出しセリフの本文。キー(カテゴリ)ごとに性格→セリフ配列。
 // selfSkillHit/allySkillHit、selfPinch/allyPinch は同じ発生イベントを、発言者が当事者か
 // 別の仲間かで出し分けるためのペア(engine側でどちらのセリフを使うか抽選する)
@@ -1795,6 +1818,7 @@ const RAID_CONFIG = {
 if (typeof module !== "undefined") {
   module.exports = {
     CLASSES, ABILITY_LABEL, ABILITY_DESC, ENEMIES, ITEMS, EQUIPMENT,
+    PERSONALITY_QUIRKS, personalityQuirk,
     MATERIALS, MATERIAL_ORDER, MATERIAL_DROP_CHANCE, MATERIAL_DROP_CHANCE_SWARM, ENEMY_MATERIAL_DROPS,
     PERSONALITIES, ACTIVE_PERSONALITIES, DIALOGUE_LINES, DIALOGUE_CHANCE, DANGER_FLOOR_LEVEL_MULT, SPEECH_BUBBLE_DURATION_MS,
     FATIGUE_PER_FLOOR, FATIGUE_PER_FLOOR_RETREAT, FATIGUE_MAX, FLEE_STRESS_PENALTY, ONSEN_FATIGUE_RELIEF, ONSEN_FLAT_COST, ONSEN_COST_PER_LEVEL, LODGE_FATIGUE_RELIEF, MAX_LEVEL,

@@ -342,6 +342,15 @@ function effectiveStat(entity, key) {
   // 温泉バフ(血行促進=攻撃力+5%、湯上がり=素早さ+5%)。次の遠征中限定、野営/帰還で失効する
   if (key === "atk" && entity.onsenBuffKey === "kekkou") result = Math.max(1, Math.round(result * 1.05));
   if (key === "spd" && entity.onsenBuffKey === "yuagari") result = Math.max(1, Math.round(result * 1.05));
+  // 性格の癖「守りたい一心」(優しい): HPが3割を切った仲間がいる間、素早さが上がる
+  // (行動順が前に来るので回復薬を先に届けられる。素早さ由来の回避も連動して少し上がる)
+  if (key === "spd") {
+    const quirk = personalityQuirk(entity);
+    if (quirk && quirk.allyLowHpSpd && typeof fieldParty !== "undefined" && Array.isArray(fieldParty) && fieldParty.includes(entity)) {
+      const hurtAlly = fieldParty.some((a) => a !== entity && a.status === "active" && a.hp > 0 && a.maxHp > 0 && a.hp / a.maxHp <= quirk.allyLowHpSpd.belowPct);
+      if (hurtAlly) result = Math.max(1, Math.round(result * quirk.allyLowHpSpd.mult));
+    }
+  }
   // 出血中は常時攻撃力-10%(敵/味方どちらにも適用、弱点の有無を問わない)
   if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
   // 弱点属性(bleed/poison/burn)のeffects(atkDown/defDown/spdDown、図鑑エディタで設定)による継続デバフ。
@@ -601,6 +610,9 @@ function applyStun(entity, turns) {
 function applySilence(entity, turns) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;
+  // 性格の癖「元より無口」(無口): もともと喋らないので黙らせようがない=沈黙が一切効かない
+  const quirk = personalityQuirk(entity);
+  if (quirk && quirk.silenceImmune) return;
   entity.silenceTurns = Math.max(entity.silenceTurns || 0, turns);
 }
 // 伊邪那美命の御守: 戦闘中最初に自分が敵へ与える状態異常を強化する(パーティ共有の使い捨てフラグ)。
@@ -1219,6 +1231,9 @@ function damageTakenMultiplier(character) {
   if (character.passives && character.passives.allyGuardDmgTakenMult !== 1 && anyOtherAllyGuarding(character)) {
     mult *= character.passives.allyGuardDmgTakenMult;
   }
+  // 性格の癖「どっしり構え」(のんびり): 受けるダメージが常時少しだけ下がる
+  const quirk = personalityQuirk(character);
+  if (quirk && quirk.dmgTakenMult) mult *= quirk.dmgTakenMult;
   return mult;
 }
 // 会心判定。会心なら会心時ダメージ倍率を、外れなら1を返す
@@ -1268,7 +1283,10 @@ function rollCritMultiplier(actor, extraCritRate, target) {
       if (m.stat === "critDmgAdd") tempCritDmgAdd += m.mult;
     });
   }
-  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0) + (actor.hagakiCritStack || 0);
+  // 性格の癖「減らず口」(生意気): 会心率が常時少しだけ上がる
+  const quirk = personalityQuirk(actor);
+  const quirkCritAdd = (quirk && quirk.critRateAdd) || 0;
+  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0) + (actor.hagakiCritStack || 0) + quirkCritAdd;
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd + tempCritDmgAdd;
   return 1;
 }
@@ -1295,6 +1313,9 @@ function skillMpCost(actor, baseMp) {
 // 通常のstatusResistMultとは別枠でさらに大きく確率を下げる(連続スタンロック防止)
 function resistedChance(target, baseChance, type) {
   let resist = (target.passives && target.passives.statusResistMult) || 0;
+  // 性格の癖「動じない」(冷静): 状態異常全般にかかりにくい
+  const quirk = personalityQuirk(target);
+  if (quirk && quirk.statusResistAdd) resist += quirk.statusResistAdd;
   // 温泉バフ「美肌」: 状態異常耐性+20%
   if (target.onsenBuffKey === "bihada") resist += 0.2;
   let chance = baseChance * (1 - resist);
@@ -1773,14 +1794,20 @@ function evasionChance(entity) {
     entity.passives.flagMods.forEach((fm) => { if (fm.stat === "evasionAdd" && entity[fm.flag]) condAdd += fm.mult; });
   }
   const fleeingAdd = entity.fleeState === "preparing" ? 0.25 : 0;
+  // 性格の癖「用心深い」(怖がり): 戦闘の最初のラウンドだけ回避が上がる(様子を見ながら戦い始める)
+  const quirk = personalityQuirk(entity);
+  const firstRoundAdd = quirk && quirk.firstRoundEvasionAdd && typeof battle !== "undefined" && battle && battle.roundsTotal <= 1 ? quirk.firstRoundEvasionAdd : 0;
   const flyingAdd = entity.isFlying ? FLYING_EVASION_BONUS : 0; // 飛行(🪽)の敵は空中にいる分、素早さ由来の回避率とは別に+5%
   // 忍足など: その戦闘で初めて敵に攻撃を受けるまで回避率が上がる(hasBeenHitThisBattleはapplyDamageToTarget側で実際に被弾した時に立てる)
   const preFirstHitAdd = entity.passives && entity.passives.preFirstHitEvasionAdd && !entity.hasBeenHitThisBattle ? entity.passives.preFirstHitEvasionAdd : 0;
-  return Math.min(0.9, base + passiveAdd + timedAdd + condAdd + fleeingAdd + flyingAdd + preFirstHitAdd);
+  return Math.min(0.9, base + passiveAdd + timedAdd + condAdd + fleeingAdd + flyingAdd + preFirstHitAdd + firstRoundAdd);
 }
 function accuracyOf(entity, target) {
   const base = entity.accuracy != null ? entity.accuracy : BASE_ACCURACY;
   let addTotal = (entity.passives && entity.passives.accuracyAdd) || 0;
+  // 性格の癖「丁寧な仕事」(真面目): 命中が常時少しだけ上がる
+  const quirk = personalityQuirk(entity);
+  if (quirk && quirk.accuracyAdd) addTotal += quirk.accuracyAdd;
   if (entity.statMods) entity.statMods.forEach((m) => { if (m.stat === "accuracyAdd") addTotal += m.mult; });
   // 対象のHP割合条件つき命中率ボーナス(弱点看破など)
   if (entity.passives && entity.passives.executeAccuracyBonus && target && target.maxHp > 0) {
@@ -2027,6 +2054,17 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   // 霊力弱点(ENEMY_WEAKNESS type:"spirit"): 実体を持たない敵は、魔力によるダメージ(陰陽師の呪符系・
   // useMag指定のスキル)にだけ被ダメージが1.5倍になる。物理攻撃には乗らない
   if (isMagic && enemyWeaknessType(target, "spirit")) dmg = Math.round(dmg * SPIRIT_WEAKNESS_DMG_MULT);
+  // 性格の戦闘癖(PERSONALITY_QUIRKS): 熱血「危地で燃える」=自分のHPが低い間の与ダメ増、
+  // お調子者「ノリで戦う」=会心を出した次の自分のターンの与ダメ増(下のstatMod "quirkNoriDmg"を参照)
+  if (actor) {
+    const actorQuirk = personalityQuirk(actor);
+    if (actorQuirk && actorQuirk.lowHpDmg && actor.maxHp > 0 && actor.hp / actor.maxHp <= actorQuirk.lowHpDmg.belowPct) {
+      dmg = Math.round(dmg * actorQuirk.lowHpDmg.mult);
+    }
+    if (actor.statMods) {
+      actor.statMods.forEach((m) => { if (m.stat === "quirkNoriDmg") dmg = Math.round(dmg * m.mult); });
+    }
+  }
   // 常時発動の低HP追撃系の受動効果(暗殺術など): 対象のHPが閾値以下なら全ての攻撃にダメージ加算がかかる
   if (actor && actor.passives && actor.passives.executeBonus) {
     const hpPct = target.maxHp > 0 ? target.hp / target.maxHp : 1;
@@ -2062,6 +2100,12 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     if (lastHitWasCrit && actor.passives && actor.passives.onCritSelfBuff) {
       const b = actor.passives.onCritSelfBuff;
       applyStatMod(actor, b.stat, b.mult, 2);
+    }
+    // 性格の癖「ノリで戦う」(お調子者): 会心を出すと次の自分の1ターンだけ与ダメージが上がる
+    // (連斬のonCritSelfBuffと同じturns:2方式。statMod "quirkNoriDmg"は上の与ダメ計算部が参照する)
+    if (lastHitWasCrit) {
+      const critQuirk = personalityQuirk(actor);
+      if (critQuirk && critQuirk.afterCritDmg) applyStatMod(actor, "quirkNoriDmg", critQuirk.afterCritDmg.mult, 2);
     }
     // 覇気: 自分が会心を出すたびに、会心率が加算的に積み上がる(戦闘中ずっと持続)
     if (lastHitWasCrit && actor.passives && actor.passives.onCritSelfStackCritRate) {

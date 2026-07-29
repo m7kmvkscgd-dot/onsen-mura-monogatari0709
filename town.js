@@ -464,6 +464,10 @@ function wireInnHireButton(ids, membersFn, onBack) {
     nameInput.value = "";
     saveState();
     playSfx("select");
+    // 雇って初めて人柄が分かる(性格は事前に選べないランダム、ユーザー確定仕様2026-07-29)。
+    // その場で性格と戦闘癖を一言で紹介する
+    const hiredQuirk = personalityQuirk(c);
+    if (hiredQuirk) showInfoModal(`${c.name}が仲間になった！\n性格は【${c.personality}】。\n癖「${hiredQuirk.label}」— ${hiredQuirk.desc}`);
     renderInnRosterList(ids, membersFn, onBack);
     renderInnClassGrid(ids);
     document.getElementById(ids.gold).textContent = state.gold + "G";
@@ -663,7 +667,10 @@ function renderStatusScreen(charId, onBack) {
   yomiEl.textContent = reading ? reading.split("").join(" ") : "";
   yomiEl.style.display = reading ? "" : "none";
   document.getElementById("statClass").textContent = c2.ja;
-  document.getElementById("statPersonality").textContent = c.personality || "-";
+  // 性格の戦闘癖(PERSONALITY_QUIRKS)があれば癖名も併記する(詳細説明は能力欄の下の行)
+  const personalityQuirkDef = personalityQuirk(c);
+  document.getElementById("statPersonality").textContent = c.personality
+    ? `${c.personality}${personalityQuirkDef ? `(${personalityQuirkDef.label})` : ""}` : "-";
   const xpNeed = xpToNext(c.level);
   document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpNeed}`;
   document.getElementById("statusXpFill").style.width = c.level >= MAX_LEVEL
@@ -698,6 +705,7 @@ function renderStatusScreen(charId, onBack) {
       </div>
     `).join("")}</div>
     <div class="status-stress-row"><span class="status-stress-lbl">${ICONS.stress} ストレス</span><span class="status-stress-val">${Math.round(c.fatigue || 0)}</span></div>
+    ${personalityQuirkDef ? `<div class="status-stress-row"><span class="status-stress-lbl">✨ ${personalityQuirkDef.label}</span><span class="status-stress-val" style="font-size:0.62rem;">${personalityQuirkDef.desc}</span></div>` : ""}
   `;
 
   // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
