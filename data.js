@@ -1745,10 +1745,50 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 // (2026-07-29: 多段ウェーブ対応。1波目を全滅させると即座に2波目が同じ戦闘のまま出現する、
 // raid.jsのraidTryAdvanceWave参照)。1候補=1waveのみでも配列に1要素だけ入れれば従来通り動く
 // ※現在の中身はユーザーのウェーブ設計エクスポート待ちの仮データ(大規模戦テストと同じ猪5体)
+// 襲撃スケジュール+村レベル別ウェーブプール(襲撃エディタ raid_editor.html のエクスポートを反映、2026-07-29)
+// 発生時、その時点の村レベルのプールから重み付きランダムで1候補を抽選(プール未設定のレベルは下位レベルへフォールバック)。
+// 各候補のwaves配列は1波目→2波目…の順で、1波目を全滅させると町に戻らず即座に次の波が出現する
 const RAID_CONFIG = {
-  schedule: { firstRaidDay: 8, repeatMinDays: 7, repeatMaxDays: 9 },
+  schedule: { firstRaidDay: 7, repeatMinDays: 6, repeatMaxDays: 8 },
   pools: {
-    "1": [{ weight: 1, memo: "仮: エクスポート待ち", waves: [{ enemies: [{ id: "inoshishi", count: 5 }] }] }],
+    "1": [
+      {
+        weight: 1,
+        memo: "お試し",
+        waves: [
+          { enemies: [{ id: "yaken", count: 3 }] },
+          { enemies: [{ id: "inoshishi", count: 3 }] },
+        ],
+      },
+    ],
+    "2": [
+      {
+        weight: 1,
+        memo: "",
+        waves: [{ enemies: [{ id: "inoshishi", count: 5 }] }],
+      },
+    ],
+    "3": [
+      {
+        weight: 1,
+        memo: "",
+        waves: [
+          { enemies: [{ id: "inoshishi", count: 5 }] },
+          { enemies: [{ id: "nurari_koumori", count: 3 }] },
+          { enemies: [{ id: "chochin_obake", count: 3 }] },
+        ],
+      },
+    ],
+    "4": [
+      {
+        weight: 1,
+        memo: "",
+        waves: [
+          { enemies: [{ id: "inoshishi", count: 3 }] },
+          { enemies: [{ id: "oo_inoshishi", count: 1 }, { id: "nurari_koumori", count: 4 }] },
+        ],
+      },
+    ],
   },
 };
 
