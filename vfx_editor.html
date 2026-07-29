@@ -47,7 +47,10 @@
   #stage .grid-line.v { top:0; bottom:0; left:50%; width:1px; }
   #cardImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:96px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5)); pointer-events:none; }
   /* stage全域を覆う当たり判定にする(以前はimg自身に合わせた0x0のまま=どこを触っても
-     反応しないバグだった。position:absoluteな子はサイズに寄与しないため親が潰れていた) */
+     反応しないバグだった。position:absoluteな子はサイズに寄与しないため親が潰れていた)。
+     ドラッグの位置オフセットはこの#vfxLayer自体には絶対に付けない(transformを持つ祖先が
+     あるとmix-blend-modeが祖先の外の背景まで見えなくなり黒背景が透過しなくなるバグがあった。
+     Chrome実機で検証済み)。オフセットは必ず中のimg自身のtransformとして適用する(playVfx参照) */
   #vfxLayer { position:absolute; inset:0; cursor:grab; touch-action:none; }
   #vfxLayer.dragging { cursor:grabbing; }
   #vfxLayer img { display:block; position:absolute; left:50%; top:50%; pointer-events:none; mix-blend-mode:normal; }
@@ -245,6 +248,7 @@ let playTimer = null;
 let curFrame = 1;
 let stageOffset = { x: 0, y: 0 };
 let stageSize = 120;
+let currentVfxImg = null; // 今表示中の<img>要素への参照(ドラッグでのtransform更新先)
 
 function renderLibList() {
   const list = document.getElementById("libList");
@@ -364,11 +368,14 @@ function selectVfx(v) {
   warmUpVfxFrames(v);
   playVfx();
 }
+// ドラッグの位置オフセットは「今表示中のimg自身」にtransformで適用する。以前は親の#vfxLayerに
+// 付けていたが、それだと#vfxLayerがtransformで新しいスタッキングコンテキストを作ってしまい、
+// 中の<img>のmix-blend-mode:screenが#cardImg/#stageの背景まで見えなくなり、加算合成が
+// 効かなくなる(黒背景がそのまま残る)不具合があった(Chrome実機で検証・再現・特定済み)。
+// img自身にtransformを置けばこの問題が起きないことを確認済み
 function applyVfxLayerTransform() {
-  // vfxLayerはstage全域を覆う当たり判定用の箱(inset:0)なので-50%補正は不要。
-  // 中のimg自身がleft:50%/top:50%+マイナスマージンで既に中央基準になっている
-  const layer = document.getElementById("vfxLayer");
-  layer.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px)`;
+  if (!currentVfxImg) return;
+  currentVfxImg.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px)`;
 }
 // 単発(particle)素材はコマが1枚しか無いが、ただ貼るだけだと「静止画」にしか見えない
 // (ユーザー指摘: これもアニメーション素材のはず)。パッと出てフッと消える簡易フラッシュ演出を
@@ -409,17 +416,25 @@ function playVfx() {
   img.style.marginTop = -(Math.round(stageSize * ratio) / 2) + "px";
   img.classList.toggle("blend-screen", document.getElementById("blendScreenCheck").checked);
   layer.appendChild(img);
+  currentVfxImg = img;
   applyVfxLayerTransform();
   curFrame = 1;
   const loop = document.getElementById("loopCheck").checked;
   if (selectedVfx.category === "particle") {
     img.src = selectedVfx.singleSrc;
-    const flash = () => img.animate(
-      [ { opacity: 0, transform: "scale(0.6)" },
-        { opacity: 1, transform: "scale(1.05)", offset: 0.25 },
-        { opacity: 1, transform: "scale(1)", offset: 0.55 },
-        { opacity: 0, transform: "scale(1.15)" } ],
-      { duration: PARTICLE_FLASH_MS, easing: "ease-out" });
+    // 位置オフセットもimg自身のtransformなので、animate()のtransformキーフレームにも
+    // 毎回同じtranslateを含めておかないと、フラッシュのたびに中央へ戻ってしまう。
+    // ループ中にドラッグされても次の発火から追従するよう、flash()の呼び出しごとに
+    // 最新のstageOffsetから読み直す(tを外で1回だけ計算してキャプチャしない)
+    const flash = () => {
+      const t = `translate(${stageOffset.x}px, ${stageOffset.y}px)`;
+      img.animate(
+        [ { opacity: 0, transform: `${t} scale(0.6)` },
+          { opacity: 1, transform: `${t} scale(1.05)`, offset: 0.25 },
+          { opacity: 1, transform: `${t} scale(1)`, offset: 0.55 },
+          { opacity: 0, transform: `${t} scale(1.15)` } ],
+        { duration: PARTICLE_FLASH_MS, easing: "ease-out" });
+    };
     flash();
     if (loop) playTimer = setInterval(flash, PARTICLE_FLASH_INTERVAL_MS);
     return;
