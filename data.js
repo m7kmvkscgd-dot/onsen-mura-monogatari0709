@@ -860,32 +860,24 @@ const SKILL_TREES = {
   samurai: {
     2: {
       left: { name: "居合", desc: "戦闘開始後、最初の攻撃のダメージ+40%", mp: 0, passive: { firstAttackBonusMult: 0.40 } },
-      right: { name: "見切り", desc: "敵の攻撃を回避した時、攻撃力50%の威力で反撃する。", mp: 0, passive: { onEvadeCounterMult: 0.5 } },
+      // 武士道はLv3右から移動+機構変更(スキルエディタ2026-07-30): 旧・HP閾値式(HP20%減るごと+10%)から
+      // 「敵からダメージを受けるごとに+10%、最大+30%」の被弾スタック式へ。engine.js applyDamageToTargetが
+      // onDamagedAtkStackを見てapplyStackingStatMod("bushido")を積む(戦闘開始時のstackCounters={}でリセット)。
+      // 心眼(guardCounterSelf)でダメージを0化した被弾でもスタックは増える(ユーザー指定「武士道は蓄積する」)
+      right: { name: "武士道", desc: "敵からダメージを受けるごとに攻撃力が最大30%あがる。(1回につき10%)", mp: 0, passive: { onDamagedAtkStack: { perStack: 0.10, maxStacks: 3 } } },
     },
     3: {
       // 闘志はLv7左から移動(内容はそのまま)
       left: { name: "闘志", desc: "仲間が会心を発動したターン、自分の会心率が25%上がる。(仲間が二人以上会心を出しても、重複しない)", mp: 0, passive: { allyCritSelfCritBuff: 0.25 } },
-      // 新規スキル。HP20%刻み4段のconditionalModsで表現(HP80/60/40/20%以下でそれぞれ攻撃力+10%)。
-      // 複数段の重なりは加算(全部重なるとちょうど+40%)。エンジン側(engine.js effectiveStat)で
-      // 差分合算してから1回だけ乗算する実装のため複利にはならない
-      right: {
-        name: "武士道", desc: "HPが20%減るごとに攻撃力＋10%", mp: 0,
-        passive: {
-          conditionalMods: [
-            { cmp: "lte", value: 0.8, statMult: [{ stat: "atk", mult: 1.1 }] },
-            { cmp: "lte", value: 0.6, statMult: [{ stat: "atk", mult: 1.1 }] },
-            { cmp: "lte", value: 0.4, statMult: [{ stat: "atk", mult: 1.1 }] },
-            { cmp: "lte", value: 0.2, statMult: [{ stat: "atk", mult: 1.1 }] },
-          ],
-        },
-      },
+      // 見切りはLv2右から移動(スキルエディタ2026-07-30、武士道と位置交換)。反撃威力50%→100%に強化
+      right: { name: "見切り", desc: "敵の攻撃を回避した時、威力100%で反撃する。", mp: 0, passive: { onEvadeCounterMult: 1.0 } },
     },
     4: {
       left: { name: "一閃", desc: "敵単体へ190%ダメージ、防御力25%無視", mp: 3, action: { kind: "damage", mult: 1.9, defPierce: 0.25 } },
-      right: { name: "心眼", desc: "このターン、敵の単体攻撃を1度だけダメージ0にし、100%の攻撃力で反撃する。", mp: 2, action: { kind: "guardCounterSelf", mult: 1.0 } },
+      right: { name: "心眼", desc: "このターン、敵の単体攻撃を1度だけダメージ0にし、100%の攻撃力で反撃する。(武士道は蓄積する)", mp: 2, action: { kind: "guardCounterSelf", mult: 1.0 } },
     },
     5: {
-      left: { name: "疾風斬り", desc: "自分より素早さが遅い相手に攻撃する時、75%の確率で出血1〜3を与える。", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.75, valueMin: 1, valueMax: 3, condition: "targetSlower" } } },
+      left: { name: "疾風斬り", desc: "自分より素早さが遅い相手に攻撃する時、出血1〜3を与える。", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 1.0, valueMin: 1, valueMax: 3, condition: "targetSlower" } } },
       // desc変更(スキルエディタの差分反映): 敵バフ解除から、命中した敵を2ターン自分に引きつける効果に全面差し替え。
       // 新設のforceTarget(inflict)機構で実装。挑発/かばうより優先度が高く、対象がいなくなれば通常選択に戻る
       right: { name: "水月", desc: "威力90%で攻撃し、これを受けた敵は2ターンの間、自分を狙うようになる。", mp: 1, action: { kind: "damage", mult: 0.9, inflict: { type: "forceTarget", chance: 1, turns: 2 } } },
@@ -896,7 +888,7 @@ const SKILL_TREES = {
       // 新規スキル(旧・百戦錬磨の名前枠を置き換え、百戦錬磨自体はLv10右「天衣無縫」へ移動)。
       // 会心率+25%/5ターン/ターン消費なしの部分のみ実装。「心眼のmp消費-1」「ストレス免疫/毎ターン回復」は
       // 別途ストレス無効化の仕組み自体が必要なため今回は見送り、テキストのみ反映(2026-07-25引き継ぎ参照、要確認)
-      right: { name: "明鏡止水", desc: "5ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 5, noCost: true } },
+      right: { name: "明鏡止水", desc: "3ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 3, noCost: true } },
     },
     7: {
       // 連斬はLv8左から移動(内容はそのまま、覇気と入れ替え)
@@ -928,13 +920,14 @@ const SKILL_TREES = {
   },
   ninja: {
     2: {
-      left: { name: "煙幕", desc: "けむり玉を一つ消費して煙幕をはる。煙幕は２ターンの間、味方全体の回避率を50%向上させる。", mp: 1, action: { kind: "buffPartyConsumeItem", item: "smokeBomb", stats: [{ stat: "evasionAdd", mult: 0.5 }], turns: 2 } },
+      // 煙幕(スキルエディタ2026-07-30): 煙玉の消費を廃止(buffPartyConsumeItem→buffParty)、回避50%→35%、mp1→2
+      left: { name: "煙幕", desc: "煙幕をはる。２ターンの間、味方全体の回避率を35%向上させる。", mp: 2, action: { kind: "buffParty", stats: [{ stat: "evasionAdd", mult: 0.35 }], turns: 2 } },
       right: { name: "毒刃", desc: "通常攻撃時、50%の確率で敵を毒状態にする(蓄積3)", mp: 0, passive: { onHitInflict: { type: "poison", chance: 0.5, valueMin: 3, valueMax: 3 } } },
     },
     3: {
       // 撒菱はLv4左から移動(内容はそのまま)
       left: { name: "撒菱", desc: "敵全体の素早さを３ターンの間30%下げる。使用時、ターンを消費しない。重複利用はできない。", mp: 1, action: { kind: "debuffAllNoCost", stat: "spd", value: 0.3, turns: 3 } },
-      right: { name: "忍足", desc: "その戦闘で敵に初めに攻撃されるまで回避率＋20%", mp: 4, passive: { preFirstHitEvasionAdd: 0.2 } },
+      right: { name: "忍足", desc: "その戦闘で敵に初めに攻撃されるまで回避率＋20%", mp: 0, passive: { preFirstHitEvasionAdd: 0.2 } },
     },
     4: {
       // 口寄せの術はLv3左から移動(内容はそのまま、撒菱と入れ替え)
@@ -970,7 +963,8 @@ const SKILL_TREES = {
   },
   spearman: {
     2: {
-      left: { name: "貫通突き", desc: "敵単体へ180%ダメージ、防御力20%無視", mp: 2, action: { kind: "damage", mult: 1.8, defPierce: 0.2 } },
+      // 貫通突き(スキルエディタ2026-07-30): 防御20%無視→「敵の防御力を2ターン30%低下」へ変更
+      left: { name: "貫通突き", desc: "敵単体へ180%ダメージ、敵防御力-30%(２ターン)", mp: 2, action: { kind: "damage", mult: 1.8, inflict: { type: "defDown", chance: 1, value: 0.3, turns: 2 } } },
       right: { name: "不動", desc: "敵からダメージを受けるとHPを2%回復する", mp: 0, passive: { onDamagedSelfHealPct: 0.02 } },
     },
     3: {
@@ -988,7 +982,7 @@ const SKILL_TREES = {
       left: { name: "蜻蛉切り", desc: "飛行の敵に対する命中率ペナルティを受けずに攻撃する。打ち落としも発生する。", mp: 1, rangeType: "ranged", action: { kind: "damage", mult: 1.0, canShootDown: true } },
       // 新規スキル(旧・守護陣を置き換え)。戦闘中1回・HP25%以下限定の緊急脱出技。onceFlag/hpBelowPctは
       // 今回新設した汎用フック(runTreeSkill側でMP消費前にチェックする)
-      right: { name: "怒声", desc: "戦闘中に一度だけ、HP25%以下の時にだけ使える。敵全員をスタンさせる。", mp: 2, action: { kind: "damage", aoe: true, mult: 0, hitChance: 1, inflict: { type: "stun", chance: 1, turns: 1 }, hpBelowPct: 0.25, onceFlag: "dosayUsed" } },
+      right: { name: "怒声", desc: "戦闘中に一度だけ、HP25%以下の時にだけ使える。敵全員をスタンさせる。", mp: 3, action: { kind: "damage", aoe: true, mult: 0, hitChance: 1, inflict: { type: "stun", chance: 1, turns: 1 }, hpBelowPct: 0.25, onceFlag: "dosayUsed" } },
     },
     6: {
       // 阿修羅突きはLv7左から移動(内容はそのまま)
@@ -1020,11 +1014,13 @@ const SKILL_TREES = {
       right: { name: "足払い", desc: "敵単体へ90%ダメージ、85%の確率でスタン(1ターン)", mp: 2, action: { kind: "damage", mult: 0.9, inflict: { type: "stun", chance: 0.85, turns: 1 } } },
     },
     3: {
-      left: { name: "円舞", desc: "薙ぎ払いが命中した敵の数×20%、次の自分のターンまで回避率が上がる", mp: 0, passive: { abilityAoeSelfBuff: { physicalAttackAll: { stat: "evasionAdd", perHitMult: 0.2, turns: 2 } } } },
+      // 旋風薙ぎはLv4左から移動(スキルエディタ2026-07-30、円舞と位置交換)
+      left: { name: "旋風薙ぎ", desc: "薙ぎ払いが出血2〜4を付与するようになる", mp: 0, passive: { abilityOnHitInflict: { physicalAttackAll: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 4 } } } },
       right: { name: "崩し", desc: "通常攻撃が命中した敵の防御力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "defDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     4: {
-      left: { name: "旋風薙ぎ", desc: "薙ぎ払いが出血2〜4を付与するようになる", mp: 0, passive: { abilityOnHitInflict: { physicalAttackAll: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 4 } } } },
+      // 円舞はLv3左から移動(スキルエディタ2026-07-30、旋風薙ぎと位置交換)
+      left: { name: "円舞", desc: "薙ぎ払いが命中した敵の数×20%、次の自分のターンまで回避率が上がる", mp: 0, passive: { abilityAoeSelfBuff: { physicalAttackAll: { stat: "evasionAdd", perHitMult: 0.2, turns: 2 } } } },
       right: { name: "威圧", desc: "通常攻撃が命中した敵の攻撃力を15%下げる(3ターン)", mp: 0, passive: { onHitInflict: { type: "atkDown", chance: 0.3, value: 0.15, turns: 3 } } },
     },
     5: {
@@ -1054,18 +1050,21 @@ const SKILL_TREES = {
   },
   hunter: {
     2: {
-      left: { name: "火矢", desc: "攻撃力100%。炎上2を与える。", mp: 1, action: { kind: "damage", mult: 1.0, inflict: { type: "burn", chance: 1, turns: 2 } } },
-      right: { name: "急所への一撃", desc: "通常攻撃で65%の確率で出血1〜3を付与", mp: 0, passive: { onHitInflict: { type: "bleed", chance: 0.65, valueMin: 1, valueMax: 3 } } },
+      left: { name: "火矢", desc: "攻撃力90%。炎上2を与える。", mp: 1, action: { kind: "damage", mult: 0.9, inflict: { type: "burn", chance: 1, turns: 2 } } },
+      // 裂傷矢(旧・急所への一撃、スキルエディタ2026-07-30): 通常攻撃の出血付与から「会心の一矢(基本技
+      // preciseShot)が確定で出血2〜3を付与」へ。薙刀士の旋風薙ぎと同じabilityOnHitInflict機構を流用
+      right: { name: "裂傷矢", desc: "会心の一矢が敵に出血2〜3を付与する", mp: 0, passive: { abilityOnHitInflict: { preciseShot: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 3 } } } },
     },
     3: {
       // desc変更(スキルエディタの差分反映): 2連続攻撃案を取りやめ、旧・隼落としの飛行ボーナスに再度差し替え
-      left: { name: "隼落とし", desc: "飛行を持つ敵へのダメージ+20%", mp: 0, passive: { flyingBonus: { mult: 1.2 } } },
+      left: { name: "隼落とし", desc: "飛行を持つ敵へのダメージ+15%", mp: 0, passive: { flyingBonus: { mult: 1.15 } } },
       // desc変更(スキルエディタの差分反映): ダメージ+スタンのアクションから、出血中の敵に狙われた時の
       // 回避率バフ(パッシブ)に全面差し替え
       right: { name: "血痕追跡", desc: "出血状態の敵から攻撃されるとき、回避率が+30%", mp: 0, passive: { evasionVsAilmentAdd: { ailment: "bleed", add: 0.3 } } },
     },
     4: {
-      left: { name: "貫き矢", desc: "通常攻撃で敵を倒した時、余ったダメージを残りHPが一番低い別の敵1体に分け与える(貫通は最大2体まで、そこから先には連鎖しない)", mp: 0, passive: { overkillPierce: true } },
+      // 貫き矢(スキルエディタ2026-07-30): 常時攻撃+5%(atkMult)を追加。貫通先はもともと1体のみの実装
+      left: { name: "貫き矢", desc: "攻撃ダメージ＋5%。敵を倒した時、余ったダメージ他の敵1体に貫通する。(貫通できるのは1体まで)", mp: 0, passive: { atkMult: 1.05, overkillPierce: true } },
       right: { name: "鷹を呼ぶ", desc: "鷹を呼び出し、一緒に戦わせる。鷹の攻撃は敵を出血させる。仲間を守らせることもできる。", mp: 3, action: { kind: "summonHawk", turns: 8 } },
     },
     5: {
@@ -1075,12 +1074,16 @@ const SKILL_TREES = {
     6: {
       // desc変更(スキルエディタの差分反映、要確認): 確定命中ダメージ技から、大技予告中の敵への追加ダメージ(パッシブ)に
       // 全面差し替え。差分にmp指定は無かったが、パッシブは全スキル共通でmp:0のため0に修正した
-      left: { name: "必中撃ち", desc: "大技予告中の敵への攻撃ダメージ+30%", mp: 0, passive: { bigAttackPendingDmgBonus: 0.3 } },
+      // 必中撃ち(スキルエディタ2026-07-30): ダメージ+30%→会心率+25%へ変更(engine.js rollCritMultiplierが参照)
+      left: { name: "必中撃ち", desc: "大技予告中の敵への攻撃会心率+25%", mp: 0, passive: { bigAttackPendingCritAdd: 0.25 } },
       right: { name: "麻痺の矢", desc: "敵単体へ70%ダメージ、95%の確率でスタン", mp: 3, passive: { onHitInflict: { type: "spdDown", chance: 0.25, value: 0.2, turns: 3 } } },
     },
     7: {
-      left: { name: "連射の心得", desc: "二連射を使った直後、次の自分の1ターンだけ攻撃力+20%", mp: 0, passive: { comboFollowup: { tag: "rapidFire", stat: "atk", mult: 1.2 } } },
-      right: { name: "狩猟本能", desc: "HPが50%以下の敵へのダメージ+25%", mp: 0, passive: { executeBonus: { belowPct: 0.5, mult: 1.25 } } },
+      // 集中(旧・連射の心得、スキルエディタ2026-07-30): 打ち落とし発生時にMP+1(engine.js maybeShootDownが参照)
+      left: { name: "集中", desc: "打ち落としが発生した時、mp+1", mp: 0, passive: { onShootDownMpRestore: 1 } },
+      // 狩猟本能(スキルエディタ2026-07-30): HP50%以下特効→「状態異常の敵に攻撃すると自身の素早さ+50%(2ターン)」へ。
+      // applyStatModは同statを上書きするため「重ねがけ不可」は自然に満たされる(engine.js applyDamageToTargetが参照)
+      right: { name: "狩猟本能", desc: "状態異常を受けている敵に攻撃すると、自身の素早さが2ターンプラス50%(重ねがけ不可)", mp: 0, passive: { onHitAilmentSelfSpdBuff: { mult: 1.5, turns: 2 } } },
     },
     8: {
       left: { name: "急所連撃", desc: "対象の状態異常の種類数に応じてダメージ増(1種につき+10%)", mp: 0, passive: { stackedWoundBonusPerAilment: 0.1 } },
@@ -1143,7 +1146,7 @@ const SKILL_TREES = {
       // 結界術はLv3右から移動(効果を「味方全体def+15%/3ターン」→「味方単体への数値シールド」に全面差し替え、mp4→3)。
       // 「陰陽師の半分のHP」は術者の最大HPの50%と解釈した。既存のbarrierHp(数値シールド)機構をこの技のために新設。
       // 旧結界術が持っていたcomboTag:"kekkai"は、それを参照していた霊脈支配(旧9右)も今回消えるため引き継いでいない
-      right: { name: "結界術", desc: "味方一人に結界を付与する。結界は陰陽師の半分のHPのシールドとなり、その数値分敵の攻撃を防ぐ。", mp: 3, action: { kind: "shieldAlly", barrierPct: 0.5 } },
+      right: { name: "結界術", desc: "味方一人に結界を付与する。結界は陰陽師の半分のHPのシールドとなり、その数値分敵の攻撃を防ぐ。", mp: 2, action: { kind: "shieldAlly", barrierPct: 0.5 } },
     },
     3: {
       left: { name: "陰陽極意", desc: "全ての技のmp消費をマイナス1する。", mp: 0, passive: { mpDiscountFlat: 1 } },
@@ -1153,7 +1156,7 @@ const SKILL_TREES = {
       right: { name: "式神召喚", desc: "式神を召喚して戦わせる。式神は回復することができない。レベルに応じて召喚できる式型の種類が増える。召喚MPは式神によって変わり、戦闘終了後も式神は消えない", mp: 0, action: { kind: "summonShikigami" } },
     },
     4: {
-      left: { name: "水遁符", desc: "ランダムな敵2体へ75%のダメージと、攻撃力25%減少、素早さ30%減少を２ターン付与する。", mp: 3, action: { kind: "damageRandomMulti", hits: 2, mult: 0.75, useMag: true, inflict: [{ type: "atkDown", chance: 1, value: 0.25, turns: 2 }, { type: "spdDown", chance: 1, value: 0.3, turns: 2 }] } },
+      left: { name: "水遁符", desc: "ランダムな敵2体へ90%のダメージと、攻撃力25%減少、素早さ30%減少を２ターン付与する。", mp: 3, action: { kind: "damageRandomMulti", hits: 2, mult: 0.9, useMag: true, inflict: [{ type: "atkDown", chance: 1, value: 0.25, turns: 2 }, { type: "spdDown", chance: 1, value: 0.3, turns: 2 }] } },
       // 新規スキル(旧・衰弱符を置き換え)。以前は「式神帰還でmp+1」が全陰陽師共通の無条件仕様だったが、
       // このスキルを取得した人だけの効果に変更した(engine.js recallShikigami参照)。差分にmp指定は無かったが
       // パッシブは全スキル共通でmp:0のため0とした
@@ -1229,6 +1232,16 @@ const SKILL_TREES = {
     },
   },
 };
+// パッシブ(passiveのみでactionを持たない)スキルはMPを消費しない。スキルエディタ側でmpが
+// 誤入力されても(忍足のmp4、裂傷矢のmp1が実例)ここで一律0に正規化する(ユーザー指示2026-07-30
+// 「パッシブの時はmp0になるようにして」)。表示(ステータス画面の「パッシブ」表記等)も正しくなる
+Object.values(SKILL_TREES).forEach((tree) => {
+  Object.values(tree).forEach((node) => {
+    ["left", "right"].forEach((side) => {
+      if (node[side] && node[side].passive && !node[side].action) node[side].mp = 0;
+    });
+  });
+});
 // 各職業の左/右スキルツリーの通り名。ツリー内のスキル全体の方向性を一語で表したもので、
 // スキルツリー画面の上部(系譜の見出し)に表示する
 const SKILL_TREE_NAMES = {

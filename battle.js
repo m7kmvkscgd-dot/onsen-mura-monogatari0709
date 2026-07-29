@@ -1906,6 +1906,7 @@ function renderActionButtons(actor) {
               popupOn(target.instanceId, `-${result.dmg}`, "dmg", dmgShakeIntensity(true));
               playScreenShakeOnHit(target, result.crit);
               playSfx(hitTakenSfxFor(result.dmg, target.maxHp, target.isSwarm));
+              applyAbilityOnHitInflicts(actor, target, ability, blog); // 裂傷矢(会心の一矢に出血付与)など、この基本技専用の追加効果
               if (result.crit) playCritEffects(target.instanceId, actor, result.dmg);
               if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, result.crit);
             }

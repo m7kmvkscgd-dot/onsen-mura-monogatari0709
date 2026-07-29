@@ -1133,6 +1133,11 @@ function applySkillChoice(character, skill, level) {
     if (add.guardTurnFree) p.guardTurnFree = true;
     if (add.extraGuardMitigation) p.extraGuardMitigation *= add.extraGuardMitigation;
     if (add.onCritSelfBuff) p.onCritSelfBuff = add.onCritSelfBuff;
+    // スキルエディタ差分2026-07-30で追加した新パッシブ群
+    if (add.onDamagedAtkStack) p.onDamagedAtkStack = add.onDamagedAtkStack; // 武士道(被弾ごとに攻撃力スタック)
+    if (add.bigAttackPendingCritAdd) p.bigAttackPendingCritAdd = add.bigAttackPendingCritAdd; // 必中撃ち(大技予告中の敵へ会心率+)
+    if (add.onShootDownMpRestore) p.onShootDownMpRestore = add.onShootDownMpRestore; // 集中(打ち落とし発生時MP回復)
+    if (add.onHitAilmentSelfSpdBuff) p.onHitAilmentSelfSpdBuff = add.onHitAilmentSelfSpdBuff; // 狩猟本能(状態異常の敵に攻撃で自分の素早さバフ)
     if (add.fasterFoeDmgReduction) p.fasterFoeDmgReduction = add.fasterFoeDmgReduction;
     if (add.ailmentCritBonus) p.ailmentCritBonus.push(add.ailmentCritBonus);
     if (add.onEvadeSelfBuff) p.onEvadeSelfBuff = add.onEvadeSelfBuff;
@@ -1286,7 +1291,9 @@ function rollCritMultiplier(actor, extraCritRate, target) {
   // 性格の癖「減らず口」(生意気): 会心率が常時少しだけ上がる
   const quirk = personalityQuirk(actor);
   const quirkCritAdd = (quirk && quirk.critRateAdd) || 0;
-  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0) + (actor.hagakiCritStack || 0) + quirkCritAdd;
+  // 必中撃ち(スキルエディタ2026-07-30): 大技予告中(bigAttackPending)の敵への追加会心率
+  const bigAtkPendingCritAdd = p.bigAttackPendingCritAdd > 0 && target && target.bigAttackPending ? p.bigAttackPendingCritAdd : 0;
+  const rate = BASE_CRIT_RATE + p.critRateAdd + tempCritRateAdd + onsenCritBonus + executeCritAdd + ailmentCritAdd + debuffCritAdd + allyGuardCritAdd + (extraCritRate || 0) + (actor.hagakiCritStack || 0) + quirkCritAdd + bigAtkPendingCritAdd;
   if (Math.random() < rate) return BASE_CRIT_DMG_MULT + p.critDmgAdd + tempCritDmgAdd;
   return 1;
 }
@@ -1849,6 +1856,10 @@ function maybeShootDown(actor, target, action) {
   if (Math.random() >= SHOOT_DOWN_CHANCE) return false;
   target.isFlying = false;
   applyStun(target, 1); // 撃ち落とした敵は1ターンだけ地に落ちて怯む(スタン)
+  // 集中(onShootDownMpRestore、スキルエディタ2026-07-30): 打ち落としが発生した時、自分のMPを回復する
+  if (actor.passives && actor.passives.onShootDownMpRestore > 0 && actor.maxMp > 0) {
+    actor.mp = Math.min(actor.maxMp, actor.mp + actor.passives.onShootDownMpRestore);
+  }
   return true;
 }
 // 命中判定。相手の回避率でどれだけ削られてもMIN_HIT_CHANCE未満にはならない(かわされ過ぎるストレスを避けるため)。
@@ -2034,6 +2045,12 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   }
   // 心眼の構えなど: 「このターン」限定で、敵の攻撃を1度だけ完全に無効化してその場で反撃する
   if (actor && target.nullifyCounterTurnsLeft > 0) {
+    // 武士道(onDamagedAtkStack): 心眼でダメージを0化した被弾でも「敵からダメージを受けた」扱いで
+    // スタックが増える(ユーザー指定「(武士道は蓄積する)」)。通常被弾側の加算は下の実ダメージ適用部
+    if (actor.instanceId !== undefined && target.passives && target.passives.onDamagedAtkStack) {
+      const b = target.passives.onDamagedAtkStack;
+      applyStackingStatMod(target, "bushido", "atk", b.perStack, b.maxStacks, 99);
+    }
     // 天衣無縫(counterDamageBonus)など: 反撃系スキル全般に加算で乗る想定のため、心眼の反撃倍率にもここで足す
     const counterMult = (target.nullifyCounterMult || 0.8) + (target.passives && target.passives.counterDamageBonus || 0);
     target.nullifyCounterTurnsLeft = 0;
@@ -2190,6 +2207,19 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
   } else {
     target.hp = Math.max(0, target.hp - dmg);
     log(dmgLine);
+  }
+  // 武士道(onDamagedAtkStack): 敵からダメージを受けるごとに攻撃力が積み上がる(1回+10%、最大+30%。
+  // スキルエディタ2026-07-30)。stackCountersは戦闘開始時にリセットされるため戦闘中のみ持続。
+  // turns:99は「この戦闘中ずっと」の意(statModsも戦闘開始時に全消しされる)
+  if (actor && actor.instanceId !== undefined && dmg > 0 && target.hp > 0 && target.passives && target.passives.onDamagedAtkStack) {
+    const bushido = target.passives.onDamagedAtkStack;
+    applyStackingStatMod(target, "bushido", "atk", bushido.perStack, bushido.maxStacks, 99);
+  }
+  // 狩猟本能(onHitAilmentSelfSpdBuff): 状態異常を負っている敵へ攻撃した時、自分の素早さが上がる
+  // (applyStatModは同statを上書きするため重ねがけはされない。スキルエディタ2026-07-30)
+  if (actor && actor.instanceId === undefined && target.instanceId !== undefined && actor.passives && actor.passives.onHitAilmentSelfSpdBuff && hasSpecificAilment(target, undefined)) {
+    const hb = actor.passives.onHitAilmentSelfSpdBuff;
+    applyStatMod(actor, "spd", hb.mult, hb.turns);
   }
   // かばう中(logSuffix==="(かばう)")かつ「会心の返し」(guardCounter、100%確定反撃)持ちの場合は、
   // ここでの汎用「迎撃」(counterChance、被弾時の確率反撃)を重ねて発動させない。
