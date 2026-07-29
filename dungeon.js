@@ -982,7 +982,10 @@ document.getElementById("retreatBtn").onclick = () => {
         // 画面上はまだ奥へ進んでいるように見えてしまう(向きが変わった区切りを付けるための暗転)
         document.getElementById("advanceBtn").disabled = true;
         document.getElementById("retreatBtn").disabled = true;
-        playAutoRetreatCutFade(() => {}, () => { startAutoRetreat(); });
+        // 背景の左右反転(bg-flipped)は真っ暗な間に適用する。暗転は「後ろに振り返った」という
+        // 芝居なので、明るくなった時には既に反対を向いていなければならない(以前は帰還1歩目の
+        // 再描画まで反転が遅れ、明転後に景色がパタッと裏返って見えていた。ユーザー指摘2026-07-30)
+        playAutoRetreatCutFade(() => { updateSceneBackgrounds(); }, () => { startAutoRetreat(); });
       },
     },
     { label: "いいえ", className: "big", onClick: () => { renderDungeon(); } },
