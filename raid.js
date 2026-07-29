@@ -123,7 +123,13 @@ function repairBarricade() {
 function fireCatapultOnRoundEnd() {
   if (!raidBattleActive || (state.catapultLevel || 0) <= 0) return;
   const groundTargets = aliveEnemies().filter((e) => !e.isFlying);
-  if (groundTargets.length === 0) return;
+  if (groundTargets.length === 0) {
+    // 対象がいない時も黙って不発にせず理由をログに出す(「投石器が機能してない」と見えてしまった
+    // 実機報告2026-07-29への対応。敵が全員飛行=コウモリ等だけの場面で毎ラウンド出るのは
+    // 情報として正しいのでそのまま)
+    if (aliveEnemies().length > 0) blog("投石器は空を飛ぶ敵に狙いを付けられない…！");
+    return;
+  }
   const target = groundTargets[Math.floor(Math.random() * groundTargets.length)];
   const atk = Math.round(CLASSES.spearman.atk * (1 + ((state.houseLevel || 1) - 1) * 0.075));
   const dmg = rollBasicAttack(atk, target.def);

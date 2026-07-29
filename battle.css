@@ -410,6 +410,21 @@
   .enemy-row.mass-battle .enemy-card { padding: 0.25rem; flex: 1 1 0; min-width: 0; max-width: 78px; }
   .enemy-row.mass-battle .enemy-card img:not(.slash-vfx) { width: 100%; max-width: 60px; height: auto; aspect-ratio: 1 / 1; display: block; margin: 0 auto; }
   .enemy-row.mass-battle .enemy-card .enemy-name { font-size: 0.62rem; margin: 0.12rem 0 0.1rem; white-space: nowrap; overflow: hidden; }
+  /* 襲撃戦限定: 敵カードの幅を編成「枠」(ボス級4/通常2/大群1、raid_editorのslotOfと同じ区分)に
+     比例させる(ユーザー指定2026-07-29: 大猪とコウモリが同じ大きさなのはおかしい。通常=従来サイズ基準、
+     ボス級=2倍幅、大群=半分幅)。ウェーブの枠合計は襲撃エディタ側で最大10に制限されているため、
+     1枠=9.2%なら最悪ケース(大群10体=92%+隙間)でも1行に必ず収まる。%指定なのでiPhone SE(375px)でも
+     同じ比率で縮む。通常戦闘の.mass-battle(探索で敵5体以上)は.raid-battleが付かないため影響なし */
+  .battle-top.raid-battle .enemy-row.mass-battle { gap: 2px; }
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card { flex: 0 1 auto; }
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card.slot-swarm { width: 9.2%; max-width: 42px; }
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card.slot-normal { width: 18.4%; max-width: 78px; }
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card.slot-boss { width: 36.8%; max-width: 148px; }
+  /* ボス級はカードが広い分イラストも大きく見せる。ただし行の高さ(176px)からはみ出さない上限を切る
+     (名前+HPバー+余白で約50px使うため、イラストは120px角まで) */
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card.slot-boss img:not(.slash-vfx) { max-width: 120px; }
+  /* 大群の小カードでは弱点/状態異常アイコンが等倍だとイラストを覆ってしまうため縮小する */
+  .battle-top.raid-battle .enemy-row.mass-battle .enemy-card.slot-swarm .enemy-debuff-icons { transform: scale(0.65); transform-origin: top left; }
   /* 襲撃バリケード(村襲撃/大規模戦モードのみ)。敵カードの列とテキストボックスの間に全幅で立てる。
      【重要】通常フローに置くとテキストボックス以下が全部押し下げられて味方カードに被る(実機事故
      2026-07-27)ため、絶対配置=フロー外にしてレイアウトへ一切影響させない。重なり順はユーザー指定で

@@ -271,6 +271,13 @@ function updateEnemyCard(card, e) {
   card.classList.toggle("swarm", !!e.isSwarm);
   card.classList.toggle("midboss", !!e.isMidBoss);
   card.classList.toggle("quest-target", !!e.isQuestTarget);
+  // 襲撃戦のカード幅は編成「枠」(ボス級4/通常2/大群1)に比例させる(ユーザー指定2026-07-29:
+  // 大猪とコウモリが同じ大きさなのはおかしい)。スタイルは.battle-top.raid-battle配下限定
+  // (battle.css)のため、通常戦闘ではこのクラスが付いていても見た目は一切変わらない
+  const slotTier = (e.isBoss || e.isMidBoss) ? "boss" : e.isSwarm ? "swarm" : "normal";
+  card.classList.toggle("slot-boss", slotTier === "boss");
+  card.classList.toggle("slot-swarm", slotTier === "swarm");
+  card.classList.toggle("slot-normal", slotTier === "normal");
   card.classList.toggle("dead", dead);
   card.classList.toggle("defeat-hidden", dead);
   // acting(enemyLunge)のような一回きりのCSSアニメーションは、クラスが「無い→有る」に変わった
@@ -513,7 +520,9 @@ function processNext() {
     // というユーザー指示で、判定タイミングをこの敵自身の手番の先頭に移した。討伐依頼対象(isQuestTarget)も
     // 含めて全てのボス/中ボスが対象(追跡先のシステムが違うだけ、triggerQuestBossFlee参照)。
     // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
-    if ((actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
+    // 襲撃戦(raidBattleActive)では敵は逃走しない(ユーザー指定2026-07-29: 実機テストで大猪が
+    // HP低下逃走してしまった。襲撃は「村を守り切るか敗北か」の戦いなので追撃システムと馴染まない)
+    if (!raidBattleActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
       actor.__hasFledPursuit = true;
       if (actor.isQuestTarget) triggerQuestBossFlee(actor);
       else triggerBossFlee(actor);
