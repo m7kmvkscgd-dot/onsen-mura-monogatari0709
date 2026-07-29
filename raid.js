@@ -200,6 +200,29 @@ function showRaidPrep() {
 // 直接セットするだけでよい。勝敗処理はbattle.jsのvictory()/defeat()がraidBattleActiveで分岐する
 let raidBattleActive = false; // 襲撃戦中フラグ(battle.js/engine.jsが参照)
 let raidWatchtowerCharId = null; // 見張り台担当(5人編成時の選択順で最初の狩人/砲術士)のキャラid。カードの高所表示(ui.js/battle.css)に使う。挙動は他の4人と同じ(ユーザー確定2026-07-28)
+// 多段ウェーブ(2026-07-29): 1回の襲撃候補が複数ウェーブ(RAID_CONFIGのwaves配列)を持てる。
+// 1波目はstartRaidBattleFromPrep()で通常の戦闘開始に使い、2波目以降はここに積んでおいて
+// battle.jsのnextRound()/processNext()が「全滅したが次ウェーブが控えている」場面で
+// raidTryAdvanceWave()を呼び、湧かせて同じ戦闘のまま続行する(町へは戻らない)
+let raidWaveQueue = [];
+let raidCurrentWaveNum = 1; // ログ表示用(第◯波)
+function raidTryAdvanceWave() {
+  if (!raidBattleActive || raidWaveQueue.length === 0) return false;
+  const nextWave = raidWaveQueue.shift();
+  const spawned = [];
+  (nextWave.enemies || []).forEach((row) => {
+    for (let i = 0; i < (row.count || 0); i++) {
+      const e = instantiateEnemyById(row.id);
+      if (e) spawned.push(e);
+    }
+  });
+  if (spawned.length === 0) return raidTryAdvanceWave(); // 空ウェーブ(設計ミス対策)は飛ばして次を試す
+  battle.enemies = battle.enemies.concat(spawned);
+  raidCurrentWaveNum++;
+  blog(`第${raidCurrentWaveNum}波が押し寄せてきた！`);
+  renderBattleScreen();
+  return true;
+}
 function startRaidBattleFromPrep() {
   const defenders = raidDefenderIds.map((id) => getRosterChar(id)).filter(Boolean);
   if (defenders.length === 0) {
@@ -212,7 +235,7 @@ function startRaidBattleFromPrep() {
     return;
   }
   const wave = pickRaidWave();
-  if (!wave) {
+  if (!wave || !wave.waves || wave.waves.length === 0) {
     // プールが空(設計データ未投入)なら発生させず次回へ順延する
     state.raidPrepPending = false;
     state.nextRaidDay = (state.dayCount || 1) + rollRaidIntervalDays();
@@ -241,8 +264,13 @@ function startRaidBattleFromPrep() {
   massBattleSizingForced = true; // 敵カードは頭数に関係なく縮小サイズで統一
   resetRaidBarricade(state.barricadeHp || 0); // 柵は建築済みかつ耐久が残っている時だけ立つ(永続耐久)
   updateSceneBackgrounds();
+  // 候補(wave)は複数ウェーブ(wave.waves)を持てる。1波目だけ確定出現させ、2波目以降は
+  // raidWaveQueueに積んでおき、全滅の代わりにraidTryAdvanceWave()が湧かせる
+  // (raid_editor.htmlのエクスポート形式もwaves配列を持つ、旧形式のenemies直書きは廃止)
+  raidCurrentWaveNum = 1;
+  raidWaveQueue = wave.waves.slice(1);
   const raiders = [];
-  wave.enemies.forEach((row) => {
+  wave.waves[0].enemies.forEach((row) => {
     for (let i = 0; i < (row.count || 0); i++) {
       const e = instantiateEnemyById(row.id);
       if (e) raiders.push(e);
@@ -254,6 +282,7 @@ function startRaidBattleFromPrep() {
 function finishRaidBattle(won) {
   raidBattleActive = false;
   raidWatchtowerCharId = null; // 高所表示の解除(ui.jsのrenderPartyBarが次の描画でクラスを外す)
+  raidWaveQueue = []; // 途中敗北等で残っていた未消化ウェーブは破棄する
   state.raidPrepPending = false; // 迎撃準備状態を解除(戦闘中リロードはフラグが残っているため準備画面からやり直しになる=踏み倒し不可)
   state.barricadeHp = Math.max(0, raidBarricadeHp); // 戦闘中に受けた柵ダメージを持ち帰る(修理は建築画面)
   battleBgOverrideSet = null;

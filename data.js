@@ -1741,11 +1741,14 @@ const TRANSFORM_ANIMAL_SOUNDS = {
 // (襲撃終了時に「その日+最短〜最長からの等確率抽選」で次回を予約する。ユーザー指示2026-07-28: 日数をばらけさせる)
 // pools: 村レベル(文字列キー"1"〜"7")→ウェーブ候補の配列。発生時にその時点の村レベルのプールから
 // 重み(weight)付きランダムで1候補を抽選する。プール未設定のレベルは下位レベルのプールへフォールバック。
+// 各候補は waves(1波目以降を順に並べた配列、各要素が{enemies:[{id,count}]})を持つ
+// (2026-07-29: 多段ウェーブ対応。1波目を全滅させると即座に2波目が同じ戦闘のまま出現する、
+// raid.jsのraidTryAdvanceWave参照)。1候補=1waveのみでも配列に1要素だけ入れれば従来通り動く
 // ※現在の中身はユーザーのウェーブ設計エクスポート待ちの仮データ(大規模戦テストと同じ猪5体)
 const RAID_CONFIG = {
   schedule: { firstRaidDay: 8, repeatMinDays: 7, repeatMaxDays: 9 },
   pools: {
-    "1": [{ weight: 1, memo: "仮: エクスポート待ち", enemies: [{ id: "inoshishi", count: 5 }] }],
+    "1": [{ weight: 1, memo: "仮: エクスポート待ち", waves: [{ enemies: [{ id: "inoshishi", count: 5 }] }] }],
   },
 };
 

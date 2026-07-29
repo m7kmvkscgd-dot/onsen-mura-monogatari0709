@@ -442,12 +442,14 @@ function nextRound(forceFirstStrike) {
     }
   });
   const alive = aliveField();
-  if (aliveEnemies().length === 0) { victory(); return; }
+  // 多段ウェーブ(襲撃戦): 全滅していても次のウェーブが控えていれば、victory()の代わりに
+  // raidTryAdvanceWave()が湧かせて戦闘を続行させる(trueを返した時だけ町へ戻らず続行)
+  if (aliveEnemies().length === 0 && !(typeof raidTryAdvanceWave === "function" && raidTryAdvanceWave())) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
   // 投石器: ラウンドが1つ完了した直後に発動する(battle.roundsTotal>0=このnextRound呼び出しが
   // 戦闘開始直後の初回ではないことの目印。0のままなら開戦直後なのでまだ何も起きていない)。
-  // ここで最後の敵を倒しても、直後のprocessNext()冒頭のaliveEnemies()===0判定でvictory()が
-  // 自然に呼ばれるため、この関数側で改めて勝利判定をする必要はない
+  // ここで最後の敵を倒しても、直後のaliveEnemies()===0判定(このすぐ上)がvictory()/次ウェーブ
+  // 湧きのどちらかを自然に処理するため、この関数側で改めて判定をする必要はない
   if (battle.roundsTotal > 0) fireCatapultOnRoundEnd();
   // 交代コマンドのクールダウンはラウンドの節目で1減る
   if (battle.swapCooldown > 0) battle.swapCooldown--;
@@ -471,7 +473,10 @@ function processNext() {
   if (!battle) return;
   battle.actingId = null;
   battle.actingEnemyId = null;
-  if (aliveEnemies().length === 0) { renderBattleScreen(); victory(); return; }
+  if (aliveEnemies().length === 0) {
+    renderBattleScreen();
+    if (!(typeof raidTryAdvanceWave === "function" && raidTryAdvanceWave())) { victory(); return; }
+  }
   const alive = aliveField();
   if (alive.length === 0) { renderBattleScreen(); handleNoOneLeftToFight(); return; }
   if (battle.orderIndex >= battle.order.length) { nextRound(); return; }

@@ -5,28 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>温泉村物語 襲撃エディタ</title>
 <style>
-  :root { --bg:#141414; --card-bg:#1d2126; --card-border:#3a3f46; --gold:#c9a55a; --title:#e8dcbf; --body:#d5cfc2; --caption:#8f9aa5; --danger:#e06c60; --success:#7bc96b; --info:#7db3d5; --radius:10px; }
+  :root { --bg:#141414; --card-bg:#1d2126; --card-border:#3a3f46; --gold:#c9a55a; --title:#e8dcbf; --body:#d5cfc2; --caption:#8f9aa5; --danger:#e06c60; --success:#7bc96b; --info:#7db3d5; --radius:10px; --wave-bg:#242a31; --wave-border:#4a5560; }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family:"Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--body); padding-bottom:80px; }
   .container { max-width:640px; margin:0 auto; padding:12px; }
-  h1 { font-size:1.05rem; color:var(--title); padding:12px 12px 0; max-width:640px; margin:0 auto; }
-  .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:640px; margin:0 auto; padding:10px 12px 0; }
+  header { position:sticky; top:0; z-index:20; background:linear-gradient(180deg, #1a1e22 0%, #141719 100%); border-bottom:1px solid var(--card-border); padding-bottom:8px; }
+  h1 { font-size:1.02rem; color:var(--title); padding:10px 12px 0; max-width:640px; margin:0 auto; }
+  .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:640px; margin:0 auto; padding:8px 12px 0; }
   .topbar button { font-family:inherit; font-size:0.78rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; }
+  .lv-nav { display:flex; gap:5px; overflow-x:auto; max-width:640px; margin:0 auto; padding:8px 12px 0; -webkit-overflow-scrolling:touch; }
+  .lv-nav .chip { flex-shrink:0; font-size:0.72rem; font-weight:700; color:var(--caption); background:#22262b; border:1px solid var(--card-border); border-radius:20px; padding:5px 11px; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+  .lv-nav .chip .dot { width:6px; height:6px; border-radius:50%; background:var(--card-border); }
+  .lv-nav .chip.has-data { color:var(--title); border-color:var(--gold); }
+  .lv-nav .chip.has-data .dot { background:var(--gold); }
   .note { font-size:0.7rem; color:var(--caption); line-height:1.6; margin:8px 0; }
-  .card { background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+  .note-card { background:rgba(0,0,0,0.2); border:1px solid var(--card-border); border-radius:var(--radius); margin-bottom:10px; }
+  .note-card summary { list-style:none; cursor:pointer; padding:8px 12px; font-size:0.76rem; font-weight:700; color:var(--title); display:flex; align-items:center; justify-content:space-between; }
+  .note-card summary::-webkit-details-marker { display:none; }
+  .note-card .note { padding:0 12px 10px; margin:0; }
+  .card { background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:0; margin-bottom:10px; overflow:hidden; }
   .card h2 { font-size:0.9rem; color:var(--title); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  #scheduleCard { padding:12px; }
+  .lv-card summary { list-style:none; cursor:pointer; padding:11px 12px; display:flex; align-items:center; gap:8px; -webkit-tap-highlight-color:transparent; }
+  .lv-card summary::-webkit-details-marker { display:none; }
+  .lv-title { flex:1; min-width:0; font-size:0.9rem; font-weight:700; color:var(--title); }
+  .lv-chevron { flex-shrink:0; color:var(--caption); font-size:0.65rem; transition:transform 0.15s; }
+  details[open] > summary .lv-chevron { transform:rotate(90deg); }
+  .lv-body { padding:0 12px 12px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; }
   label { font-size:0.72rem; color:var(--caption); display:block; margin-bottom:2px; }
   input[type=number], input[type=text] { background:rgba(0,0,0,0.25); border:1px solid var(--card-border); border-radius:6px; color:var(--body); font-size:0.9rem; padding:7px 8px; }
   input[type=number] { width:80px; text-align:right; }
   input[type=text] { width:100%; text-align:left; }
   .row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
-  .wave { background:rgba(0,0,0,0.18); border:1px solid var(--card-border); border-radius:8px; padding:9px; margin-top:8px; }
-  .wave-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:6px; flex-wrap:wrap; }
-  .wave-head .ttl { font-size:0.78rem; font-weight:700; color:var(--title); }
-  .slot-sum { font-size:0.72rem; color:var(--info); }
+  /* 候補(重み付き抽選の1件) */
+  .candidate { background:rgba(0,0,0,0.22); border:1px solid var(--card-border); border-left:3px solid var(--info); border-radius:9px; padding:10px; margin-top:9px; }
+  .candidate-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:6px; flex-wrap:wrap; }
+  .candidate-head .ttl { font-size:0.8rem; font-weight:700; color:var(--title); }
   .prob { font-size:0.72rem; color:var(--success); font-weight:700; }
-  .weight-row { display:flex; align-items:center; gap:8px; margin:4px 0 2px; }
+  .total-slot { font-size:0.68rem; color:var(--caption); }
+  .weight-row { display:flex; align-items:center; gap:8px; margin:4px 0 6px; }
   .weight-row label { margin:0; }
+  /* ウェーブ(候補内の1段階、複数持てる) */
+  .wave { background:var(--wave-bg); border:1px solid var(--wave-border); border-left:3px solid var(--gold); border-radius:8px; padding:9px; margin-top:8px; }
+  .wave-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; gap:6px; flex-wrap:wrap; }
+  .wave-head .ttl { font-size:0.76rem; font-weight:700; color:var(--title); }
+  .slot-sum { font-size:0.68rem; color:var(--info); }
   .enemy-line { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px dashed rgba(255,255,255,0.08); }
   .enemy-line img { width:34px; height:34px; object-fit:contain; background:#2a2f36; border-radius:6px; flex-shrink:0; }
   .enemy-line .nm { flex:1; min-width:0; font-size:0.82rem; }
@@ -36,7 +59,9 @@
   .cnt .v { min-width:26px; text-align:center; font-weight:900; }
   .small { font-size:0.68rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:7px; padding:6px 10px; font-family:inherit; }
   .small.danger { color:#f0b0a8; border-color:#5c3a36; }
+  .small.ghost { background:transparent; }
   .add-line { margin-top:6px; }
+  .add-wave-row { margin-top:8px; }
   .badge { font-size:0.58rem; border:1px solid var(--card-border); border-radius:6px; padding:0 4px; color:var(--caption); margin-left:4px; }
   .badge.swarm { color:#a8d5f0; }
   .badge.boss { color:#f0b0a8; }
@@ -56,16 +81,23 @@
 </style>
 </head>
 <body>
-<h1>👹 温泉村物語 襲撃エディタ</h1>
-<div class="topbar">
-  <button id="exportBtn">📋 エクスポート</button>
-  <button id="importBtn">📥 読み込み</button>
-  <button id="resetBtn">全て初期化</button>
-</div>
+<header>
+  <h1>👹 温泉村物語 襲撃エディタ</h1>
+  <div class="topbar">
+    <button id="exportBtn">📋 エクスポート</button>
+    <button id="importBtn">📥 読み込み</button>
+    <button id="resetBtn">全て初期化</button>
+  </div>
+  <div class="lv-nav" id="lvNav"></div>
+</header>
 <div class="container">
-  <p class="note">襲撃スケジュールと「村レベル別ウェーブプール」の設計ツール(ゲーム側は実装済み2026-07-28。エクスポートしたJSONをdata.jsのRAID_CONFIGへ反映します。現在のゲーム側は仮プール=猪5体のみ)。編集は端末に自動保存。<br>
-  仕組み: 襲撃発生時、<b>その時の村レベルのプールから重み付きランダムで1つ抽選</b>。そのレベルにプールが無い場合は、それ以下で一番近いレベルのプールを使う想定。<br>
-  枠の目安: 通常の敵=2枠 / 大群=1枠 / ボス級=4枠(表示のみ、上限チェックなし)</p>
+  <details class="note-card">
+    <summary>ℹ️ 使い方(タップで開閉) <span class="lv-chevron">▶</span></summary>
+    <p class="note">襲撃スケジュールと「村レベル別ウェーブプール」の設計ツール(ゲーム側は実装済み。エクスポートしたJSONをdata.jsのRAID_CONFIGへ反映します)。編集は端末に自動保存。<br>
+    仕組み: 襲撃発生時、<b>その時の村レベルのプールから重み付きランダムで1つ「候補」を抽選</b>。そのレベルにプールが無い場合は、それ以下で一番近いレベルのプールを使う想定。<br>
+    <b>候補</b>=抽選される1つの襲撃デザイン。1つの候補は<b>ウェーブ</b>(第1波・第2波…)を複数持てる。1波目を全滅させると町に戻らずそのまま次の波が出現する連戦になる。単発でよければウェーブは1つのままでよい。<br>
+    枠の目安: 通常の敵=2枠 / 大群=1枠 / ボス級=4枠(表示のみ、上限チェックなし)</p>
+  </details>
   <div class="card" id="scheduleCard">
     <h2>スケジュール</h2>
     <div class="row">
@@ -115,14 +147,15 @@ const ENEMY_LIST = [{"id":"yaken","ja":"野犬","stage":"forest","isSwarm":false
 const ENEMY_BY_ID = {};
 ENEMY_LIST.forEach((e) => { ENEMY_BY_ID[e.id] = e; });
 const STAGE_JA = { forest: "🌲森", coast: "🌊海岸", cave: "🕳️洞窟", valley: "🎋渓流", bamboo: "🎍竹林", shugendo: "⛰️修験道", yama: "🏔️山", ruins: "🏚️廃城下町", gate: "🚪門", castle: "🏯古城", ruinsforest: "🌿少し森" };
-const STORAGE_KEY = "onsen_raid_editor_v2"; // v1(襲撃回数ベース)から村レベル別プール方式に刷新
+const STORAGE_KEY = "onsen_raid_editor_v3"; // v2(候補=1ウェーブ固定)から候補が複数ウェーブを持てる方式に刷新
 const MAX_VILLAGE_LEVEL = 7;
 
 const DEFAULT_CONFIG = {
   schedule: { firstRaidDay: 8, repeatMinDays: 7, repeatMaxDays: 9 },
-  // pools: 村レベル(文字列キー"1"〜"7") → ウェーブ候補の配列。各候補は{weight(重み), memo, enemies:[{id,count}]}
+  // pools: 村レベル(文字列キー"1"〜"7") → 候補の配列。各候補は{weight(重み), memo, waves:[{enemies:[{id,count}]}, ...]}
+  // waves配列は1波目→2波目→…の順。1波目を全滅させると町に戻らず即座に2波目が出現する(連戦)
   pools: {
-    "1": [{ weight: 1, memo: "お試し", enemies: [{ id: "inoshishi", count: 5 }] }],
+    "1": [{ weight: 1, memo: "お試し", waves: [{ enemies: [{ id: "inoshishi", count: 5 }] }] }],
   },
 };
 let config;
@@ -138,67 +171,129 @@ if (config.schedule.repeatMinDays == null) {
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); }
 function slotOf(e) { return e ? (e.isBoss || e.isMidBoss ? 4 : e.isSwarm ? 1 : 2) : 2; }
 function waveSlotSum(wave) { return wave.enemies.reduce((s, r) => s + slotOf(ENEMY_BY_ID[r.id]) * r.count, 0); }
+function candidateTotalSlot(cand) { return cand.waves.reduce((s, w) => s + waveSlotSum(w), 0); }
+function candidateTotalWaves(pool) { return pool.reduce((s, c) => s + c.waves.length, 0); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+// 村レベルカードの開閉状態(見やすさ改善: 全部展開しっぱなしだと長すぎるため、データがある
+// レベルだけ初期展開し、以後はユーザーの開閉操作をSetで覚えておいて再描画のたびに復元する)
+let openLevels = null;
+function initOpenLevelsIfNeeded() {
+  if (openLevels) return;
+  openLevels = new Set();
+  for (let lv = 1; lv <= MAX_VILLAGE_LEVEL; lv++) {
+    if ((config.pools[String(lv)] || []).length > 0) openLevels.add(lv);
+  }
+  if (openLevels.size === 0) openLevels.add(1);
+}
+
+function renderLvNav() {
+  const nav = document.getElementById("lvNav");
+  nav.innerHTML = "";
+  for (let lv = 1; lv <= MAX_VILLAGE_LEVEL; lv++) {
+    const pool = config.pools[String(lv)] || [];
+    const chip = document.createElement("div");
+    chip.className = "chip" + (pool.length > 0 ? " has-data" : "");
+    chip.innerHTML = `<span class="dot"></span>Lv${lv}`;
+    chip.onclick = () => {
+      openLevels.add(lv);
+      render();
+      document.getElementById("lvCard" + lv).scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    nav.appendChild(chip);
+  }
+}
+
 function render() {
+  initOpenLevelsIfNeeded();
   document.getElementById("firstDay").value = config.schedule.firstRaidDay;
   document.getElementById("repeatMinDays").value = config.schedule.repeatMinDays;
   document.getElementById("repeatMaxDays").value = config.schedule.repeatMaxDays;
+  renderLvNav();
   const list = document.getElementById("poolList");
   list.innerHTML = "";
   for (let lv = 1; lv <= MAX_VILLAGE_LEVEL; lv++) {
     const key = String(lv);
     const pool = config.pools[key] || [];
     const totalWeight = pool.reduce((s, w) => s + (Number(w.weight) || 0), 0);
-    const card = document.createElement("div");
-    card.className = "card";
+    const card = document.createElement("details");
+    card.className = "card lv-card";
+    card.id = "lvCard" + lv;
+    if (openLevels.has(lv)) card.open = true;
+    card.addEventListener("toggle", () => { if (card.open) openLevels.add(lv); else openLevels.delete(lv); });
     card.innerHTML = `
-      <h2><span>🏠村レベル${lv} のウェーブプール <span class="badge">${pool.length}件</span></span><button class="small" data-act="addWave">＋候補を追加</button></h2>
-      ${pool.length === 0 ? '<div class="empty-pool">未設定(このレベルで襲撃が起きた場合、下のレベルのプールを流用する想定)</div>' : ""}
-      <div data-waves></div>
+      <summary>
+        <span class="lv-title">🏠村レベル${lv}</span>
+        <span class="badge">候補${pool.length}件</span>
+        <span class="badge">計${candidateTotalWaves(pool)}ウェーブ</span>
+        <span class="lv-chevron">▶</span>
+      </summary>
+      <div class="lv-body">
+        ${pool.length === 0 ? '<div class="empty-pool">未設定(このレベルで襲撃が起きた場合、下のレベルのプールを流用する想定)</div>' : ""}
+        <div data-candidates></div>
+        <div class="add-line"><button class="small" data-act="addCandidate">＋候補を追加</button></div>
+      </div>
     `;
-    const wavesEl = card.querySelector("[data-waves]");
-    pool.forEach((wave, wi) => {
-      const prob = totalWeight > 0 ? Math.round((Number(wave.weight) || 0) / totalWeight * 100) : 0;
-      const wv = document.createElement("div");
-      wv.className = "wave";
-      wv.innerHTML = `
-        <div class="wave-head">
-          <span class="ttl">候補${wi + 1}</span>
-          <span><span class="prob">出現率${prob}%</span> <span class="slot-sum">枠合計: ${waveSlotSum(wave)}</span> <button class="small danger" data-act="delWave">削除</button></span>
+    const candidatesEl = card.querySelector("[data-candidates]");
+    pool.forEach((cand, ci) => {
+      const prob = totalWeight > 0 ? Math.round((Number(cand.weight) || 0) / totalWeight * 100) : 0;
+      const cv = document.createElement("div");
+      cv.className = "candidate";
+      cv.innerHTML = `
+        <div class="candidate-head">
+          <span class="ttl">候補${ci + 1}</span>
+          <span><span class="prob">出現率${prob}%</span> <span class="total-slot">総枠${candidateTotalSlot(cand)}</span> <button class="small danger" data-act="delCandidate">削除</button></span>
         </div>
-        <div class="weight-row"><label>重み</label><input type="number" data-act="weight" value="${Number(wave.weight) || 0}" min="0" style="width:70px;"><label style="flex:1;">メモ</label></div>
-        <input type="text" data-act="memo" value="${esc(wave.memo)}" placeholder="この編成の狙いなど">
-        <div data-lines></div>
-        <div class="add-line"><button class="small" data-act="addEnemy">＋敵を追加</button></div>
+        <div class="weight-row"><label>重み</label><input type="number" data-act="weight" value="${Number(cand.weight) || 0}" min="0" style="width:70px;"><label style="flex:1;">メモ</label></div>
+        <input type="text" data-act="memo" value="${esc(cand.memo)}" placeholder="この編成の狙いなど">
+        <div data-waves></div>
+        <div class="add-line add-wave-row"><button class="small" data-act="addWave">＋ウェーブを追加(連戦の次の波)</button></div>
       `;
-      const linesEl = wv.querySelector("[data-lines]");
-      wave.enemies.forEach((line, li) => {
-        const e = ENEMY_BY_ID[line.id];
-        const el = document.createElement("div");
-        el.className = "enemy-line";
-        el.innerHTML = `
-          <img src="${e ? esc(e.image) : ""}" onerror="this.style.visibility='hidden'">
-          <div class="nm">${e ? esc(e.ja) : esc(line.id)}<span class="badge">${e ? (STAGE_JA[e.stage] || e.stage) : "?"}</span>${e && e.isSwarm ? '<span class="badge swarm">大群1枠</span>' : ""}${e && (e.isBoss || e.isMidBoss) ? '<span class="badge boss">ボス級4枠</span>' : ""}
-            <div class="meta">${e ? `HP${e.hp} 攻${e.atk} ・ ${slotOf(e)}枠×${line.count}=${slotOf(e) * line.count}` : ""}</div>
+      const wavesEl = cv.querySelector("[data-waves]");
+      cand.waves.forEach((wave, wi) => {
+        const wv = document.createElement("div");
+        wv.className = "wave";
+        wv.innerHTML = `
+          <div class="wave-head">
+            <span class="ttl">${wi === 0 ? "ウェーブ1(1波目)" : `ウェーブ${wi + 1}(${wi + 1}波目)`}</span>
+            <span><span class="slot-sum">枠合計: ${waveSlotSum(wave)}</span> ${cand.waves.length > 1 ? '<button class="small danger" data-act="delWave">削除</button>' : ""}</span>
           </div>
-          <div class="cnt"><button data-act="minus">−</button><span class="v">${line.count}</span><button data-act="plus">＋</button></div>
-          <button class="small danger" data-act="delEnemy">✕</button>
+          <div data-lines></div>
+          <div class="add-line"><button class="small" data-act="addEnemy">＋敵を追加</button></div>
         `;
-        el.querySelector('[data-act="minus"]').onclick = () => { if (line.count > 1) { line.count--; save(); render(); } };
-        el.querySelector('[data-act="plus"]').onclick = () => { if (line.count < 10) { line.count++; save(); render(); } };
-        el.querySelector('[data-act="delEnemy"]').onclick = () => { wave.enemies.splice(li, 1); save(); render(); };
-        linesEl.appendChild(el);
+        const linesEl = wv.querySelector("[data-lines]");
+        wave.enemies.forEach((line, li) => {
+          const e = ENEMY_BY_ID[line.id];
+          const el = document.createElement("div");
+          el.className = "enemy-line";
+          el.innerHTML = `
+            <img src="${e ? esc(e.image) : ""}" onerror="this.style.visibility='hidden'">
+            <div class="nm">${e ? esc(e.ja) : esc(line.id)}<span class="badge">${e ? (STAGE_JA[e.stage] || e.stage) : "?"}</span>${e && e.isSwarm ? '<span class="badge swarm">大群1枠</span>' : ""}${e && (e.isBoss || e.isMidBoss) ? '<span class="badge boss">ボス級4枠</span>' : ""}
+              <div class="meta">${e ? `HP${e.hp} 攻${e.atk} ・ ${slotOf(e)}枠×${line.count}=${slotOf(e) * line.count}` : ""}</div>
+            </div>
+            <div class="cnt"><button data-act="minus">−</button><span class="v">${line.count}</span><button data-act="plus">＋</button></div>
+            <button class="small danger" data-act="delEnemy">✕</button>
+          `;
+          el.querySelector('[data-act="minus"]').onclick = () => { if (line.count > 1) { line.count--; save(); render(); } };
+          el.querySelector('[data-act="plus"]').onclick = () => { if (line.count < 10) { line.count++; save(); render(); } };
+          el.querySelector('[data-act="delEnemy"]').onclick = () => { wave.enemies.splice(li, 1); save(); render(); };
+          linesEl.appendChild(el);
+        });
+        wv.querySelector('[data-act="addEnemy"]').onclick = () => openPick((id) => { wave.enemies.push({ id, count: 1 }); save(); render(); });
+        const delWaveBtn = wv.querySelector('[data-act="delWave"]');
+        if (delWaveBtn) delWaveBtn.onclick = () => { if (!confirm(`村レベル${lv}・候補${ci + 1}のウェーブ${wi + 1}を削除しますか？`)) return; cand.waves.splice(wi, 1); save(); render(); };
+        wavesEl.appendChild(wv);
       });
-      wv.querySelector('[data-act="weight"]').addEventListener("input", (ev) => { wave.weight = Math.max(0, Number(ev.target.value) || 0); save(); renderProbOnly(); });
-      wv.querySelector('[data-act="memo"]').addEventListener("input", (ev) => { wave.memo = ev.target.value; save(); });
-      wv.querySelector('[data-act="addEnemy"]').onclick = () => openPick((id) => { wave.enemies.push({ id, count: 1 }); save(); render(); });
-      wv.querySelector('[data-act="delWave"]').onclick = () => { if (!confirm(`村レベル${lv}の候補${wi + 1}を削除しますか？`)) return; pool.splice(wi, 1); if (pool.length === 0) delete config.pools[key]; save(); render(); };
-      wavesEl.appendChild(wv);
+      cv.querySelector('[data-act="weight"]').addEventListener("input", (ev) => { cand.weight = Math.max(0, Number(ev.target.value) || 0); save(); renderProbOnly(); });
+      cv.querySelector('[data-act="memo"]').addEventListener("input", (ev) => { cand.memo = ev.target.value; save(); });
+      cv.querySelector('[data-act="addWave"]').onclick = () => { cand.waves.push({ enemies: [] }); save(); render(); };
+      cv.querySelector('[data-act="delCandidate"]').onclick = () => { if (!confirm(`村レベル${lv}の候補${ci + 1}を削除しますか？`)) return; pool.splice(ci, 1); if (pool.length === 0) delete config.pools[key]; save(); render(); };
+      candidatesEl.appendChild(cv);
     });
-    card.querySelector('[data-act="addWave"]').onclick = () => {
+    card.querySelector('[data-act="addCandidate"]').onclick = () => {
       if (!config.pools[key]) config.pools[key] = [];
-      config.pools[key].push({ weight: 1, memo: "", enemies: [] });
+      config.pools[key].push({ weight: 1, memo: "", waves: [{ enemies: [] }] });
+      openLevels.add(lv);
       save(); render();
     };
     list.appendChild(card);
@@ -206,20 +301,20 @@ function render() {
 }
 // 重み入力中はフォーカスを奪わないよう、出現率の表示だけ更新する(全再描画しない)
 function renderProbOnly() {
-  document.querySelectorAll("#poolList .card").forEach((card, idx) => {
+  document.querySelectorAll("#poolList .lv-card").forEach((card, idx) => {
     const key = String(idx + 1);
     const pool = config.pools[key] || [];
     const totalWeight = pool.reduce((s, w) => s + (Number(w.weight) || 0), 0);
-    card.querySelectorAll(".wave").forEach((wv, wi) => {
-      const prob = totalWeight > 0 ? Math.round((Number(pool[wi].weight) || 0) / totalWeight * 100) : 0;
-      wv.querySelector(".prob").textContent = `出現率${prob}%`;
+    card.querySelectorAll(".candidate").forEach((cv, ci) => {
+      const prob = totalWeight > 0 ? Math.round((Number(pool[ci].weight) || 0) / totalWeight * 100) : 0;
+      cv.querySelector(".prob").textContent = `出現率${prob}%`;
     });
   });
 }
 document.getElementById("firstDay").addEventListener("input", (e) => { config.schedule.firstRaidDay = Number(e.target.value) || 1; save(); });
 document.getElementById("repeatMinDays").addEventListener("input", (e) => { config.schedule.repeatMinDays = Number(e.target.value) || 1; save(); });
 document.getElementById("repeatMaxDays").addEventListener("input", (e) => { config.schedule.repeatMaxDays = Number(e.target.value) || 1; save(); });
-document.getElementById("resetBtn").onclick = () => { if (!confirm("全ての編集を破棄して初期状態に戻します。よろしいですか？")) return; config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); save(); render(); };
+document.getElementById("resetBtn").onclick = () => { if (!confirm("全ての編集を破棄して初期状態に戻します。よろしいですか？")) return; config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); openLevels = null; save(); render(); };
 
 // 敵ピッカー
 let pickCallback = null;
@@ -246,7 +341,8 @@ document.getElementById("pickCloseBtn").onclick = () => document.getElementById(
 // エクスポート/読み込み
 document.getElementById("exportBtn").onclick = () => {
   const out = "// 襲撃スケジュール+村レベル別ウェーブプール(襲撃エディタのエクスポート。ゲーム実装時にRAID_CONFIGとして反映)\n" +
-    "// 発生時、その時点の村レベルのプールから重み付きランダムで1候補を抽選(プール未設定のレベルは下位レベルへフォールバック)\n" +
+    "// 発生時、その時点の村レベルのプールから重み付きランダムで1候補を抽選(プール未設定のレベルは下位レベルへフォールバック)。\n" +
+    "// 各候補のwaves配列は1波目→2波目…の順で、1波目を全滅させると町に戻らず即座に次の波が出現する\n" +
     "const RAID_CONFIG = " + JSON.stringify(config, null, 2) + ";\n";
   document.getElementById("exportJson").value = out;
   document.getElementById("exportModal").classList.add("open");
@@ -267,6 +363,7 @@ document.getElementById("importDoBtn").onclick = () => {
     const parsed = JSON.parse(raw);
     if (!parsed.schedule || !parsed.pools) throw new Error("形式が違います");
     config = parsed;
+    openLevels = null;
     save(); render();
     document.getElementById("importStatus").textContent = "読み込みました";
   } catch (e) {
