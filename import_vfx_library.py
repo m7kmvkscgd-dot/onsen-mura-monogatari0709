@@ -40,18 +40,28 @@ def slice_flipbook(tga_path, base_name):
         print(f"  [skip] グリッド指定(_AxB)が見つからない: {base_name}")
         return None
     cols, rows = int(m.group(1)), int(m.group(2))
+    # 画像サイズがcols/rowsで割り切れない場合(例: flame_02_15x4は2048/15=136.53...)、
+    # 従来はcell_w=幅//colsで切り捨てた固定値を使っていたため、列を追う(右へ進む)ごとに
+    # 本来の境界とのズレが列数ぶん積み重なり、最終列では最大でcols-1px分もズレて中心が
+    # 徐々に流れて見える不具合があった(ユーザー報告: アニメの中心が定期的にズレる)。
+    # 各列/行の境界を「その都度、画像全体幅に対する比率から丸めて」計算することで、
+    # 1px単位の丸め誤差はあっても列を追うごとに蓄積しない(隣接コマ間で最大1pxしかブレない)
     if im.width % cols != 0 or im.height % rows != 0:
-        print(f"  [warn] {base_name}: 画像サイズ{im.size}が{cols}x{rows}で割り切れません(端数切り捨て)")
-    cell_w, cell_h = im.width // cols, im.height // rows
+        print(f"  [note] {base_name}: 画像サイズ{im.size}は{cols}x{rows}で割り切れないため、コマごとに比率丸めで境界を計算します(蓄積ズレ無し)")
+    def col_edges(n, count):
+        return [round(i * n / count) for i in range(count + 1)]
+    x_edges = col_edges(im.width, cols)
+    y_edges = col_edges(im.height, rows)
     out_subdir = os.path.join(OUT_DIR, base_name)
     os.makedirs(out_subdir, exist_ok=True)
     frame = 0
     for row in range(rows):
         for col in range(cols):
             frame += 1
-            box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
+            box = (x_edges[col], y_edges[row], x_edges[col + 1], y_edges[row + 1])
             cell = im.crop(box)
             cell.save(os.path.join(out_subdir, f"frame_{frame}.png"))
+    cell_w, cell_h = round(im.width / cols), round(im.height / rows)
     return {
         "id": base_name,
         "label": base_name,

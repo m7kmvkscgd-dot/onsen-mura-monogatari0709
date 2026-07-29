@@ -106,7 +106,7 @@
     "source": "spritesheet",
     "framePrefix": "assets/vfx_library/flame_02_15x4/frame_",
     "frameCount": 60,
-    "cellW": 136,
+    "cellW": 137,
     "cellH": 256
   },
   {
