@@ -90,7 +90,7 @@ function createCharacter(name, classId, classUpgrades) {
     onsenLockUntilMinutes: null, // 入浴した時点から見て翌朝(dawn=4:30)の絶対分数。この値を過ぎるまでパーティ編成に組み込めない
     onsenPendingRelief: false, // 入浴済みでまだ「リラックスできた！」演出(ストレス減少)を再生していない場合true
     poison: 0, // 毒の蓄積値。自分のターンが来るたびにこの値分ダメージを受け、1減る
-    bleed: 0, // 出血の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する。出血中は攻撃力-10%
+    bleed: 0, // 出血の蓄積値。毒と同じ減衰式だが、技の付与量は毒より低めに設計する(旧・攻撃力-10%の一律補正は2026-07-30廃止)
     burnTurns: 0, // 炎上の残りターン数。自分のターンが来るたびに最大HP割合のダメージを受ける(ターン数のみ減り、減衰しない)
     stunTurns: 0, // スタン(行動不能)の残りターン数
     stunResistTurns: 0, // スタンを受けた直後の一定ターン、スタン確率が大幅に下がる(連続スタンロック防止)
@@ -358,8 +358,9 @@ function effectiveStat(entity, key) {
       if (hurtAlly) result = Math.max(1, Math.round(result * quirk.allyLowHpSpd.mult));
     }
   }
-  // 出血中は常時攻撃力-10%(敵/味方どちらにも適用、弱点の有無を問わない)
-  if (key === "atk" && (entity.bleed || 0) > 0) result = Math.max(1, Math.round(result * 0.9));
+  // 【廃止2026-07-30】旧・「出血中は常時攻撃力-10%」の一律補正はユーザー指示で削除
+  // (MP0で出血をばら撒ける疾風斬り等と合わさると強すぎるため。出血による攻撃力低下は
+  //  弱点システム(ENEMY_WEAKNESS.effectsのatkDown、敵ごとに図鑑エディタで設定)にのみ任せる)
   // 弱点属性(bleed/poison/burn)のeffects(atkDown/defDown/spdDown、図鑑エディタで設定)による継続デバフ。
   // 対応するDOTが現在アクティブな間だけ-30%が乗る(旧tier1/2システムの後継、2026-07-21)
   if ((key === "atk" || key === "def" || key === "spd") && weaknessEffectActive(entity, key + "Down")) {
@@ -508,7 +509,7 @@ function applyBurn(entity, turns) {
 const BLEED_MAX_STACKS = 5; // (旧)出血蓄積の上限。2026-07-18ユーザー指示で天井撤廃済み、現在はどこも参照しない(module.exports互換のため定義だけ残置)
 // 出血: 毒(重ね掛けは大きい方に上書き)とは違い、こちらは加算で積み上がる方式にしてある
 // (磯魚などの低威力多段ヒットで着実に蓄積していく手触りを狙ったもの、上限で頭打ちにはなる)。
-// 技側の付与量を毒より低めに設定する運用にしてあり、代わりに出血中は常時攻撃力-10%が乗る(effectiveStat側)
+// 技側の付与量を毒より低めに設定する運用にしてある(旧・出血中の攻撃力-10%一律補正は2026-07-30廃止)
 function applyBleed(entity, stacks) {
   if (entity.statusImmuneTurns > 0) return;
   if (blockedByOmamoriIzanagi(entity)) return;

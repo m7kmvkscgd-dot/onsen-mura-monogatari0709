@@ -1750,7 +1750,7 @@ const BOSS_PURSUIT_ENCOUNTER_CHANCE = 0.6;
 const STATUS_TOOLTIPS = {
   poison: { icon: "🦠", title: "毒", desc: "毎ターンダメージを受ける。毒は蓄積し、数値が大きいほど威力が上がる。" },
   burn: { icon: "🔥", title: "炎上", desc: "毎ターン最大HPの一定割合のダメージを受ける、ターン数固定のデバフ。" },
-  bleed: { icon: "🩸", title: "出血", desc: "毎ターンダメージを受け、攻撃力も下がる。" },
+  bleed: { icon: "🩸", title: "出血", desc: "毎ターンダメージを受ける。出血が弱点の敵はさらに弱体化する。" },
   stun: { icon: "💫", title: "スタン", desc: "行動できない。" },
   silence: { icon: "🔇", title: "沈黙", desc: "技・術が使えなくなり、通常攻撃しかできない。" },
   tangle: { icon: "🕸️", title: "束縛", desc: "素早さが下がる。" },
