@@ -1016,6 +1016,15 @@ function finishRetreat() {
   if (state.rescueQuestAccepted && state.rescueQuestItemObtained) {
     state.gold += RESCUE_QUEST_DEF.rewardGold;
     advGoldEarned += RESCUE_QUEST_DEF.rewardGold; // リザルト画面の「収穫」にも反映されるよう、他の金銭報酬と同じ集計に加算する
+    const rescueMats = RESCUE_QUEST_DEF.rewardMaterials || {}; // 固定報酬素材(任意、奉行所エディタ参照)
+    if (MATERIAL_ORDER.some((id) => rescueMats[id])) {
+      if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+      MATERIAL_ORDER.forEach((id) => {
+        if (!rescueMats[id]) return;
+        state.materials[id] = (state.materials[id] || 0) + rescueMats[id];
+        advMaterialGains[id] = (advMaterialGains[id] || 0) + rescueMats[id];
+      });
+    }
     state.rescueQuestAccepted = false;
     state.rescueQuestItemObtained = false;
     dlog(`${RESCUE_QUEST_DEF.itemName}を無事に届けた！謝礼${RESCUE_QUEST_DEF.rewardGold}Gを受け取った。`);

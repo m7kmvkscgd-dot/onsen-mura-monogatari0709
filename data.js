@@ -1611,6 +1611,8 @@ const BIG_ATTACK_EXPOSED_BONUS = 1.2; // 予告中(bigAttackPending)の敵へは
 // QUEST_BOARD_SIZE枚だけを毎日ランダムに選んで張り替える(indexHtml側のrefreshMagistrateQuestsIfNeeded参照)。
 // 受注制(同時に1件まで)。受注すると、深淵の森でtargetFloorに到達した時にcount体の群れが確定出現し、
 // 倒すと即達成→報酬(帰還後のリザルト画面に表示)、というモンハンの緊急依頼のような1本道の設計にしてある
+// rewardMaterials: 固定報酬素材 { 素材id: 個数 }(任意、未設定/空なら素材報酬なし)。ゴールド報酬に
+// 上乗せでstate.materialsへ加算される(battle.js victory()参照)。値は奉行所エディタ(quest_editor.html)で編集する
 const QUEST_DEFS = {
   yaken: { emoji: "🐺", requester: "街道番・源蔵", title: "野犬どもを追い払え！", text: "街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。", targetFloor: 5, count: 2, tier: 1, rewardGold: 30 },
   // 大猪は中ボス級のため、奉行所の依頼を最低3回達成するまで張り出されない(minQuestClears、refreshMagistrateQuestsIfNeeded参照)

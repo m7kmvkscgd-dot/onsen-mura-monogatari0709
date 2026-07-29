@@ -2183,8 +2183,19 @@ function victory() {
   if (battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     const qDef = QUEST_DEFS[battle.questKey];
     const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
-    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP };
+    const questMats = qDef.rewardMaterials || {}; // 討伐依頼の固定報酬素材(任意、奉行所エディタ参照)
+    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP, materials: questMats };
     totalGold += questGold;
+    // 報酬素材は敵ドロップと同じstate.materials/advMaterialGainsに積む。リザルト画面の
+    // 素材アイコン行(matRowEl、ui.js)にそのまま乗って表示される
+    if (MATERIAL_ORDER.some((id) => questMats[id])) {
+      if (!state.materials) state.materials = { kawa: 0, hone: 0, ki: 0, tetsu: 0 };
+      MATERIAL_ORDER.forEach((id) => {
+        if (!questMats[id]) return;
+        state.materials[id] = (state.materials[id] || 0) + questMats[id];
+        advMaterialGains[id] = (advMaterialGains[id] || 0) + questMats[id];
+      });
+    }
     xpParticipants().forEach((c) => {
       const share = Math.round(QUEST_REWARD_XP * xpRatioOf(c));
       if (share <= 0) return;

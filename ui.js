@@ -640,9 +640,11 @@ function renderResultScreen(onContinue, isDefeat) {
   const questCard = document.getElementById("resultQuestCard");
   if (!isDefeat && advQuestCompleted) {
     questCard.style.display = "";
+    const matText = MATERIAL_ORDER.filter((id) => advQuestCompleted.materials && advQuestCompleted.materials[id])
+      .map((id) => ` + ${MATERIALS[id].ja}×${advQuestCompleted.materials[id]}`).join("");
     questCard.innerHTML = `
       <div class="roster-name">🏯依頼達成: ${advQuestCompleted.title}</div>
-      <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G${advQuestCompleted.xp > 0 ? ` + XP${advQuestCompleted.xp}` : ""}</p>
+      <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G${advQuestCompleted.xp > 0 ? ` + XP${advQuestCompleted.xp}` : ""}${matText}</p>
     `;
   } else {
     questCard.style.display = "none";

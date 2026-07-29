@@ -89,8 +89,8 @@
   .reset-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--card-border); color: var(--caption); display: none; }
   .building-card.edited .reset-btn { display: inline-block; }
 
-  #exportModal, #checkpointModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  #exportModal.open, #checkpointModal.open { display: flex; }
+  #exportModal, #checkpointModal, #equipmentModal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #exportModal.open, #checkpointModal.open, #equipmentModal.open { display: flex; }
   .export-panel { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 16px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
   .export-panel h2 { margin: 0; font-size: 1rem; color: var(--title); }
   .export-panel p.hint { margin: 0; font-size: 0.75rem; color: var(--caption); }
@@ -102,6 +102,27 @@
   .export-diff-list del { color: var(--danger); text-decoration: line-through; opacity: 0.7; }
   .export-diff-list ins { color: var(--success); text-decoration: none; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  .open-equip-btn { width: 100%; margin-top: 4px; }
+  .open-equip-btn .equip-edit-dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-left: 6px; }
+  .open-equip-btn.has-edits .equip-edit-dot { display: inline-block; }
+  #equipmentModal .export-panel { max-width: 760px; }
+  #equipmentBody { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .equip-class-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 3px solid var(--gold); border-radius: var(--radius); overflow: hidden; }
+  .equip-class-card.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .equip-class-card summary { list-style: none; cursor: pointer; padding: 9px 10px; display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; }
+  .equip-class-card summary::-webkit-details-marker { display: none; }
+  .equip-class-title { flex: 1; min-width: 0; font-size: 0.86rem; font-weight: bold; color: var(--title); }
+  .equip-class-chevron { flex-shrink: 0; color: var(--caption); font-size: 0.65rem; transition: transform 0.15s; }
+  .equip-class-card[open] .equip-class-chevron { transform: rotate(90deg); }
+  .equip-class-edit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; display: none; }
+  .equip-class-card.edited .equip-class-edit-dot { display: inline-block; }
+  .equip-class-body { padding: 2px 10px 10px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 6px; }
+  .equip-slot-title { font-size: 0.76rem; color: var(--gold); font-weight: bold; margin-top: 6px; }
+  .equip-tier-row { background: rgba(0,0,0,0.16); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .equip-tier-row.edited { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .equip-tier-head { display: flex; align-items: center; justify-content: space-between; }
+  .equip-tier-badge { font-size: 0.72rem; color: var(--caption); font-weight: bold; }
 </style>
 </head>
 <body>
@@ -149,6 +170,17 @@
   </div>
 </div>
 
+<div id="equipmentModal">
+  <div class="export-panel">
+    <h2>⚒️ 鍛冶屋の詳細編集(武器・防具)</h2>
+    <p class="hint">職業ごとの武器/防具、各5段階(強化するほど下段階)の解禁Lv・名前・増加ステータス・増加量・価格・必要素材を編集できます。閉じると通常のエクスポート画面に含まれます。</p>
+    <div id="equipmentBody"></div>
+    <div class="modal-actions">
+      <button id="closeEquipmentBtn" class="ghost">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // classUnlock: 建築で解禁される職業。侍/槍士/狩人/陰陽師は最初から雇えるためnull
 const BUILDING_DATA = {
@@ -186,6 +218,44 @@ const BUILDING_DATA = {
     upgradeMatsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 4, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 5 }],
   },
 };
+// 鍛冶屋の詳細編集用データ(data.jsのEQUIPMENTのスナップショット。編集ツールのベースライン、
+// ゲーム側の実データを変更した時は必ずここも同じ内容に同期させる)。8職業×武器/防具×5段階。
+// tier: { name, statKey(atk/def/mag), bonus(そのステータスへの加算量), price(G), level(解禁に必要なキャラクターLv), mats(必要素材) }
+const EQUIPMENT_DATA = {
+  samurai: {
+    weapon: [{ name: "業物の刀", statKey: "atk", bonus: 2, price: 20, level: 1, mats: { ki: 1 } }, { name: "業物の太刀", statKey: "atk", bonus: 4, price: 90, level: 3, mats: { tetsu: 6 } }, { name: "妖刀", statKey: "atk", bonus: 5, price: 125, level: 5, mats: { tetsu: 9 } }, { name: "鬼哭の刀", statKey: "atk", bonus: 6, price: 160, level: 7, mats: { tetsu: 14 } }, { name: "伝説の名刀", statKey: "atk", bonus: 7, price: 200, level: 9, mats: { tetsu: 21 } }],
+    armor: [{ name: "当世具足", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "強化当世具足", statKey: "def", bonus: 4, price: 70, level: 3, mats: { tetsu: 3, kawa: 3 } }, { name: "上級当世具足", statKey: "def", bonus: 6, price: 100, level: 5, mats: { tetsu: 4, kawa: 5 } }, { name: "鬼哭の甲冑", statKey: "def", bonus: 8, price: 130, level: 7, mats: { tetsu: 6, kawa: 8 } }, { name: "伝説の甲冑", statKey: "def", bonus: 10, price: 160, level: 9, mats: { tetsu: 10, kawa: 11 } }],
+  },
+  ninja: {
+    weapon: [{ name: "業物の苦無", statKey: "atk", bonus: 2, price: 20, level: 1, mats: { ki: 1 } }, { name: "改良苦無", statKey: "atk", bonus: 4, price: 90, level: 3, mats: { tetsu: 6 } }, { name: "影の苦無", statKey: "atk", bonus: 5, price: 120, level: 5, mats: { tetsu: 9 } }, { name: "月影の苦無", statKey: "atk", bonus: 6, price: 160, level: 7, mats: { tetsu: 14 } }, { name: "暁の苦無", statKey: "atk", bonus: 7, price: 195, level: 9, mats: { tetsu: 21 } }],
+    armor: [{ name: "強化忍び装束", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "精鋭忍び装束", statKey: "def", bonus: 4, price: 70, level: 3, mats: { kawa: 6 } }, { name: "上級忍び装束", statKey: "def", bonus: 6, price: 95, level: 5, mats: { kawa: 9 } }, { name: "月影の装束", statKey: "def", bonus: 8, price: 130, level: 7, mats: { kawa: 14 } }, { name: "暁の装束", statKey: "def", bonus: 10, price: 155, level: 9, mats: { kawa: 21 } }],
+  },
+  spearman: {
+    weapon: [{ name: "鍛えの槍", statKey: "atk", bonus: 2, price: 20, level: 1, mats: { ki: 1 } }, { name: "業物の槍", statKey: "atk", bonus: 3, price: 70, level: 3, mats: { tetsu: 3, ki: 3 } }, { name: "十文字槍", statKey: "atk", bonus: 4, price: 100, level: 5, mats: { tetsu: 5, ki: 4 } }, { name: "鬼殺しの槍", statKey: "atk", bonus: 5, price: 130, level: 7, mats: { tetsu: 8, ki: 6 } }, { name: "伝説の大槍", statKey: "atk", bonus: 6, price: 170, level: 9, mats: { tetsu: 12, ki: 9 } }],
+    armor: [{ name: "鉄の大盾", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "業物の大盾", statKey: "def", bonus: 4, price: 55, level: 3, mats: { tetsu: 4, kawa: 2 } }, { name: "強化大盾", statKey: "def", bonus: 6, price: 80, level: 5, mats: { tetsu: 5, kawa: 4 } }, { name: "鬼殺しの大盾", statKey: "def", bonus: 8, price: 105, level: 7, mats: { tetsu: 8, kawa: 6 } }, { name: "伝説の盾", statKey: "def", bonus: 10, price: 135, level: 9, mats: { tetsu: 12, kawa: 9 } }],
+  },
+  naginata: {
+    weapon: [{ name: "鍛えの薙刀", statKey: "atk", bonus: 2, price: 20, level: 1, mats: { ki: 1 } }, { name: "業物の薙刀", statKey: "atk", bonus: 3, price: 65, level: 3, mats: { tetsu: 3, ki: 3 } }, { name: "大薙刀", statKey: "atk", bonus: 4, price: 90, level: 5, mats: { tetsu: 5, ki: 4 } }, { name: "巴形の薙刀", statKey: "atk", bonus: 5, price: 120, level: 7, mats: { tetsu: 8, ki: 6 } }, { name: "伝説の薙刀", statKey: "atk", bonus: 6, price: 155, level: 9, mats: { tetsu: 12, ki: 9 } }],
+    armor: [{ name: "強化白鉢巻", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "強化具足", statKey: "def", bonus: 4, price: 50, level: 3, mats: { kawa: 4, tetsu: 2 } }, { name: "上級具足", statKey: "def", bonus: 6, price: 70, level: 5, mats: { kawa: 6, tetsu: 3 } }, { name: "巴形の装束", statKey: "def", bonus: 8, price: 95, level: 7, mats: { kawa: 9, tetsu: 5 } }, { name: "伝説の巫女装束", statKey: "def", bonus: 10, price: 125, level: 9, mats: { kawa: 14, tetsu: 7 } }],
+  },
+  hunter: {
+    weapon: [{ name: "鍛えの弓", statKey: "atk", bonus: 2, price: 20, level: 1, mats: { ki: 1 } }, { name: "業物の弓", statKey: "atk", bonus: 3, price: 70, level: 3, mats: { ki: 6 } }, { name: "強弓", statKey: "atk", bonus: 4, price: 100, level: 5, mats: { ki: 9 } }, { name: "鬼哭の弓", statKey: "atk", bonus: 5, price: 130, level: 7, mats: { ki: 14 } }, { name: "伝説の弓", statKey: "atk", bonus: 6, price: 170, level: 9, mats: { ki: 21 } }],
+    armor: [{ name: "強化猟師装束", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "精鋭猟師装束", statKey: "def", bonus: 4, price: 55, level: 3, mats: { kawa: 6 } }, { name: "上級猟師装束", statKey: "def", bonus: 6, price: 80, level: 5, mats: { kawa: 9 } }, { name: "鬼哭の猟師装束", statKey: "def", bonus: 8, price: 105, level: 7, mats: { kawa: 14 } }, { name: "伝説の猟師装束", statKey: "def", bonus: 10, price: 135, level: 9, mats: { kawa: 21 } }],
+  },
+  gunner: {
+    weapon: [{ name: "鍛えの火縄銃", statKey: "atk", bonus: 3, price: 30, level: 1, mats: { ki: 1 } }, { name: "業物の火縄銃", statKey: "atk", bonus: 4, price: 85, level: 3, mats: { tetsu: 4, ki: 2 } }, { name: "上級火縄銃", statKey: "atk", bonus: 6, price: 135, level: 5, mats: { tetsu: 6, ki: 3 } }, { name: "雷神の大筒", statKey: "atk", bonus: 7, price: 170, level: 7, mats: { tetsu: 10, ki: 4 } }, { name: "伝説の大筒", statKey: "atk", bonus: 8, price: 205, level: 9, mats: { tetsu: 15, ki: 6 } }],
+    armor: [{ name: "強化胴当て", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "精鋭胴当て", statKey: "def", bonus: 4, price: 70, level: 3, mats: { tetsu: 3, kawa: 3 } }, { name: "上級胴当て", statKey: "def", bonus: 6, price: 110, level: 5, mats: { tetsu: 4, kawa: 5 } }, { name: "雷神の胴当て", statKey: "def", bonus: 8, price: 135, level: 7, mats: { tetsu: 6, kawa: 8 } }, { name: "伝説の胴当て", statKey: "def", bonus: 10, price: 165, level: 9, mats: { tetsu: 9, kawa: 12 } }],
+  },
+  onmyoji: {
+    weapon: [{ name: "式神の御幣", statKey: "mag", bonus: 3, price: 35, level: 1, mats: { ki: 1 } }, { name: "精霊の御幣", statKey: "mag", bonus: 5, price: 110, level: 3, mats: { ki: 3, hone: 3 } }, { name: "上級御幣", statKey: "mag", bonus: 6, price: 140, level: 5, mats: { ki: 5, hone: 4 } }, { name: "秘伝の御幣", statKey: "mag", bonus: 8, price: 205, level: 7, mats: { ki: 7, hone: 7 } }, { name: "大陰陽の御幣", statKey: "mag", bonus: 9, price: 245, level: 9, mats: { ki: 11, hone: 10 } }],
+    armor: [{ name: "浄衣", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "精霊の浄衣", statKey: "def", bonus: 4, price: 90, level: 3, mats: { kawa: 4 } }, { name: "上級浄衣", statKey: "def", bonus: 6, price: 110, level: 5, mats: { kawa: 6 } }, { name: "秘伝の浄衣", statKey: "def", bonus: 8, price: 165, level: 7, mats: { kawa: 9 } }, { name: "大陰陽の浄衣", statKey: "def", bonus: 10, price: 195, level: 9, mats: { kawa: 14 } }],
+  },
+  priest: {
+    weapon: [{ name: "聖なる錫杖", statKey: "mag", bonus: 2, price: 25, level: 1, mats: { ki: 1 } }, { name: "高僧の錫杖", statKey: "mag", bonus: 4, price: 100, level: 3, mats: { tetsu: 3, ki: 3 } }, { name: "大僧正の錫杖", statKey: "mag", bonus: 5, price: 135, level: 5, mats: { tetsu: 4, ki: 5 } }, { name: "悟りの錫杖", statKey: "mag", bonus: 6, price: 170, level: 7, mats: { tetsu: 6, ki: 8 } }, { name: "神託の錫杖", statKey: "mag", bonus: 7, price: 215, level: 9, mats: { tetsu: 10, ki: 11 } }],
+    armor: [{ name: "法衣", statKey: "def", bonus: 2, price: 10, level: 1, mats: { kawa: 1 } }, { name: "高僧の法衣", statKey: "def", bonus: 4, price: 80, level: 3, mats: { kawa: 4 } }, { name: "大僧正の法衣", statKey: "def", bonus: 6, price: 110, level: 5, mats: { kawa: 6 } }, { name: "悟りの法衣", statKey: "def", bonus: 8, price: 135, level: 7, mats: { kawa: 9 } }, { name: "神託の法衣", statKey: "def", bonus: 10, price: 170, level: 9, mats: { kawa: 14 } }],
+  },
+};
+const CLASS_JA = { samurai: "侍", ninja: "忍", spearman: "槍士", naginata: "薙刀士", hunter: "狩人", gunner: "砲術士", onmyoji: "陰陽師", priest: "僧侶" };
 const CLASS_UNLOCK_OPTIONS = [
   { value: "", label: "なし" },
   { value: "naginata", label: "薙刀士" },
@@ -204,9 +274,10 @@ const EXTRA_FIELD_DEFS = {
   barricadeHpLv2: { label: "鉄杭柵(Lv2)の最大耐久", isPct: false },
 };
 
-let edits = { buildings: {}, house: {} };
+let edits = { buildings: {}, house: {}, equipment: {} };
 let activeSection = "buildings";
 let searchQuery = "";
+let openEquipClass = null; // 鍛冶屋モーダルで開いている職業ID(再描画時に開閉状態を保つ)
 
 function buildingIds() { return Object.keys(BUILDING_DATA.buildings); }
 function setBuildingEdit(id, field, value, original) {
@@ -233,12 +304,59 @@ function currentHouseValue(field, original) {
 function countEdits() {
   let n = Object.keys(edits.buildings).reduce((s, id) => s + Object.keys(edits.buildings[id]).length, 0);
   n += Object.keys(edits.house).length;
+  n += countEquipEdits();
   return n;
 }
 function sectionHasEdits(sec) {
-  if (sec === "buildings") return Object.keys(edits.buildings).length > 0;
+  if (sec === "buildings") return Object.keys(edits.buildings).length > 0 || isEquipEditedAny();
   if (sec === "house") return Object.keys(edits.house).length > 0;
   return false;
+}
+
+// ==== 鍛冶屋の詳細編集(EQUIPMENT_DATA、武器/防具の各段階) ====
+// edits.equipment = { classId: { weapon: { tierIdx: {field: value} }, armor: {...} } }
+function equipSlotEdits(classId, slot) {
+  edits.equipment[classId] = edits.equipment[classId] || {};
+  edits.equipment[classId][slot] = edits.equipment[classId][slot] || {};
+  return edits.equipment[classId][slot];
+}
+function setEquipEdit(classId, slot, idx, field, value, original) {
+  const se = equipSlotEdits(classId, slot);
+  se[idx] = se[idx] || {};
+  if (JSON.stringify(value) === JSON.stringify(original)) delete se[idx][field];
+  else se[idx][field] = value;
+  if (Object.keys(se[idx]).length === 0) delete se[idx];
+  if (Object.keys(se).length === 0) delete edits.equipment[classId][slot];
+  if (edits.equipment[classId] && Object.keys(edits.equipment[classId]).length === 0) delete edits.equipment[classId];
+  refreshEditCount();
+}
+function currentEquipValue(classId, slot, idx, field, original) {
+  const se = edits.equipment[classId] && edits.equipment[classId][slot];
+  const e = se && se[idx];
+  return e && Object.prototype.hasOwnProperty.call(e, field) ? e[field] : original;
+}
+function isEquipTierEdited(classId, slot, idx) {
+  const se = edits.equipment[classId] && edits.equipment[classId][slot];
+  return !!(se && se[idx] && Object.keys(se[idx]).length);
+}
+function isEquipClassEdited(classId) { return !!(edits.equipment[classId] && Object.keys(edits.equipment[classId]).length); }
+function isEquipEditedAny() { return Object.keys(edits.equipment).length > 0; }
+function resetEquipTier(classId, slot, idx) {
+  const se = edits.equipment[classId] && edits.equipment[classId][slot];
+  if (!se) return;
+  delete se[idx];
+  if (Object.keys(se).length === 0) delete edits.equipment[classId][slot];
+  if (edits.equipment[classId] && Object.keys(edits.equipment[classId]).length === 0) delete edits.equipment[classId];
+}
+function countEquipEdits() {
+  let n = 0;
+  Object.keys(edits.equipment).forEach((cid) => {
+    ["weapon", "armor"].forEach((slot) => {
+      const se = edits.equipment[cid][slot] || {};
+      Object.keys(se).forEach((idx) => { n += Object.keys(se[idx]).length; });
+    });
+  });
+  return n;
 }
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -315,6 +433,7 @@ function buildBuildingCard(id) {
           ${matsCosts.map((m, i) => `<div class="mats-level-row">${matsCosts.length > 1 ? `<span class="mats-level-label">Lv${i + 1}</span>` : ""}${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-mats-index="${i}" data-mats-id="${mid}" value="${m[mid] || 0}" min="0"></span>`).join("")}<span class="wood-hint">木の案:${suggestWood(costs[i])}</span></div>`).join("")}
         </div>
       </div>
+      ${id === "shop" ? `<button type="button" id="openEquipmentBtn" class="open-equip-btn small${isEquipEditedAny() ? " has-edits" : ""}">⚒️ 武器・防具の詳細を編集(職業別・段階ごと)<span class="equip-edit-dot"></span></button>` : ""}
       ${src.extra ? buildExtraFieldsHtml(id, src.extra) : ""}
       <div class="building-actions">
         <button type="button" class="reset-btn">↺ 元に戻す</button>
@@ -369,6 +488,8 @@ function buildBuildingCard(id) {
     });
   }
   node.querySelector(".reset-btn").addEventListener("click", (e) => { e.preventDefault(); resetBuilding(id); });
+  const openEquipBtn = node.querySelector("#openEquipmentBtn");
+  if (openEquipBtn) openEquipBtn.addEventListener("click", (e) => { e.preventDefault(); openEquipmentModal(); });
   return node;
 }
 function buildExtraFieldsHtml(id, extraOriginal) {
@@ -381,6 +502,135 @@ function buildExtraFieldsHtml(id, extraOriginal) {
   }).join("");
   return `<div class="extra-fields-title">この施設固有の数値</div>${rows}`;
 }
+
+function refreshShopEquipDot() {
+  const btn = document.getElementById("openEquipmentBtn");
+  if (btn) btn.classList.toggle("has-edits", isEquipEditedAny());
+}
+function buildEquipTierRow(classId, slot, idx, tierSrc) {
+  const name = currentEquipValue(classId, slot, idx, "name", tierSrc.name);
+  const statKey = currentEquipValue(classId, slot, idx, "statKey", tierSrc.statKey);
+  const bonus = currentEquipValue(classId, slot, idx, "bonus", tierSrc.bonus);
+  const price = currentEquipValue(classId, slot, idx, "price", tierSrc.price);
+  const level = currentEquipValue(classId, slot, idx, "level", tierSrc.level);
+  const mats = currentEquipValue(classId, slot, idx, "mats", tierSrc.mats) || {};
+  const row = document.createElement("div");
+  row.className = "equip-tier-row" + (isEquipTierEdited(classId, slot, idx) ? " edited" : "");
+  row.innerHTML = `
+    <div class="equip-tier-head">
+      <span class="equip-tier-badge">${idx + 1}段階目</span>
+      <button type="button" class="reset-btn" style="${isEquipTierEdited(classId, slot, idx) ? "display:inline-block;" : ""}">↺ 元に戻す</button>
+    </div>
+    <div class="field-pair">
+      <div class="field-row" style="flex:0 0 70px;">
+        <label>解禁Lv</label>
+        <input type="number" data-f="level" value="${level}" min="1">
+      </div>
+      <div class="field-row">
+        <label>名前</label>
+        <input type="text" data-f="name" value="${escapeHtml(name)}">
+      </div>
+    </div>
+    <div class="field-pair">
+      <div class="field-row" style="flex:0 0 84px;">
+        <label>ステータス</label>
+        <select data-f="statKey">
+          <option value="atk" ${statKey === "atk" ? "selected" : ""}>攻撃力</option>
+          <option value="def" ${statKey === "def" ? "selected" : ""}>防御力</option>
+          <option value="mag" ${statKey === "mag" ? "selected" : ""}>魔力</option>
+        </select>
+      </div>
+      <div class="field-row" style="flex:0 0 76px;">
+        <label>増加量</label>
+        <input type="number" data-f="bonus" value="${bonus}" min="0">
+      </div>
+      <div class="field-row" style="flex:0 0 90px;">
+        <label>価格(G)</label>
+        <input type="number" data-f="price" value="${price}" min="0">
+      </div>
+    </div>
+    <div class="mats-level-row">
+      ${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-mat="${mid}" value="${mats[mid] || 0}" min="0"></span>`).join("")}
+    </div>
+  `;
+  ["level", "name", "statKey", "bonus", "price"].forEach((f) => {
+    const el = row.querySelector(`[data-f="${f}"]`);
+    el.addEventListener("input", () => {
+      let v = el.value;
+      if (f === "level" || f === "bonus" || f === "price") v = v === "" ? tierSrc[f] : Number(v);
+      setEquipEdit(classId, slot, idx, f, v, tierSrc[f]);
+      row.classList.toggle("edited", isEquipTierEdited(classId, slot, idx));
+      row.querySelector(".reset-btn").style.display = isEquipTierEdited(classId, slot, idx) ? "inline-block" : "none";
+      row.closest(".equip-class-card").classList.toggle("edited", isEquipClassEdited(classId));
+      row.closest(".equip-class-card").querySelector(".equip-class-edit-dot").style.display = isEquipClassEdited(classId) ? "inline-block" : "none";
+      refreshShopEquipDot();
+    });
+  });
+  row.querySelectorAll("[data-mat]").forEach((el) => {
+    const mid = el.dataset.mat;
+    el.addEventListener("input", () => {
+      const newMats = Object.assign({}, mats);
+      newMats[mid] = el.value === "" ? 0 : Number(el.value);
+      setEquipEdit(classId, slot, idx, "mats", newMats, tierSrc.mats || {});
+      row.classList.toggle("edited", isEquipTierEdited(classId, slot, idx));
+      row.querySelector(".reset-btn").style.display = isEquipTierEdited(classId, slot, idx) ? "inline-block" : "none";
+      row.closest(".equip-class-card").classList.toggle("edited", isEquipClassEdited(classId));
+      row.closest(".equip-class-card").querySelector(".equip-class-edit-dot").style.display = isEquipClassEdited(classId) ? "inline-block" : "none";
+      refreshShopEquipDot();
+    });
+  });
+  row.querySelector(".reset-btn").addEventListener("click", (e) => {
+    e.preventDefault();
+    resetEquipTier(classId, slot, idx);
+    refreshEquipmentModal();
+    refreshEditCount();
+    refreshShopEquipDot();
+  });
+  return row;
+}
+function buildEquipmentBody() {
+  const wrap = document.createElement("div");
+  wrap.style.display = "flex";
+  wrap.style.flexDirection = "column";
+  wrap.style.gap = "6px";
+  Object.keys(EQUIPMENT_DATA).forEach((classId) => {
+    const det = document.createElement("details");
+    det.className = "equip-class-card" + (isEquipClassEdited(classId) ? " edited" : "");
+    if (openEquipClass === classId) det.open = true;
+    det.addEventListener("toggle", () => { openEquipClass = det.open ? classId : (openEquipClass === classId ? null : openEquipClass); });
+    det.innerHTML = `
+      <summary>
+        <span class="equip-class-title">${escapeHtml(CLASS_JA[classId])}</span>
+        <span class="equip-class-edit-dot" style="${isEquipClassEdited(classId) ? "display:inline-block;" : ""}"></span>
+        <span class="equip-class-chevron">▶</span>
+      </summary>
+      <div class="equip-class-body"></div>
+    `;
+    const bodyEl = det.querySelector(".equip-class-body");
+    ["weapon", "armor"].forEach((slot) => {
+      const title = document.createElement("div");
+      title.className = "equip-slot-title";
+      title.textContent = slot === "weapon" ? "武器" : "防具";
+      bodyEl.appendChild(title);
+      EQUIPMENT_DATA[classId][slot].forEach((tierSrc, idx) => bodyEl.appendChild(buildEquipTierRow(classId, slot, idx, tierSrc)));
+    });
+    wrap.appendChild(det);
+  });
+  return wrap;
+}
+function refreshEquipmentModal() {
+  const body = document.getElementById("equipmentBody");
+  body.innerHTML = "";
+  body.appendChild(buildEquipmentBody());
+}
+function openEquipmentModal() {
+  refreshEquipmentModal();
+  document.getElementById("equipmentModal").classList.add("open");
+}
+document.getElementById("closeEquipmentBtn").addEventListener("click", () => {
+  document.getElementById("equipmentModal").classList.remove("open");
+  renderMain(); // 建築リストの鍛冶屋カードの編集ドットを更新するため再描画
+});
 
 function matchesSearch(id) {
   if (!searchQuery) return true;
@@ -395,7 +645,7 @@ function renderBuildingsSection() {
   const container = document.createElement("div");
   const note = document.createElement("div");
   note.className = "section-note";
-  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な素材」は素材経済の要求数(皮/骨/木/鉄、ゲーム側は未実装。値を決めてエクスポートすると実装に反映されます)。「木の案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。";
+  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な素材」は素材経済の要求数(皮/骨/木/鉄、ゲーム側は未実装。値を決めてエクスポートすると実装に反映されます)。「木の案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。鍛冶屋カードの「⚒️ 武器・防具の詳細を編集」から、職業ごとの武器/防具5段階(解禁Lv・名前・ステータス・増加量・価格・必要素材)を編集できます。";
   container.appendChild(note);
   const ids = buildingIds().filter(matchesSearch);
   if (!ids.length) {
@@ -520,7 +770,7 @@ document.getElementById("searchBox").addEventListener("input", (e) => { searchQu
 document.getElementById("resetAllBtn").addEventListener("click", () => {
   if (countEdits() === 0) return;
   if (!confirm("全ての編集内容を破棄します。よろしいですか？")) return;
-  edits = { buildings: {}, house: {} };
+  edits = { buildings: {}, house: {}, equipment: {} };
   renderMain();
 });
 
@@ -529,6 +779,7 @@ function buildExportData() {
   const out = {};
   if (Object.keys(edits.buildings).length) out.buildings = edits.buildings;
   if (Object.keys(edits.house).length) out.house = edits.house;
+  if (Object.keys(edits.equipment).length) out.equipment = edits.equipment;
   return out;
 }
 function buildDiffListHtml() {
@@ -547,6 +798,17 @@ function buildDiffListHtml() {
     const fieldLines = Object.keys(edits.house).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(BUILDING_DATA.house[f]))}</del> → <ins>${escapeHtml(JSON.stringify(edits.house[f]))}</ins></div>`).join("");
     parts.push(`<div class="diff-item"><div class="diff-title">✎ 家(住居)設定</div>${fieldLines}</div>`);
   }
+  Object.keys(edits.equipment).forEach((classId) => {
+    ["weapon", "armor"].forEach((slot) => {
+      const se = edits.equipment[classId][slot] || {};
+      Object.keys(se).forEach((idx) => {
+        const fields = se[idx];
+        const src = EQUIPMENT_DATA[classId][slot][idx];
+        const fieldLines = Object.keys(fields).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(src[f]))}</del> → <ins>${escapeHtml(JSON.stringify(fields[f]))}</ins></div>`).join("");
+        parts.push(`<div class="diff-item"><div class="diff-title">✎ ${escapeHtml(CLASS_JA[classId])}${slot === "weapon" ? "武器" : "防具"}${Number(idx) + 1}段階目(${escapeHtml(src.name)})</div>${fieldLines}</div>`);
+      });
+    });
+  });
   return parts.length ? parts.join("") : '<div class="empty-hint">まだ編集がありません</div>';
 }
 document.getElementById("exportBtn").addEventListener("click", () => {
@@ -591,6 +853,16 @@ document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
   try {
     Object.keys(parsed.buildings || {}).forEach((id) => { edits.buildings[id] = Object.assign({}, edits.buildings[id] || {}, parsed.buildings[id]); });
     Object.assign(edits.house, parsed.house || {});
+    Object.keys(parsed.equipment || {}).forEach((classId) => {
+      edits.equipment[classId] = edits.equipment[classId] || {};
+      ["weapon", "armor"].forEach((slot) => {
+        if (!parsed.equipment[classId][slot]) return;
+        edits.equipment[classId][slot] = Object.assign({}, edits.equipment[classId][slot] || {});
+        Object.keys(parsed.equipment[classId][slot]).forEach((idx) => {
+          edits.equipment[classId][slot][idx] = Object.assign({}, edits.equipment[classId][slot][idx] || {}, parsed.equipment[classId][slot][idx]);
+        });
+      });
+    });
     statusEl.textContent = "読み込みました";
     statusEl.style.color = "var(--success)";
     renderMain();

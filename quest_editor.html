@@ -73,6 +73,11 @@
   .field-row.checkbox-row input { width: 16px; height: 16px; flex-shrink: 0; }
   .field-row.checkbox-row label { font-size: 0.78rem; color: var(--body); }
   .reward-hint { font-size: 0.68rem; color: var(--caption); }
+  .mats-level-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mats-cell { display: inline-flex; align-items: center; gap: 3px; }
+  .mats-cell img { width: 20px; height: 20px; object-fit: contain; }
+  .mats-cell input { width: 46px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.85rem; padding: 6px 4px; text-align: right; }
+  .mats-cell input:focus { outline: none; border-color: var(--gold); }
   .quest-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
   .quest-actions-left { display: flex; gap: 8px; }
   .del-btn { font-size: 0.68rem; padding: 4px 8px; background: transparent; border-color: var(--danger); color: var(--danger); }
@@ -163,6 +168,9 @@ const CONST_DEFS = [
   { key: "BOSS_PURSUIT_ENCOUNTER_CHANCE", name: "ボス追撃の遭遇率", desc: "逃走したボスが以後フロア移動のたびに追いついてくる確率", isPct: true },
 ];
 
+const MAT_IDS = ["kawa", "hone", "ki", "tetsu"];
+const MAT_LABEL = { kawa: "皮", hone: "骨", ki: "木", tetsu: "鉄" };
+
 let edits = { quests: {}, rescue: {}, constants: {} };
 let addedQuests = {}; // id -> フルの依頼オブジェクト(新規追加分)
 let deletedQuestIds = new Set();
@@ -186,7 +194,8 @@ function questSource(id) { return isNewQuest(id) ? addedQuests[id] : QUEST_DATA.
 function setQuestEdit(id, field, value, original) {
   if (isNewQuest(id)) { addedQuests[id][field] = value; return; }
   edits.quests[id] = edits.quests[id] || {};
-  if (value === original || (value === "" && (original === undefined || original === null))) delete edits.quests[id][field];
+  // rewardMaterialsはオブジェクト値のため単純な===比較ではなくJSON文字列化して比較する(値は変わらない)
+  if (JSON.stringify(value) === JSON.stringify(original) || (value === "" && (original === undefined || original === null))) delete edits.quests[id][field];
   else edits.quests[id][field] = value;
   if (Object.keys(edits.quests[id]).length === 0) delete edits.quests[id];
 }
@@ -202,7 +211,7 @@ function resetQuest(id) {
   refreshAll();
 }
 function setRescueEdit(field, value, original) {
-  if (value === original) delete edits.rescue[field];
+  if (JSON.stringify(value) === JSON.stringify(original)) delete edits.rescue[field];
   else edits.rescue[field] = value;
 }
 function currentRescueValue(field, original) {
@@ -253,6 +262,7 @@ function buildQuestCard(id) {
   const chaseText = currentQuestValue(id, "chaseText", src.chaseText);
   const requiresOoInoshishi = !!currentQuestValue(id, "requiresOoInoshishi", src.requiresOoInoshishi);
   const minQuestClears = currentQuestValue(id, "minQuestClears", src.minQuestClears);
+  const rewardMaterials = currentQuestValue(id, "rewardMaterials", src.rewardMaterials) || {};
   const edited = isQuestEdited(id);
   const node = document.createElement("details");
   node.className = "quest-card tier" + tier + (edited ? " edited" : "") + (deleted ? " deleted" : "");
@@ -305,6 +315,12 @@ function buildQuestCard(id) {
         <label>固定報酬金(rewardGold、空欄なら目標階層から自動計算)</label>
         <input type="number" data-field="rewardGold" value="${rewardGold != null ? rewardGold : ""}" placeholder="自動計算" min="0">
         <span class="reward-hint">空欄時の自動計算額: 目標階層 × QUEST_GOLD_PER_FLOOR × QUEST_REWARD_MULT(下の「全体設定」タブ参照)</span>
+      </div>
+      <div class="field-row">
+        <label>報酬素材(rewardMaterials、任意。0のままなら素材報酬なし)</label>
+        <div class="mats-level-row">
+          ${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-quest-mats-id="${mid}" value="${rewardMaterials[mid] || 0}" min="0"></span>`).join("")}
+        </div>
       </div>
       <div class="field-pair">
         <div class="field-row">
@@ -363,6 +379,16 @@ function buildQuestCard(id) {
   tierSelect.addEventListener("change", () => {
     setQuestEdit(id, "tier", Number(tierSelect.value), src.tier);
     renderMain(); // タブが変わるので全体再描画
+  });
+  node.querySelectorAll("[data-quest-mats-id]").forEach((el) => {
+    const mid = el.dataset.questMatsId;
+    el.addEventListener("input", () => {
+      const newMats = Object.assign({}, rewardMaterials);
+      newMats[mid] = el.value === "" ? 0 : Number(el.value);
+      setQuestEdit(id, "rewardMaterials", newMats, src.rewardMaterials || {});
+      node.classList.toggle("edited", isQuestEdited(id));
+      refreshEditCount();
+    });
   });
   const requiresCheckbox = node.querySelector('[data-field="requiresOoInoshishi"]');
   requiresCheckbox.addEventListener("change", () => {
@@ -433,6 +459,7 @@ function renderRescueSection() {
   const targetFloor = currentRescueValue("targetFloor", src.targetFloor);
   const rewardGold = currentRescueValue("rewardGold", src.rewardGold);
   const itemName = currentRescueValue("itemName", src.itemName);
+  const rewardMaterials = currentRescueValue("rewardMaterials", src.rewardMaterials) || {};
   const edited = Object.keys(edits.rescue).length > 0;
   const card = document.createElement("div");
   card.className = "quest-card" + (edited ? " edited" : "");
@@ -476,6 +503,12 @@ function renderRescueSection() {
           <input type="text" data-field="itemName" value="${escapeHtml(itemName)}">
         </div>
       </div>
+      <div class="field-row">
+        <label>報酬素材(rewardMaterials、任意。0のままなら素材報酬なし)</label>
+        <div class="mats-level-row">
+          ${MAT_IDS.map((mid) => `<span class="mats-cell"><img src="assets/icons/materials/${mid}.png" alt="${MAT_LABEL[mid]}"><input type="number" data-rescue-mats-id="${mid}" value="${rewardMaterials[mid] || 0}" min="0"></span>`).join("")}
+        </div>
+      </div>
       <button type="button" class="reset-btn" style="${edited ? "display:inline-block;" : ""}">↺ 元に戻す</button>
     </div>
   `;
@@ -488,6 +521,17 @@ function renderRescueSection() {
       let v = el.value;
       if (numeric) v = v === "" ? src[f] : Number(v);
       setRescueEdit(f, v, src[f]);
+      card.classList.toggle("edited", Object.keys(edits.rescue).length > 0);
+      card.querySelector(".reset-btn").style.display = Object.keys(edits.rescue).length > 0 ? "inline-block" : "none";
+      refreshEditCount();
+    });
+  });
+  card.querySelectorAll("[data-rescue-mats-id]").forEach((el) => {
+    const mid = el.dataset.rescueMatsId;
+    el.addEventListener("input", () => {
+      const newMats = Object.assign({}, rewardMaterials);
+      newMats[mid] = el.value === "" ? 0 : Number(el.value);
+      setRescueEdit("rewardMaterials", newMats, src.rewardMaterials || {});
       card.classList.toggle("edited", Object.keys(edits.rescue).length > 0);
       card.querySelector(".reset-btn").style.display = Object.keys(edits.rescue).length > 0 ? "inline-block" : "none";
       refreshEditCount();
