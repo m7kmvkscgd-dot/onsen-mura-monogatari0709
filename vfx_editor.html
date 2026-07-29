@@ -118,8 +118,10 @@
     別枠で割り当てられます。状態異常は敵にも味方にも起こり得ますが、実戦では敵が受ける場面の方が多いため
     既定は「敵」側のプレビューです(「敵に出す/自分に出す」で切替可)。毒・出血は本体側で蓄積値そのものがダメージ量
     (戦闘中いくらでも積み上がり、1ターンごとに-1)、炎上は蓄積ではなく残りターン数(固定割合ダメージ)という
-    違う仕組みなので、「蓄積で拡大」スライダーで指定した%ずつ、蓄積/残りターンが1増えるごとにVFXが大きくなるよう
-    調整できます(プレビュー蓄積スライダーで実際の見た目を確認可)。今のengine.js/effects.jsには毒/出血/炎上の
+    違う仕組みなので、「蓄積レベル」スライダーは毒/出血選択時は「蓄積値」、炎上選択時は「残りターン数」を意味します。
+    自動での拡大は行いません。同じ状態異常でもレベルごとに全く別のVFX・大きさ・位置を手動で個別に保存できるので、
+    レベルに応じて派手にしたい場合はレベルを変えてそのつど大きさ・位置を自分で調整して保存してください(自動計算だと
+    地面などの基準位置がズレるため、意図的に手動調整のみにしています)。今のengine.js/effects.jsには毒/出血/炎上の
     ダメージ処理にVFX再生の呼び出し自体が無い(状態異常アイコンの表示のみ)ため、実際にゲームへ反映するには
     ダメージ処理側に新規の呼び出しを追加する対応が必要です。</p>
   </details>
@@ -196,18 +198,15 @@
         <input type="range" id="frameMsSlider" min="10" max="120" value="30">
         <span class="val" id="frameMsVal" style="flex:0 0 74px;">30ms/コマ</span>
       </div>
-      <div id="stackScaleBlock" style="display:none; border-top:1px dashed rgba(255,255,255,0.12); padding-top:8px; margin-top:2px;">
+      <div id="stackLevelBlock" style="display:none; border-top:1px dashed rgba(255,255,255,0.12); padding-top:8px; margin-top:2px;">
         <div class="slider-row">
-          <label>蓄積で拡大</label>
-          <input type="range" id="stackScaleSlider" min="0" max="30" value="8">
-          <span class="val" id="stackScaleVal" style="flex:0 0 66px;">+8%/段</span>
+          <label id="stackLevelLabel">蓄積レベル</label>
+          <input type="range" id="stackLevelSlider" min="1" max="15" value="1">
+          <span class="val" id="stackLevelVal" style="flex:0 0 66px;">Lv1</span>
         </div>
-        <div class="slider-row">
-          <label id="stackPreviewLabel">プレビュー蓄積</label>
-          <input type="range" id="stackPreviewSlider" min="1" max="15" value="1">
-          <span class="val" id="stackPreviewVal" style="flex:0 0 66px;">1</span>
-        </div>
-        <p class="note" style="margin:2px 0 0;">毒/出血は蓄積値そのものがダメージ量(戦闘中いくらでも積み上がる)、炎上は蓄積ではなく残りターン数です。ここで指定した%ずつ、蓄積/残りターンが1増えるごとに大きさが拡大します(プレビュー蓄積スライダーで実際の見た目を確認できます)。</p>
+        <p class="note" style="margin:2px 0 0;">自動での拡大はしません。ここでレベルを選び、そのレベル専用のVFX・大きさ・位置を上の項目で個別に決めて保存してください
+        (レベルごとに別々の割り当てとして保存されます。位置合わせが自動計算だと地面などとズレるため、レベルごとに手動で調整する仕様です)。
+        毒/出血は蓄積値そのもの、炎上は残りターン数がこの「レベル」に対応します。</p>
       </div>
       <div class="playback-row">
         <button class="small" id="replayBtn">▶ 再生し直す</button>
@@ -356,26 +355,27 @@ const skillCol = document.getElementById("skillCol");
 const ailmentCol = document.getElementById("ailmentCol");
 const targetToggle = document.getElementById("targetToggle");
 const ailmentTargetNote = document.getElementById("ailmentTargetNote");
-const stackScaleBlock = document.getElementById("stackScaleBlock");
+const stackLevelBlock = document.getElementById("stackLevelBlock");
 const ailmentSelect = document.getElementById("ailmentSelect");
-const stackScaleSlider = document.getElementById("stackScaleSlider");
-const stackScaleVal = document.getElementById("stackScaleVal");
-const stackPreviewSlider = document.getElementById("stackPreviewSlider");
-const stackPreviewVal = document.getElementById("stackPreviewVal");
-const stackPreviewLabel = document.getElementById("stackPreviewLabel");
+const stackLevelSlider = document.getElementById("stackLevelSlider");
+const stackLevelVal = document.getElementById("stackLevelVal");
+const stackLevelLabel = document.getElementById("stackLevelLabel");
 
 // 状態異常(毒/出血/炎上)は敵にも味方にも起こり得るが、実戦では敵が受ける場面の方が
 // 圧倒的に多い(ユーザー指摘)ため、状態異常モードの既定ターゲットは"enemy"にする
 // (職業×スキルモードはスキルのkindから自動判定するdefaultTargetForSkillのまま)。
 // 敵/自分の切替トグル自体は両モード共通でずっと表示したままにする
 function defaultTargetForAilment() { return "enemy"; }
+// 蓄積/残りターンに応じた拡大は自動計算では行わない(ユーザー指摘: 自動で拡大すると
+// 位置が地面などとズレる)。代わりに「蓄積レベル」を1〜15の中から選び、そのレベルごとに
+// VFX・大きさ・位置を個別に手動で決めて保存する(レベルはassignKeyの一部として扱う)
 function applyAssignModeUi() {
   const isAilment = assignMode === "ailment";
   skillCol.style.display = isAilment ? "none" : "";
   ailmentCol.style.display = isAilment ? "" : "none";
   ailmentTargetNote.style.display = isAilment ? "" : "none";
-  stackScaleBlock.style.display = isAilment ? "" : "none";
-  stackPreviewLabel.textContent = (isAilment && ailmentSelect.value === "burn") ? "プレビュー残りターン" : "プレビュー蓄積";
+  stackLevelBlock.style.display = isAilment ? "" : "none";
+  stackLevelLabel.textContent = (isAilment && ailmentSelect.value === "burn") ? "残りターン" : "蓄積レベル";
   document.getElementById("targetEnemyHint").textContent = isAilment ? "(状態異常を受けている敵)" : "(攻撃・デバフ)";
   document.getElementById("targetSelfHint").textContent = isAilment ? "(状態異常を受けている味方)" : "(自己バフ・心眼など)";
 }
@@ -393,22 +393,10 @@ ailmentSelect.addEventListener("change", () => {
   applyAssignModeUi();
   syncStageToCurrentSelection();
 });
-stackScaleSlider.addEventListener("input", (e) => {
-  stackScaleVal.textContent = `+${e.target.value}%/段`;
-  playVfx();
+stackLevelSlider.addEventListener("input", (e) => {
+  stackLevelVal.textContent = `Lv${e.target.value}`;
+  syncStageToCurrentSelection();
 });
-stackPreviewSlider.addEventListener("input", (e) => {
-  stackPreviewVal.textContent = e.target.value;
-  playVfx();
-});
-// 状態異常モードの時だけ、蓄積/残りターン数に応じてプレビュー上のサイズを拡大する。
-// 職業×スキルモードでは常にstageSizeそのまま(ブロック自体が非表示なのでスライダーは無関係)
-function effectiveStageSize() {
-  if (assignMode !== "ailment") return stageSize;
-  const pct = Number(stackScaleSlider.value) || 0;
-  const level = Number(stackPreviewSlider.value) || 1;
-  return Math.round(stageSize * (1 + (level - 1) * pct / 100));
-}
 
 function updateCardPortrait() {
   const isEnemy = currentTarget() === "enemy";
@@ -455,7 +443,6 @@ function selectVfx(v) {
     document.getElementById("blendScreenCheck").checked = resolveBlendScreen(a, v);
     setFrameMsUi(a.frameMs || 30);
     setTargetUi(a.target || (assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value)));
-    stackScaleSlider.value = a.stackScalePct != null ? a.stackScalePct : 8;
   } else {
     stageSize = 120; stageOffset = { x: 0, y: 0 };
     // 既定値はsource(データの出どころ)で判断する。spritesheet(flipbooksの元TGA)は
@@ -465,11 +452,7 @@ function selectVfx(v) {
     document.getElementById("blendScreenCheck").checked = v.source === "spritesheet";
     setFrameMsUi(30); // 本体既定のATTACK_VFX_FRAME_MSと同じ
     setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
-    stackScaleSlider.value = 8;
   }
-  stackScaleVal.textContent = `+${stackScaleSlider.value}%/段`;
-  stackPreviewSlider.value = 1;
-  stackPreviewVal.textContent = "1";
   document.getElementById("hitstopCheck").checked = false; // ヒットストップ再現はプレビュー専用のフラグなので毎回OFFに戻す
   document.getElementById("sizeSlider").value = stageSize;
   document.getElementById("sizeVal").textContent = stageSize + "px";
@@ -521,11 +504,10 @@ function playVfx() {
   layer.innerHTML = "";
   const img = document.createElement("img");
   const ratio = selectedVfx.cellH / selectedVfx.cellW;
-  const effSize = effectiveStageSize();
-  img.style.width = effSize + "px";
-  img.style.height = Math.round(effSize * ratio) + "px";
-  img.style.marginLeft = -(effSize / 2) + "px";
-  img.style.marginTop = -(Math.round(effSize * ratio) / 2) + "px";
+  img.style.width = stageSize + "px";
+  img.style.height = Math.round(stageSize * ratio) + "px";
+  img.style.marginLeft = -(stageSize / 2) + "px";
+  img.style.marginTop = -(Math.round(stageSize * ratio) / 2) + "px";
   img.classList.toggle("blend-screen", document.getElementById("blendScreenCheck").checked);
   layer.appendChild(img);
   currentVfxImg = img;
@@ -614,29 +596,25 @@ document.getElementById("offsetYInput").addEventListener("input", (e) => { stage
 })();
 
 // ==== 割り当ての保存/読み込み ====
+// 状態異常モードは「毒/出血/炎上」に加えて「蓄積レベル(1〜15)」もキーの一部にする。
+// 同じ状態異常でもレベルごとに全く別のVFX・大きさ・位置を個別に保存できる(自動拡大はしない)
 function assignKey() {
-  if (assignMode === "ailment") return `__ailment__:${ailmentSelect.value}`;
+  if (assignMode === "ailment") return `__ailment__:${ailmentSelect.value}:${stackLevelSlider.value}`;
   return `${classSelect.value}:${skillSelect.value}`;
 }
-// 職業/スキルの選択を切り替えた時に呼ぶ。その組み合わせに保存済みの割り当てがあれば
-// VFX選択・大きさ・位置を全部復元してプレビューし直す(以前はVFXの選び直しを忘れて
+// 職業/スキル(またはレベル)の選択を切り替えた時に呼ぶ。その組み合わせに保存済みの割り当てが
+// あればVFX選択・大きさ・位置を全部復元してプレビューし直す(以前はVFXの選び直しを忘れて
 // 位置だけ古いVFXに適用してしまうバグがあった)。保存済みが無ければ何もしない(今の
 // 選択中VFXをいじっている途中かもしれないので、勝手にリセットはしない)
-function resetStackScaleUi() {
-  stackScaleSlider.value = 8; stackScaleVal.textContent = "+8%/段";
-  stackPreviewSlider.value = 1; stackPreviewVal.textContent = "1";
-}
 function syncStageToCurrentSelection() {
   const a = assignments[assignKey()];
   if (!a) {
     setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
-    resetStackScaleUi();
     return;
   }
   const vfx = findVfxById(a.vfxId);
   if (!vfx) {
     setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
-    resetStackScaleUi();
     return;
   }
   selectedVfx = vfx;
@@ -648,10 +626,6 @@ function syncStageToCurrentSelection() {
   setFrameMsUi(a.frameMs || 30);
   document.getElementById("hitstopCheck").checked = false;
   setTargetUi(a.target || (assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value)));
-  stackScaleSlider.value = a.stackScalePct != null ? a.stackScalePct : 8;
-  stackScaleVal.textContent = `+${stackScaleSlider.value}%/段`;
-  stackPreviewSlider.value = 1;
-  stackPreviewVal.textContent = "1";
   setOffsetInputs();
   renderLibList();
   updateCardPortrait();
@@ -672,8 +646,8 @@ document.getElementById("saveAssignBtn").addEventListener("click", () => {
     assignments[assignKey()] = {
       ...common,
       mode: "ailment", ailmentId: aid, ailmentLabel: AILMENT_DEFS[aid].label,
+      stackLevel: Number(stackLevelSlider.value) || 1,
       target: currentTarget(),
-      stackScalePct: Number(stackScaleSlider.value) || 0,
     };
   } else {
     const cid = classSelect.value, sid = skillSelect.value;
@@ -701,14 +675,13 @@ function renderAssignList() {
     el.className = "assign-item";
     const isAilment = a.mode === "ailment";
     const whoText = isAilment
-      ? esc((AILMENT_DEFS[a.ailmentId] && AILMENT_DEFS[a.ailmentId].label) || a.ailmentLabel || a.ailmentId)
+      ? `${esc((AILMENT_DEFS[a.ailmentId] && AILMENT_DEFS[a.ailmentId].label) || a.ailmentLabel || a.ailmentId)} Lv${a.stackLevel || 1}`
       : `${esc(a.classLabel)} / ${esc(a.skillLabel)}`;
-    const stackText = isAilment ? ` ・ 蓄積+${a.stackScalePct || 0}%/段` : "";
     el.innerHTML = `
       <img src="${esc(thumb)}" onerror="this.style.visibility='hidden'">
       <div class="info">
         <div class="who">${whoText}</div>
-        <div class="what">${a.target === "self" ? "🧍自分" : "👹敵"} ・ ${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY}) ・ ${a.frameMs || 30}ms/コマ${a.blendScreen ? " ・ 加算" : ""}${stackText}</div>
+        <div class="what">${a.target === "self" ? "🧍自分" : "👹敵"} ・ ${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY}) ・ ${a.frameMs || 30}ms/コマ${a.blendScreen ? " ・ 加算" : ""}</div>
       </div>
       <button class="small danger" data-act="del">削除</button>
     `;
@@ -738,13 +711,15 @@ document.getElementById("exportBtn").onclick = () => {
     "// playAttackVfx(targetId,...)のtargetIdを、通常攻撃/damage系は敵のinstanceId、\n" +
     "// buffSelf等の自己完結スキルは今のところVFX呼び出し自体が無いため新規に actor.instanceId を\n" +
     "// 渡す対応が必要です)\n" +
-    "// mode:\"ailment\"のstackScalePctは「毒/出血の蓄積値、炎上の残りターン数が1増えるごとに\n" +
-    "// 大きさを何%拡大するか」です(実際のサイズ = size * (1 + (蓄積/残りターン-1) * stackScalePct/100)、\n" +
-    "// 1段目=size基準)。今のengine.js(tickPoison/tickBleed/applyBurn)・effects.jsの状態異常アイコン\n" +
-    "// 表示ロジックには、そもそもVFXを再生する呼び出し自体が一切無い(アイコン表示のみ)ため、\n" +
-    "// 実際にダメージ発生時にこのVFXを鳴らすには、ダメージ処理側(engine.jsのtickPoison等)から\n" +
-    "// 新規にVFX再生呼び出しを追加し、その時点のentity.poison/entity.bleed/entity.burnTurnsの値を\n" +
-    "// このstackScalePctの計算式に渡す対応が必要です(まだ本体側に実装されていません)。\n" +
+    "// mode:\"ailment\"のstackLevelは「毒/出血の蓄積値、炎上の残りターン数」に対応する1〜15の\n" +
+    "// レベルです。自動計算でのサイズ拡大は行っておらず、レベルごとに全く別の割り当て(VFX/\n" +
+    "// 大きさ/位置)として個別に保存する仕様です(自動拡大だと地面などの位置がズレるため、\n" +
+    "// レベルごとの見た目はユーザーが手動で決めます)。今のengine.js(tickPoison/tickBleed/\n" +
+    "// applyBurn)・effects.jsの状態異常アイコン表示ロジックには、そもそもVFXを再生する呼び出し\n" +
+    "// 自体が一切無い(アイコン表示のみ)ため、実際にダメージ発生時にこのVFXを鳴らすには、\n" +
+    "// ダメージ処理側(engine.jsのtickPoison等)から新規にVFX再生呼び出しを追加し、その時点の\n" +
+    "// entity.poison/entity.bleed/entity.burnTurnsの値に最も近いstackLevelの割り当てを選ぶ\n" +
+    "// 対応が必要です(まだ本体側に実装されていません)。\n" +
     JSON.stringify(Object.values(assignments), null, 2) + "\n";
   document.getElementById("exportJson").value = out;
   document.getElementById("exportModal").classList.add("open");
