@@ -18,8 +18,11 @@
 #      1枚に正方形グリッドで敷き詰められたスプライトシート(1コマ100x100px、README.txt記載)。
 #      本物のアルファ透過。グリッドはファイル名ではなく画像サイズ÷100から算出。
 #   5. kenney_smoke_particles/PNG/<スタイル名>/*.png … Kenney「Smoke Particles」(CC0)。
-#      連番だが中身はアニメの連続コマではなく、形の違う独立したバリエーション画像
-#      (サイズがバラバラ=非連続と確認済み)。1枚1枚を単発(particle_single)として取り込む。
+#      スタイル(黒煙/爆発/おなら/フラッシュ/白煙)ごとに連番(00,01,02...)。当初は「サイズが
+#      バラバラだから連番アニメではなく独立したバリエーション画像」と判断し単発77件として
+#      取り込んでいたが、ユーザーがエディター上のサムネイルを見て連番アニメである(見た目が
+#      推移している)ことを指摘、再検証の結果を誤りと判断し修正(2026-07-29)。スタイル単位で
+#      1本の連番アニメ(flipbook)としてまとめる。
 #
 # source(エディター側での既定の重ね方=mix-blend-mode:screenを付けるかの判断に使う):
 #   "spritesheet"        … 黒背景+低アルファ前提のflipbooks由来(既定でON=加算合成)
@@ -27,7 +30,7 @@
 #   "particle_single"    … 単発。同上(既定OFF)
 #   "codemanu_alpha_seq"  … CodeManu VFX Free Packの連番フレーム。本物のアルファ(既定OFF)
 #   "codemanu_alpha_sheet" … CodeManu Pixel Effects Packのスライス済みシート。本物のアルファ(既定OFF)
-#   "kenney_alpha_particle" … Kenney Smoke Particlesの単発。本物のアルファ(既定OFF)
+#   "kenney_alpha_seq" … Kenney Smoke Particlesのスタイル単位の連番アニメ。本物のアルファ(既定OFF)
 #
 # tags: 素材名からのキーワード推測によるジャンル分け(fire/smoke/explosion/impact/blood/magic/
 #   ice/electric/light/swirl)。エディター側の絞り込みタブ用。あくまで簡易的な自動分類なので、
@@ -241,25 +244,28 @@ def import_kenney_smoke(src_root):
         if not os.path.isdir(style_path):
             continue
         style_slug = re.sub(r"\s+", "_", style_dir.strip()).lower()
-        for fn in sorted(os.listdir(style_path)):
-            if not fn.lower().endswith(".png"):
-                continue
-            name = os.path.splitext(fn)[0]
+        files = sorted(fn for fn in os.listdir(style_path) if fn.lower().endswith(".png"))
+        if not files:
+            continue
+        out_subdir = os.path.join(OUT_DIR, "kenney_smoke", style_slug)
+        os.makedirs(out_subdir, exist_ok=True)
+        first_im = None
+        for i, fn in enumerate(files, start=1):
             im = Image.open(os.path.join(style_path, fn)).convert("RGBA")
-            out_path = os.path.join(OUT_DIR, "kenney_smoke", f"{name}.png")
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            im.save(out_path)
-            entries.append({
-                "id": f"kenney_smoke/{name}",
-                "label": f"kenney_{name}",
-                "category": "particle",
-                "source": "kenney_alpha_particle",
-                "singleSrc": out_path.replace("\\", "/"),
-                "frameCount": 1,
-                "cellW": im.width,
-                "cellH": im.height,
-                "tags": guess_tags(style_slug),
-            })
+            if first_im is None:
+                first_im = im
+            im.save(os.path.join(out_subdir, f"frame_{i}.png"))
+        entries.append({
+            "id": f"kenney_smoke/{style_slug}",
+            "label": f"kenney_{style_slug}",
+            "category": "flipbook",
+            "source": "kenney_alpha_seq",
+            "framePrefix": f"{OUT_DIR}/kenney_smoke/{style_slug}/frame_",
+            "frameCount": len(files),
+            "cellW": first_im.width,
+            "cellH": first_im.height,
+            "tags": guess_tags(style_slug),
+        })
     return entries
 
 
