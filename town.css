@@ -936,3 +936,7 @@
 .hire-reveal-quirk { margin-top: 4px; width: 100%; background: rgba(201,165,90,0.08); border: 1px dashed rgba(201,165,90,0.5); border-radius: 10px; padding: 8px 10px; box-sizing: border-box; }
 .hire-reveal-quirk-name { font-size: 0.8rem; font-weight: 800; color: #c9a55a; margin-bottom: 2px; }
 .hire-reveal-quirk-desc { font-size: 0.72rem; line-height: 1.5; color: #d5cfc2; }
+
+/* 性格の癖の行の値: 当初ストレス行の赤(--dw-danger)を流用していたが「ペナルティに見える」と
+   ユーザー指摘(2026-07-29)。性格チップ(.status-chip.per)と同系の緑=バフ系の色に統一 */
+.status-quirk-val { color: #a9e8c0; font-weight: 700; font-size: 11px; text-align: right; }

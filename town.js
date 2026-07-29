@@ -647,8 +647,23 @@ function retriggerEntryAnim(el, cls) {
 // このモジュール変数を参照する形で常に「今表示中のキャラの正しい戻り先」を辿れるようにしてある
 let statusScreenOnBack = null;
 function defaultStatusOnBack() { renderTavern(); showScreen("screen-tavern"); }
+// ステータス画面の立ち絵ショーケース(fixed配置のhero内)をスクロールに追従させる。
+// heroはposition:fixedのため、素のままだとページをスクロールしても立ち絵と名前変更ボタンが
+// その場に残り、カードの隙間から覗いて見える(ユーザー実機指摘2026-07-29「モーダルと連動して
+// 動いてくれてない」)。スクロール量ぶんtranslateYで持ち上げ、ページ内容と一体で動かす
+function syncStatusShowcaseToScroll() {
+  const screen = document.getElementById("screen-status");
+  if (!screen || !screen.classList.contains("active")) return;
+  const showcase = document.querySelector("#statusHero .status-showcase");
+  if (!showcase) return;
+  // 基準位置はCSSのtranslateY(-100%)(パネル上端アンカー)。そこからスクロール量だけ上へ
+  showcase.style.transform = `translateY(calc(-100% - ${Math.round(window.scrollY)}px))`;
+}
+window.addEventListener("scroll", syncStatusShowcaseToScroll, { passive: true });
+
 function renderStatusScreen(charId, onBack) {
   statusScreenOnBack = onBack || statusScreenOnBack || defaultStatusOnBack;
+  syncStatusShowcaseToScroll(); // 画面を開いた/再描画した時点のスクロール位置にも即追従させる
   const c = getRosterChar(charId);
   const c2 = CLASSES[c.classId];
   // ふりがな付きの表示名。以前は専用の<h1>(#statusName)に表示していたが、共通ヘッダー導入時に
@@ -704,7 +719,7 @@ function renderStatusScreen(charId, onBack) {
       </div>
     `).join("")}</div>
     <div class="status-stress-row"><span class="status-stress-lbl">${ICONS.stress} ストレス</span><span class="status-stress-val">${Math.round(c.fatigue || 0)}</span></div>
-    ${personalityQuirkDef ? `<div class="status-stress-row"><span class="status-stress-lbl">✨ ${personalityQuirkDef.label}</span><span class="status-stress-val" style="font-size:0.62rem;">${personalityQuirkDef.desc}</span></div>` : ""}
+    ${personalityQuirkDef ? `<div class="status-stress-row"><span class="status-stress-lbl">✨ ${personalityQuirkDef.label}</span><span class="status-quirk-val">${personalityQuirkDef.desc}</span></div>` : ""}
   `;
 
   // 習得済みスキルに加えて、まだ到達していないレベルは「？？？ Lv◯で習得」の伏せ字で表示し、
