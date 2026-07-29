@@ -16,6 +16,12 @@
 /quest_editor.html
   Cache-Control: no-cache, must-revalidate
 
+/raid_editor.html
+  Cache-Control: no-cache, must-revalidate
+
+/vfx_editor.html
+  Cache-Control: no-cache, must-revalidate
+
 # ゲーム本体のコード類(HTML/CSS/JS)は常に再検証させる(2026-07-26)。index.htmlだけ新しく
 # CSSが古い、という不整合(朱印がパネル最下部に落ちて見えた不具合の原因)を防ぐ。
 
