@@ -1,0 +1,2785 @@
+[
+  {
+    "id": "ogart_80_rpg_sfx/blade_01",
+    "label": "blade_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/blade_01.ogg",
+    "duration": 0.29,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/blade_02",
+    "label": "blade_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/blade_02.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/blade_03",
+    "label": "blade_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/blade_03.ogg",
+    "duration": 0.4,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/book_01",
+    "label": "book_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/book_01.ogg",
+    "duration": 0.72,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/book_02",
+    "label": "book_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/book_02.ogg",
+    "duration": 0.88,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/book_03",
+    "label": "book_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/book_03.ogg",
+    "duration": 1.22,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/book_04",
+    "label": "book_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/book_04.ogg",
+    "duration": 1.15,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/chain_01",
+    "label": "chain_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/chain_01.ogg",
+    "duration": 0.51,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/chain_02",
+    "label": "chain_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/chain_02.ogg",
+    "duration": 0.49,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/chain_03",
+    "label": "chain_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/chain_03.ogg",
+    "duration": 0.93,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_die_01",
+    "label": "creature_die_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_die_01.ogg",
+    "duration": 1.06,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_hurt_01",
+    "label": "creature_hurt_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_hurt_01.ogg",
+    "duration": 0.62,
+    "tags": [
+      "blood",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_hurt_02",
+    "label": "creature_hurt_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_hurt_02.ogg",
+    "duration": 0.68,
+    "tags": [
+      "blood",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_01",
+    "label": "creature_misc_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_01.ogg",
+    "duration": 0.26,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_02",
+    "label": "creature_misc_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_02.ogg",
+    "duration": 0.19,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_03",
+    "label": "creature_misc_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_03.ogg",
+    "duration": 0.64,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_04",
+    "label": "creature_misc_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_04.ogg",
+    "duration": 0.55,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_05",
+    "label": "creature_misc_05",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_05.ogg",
+    "duration": 0.6,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_06",
+    "label": "creature_misc_06",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_06.ogg",
+    "duration": 0.42,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_07",
+    "label": "creature_misc_07",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_07.ogg",
+    "duration": 0.35,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_misc_08",
+    "label": "creature_misc_08",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_misc_08.ogg",
+    "duration": 0.46,
+    "tags": [
+      "creature",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_monster_01",
+    "label": "creature_monster_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_monster_01.ogg",
+    "duration": 0.26,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_monster_02",
+    "label": "creature_monster_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_monster_02.ogg",
+    "duration": 0.24,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_monster_03",
+    "label": "creature_monster_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_monster_03.ogg",
+    "duration": 0.99,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_monster_04",
+    "label": "creature_monster_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_monster_04.ogg",
+    "duration": 0.72,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_roar_01",
+    "label": "creature_roar_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_roar_01.ogg",
+    "duration": 0.64,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_roar_02",
+    "label": "creature_roar_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_roar_02.ogg",
+    "duration": 1.04,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_roar_03",
+    "label": "creature_roar_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_roar_03.ogg",
+    "duration": 1.16,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_slime_01",
+    "label": "creature_slime_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_slime_01.ogg",
+    "duration": 0.67,
+    "tags": [
+      "poison",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_slime_02",
+    "label": "creature_slime_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_slime_02.ogg",
+    "duration": 0.74,
+    "tags": [
+      "poison",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_slime_03",
+    "label": "creature_slime_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_slime_03.ogg",
+    "duration": 0.48,
+    "tags": [
+      "poison",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/creature_slime_04",
+    "label": "creature_slime_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg",
+    "duration": 0.62,
+    "tags": [
+      "poison",
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_coins_01",
+    "label": "item_coins_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_coins_01.ogg",
+    "duration": 0.41,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_coins_02",
+    "label": "item_coins_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_coins_02.ogg",
+    "duration": 0.62,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_coins_03",
+    "label": "item_coins_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_coins_03.ogg",
+    "duration": 0.48,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_coins_04",
+    "label": "item_coins_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_coins_04.ogg",
+    "duration": 1.61,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_gem_01",
+    "label": "item_gem_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_gem_01.ogg",
+    "duration": 0.25,
+    "tags": [
+      "magic",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_gem_02",
+    "label": "item_gem_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_gem_02.ogg",
+    "duration": 0.2,
+    "tags": [
+      "magic",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_gem_03",
+    "label": "item_gem_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_gem_03.ogg",
+    "duration": 0.29,
+    "tags": [
+      "magic",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_gem_04",
+    "label": "item_gem_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_gem_04.ogg",
+    "duration": 0.59,
+    "tags": [
+      "magic",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_01",
+    "label": "item_misc_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_01.ogg",
+    "duration": 0.41,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_02",
+    "label": "item_misc_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_02.ogg",
+    "duration": 0.44,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_03",
+    "label": "item_misc_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_03.ogg",
+    "duration": 0.34,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_04",
+    "label": "item_misc_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_04.ogg",
+    "duration": 0.38,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_05",
+    "label": "item_misc_05",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_05.ogg",
+    "duration": 0.39,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_misc_06",
+    "label": "item_misc_06",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_misc_06.ogg",
+    "duration": 0.72,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_stone_01",
+    "label": "item_stone_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_stone_01.ogg",
+    "duration": 0.73,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_stone_02",
+    "label": "item_stone_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_stone_02.ogg",
+    "duration": 0.3,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_stone_03",
+    "label": "item_stone_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_stone_03.ogg",
+    "duration": 0.39,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_stone_04",
+    "label": "item_stone_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_stone_04.ogg",
+    "duration": 0.3,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_wood_01",
+    "label": "item_wood_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_wood_01.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_wood_02",
+    "label": "item_wood_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_wood_02.ogg",
+    "duration": 0.26,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/item_wood_03",
+    "label": "item_wood_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/item_wood_03.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/lock_01",
+    "label": "lock_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/lock_01.ogg",
+    "duration": 0.41,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/lock_02",
+    "label": "lock_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/lock_02.ogg",
+    "duration": 0.4,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/lock_03",
+    "label": "lock_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/lock_03.ogg",
+    "duration": 0.34,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/metal_01",
+    "label": "metal_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/metal_01.ogg",
+    "duration": 0.58,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/metal_02",
+    "label": "metal_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/metal_02.ogg",
+    "duration": 0.56,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/metal_03",
+    "label": "metal_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/metal_03.ogg",
+    "duration": 0.43,
+    "tags": [
+      "metal"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/misc_01",
+    "label": "misc_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/misc_01.ogg",
+    "duration": 0.34,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/misc_02",
+    "label": "misc_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/misc_02.ogg",
+    "duration": 0.54,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/misc_03",
+    "label": "misc_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/misc_03.ogg",
+    "duration": 0.24,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_01",
+    "label": "spell_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_01.ogg",
+    "duration": 0.63,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_02",
+    "label": "spell_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_02.ogg",
+    "duration": 0.55,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_01",
+    "label": "spell_fire_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_01.ogg",
+    "duration": 1.06,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_02",
+    "label": "spell_fire_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_02.ogg",
+    "duration": 1.07,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_03",
+    "label": "spell_fire_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_03.ogg",
+    "duration": 1.93,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_04",
+    "label": "spell_fire_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_04.ogg",
+    "duration": 1.59,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_05",
+    "label": "spell_fire_05",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_05.ogg",
+    "duration": 1.24,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_06",
+    "label": "spell_fire_06",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_06.ogg",
+    "duration": 1.0,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/spell_fire_07",
+    "label": "spell_fire_07",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/spell_fire_07.ogg",
+    "duration": 0.65,
+    "tags": [
+      "fire",
+      "magic"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/stones_01",
+    "label": "stones_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/stones_01.ogg",
+    "duration": 0.68,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/stones_02",
+    "label": "stones_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/stones_02.ogg",
+    "duration": 0.78,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/stones_03",
+    "label": "stones_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/stones_03.ogg",
+    "duration": 1.2,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/stones_04",
+    "label": "stones_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/stones_04.ogg",
+    "duration": 0.38,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/wood_01",
+    "label": "wood_01",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/wood_01.ogg",
+    "duration": 0.24,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/wood_02",
+    "label": "wood_02",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/wood_02.ogg",
+    "duration": 0.19,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/wood_03",
+    "label": "wood_03",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/wood_03.ogg",
+    "duration": 0.3,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/wood_04",
+    "label": "wood_04",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/wood_04.ogg",
+    "duration": 0.65,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_rpg_sfx/wood_05",
+    "label": "wood_05",
+    "pack": "80 CC0 RPG SFX",
+    "src": "assets/se_library/ogart_80_rpg_sfx/wood_05.ogg",
+    "duration": 0.39,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_01",
+    "label": "alien_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_01.ogg",
+    "duration": 0.7,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_02",
+    "label": "alien_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_02.ogg",
+    "duration": 0.78,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_03",
+    "label": "alien_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_03.ogg",
+    "duration": 0.83,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_04",
+    "label": "alien_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_04.ogg",
+    "duration": 0.72,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_05",
+    "label": "alien_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_05.ogg",
+    "duration": 0.45,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/alien_06",
+    "label": "alien_06",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/alien_06.ogg",
+    "duration": 0.42,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/barking_01",
+    "label": "barking_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/barking_01.ogg",
+    "duration": 0.4,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/barking_02",
+    "label": "barking_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/barking_02.ogg",
+    "duration": 0.46,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/breath",
+    "label": "breath",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/breath.ogg",
+    "duration": 0.67,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/bug_01",
+    "label": "bug_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/bug_01.ogg",
+    "duration": 0.58,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/bug_02",
+    "label": "bug_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/bug_02.ogg",
+    "duration": 0.57,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/bug_03",
+    "label": "bug_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/bug_03.ogg",
+    "duration": 0.35,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/bug_04",
+    "label": "bug_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/bug_04.ogg",
+    "duration": 0.45,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/burble_01",
+    "label": "burble_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/burble_01.ogg",
+    "duration": 0.99,
+    "tags": [
+      "poison"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/burble_02",
+    "label": "burble_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/burble_02.ogg",
+    "duration": 0.93,
+    "tags": [
+      "poison"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/burp_01",
+    "label": "burp_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/burp_01.ogg",
+    "duration": 0.69,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/burp_02",
+    "label": "burp_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/burp_02.ogg",
+    "duration": 0.82,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cough_01",
+    "label": "cough_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cough_01.ogg",
+    "duration": 0.43,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cough_02",
+    "label": "cough_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cough_02.ogg",
+    "duration": 0.35,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cough_03",
+    "label": "cough_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cough_03.ogg",
+    "duration": 0.84,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_01",
+    "label": "cute_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_01.ogg",
+    "duration": 0.39,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_02",
+    "label": "cute_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_02.ogg",
+    "duration": 0.46,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_03",
+    "label": "cute_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_03.ogg",
+    "duration": 0.61,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_04",
+    "label": "cute_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_04.ogg",
+    "duration": 0.51,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_05",
+    "label": "cute_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_05.ogg",
+    "duration": 0.51,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_06",
+    "label": "cute_06",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_06.ogg",
+    "duration": 0.44,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_07",
+    "label": "cute_07",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_07.ogg",
+    "duration": 0.29,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_08",
+    "label": "cute_08",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_08.ogg",
+    "duration": 0.38,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_09",
+    "label": "cute_09",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_09.ogg",
+    "duration": 0.6,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/cute_10",
+    "label": "cute_10",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/cute_10.ogg",
+    "duration": 0.48,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/eat_01",
+    "label": "eat_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/eat_01.ogg",
+    "duration": 0.58,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/eat_02",
+    "label": "eat_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/eat_02.ogg",
+    "duration": 0.39,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/eat_03",
+    "label": "eat_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/eat_03.ogg",
+    "duration": 0.27,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/eat_04",
+    "label": "eat_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/eat_04.ogg",
+    "duration": 0.45,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/grunt_01",
+    "label": "grunt_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/grunt_01.ogg",
+    "duration": 0.93,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/grunt_02",
+    "label": "grunt_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/grunt_02.ogg",
+    "duration": 0.53,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/grunt_03",
+    "label": "grunt_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/grunt_03.ogg",
+    "duration": 0.67,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/grunt_04",
+    "label": "grunt_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/grunt_04.ogg",
+    "duration": 0.61,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/grunt_05",
+    "label": "grunt_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/grunt_05.ogg",
+    "duration": 0.65,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/howl",
+    "label": "howl",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/howl.ogg",
+    "duration": 0.72,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/hurt_01",
+    "label": "hurt_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/hurt_01.ogg",
+    "duration": 0.49,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/hurt_02",
+    "label": "hurt_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/hurt_02.ogg",
+    "duration": 0.48,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/hurt_03",
+    "label": "hurt_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/hurt_03.ogg",
+    "duration": 0.46,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/hurt_04",
+    "label": "hurt_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/hurt_04.ogg",
+    "duration": 0.35,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/hurt_05",
+    "label": "hurt_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/hurt_05.ogg",
+    "duration": 0.45,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_01",
+    "label": "misc_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_01.ogg",
+    "duration": 0.58,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_02",
+    "label": "misc_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_02.ogg",
+    "duration": 0.38,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_03",
+    "label": "misc_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_03.ogg",
+    "duration": 0.25,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_04",
+    "label": "misc_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_04.ogg",
+    "duration": 0.48,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_05",
+    "label": "misc_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_05.ogg",
+    "duration": 0.79,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_06",
+    "label": "misc_06",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_06.ogg",
+    "duration": 0.46,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_07",
+    "label": "misc_07",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_07.ogg",
+    "duration": 0.48,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_08",
+    "label": "misc_08",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_08.ogg",
+    "duration": 0.5,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/misc_09",
+    "label": "misc_09",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/misc_09.ogg",
+    "duration": 0.65,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_01",
+    "label": "monster_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_01.ogg",
+    "duration": 1.0,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_02",
+    "label": "monster_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_02.ogg",
+    "duration": 0.58,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_03",
+    "label": "monster_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_03.ogg",
+    "duration": 0.78,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_04",
+    "label": "monster_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_04.ogg",
+    "duration": 1.28,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_05",
+    "label": "monster_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_05.ogg",
+    "duration": 0.43,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_06",
+    "label": "monster_06",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_06.ogg",
+    "duration": 0.83,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/monster_07",
+    "label": "monster_07",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/monster_07.ogg",
+    "duration": 1.13,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/nose",
+    "label": "nose",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/nose.ogg",
+    "duration": 0.35,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/ooh",
+    "label": "ooh",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/ooh.ogg",
+    "duration": 0.74,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/roar_01",
+    "label": "roar_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/roar_01.ogg",
+    "duration": 0.37,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/roar_02",
+    "label": "roar_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/roar_02.ogg",
+    "duration": 0.9,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/roar_03",
+    "label": "roar_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/roar_03.ogg",
+    "duration": 0.46,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/scream_01",
+    "label": "scream_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/scream_01.ogg",
+    "duration": 0.96,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/scream_02",
+    "label": "scream_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/scream_02.ogg",
+    "duration": 0.96,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/snore",
+    "label": "snore",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/snore.ogg",
+    "duration": 0.44,
+    "tags": [
+      "misc"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/spit_01",
+    "label": "spit_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/spit_01.ogg",
+    "duration": 0.49,
+    "tags": [
+      "poison"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/spit_02",
+    "label": "spit_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/spit_02.ogg",
+    "duration": 0.69,
+    "tags": [
+      "poison"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/spit_03",
+    "label": "spit_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/spit_03.ogg",
+    "duration": 0.36,
+    "tags": [
+      "poison"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/troll_01",
+    "label": "troll_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/troll_01.ogg",
+    "duration": 0.57,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/troll_02",
+    "label": "troll_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/troll_02.ogg",
+    "duration": 0.79,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/troll_03",
+    "label": "troll_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/troll_03.ogg",
+    "duration": 0.42,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/weird_01",
+    "label": "weird_01",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/weird_01.ogg",
+    "duration": 0.6,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/weird_02",
+    "label": "weird_02",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/weird_02.ogg",
+    "duration": 0.46,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/weird_03",
+    "label": "weird_03",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/weird_03.ogg",
+    "duration": 0.39,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/weird_04",
+    "label": "weird_04",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/weird_04.ogg",
+    "duration": 0.3,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_80_creature_sfx/weird_05",
+    "label": "weird_05",
+    "pack": "80 CC0 creature SFX",
+    "src": "assets/se_library/ogart_80_creature_sfx/weird_05.ogg",
+    "duration": 0.67,
+    "tags": [
+      "creature"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/explosion",
+    "label": "explosion",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/explosion.ogg",
+    "duration": 0.56,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/hit_01",
+    "label": "hit_01",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/hit_01.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/hit_02",
+    "label": "hit_02",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/hit_02.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/hit_03",
+    "label": "hit_03",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/hit_03.ogg",
+    "duration": 0.43,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/hit_04",
+    "label": "hit_04",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/hit_04.ogg",
+    "duration": 0.45,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/plop_01",
+    "label": "plop_01",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/plop_01.ogg",
+    "duration": 0.3,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "ogart_100_cc0_sfx_selected/plop_02",
+    "label": "plop_02",
+    "pack": "100 CC0 SFX(抜粋)",
+    "src": "assets/se_library/ogart_100_cc0_sfx_selected/plop_02.ogg",
+    "duration": 0.36,
+    "tags": [
+      "blood"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactBell_heavy_000",
+    "label": "impactBell_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactBell_heavy_000.ogg",
+    "duration": 1.48,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactBell_heavy_001",
+    "label": "impactBell_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactBell_heavy_001.ogg",
+    "duration": 1.74,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactBell_heavy_002",
+    "label": "impactBell_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactBell_heavy_002.ogg",
+    "duration": 0.7,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactBell_heavy_003",
+    "label": "impactBell_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactBell_heavy_003.ogg",
+    "duration": 0.65,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactBell_heavy_004",
+    "label": "impactBell_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactBell_heavy_004.ogg",
+    "duration": 0.3,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGeneric_light_000",
+    "label": "impactGeneric_light_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGeneric_light_000.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGeneric_light_001",
+    "label": "impactGeneric_light_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGeneric_light_001.ogg",
+    "duration": 0.12,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGeneric_light_002",
+    "label": "impactGeneric_light_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGeneric_light_002.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGeneric_light_003",
+    "label": "impactGeneric_light_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGeneric_light_003.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGeneric_light_004",
+    "label": "impactGeneric_light_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGeneric_light_004.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_heavy_000",
+    "label": "impactGlass_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_heavy_000.ogg",
+    "duration": 0.24,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_heavy_001",
+    "label": "impactGlass_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_heavy_001.ogg",
+    "duration": 0.43,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_heavy_002",
+    "label": "impactGlass_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_heavy_002.ogg",
+    "duration": 0.25,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_heavy_003",
+    "label": "impactGlass_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_heavy_003.ogg",
+    "duration": 0.17,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_heavy_004",
+    "label": "impactGlass_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_heavy_004.ogg",
+    "duration": 0.4,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_light_000",
+    "label": "impactGlass_light_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_light_000.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_light_001",
+    "label": "impactGlass_light_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_light_001.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_light_002",
+    "label": "impactGlass_light_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_light_002.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_light_003",
+    "label": "impactGlass_light_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_light_003.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_light_004",
+    "label": "impactGlass_light_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_light_004.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_medium_000",
+    "label": "impactGlass_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_medium_000.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_medium_001",
+    "label": "impactGlass_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_medium_001.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_medium_002",
+    "label": "impactGlass_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_medium_002.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_medium_003",
+    "label": "impactGlass_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_medium_003.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactGlass_medium_004",
+    "label": "impactGlass_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactGlass_medium_004.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_heavy_000",
+    "label": "impactMetal_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_heavy_000.ogg",
+    "duration": 0.17,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_heavy_001",
+    "label": "impactMetal_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_heavy_001.ogg",
+    "duration": 0.36,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_heavy_002",
+    "label": "impactMetal_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_heavy_002.ogg",
+    "duration": 0.12,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_heavy_003",
+    "label": "impactMetal_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_heavy_003.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_heavy_004",
+    "label": "impactMetal_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_heavy_004.ogg",
+    "duration": 0.13,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_light_000",
+    "label": "impactMetal_light_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_light_000.ogg",
+    "duration": 0.35,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_light_001",
+    "label": "impactMetal_light_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_light_001.ogg",
+    "duration": 0.25,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_light_002",
+    "label": "impactMetal_light_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_light_002.ogg",
+    "duration": 0.24,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_light_003",
+    "label": "impactMetal_light_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_light_003.ogg",
+    "duration": 0.48,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_light_004",
+    "label": "impactMetal_light_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_light_004.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_medium_000",
+    "label": "impactMetal_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_medium_000.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_medium_001",
+    "label": "impactMetal_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_medium_001.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_medium_002",
+    "label": "impactMetal_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_medium_002.ogg",
+    "duration": 0.12,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_medium_003",
+    "label": "impactMetal_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_medium_003.ogg",
+    "duration": 0.25,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMetal_medium_004",
+    "label": "impactMetal_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMetal_medium_004.ogg",
+    "duration": 0.11,
+    "tags": [
+      "impact",
+      "metal"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMining_000",
+    "label": "impactMining_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMining_000.ogg",
+    "duration": 0.94,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMining_001",
+    "label": "impactMining_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMining_001.ogg",
+    "duration": 0.87,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMining_002",
+    "label": "impactMining_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMining_002.ogg",
+    "duration": 0.8,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMining_003",
+    "label": "impactMining_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMining_003.ogg",
+    "duration": 0.99,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactMining_004",
+    "label": "impactMining_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactMining_004.ogg",
+    "duration": 0.83,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlank_medium_000",
+    "label": "impactPlank_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlank_medium_000.ogg",
+    "duration": 0.78,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlank_medium_001",
+    "label": "impactPlank_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlank_medium_001.ogg",
+    "duration": 0.78,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlank_medium_002",
+    "label": "impactPlank_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlank_medium_002.ogg",
+    "duration": 0.78,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlank_medium_003",
+    "label": "impactPlank_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlank_medium_003.ogg",
+    "duration": 0.78,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlank_medium_004",
+    "label": "impactPlank_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlank_medium_004.ogg",
+    "duration": 0.78,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_heavy_000",
+    "label": "impactPlate_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_heavy_000.ogg",
+    "duration": 0.49,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_heavy_001",
+    "label": "impactPlate_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_heavy_001.ogg",
+    "duration": 0.35,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_heavy_002",
+    "label": "impactPlate_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_heavy_002.ogg",
+    "duration": 0.49,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_heavy_003",
+    "label": "impactPlate_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_heavy_003.ogg",
+    "duration": 0.35,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_heavy_004",
+    "label": "impactPlate_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_heavy_004.ogg",
+    "duration": 0.56,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_light_000",
+    "label": "impactPlate_light_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_light_000.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_light_001",
+    "label": "impactPlate_light_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_light_001.ogg",
+    "duration": 0.65,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_light_002",
+    "label": "impactPlate_light_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_light_002.ogg",
+    "duration": 0.49,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_light_003",
+    "label": "impactPlate_light_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_light_003.ogg",
+    "duration": 0.53,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_light_004",
+    "label": "impactPlate_light_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_light_004.ogg",
+    "duration": 0.66,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_medium_000",
+    "label": "impactPlate_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_medium_000.ogg",
+    "duration": 0.61,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_medium_001",
+    "label": "impactPlate_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_medium_001.ogg",
+    "duration": 0.62,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_medium_002",
+    "label": "impactPlate_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_medium_002.ogg",
+    "duration": 0.52,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_medium_003",
+    "label": "impactPlate_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_medium_003.ogg",
+    "duration": 0.65,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPlate_medium_004",
+    "label": "impactPlate_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPlate_medium_004.ogg",
+    "duration": 0.53,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_heavy_000",
+    "label": "impactPunch_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_heavy_000.ogg",
+    "duration": 0.65,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_heavy_001",
+    "label": "impactPunch_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_heavy_001.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_heavy_002",
+    "label": "impactPunch_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_heavy_002.ogg",
+    "duration": 0.46,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_heavy_003",
+    "label": "impactPunch_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_heavy_003.ogg",
+    "duration": 0.47,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_heavy_004",
+    "label": "impactPunch_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_heavy_004.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_medium_000",
+    "label": "impactPunch_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_medium_000.ogg",
+    "duration": 0.43,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_medium_001",
+    "label": "impactPunch_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_medium_001.ogg",
+    "duration": 0.4,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_medium_002",
+    "label": "impactPunch_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_medium_002.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_medium_003",
+    "label": "impactPunch_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_medium_003.ogg",
+    "duration": 0.46,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactPunch_medium_004",
+    "label": "impactPunch_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactPunch_medium_004.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_heavy_000",
+    "label": "impactSoft_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_heavy_000.ogg",
+    "duration": 0.51,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_heavy_001",
+    "label": "impactSoft_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_heavy_001.ogg",
+    "duration": 0.57,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_heavy_002",
+    "label": "impactSoft_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_heavy_002.ogg",
+    "duration": 0.57,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_heavy_003",
+    "label": "impactSoft_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_heavy_003.ogg",
+    "duration": 0.54,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_heavy_004",
+    "label": "impactSoft_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_heavy_004.ogg",
+    "duration": 0.5,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_medium_000",
+    "label": "impactSoft_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_medium_000.ogg",
+    "duration": 0.12,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_medium_001",
+    "label": "impactSoft_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_medium_001.ogg",
+    "duration": 0.18,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_medium_002",
+    "label": "impactSoft_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_medium_002.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_medium_003",
+    "label": "impactSoft_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_medium_003.ogg",
+    "duration": 0.14,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactSoft_medium_004",
+    "label": "impactSoft_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactSoft_medium_004.ogg",
+    "duration": 0.15,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactTin_medium_000",
+    "label": "impactTin_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactTin_medium_000.ogg",
+    "duration": 0.16,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactTin_medium_001",
+    "label": "impactTin_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactTin_medium_001.ogg",
+    "duration": 0.17,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactTin_medium_002",
+    "label": "impactTin_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactTin_medium_002.ogg",
+    "duration": 0.13,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactTin_medium_003",
+    "label": "impactTin_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactTin_medium_003.ogg",
+    "duration": 0.21,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactTin_medium_004",
+    "label": "impactTin_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactTin_medium_004.ogg",
+    "duration": 0.18,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_heavy_000",
+    "label": "impactWood_heavy_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_heavy_000.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_heavy_001",
+    "label": "impactWood_heavy_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_heavy_001.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_heavy_002",
+    "label": "impactWood_heavy_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_heavy_002.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_heavy_003",
+    "label": "impactWood_heavy_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_heavy_003.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_heavy_004",
+    "label": "impactWood_heavy_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_heavy_004.ogg",
+    "duration": 0.31,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_light_000",
+    "label": "impactWood_light_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_light_000.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_light_001",
+    "label": "impactWood_light_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_light_001.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_light_002",
+    "label": "impactWood_light_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_light_002.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_light_003",
+    "label": "impactWood_light_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_light_003.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_light_004",
+    "label": "impactWood_light_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_light_004.ogg",
+    "duration": 0.27,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_medium_000",
+    "label": "impactWood_medium_000",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_medium_000.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_medium_001",
+    "label": "impactWood_medium_001",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_medium_001.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_medium_002",
+    "label": "impactWood_medium_002",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_medium_002.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_medium_003",
+    "label": "impactWood_medium_003",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_medium_003.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  },
+  {
+    "id": "kenney_impact_sounds/impactWood_medium_004",
+    "label": "impactWood_medium_004",
+    "pack": "Kenney Impact Sounds",
+    "src": "assets/se_library/kenney_impact_sounds/impactWood_medium_004.ogg",
+    "duration": 0.33,
+    "tags": [
+      "impact",
+      "misc"
+    ]
+  }
+]
