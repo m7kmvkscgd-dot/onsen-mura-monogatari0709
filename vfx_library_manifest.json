@@ -7,7 +7,10 @@
     "framePrefix": "assets/vfx_library/cloud_01_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "cloud_02_8x8",
@@ -17,7 +20,10 @@
     "framePrefix": "assets/vfx_library/cloud_02_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "explosion_01_8x8",
@@ -27,7 +33,10 @@
     "framePrefix": "assets/vfx_library/explosion_01_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "explosion"
+    ]
   },
   {
     "id": "explosion_02_8x8",
@@ -37,7 +46,10 @@
     "framePrefix": "assets/vfx_library/explosion_02_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "explosion"
+    ]
   },
   {
     "id": "explosion_smoke_01_8x8",
@@ -47,7 +59,11 @@
     "framePrefix": "assets/vfx_library/explosion_smoke_01_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke",
+      "explosion"
+    ]
   },
   {
     "id": "fire_01_8x8",
@@ -57,7 +73,10 @@
     "framePrefix": "assets/vfx_library/fire_01_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "fire_02_8x8",
@@ -67,7 +86,10 @@
     "framePrefix": "assets/vfx_library/fire_02_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "fire_03_8x8",
@@ -77,7 +99,10 @@
     "framePrefix": "assets/vfx_library/fire_03_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "fire_04_8x8",
@@ -87,7 +112,10 @@
     "framePrefix": "assets/vfx_library/fire_04_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "flame_01_16x4",
@@ -97,7 +125,10 @@
     "framePrefix": "assets/vfx_library/flame_01_16x4/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 256
+    "cellH": 256,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "flame_02_15x4",
@@ -107,7 +138,10 @@
     "framePrefix": "assets/vfx_library/flame_02_15x4/frame_",
     "frameCount": 60,
     "cellW": 137,
-    "cellH": 256
+    "cellH": 256,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "wispy_smoke_01_8x8",
@@ -117,7 +151,10 @@
     "framePrefix": "assets/vfx_library/wispy_smoke_01_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "wispy_smoke_02_8x8",
@@ -127,7 +164,10 @@
     "framePrefix": "assets/vfx_library/wispy_smoke_02_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "wispy_smoke_03_8x8",
@@ -137,7 +177,10 @@
     "framePrefix": "assets/vfx_library/wispy_smoke_03_8x8/frame_",
     "frameCount": 64,
     "cellW": 128,
-    "cellH": 128
+    "cellH": 128,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "particles_seq/circle",
@@ -147,7 +190,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/circle/frame_",
     "frameCount": 5,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "swirl"
+    ]
   },
   {
     "id": "particles_seq/dirt",
@@ -157,7 +203,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/dirt/frame_",
     "frameCount": 3,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "particles_seq/effect",
@@ -167,7 +216,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/effect/frame_",
     "frameCount": 3,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "magic"
+    ]
   },
   {
     "id": "particles_seq/fire",
@@ -177,7 +229,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/fire/frame_",
     "frameCount": 2,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "particles_seq/flame",
@@ -187,7 +242,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/flame/frame_",
     "frameCount": 6,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "particles/flare",
@@ -197,7 +255,10 @@
     "singleSrc": "assets/vfx_library/particles/flare.png",
     "frameCount": 1,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "light"
+    ]
   },
   {
     "id": "particles_seq/light",
@@ -207,7 +268,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/light/frame_",
     "frameCount": 3,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "light"
+    ]
   },
   {
     "id": "particles_seq/magic",
@@ -217,7 +281,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/magic/frame_",
     "frameCount": 5,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "magic"
+    ]
   },
   {
     "id": "particles_seq/muzzle",
@@ -227,7 +294,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/muzzle/frame_",
     "frameCount": 5,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "impact"
+    ]
   },
   {
     "id": "particles_seq/scorch",
@@ -237,7 +307,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/scorch/frame_",
     "frameCount": 3,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "fire"
+    ]
   },
   {
     "id": "particles/scratch",
@@ -247,7 +320,10 @@
     "singleSrc": "assets/vfx_library/particles/scratch.png",
     "frameCount": 1,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "impact"
+    ]
   },
   {
     "id": "particles_seq/slash",
@@ -257,7 +333,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/slash/frame_",
     "frameCount": 4,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "impact"
+    ]
   },
   {
     "id": "particles_seq/smoke",
@@ -267,7 +346,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/smoke/frame_",
     "frameCount": 10,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "smoke"
+    ]
   },
   {
     "id": "particles_seq/spark",
@@ -277,7 +359,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/spark/frame_",
     "frameCount": 7,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "electric"
+    ]
   },
   {
     "id": "particles_seq/spotlight",
@@ -287,7 +372,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/spotlight/frame_",
     "frameCount": 8,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "light"
+    ]
   },
   {
     "id": "particles_seq/star",
@@ -297,7 +385,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/star/frame_",
     "frameCount": 9,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "light"
+    ]
   },
   {
     "id": "particles_seq/symbol",
@@ -307,7 +398,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/symbol/frame_",
     "frameCount": 2,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "magic"
+    ]
   },
   {
     "id": "particles_seq/trace",
@@ -317,7 +411,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/trace/frame_",
     "frameCount": 7,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "magic"
+    ]
   },
   {
     "id": "particles_seq/twirl",
@@ -327,7 +424,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/twirl/frame_",
     "frameCount": 4,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "swirl"
+    ]
   },
   {
     "id": "particles_seq/window",
@@ -337,7 +437,10 @@
     "framePrefix": "assets/vfx_library/particles_seq/window/frame_",
     "frameCount": 4,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "magic"
+    ]
   },
   {
     "id": "particles/smoke_07_strong_a",
@@ -347,6 +450,1562 @@
     "singleSrc": "assets/vfx_library/particles/smoke_07_strong_a.png",
     "frameCount": 1,
     "cellW": 512,
-    "cellH": 512
+    "cellH": 512,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/anima",
+    "label": "anima",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/anima/frame_",
+    "frameCount": 30,
+    "cellW": 437,
+    "cellH": 437,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/big_hit",
+    "label": "big_hit",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/big_hit/frame_",
+    "frameCount": 30,
+    "cellW": 557,
+    "cellH": 553,
+    "tags": [
+      "explosion",
+      "impact"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/blood_impact",
+    "label": "blood_impact",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/blood_impact/frame_",
+    "frameCount": 30,
+    "cellW": 69,
+    "cellH": 60,
+    "tags": [
+      "impact",
+      "blood"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/charged",
+    "label": "charged",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/charged/frame_",
+    "frameCount": 40,
+    "cellW": 321,
+    "cellH": 371,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/constellation",
+    "label": "constellation",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/constellation/frame_",
+    "frameCount": 30,
+    "cellW": 299,
+    "cellH": 313,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/dithered_fire",
+    "label": "dithered_fire",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/dithered_fire/frame_",
+    "frameCount": 30,
+    "cellW": 517,
+    "cellH": 246,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/elden_ring",
+    "label": "elden_ring",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/elden_ring/frame_",
+    "frameCount": 30,
+    "cellW": 421,
+    "cellH": 425,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/electric_shield",
+    "label": "electric_shield",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/electric_shield/frame_",
+    "frameCount": 30,
+    "cellW": 265,
+    "cellH": 265,
+    "tags": [
+      "electric"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/explosion",
+    "label": "explosion",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/explosion/frame_",
+    "frameCount": 30,
+    "cellW": 517,
+    "cellH": 517,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/explosion_2",
+    "label": "explosion_2",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/explosion_2/frame_",
+    "frameCount": 30,
+    "cellW": 355,
+    "cellH": 355,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/fast_pixel_fire",
+    "label": "fast_pixel_fire",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/fast_pixel_fire/frame_",
+    "frameCount": 30,
+    "cellW": 173,
+    "cellH": 193,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/hyperspeed",
+    "label": "hyperspeed",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/hyperspeed/frame_",
+    "frameCount": 30,
+    "cellW": 517,
+    "cellH": 515,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/impact",
+    "label": "impact",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/impact/frame_",
+    "frameCount": 30,
+    "cellW": 291,
+    "cellH": 301,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/kabooms",
+    "label": "kabooms",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/kabooms/frame_",
+    "frameCount": 30,
+    "cellW": 401,
+    "cellH": 325,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/magma",
+    "label": "magma",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/magma/frame_",
+    "frameCount": 30,
+    "cellW": 381,
+    "cellH": 186,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/power_chords",
+    "label": "power_chords",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/power_chords/frame_",
+    "frameCount": 30,
+    "cellW": 517,
+    "cellH": 353,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/puff_and_stars",
+    "label": "puff_and_stars",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/puff_and_stars/frame_",
+    "frameCount": 40,
+    "cellW": 120,
+    "cellH": 109,
+    "tags": [
+      "smoke",
+      "light"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/small_hit",
+    "label": "small_hit",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/small_hit/frame_",
+    "frameCount": 30,
+    "cellW": 532,
+    "cellH": 528,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/tentacles",
+    "label": "tentacles",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/tentacles/frame_",
+    "frameCount": 30,
+    "cellW": 453,
+    "cellH": 337,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/the_vortex",
+    "label": "the_vortex",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/the_vortex/frame_",
+    "frameCount": 30,
+    "cellW": 427,
+    "cellH": 431,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/wheel",
+    "label": "wheel",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/wheel/frame_",
+    "frameCount": 30,
+    "cellW": 273,
+    "cellH": 273,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_vfx_free/worm",
+    "label": "worm",
+    "category": "flipbook",
+    "source": "codemanu_alpha_seq",
+    "framePrefix": "assets/vfx_library/codemanu_vfx_free/worm/frame_",
+    "frameCount": 30,
+    "cellW": 413,
+    "cellH": 369,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/weaponhit",
+    "label": "weaponhit",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/weaponhit/frame_",
+    "frameCount": 36,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "impact"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/fire",
+    "label": "fire",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/fire/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/nebula",
+    "label": "nebula",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/nebula/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/vortex",
+    "label": "vortex",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/vortex/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/phantom",
+    "label": "phantom",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/phantom/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/loading",
+    "label": "loading",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/loading/frame_",
+    "frameCount": 121,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/sunburn",
+    "label": "sunburn",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/sunburn/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/felspell",
+    "label": "felspell",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/felspell/frame_",
+    "frameCount": 100,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/midnight",
+    "label": "midnight",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/midnight/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/freezing",
+    "label": "freezing",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/freezing/frame_",
+    "frameCount": 100,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "ice"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/magicspell",
+    "label": "magicspell",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/magicspell/frame_",
+    "frameCount": 81,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/magicbubbles",
+    "label": "magicbubbles",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/magicbubbles/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/magic8",
+    "label": "magic8",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/magic8/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/bluefire",
+    "label": "bluefire",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/bluefire/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/casting",
+    "label": "casting",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/casting/frame_",
+    "frameCount": 81,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/magickahit",
+    "label": "magickahit",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/magickahit/frame_",
+    "frameCount": 49,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "impact",
+      "magic"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/flamelash",
+    "label": "flamelash",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/flamelash/frame_",
+    "frameCount": 49,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/firespin",
+    "label": "firespin",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/firespin/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire",
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/protectioncircle",
+    "label": "protectioncircle",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/protectioncircle/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "magic",
+      "swirl"
+    ]
+  },
+  {
+    "id": "codemanu_pixel_effects/brightfire",
+    "label": "brightfire",
+    "category": "flipbook",
+    "source": "codemanu_alpha_sheet",
+    "framePrefix": "assets/vfx_library/codemanu_pixel_effects/brightfire/frame_",
+    "frameCount": 64,
+    "cellW": 100,
+    "cellH": 100,
+    "tags": [
+      "fire"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke00",
+    "label": "kenney_blackSmoke00",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke00.png",
+    "frameCount": 1,
+    "cellW": 362,
+    "cellH": 336,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke01",
+    "label": "kenney_blackSmoke01",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke01.png",
+    "frameCount": 1,
+    "cellW": 398,
+    "cellH": 364,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke02",
+    "label": "kenney_blackSmoke02",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke02.png",
+    "frameCount": 1,
+    "cellW": 386,
+    "cellH": 342,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke03",
+    "label": "kenney_blackSmoke03",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke03.png",
+    "frameCount": 1,
+    "cellW": 351,
+    "cellH": 367,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke04",
+    "label": "kenney_blackSmoke04",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke04.png",
+    "frameCount": 1,
+    "cellW": 386,
+    "cellH": 364,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke05",
+    "label": "kenney_blackSmoke05",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke05.png",
+    "frameCount": 1,
+    "cellW": 377,
+    "cellH": 348,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke06",
+    "label": "kenney_blackSmoke06",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke06.png",
+    "frameCount": 1,
+    "cellW": 368,
+    "cellH": 407,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke07",
+    "label": "kenney_blackSmoke07",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke07.png",
+    "frameCount": 1,
+    "cellW": 395,
+    "cellH": 397,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke08",
+    "label": "kenney_blackSmoke08",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke08.png",
+    "frameCount": 1,
+    "cellW": 378,
+    "cellH": 415,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke09",
+    "label": "kenney_blackSmoke09",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke09.png",
+    "frameCount": 1,
+    "cellW": 338,
+    "cellH": 360,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke10",
+    "label": "kenney_blackSmoke10",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke10.png",
+    "frameCount": 1,
+    "cellW": 372,
+    "cellH": 370,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke11",
+    "label": "kenney_blackSmoke11",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke11.png",
+    "frameCount": 1,
+    "cellW": 393,
+    "cellH": 327,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke12",
+    "label": "kenney_blackSmoke12",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke12.png",
+    "frameCount": 1,
+    "cellW": 373,
+    "cellH": 364,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke13",
+    "label": "kenney_blackSmoke13",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke13.png",
+    "frameCount": 1,
+    "cellW": 371,
+    "cellH": 388,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke14",
+    "label": "kenney_blackSmoke14",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke14.png",
+    "frameCount": 1,
+    "cellW": 378,
+    "cellH": 404,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke15",
+    "label": "kenney_blackSmoke15",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke15.png",
+    "frameCount": 1,
+    "cellW": 378,
+    "cellH": 371,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke16",
+    "label": "kenney_blackSmoke16",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke16.png",
+    "frameCount": 1,
+    "cellW": 360,
+    "cellH": 371,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke17",
+    "label": "kenney_blackSmoke17",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke17.png",
+    "frameCount": 1,
+    "cellW": 350,
+    "cellH": 398,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke18",
+    "label": "kenney_blackSmoke18",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke18.png",
+    "frameCount": 1,
+    "cellW": 382,
+    "cellH": 359,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke19",
+    "label": "kenney_blackSmoke19",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke19.png",
+    "frameCount": 1,
+    "cellW": 356,
+    "cellH": 382,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke20",
+    "label": "kenney_blackSmoke20",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke20.png",
+    "frameCount": 1,
+    "cellW": 369,
+    "cellH": 350,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke21",
+    "label": "kenney_blackSmoke21",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke21.png",
+    "frameCount": 1,
+    "cellW": 386,
+    "cellH": 394,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke22",
+    "label": "kenney_blackSmoke22",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke22.png",
+    "frameCount": 1,
+    "cellW": 366,
+    "cellH": 385,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke23",
+    "label": "kenney_blackSmoke23",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke23.png",
+    "frameCount": 1,
+    "cellW": 367,
+    "cellH": 402,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/blackSmoke24",
+    "label": "kenney_blackSmoke24",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/blackSmoke24.png",
+    "frameCount": 1,
+    "cellW": 393,
+    "cellH": 371,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion00",
+    "label": "kenney_explosion00",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion00.png",
+    "frameCount": 1,
+    "cellW": 583,
+    "cellH": 536,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion01",
+    "label": "kenney_explosion01",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion01.png",
+    "frameCount": 1,
+    "cellW": 634,
+    "cellH": 585,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion02",
+    "label": "kenney_explosion02",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion02.png",
+    "frameCount": 1,
+    "cellW": 620,
+    "cellH": 526,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion03",
+    "label": "kenney_explosion03",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion03.png",
+    "frameCount": 1,
+    "cellW": 574,
+    "cellH": 636,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion04",
+    "label": "kenney_explosion04",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion04.png",
+    "frameCount": 1,
+    "cellW": 600,
+    "cellH": 618,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion05",
+    "label": "kenney_explosion05",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion05.png",
+    "frameCount": 1,
+    "cellW": 572,
+    "cellH": 545,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion06",
+    "label": "kenney_explosion06",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion06.png",
+    "frameCount": 1,
+    "cellW": 583,
+    "cellH": 590,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion07",
+    "label": "kenney_explosion07",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion07.png",
+    "frameCount": 1,
+    "cellW": 634,
+    "cellH": 521,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/explosion08",
+    "label": "kenney_explosion08",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/explosion08.png",
+    "frameCount": 1,
+    "cellW": 603,
+    "cellH": 590,
+    "tags": [
+      "explosion"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart00",
+    "label": "kenney_fart00",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart00.png",
+    "frameCount": 1,
+    "cellW": 543,
+    "cellH": 547,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart01",
+    "label": "kenney_fart01",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart01.png",
+    "frameCount": 1,
+    "cellW": 579,
+    "cellH": 575,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart02",
+    "label": "kenney_fart02",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart02.png",
+    "frameCount": 1,
+    "cellW": 608,
+    "cellH": 561,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart03",
+    "label": "kenney_fart03",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart03.png",
+    "frameCount": 1,
+    "cellW": 564,
+    "cellH": 588,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart04",
+    "label": "kenney_fart04",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart04.png",
+    "frameCount": 1,
+    "cellW": 586,
+    "cellH": 629,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart05",
+    "label": "kenney_fart05",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart05.png",
+    "frameCount": 1,
+    "cellW": 520,
+    "cellH": 554,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart06",
+    "label": "kenney_fart06",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart06.png",
+    "frameCount": 1,
+    "cellW": 592,
+    "cellH": 566,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart07",
+    "label": "kenney_fart07",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart07.png",
+    "frameCount": 1,
+    "cellW": 605,
+    "cellH": 563,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/fart08",
+    "label": "kenney_fart08",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/fart08.png",
+    "frameCount": 1,
+    "cellW": 571,
+    "cellH": 550,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash00",
+    "label": "kenney_flash00",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash00.png",
+    "frameCount": 1,
+    "cellW": 550,
+    "cellH": 496,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash01",
+    "label": "kenney_flash01",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash01.png",
+    "frameCount": 1,
+    "cellW": 463,
+    "cellH": 482,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash02",
+    "label": "kenney_flash02",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash02.png",
+    "frameCount": 1,
+    "cellW": 563,
+    "cellH": 524,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash03",
+    "label": "kenney_flash03",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash03.png",
+    "frameCount": 1,
+    "cellW": 463,
+    "cellH": 495,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash04",
+    "label": "kenney_flash04",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash04.png",
+    "frameCount": 1,
+    "cellW": 483,
+    "cellH": 502,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash05",
+    "label": "kenney_flash05",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash05.png",
+    "frameCount": 1,
+    "cellW": 525,
+    "cellH": 534,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash06",
+    "label": "kenney_flash06",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash06.png",
+    "frameCount": 1,
+    "cellW": 473,
+    "cellH": 557,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash07",
+    "label": "kenney_flash07",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash07.png",
+    "frameCount": 1,
+    "cellW": 549,
+    "cellH": 521,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/flash08",
+    "label": "kenney_flash08",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/flash08.png",
+    "frameCount": 1,
+    "cellW": 516,
+    "cellH": 542,
+    "tags": [
+      "light"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff00",
+    "label": "kenney_whitePuff00",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff00.png",
+    "frameCount": 1,
+    "cellW": 381,
+    "cellH": 346,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff01",
+    "label": "kenney_whitePuff01",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff01.png",
+    "frameCount": 1,
+    "cellW": 345,
+    "cellH": 374,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff02",
+    "label": "kenney_whitePuff02",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff02.png",
+    "frameCount": 1,
+    "cellW": 382,
+    "cellH": 360,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff03",
+    "label": "kenney_whitePuff03",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff03.png",
+    "frameCount": 1,
+    "cellW": 353,
+    "cellH": 383,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff04",
+    "label": "kenney_whitePuff04",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff04.png",
+    "frameCount": 1,
+    "cellW": 375,
+    "cellH": 378,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff05",
+    "label": "kenney_whitePuff05",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff05.png",
+    "frameCount": 1,
+    "cellW": 337,
+    "cellH": 378,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff06",
+    "label": "kenney_whitePuff06",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff06.png",
+    "frameCount": 1,
+    "cellW": 400,
+    "cellH": 383,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff07",
+    "label": "kenney_whitePuff07",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff07.png",
+    "frameCount": 1,
+    "cellW": 367,
+    "cellH": 362,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff08",
+    "label": "kenney_whitePuff08",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff08.png",
+    "frameCount": 1,
+    "cellW": 419,
+    "cellH": 384,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff09",
+    "label": "kenney_whitePuff09",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff09.png",
+    "frameCount": 1,
+    "cellW": 368,
+    "cellH": 405,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff10",
+    "label": "kenney_whitePuff10",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff10.png",
+    "frameCount": 1,
+    "cellW": 349,
+    "cellH": 417,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff11",
+    "label": "kenney_whitePuff11",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff11.png",
+    "frameCount": 1,
+    "cellW": 406,
+    "cellH": 370,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff12",
+    "label": "kenney_whitePuff12",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff12.png",
+    "frameCount": 1,
+    "cellW": 348,
+    "cellH": 385,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff13",
+    "label": "kenney_whitePuff13",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff13.png",
+    "frameCount": 1,
+    "cellW": 367,
+    "cellH": 401,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff14",
+    "label": "kenney_whitePuff14",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff14.png",
+    "frameCount": 1,
+    "cellW": 392,
+    "cellH": 350,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff15",
+    "label": "kenney_whitePuff15",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff15.png",
+    "frameCount": 1,
+    "cellW": 394,
+    "cellH": 377,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff16",
+    "label": "kenney_whitePuff16",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff16.png",
+    "frameCount": 1,
+    "cellW": 361,
+    "cellH": 384,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff17",
+    "label": "kenney_whitePuff17",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff17.png",
+    "frameCount": 1,
+    "cellW": 385,
+    "cellH": 345,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff18",
+    "label": "kenney_whitePuff18",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff18.png",
+    "frameCount": 1,
+    "cellW": 360,
+    "cellH": 364,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff19",
+    "label": "kenney_whitePuff19",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff19.png",
+    "frameCount": 1,
+    "cellW": 377,
+    "cellH": 411,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff20",
+    "label": "kenney_whitePuff20",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff20.png",
+    "frameCount": 1,
+    "cellW": 379,
+    "cellH": 384,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff21",
+    "label": "kenney_whitePuff21",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff21.png",
+    "frameCount": 1,
+    "cellW": 371,
+    "cellH": 376,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff22",
+    "label": "kenney_whitePuff22",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff22.png",
+    "frameCount": 1,
+    "cellW": 361,
+    "cellH": 391,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff23",
+    "label": "kenney_whitePuff23",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff23.png",
+    "frameCount": 1,
+    "cellW": 381,
+    "cellH": 409,
+    "tags": [
+      "smoke"
+    ]
+  },
+  {
+    "id": "kenney_smoke/whitePuff24",
+    "label": "kenney_whitePuff24",
+    "category": "particle",
+    "source": "kenney_alpha_particle",
+    "singleSrc": "assets/vfx_library/kenney_smoke/whitePuff24.png",
+    "frameCount": 1,
+    "cellW": 370,
+    "cellH": 362,
+    "tags": [
+      "smoke"
+    ]
   }
 ]
