@@ -1641,6 +1641,7 @@ const SWARM_ENCOUNTER_CHANCE = 0.15;
 // 炎上(毒とは別系統のDOT): 毒が固定ダメージ+蓄積減衰なのに対し、炎上は最大HPの割合ダメージ+ターン数固定(減衰なし)。
 // 低HPの相手には毒が、高HPのタンクには炎上がよく効く、という住み分けを狙っている(陰陽師/砲術士の専売)
 const BURN_DAMAGE_PCT = 0.08;
+const BURN_DAMAGE_PCT_BOSS = 0.03; // ボス級(isBoss/isMidBoss)への炎上は割合を下げる(8%→3%、弱点なら2倍=6%。巨大HPプールに%DOTが効きすぎる問題への対処、ユーザー指示2026-07-30)
 
 // 命中率/回避率。素早い敵ほど回避率が上がり「攻撃をかわしてくる緊張感」を出すが、
 // かわし過ぎてストレスにならないよう回避率に上限(EVASION_MAX)を、命中率に下限(MIN_HIT_CHANCE)を設けている。
@@ -1666,7 +1667,7 @@ const STUN_RESIST_MULT = 0.2;
 // 威力・デバフの中身は敵ごとにENEMIES[id].bigAttackで個別設計する(全103体に設定済み、
 // 汎用フォールバックは廃止した。2026-07-19)
 const BIG_ATTACK_CYCLE_LENGTH = 4;
-const BIG_ATTACK_DOT_REDUCTION = 0.15; // 敵が毒/炎上状態の間、大技の威力をさらに下げる(削る対抗策)
+const BIG_ATTACK_DOT_REDUCTION = 0; // 【廃止2026-07-30】旧・「敵が毒/炎上/出血の間は大技-15%」の一律補正はユーザー指示で削除(定数はセーブ互換のため残置、engine側の参照は全て撤去済み)
 const BIG_ATTACK_EXPOSED_BONUS = 1.2; // 予告中(bigAttackPending)の敵へは、プレイヤーの与ダメージが増える(押し切る対抗策)
 
 // 奉行所: 序盤(floor1-12)の10種の敵をそれぞれ討伐対象にした依頼。全部を一度に張り出さず、

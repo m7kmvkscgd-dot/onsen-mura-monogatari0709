@@ -589,7 +589,10 @@ function revertTransform(character) {
 function tickBurn(entity, log) {
   if (!entity.burnTurns || entity.burnTurns <= 0) return 0;
   const w = enemyWeaknessType(entity, "burn");
-  const dmg = Math.max(1, Math.round(entity.maxHp * BURN_DAMAGE_PCT * (w ? 2 : 1)));
+  // ボス級は割合を8%→3%に下げる(弱点で2倍=6%。毒/出血のdotTickBossCap(6%)と同水準に収まる。
+  // 以前はボスにも8%(弱点16%)がそのまま入っており、%DOTがボスHPプールに効きすぎていた)
+  const pct = (entity.isBoss || entity.isMidBoss) ? BURN_DAMAGE_PCT_BOSS : BURN_DAMAGE_PCT;
+  const dmg = Math.max(1, Math.round(entity.maxHp * pct * (w ? 2 : 1)));
   entity.hp = Math.max(0, entity.hp - dmg);
   log(`${entity.label}は炎上で${dmg}ダメージ！${w ? "(炎上は弱点！)" : ""}`);
   entity.burnTurns--;
@@ -2783,7 +2786,6 @@ function commitBigAttackTelegraphTarget(enemy, alive) {
 // mid: 中央値(変動なしの素の計算) / max: 上振れした場合の目安(+15%、rollBasicAttackの変動幅上限と同じ)
 function predictBigAttackDamage(enemy, target, profile) {
   let mult = profile.mult;
-  if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   const base = enemy.atk * mitigation(effectiveStat(target, "def"), 18) * mult;
   return { mid: Math.max(1, Math.round(base)), max: Math.max(1, Math.round(base * 1.15)) };
 }
@@ -2858,7 +2860,6 @@ function enemyBigAttack(enemy, targets, log) {
   // 飛行の敵は従来通り柵を飛び越えて味方を狙う
   if (typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0 && !enemy.isFlying) {
     let bMult = profile.mult;
-    if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) bMult = Math.max(0.2, bMult - BIG_ATTACK_DOT_REDUCTION);
     const dmg = Math.max(1, Math.round(rollBasicAttack(enemy.atk, 0) * bMult));
     enemy.bigAttackTelegraphTargetId = null;
     enemy.bigAttackTelegraphForced = false;
@@ -2887,7 +2888,6 @@ function enemyBigAttack(enemy, targets, log) {
   enemy.bigAttackTelegraphForced = false;
   const hitTargets = profile.aoe ? alive : [singleTarget];
   let mult = profile.mult;
-  if (enemy.poison > 0 || enemy.burnTurns > 0 || enemy.bleed > 0) mult = Math.max(0.2, mult - BIG_ATTACK_DOT_REDUCTION);
   const bigAttackName = (profile.name) || "大技";
   return hitTargets.map((target) => {
     if (target.passives && target.passives.onceGuardType === "dodgeOnce" && !target.passives.onceGuardUsed) {
