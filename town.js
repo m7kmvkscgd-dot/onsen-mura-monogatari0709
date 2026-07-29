@@ -465,9 +465,8 @@ function wireInnHireButton(ids, membersFn, onBack) {
     saveState();
     playSfx("select");
     // 雇って初めて人柄が分かる(性格は事前に選べないランダム、ユーザー確定仕様2026-07-29)。
-    // その場で性格と戦闘癖を一言で紹介する
-    const hiredQuirk = personalityQuirk(c);
-    if (hiredQuirk) showInfoModal(`${c.name}が仲間になった！\n性格は【${c.personality}】。\n癖「${hiredQuirk.label}」— ${hiredQuirk.desc}`);
+    // キャラの絵付きの専用カードで性格と戦闘癖を紹介する
+    showHireReveal(c);
     renderInnRosterList(ids, membersFn, onBack);
     renderInnClassGrid(ids);
     document.getElementById(ids.gold).textContent = state.gold + "G";
@@ -667,10 +666,10 @@ function renderStatusScreen(charId, onBack) {
   yomiEl.textContent = reading ? reading.split("").join(" ") : "";
   yomiEl.style.display = reading ? "" : "none";
   document.getElementById("statClass").textContent = c2.ja;
-  // 性格の戦闘癖(PERSONALITY_QUIRKS)があれば癖名も併記する(詳細説明は能力欄の下の行)
+  // 性格バッジは性格名のみ(癖名の括弧書き併記はごちゃつくとユーザー指摘で廃止2026-07-29)。
+  // 癖の名前と説明は能力欄の下の専用行に出す
   const personalityQuirkDef = personalityQuirk(c);
-  document.getElementById("statPersonality").textContent = c.personality
-    ? `${c.personality}${personalityQuirkDef ? `(${personalityQuirkDef.label})` : ""}` : "-";
+  document.getElementById("statPersonality").textContent = c.personality || "-";
   const xpNeed = xpToNext(c.level);
   document.getElementById("statXp").textContent = c.level >= MAX_LEVEL ? "MAX" : `${c.xp} / ${xpNeed}`;
   document.getElementById("statusXpFill").style.width = c.level >= MAX_LEVEL
@@ -899,6 +898,33 @@ function hideConfirmModal() {
 // showConfirmModal)に統一した。呼び出し側はshowInfoModal(msg)と同じ感覚でそのまま使える
 function showInfoModal(message) {
   showConfirmModal(message, [{ label: "OK", className: "big primary" }]);
+}
+
+// ============ 仲間加入の判明演出(2026-07-29) ============
+// 雇った瞬間に性格と戦闘癖をキャラの絵付きのカードで紹介する。当初は素のshowInfoModalの文字羅列
+// だったが「改行が汚い・無駄に長い・ワクワクしない・絵がない、0点」とユーザー指摘で専用演出に刷新。
+// genericConfirmのextra枠(テキストとボタンの間の任意HTML差し込み枠)にカードを流し込む
+function showHireReveal(c) {
+  const quirk = personalityQuirk(c);
+  const safeName = String(c.name).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  showConfirmModal("", [{ label: "よろしく頼む！", className: "big primary" }]);
+  const extra = document.getElementById("genericConfirmExtra");
+  extra.innerHTML = `
+    <div class="hire-reveal">
+      <div class="hire-reveal-heading">新しい仲間</div>
+      <img class="hire-reveal-portrait" src="${CLASSES[c.classId].image}" alt="">
+      <div class="hire-reveal-name">${safeName}</div>
+      <div class="hire-reveal-chips">
+        <span class="hire-reveal-chip">${CLASSES[c.classId].ja}</span>
+        <span class="hire-reveal-chip pers">${c.personality}</span>
+      </div>
+      ${quirk ? `<div class="hire-reveal-quirk"><div class="hire-reveal-quirk-name">✨ ${quirk.label}</div><div class="hire-reveal-quirk-desc">${quirk.desc}</div></div>` : ""}
+    </div>`;
+  // 登場のポップイン(CSS transitionはiOSで信頼できない実績があるためelement.animateを使う)
+  extra.firstElementChild.animate(
+    [{ opacity: 0, transform: "scale(0.88) translateY(8px)" }, { opacity: 1, transform: "scale(1) translateY(0)" }],
+    { duration: 260, easing: "ease-out" });
+  playSfx("quest_accept");
 }
 
 // ============ 最初の1人選び(ゲーム開始時、名簿が空の間だけ表示) ============
