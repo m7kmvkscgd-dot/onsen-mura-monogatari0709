@@ -115,7 +115,8 @@
     自分が既定で選ばれます(スキルのkindから自動判定、手動でも切替可)。今の本体は自己バフ系スキルにVFX呼び出し
     自体が無いため、自分側の反映にはengine.js/battle.js側に新しく組み込む対応が必要です。<br>
     「②」の上部タブで「状態異常(毒/出血/炎上)」に切り替えると、毒・出血・炎上ダメージ時のVFXを職業/スキルとは
-    別枠で割り当てられます(蝕まれている本人=自分に常に表示)。毒・出血は本体側で蓄積値そのものがダメージ量
+    別枠で割り当てられます。状態異常は敵にも味方にも起こり得ますが、実戦では敵が受ける場面の方が多いため
+    既定は「敵」側のプレビューです(「敵に出す/自分に出す」で切替可)。毒・出血は本体側で蓄積値そのものがダメージ量
     (戦闘中いくらでも積み上がり、1ターンごとに-1)、炎上は蓄積ではなく残りターン数(固定割合ダメージ)という
     違う仕組みなので、「蓄積で拡大」スライダーで指定した%ずつ、蓄積/残りターンが1増えるごとにVFXが大きくなるよう
     調整できます(プレビュー蓄積スライダーで実際の見た目を確認可)。今のengine.js/effects.jsには毒/出血/炎上の
@@ -159,10 +160,10 @@
       </div>
     </div>
     <div class="target-toggle" id="targetToggle">
-      <label><input type="radio" name="target" value="enemy">敵に出す(攻撃・デバフ)</label>
-      <label><input type="radio" name="target" value="self">自分に出す(自己バフ・心眼など)</label>
+      <label><input type="radio" name="target" value="enemy">敵に出す<span id="targetEnemyHint">(攻撃・デバフ)</span></label>
+      <label><input type="radio" name="target" value="self">自分に出す<span id="targetSelfHint">(自己バフ・心眼など)</span></label>
     </div>
-    <p class="note" id="ailmentTargetNote" style="display:none; margin:0 0 8px;">状態異常は蝕まれている本人に出る演出のため、常に「自分」側(左の職業のポートレート)に表示します。</p>
+    <p class="note" id="ailmentTargetNote" style="display:none; margin:0 0 8px;">状態異常は敵にも味方にも発生しますが、実戦では敵が受ける場面の方が多いため既定は「敵」側のプレビューにしています(切替も可能)。</p>
 
     <div class="stage-wrap">
       <div id="stage">
@@ -363,15 +364,20 @@ const stackPreviewSlider = document.getElementById("stackPreviewSlider");
 const stackPreviewVal = document.getElementById("stackPreviewVal");
 const stackPreviewLabel = document.getElementById("stackPreviewLabel");
 
+// 状態異常(毒/出血/炎上)は敵にも味方にも起こり得るが、実戦では敵が受ける場面の方が
+// 圧倒的に多い(ユーザー指摘)ため、状態異常モードの既定ターゲットは"enemy"にする
+// (職業×スキルモードはスキルのkindから自動判定するdefaultTargetForSkillのまま)。
+// 敵/自分の切替トグル自体は両モード共通でずっと表示したままにする
+function defaultTargetForAilment() { return "enemy"; }
 function applyAssignModeUi() {
   const isAilment = assignMode === "ailment";
   skillCol.style.display = isAilment ? "none" : "";
   ailmentCol.style.display = isAilment ? "" : "none";
-  targetToggle.style.display = isAilment ? "none" : "";
   ailmentTargetNote.style.display = isAilment ? "" : "none";
   stackScaleBlock.style.display = isAilment ? "" : "none";
   stackPreviewLabel.textContent = (isAilment && ailmentSelect.value === "burn") ? "プレビュー残りターン" : "プレビュー蓄積";
-  if (isAilment) setTargetUi("self");
+  document.getElementById("targetEnemyHint").textContent = isAilment ? "(状態異常を受けている敵)" : "(攻撃・デバフ)";
+  document.getElementById("targetSelfHint").textContent = isAilment ? "(状態異常を受けている味方)" : "(自己バフ・心眼など)";
 }
 assignModeTabs.querySelectorAll("button").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -448,7 +454,7 @@ function selectVfx(v) {
     stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY };
     document.getElementById("blendScreenCheck").checked = resolveBlendScreen(a, v);
     setFrameMsUi(a.frameMs || 30);
-    setTargetUi(assignMode === "ailment" ? "self" : (a.target || defaultTargetForSkill(classSelect.value, skillSelect.value)));
+    setTargetUi(a.target || (assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value)));
     stackScaleSlider.value = a.stackScalePct != null ? a.stackScalePct : 8;
   } else {
     stageSize = 120; stageOffset = { x: 0, y: 0 };
@@ -458,7 +464,7 @@ function selectVfx(v) {
     // (個別に手動で切り替えられる)
     document.getElementById("blendScreenCheck").checked = v.source === "spritesheet";
     setFrameMsUi(30); // 本体既定のATTACK_VFX_FRAME_MSと同じ
-    setTargetUi(assignMode === "ailment" ? "self" : defaultTargetForSkill(classSelect.value, skillSelect.value));
+    setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
     stackScaleSlider.value = 8;
   }
   stackScaleVal.textContent = `+${stackScaleSlider.value}%/段`;
@@ -623,13 +629,13 @@ function resetStackScaleUi() {
 function syncStageToCurrentSelection() {
   const a = assignments[assignKey()];
   if (!a) {
-    setTargetUi(assignMode === "ailment" ? "self" : defaultTargetForSkill(classSelect.value, skillSelect.value));
+    setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
     resetStackScaleUi();
     return;
   }
   const vfx = findVfxById(a.vfxId);
   if (!vfx) {
-    setTargetUi(assignMode === "ailment" ? "self" : defaultTargetForSkill(classSelect.value, skillSelect.value));
+    setTargetUi(assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value));
     resetStackScaleUi();
     return;
   }
@@ -641,7 +647,7 @@ function syncStageToCurrentSelection() {
   document.getElementById("blendScreenCheck").checked = resolveBlendScreen(a, vfx);
   setFrameMsUi(a.frameMs || 30);
   document.getElementById("hitstopCheck").checked = false;
-  setTargetUi(assignMode === "ailment" ? "self" : (a.target || defaultTargetForSkill(classSelect.value, skillSelect.value)));
+  setTargetUi(a.target || (assignMode === "ailment" ? defaultTargetForAilment() : defaultTargetForSkill(classSelect.value, skillSelect.value)));
   stackScaleSlider.value = a.stackScalePct != null ? a.stackScalePct : 8;
   stackScaleVal.textContent = `+${stackScaleSlider.value}%/段`;
   stackPreviewSlider.value = 1;
@@ -666,7 +672,7 @@ document.getElementById("saveAssignBtn").addEventListener("click", () => {
     assignments[assignKey()] = {
       ...common,
       mode: "ailment", ailmentId: aid, ailmentLabel: AILMENT_DEFS[aid].label,
-      target: "self",
+      target: currentTarget(),
       stackScalePct: Number(stackScaleSlider.value) || 0,
     };
   } else {
