@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>温泉村物語 開発ツール</title>
+<style>
+  :root { --bg:#141414; --card-bg:#1d2126; --card-border:#3a3f46; --gold:#c9a55a; --title:#e8dcbf; --body:#d5cfc2; --caption:#8f9aa5; --info:#7db3d5; --success:#7bc96b; --radius:10px; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--body); padding-bottom:60px; }
+  .container { max-width:640px; margin:0 auto; padding:12px; }
+  h1 { font-size:1.05rem; color:var(--title); padding:14px 2px 4px; }
+  .sub { font-size:0.7rem; color:var(--caption); margin-bottom:14px; }
+  h2 { font-size:0.78rem; color:var(--gold); margin:18px 2px 8px; letter-spacing:0.05em; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  a.tool { display:flex; align-items:center; gap:10px; background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:13px 12px; text-decoration:none; color:var(--body); min-height:52px; }
+  a.tool:active { background:#262c33; }
+  a.tool .ic { font-size:1.3rem; flex-shrink:0; }
+  a.tool .nm { font-size:0.82rem; font-weight:700; line-height:1.3; }
+  a.tool .nm small { display:block; font-size:0.6rem; font-weight:400; color:var(--caption); margin-top:1px; }
+  .badge { display:inline-block; font-size:0.55rem; font-weight:700; color:var(--success); border:1px solid var(--success); border-radius:5px; padding:0 4px; margin-left:4px; vertical-align:1px; }
+  a.tool.game { border-left-color:var(--info); }
+  details { margin-top:16px; background:rgba(0,0,0,0.2); border:1px solid var(--card-border); border-radius:var(--radius); }
+  details summary { list-style:none; cursor:pointer; padding:10px 12px; font-size:0.76rem; font-weight:700; color:var(--title); }
+  details summary::-webkit-details-marker { display:none; }
+  details .grid { padding:0 10px 10px; }
+  .foot { font-size:0.62rem; color:var(--caption); margin-top:20px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🛠️ 温泉村物語 開発ツール</h1>
+  <p class="sub">全ツールの入口。<span class="badge">直結</span>付きはゲーム本体のdata.jsを直接読むため、ゲームデータと常に同期しています。</p>
+
+  <h2>ゲーム</h2>
+  <div class="grid">
+    <a class="tool game" href="index.html"><span class="ic">♨️</span><span class="nm">ゲーム本体<small>温泉村物語を起動</small></span></a>
+  </div>
+
+  <h2>エディタ</h2>
+  <div class="grid">
+    <a class="tool" href="enemy_editor.html"><span class="ic">👹</span><span class="nm">敵エディタ<small>敵ステータス・技</small></span></a>
+    <a class="tool" href="skill_editor.html"><span class="ic">📜</span><span class="nm">スキルエディタ<small>職業スキルツリー</small></span></a>
+    <a class="tool" href="building_editor.html"><span class="ic">🏯</span><span class="nm">建築エディタ<small>村の施設・効果</small></span></a>
+    <a class="tool" href="quest_editor.html"><span class="ic">🏮</span><span class="nm">奉行所エディタ<small>討伐依頼</small></span></a>
+    <a class="tool" href="raid_editor.html"><span class="ic">⚔️</span><span class="nm">襲撃エディタ<span class="badge">直結</span><small>ウェーブ・スケジュール</small></span></a>
+    <a class="tool" href="vfx_editor.html"><span class="ic">✨</span><span class="nm">VFXエディタ<small>スキル演出・SE</small></span></a>
+    <a class="tool" href="audio_editor.html"><span class="ic">🔊</span><span class="nm">音量エディタ<small>BGM/SE音量</small></span></a>
+    <a class="tool" href="world_map_editor.html"><span class="ic">🗺️</span><span class="nm">世界地図エディタ<small>エリア接続</small></span></a>
+  </div>
+
+  <h2>せりふくん</h2>
+  <div class="grid">
+    <a class="tool" href="serifu/セリフ判定_3人.html"><span class="ic">💬</span><span class="nm">セリフ判定(3人)<small>トリオ会話の採用判定</small></span></a>
+    <a class="tool" href="serifu/セリフ判定.html"><span class="ic">💬</span><span class="nm">セリフ判定(2人)<small>ペア会話の採用判定</small></span></a>
+  </div>
+
+  <h2>資料・マップ</h2>
+  <div class="grid">
+    <a class="tool" href="world_map.html"><span class="ic">🌏</span><span class="nm">世界地図</span></a>
+    <a class="tool" href="area_map.html"><span class="ic">🧭</span><span class="nm">エリアマップ</span></a>
+    <a class="tool" href="implementation_map.html"><span class="ic">🧩</span><span class="nm">実装マップ</span></a>
+    <a class="tool" href="implementation_status.html"><span class="ic">📋</span><span class="nm">実装状況</span></a>
+  </div>
+
+  <h2>制作補助</h2>
+  <div class="grid">
+    <a class="tool" href="enemy_prompt_generator.html"><span class="ic">🎨</span><span class="nm">敵プロンプト生成<small>ComfyUI用</small></span></a>
+    <a class="tool" href="bg_prompt_generator.html"><span class="ic">🖼️</span><span class="nm">背景プロンプト生成<small>ComfyUI用</small></span></a>
+  </div>
+
+  <details>
+    <summary>🧪 モック置き場(過去の検討用画面)</summary>
+    <div class="grid">
+      <a class="tool" href="swap_anim_mock.html"><span class="ic">🔁</span><span class="nm">交代アニメ</span></a>
+      <a class="tool" href="mock_result_loot.html"><span class="ic">🎁</span><span class="nm">リザルト戦利品</span></a>
+      <a class="tool" href="mock_drop_fx.html"><span class="ic">🪙</span><span class="nm">ドロップ演出</span></a>
+      <a class="tool" href="mock_shop_materials.html"><span class="ic">🛒</span><span class="nm">売店素材表示</span></a>
+      <a class="tool" href="mock_barricade_damage.html"><span class="ic">🧱</span><span class="nm">バリケード損壊</span></a>
+      <a class="tool" href="mock_raid_countdown.html"><span class="ic">⏳</span><span class="nm">襲撃カウントダウン</span></a>
+      <a class="tool" href="mock_watchtower_battle.html"><span class="ic">🗼</span><span class="nm">見張り台戦闘</span></a>
+      <a class="tool" href="mock_kyoboku_chop.html"><span class="ic">🪓</span><span class="nm">巨木伐採</span></a>
+      <a class="tool" href="mock_catapult_fx.html"><span class="ic">🪨</span><span class="nm">投石機演出</span></a>
+      <a class="tool" href="mock_enemy_noframe.html"><span class="ic">🖼️</span><span class="nm">敵フレーム無し表示</span></a>
+    </div>
+  </details>
+
+  <p class="foot">エディタは順次「直結」化を進行中(内蔵データコピーを廃止し、data.js直読みへ移行)。新しいツールを追加したらこのページにもリンクを足すこと。</p>
+</div>
+</body>
+</html>
