@@ -895,7 +895,9 @@ const SKILL_TREES = {
       // 明鏡止水(2026-07-30ストレス系フル実装): meikyo:trueで3ターンのmeikyoTurnsが立ち、その間
       // ストレスの能力低下を受けず(effectiveStat)・毎ターンストレス1回復(tickSamuraiForms)・
       // 心眼のMP-1(skillMpCost)・専用立ち絵(class_samurai_meikyo.png)。戦闘終了で必ず解除
-      right: { name: "明鏡止水", desc: "3ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 3, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 3, noCost: true, meikyo: true } },
+      // mp3→2(2026-07-30ユーザー相談: 5→3ターン化でターン単価が1.67倍になっていた+心眼割引は
+      // 敵が自分を狙わないと空振りで当てにならない、という結論からコストを引き下げ)
+      right: { name: "明鏡止水", desc: "3ターンの間、明鏡止水状態に入る。会心率+25% 心眼のmp消費-1。 ストレスの影響を受けず、ストレスを蓄積しない。毎ターンストレスを1回復。ターンを消費しない。", mp: 2, action: { kind: "buffSelf", stats: [{ stat: "critRateAdd", mult: 0.25 }], turns: 3, noCost: true, meikyo: true } },
     },
     7: {
       // 連斬はLv8左から移動(内容はそのまま、覇気と入れ替え)
