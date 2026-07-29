@@ -1219,8 +1219,11 @@ function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
   const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
   lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
-  // 影分身/式神で追加の1体が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする
-  bar.classList.toggle("party-bar-five", combatants.length >= 5);
+  // 影分身/式神で追加の1体が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする。
+  // 襲撃戦(massBattleSizingForced)は人数に関係なく常に5人サイズで統一(4人でも大きくしない、
+  // ユーザー指定2026-07-29: 途中で式神召喚などにより人数が変わってもサイズがガタつかないように)
+  const raidSizing = typeof massBattleSizingForced !== "undefined" && massBattleSizingForced && elId === "battlePartyBar";
+  bar.classList.toggle("party-bar-five", combatants.length >= 5 || raidSizing);
   // 表示対象でなくなったカードだけ取り除く(交代で下がった/ロストして探索バーから外れた/
   // 式神・分身の消滅/逃走離脱/別の遠征メンバーへの入れ替わり)
   const validIds = new Set(combatants.map((c) => String(c.id)));

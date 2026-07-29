@@ -217,7 +217,14 @@ function raidTryAdvanceWave() {
     }
   });
   if (spawned.length === 0) return raidTryAdvanceWave(); // 空ウェーブ(設計ミス対策)は飛ばして次を試す
+  // 前の波の死体カードの枠を畳む: 通常戦闘の差分レンダラーは「敵が死んでも枠を残す」仕様
+  // (残った敵の並びが詰まって動かないため)だが、ウェーブ切り替え時は前の波が全滅済みなので、
+  // 枠を残すと新しい波のカードが見えない死体枠の右に押し込まれて「縮む+右寄り」になる
+  // (実機バグ2026-07-29)。battle.enemiesからは外さない(勝利時のgold/xp集計が全ウェーブ分を
+  // 走査するため)。__clearedWaveはrenderBattleScreenのvisibleEnemiesフィルタが見る表示専用フラグ
+  battle.enemies.forEach((e) => { if (e.hp <= 0) e.__clearedWave = true; });
   battle.enemies = battle.enemies.concat(spawned);
+  battle.justAppeared = true; // 新しい波のカードにも戦闘開始時と同じ出現演出を付ける
   raidCurrentWaveNum++;
   blog(`第${raidCurrentWaveNum}波が押し寄せてきた！`);
   renderBattleScreen();

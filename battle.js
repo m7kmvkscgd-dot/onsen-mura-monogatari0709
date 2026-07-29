@@ -343,7 +343,9 @@ function renderBattleScreen() {
   // (演出が終わった後も)このリストから外さない=枠は残したままにする。外すと#enemyRowの
   // justify-content:centerにより残った敵が中央へ詰め直されてしまい、「敵が死んで消えても
   // 他の敵の並びは動かないでほしい」という指示に反するため
-  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0));
+  // __clearedWave: 襲撃戦でウェーブが進んだ時、前の波の死体カードの枠ごと畳むための表示専用フラグ
+  // (raid.js raidTryAdvanceWave参照。通常戦闘では常にundefinedなので従来どおり枠が残る)
+  const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0) && !e.__clearedWave);
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
   // 5体以上の大規模戦は敵カードを味方カード(5人表示)と同格のサイズへ縮小し、折り返さず1行に収める
   // (2026-07-27実機報告: 通常サイズのまま5体並べると2行に折り返してテキストボックスと衝突していた)
