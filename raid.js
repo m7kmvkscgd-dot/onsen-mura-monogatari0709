@@ -114,6 +114,24 @@ function repairBarricade() {
   return true;
 }
 
+// ============ 投石器(2026-07-29) ============
+// 襲撃戦のラウンド終了ごとに、地上の敵(isFlyingでない生存個体)からランダムに1体選んで自動で
+// 投石攻撃する。威力は「村レベル=槍士の同レベル攻撃力」として通常攻撃と同じ式(rollBasicAttack)
+// で計算する(村レベルはHOUSE_MAX_LEVEL=7が上限のため、キャラクターのレベル成長式をそのまま
+// 流用しても破綻しない)。地上の敵が1体もいない(全滅済み、または敵が全員飛行)時は不発になる。
+// battle.jsのnextRound()から、ラウンドが1つ完了した直後(次のラウンドの手番順を組む前)に呼ばれる
+function fireCatapultOnRoundEnd() {
+  if (!raidBattleActive || (state.catapultLevel || 0) <= 0) return;
+  const groundTargets = aliveEnemies().filter((e) => !e.isFlying);
+  if (groundTargets.length === 0) return;
+  const target = groundTargets[Math.floor(Math.random() * groundTargets.length)];
+  const atk = Math.round(CLASSES.spearman.atk * (1 + ((state.houseLevel || 1) - 1) * 0.075));
+  const dmg = rollBasicAttack(atk, target.def);
+  target.hp = Math.max(0, target.hp - dmg);
+  blog(`投石器が${target.label}に岩を撃ち込んだ！${dmg}のダメージ！`);
+  popupOn(target.instanceId, `-${dmg}`, "dmg");
+}
+
 // ============ ウェーブ抽選 ============
 // その時点の村レベルのプールから重み付きで1候補を選ぶ。プール未設定のレベルは下位レベルへ
 // フォールバック(raid_editor.htmlの設計契約)。全レベル未設定ならnull(襲撃は発生せず次回へ順延)

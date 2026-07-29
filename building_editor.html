@@ -199,6 +199,9 @@ const BUILDING_DATA = {
     shrine: { name: "神社", icon: "⛩️", desc: "僧侶が雇えるようになります。また、出発準備画面でおみくじが引けるようになり、温泉から魂のかけらを捧げてお守りをもらえるようになります。", unlockHouseLevel: 3, costs: [30], classUnlock: "priest", matsCosts: [{ kawa: 0, hone: 0, ki: 2, tetsu: 0 }] },
     hotSpringKeeper: { name: "湯守屋", icon: "♨️", desc: "温泉で回復するストレスの量が上がります(50→65)。", unlockHouseLevel: 5, costs: [200], classUnlock: null, extra: { baseRelief: 50, keeperRelief: 65 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 5 }] },
     gunpowderStore: { name: "火薬庫", icon: "💣", desc: "砲術士が雇えるようになります。", unlockHouseLevel: 4, costs: [30], classUnlock: "gunner", matsCosts: [{ kawa: 0, hone: 0, ki: 3, tetsu: 0 }] },
+    // 投石器(2026-07-29): 襲撃戦のラウンド終了ごとに地上の敵1体へ自動で投石攻撃する。威力は
+    // 「村レベル=槍士の同レベル攻撃力」として通常攻撃と同じ式で計算する(raid.jsのfireCatapultOnRoundEnd参照)
+    catapult: { name: "投石器", icon: "🪨", desc: "襲撃の時、毎ターンの終わりに地上の敵1体へ自動で投石攻撃します。威力は村レベルに応じて上がります。(空を飛ぶ敵には当たりません)", unlockHouseLevel: 4, costs: [100], classUnlock: null, matsCosts: [{ kawa: 2, hone: 0, ki: 8, tetsu: 0 }] },
     teaHouse: { name: "茶屋", icon: "🍡", desc: "深淵の森20層で茶屋に立ち寄れるようになります。一休みしてHP・MPを回復したり、お菓子を購入できます。", unlockHouseLevel: 3, costs: [50], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 5, tetsu: 0 }] },
     stable: { name: "馬屋", icon: "🐎", desc: "(詳細は未定)", unlockHouseLevel: 7, costs: [200], classUnlock: null, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }] },
     beeFarm: { name: "養蜂場", icon: "🐝", desc: "回復薬の回復量が段階ごとに上がります。", unlockHouseLevel: 5, costs: [100, 100, 100, 125, 100], classUnlock: null, extra: { potionBonusPerLevel: 0.015 }, matsCosts: [{ kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, { kawa: 0, hone: 0, ki: 8, tetsu: 0 }] },
@@ -645,7 +648,7 @@ function renderBuildingsSection() {
   const container = document.createElement("div");
   const note = document.createElement("div");
   note.className = "section-note";
-  note.textContent = "全16施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な素材」は素材経済の要求数(皮/骨/木/鉄、ゲーム側は未実装。値を決めてエクスポートすると実装に反映されます)。「木の案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。鍛冶屋カードの「⚒️ 武器・防具の詳細を編集」から、職業ごとの武器/防具5段階(解禁Lv・名前・ステータス・増加量・価格・必要素材)を編集できます。";
+  note.textContent = "全18施設。costs配列は左から順にレベル1→2、2→3…の建築/増築費用です。「必要な素材」は素材経済の要求数(皮/骨/木/鉄、ゲーム側は未実装。値を決めてエクスポートすると実装に反映されます)。「木の案:N」は価格帯からの叩き台です。「この施設固有の数値」は道場の経験値分け前/鞄屋の基礎上限/養蜂場の回復薬ボーナス/湯守屋の疲労回復量など、その施設だけが参照する個別の定数です。鍛冶屋カードの「⚒️ 武器・防具の詳細を編集」から、職業ごとの武器/防具5段階(解禁Lv・名前・ステータス・増加量・価格・必要素材)を編集できます。";
   container.appendChild(note);
   const ids = buildingIds().filter(matchesSearch);
   if (!ids.length) {
@@ -747,7 +750,7 @@ function renderTabs() {
   const nav = document.getElementById("sectionTabs");
   nav.innerHTML = "";
   const tabs = [
-    { key: "buildings", label: "施設一覧(全17)" },
+    { key: "buildings", label: "施設一覧(全18)" },
     { key: "house", label: "家(住居)設定" },
   ];
   tabs.forEach((t) => {

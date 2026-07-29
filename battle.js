@@ -444,6 +444,11 @@ function nextRound(forceFirstStrike) {
   const alive = aliveField();
   if (aliveEnemies().length === 0) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
+  // 投石器: ラウンドが1つ完了した直後に発動する(battle.roundsTotal>0=このnextRound呼び出しが
+  // 戦闘開始直後の初回ではないことの目印。0のままなら開戦直後なのでまだ何も起きていない)。
+  // ここで最後の敵を倒しても、直後のprocessNext()冒頭のaliveEnemies()===0判定でvictory()が
+  // 自然に呼ばれるため、この関数側で改めて勝利判定をする必要はない
+  if (battle.roundsTotal > 0) fireCatapultOnRoundEnd();
   // 交代コマンドのクールダウンはラウンドの節目で1減る
   if (battle.swapCooldown > 0) battle.swapCooldown--;
   // 参加ターン比の経験値配分用: このラウンドに戦場へ出ていたメンバーを記録する。

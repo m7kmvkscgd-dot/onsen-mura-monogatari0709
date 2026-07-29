@@ -1840,7 +1840,7 @@ document.getElementById("onsenShrineBackBtnTop").onclick = () => { renderFacilit
 // ============ 増築 ============
 // ============ 建築(増築画面の施設一覧) ============
 // 「仲間を雇う」画面(宿屋)と同じ設計思想(アイコン中心の4列グリッド、詳細は別モーダル)に全面刷新。
-// 全16施設のデータを1箇所(BUILDING_DEFS)にまとめ、建築/増築の実処理(buildOrUpgradeBuilding)も
+// 全18施設のデータを1箇所(BUILDING_DEFS)にまとめ、建築/増築の実処理(buildOrUpgradeBuilding)も
 // 汎用の1関数に統一した(以前はdojo/bagShop/henHouse/beeFarmだけ個別のonclickハンドラを持ち、
 // 残り12施設もrenderSimpleBuilding/buildSimpleBuildingという別の共通処理を使う、という二重構造
 // だったが、costsを「レベルごとの建築費配列」として持たせることで単発建築(costs長さ1)も
@@ -1889,6 +1889,10 @@ const BUILDING_DEFS = [
   { key: "gunpowderStore", levelField: "gunpowderStoreLevel", name: "火薬庫", icon: "💣", iconImg: "assets/icons/buildings/gunpowderStore.png",
     unlock: GUNPOWDER_STORE_UNLOCK_HOUSE_LEVEL, costs: [GUNPOWDER_STORE_COST], mats: [{ ki: 3 }], classUnlock: "gunner",
     desc: "砲術士が雇えるようになります。" },
+  // 投石器(2026-07-29): 襲撃戦のラウンド終了ごとに地上の敵1体へ自動で投石攻撃する(raid.jsのfireCatapultOnRoundEnd参照)
+  { key: "catapult", levelField: "catapultLevel", name: "投石器", icon: "🪨", iconImg: "assets/icons/buildings/catapult.png",
+    unlock: CATAPULT_UNLOCK_HOUSE_LEVEL, costs: [CATAPULT_COST], mats: [CATAPULT_MATS],
+    desc: "襲撃の時、毎ターンの終わりに地上の敵1体へ自動で投石攻撃します。威力は村レベルに応じて上がります。(空を飛ぶ敵には当たりません)" },
   { key: "henHouse", levelField: "henHouseLevel", name: "鶏小屋", icon: "🐓", iconImg: "assets/icons/buildings/henHouse.png",
     unlock: HEN_HOUSE_UNLOCK_HOUSE_LEVEL, costs: [HEN_HOUSE_LEVEL1_COST, HEN_HOUSE_LEVEL2_COST],
     desc: "温泉卵の回復量が2%増加し、毎日の在庫が一つ増える\nレベル2になるとさらに2%増加する。" },
@@ -2134,6 +2138,7 @@ const FACILITY_DISPLAY = {
   shrineLevel: { icon: "⛩️", name: "神社" },
   hotSpringKeeperLevel: { icon: "♨️", name: "湯守屋" },
   gunpowderStoreLevel: { icon: "💣", name: "火薬庫" },
+  catapultLevel: { icon: "🪨", name: "投石器" },
   teaHouseLevel: { icon: "🍡", name: "茶屋" },
   stableLevel: { icon: "🐎", name: "馬屋" },
   beeFarmLevel: { icon: "🐝", name: "養蜂場" },
@@ -2200,7 +2205,7 @@ function showClassUnlockCelebration(classId) {
   // (CLASS_STATUS_PORTRAIT、本来はステータス詳細画面専用)をこの演出だけ使い回す
   showBuildCompleteOverlay(null, "新しい仲間を雇えるようになりました！", c.ja, [CLASS_DESC[classId], "宿屋で雇えます。"], CLASS_STATUS_PORTRAIT[classId]);
 }
-// 建築/増築の共通処理。全16施設がこの1つの関数で完結する(costsが1要素なら単発建築のみ、
+// 建築/増築の共通処理。全18施設がこの1つの関数で完結する(costsが1要素なら単発建築のみ、
 // 複数要素なら道場/鞄屋/養蜂場/鶏小屋のような多段階建築になる)
 function buildOrUpgradeBuilding(key) {
   const def = BUILDING_DEFS.find((d) => d.key === key);
