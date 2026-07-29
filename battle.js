@@ -1197,6 +1197,17 @@ function pickFollowupTarget(onPicked) {
 }
 // 連斬など: 会心を出した直後の追撃。通常攻撃と同じ処理を簡略版で再現する
 // (最初の一撃の武甕槌命/建御雷神の御守判定・ヒットストップ演出の間は含めない。追撃はあくまで「おまけ」の一撃)
+// 連斬(onCritExtraAttackChance)の発動判定+行動終了の共通ラッパー。従来は通常攻撃の会心にしか
+// 反応しなかったが、descは「会心を出した直後」であり技の会心も対象(鬼神斬り(会心+40%)との
+// シナジーがユーザーの設計意図、2026-07-30)。技・基本アビリティの完了経路からもこれを通す。
+// 判定は行動1回につき1回(範囲技で複数会心が出ても1回だけ)
+function maybeCritFollowupThenFinish(actor, wasCrit) {
+  if (wasCrit && actor.hp > 0 && actor.passives && actor.passives.onCritExtraAttackChance && Math.random() < actor.passives.onCritExtraAttackChance) {
+    runCritFollowupAttack(actor, () => finishPlayerAction(wasCrit));
+    return;
+  }
+  finishPlayerAction(wasCrit);
+}
 function runCritFollowupAttack(actor, onDone) {
   blog(`${actor.label}は会心の勢いのまま、もう一度斬りかかった！`);
   pickFollowupTarget((target) => {
@@ -1281,7 +1292,7 @@ function runTreeSkill(actor, skill) {
     });
     setTimeout(() => {
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
-      finishPlayerAction(anyCrit);
+      maybeCritFollowupThenFinish(actor, anyCrit);
     }, hits.length * STAGGER_MS + 50);
     return;
   }
@@ -1433,7 +1444,7 @@ function runTreeSkill(actor, skill) {
     }
     renderBattleScreen();
     hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
-    triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
+    triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
     return;
   }
   // 迅雷突き(2026-07-30): 敵を2回指定して1体ずつ100%威力で攻撃する(同じ敵を2回選んでもよい)。
@@ -1465,7 +1476,7 @@ function runTreeSkill(actor, skill) {
         });
         setTimeout(() => {
           if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
-          finishPlayerAction(anyCrit);
+          maybeCritFollowupThenFinish(actor, anyCrit);
         }, rs.length * STAGGER_MS + 50);
       });
     });
@@ -1506,7 +1517,7 @@ function runTreeSkill(actor, skill) {
           triggerShootDownEvents(r.shotDown ? [target] : [], () => renderActionButtons(actor));
           return;
         }
-        triggerShootDownEvents(r.shotDown ? [target] : [], () => finishPlayerAction(r.crit));
+        triggerShootDownEvents(r.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, r.crit));
       }, r.hits.length * STAGGER_MS);
       return;
     }
@@ -1532,7 +1543,7 @@ function runTreeSkill(actor, skill) {
       triggerShootDownEvents(r && r.shotDown ? [target] : [], () => renderActionButtons(actor));
       return;
     }
-    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => finishPlayerAction(r && r.crit));
+    triggerShootDownEvents(r && r.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, r && r.crit));
   });
 }
 
@@ -1961,7 +1972,7 @@ function renderActionButtons(actor) {
             playAttackerLunge(actor.id);
             playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
-            triggerShootDownEvents(shotDownTargets, () => finishPlayerAction(anyCrit));
+            triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
             return;
           }
           // 単体系(会心の一撃/奇襲/呪符ノ術など)
@@ -1981,7 +1992,7 @@ function renderActionButtons(actor) {
             playAttackerLunge(actor.id);
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
             if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
-            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => finishPlayerAction(result && result.crit));
+            triggerShootDownEvents(result && result.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, result && result.crit));
           });
         };
         attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
