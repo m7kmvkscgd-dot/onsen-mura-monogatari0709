@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>温泉村物語 VFXアニメーションエディタ</title>
+<style>
+  :root { --bg:#141414; --card-bg:#1d2126; --card-border:#3a3f46; --gold:#c9a55a; --title:#e8dcbf; --body:#d5cfc2; --caption:#8f9aa5; --danger:#e06c60; --success:#7bc96b; --info:#7db3d5; --radius:10px; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--body); padding-bottom:40px; }
+  .container { max-width:640px; margin:0 auto; padding:12px; }
+  header { position:sticky; top:0; z-index:20; background:linear-gradient(180deg, #1a1e22 0%, #141719 100%); border-bottom:1px solid var(--card-border); padding-bottom:8px; }
+  h1 { font-size:1.0rem; color:var(--title); padding:10px 12px 0; max-width:640px; margin:0 auto; }
+  .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:640px; margin:0 auto; padding:8px 12px 0; }
+  .topbar button { font-family:inherit; font-size:0.78rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; }
+  .note { font-size:0.7rem; color:var(--caption); line-height:1.6; margin:8px 0; }
+  .note-card { background:rgba(0,0,0,0.2); border:1px solid var(--card-border); border-radius:var(--radius); margin-bottom:10px; }
+  .note-card summary { list-style:none; cursor:pointer; padding:8px 12px; font-size:0.76rem; font-weight:700; color:var(--title); display:flex; align-items:center; justify-content:space-between; }
+  .note-card summary::-webkit-details-marker { display:none; }
+  .note-card .note { padding:0 12px 10px; margin:0; }
+  .card { background:var(--card-bg); border:1px solid var(--card-border); border-left:3px solid var(--gold); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+  .card h2 { font-size:0.86rem; color:var(--title); margin-bottom:8px; }
+  label { font-size:0.72rem; color:var(--caption); display:block; margin-bottom:3px; }
+  input[type=search], input[type=text], select { background:rgba(0,0,0,0.25); border:1px solid var(--card-border); border-radius:6px; color:var(--body); font-size:0.85rem; padding:7px 8px; width:100%; }
+  input[type=range] { width:100%; }
+  input[type=number] { background:rgba(0,0,0,0.25); border:1px solid var(--card-border); border-radius:6px; color:var(--body); font-size:0.85rem; padding:6px 6px; width:72px; text-align:right; }
+  .row { display:flex; gap:10px; margin-bottom:8px; }
+  .row > div { flex:1; min-width:0; }
+  .tabs { display:flex; gap:6px; margin-bottom:8px; }
+  .tabs button { flex:1; font-family:inherit; font-size:0.74rem; font-weight:700; color:var(--caption); background:#22262b; border:1px solid var(--card-border); border-radius:8px; padding:7px 4px; }
+  .tabs button.active { color:var(--title); border-color:var(--gold); background:#2a2f36; }
+  #libList { max-height:280px; overflow-y:auto; border:1px solid var(--card-border); border-radius:8px; }
+  .lib-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-top:1px dashed rgba(255,255,255,0.08); cursor:pointer; }
+  .lib-item:first-child { border-top:none; }
+  .lib-item:hover, .lib-item.selected { background:rgba(201,165,90,0.12); }
+  .lib-item img { width:36px; height:36px; object-fit:contain; background:#000; border-radius:6px; flex-shrink:0; }
+  .lib-item .nm { flex:1; min-width:0; font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lib-item .meta { font-size:0.6rem; color:var(--caption); }
+  .badge { font-size:0.58rem; border:1px solid var(--card-border); border-radius:6px; padding:1px 5px; color:var(--caption); flex-shrink:0; }
+  .badge.flipbook { color:#a8d5f0; }
+  .badge.particle { color:#f0c9a8; }
+
+  .stage-wrap { display:flex; justify-content:center; margin:10px 0; }
+  #stage { position:relative; width:260px; height:260px; background:radial-gradient(ellipse at center, #2a2f36 0%, #14171a 100%); border:1px solid var(--card-border); border-radius:12px; overflow:hidden; touch-action:none; }
+  #stage .grid-line { position:absolute; background:rgba(255,255,255,0.06); }
+  #stage .grid-line.h { left:0; right:0; top:50%; height:1px; }
+  #stage .grid-line.v { top:0; bottom:0; left:50%; width:1px; }
+  #cardImg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:96px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5)); pointer-events:none; }
+  #vfxLayer { position:absolute; left:50%; top:50%; cursor:grab; touch-action:none; }
+  #vfxLayer.dragging { cursor:grabbing; }
+  #vfxLayer img { display:block; position:absolute; left:50%; top:50%; pointer-events:none; }
+  .stage-hint { text-align:center; font-size:0.62rem; color:var(--caption); margin-top:4px; }
+
+  .assign-controls { display:flex; flex-direction:column; gap:8px; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { flex:0 0 70px; margin:0; }
+  .slider-row .val { flex:0 0 48px; text-align:right; font-size:0.76rem; color:var(--title); font-weight:700; }
+  .playback-row { display:flex; gap:8px; align-items:center; }
+  .small { font-size:0.72rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:7px; padding:7px 12px; font-family:inherit; }
+  .small.primary { background:linear-gradient(160deg,#6b4a2e,#4a3220); color:var(--title); }
+  .small.danger { color:#f0b0a8; border-color:#5c3a36; }
+
+  .assign-item { display:flex; align-items:center; gap:8px; padding:8px; border-top:1px dashed rgba(255,255,255,0.08); }
+  .assign-item:first-child { border-top:none; }
+  .assign-item img { width:32px; height:32px; object-fit:contain; background:#000; border-radius:6px; flex-shrink:0; }
+  .assign-item .info { flex:1; min-width:0; }
+  .assign-item .info .who { font-size:0.8rem; font-weight:700; color:var(--title); }
+  .assign-item .info .what { font-size:0.66rem; color:var(--caption); }
+  .empty-hint { font-size:0.74rem; color:var(--caption); padding:8px 0; text-align:center; }
+
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; z-index:50; padding:14px; }
+  .modal.open { display:flex; }
+  .modal-inner { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; width:100%; max-width:560px; max-height:86dvh; display:flex; flex-direction:column; padding:12px; }
+  .modal-inner h3 { font-size:0.9rem; color:var(--title); margin-bottom:8px; }
+  textarea { width:100%; height:280px; background:#0f1214; color:#cfe3cf; border:1px solid var(--card-border); border-radius:8px; font-size:0.68rem; font-family:ui-monospace,monospace; padding:8px; }
+  .modal-actions { display:flex; gap:8px; margin-top:8px; }
+  .modal-actions button { flex:1; font-family:inherit; font-size:0.8rem; font-weight:700; color:var(--body); background:#26313a; border:1px solid var(--card-border); border-radius:8px; padding:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎆 温泉村物語 VFXアニメーションエディタ</h1>
+  <div class="topbar">
+    <button id="exportBtn">📋 割り当てをエクスポート</button>
+    <button id="resetBtn">全て初期化</button>
+  </div>
+</header>
+<div class="container">
+  <details class="note-card">
+    <summary>ℹ️ 使い方(タップで開閉) <span>▶</span></summary>
+    <p class="note">iCloudの「VFX系」フォルダから取り込んだ素材(import_vfx_library.py実行時点のもの)を一覧から選び、
+    キャラ×スキルに割り当てて、表示位置・大きさをこの場でプレビューしながら調整できます。素材を追加/差し替えたら
+    <code>python import_vfx_library.py</code>をもう一度実行してこのページを開き直してください(自動反映ではありません)。<br>
+    今のゲーム側(effects.js)は「クラスごとに通常攻撃/スキルの2種類だけ」VFXを持てる作りです。ここではスキル単位で
+    割り当てられますが、実際にゲームへ反映する時はエンジン側の対応も必要になる場合がある点だけ了承しておいてください。
+    調整した位置・サイズはエクスポートしたJSONにそのまま残るので、反映作業自体はスムーズです。</p>
+  </details>
+
+  <div class="card">
+    <h2>① VFXを選ぶ<span id="libCount" style="color:var(--caption); font-weight:normal; font-size:0.72rem;"></span></h2>
+    <div class="tabs" id="libTabs">
+      <button class="active" data-cat="all">すべて</button>
+      <button data-cat="flipbook">連続アニメ(flipbook)</button>
+      <button data-cat="particle">単発(particle)</button>
+    </div>
+    <input type="search" id="libSearch" placeholder="名前で検索...">
+    <div id="libList" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card" id="assignCard" style="display:none;">
+    <h2>② 割り当て先・位置・大きさを決める</h2>
+    <div class="row">
+      <div>
+        <label>職業</label>
+        <select id="classSelect"></select>
+      </div>
+      <div>
+        <label>スキル</label>
+        <select id="skillSelect"></select>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <div id="stage">
+        <div class="grid-line h"></div>
+        <div class="grid-line v"></div>
+        <img id="cardImg" src="">
+        <div id="vfxLayer"></div>
+      </div>
+    </div>
+    <div class="stage-hint">VFXを指でドラッグすると表示位置がずれます(中央=キャラの中心)</div>
+
+    <div class="assign-controls" style="margin-top:10px;">
+      <div class="slider-row">
+        <label>大きさ</label>
+        <input type="range" id="sizeSlider" min="20" max="400" value="120">
+        <span class="val" id="sizeVal">120px</span>
+      </div>
+      <div class="row">
+        <div>
+          <label>横位置(X)</label>
+          <input type="number" id="offsetXInput" value="0">
+        </div>
+        <div>
+          <label>縦位置(Y)</label>
+          <input type="number" id="offsetYInput" value="0">
+        </div>
+      </div>
+      <div class="playback-row">
+        <button class="small" id="replayBtn">▶ 再生し直す</button>
+        <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" id="loopCheck" checked style="width:auto;">ループ再生</label>
+      </div>
+      <button class="small primary" id="saveAssignBtn">✓ この割り当てを保存</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ 保存済みの割り当て<span id="assignCount" style="color:var(--caption); font-weight:normal; font-size:0.72rem;"></span></h2>
+    <div id="assignList"></div>
+  </div>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-inner">
+    <h3>エクスポート(このJSONをClaudeに貼る)</h3>
+    <textarea id="exportJson" readonly></textarea>
+    <div class="modal-actions">
+      <button id="copyBtn">コピー</button>
+      <button id="exportCloseBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// import_vfx_library.py の出力(vfx_library_manifest.json)を埋め込み。素材を追加したら
+// スクリプトを再実行し、このconstを最新のvfx_library_manifest.jsonの中身へ手動で差し替える
+const VFX_LIBRARY = [{"id":"cloud_01_8x8","label":"cloud_01_8x8","category":"flipbook","framePrefix":"assets/vfx_library/cloud_01_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"cloud_02_8x8","label":"cloud_02_8x8","category":"flipbook","framePrefix":"assets/vfx_library/cloud_02_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"explosion_01_8x8","label":"explosion_01_8x8","category":"flipbook","framePrefix":"assets/vfx_library/explosion_01_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"explosion_02_8x8","label":"explosion_02_8x8","category":"flipbook","framePrefix":"assets/vfx_library/explosion_02_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"explosion_smoke_01_8x8","label":"explosion_smoke_01_8x8","category":"flipbook","framePrefix":"assets/vfx_library/explosion_smoke_01_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"fire_01_8x8","label":"fire_01_8x8","category":"flipbook","framePrefix":"assets/vfx_library/fire_01_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"fire_02_8x8","label":"fire_02_8x8","category":"flipbook","framePrefix":"assets/vfx_library/fire_02_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"fire_03_8x8","label":"fire_03_8x8","category":"flipbook","framePrefix":"assets/vfx_library/fire_03_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"fire_04_8x8","label":"fire_04_8x8","category":"flipbook","framePrefix":"assets/vfx_library/fire_04_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"flame_01_16x4","label":"flame_01_16x4","category":"flipbook","framePrefix":"assets/vfx_library/flame_01_16x4/frame_","frameCount":64,"cellW":128,"cellH":256},{"id":"flame_02_15x4","label":"flame_02_15x4","category":"flipbook","framePrefix":"assets/vfx_library/flame_02_15x4/frame_","frameCount":60,"cellW":136,"cellH":256},{"id":"wispy_smoke_01_8x8","label":"wispy_smoke_01_8x8","category":"flipbook","framePrefix":"assets/vfx_library/wispy_smoke_01_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"wispy_smoke_02_8x8","label":"wispy_smoke_02_8x8","category":"flipbook","framePrefix":"assets/vfx_library/wispy_smoke_02_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"wispy_smoke_03_8x8","label":"wispy_smoke_03_8x8","category":"flipbook","framePrefix":"assets/vfx_library/wispy_smoke_03_8x8/frame_","frameCount":64,"cellW":128,"cellH":128},{"id":"particles/circle_01_a","label":"circle_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/circle_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/circle_02_a","label":"circle_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/circle_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/circle_03_a","label":"circle_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/circle_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/circle_04_a","label":"circle_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/circle_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/circle_05_a","label":"circle_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/circle_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/dirt_01_a","label":"dirt_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/dirt_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/dirt_02_a","label":"dirt_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/dirt_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/dirt_03_a","label":"dirt_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/dirt_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/effect_01_a","label":"effect_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/effect_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/effect_02_a","label":"effect_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/effect_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/effect_03_a","label":"effect_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/effect_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/fire_01_a","label":"fire_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/fire_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/fire_02_a","label":"fire_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/fire_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_01_a","label":"flame_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_02_a","label":"flame_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_03_a","label":"flame_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_04_a","label":"flame_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_05_a","label":"flame_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flame_06_a","label":"flame_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/flame_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/flare_01_a","label":"flare_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/flare_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/light_01_a","label":"light_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/light_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/light_02_a","label":"light_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/light_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/light_03_a","label":"light_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/light_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/magic_01_a","label":"magic_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/magic_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/magic_02_a","label":"magic_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/magic_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/magic_03_a","label":"magic_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/magic_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/magic_04_a","label":"magic_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/magic_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/magic_05_a","label":"magic_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/magic_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/muzzle_01_a","label":"muzzle_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/muzzle_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/muzzle_02_a","label":"muzzle_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/muzzle_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/muzzle_03_a","label":"muzzle_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/muzzle_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/muzzle_04_a","label":"muzzle_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/muzzle_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/muzzle_05_a","label":"muzzle_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/muzzle_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/scorch_01_a","label":"scorch_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/scorch_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/scorch_02_a","label":"scorch_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/scorch_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/scorch_03_a","label":"scorch_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/scorch_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/scratch_01_a","label":"scratch_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/scratch_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/slash_01_a","label":"slash_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/slash_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/slash_02_a","label":"slash_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/slash_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/slash_03_a","label":"slash_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/slash_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/slash_04_a","label":"slash_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/slash_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_01_a","label":"smoke_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_02_a","label":"smoke_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_03_a","label":"smoke_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_04_a","label":"smoke_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_05_a","label":"smoke_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_06_a","label":"smoke_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_07_a","label":"smoke_07_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_07_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_07_strong_a","label":"smoke_07_strong_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_07_strong_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_08_a","label":"smoke_08_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_08_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_09_a","label":"smoke_09_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_09_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/smoke_10_a","label":"smoke_10_a","category":"particle","singleSrc":"assets/vfx_library/particles/smoke_10_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_01_a","label":"spark_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_02_a","label":"spark_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_03_a","label":"spark_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_04_a","label":"spark_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_05_a","label":"spark_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_06_a","label":"spark_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spark_07_a","label":"spark_07_a","category":"particle","singleSrc":"assets/vfx_library/particles/spark_07_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_01_a","label":"spotlight_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_02_a","label":"spotlight_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_03_a","label":"spotlight_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_04_a","label":"spotlight_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_05_a","label":"spotlight_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_06_a","label":"spotlight_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_07_a","label":"spotlight_07_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_07_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/spotlight_08_a","label":"spotlight_08_a","category":"particle","singleSrc":"assets/vfx_library/particles/spotlight_08_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_01_a","label":"star_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_02_a","label":"star_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_03_a","label":"star_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_04_a","label":"star_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_05_a","label":"star_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_06_a","label":"star_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_07_a","label":"star_07_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_07_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_08_a","label":"star_08_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_08_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/star_09_a","label":"star_09_a","category":"particle","singleSrc":"assets/vfx_library/particles/star_09_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/symbol_01_a","label":"symbol_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/symbol_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/symbol_02_a","label":"symbol_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/symbol_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_01_a","label":"trace_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_02_a","label":"trace_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_03_a","label":"trace_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_04_a","label":"trace_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_05_a","label":"trace_05_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_05_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_06_a","label":"trace_06_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_06_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/trace_07_a","label":"trace_07_a","category":"particle","singleSrc":"assets/vfx_library/particles/trace_07_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/twirl_01_a","label":"twirl_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/twirl_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/twirl_02_a","label":"twirl_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/twirl_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/twirl_03_a","label":"twirl_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/twirl_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/twirl_04_a","label":"twirl_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/twirl_04_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/window_01_a","label":"window_01_a","category":"particle","singleSrc":"assets/vfx_library/particles/window_01_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/window_02_a","label":"window_02_a","category":"particle","singleSrc":"assets/vfx_library/particles/window_02_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/window_03_a","label":"window_03_a","category":"particle","singleSrc":"assets/vfx_library/particles/window_03_a.png","frameCount":1,"cellW":512,"cellH":512},{"id":"particles/window_04_a","label":"window_04_a","category":"particle","singleSrc":"assets/vfx_library/particles/window_04_a.png","frameCount":1,"cellW":512,"cellH":512}];
+const CLASS_SKILL_DATA = {"classList":[{"id":"samurai","ja":"侍"},{"id":"ninja","ja":"忍"},{"id":"spearman","ja":"槍士"},{"id":"naginata","ja":"薙刀士"},{"id":"hunter","ja":"狩人"},{"id":"gunner","ja":"砲術士"},{"id":"onmyoji","ja":"陰陽師"},{"id":"priest","ja":"僧侶"}],"skillsByClass":{"samurai":[{"id":"2_left","level":2,"side":"left","name":"居合"},{"id":"2_right","level":2,"side":"right","name":"見切り"},{"id":"3_left","level":3,"side":"left","name":"闘志"},{"id":"3_right","level":3,"side":"right","name":"武士道"},{"id":"4_left","level":4,"side":"left","name":"一閃"},{"id":"4_right","level":4,"side":"right","name":"心眼"},{"id":"5_left","level":5,"side":"left","name":"疾風斬り"},{"id":"5_right","level":5,"side":"right","name":"水月"},{"id":"6_left","level":6,"side":"left","name":"鬼神化"},{"id":"6_right","level":6,"side":"right","name":"明鏡止水"},{"id":"7_left","level":7,"side":"left","name":"連斬"},{"id":"7_right","level":7,"side":"right","name":"覚悟"},{"id":"8_left","level":8,"side":"left","name":"覇気"},{"id":"8_right","level":8,"side":"right","name":"黒曜"},{"id":"9_left","level":9,"side":"left","name":"修羅"},{"id":"9_right","level":9,"side":"right","name":"残心"},{"id":"10_left","level":10,"side":"left","name":"神速抜刀"},{"id":"10_right","level":10,"side":"right","name":"天衣無縫"}],"ninja":[{"id":"2_left","level":2,"side":"left","name":"煙幕"},{"id":"2_right","level":2,"side":"right","name":"毒刃"},{"id":"3_left","level":3,"side":"left","name":"撒菱"},{"id":"3_right","level":3,"side":"right","name":"忍足"},{"id":"4_left","level":4,"side":"left","name":"口寄せの術"},{"id":"4_right","level":4,"side":"right","name":"影分身の術"},{"id":"5_left","level":5,"side":"left","name":"身代わりの術"},{"id":"5_right","level":5,"side":"right","name":"蝮手裏剣"},{"id":"6_left","level":6,"side":"left","name":"暗殺術"},{"id":"6_right","level":6,"side":"right","name":"毒殺の心得"},{"id":"7_left","level":7,"side":"left","name":"影縫い"},{"id":"7_right","level":7,"side":"right","name":"瞬身の順"},{"id":"8_left","level":8,"side":"left","name":"幻影乱舞"},{"id":"8_right","level":8,"side":"right","name":"修羅刃"},{"id":"9_left","level":9,"side":"left","name":"影縫い"},{"id":"9_right","level":9,"side":"right","name":"空蝉"},{"id":"10_left","level":10,"side":"left","name":"禁忌・影分身の術"},{"id":"10_right","level":10,"side":"right","name":"朧隠れ"}],"spearman":[{"id":"2_left","level":2,"side":"left","name":"貫通突き"},{"id":"2_right","level":2,"side":"right","name":"不動"},{"id":"3_left","level":3,"side":"left","name":"貫きの構え"},{"id":"3_right","level":3,"side":"right","name":"砦の構え"},{"id":"4_left","level":4,"side":"left","name":"迅雷突き"},{"id":"4_right","level":4,"side":"right","name":"守り槍"},{"id":"5_left","level":5,"side":"left","name":"蜻蛉切り"},{"id":"5_right","level":5,"side":"right","name":"怒声"},{"id":"6_left","level":6,"side":"left","name":"阿修羅突き"},{"id":"6_right","level":6,"side":"right","name":"迎撃"},{"id":"7_left","level":7,"side":"left","name":"剛槍"},{"id":"7_right","level":7,"side":"right","name":"城壁の意志"},{"id":"8_left","level":8,"side":"left","name":"鎧砕き"},{"id":"8_right","level":8,"side":"right","name":"不屈"},{"id":"9_left","level":9,"side":"left","name":"槍鬼"},{"id":"9_right","level":9,"side":"right","name":"鋼の肉体"},{"id":"10_left","level":10,"side":"left","name":"天穿槍"},{"id":"10_right","level":10,"side":"right","name":"仁王立ち"}],"naginata":[{"id":"2_left","level":2,"side":"left","name":"舞の型"},{"id":"2_right","level":2,"side":"right","name":"足払い"},{"id":"3_left","level":3,"side":"left","name":"円舞"},{"id":"3_right","level":3,"side":"right","name":"崩し"},{"id":"4_left","level":4,"side":"left","name":"旋風薙ぎ"},{"id":"4_right","level":4,"side":"right","name":"威圧"},{"id":"5_left","level":5,"side":"left","name":"拍子外し"},{"id":"5_right","level":5,"side":"right","name":"舞姫"},{"id":"6_left","level":6,"side":"left","name":"乱舞"},{"id":"6_right","level":6,"side":"right","name":"流水"},{"id":"7_left","level":7,"side":"left","name":"豪舞"},{"id":"7_right","level":7,"side":"right","name":"護りの薙刀"},{"id":"8_left","level":8,"side":"left","name":"花吹雪"},{"id":"8_right","level":8,"side":"right","name":"乱心"},{"id":"9_left","level":9,"side":"left","name":"百花繚乱"},{"id":"9_right","level":9,"side":"right","name":"静寂"},{"id":"10_left","level":10,"side":"left","name":"千本桜"},{"id":"10_right","level":10,"side":"right","name":"天女の舞"}],"hunter":[{"id":"2_left","level":2,"side":"left","name":"火矢"},{"id":"2_right","level":2,"side":"right","name":"急所への一撃"},{"id":"3_left","level":3,"side":"left","name":"隼落とし"},{"id":"3_right","level":3,"side":"right","name":"血痕追跡"},{"id":"4_left","level":4,"side":"left","name":"貫き矢"},{"id":"4_right","level":4,"side":"right","name":"鷹を呼ぶ"},{"id":"5_left","level":5,"side":"left","name":"追い討ち"},{"id":"5_right","level":5,"side":"right","name":"血管炸裂"},{"id":"6_left","level":6,"side":"left","name":"必中撃ち"},{"id":"6_right","level":6,"side":"right","name":"麻痺の矢"},{"id":"7_left","level":7,"side":"left","name":"連射の心得"},{"id":"7_right","level":7,"side":"right","name":"狩猟本能"},{"id":"8_left","level":8,"side":"left","name":"急所連撃"},{"id":"8_right","level":8,"side":"right","name":"腐食毒"},{"id":"9_left","level":9,"side":"left","name":"弱者狩り"},{"id":"9_right","level":9,"side":"right","name":"痺れ矢・豪雨"},{"id":"10_left","level":10,"side":"left","name":"流星射ち"},{"id":"10_right","level":10,"side":"right","name":"狩神の領域"}],"gunner":[{"id":"2_left","level":2,"side":"left","name":"土嚢展開"},{"id":"2_right","level":2,"side":"right","name":"榴弾"},{"id":"3_left","level":3,"side":"left","name":"火薬強化"},{"id":"3_right","level":3,"side":"right","name":"爆薬調合"},{"id":"4_left","level":4,"side":"left","name":"貫通弾"},{"id":"4_right","level":4,"side":"right","name":"炸裂弾"},{"id":"5_left","level":5,"side":"left","name":"援護砲撃"},{"id":"5_right","level":5,"side":"right","name":"焼夷弾"},{"id":"6_left","level":6,"side":"left","name":"装填術"},{"id":"6_right","level":6,"side":"right","name":"爆風拡大"},{"id":"7_left","level":7,"side":"left","name":"会心装填"},{"id":"7_right","level":7,"side":"right","name":"衝撃波"},{"id":"8_left","level":8,"side":"left","name":"徹甲弾"},{"id":"8_right","level":8,"side":"right","name":"一斉砲撃"},{"id":"9_left","level":9,"side":"left","name":"砲撃術皆伝"},{"id":"9_right","level":9,"side":"right","name":"爆炎支配"},{"id":"10_left","level":10,"side":"left","name":"神威砲"},{"id":"10_right","level":10,"side":"right","name":"天地崩砲"}],"onmyoji":[{"id":"2_left","level":2,"side":"left","name":"火遁符"},{"id":"2_right","level":2,"side":"right","name":"結界術"},{"id":"3_left","level":3,"side":"left","name":"陰陽極意"},{"id":"3_right","level":3,"side":"right","name":"式神召喚"},{"id":"4_left","level":4,"side":"left","name":"水遁符"},{"id":"4_right","level":4,"side":"right","name":"帰還"},{"id":"5_left","level":5,"side":"left","name":"呪符の見切り"},{"id":"5_right","level":5,"side":"right","name":"霊魂吸収"},{"id":"6_left","level":6,"side":"left","name":"陰陽融合"},{"id":"6_right","level":6,"side":"right","name":"式神の加護"},{"id":"7_left","level":7,"side":"left","name":"天地鳴動"},{"id":"7_right","level":7,"side":"right","name":"魂養術"},{"id":"8_left","level":8,"side":"left","name":"雷遁符"},{"id":"8_right","level":8,"side":"right","name":"神速召喚"},{"id":"9_left","level":9,"side":"left","name":"衰弱撃ち"},{"id":"9_right","level":9,"side":"right","name":"憑依"},{"id":"10_left","level":10,"side":"left","name":"五行滅殺陣"},{"id":"10_right","level":10,"side":"right","name":"黄泉の呪"}],"priest":[{"id":"2_left","level":2,"side":"left","name":"治癒術"},{"id":"2_right","level":2,"side":"right","name":"祝福"},{"id":"3_left","level":3,"side":"left","name":"癒しの祈り"},{"id":"3_right","level":3,"side":"right","name":"神聖加護"},{"id":"4_left","level":4,"side":"left","name":"生命力循環"},{"id":"4_right","level":4,"side":"right","name":"浄化"},{"id":"5_left","level":5,"side":"left","name":"慈愛"},{"id":"5_right","level":5,"side":"right","name":"聖なる結界"},{"id":"6_left","level":6,"side":"left","name":"蘇生術"},{"id":"6_right","level":6,"side":"right","name":"神託"},{"id":"7_left","level":7,"side":"left","name":"癒しの波動"},{"id":"7_right","level":7,"side":"right","name":"聖域"},{"id":"8_left","level":8,"side":"left","name":"生命の奇跡"},{"id":"8_right","level":8,"side":"right","name":"神威"},{"id":"9_left","level":9,"side":"left","name":"慈悲の心"},{"id":"9_right","level":9,"side":"right","name":"退魔"},{"id":"10_left","level":10,"side":"left","name":"命の祝福"},{"id":"10_right","level":10,"side":"right","name":"天恵の祈り"}]}};
+const STORAGE_KEY = "onsen_vfx_editor_v1";
+
+const CLASS_PORTRAIT = {}; // classId -> 立ち絵パス(既存のassets/class_*.pngを流用)
+CLASS_SKILL_DATA.classList.forEach((c) => { CLASS_PORTRAIT[c.id] = `assets/class_${c.id}.png`; });
+
+let assignments = {}; // key: `${classId}:${skillId}` -> {classId, skillId, skillLabel, classLabel, vfxId, vfxLabel, category, size, offsetX, offsetY}
+try { assignments = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (e) { assignments = {}; }
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments)); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+let selectedVfx = null; // VFX_LIBRARYの1件
+let libCat = "all";
+let libQuery = "";
+let playTimer = null;
+let curFrame = 1;
+let stageOffset = { x: 0, y: 0 };
+let stageSize = 120;
+
+function renderLibList() {
+  const list = document.getElementById("libList");
+  const items = VFX_LIBRARY.filter((v) => (libCat === "all" || v.category === libCat) && (!libQuery || v.label.toLowerCase().includes(libQuery)));
+  document.getElementById("libCount").textContent = ` (${items.length}/${VFX_LIBRARY.length}件)`;
+  list.innerHTML = "";
+  if (items.length === 0) { list.innerHTML = '<div class="empty-hint">該当する素材がありません</div>'; return; }
+  items.forEach((v) => {
+    const el = document.createElement("div");
+    el.className = "lib-item" + (selectedVfx && selectedVfx.id === v.id ? " selected" : "");
+    const thumb = v.category === "flipbook" ? `${v.framePrefix}1.png` : v.singleSrc;
+    el.innerHTML = `
+      <img src="${esc(thumb)}" onerror="this.style.visibility='hidden'">
+      <div class="nm">${esc(v.label)}</div>
+      <span class="badge ${v.category}">${v.category === "flipbook" ? v.frameCount + "コマ" : "単発"}</span>
+    `;
+    el.onclick = () => selectVfx(v);
+    list.appendChild(el);
+  });
+}
+document.getElementById("libTabs").querySelectorAll("button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#libTabs button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    libCat = btn.dataset.cat;
+    renderLibList();
+  });
+});
+document.getElementById("libSearch").addEventListener("input", (e) => { libQuery = e.target.value.trim().toLowerCase(); renderLibList(); });
+
+// ==== 職業/スキル選択 ====
+const classSelect = document.getElementById("classSelect");
+const skillSelect = document.getElementById("skillSelect");
+CLASS_SKILL_DATA.classList.forEach((c) => {
+  const opt = document.createElement("option");
+  opt.value = c.id; opt.textContent = c.ja;
+  classSelect.appendChild(opt);
+});
+function renderSkillOptions() {
+  const cid = classSelect.value;
+  skillSelect.innerHTML = "";
+  const normalOpt = document.createElement("option");
+  normalOpt.value = "normal"; normalOpt.textContent = "(通常攻撃)";
+  skillSelect.appendChild(normalOpt);
+  (CLASS_SKILL_DATA.skillsByClass[cid] || []).forEach((sk) => {
+    const opt = document.createElement("option");
+    opt.value = sk.id;
+    opt.textContent = `Lv${sk.level}${sk.side === "left" ? "左" : "右"}: ${sk.name}`;
+    skillSelect.appendChild(opt);
+  });
+}
+classSelect.addEventListener("change", () => { renderSkillOptions(); syncStageToCurrentSelection(); });
+skillSelect.addEventListener("change", () => { syncStageToCurrentSelection(); });
+renderSkillOptions();
+
+function updateCardPortrait() {
+  document.getElementById("cardImg").src = CLASS_PORTRAIT[classSelect.value] || "";
+}
+
+// ==== プレビューステージ ====
+function stopPlayback() { if (playTimer) { clearInterval(playTimer); playTimer = null; } }
+function findVfxById(id) { return VFX_LIBRARY.find((v) => v.id === id) || null; }
+// VFXライブラリから選んだ時: 今の職業/スキルに「その同じVFX」の保存済み調整があれば復元、
+// 無ければ既定値(120px・中央)にリセットする(前に別のVFXで動かした位置を誤って引き継がないため)
+function selectVfx(v) {
+  selectedVfx = v;
+  document.getElementById("assignCard").style.display = "";
+  const a = assignments[assignKey()];
+  if (a && a.vfxId === v.id) { stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY }; }
+  else { stageSize = 120; stageOffset = { x: 0, y: 0 }; }
+  document.getElementById("sizeSlider").value = stageSize;
+  document.getElementById("sizeVal").textContent = stageSize + "px";
+  setOffsetInputs();
+  renderLibList();
+  updateCardPortrait();
+  playVfx();
+}
+function applyVfxLayerTransform() {
+  const layer = document.getElementById("vfxLayer");
+  layer.style.transform = `translate(calc(-50% + ${stageOffset.x}px), calc(-50% + ${stageOffset.y}px))`;
+}
+function playVfx() {
+  stopPlayback();
+  if (!selectedVfx) return;
+  const layer = document.getElementById("vfxLayer");
+  layer.innerHTML = "";
+  const img = document.createElement("img");
+  const ratio = selectedVfx.cellH / selectedVfx.cellW;
+  img.style.width = stageSize + "px";
+  img.style.height = Math.round(stageSize * ratio) + "px";
+  img.style.marginLeft = -(stageSize / 2) + "px";
+  img.style.marginTop = -(Math.round(stageSize * ratio) / 2) + "px";
+  layer.appendChild(img);
+  applyVfxLayerTransform();
+  curFrame = 1;
+  const loop = document.getElementById("loopCheck").checked;
+  if (selectedVfx.category === "particle") { img.src = selectedVfx.singleSrc; return; }
+  img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
+  playTimer = setInterval(() => {
+    curFrame++;
+    if (curFrame > selectedVfx.frameCount) {
+      if (loop) { curFrame = 1; } else { stopPlayback(); return; }
+    }
+    img.src = `${selectedVfx.framePrefix}${curFrame}.png`;
+  }, 30); // ゲーム本体のATTACK_VFX_FRAME_MSと同じ30ms
+}
+document.getElementById("replayBtn").addEventListener("click", playVfx);
+document.getElementById("loopCheck").addEventListener("change", playVfx);
+
+document.getElementById("sizeSlider").addEventListener("input", (e) => {
+  stageSize = Number(e.target.value);
+  document.getElementById("sizeVal").textContent = stageSize + "px";
+  playVfx();
+});
+function setOffsetInputs() {
+  document.getElementById("offsetXInput").value = stageOffset.x;
+  document.getElementById("offsetYInput").value = stageOffset.y;
+}
+document.getElementById("offsetXInput").addEventListener("input", (e) => { stageOffset.x = Number(e.target.value) || 0; applyVfxLayerTransform(); });
+document.getElementById("offsetYInput").addEventListener("input", (e) => { stageOffset.y = Number(e.target.value) || 0; applyVfxLayerTransform(); });
+
+// ドラッグでの位置調整(タッチ/マウス共通、Pointer Events)
+(() => {
+  const layer = document.getElementById("vfxLayer");
+  let dragging = false, startX = 0, startY = 0, baseX = 0, baseY = 0;
+  layer.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    layer.classList.add("dragging");
+    layer.setPointerCapture(e.pointerId);
+    startX = e.clientX; startY = e.clientY;
+    baseX = stageOffset.x; baseY = stageOffset.y;
+  });
+  layer.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    stageOffset.x = Math.round(baseX + (e.clientX - startX));
+    stageOffset.y = Math.round(baseY + (e.clientY - startY));
+    applyVfxLayerTransform();
+    setOffsetInputs();
+  });
+  const endDrag = () => { dragging = false; layer.classList.remove("dragging"); };
+  layer.addEventListener("pointerup", endDrag);
+  layer.addEventListener("pointercancel", endDrag);
+})();
+
+// ==== 割り当ての保存/読み込み ====
+function assignKey() { return `${classSelect.value}:${skillSelect.value}`; }
+// 職業/スキルの選択を切り替えた時に呼ぶ。その組み合わせに保存済みの割り当てがあれば
+// VFX選択・大きさ・位置を全部復元してプレビューし直す(以前はVFXの選び直しを忘れて
+// 位置だけ古いVFXに適用してしまうバグがあった)。保存済みが無ければ何もしない(今の
+// 選択中VFXをいじっている途中かもしれないので、勝手にリセットはしない)
+function syncStageToCurrentSelection() {
+  const a = assignments[assignKey()];
+  if (!a) { updateCardPortrait(); return; }
+  const vfx = findVfxById(a.vfxId);
+  if (!vfx) { updateCardPortrait(); return; }
+  selectedVfx = vfx;
+  stageSize = a.size; stageOffset = { x: a.offsetX, y: a.offsetY };
+  document.getElementById("assignCard").style.display = "";
+  document.getElementById("sizeSlider").value = stageSize;
+  document.getElementById("sizeVal").textContent = stageSize + "px";
+  setOffsetInputs();
+  renderLibList();
+  updateCardPortrait();
+  playVfx();
+}
+document.getElementById("saveAssignBtn").addEventListener("click", () => {
+  if (!selectedVfx) return;
+  const cid = classSelect.value, sid = skillSelect.value;
+  const classLabel = CLASS_SKILL_DATA.classList.find((c) => c.id === cid).ja;
+  const skillLabel = skillSelect.options[skillSelect.selectedIndex].textContent;
+  assignments[assignKey()] = {
+    classId: cid, skillId: sid, classLabel, skillLabel,
+    vfxId: selectedVfx.id, vfxLabel: selectedVfx.label, category: selectedVfx.category,
+    framePrefix: selectedVfx.framePrefix, singleSrc: selectedVfx.singleSrc, frameCount: selectedVfx.frameCount,
+    size: stageSize, offsetX: stageOffset.x, offsetY: stageOffset.y,
+  };
+  save();
+  renderAssignList();
+});
+function renderAssignList() {
+  const wrap = document.getElementById("assignList");
+  const keys = Object.keys(assignments);
+  document.getElementById("assignCount").textContent = ` (${keys.length}件)`;
+  wrap.innerHTML = "";
+  if (keys.length === 0) { wrap.innerHTML = '<div class="empty-hint">まだ割り当てがありません</div>'; return; }
+  keys.forEach((k) => {
+    const a = assignments[k];
+    const thumb = a.category === "flipbook" ? `${a.framePrefix}1.png` : a.singleSrc;
+    const el = document.createElement("div");
+    el.className = "assign-item";
+    el.innerHTML = `
+      <img src="${esc(thumb)}" onerror="this.style.visibility='hidden'">
+      <div class="info">
+        <div class="who">${esc(a.classLabel)} / ${esc(a.skillLabel)}</div>
+        <div class="what">${esc(a.vfxLabel)} ・ ${a.size}px ・ (${a.offsetX >= 0 ? "+" : ""}${a.offsetX}, ${a.offsetY >= 0 ? "+" : ""}${a.offsetY})</div>
+      </div>
+      <button class="small danger" data-act="del">削除</button>
+    `;
+    el.querySelector('[data-act="del"]').onclick = () => { delete assignments[k]; save(); renderAssignList(); };
+    wrap.appendChild(el);
+  });
+}
+
+document.getElementById("resetBtn").onclick = () => {
+  if (Object.keys(assignments).length === 0 && !selectedVfx) return;
+  if (!confirm("全ての割り当てを削除します。よろしいですか？")) return;
+  assignments = {};
+  save();
+  renderAssignList();
+};
+
+// ==== エクスポート ====
+document.getElementById("exportBtn").onclick = () => {
+  const out = "// VFXアニメーションエディタのエクスポート(職業×スキル -> VFX割り当て)\n" +
+    "// 注意: 今のeffects.jsはクラスごとに通常攻撃/スキルの2種類しかVFXスロットを持たないため、\n" +
+    "// スキル単位の割り当てを実際にゲームへ反映するにはengine.js/effects.js側の対応も必要な場合があります\n" +
+    JSON.stringify(Object.values(assignments), null, 2) + "\n";
+  document.getElementById("exportJson").value = out;
+  document.getElementById("exportModal").classList.add("open");
+};
+document.getElementById("copyBtn").onclick = () => {
+  const ta = document.getElementById("exportJson");
+  ta.select();
+  document.execCommand("copy");
+  document.getElementById("copyBtn").textContent = "コピーしました";
+  setTimeout(() => { document.getElementById("copyBtn").textContent = "コピー"; }, 1200);
+};
+document.getElementById("exportCloseBtn").onclick = () => document.getElementById("exportModal").classList.remove("open");
+
+renderLibList();
+renderAssignList();
+</script>
+</body>
+</html>

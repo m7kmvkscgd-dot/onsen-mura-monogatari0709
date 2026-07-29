@@ -1,0 +1,965 @@
+[
+  {
+    "id": "cloud_01_8x8",
+    "label": "cloud_01_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/cloud_01_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "cloud_02_8x8",
+    "label": "cloud_02_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/cloud_02_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "explosion_01_8x8",
+    "label": "explosion_01_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/explosion_01_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "explosion_02_8x8",
+    "label": "explosion_02_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/explosion_02_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "explosion_smoke_01_8x8",
+    "label": "explosion_smoke_01_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/explosion_smoke_01_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "fire_01_8x8",
+    "label": "fire_01_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/fire_01_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "fire_02_8x8",
+    "label": "fire_02_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/fire_02_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "fire_03_8x8",
+    "label": "fire_03_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/fire_03_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "fire_04_8x8",
+    "label": "fire_04_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/fire_04_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "flame_01_16x4",
+    "label": "flame_01_16x4",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/flame_01_16x4/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 256
+  },
+  {
+    "id": "flame_02_15x4",
+    "label": "flame_02_15x4",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/flame_02_15x4/frame_",
+    "frameCount": 60,
+    "cellW": 136,
+    "cellH": 256
+  },
+  {
+    "id": "wispy_smoke_01_8x8",
+    "label": "wispy_smoke_01_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/wispy_smoke_01_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "wispy_smoke_02_8x8",
+    "label": "wispy_smoke_02_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/wispy_smoke_02_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "wispy_smoke_03_8x8",
+    "label": "wispy_smoke_03_8x8",
+    "category": "flipbook",
+    "framePrefix": "assets/vfx_library/wispy_smoke_03_8x8/frame_",
+    "frameCount": 64,
+    "cellW": 128,
+    "cellH": 128
+  },
+  {
+    "id": "particles/circle_01_a",
+    "label": "circle_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/circle_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/circle_02_a",
+    "label": "circle_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/circle_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/circle_03_a",
+    "label": "circle_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/circle_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/circle_04_a",
+    "label": "circle_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/circle_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/circle_05_a",
+    "label": "circle_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/circle_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/dirt_01_a",
+    "label": "dirt_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/dirt_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/dirt_02_a",
+    "label": "dirt_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/dirt_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/dirt_03_a",
+    "label": "dirt_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/dirt_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/effect_01_a",
+    "label": "effect_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/effect_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/effect_02_a",
+    "label": "effect_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/effect_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/effect_03_a",
+    "label": "effect_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/effect_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/fire_01_a",
+    "label": "fire_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/fire_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/fire_02_a",
+    "label": "fire_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/fire_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_01_a",
+    "label": "flame_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_02_a",
+    "label": "flame_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_03_a",
+    "label": "flame_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_04_a",
+    "label": "flame_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_05_a",
+    "label": "flame_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flame_06_a",
+    "label": "flame_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flame_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/flare_01_a",
+    "label": "flare_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/flare_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/light_01_a",
+    "label": "light_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/light_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/light_02_a",
+    "label": "light_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/light_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/light_03_a",
+    "label": "light_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/light_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/magic_01_a",
+    "label": "magic_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/magic_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/magic_02_a",
+    "label": "magic_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/magic_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/magic_03_a",
+    "label": "magic_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/magic_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/magic_04_a",
+    "label": "magic_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/magic_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/magic_05_a",
+    "label": "magic_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/magic_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/muzzle_01_a",
+    "label": "muzzle_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/muzzle_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/muzzle_02_a",
+    "label": "muzzle_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/muzzle_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/muzzle_03_a",
+    "label": "muzzle_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/muzzle_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/muzzle_04_a",
+    "label": "muzzle_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/muzzle_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/muzzle_05_a",
+    "label": "muzzle_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/muzzle_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/scorch_01_a",
+    "label": "scorch_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/scorch_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/scorch_02_a",
+    "label": "scorch_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/scorch_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/scorch_03_a",
+    "label": "scorch_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/scorch_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/scratch_01_a",
+    "label": "scratch_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/scratch_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/slash_01_a",
+    "label": "slash_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/slash_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/slash_02_a",
+    "label": "slash_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/slash_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/slash_03_a",
+    "label": "slash_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/slash_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/slash_04_a",
+    "label": "slash_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/slash_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_01_a",
+    "label": "smoke_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_02_a",
+    "label": "smoke_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_03_a",
+    "label": "smoke_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_04_a",
+    "label": "smoke_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_05_a",
+    "label": "smoke_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_06_a",
+    "label": "smoke_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_07_a",
+    "label": "smoke_07_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_07_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_07_strong_a",
+    "label": "smoke_07_strong_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_07_strong_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_08_a",
+    "label": "smoke_08_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_08_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_09_a",
+    "label": "smoke_09_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_09_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/smoke_10_a",
+    "label": "smoke_10_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/smoke_10_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_01_a",
+    "label": "spark_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_02_a",
+    "label": "spark_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_03_a",
+    "label": "spark_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_04_a",
+    "label": "spark_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_05_a",
+    "label": "spark_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_06_a",
+    "label": "spark_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spark_07_a",
+    "label": "spark_07_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spark_07_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_01_a",
+    "label": "spotlight_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_02_a",
+    "label": "spotlight_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_03_a",
+    "label": "spotlight_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_04_a",
+    "label": "spotlight_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_05_a",
+    "label": "spotlight_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_06_a",
+    "label": "spotlight_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_07_a",
+    "label": "spotlight_07_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_07_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/spotlight_08_a",
+    "label": "spotlight_08_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/spotlight_08_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_01_a",
+    "label": "star_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_02_a",
+    "label": "star_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_03_a",
+    "label": "star_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_04_a",
+    "label": "star_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_05_a",
+    "label": "star_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_06_a",
+    "label": "star_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_07_a",
+    "label": "star_07_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_07_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_08_a",
+    "label": "star_08_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_08_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/star_09_a",
+    "label": "star_09_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/star_09_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/symbol_01_a",
+    "label": "symbol_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/symbol_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/symbol_02_a",
+    "label": "symbol_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/symbol_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_01_a",
+    "label": "trace_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_02_a",
+    "label": "trace_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_03_a",
+    "label": "trace_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_04_a",
+    "label": "trace_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_05_a",
+    "label": "trace_05_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_05_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_06_a",
+    "label": "trace_06_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_06_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/trace_07_a",
+    "label": "trace_07_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/trace_07_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/twirl_01_a",
+    "label": "twirl_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/twirl_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/twirl_02_a",
+    "label": "twirl_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/twirl_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/twirl_03_a",
+    "label": "twirl_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/twirl_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/twirl_04_a",
+    "label": "twirl_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/twirl_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/window_01_a",
+    "label": "window_01_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/window_01_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/window_02_a",
+    "label": "window_02_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/window_02_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/window_03_a",
+    "label": "window_03_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/window_03_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  },
+  {
+    "id": "particles/window_04_a",
+    "label": "window_04_a",
+    "category": "particle",
+    "singleSrc": "assets/vfx_library/particles/window_04_a.png",
+    "frameCount": 1,
+    "cellW": 512,
+    "cellH": 512
+  }
+]
