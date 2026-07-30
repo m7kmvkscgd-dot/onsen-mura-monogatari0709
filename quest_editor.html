@@ -983,7 +983,7 @@ function renderBgSetsSection() {
   const hint = document.createElement("p");
   hint.className = "empty-hint";
   hint.style.cssText = "padding:6px 10px 0; text-align:left;";
-  hint.textContent = "ルート用の背景写真をスマホからアップロードする預かり所。セット名を決めて時間帯ごとに写真を入れておくと、Claudeが圧縮してゲーム(assets/bg/)へ反映する。1セット=早朝/朝/昼/夕/夜の5枚(足りない時間帯は反映時に昼で代用)。写真は端末上で自動縮小してから送られる。";
+  hint.textContent = "ルート用の背景写真をスマホからアップロードする預かり所。セット名を決めて写真を入れておくと、Claudeが圧縮してゲーム(assets/bg/)へ反映する。開発中はまず昼1枚だけでOK(足りない時間帯は反映時に昼で代用される)。早朝/朝/夕/夜は後から追加アップロードすれば差し替わる。写真は端末上で自動縮小してから送られる。";
   container.appendChild(hint);
   if (!bgSourcesLoaded) {
     const p = document.createElement("div");
