@@ -1744,6 +1744,22 @@ const CHASE_ENCOUNTER_CHANCE = 0.6;
 const BOSS_FLEE_HP_RATIO = 0.3;
 const BOSS_PURSUIT_ENCOUNTER_CHANCE = 0.6;
 
+// ============ クエストダンジョン(奉行所依頼の期間限定ルート)定義 ============
+// 奉行所の依頼(QUEST_DEFS)にroute: "<このオブジェクトのキー>"を付けると、その依頼の受注中だけ
+// 出発時の行き先に専用ルートが追加される(サイドクエスト用の短い一本道ダンジョン)。
+// 依頼の期限が切れる/達成する/取り下げるとルートは行き先から消える(受注中のみ存在する道)。
+// ※ゲーム本体側の進行処理は未実装(2026-07-30時点)。先にエディタ(quest_editor.htmlの
+//   「クエストダンジョン」タブ)+背景アップロード(/api/bgsets)のパイプラインを整備した段階。
+//   最初のルートデータと背景素材が揃い次第、dungeon.js側にルート進行を実装する。
+// スキーマ:
+//   ja: 出発時の選択肢に出るルート名(例「沼地」) / emoji: 選択肢に添える絵文字
+//   totalFloors: ルートの全長(最深部の層数)。依頼側のtargetFloorはこのルート内の層数として扱う
+//   segments: 層区間ごとの見た目と敵。fromFloor昇順で並べ、「現在層以下で一番大きいfromFloor」の区間が適用される
+//     fromFloor: この層から区間が始まる
+//     bg: 背景セット名(ui.jsのBG_SETSのキー。新規背景はエディタの「背景セット」タブでアップロード→Claudeがassets/bg/へ反映)
+//     enemies: この区間で出る敵IDの配列。空配列なら深淵の森(森ステージ)の通常抽選を流用する
+const QUEST_ROUTE_DEFS = {};
+
 
 // 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。
 // キーはstatusIconsFor()等がdata-status属性に埋め込む識別子。今後アイコンが増えた場合は
@@ -1871,6 +1887,7 @@ if (typeof module !== "undefined") {
     RESCUE_QUEST_DEF, RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,
     QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE, QUEST_COOLDOWN_DAYS,
     QUEST_DEADLINE_DAYS, QUEST_CONTRACT_FEE_DIVISOR, questContractFee,
+    QUEST_ROUTE_DEFS,
     RAID_CONFIG,
   };
 }

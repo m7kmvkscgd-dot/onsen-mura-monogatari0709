@@ -100,6 +100,32 @@
   .export-diff-list del { color: var(--danger); text-decoration: line-through; opacity: 0.7; }
   .export-diff-list ins { color: var(--success); text-decoration: none; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* クエストダンジョン(ルート)タブ: 区間エディタ */
+  .seg-row { background: rgba(0,0,0,0.18); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px; margin-bottom: 6px; }
+  .seg-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .seg-from { font-size: 0.78rem; color: var(--body); display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .seg-from-input { width: 52px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.85rem; padding: 6px 4px; text-align: right; }
+  .seg-from-input:focus { outline: none; border-color: var(--gold); }
+  .seg-bg-select { flex: 1; min-width: 110px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 6px; color: var(--body); font-size: 0.8rem; padding: 6px; }
+  .seg-del { background: transparent; border-color: var(--danger); color: var(--danger); flex-shrink: 0; padding: 5px 9px; font-size: 0.74rem; }
+  .seg-enemies { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }
+  .enemy-chip { background: #3a4450; border: 1px solid var(--card-border); border-radius: 999px; padding: 4px 9px; font-size: 0.74rem; color: var(--body); }
+  .enemy-add-select { background: rgba(0,0,0,0.2); border: 1px dashed var(--card-border); border-radius: 999px; color: var(--caption); font-size: 0.74rem; padding: 4px 6px; max-width: 210px; }
+  .seg-empty { font-size: 0.74rem; color: var(--caption); padding: 4px 0; }
+  .add-seg-btn { background: transparent; border: 1px dashed var(--card-border); color: var(--caption); padding: 7px; border-radius: 8px; font-size: 0.78rem; margin-top: 4px; }
+  .add-seg-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* 背景セット(預かり所)タブ */
+  .bgset-new-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bgset-new-row input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--card-border); color: var(--body); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; }
+  .bgset-new-row input:focus { outline: none; border-color: var(--gold); }
+  .bgset-phase-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .bgset-phase-row:last-child { border-bottom: none; }
+  .bgset-phase-label { flex: 0 0 34px; font-size: 0.8rem; color: var(--title); }
+  .bgset-thumb { width: 56px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--card-border); flex-shrink: 0; }
+  .bgset-status { flex: 1; font-size: 0.72rem; color: var(--caption); min-width: 0; }
+  .bgset-file-btn { flex-shrink: 0; background: #7b5d36; color: var(--title); border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 </style>
 </head>
 <body>
@@ -147,8 +173,22 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
-const QUEST_DATA = {"quests":{"yaken":{"emoji":"🐺","requester":"街道番・源蔵","title":"野犬どもを追い払え！","text":"街道を野犬の群れがうろつき、旅人が通れなくなっています。被害が広がる前に追い払ってください。","targetFloor":5,"count":2,"tier":1,"rewardGold":30},"inoshishi":{"emoji":"🐗","requester":"農家・徳兵衛","title":"大猪の討伐","text":"山から現れた大きな猪が畑を荒らし回っています。このままでは収穫が望めません。どうか討伐をお願いします。","targetFloor":8,"count":1,"spawnId":"oo_inoshishi","chaseText":"大猪が追いかけてきた！","rewardGold":70,"tier":1,"minQuestClears":3},"dokuhebi":{"emoji":"🐍","requester":"水番・お咲","title":"水場に潜む毒","text":"村の水場に大きな毒蛇が棲みつきました。子どもたちも近寄れず困っています。退治をお願いします。","targetFloor":8,"count":2,"tier":1},"oogumo":{"emoji":"🕷","requester":"旅籠主人・宗吉","title":"糸に閉ざされた古道","text":"山道一面が蜘蛛の巣で覆われ、人が通れなくなりました。巣の主を退治してください。","targetFloor":9,"count":1,"tier":1},"kodama":{"emoji":"🌳","requester":"山守・弥助","title":"森の異変","text":"最近、森へ入った者が何人も襲われています。木が動いたと言う者もいますが、本当かどうかは分かりません…。原因を突き止めてください。","targetFloor":6,"count":2,"tier":1},"kappa":{"emoji":"🐢","requester":"漁師・浜吉","title":"川辺の怪","text":"川へ近づく者が何者かに水へ引きずり込まれそうになっています。姿を見た者はおらず、皆おびえています。","targetFloor":8,"count":1,"tier":1},"hitotsume_kozo":{"emoji":"👁","requester":"寺子屋師匠・文左衛門","title":"夜道の怪影","text":"子どもたちが「大きな目玉の化け物を見た」と泣きながら帰ってきます。本当にいるのか確かめていただけませんか。","targetFloor":9,"count":2,"tier":1},"bake_danuki":{"emoji":"🦝","requester":"旅商人・喜兵衛","title":"消えない山道","text":"山道で何度歩いても同じ場所へ戻ってしまいます。何かに化かされているとしか思えません…。","targetFloor":11,"count":1,"tier":1},"onibi":{"emoji":"🔥","requester":"墓守・源次","title":"夜に漂う青い火","text":"夜になると青白い火が現れ、人々は誰も近づけません。あれが何なのか調べてください。","targetFloor":9,"count":3,"tier":1},"kamaitachi":{"emoji":"🦦","requester":"木こり・新八","title":"風が人を斬る","text":"山へ入ると、突然体中に切り傷ができます。誰も姿を見た者はいません。どうか原因を突き止めてください。","targetFloor":12,"count":2,"tier":1},"q_arakuma":{"emoji":"🐻","requester":"街道番・源蔵","title":"緊急依頼『森の主』","text":"山へ向かった者が誰一人戻ってきません。現場には巨大な爪痕と足跡だけが残されていました。あれは普通の熊ではありません。どうか森の主を討ち倒してください。","targetFloor":11,"count":1,"chaseText":"荒熊が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_daija":{"emoji":"🐍","requester":"庄屋・善兵衛","title":"緊急依頼『川を塞ぐ影』","text":"川へ近づいた者が次々と姿を消しています。生き残った者は巨大な蛇を見たと震えています。村へ現れる前に討伐してください。奉行所より緊急依頼です。","targetFloor":12,"count":1,"chaseText":"大蛇が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_oni":{"emoji":"👹","requester":"山番・五郎","title":"緊急依頼『山に棲む怪物』","text":"山小屋が跡形もなく壊されていました。人の仕業とは思えない力です。このままでは村まで被害が及びます。どうか討伐をお願いします。","targetFloor":14,"count":1,"chaseText":"鬼が追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"q_gashadokuro":{"emoji":"💀","requester":"墓守・源次","title":"緊急依頼『夜鳴きの怪』","text":"夜になると山奥から骨の軋む音が聞こえます。音を追った者は誰一人帰ってきません。正体は誰にも分かりません。どうかこの怪異を止めてください。","targetFloor":15,"count":1,"chaseText":"がしゃどくろが追いかけてきた！","rewardGold":150,"tier":1,"requiresOoInoshishi":true},"ochimusha":{"emoji":"🥷","requester":"旅籠「松風屋」主人・徳兵衛","title":"彷徨う鎧武者","text":"日が暮れるたび、あの鎧武者が街道に現れるんです…。旅人も寄り付かず、このままじゃ店を畳むしかありません。村の者も皆おびえております。どうか、あいつを止めてください。","targetFloor":18,"count":2,"tier":2},"kamaitachi2":{"emoji":"🦦","requester":"薪拾い・権次","title":"風より速き影","text":"山へ入るたび、身体中が切り傷だらけになるんです。姿は見えねぇのに風だけが吹き抜ける…。もう年寄りには敵いません。村の暮らしも立ちゆきません。頼みます。","targetFloor":21,"count":1,"tier":2},"youko":{"emoji":"🦊","requester":"庄屋・甚兵衛","title":"化け狐の誘い","text":"村の若い衆が狐火に誘われ、夜な夜な山へ消えてしまうのです。笑って帰る者もおれば、戻らぬ者もおります…。これ以上犠牲者は出したくありませぬ。どうか助けてくだされ。","targetFloor":24,"count":1,"tier":2},"rokurokubi":{"emoji":"👺","requester":"呉服屋・お絹","title":"夜道に伸びる首","text":"娘が店番を終えて帰るのも命懸けです…。首の長い女が追いかけてくると皆が震えております。このままでは夜の商売もできません。安心して夜道を歩ける町に戻してください。","targetFloor":23,"count":2,"tier":2},"yukionna":{"emoji":"❄️","requester":"猟師・熊蔵","title":"凍てつく山の怪","text":"山はわしらの命綱なんです。それなのに仲間が次々と凍りついて帰ってくる…。獲物も獲れず、村の蓄えも尽きそうです。どうか、あの雪女を討ってください。","targetFloor":27,"count":1,"tier":2},"yamauba":{"emoji":"👵","requester":"木こり・辰吉","title":"山に潜む老婆","text":"『助けておくれ』って婆さんの声が聞こえるんです。でも近寄った者は誰一人帰っちゃこねぇ…。木こりも皆、山へ入るのを怖がっています。どうか退治してください。","targetFloor":30,"count":1,"tier":2},"tsuchigumo":{"emoji":"🕷","requester":"炭焼き・留吉","title":"糸に絡む悲鳴","text":"仲間を助けに行きたいんです。でも森中が蜘蛛の糸だらけで、一歩も進めねぇ…。助けを呼ぶ声が今も聞こえるんです。どうか、あいつを退治してください。","targetFloor":26,"count":1,"tier":2},"onryo":{"emoji":"👻","requester":"安養寺 住職・玄海","title":"消えぬ怨み","text":"読経を重ねても、あの怨念だけは静まりませぬ…。寺に訪れる者も怯え、夜は誰も近寄らなくなりました。どうか、この迷える魂を救ってください。","targetFloor":29,"count":2,"tier":2},"oomukade":{"emoji":"🐛","requester":"飛脚・新八","title":"地を這う災厄","text":"この道が通れねぇと、荷も手紙も届けられません。仲間も毒にやられちまいました…。商人も旅人も皆困っています。どうか、街道を取り戻してください！","targetFloor":33,"count":1,"tier":2},"kasha":{"emoji":"🔥","requester":"墓守・源蔵","title":"燃え走る怪車","text":"弔いの最中にまで火車が現れ、亡き人をさらっていくんです…。死んだ者くらい安らかに眠らせてやりたい。このままでは供養もできません。どうか力を貸してください。","targetFloor":36,"count":1,"tier":2}},"rescue":{"emoji":"🌿","requester":"百姓・佐吉","title":"妻のための薬草摘み","text":"女房が夏の暑さにやられて臥せってしまいました。深淵の森に生える薬草を煎じれば良くなるはずなのですが、わっし自身は足腰が悪く森には入れません。どうか代わりに薬草を摘んできてもらえないでしょうか。","targetFloor":5,"rewardGold":25,"itemName":"薬草"},"constants":{"QUEST_BOARD_SIZE":3,"QUEST_BOARD_SECOND_SLOT_CHANCE":0.75,"QUEST_BOARD_THIRD_SLOT_CHANCE":0.5,"QUEST_COOLDOWN_DAYS":5,"QUEST_DEADLINE_DAYS":2,"QUEST_CONTRACT_FEE_DIVISOR":5,"QUEST_GOLD_PER_FLOOR":8,"QUEST_REWARD_MULT":0.6,"QUEST_REWARD_XP":0,"RESCUE_QUEST_GOLD_THRESHOLD":20,"RESCUE_QUEST_MAX_ACTIVE_MEMBERS":1,"CHASE_ENCOUNTER_CHANCE":0.6,"BOSS_FLEE_HP_RATIO":0.3,"BOSS_PURSUIT_ENCOUNTER_CHANCE":0.6}};
+// ゲーム本体のdata.jsを直接読み込んでベースラインを組み立てる(直結化 2026-07-30)。
+// 以前はここに全依頼データのコピーがベタ書きされており、data.js反映のたびに手動同期が必要だった。
+const QUEST_DATA = {
+  quests: QUEST_DEFS,
+  rescue: RESCUE_QUEST_DEF,
+  routes: QUEST_ROUTE_DEFS,
+  constants: {
+    QUEST_BOARD_SIZE, QUEST_BOARD_SECOND_SLOT_CHANCE, QUEST_BOARD_THIRD_SLOT_CHANCE,
+    QUEST_COOLDOWN_DAYS, QUEST_DEADLINE_DAYS, QUEST_CONTRACT_FEE_DIVISOR,
+    QUEST_GOLD_PER_FLOOR, QUEST_REWARD_MULT, QUEST_REWARD_XP,
+    RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,
+    CHASE_ENCOUNTER_CHANCE, BOSS_FLEE_HP_RATIO, BOSS_PURSUIT_ENCOUNTER_CHANCE,
+  },
+};
 
 // 全体設定の項目定義(name/desc/型)。isPct: 0〜1の割合値として%表示で編集させる
 const CONST_DEFS = [
@@ -171,10 +211,12 @@ const CONST_DEFS = [
 const MAT_IDS = ["kawa", "hone", "ki", "tetsu"];
 const MAT_LABEL = { kawa: "皮", hone: "骨", ki: "木", tetsu: "鉄" };
 
-let edits = { quests: {}, rescue: {}, constants: {} };
+let edits = { quests: {}, rescue: {}, constants: {}, routes: {} };
 let addedQuests = {}; // id -> フルの依頼オブジェクト(新規追加分)
 let deletedQuestIds = new Set();
-let activeSection = "tier1"; // tier1 | tier2 | rescue | settings
+let addedRoutes = {}; // id -> フルのクエストダンジョン(ルート)オブジェクト(新規追加分)
+let deletedRouteIds = new Set();
+let activeSection = "tier1"; // tier1 | tier2 | routes | bgsets | rescue | settings
 let searchQuery = "";
 
 function baseQuestIds(tier) {
@@ -185,6 +227,26 @@ function addedQuestIds(tier) {
 }
 function isNewQuest(id) { return Object.prototype.hasOwnProperty.call(addedQuests, id); }
 function questSource(id) { return isNewQuest(id) ? addedQuests[id] : QUEST_DATA.quests[id]; }
+// ルート(クエストダンジョン)側も依頼と同じ「既存への差分編集+新規追加+削除予定」の3層で管理する
+function isNewRoute(id) { return Object.prototype.hasOwnProperty.call(addedRoutes, id); }
+function routeSource(id) { return isNewRoute(id) ? addedRoutes[id] : QUEST_DATA.routes[id]; }
+function setRouteEdit(id, field, value, original) {
+  if (isNewRoute(id)) { addedRoutes[id][field] = value; return; }
+  edits.routes[id] = edits.routes[id] || {};
+  // segmentsは配列値のためJSON文字列化で比較する(依頼のrewardMaterialsと同じ理由)
+  if (JSON.stringify(value) === JSON.stringify(original)) delete edits.routes[id][field];
+  else edits.routes[id][field] = value;
+  if (Object.keys(edits.routes[id]).length === 0) delete edits.routes[id];
+}
+function currentRouteValue(id, field, original) {
+  if (isNewRoute(id)) return addedRoutes[id][field];
+  const e = edits.routes[id];
+  return e && Object.prototype.hasOwnProperty.call(e, field) ? e[field] : original;
+}
+function isRouteEdited(id) { return isNewRoute(id) || !!(edits.routes[id] && Object.keys(edits.routes[id]).length); }
+function routeOptionIds() {
+  return [...Object.keys(QUEST_DATA.routes).filter((id) => !deletedRouteIds.has(id)), ...Object.keys(addedRoutes)];
+}
 
 // 注意: ここでは全体再描画(refreshAll/renderMain)を呼ばない。以前は毎回呼んでいたため、
 // 1文字入力するたびにカード一覧が丸ごと作り直されて<details>が閉じてしまい入力できない不具合が
@@ -228,6 +290,9 @@ function countEdits() {
   let n = Object.keys(edits.quests).reduce((s, id) => s + Object.keys(edits.quests[id]).length, 0);
   n += Object.keys(addedQuests).length;
   n += deletedQuestIds.size;
+  n += Object.keys(edits.routes).reduce((s, id) => s + Object.keys(edits.routes[id]).length, 0);
+  n += Object.keys(addedRoutes).length;
+  n += deletedRouteIds.size;
   n += Object.keys(edits.rescue).length;
   n += Object.keys(edits.constants).length;
   return n;
@@ -240,9 +305,10 @@ function sectionHasEdits(sec) {
     const deletedInTier = [...deletedQuestIds].some((id) => QUEST_DATA.quests[id] && QUEST_DATA.quests[id].tier === tierNum);
     return editedExisting || addedInTier || deletedInTier;
   }
+  if (sec === "routes") return Object.keys(edits.routes).length > 0 || Object.keys(addedRoutes).length > 0 || deletedRouteIds.size > 0;
   if (sec === "rescue") return Object.keys(edits.rescue).length > 0;
   if (sec === "settings") return Object.keys(edits.constants).length > 0;
-  return false;
+  return false; // bgsetsタブはサーバー直書き(編集バッファを持たない)ため常にfalse
 }
 
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -262,6 +328,7 @@ function buildQuestCard(id) {
   const chaseText = currentQuestValue(id, "chaseText", src.chaseText);
   const requiresOoInoshishi = !!currentQuestValue(id, "requiresOoInoshishi", src.requiresOoInoshishi);
   const minQuestClears = currentQuestValue(id, "minQuestClears", src.minQuestClears);
+  const route = currentQuestValue(id, "route", src.route);
   const rewardMaterials = currentQuestValue(id, "rewardMaterials", src.rewardMaterials) || {};
   const edited = isQuestEdited(id);
   const node = document.createElement("details");
@@ -333,6 +400,13 @@ function buildQuestCard(id) {
         </div>
       </div>
       <div class="field-row">
+        <label>クエストダンジョン(route、任意。受注中だけ出発先に専用ルートが出る)</label>
+        <select data-field="route">
+          <option value="">なし(通常どおり深淵の森)</option>
+          ${routeOptionIds().map((rid) => `<option value="${escapeHtml(rid)}" ${route === rid ? "selected" : ""}>${escapeHtml((routeSource(rid) && routeSource(rid).ja) || rid)}(${escapeHtml(rid)})</option>`).join("")}
+        </select>
+      </div>
+      <div class="field-row">
         <label>解禁条件: 依頼達成回数(minQuestClears、任意)</label>
         <input type="number" data-field="minQuestClears" value="${minQuestClears != null ? minQuestClears : ""}" placeholder="制限なしなら空欄" min="0">
       </div>
@@ -379,6 +453,13 @@ function buildQuestCard(id) {
   tierSelect.addEventListener("change", () => {
     setQuestEdit(id, "tier", Number(tierSelect.value), src.tier);
     renderMain(); // タブが変わるので全体再描画
+  });
+  const routeSelect = node.querySelector('[data-field="route"]');
+  routeSelect.addEventListener("change", () => {
+    // 空欄=未設定はnullで持つ(既存のrouteを外す編集も差分として書き出せるように)
+    setQuestEdit(id, "route", routeSelect.value === "" ? null : routeSelect.value, src.route == null ? null : src.route);
+    node.classList.toggle("edited", isQuestEdited(id));
+    refreshEditCount();
   });
   node.querySelectorAll("[data-quest-mats-id]").forEach((el) => {
     const mid = el.dataset.questMatsId;
@@ -572,11 +653,381 @@ function renderSettingsSection() {
   return container;
 }
 
+// ==== クエストダンジョン(ルート)タブ ====
+const PHASE_KEYS = ["dawn", "asa", "day", "dusk", "night"];
+const PHASE_LABEL = { dawn: "早朝", asa: "朝", day: "昼", dusk: "夕", night: "夜" };
+let gameBgSetNames = []; // ゲーム本体ui.jsのBG_SETSキー(=反映済みの背景セット名)
+let kvBgSets = [];       // /api/bgsets の一覧 [{name, phases:[...]}](預かり所にアップロード済み、未反映含む)
+let bgSourcesLoaded = false;
+async function loadBgSetSources() {
+  // 反映済みセット名はui.jsのソースから直接拾う(直結方針。エディタ内にコピーを持たない)
+  try {
+    const txt = await (await fetch("ui.js")).text();
+    const m = txt.match(/const BG_SETS = \{([\s\S]*?)\n\};/);
+    if (m) gameBgSetNames = [...m[1].matchAll(/^\s*([A-Za-z0-9_]+):/gm)].map((x) => x[1]);
+  } catch (e) { /* file://直開き等でui.jsが読めない場合は選択肢が減るだけで編集自体は可能 */ }
+  try {
+    const res = await fetch("/api/bgsets");
+    if (res.ok) kvBgSets = await res.json();
+  } catch (e) { /* ローカル起動などAPIが無い環境ではアップロード済み一覧なしで動く */ }
+  bgSourcesLoaded = true;
+  if (activeSection === "routes" || activeSection === "bgsets") renderMain();
+}
+function bgSetOptionNames() {
+  const names = [...gameBgSetNames];
+  kvBgSets.forEach((s) => { if (!names.includes(s.name)) names.push(s.name); });
+  return names.length ? names : ["dungeon"];
+}
+function enemyOptionList() {
+  return Object.values(ENEMIES).map((e) => ({ id: e.id, ja: e.ja })).sort((a, b) => a.ja.localeCompare(b.ja, "ja"));
+}
+
+function buildRouteCard(id) {
+  const src = routeSource(id);
+  const deleted = deletedRouteIds.has(id);
+  const ja = currentRouteValue(id, "ja", src.ja);
+  const emoji = currentRouteValue(id, "emoji", src.emoji);
+  const totalFloors = currentRouteValue(id, "totalFloors", src.totalFloors);
+  const edited = isRouteEdited(id);
+  const node = document.createElement("details");
+  node.className = "quest-card" + (edited ? " edited" : "") + (deleted ? " deleted" : "");
+  node.style.borderLeft = "3px solid var(--info)";
+  node.innerHTML = `
+    <summary>
+      <span class="quest-emoji-badge">${escapeHtml(emoji || "🗺")}</span>
+      <span class="quest-title-preview">${escapeHtml(ja || "(無名ルート)")}${deleted ? "(削除予定)" : ""}</span>
+      <span class="quest-meta-badge">全${totalFloors}層</span>
+      <span class="quest-id-badge">${escapeHtml(id)}</span>
+      <span class="quest-edit-dot"></span>
+      <span class="quest-chevron">▶</span>
+    </summary>
+    <div class="quest-body">
+      <div class="field-pair">
+        <div class="field-row" style="flex:0 0 60px;">
+          <label>絵文字</label>
+          <input type="text" data-rfield="emoji" value="${escapeHtml(emoji || "")}" maxlength="4">
+        </div>
+        <div class="field-row">
+          <label>ルート名(出発時の選択肢に出る)</label>
+          <input type="text" data-rfield="ja" value="${escapeHtml(ja || "")}">
+        </div>
+        <div class="field-row" style="flex:0 0 80px;">
+          <label>全長(層)</label>
+          <input type="number" data-rfield="totalFloors" value="${totalFloors}" min="1">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>区間(◯層目からの背景と敵。現在層以下で一番大きい「開始層」の区間が使われる)</label>
+        <div class="segments-box"></div>
+        <button type="button" class="add-seg-btn">+ 区間を追加</button>
+      </div>
+      <div class="quest-actions">
+        <div class="quest-actions-left">
+          <button type="button" class="reset-btn">↺ 元に戻す</button>
+        </div>
+        ${deleted ? `<button type="button" class="undo-del-btn">削除を取り消す</button>` : `<button type="button" class="del-btn">🗑 このルートを削除</button>`}
+      </div>
+    </div>
+  `;
+  const emojiPreviewEl = node.querySelector(".quest-emoji-badge");
+  const titlePreviewEl = node.querySelector(".quest-title-preview");
+  const floorsPreviewEl = node.querySelector(".quest-meta-badge");
+  [["emoji", false], ["ja", false], ["totalFloors", true]].forEach(([f, numeric]) => {
+    const el = node.querySelector(`[data-rfield="${f}"]`);
+    const originalVal = src[f];
+    el.addEventListener("input", () => {
+      let v = el.value;
+      if (numeric) v = v === "" ? originalVal : Number(v);
+      setRouteEdit(id, f, v, originalVal);
+      if (f === "emoji") emojiPreviewEl.textContent = v || "🗺";
+      if (f === "ja") titlePreviewEl.textContent = v || "(無名ルート)";
+      if (f === "totalFloors") floorsPreviewEl.textContent = `全${v}層`;
+      node.classList.toggle("edited", isRouteEdited(id));
+      refreshEditCount();
+    });
+  });
+  // ---- 区間エディタ。データは常に「segments配列を丸ごと差し替え」で編集し、
+  // 構造が変わる操作(区間や敵の追加/削除)だけこの箱の中を局所再構築する(カード全体は再描画しない=<details>が閉じない) ----
+  const segBox = node.querySelector(".segments-box");
+  function currentSegments() { return currentRouteValue(id, "segments", src.segments) || []; }
+  function commitSegments(next) {
+    setRouteEdit(id, "segments", next, src.segments || []);
+    node.classList.toggle("edited", isRouteEdited(id));
+    refreshEditCount();
+  }
+  function cloneSegments() { return JSON.parse(JSON.stringify(currentSegments())); }
+  function rebuildSegments() {
+    segBox.innerHTML = "";
+    const segs = currentSegments();
+    if (!segs.length) {
+      const p = document.createElement("div");
+      p.className = "seg-empty";
+      p.textContent = "区間がありません(最低1つ追加してください。例: 1層目から 背景dungeon=森)";
+      segBox.appendChild(p);
+    }
+    segs.forEach((seg, idx) => segBox.appendChild(buildSegmentRow(seg, idx)));
+  }
+  function buildSegmentRow(seg, idx) {
+    const row = document.createElement("div");
+    row.className = "seg-row";
+    const bgNames = bgSetOptionNames();
+    if (seg.bg && !bgNames.includes(seg.bg)) bgNames.push(seg.bg);
+    row.innerHTML = `
+      <div class="seg-head">
+        <span class="seg-from"><input type="number" class="seg-from-input" value="${seg.fromFloor}" min="1">層目から</span>
+        <select class="seg-bg-select">
+          ${bgNames.map((n) => `<option value="${escapeHtml(n)}" ${seg.bg === n ? "selected" : ""}>${escapeHtml(n)}${gameBgSetNames.length && !gameBgSetNames.includes(n) ? "(未反映)" : ""}</option>`).join("")}
+        </select>
+        <button type="button" class="seg-del">✕</button>
+      </div>
+      <div class="seg-enemies"></div>
+    `;
+    row.querySelector(".seg-from-input").addEventListener("input", (e) => {
+      // 入力中の並べ替えはしない(フォーカスが飛ぶため)。fromFloor順の解決はゲーム側適用時に行う
+      const next = cloneSegments();
+      next[idx].fromFloor = e.target.value === "" ? 1 : Number(e.target.value);
+      commitSegments(next);
+    });
+    row.querySelector(".seg-bg-select").addEventListener("change", (e) => {
+      const next = cloneSegments();
+      next[idx].bg = e.target.value;
+      commitSegments(next);
+    });
+    row.querySelector(".seg-del").addEventListener("click", () => {
+      const next = cloneSegments();
+      next.splice(idx, 1);
+      commitSegments(next);
+      rebuildSegments();
+    });
+    const enemiesBox = row.querySelector(".seg-enemies");
+    (seg.enemies || []).forEach((eid, eIdx) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "enemy-chip";
+      const def = ENEMIES[eid];
+      chip.textContent = (def ? def.ja : eid) + " ✕";
+      chip.title = eid;
+      chip.addEventListener("click", () => {
+        const next = cloneSegments();
+        next[idx].enemies.splice(eIdx, 1);
+        commitSegments(next);
+        rebuildSegments();
+      });
+      enemiesBox.appendChild(chip);
+    });
+    const sel = document.createElement("select");
+    sel.className = "enemy-add-select";
+    sel.innerHTML = `<option value="">＋敵を追加(空のままなら森の通常抽選)</option>` +
+      enemyOptionList().map((e) => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.ja)}(${escapeHtml(e.id)})</option>`).join("");
+    sel.addEventListener("change", () => {
+      if (!sel.value) return;
+      const next = cloneSegments();
+      next[idx].enemies = next[idx].enemies || [];
+      next[idx].enemies.push(sel.value);
+      commitSegments(next);
+      rebuildSegments();
+    });
+    enemiesBox.appendChild(sel);
+    return row;
+  }
+  node.querySelector(".add-seg-btn").addEventListener("click", () => {
+    const next = cloneSegments();
+    const lastFrom = next.length ? Number(next[next.length - 1].fromFloor) || 0 : 0;
+    const defaultBg = bgSetOptionNames().includes("dungeon") ? "dungeon" : bgSetOptionNames()[0];
+    next.push({ fromFloor: lastFrom + 1, bg: defaultBg, enemies: [] });
+    commitSegments(next);
+    rebuildSegments();
+  });
+  node.querySelector(".reset-btn").addEventListener("click", (e) => { e.preventDefault(); if (isNewRoute(id)) delete addedRoutes[id]; else delete edits.routes[id]; refreshAll(); });
+  const delBtn = node.querySelector(".del-btn");
+  if (delBtn) delBtn.addEventListener("click", (e) => { e.preventDefault(); if (isNewRoute(id)) delete addedRoutes[id]; else deletedRouteIds.add(id); refreshAll(); });
+  const undoBtn = node.querySelector(".undo-del-btn");
+  if (undoBtn) undoBtn.addEventListener("click", (e) => { e.preventDefault(); deletedRouteIds.delete(id); refreshAll(); });
+  rebuildSegments();
+  return node;
+}
+
+function renderRoutesSection() {
+  const container = document.createElement("div");
+  const hint = document.createElement("p");
+  hint.className = "empty-hint";
+  hint.style.cssText = "padding:6px 10px 0; text-align:left;";
+  hint.textContent = "奉行所依頼の受注中だけ出発先に現れる専用ルート(サイドクエスト用の短い一本道)。依頼カードの「クエストダンジョン」欄でルートを割り当てて使う。※ゲーム本体側のルート進行はまだ未実装(ここでルートを設計→背景素材が揃い次第Claudeが本体実装に入る)。";
+  container.appendChild(hint);
+  [...Object.keys(QUEST_DATA.routes), ...Object.keys(addedRoutes)].forEach((id) => container.appendChild(buildRouteCard(id)));
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "add-quest-btn";
+  addBtn.textContent = "+ 新しいルートを追加";
+  addBtn.addEventListener("click", () => {
+    let newId = (prompt("新しいルートのID(英数字、既存と重複しないもの。例: numachi)") || "").trim();
+    if (!newId) return;
+    newId = newId.replace(/[^a-zA-Z0-9_]/g, "");
+    if (!newId) { alert("英数字・アンダースコアのみ使用できます"); return; }
+    if (QUEST_DATA.routes[newId] || addedRoutes[newId]) { alert("そのIDは既に使われています"); return; }
+    const defaultBg = bgSetOptionNames().includes("dungeon") ? "dungeon" : bgSetOptionNames()[0];
+    addedRoutes[newId] = { ja: "新しいルート", emoji: "🗺", totalFloors: 7, segments: [{ fromFloor: 1, bg: defaultBg, enemies: [] }] };
+    refreshAll();
+  });
+  container.appendChild(addBtn);
+  return container;
+}
+
+// ==== 背景セット(預かり所)タブ。編集バッファを持たず/api/bgsetsへ直接読み書きする ====
+function downscaleImage(file, maxEdge = 1600) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      let out = canvas.toDataURL("image/jpeg", 0.85);
+      if (out.length > 3800000) out = canvas.toDataURL("image/jpeg", 0.7); // KV側の4MB制限に収める
+      if (out.length > 3800000) reject(new Error("画像が大きすぎます"));
+      else resolve(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("画像を読み込めませんでした")); };
+    img.src = url;
+  });
+}
+
+function buildBgSetCard(set) {
+  const inGame = gameBgSetNames.includes(set.name);
+  const node = document.createElement("details");
+  node.className = "quest-card";
+  node.innerHTML = `
+    <summary>
+      <span class="quest-emoji-badge">🖼</span>
+      <span class="quest-title-preview">${escapeHtml(set.name)}</span>
+      <span class="quest-meta-badge">${set.phases.length}/5枚${inGame ? "・ゲーム反映済み" : ""}</span>
+      <span class="quest-chevron">▶</span>
+    </summary>
+    <div class="quest-body">
+      <div class="bgset-phases"></div>
+      <div class="quest-actions">
+        <div></div>
+        <button type="button" class="del-btn">🗑 このセットを預かり所から削除</button>
+      </div>
+    </div>
+  `;
+  const metaBadge = node.querySelector(".quest-meta-badge");
+  const phasesBox = node.querySelector(".bgset-phases");
+  PHASE_KEYS.forEach((phase) => {
+    const row = document.createElement("div");
+    row.className = "bgset-phase-row";
+    const has = set.phases.includes(phase);
+    row.innerHTML = `
+      <span class="bgset-phase-label">${PHASE_LABEL[phase]}</span>
+      <img class="bgset-thumb" alt="" style="display:none;">
+      <span class="bgset-status">${has ? "✅ アップロード済み" : "— 未アップロード"}</span>
+      <label class="bgset-file-btn">${has ? "差し替え" : "写真を選ぶ"}<input type="file" accept="image/*" hidden></label>
+    `;
+    const input = row.querySelector("input[type=file]");
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const statusEl = row.querySelector(".bgset-status");
+      const thumbEl = row.querySelector(".bgset-thumb");
+      statusEl.textContent = "⏳ 変換中…";
+      try {
+        const dataUrl = await downscaleImage(file);
+        statusEl.textContent = "⏳ アップロード中…";
+        const res = await fetch("/api/bgsets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: set.name, phase, image: dataUrl }) });
+        if (!res.ok) throw new Error(await res.text());
+        statusEl.textContent = "✅ アップロード済み";
+        thumbEl.src = dataUrl;
+        thumbEl.style.display = "inline-block";
+        if (!set.phases.includes(phase)) set.phases.push(phase);
+        metaBadge.textContent = `${set.phases.length}/5枚${inGame ? "・ゲーム反映済み" : ""}`;
+      } catch (e) {
+        statusEl.textContent = "❌ 失敗: " + e.message;
+      }
+    });
+    phasesBox.appendChild(row);
+  });
+  // 開いた時に一度だけ、アップロード済み画像のサムネイルを取得して埋める
+  let thumbsLoaded = false;
+  node.addEventListener("toggle", async () => {
+    if (!node.open || thumbsLoaded || !set.phases.length) return;
+    thumbsLoaded = true;
+    try {
+      const res = await fetch("/api/bgsets/" + set.name);
+      if (!res.ok) return;
+      const data = await res.json();
+      phasesBox.querySelectorAll(".bgset-phase-row").forEach((row, i) => {
+        const img = row.querySelector(".bgset-thumb");
+        if (data.images[PHASE_KEYS[i]] && !img.src) {
+          img.src = data.images[PHASE_KEYS[i]];
+          img.style.display = "inline-block";
+        }
+      });
+    } catch (e) {}
+  });
+  node.querySelector(".del-btn").addEventListener("click", async () => {
+    if (!confirm(`背景セット「${set.name}」を預かり所から削除します(ゲームに反映済みの画像はそのまま残ります)。よろしいですか？`)) return;
+    try {
+      await fetch("/api/bgsets/" + set.name, { method: "DELETE" });
+      kvBgSets = kvBgSets.filter((s) => s.name !== set.name);
+      renderMain();
+    } catch (e) { alert("削除に失敗しました: " + e.message); }
+  });
+  return node;
+}
+
+function renderBgSetsSection() {
+  const container = document.createElement("div");
+  const hint = document.createElement("p");
+  hint.className = "empty-hint";
+  hint.style.cssText = "padding:6px 10px 0; text-align:left;";
+  hint.textContent = "ルート用の背景写真をスマホからアップロードする預かり所。セット名を決めて時間帯ごとに写真を入れておくと、Claudeが圧縮してゲーム(assets/bg/)へ反映する。1セット=早朝/朝/昼/夕/夜の5枚(足りない時間帯は反映時に昼で代用)。写真は端末上で自動縮小してから送られる。";
+  container.appendChild(hint);
+  if (!bgSourcesLoaded) {
+    const p = document.createElement("div");
+    p.className = "empty-hint";
+    p.textContent = "読み込み中…";
+    container.appendChild(p);
+    return container;
+  }
+  const newRow = document.createElement("div");
+  newRow.className = "bgset-new-row";
+  newRow.innerHTML = `<input type="text" id="newBgSetName" placeholder="新しいセット名(英小文字。例: numachi)" autocapitalize="off" autocorrect="off"><button type="button" id="createBgSetBtn">枠を作る</button>`;
+  newRow.querySelector("#createBgSetBtn").addEventListener("click", () => {
+    const name = newRow.querySelector("#newBgSetName").value.trim();
+    if (!/^[a-z][a-z0-9_]{1,29}$/.test(name)) { alert("セット名は英小文字で始まる小文字英数字/アンダースコア(2〜30文字)にしてください"); return; }
+    if (kvBgSets.some((s) => s.name === name)) { alert("そのセット名は既に預かり所にあります"); return; }
+    if (gameBgSetNames.includes(name)) { alert("そのセット名は既にゲーム側(BG_SETS)で使われています"); return; }
+    kvBgSets.push({ name, phases: [] });
+    renderMain();
+  });
+  container.appendChild(newRow);
+  if (!kvBgSets.length) {
+    const p = document.createElement("div");
+    p.className = "empty-hint";
+    p.textContent = "預かり所にセットがありません。上でセット名を決めて枠を作ってください。";
+    container.appendChild(p);
+  }
+  kvBgSets.forEach((set) => container.appendChild(buildBgSetCard(set)));
+  if (gameBgSetNames.length) {
+    const p = document.createElement("p");
+    p.className = "empty-hint";
+    p.style.textAlign = "left";
+    p.textContent = "ゲームに反映済みの背景セット: " + gameBgSetNames.join(", ");
+    container.appendChild(p);
+  }
+  return container;
+}
+
 function renderMain() {
   const main = document.getElementById("mainArea");
   main.innerHTML = "";
   if (activeSection === "tier1") main.appendChild(renderTierSection(1));
   else if (activeSection === "tier2") main.appendChild(renderTierSection(2));
+  else if (activeSection === "routes") main.appendChild(renderRoutesSection());
+  else if (activeSection === "bgsets") main.appendChild(renderBgSetsSection());
   else if (activeSection === "rescue") main.appendChild(renderRescueSection());
   else if (activeSection === "settings") main.appendChild(renderSettingsSection());
   renderTabs();
@@ -588,6 +1039,8 @@ function renderTabs() {
   const tabs = [
     { key: "tier1", label: "★1討伐依頼" },
     { key: "tier2", label: "★2討伐依頼" },
+    { key: "routes", label: "クエストダンジョン" },
+    { key: "bgsets", label: "背景セット" },
     { key: "rescue", label: "救済クエスト" },
     { key: "settings", label: "全体設定" },
   ];
@@ -608,9 +1061,11 @@ document.getElementById("searchBox").addEventListener("input", (e) => { searchQu
 document.getElementById("resetAllBtn").addEventListener("click", () => {
   if (countEdits() === 0) return;
   if (!confirm("全ての編集内容を破棄します。よろしいですか？")) return;
-  edits = { quests: {}, rescue: {}, constants: {} };
+  edits = { quests: {}, rescue: {}, constants: {}, routes: {} };
   addedQuests = {};
   deletedQuestIds = new Set();
+  addedRoutes = {};
+  deletedRouteIds = new Set();
   renderMain();
 });
 
@@ -620,6 +1075,9 @@ function buildExportData() {
   if (Object.keys(edits.quests).length) out.quests = edits.quests;
   if (Object.keys(addedQuests).length) out.newQuests = addedQuests;
   if (deletedQuestIds.size) out.deletedQuestIds = [...deletedQuestIds];
+  if (Object.keys(edits.routes).length) out.routes = edits.routes;
+  if (Object.keys(addedRoutes).length) out.newRoutes = addedRoutes;
+  if (deletedRouteIds.size) out.deletedRouteIds = [...deletedRouteIds];
   if (Object.keys(edits.rescue).length) out.rescue = edits.rescue;
   if (Object.keys(edits.constants).length) out.constants = edits.constants;
   return out;
@@ -642,6 +1100,19 @@ function buildDiffListHtml() {
   [...deletedQuestIds].forEach((id) => {
     const title = QUEST_DATA.quests[id] ? QUEST_DATA.quests[id].title : id;
     parts.push(`<div class="diff-item"><div class="diff-title" style="color:var(--danger);">🗑削除: ${escapeHtml(title)}(${escapeHtml(id)})</div></div>`);
+  });
+  Object.keys(edits.routes).forEach((id) => {
+    const fields = edits.routes[id];
+    const title = QUEST_DATA.routes[id] ? QUEST_DATA.routes[id].ja : id;
+    const fieldLines = Object.keys(fields).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(QUEST_DATA.routes[id][f]))}</del> → <ins>${escapeHtml(JSON.stringify(fields[f]))}</ins></div>`).join("");
+    parts.push(`<div class="diff-item"><div class="diff-title">✎ ルート: ${escapeHtml(title)}(${escapeHtml(id)})</div>${fieldLines}</div>`);
+  });
+  Object.keys(addedRoutes).forEach((id) => {
+    parts.push(`<div class="diff-item"><div class="diff-title">＋新規ルート: ${escapeHtml(addedRoutes[id].ja)}(${escapeHtml(id)})</div></div>`);
+  });
+  [...deletedRouteIds].forEach((id) => {
+    const title = QUEST_DATA.routes[id] ? QUEST_DATA.routes[id].ja : id;
+    parts.push(`<div class="diff-item"><div class="diff-title" style="color:var(--danger);">🗑ルート削除: ${escapeHtml(title)}(${escapeHtml(id)})</div></div>`);
   });
   if (Object.keys(edits.rescue).length) {
     const fieldLines = Object.keys(edits.rescue).map((f) => `<div class="diff-field">${escapeHtml(f)}: <del>${escapeHtml(JSON.stringify(QUEST_DATA.rescue[f]))}</del> → <ins>${escapeHtml(JSON.stringify(edits.rescue[f]))}</ins></div>`).join("");
@@ -672,7 +1143,7 @@ document.getElementById("copyJsonBtn").addEventListener("click", () => {
 // ==== 一時保存(チェックポイント)。編集途中の状態(edits/addedQuests/deletedQuestIds)をJSONで
 // 出し入れできるようにする。localStorageに頼らず(別端末/別ブラウザでも使えるように)コピペで運用する ====
 function buildCheckpointData() {
-  return { edits, addedQuests, deletedQuestIds: [...deletedQuestIds] };
+  return { edits, addedQuests, deletedQuestIds: [...deletedQuestIds], addedRoutes, deletedRouteIds: [...deletedRouteIds] };
 }
 document.getElementById("checkpointBtn").addEventListener("click", () => {
   document.getElementById("checkpointJson").value = JSON.stringify(buildCheckpointData(), null, 2);
@@ -701,11 +1172,14 @@ document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
   try {
     if (parsed.edits) {
       Object.keys(parsed.edits.quests || {}).forEach((id) => { edits.quests[id] = Object.assign({}, edits.quests[id] || {}, parsed.edits.quests[id]); });
+      Object.keys(parsed.edits.routes || {}).forEach((id) => { edits.routes[id] = Object.assign({}, edits.routes[id] || {}, parsed.edits.routes[id]); });
       Object.assign(edits.rescue, parsed.edits.rescue || {});
       Object.assign(edits.constants, parsed.edits.constants || {});
     }
     Object.assign(addedQuests, parsed.addedQuests || {});
     (parsed.deletedQuestIds || []).forEach((id) => deletedQuestIds.add(id));
+    Object.assign(addedRoutes, parsed.addedRoutes || {});
+    (parsed.deletedRouteIds || []).forEach((id) => deletedRouteIds.add(id));
     statusEl.textContent = "読み込みました";
     statusEl.style.color = "var(--success)";
     refreshAll();
@@ -716,6 +1190,7 @@ document.getElementById("loadCheckpointBtn").addEventListener("click", () => {
 });
 
 renderMain();
+loadBgSetSources(); // 背景セットの選択肢(ui.jsのBG_SETS+預かり所)は非同期で読み、揃い次第ルート/背景タブを再描画する
 </script>
 </body>
 </html>
