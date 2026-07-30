@@ -329,6 +329,8 @@ function buildQuestCard(id) {
   const requiresOoInoshishi = !!currentQuestValue(id, "requiresOoInoshishi", src.requiresOoInoshishi);
   const minQuestClears = currentQuestValue(id, "minQuestClears", src.minQuestClears);
   const route = currentQuestValue(id, "route", src.route);
+  const departStart = currentQuestValue(id, "departStart", src.departStart);
+  const departEnd = currentQuestValue(id, "departEnd", src.departEnd);
   const rewardMaterials = currentQuestValue(id, "rewardMaterials", src.rewardMaterials) || {};
   const edited = isQuestEdited(id);
   const node = document.createElement("details");
@@ -400,11 +402,21 @@ function buildQuestCard(id) {
         </div>
       </div>
       <div class="field-row">
-        <label>クエストダンジョン(route、任意。受注中だけ出発先に専用ルートが出る)</label>
+        <label>クエストダンジョン(route、任意。設定するとモンハン形式=専用ルート・期限なし一発勝負になる)</label>
         <select data-field="route">
-          <option value="">なし(通常どおり深淵の森)</option>
+          <option value="">なし(通常どおり深淵の森・期限あり)</option>
           ${routeOptionIds().map((rid) => `<option value="${escapeHtml(rid)}" ${route === rid ? "selected" : ""}>${escapeHtml((routeSource(rid) && routeSource(rid).ja) || rid)}(${escapeHtml(rid)})</option>`).join("")}
         </select>
+      </div>
+      <div class="field-pair">
+        <div class="field-row">
+          <label>出発可能時間・開始(departStart、ルート依頼向け)</label>
+          <input type="time" data-field="departStart" value="${escapeHtml(departStart || "")}">
+        </div>
+        <div class="field-row">
+          <label>同・終了(departEnd。両方空欄=いつでも出発可)</label>
+          <input type="time" data-field="departEnd" value="${escapeHtml(departEnd || "")}">
+        </div>
       </div>
       <div class="field-row">
         <label>解禁条件: 依頼達成回数(minQuestClears、任意)</label>
@@ -422,9 +434,10 @@ function buildQuestCard(id) {
       </div>
     </div>
   `;
-  const fields = ["emoji", "requester", "title", "text", "targetFloor", "count", "tier", "rewardGold", "spawnId", "chaseText", "minQuestClears"];
+  const fields = ["emoji", "requester", "title", "text", "targetFloor", "count", "tier", "rewardGold", "spawnId", "chaseText", "minQuestClears", "departStart", "departEnd"];
   const REQUIRED_NUMERIC = new Set(["targetFloor", "count"]); // 空欄を許さず元の値へフォールバックする
   const OPTIONAL_NUMERIC = new Set(["rewardGold", "minQuestClears"]); // 空欄=null(未設定)として明示的に書き出す
+  const OPTIONAL_TEXT = new Set(["departStart", "departEnd"]); // 空欄=null(未設定)。"11:00"形式の時刻文字列
   const emojiPreviewEl = node.querySelector(".quest-emoji-badge");
   const titlePreviewEl = node.querySelector(".quest-title-preview");
   const floorPreviewEl = node.querySelector(".quest-meta-badge");
@@ -439,6 +452,7 @@ function buildQuestCard(id) {
       // (nullなら書き出される)。targetFloor/countは必須項目なので空欄時は元の値へフォールバックする
       if (REQUIRED_NUMERIC.has(f)) v = v === "" ? originalVal : Number(v);
       else if (OPTIONAL_NUMERIC.has(f)) v = v === "" ? null : Number(v);
+      else if (OPTIONAL_TEXT.has(f)) v = v === "" ? null : v;
       setQuestEdit(id, f, v, originalVal);
       // カード折りたたみ時のプレビュー(絵文字/依頼名/目標階層)だけはその場でテキストを直接書き換える
       // (全体再描画はしない、上のコメント参照)

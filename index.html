@@ -362,6 +362,11 @@
         <span class="depart-btn-main">深淵の森へ出発する</span>
         <span class="depart-btn-sub" id="forestMaxFloorLabel"></span>
       </button>
+      <!-- クエストダンジョン依頼(モンハン形式)の受注中だけ表示される専用ルート行き出発ボタン(town.jsのrenderPartySelect参照) -->
+      <button class="big primary depart-btn" id="departQuestRouteBtn" style="width:100%; margin-top:0.5rem; display:none; border:1px solid #d7b66f;">
+        <span class="depart-btn-main" id="questRouteDepartLabel">討伐の道へ出発する(依頼)</span>
+        <span class="depart-btn-sub" id="questRouteWindowLabel"></span>
+      </button>
       <button class="big depart-btn depart-coast" id="departCoastBtn" style="width:100%; margin-top:0.5rem;">
         <span class="depart-btn-main">海岸へ出発する</span>
         <span class="depart-btn-sub" id="coastMaxFloorLabel"></span>

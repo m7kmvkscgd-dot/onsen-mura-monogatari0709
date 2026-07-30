@@ -73,13 +73,50 @@ function currentStageName() {
     : currentStage === "ruins" ? "廃城下町" : currentStage === "gate" ? "門" : currentStage === "castle" ? "古城"
     : currentStage === "valley" ? "渓流" : currentStage === "bamboo" ? "光る竹林"
     : currentStage === "shugendo" ? "修験道" : currentStage === "yama" ? "山"
+    : currentStage === "questroute" ? ((questRouteDef() || {}).ja || "討伐の道")
     : "深淵の森";
 }
 // 中継ステージへ入った時、直前のステージ・階層を積んでおく(0階層まで帰還した時にpopして戻るための橋渡し)。
 // 森→洞窟の1本だけだった頃はcaveEntryFloorという単一変数だったが、洞窟→廃城下町→門→古城と
 // 中継が連鎖するようになったため、スタック形式に一般化した
 let stageEntryStack = [];
-const VALID_STAGES = ["forest", "coast", "cave", "ruins", "gate", "castle", "ruinsforest", "valley", "bamboo", "shugendo", "yama"];
+const VALID_STAGES = ["forest", "coast", "cave", "ruins", "gate", "castle", "ruinsforest", "valley", "bamboo", "shugendo", "yama", "questroute"];
+
+// ============ クエストダンジョン(奉行所依頼の専用ルート、モンハン形式 2026-07-30) ============
+// 専用ルート付き依頼(QUEST_DEFSのroute)を受注→即出発すると、currentStage="questroute"の遠征になる。
+// ルートidはacceptedQuestではなくこの遠征単位の変数で持つ(対象を討伐した瞬間にacceptedQuestは
+// nullになるが、その後も帰り道でルートの背景・敵を使い続ける必要があるため)
+let currentQuestRouteId = null;
+function questRouteDef() {
+  return currentQuestRouteId && typeof QUEST_ROUTE_DEFS !== "undefined" ? QUEST_ROUTE_DEFS[currentQuestRouteId] : null;
+}
+function questRouteTotalFloors() {
+  const def = questRouteDef();
+  return def && def.totalFloors ? def.totalFloors : 7;
+}
+// 現在層に適用される区間(背景セット・敵プール)。fromFloor昇順に見て「現在層以下で一番大きい開始層」の区間を返す
+function questRouteSegmentFor(floor) {
+  const def = questRouteDef();
+  if (!def || !Array.isArray(def.segments)) return null;
+  let seg = null;
+  def.segments.slice().sort((a, b) => (a.fromFloor || 1) - (b.fromFloor || 1)).forEach((s) => { if (floor >= (s.fromFloor || 1)) seg = s; });
+  return seg;
+}
+// クエストルートの遭遇の組み立て。区間に敵ID指定があればそこから1〜3体、無ければ深淵の森の通常抽選を流用する。
+// 指定プールはquestOnlyの敵も許可する(通常抽選と違い、設計者が明示的に選んだ敵のため)
+function pickEncounterForQuestRoute(floor) {
+  const seg = questRouteSegmentFor(floor);
+  const ids = seg && Array.isArray(seg.enemies) ? seg.enemies.filter((id) => ENEMIES[id]) : [];
+  if (!ids.length) return pickEncounterForFloor(floor, "forest");
+  let count = 1;
+  if (floor >= 3) {
+    const roll = Math.random();
+    count = roll < 0.5 ? 1 : roll < 0.85 ? 2 : 3;
+  }
+  const enemies = [];
+  for (let i = 0; i < count; i++) enemies.push(instantiateEnemyById(ids[Math.floor(Math.random() * ids.length)]));
+  return applyGroupNerf(enemies);
+}
 
 // ============ 遠征状態の永続化(2026-07-18) ============
 // 従来、階層・パーティ・帰還中フラグ等の遠征状態はメモリ上にしか無く、探索中にページを
@@ -111,6 +148,8 @@ function collectExpeditionSnapshot() {
     advMaxFloor,
     advLostHappened,
     advQuestCompleted,
+    advQuestFailed,
+    questRouteId: currentQuestRouteId, // クエストルート遠征の途中リロード再開用
     jizoBlessingActive,
     warashiLuckActive,
     koOniRepayFloorsLeft,
@@ -150,6 +189,8 @@ function resumeExpeditionFromSave() {
   advXpGained = snap.advXpGained || {};
   advLevelBefore = snap.advLevelBefore || {};
   advQuestCompleted = snap.advQuestCompleted || null;
+  advQuestFailed = snap.advQuestFailed || null;
+  currentQuestRouteId = snap.questRouteId || null;
   advEnemiesDefeated = snap.advEnemiesDefeated || 0;
   advMaxFloor = snap.advMaxFloor || 0;
   advLostHappened = !!snap.advLostHappened;
@@ -202,6 +243,7 @@ let advGoldEarned = 0; // 今回の冒険で稼いだ合計ゴールド(帰還�
 let advXpGained = {}; // 今回の冒険でキャラごとに得た経験値の合計(characterId -> xp、同じくリザルト画面用)
 let advLevelBefore = {}; // 今回の冒険開始時点のレベル(characterId -> level)。リザルト画面でレベルアップを分かりやすく表示するための比較用
 let advQuestCompleted = null; // 今回の冒険で奉行所の依頼を達成した場合{title, gold, xp}(リザルト画面用、enterDungeon()でリセット)
+let advQuestFailed = null; // クエストダンジョン依頼(モンハン形式)に失敗した場合{title, fee}(リザルト画面用。表示したら消費、enterDungeon()でもリセット)
 let advEnemiesDefeated = 0; // 今回の冒険で倒した敵の数(リザルトの戦績/朱印評価用、battle.js victory()が加算)
 let advMaxFloor = 0; // 今回の冒険で踏破した最大階層(同上。中継ステージをまたいでも単純に各ステージの階層数の最大値)
 let advLostHappened = false; // 今回の冒険で誰かがロストしたか(朱印評価と「全員生還！」表示用、battle.js側が立てる)
@@ -314,6 +356,10 @@ function enterDungeon() {
   advXpGained = {};
   advLevelBefore = {};
   advQuestCompleted = null;
+  advQuestFailed = null;
+  // クエストダンジョン(モンハン形式): 専用ルート付き依頼の受注中の出発はそのルート行き。
+  // ルートidを遠征単位で確保する(討伐達成でacceptedQuestが消えた後も帰り道で参照するため)
+  currentQuestRouteId = currentStage === "questroute" && state.acceptedQuest ? state.acceptedQuest.route || null : null;
   advEnemiesDefeated = 0;
   advMaxFloor = 0;
   advLostHappened = false;
@@ -1035,6 +1081,17 @@ function finishRetreat() {
     state.rescueQuestItemObtained = false;
     dlog(`${RESCUE_QUEST_DEF.itemName}を無事に届けた！謝礼${RESCUE_QUEST_DEF.rewardGold}Gを受け取った。`);
   }
+  // クエストダンジョン(モンハン形式): 対象を討伐できないまま里へ戻ったら依頼失敗。契約金は没収され、
+  // その依頼は今日はもう受けられない(翌日また張り出される、refreshMagistrateQuestsIfNeeded参照)
+  if (currentQuestRouteId && state.acceptedQuest && state.acceptedQuest.route === currentQuestRouteId) {
+    const failedQDef = QUEST_DEFS[state.acceptedQuest.questKey];
+    advQuestFailed = { title: failedQDef ? failedQDef.title : "討伐依頼", fee: state.acceptedQuest.contractFee || 0 };
+    state.magistrateQuestFailedOn = state.magistrateQuestFailedOn || {};
+    state.magistrateQuestFailedOn[state.acceptedQuest.questKey] = state.dayCount;
+    state.acceptedQuest = null;
+    dlog("依頼を果たせないまま里へ戻った…契約金は没収された。");
+  }
+  currentQuestRouteId = null;
   toggleTimeOfDay();
   // 里に帰るたびに町の曲を続きからではなく最初から再生する。時間帯によってtown/town_dawn/town_nightの
   // どのBGMキーが実際に使われるか変わるため、3つとも記憶位置をリセットしておく
@@ -1174,7 +1231,9 @@ function moveOneFloor(pathBias, enterTeahouse) {
 // 追いかけてきて再度戦闘になる(大猪で「逃げても無駄」の緊張感を作るための仕組み)
 function tryForceQuestEncounter() {
   const q = state.acceptedQuest;
-  if (!q || currentStage !== "forest") return false;
+  if (!q) return false;
+  // 専用ルート付き依頼(モンハン形式)は自分のルートの中でのみ、通常依頼は深淵の森でのみ対象が出る
+  if (q.route ? currentStage !== "questroute" : currentStage !== "forest") return false;
   const isFirstEncounter = !retreating && currentFloor === q.targetFloor;
   const isChaseEncounter = q.chasing && Math.random() < CHASE_ENCOUNTER_CHANCE;
   if (!isFirstEncounter && !isChaseEncounter) return false;
@@ -1232,7 +1291,7 @@ function resolveFloorArrival(pathBias) {
 function updateQuestTargetBadge() {
   const badge = document.getElementById("questTargetBadge");
   const q = state.acceptedQuest;
-  if (!q || currentStage !== "forest") {
+  if (!q || (q.route ? currentStage !== "questroute" : currentStage !== "forest")) {
     badge.style.visibility = "hidden";
     return;
   }
@@ -1308,6 +1367,16 @@ document.getElementById("advanceBtn").onclick = () => {
   // すべてrunAutoRetreatTick/performAutoRetreatFloorMove側で扱う)
   if (retreating) {
     startAutoRetreat();
+    return;
+  }
+  // クエストダンジョン(専用ルート)は選択の余地のない一本道: 進路選択を出さず1階層ずつ進む。
+  // 最深部より先は行き止まり(目的を果たしたら「里に戻る」で帰る)
+  if (currentStage === "questroute") {
+    if (targetFloor > questRouteTotalFloors()) {
+      showInfoModal("道はここで途切れている…。目的を果たしたら里へ戻ろう。");
+      return;
+    }
+    playDungeonMoveTransition(() => moveOneFloor(null));
     return;
   }
   // 門の最深部(1層)は、選択の余地のない一本道の継続ではなく「古城の鍵が無いと通れない」固定の
@@ -2512,7 +2581,9 @@ function rollEncounter(pathBias) {
   // クラッシュするのを未然に防ぐための安全策。敵データが揃えば自動的に通常通り機能する)
   // 設定画面の「高遭遇モード」ON時は遭遇確率を1.5倍にする(帰還中/通常どちらの基準値にも一律で掛ける)
   const encounterModeMult = state.highEncounterMode ? 1.5 : 1;
-  const rawBattleChance = (!debugNoEncounters && stageHasEnemies(currentStage)) ? Math.min(1, (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) * encounterModeMult) : 0;
+  // クエストルートは敵プールを区間定義(無指定なら森を流用)から引くため、stageHasEnemiesの空判定は適用しない
+  const stageBattleOk = currentStage === "questroute" || stageHasEnemies(currentStage);
+  const rawBattleChance = (!debugNoEncounters && stageBattleOk) ? Math.min(1, (retreating ? RETREAT_BATTLE_CHANCE : baseBattle) * encounterModeMult) : 0;
   // 帰還中は片側ピティ(戦闘直後の抑制のみ、確定発生なし)を適用する(ユーザー指示、2026-07-28)。
   // 2026-07-21時点では帰還はピティ制の完全対象外だったが、「帰還中の連続遭遇がストレス」という
   // ユーザー報告を受けて抑制側だけ導入。シミュレーション(帰還10フロア)では平均戦闘数1.80→1.66回
@@ -2525,7 +2596,7 @@ function rollEncounter(pathBias) {
   const roll = Math.random();
   if (roll < battleChance) {
     lastFloorMoveOutcome = "battle"; // オート帰還の一時停止判定用
-    queueEncounterBattle(pickEncounterForFloor(currentFloor, currentStage), bias);
+    queueEncounterBattle(currentStage === "questroute" ? pickEncounterForQuestRoute(currentFloor) : pickEncounterForFloor(currentFloor, currentStage), bias);
   } else if (roll < battleChance + goldChance) {
     lastFloorMoveOutcome = "gold"; // オート帰還の一時停止判定用
     // 財宝の金額: 上限は1階層につき+1Gの単純な一次式、下限は上限の50%(深く潜っても運が悪いと固定5G、という

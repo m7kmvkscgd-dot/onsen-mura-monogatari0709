@@ -1214,6 +1214,22 @@ function renderPartySelect() {
   // 海岸への直接出発は廃止(ユーザー指示、2026-07-19)。今後は森→洞窟の先で海の村を発見してから
   // 辿り着く経路にする予定のため、そのルートができるまで出発画面からは一旦隠す
   document.getElementById("departCoastBtn").style.display = "none";
+  // クエストダンジョン依頼(モンハン形式)の受注中は、通常の森出発ボタンとは別に専用ルート行きの
+  // 出発ボタンを出す(受注中も村・通常探索は自由、というユーザー確定仕様のため森ボタンはそのまま残す)
+  const routeQuest = !raidPrep && state.acceptedQuest && state.acceptedQuest.route ? state.acceptedQuest : null;
+  const routeDefForDepart = routeQuest && typeof QUEST_ROUTE_DEFS !== "undefined" ? QUEST_ROUTE_DEFS[routeQuest.route] : null;
+  const questDepartBtn = document.getElementById("departQuestRouteBtn");
+  if (routeQuest) {
+    const routeQDef = QUEST_DEFS[routeQuest.questKey] || {};
+    const win = questDepartWindow(routeQDef);
+    questDepartBtn.style.display = "";
+    document.getElementById("questRouteDepartLabel").textContent = `⚔️ ${(routeDefForDepart && routeDefForDepart.ja) || "討伐の道"}へ出発する(依頼)`;
+    document.getElementById("questRouteWindowLabel").textContent = win
+      ? `出発可能 ${formatClockTime(win.startMin)}〜${formatClockTime(win.endMin)}・一発勝負`
+      : "いつでも出発可・一発勝負";
+  } else {
+    questDepartBtn.style.display = "none";
+  }
   showPartySelectTab("main");
   renderOmikujiTab();
   // 鍛冶屋チップ(村トップから移設)。鍛冶屋を建築するまでは非表示
@@ -1447,6 +1463,36 @@ function showDepartConfirm(stage) {
 }
 document.getElementById("departForestBtn").onclick = () => showDepartConfirm("forest");
 document.getElementById("departCoastBtn").onclick = () => showDepartConfirm("coast");
+// クエストダンジョン依頼(モンハン形式)の専用ルートへの出発。出発可能時間の外なら
+// 「開始時刻まで時間を進めるか」を確認してから(村で刻限まで待った扱いで)出発準備に進む
+document.getElementById("departQuestRouteBtn").onclick = () => {
+  const q = state.acceptedQuest;
+  if (!q || !q.route) return;
+  if (state.activePartyIds.length === 0) {
+    showInfoModal("パーティを1人以上選んでください");
+    return;
+  }
+  const def = QUEST_DEFS[q.questKey] || {};
+  const win = questDepartWindow(def);
+  if (!win || isWithinDepartWindow(win)) {
+    showDepartConfirm("questroute");
+    return;
+  }
+  // 今日の枠を既に過ぎている場合は翌日の開始時刻まで送ることになるため、その旨も文言に含める
+  const crossesDay = win.startMin <= (state.clockMinutes != null ? state.clockMinutes : 0);
+  const startLabel = `${crossesDay ? "明日の" : ""}${formatClockTime(win.startMin)}`;
+  showConfirmModal(`出発できるのは${formatClockTime(win.startMin)}〜${formatClockTime(win.endMin)}の間だ。\n${startLabel}まで時間を進めて出発しますか？`, [
+    {
+      label: `${startLabel}まで待って出発`, className: "big primary",
+      onClick: () => {
+        advanceClockToQuestWindow(win);
+        renderPartySelect(); // 進めた後の時刻・背景を反映してから最終確認へ
+        showDepartConfirm("questroute");
+      },
+    },
+    { label: "やめておく", className: "big" },
+  ]);
+};
 // 襲撃の迎撃準備画面(renderPartySelectの襲撃モード)の開戦ボタン。誤タップ防止に確認を挟む
 document.getElementById("raidDefendBtn").onclick = () => {
   const count = raidDefenderIds.length;
@@ -2341,6 +2387,17 @@ function refreshMagistrateQuestsIfNeeded() {
       return shownDay == null || (state.dayCount - shownDay) >= QUEST_COOLDOWN_DAYS;
     });
     const picked = tierKeepKey ? [tierKeepKey] : [];
+    // クエストダンジョン依頼(モンハン形式)で昨日失敗した依頼は、翌日必ずもう一度張り出す(再挑戦の機会を保証)。
+    // クールダウンより優先し、確定枠として先に積む
+    const failedOn = state.magistrateQuestFailedOn || {};
+    Object.keys(failedOn).forEach((id) => {
+      if (failedOn[id] !== state.dayCount - 1) return;
+      if (!QUEST_DEFS[id] || QUEST_DEFS[id].tier !== tier) return;
+      if (picked.includes(id) || picked.length >= QUEST_BOARD_SIZE) return;
+      picked.push(id);
+      const poolIdx = pool.indexOf(id);
+      if (poolIdx >= 0) pool.splice(poolIdx, 1); // 通常抽選プールとの二重取りを防ぐ
+    });
     for (let i = picked.length; i < QUEST_BOARD_SIZE && pool.length > 0; i++) {
       const chance = slotChances[i] != null ? slotChances[i] : 1.0;
       if (Math.random() >= chance) break;
@@ -2418,6 +2475,10 @@ function renderMagistrateScreen() {
     const isAccepted = state.acceptedQuest && state.acceptedQuest.questKey === id;
     // 同じ依頼を1日に何度もクリアして稼げてしまわないよう、達成日が今日のうちは再受注させない
     const clearedToday = (state.magistrateQuestClearedOn || {})[id] === state.dayCount;
+    // クエストダンジョン依頼(モンハン形式): 失敗した日は再受注できない(翌日また張り出される)
+    const failedToday = (state.magistrateQuestFailedOn || {})[id] === state.dayCount;
+    const routeDef = def.route && typeof QUEST_ROUTE_DEFS !== "undefined" ? QUEST_ROUTE_DEFS[def.route] : null;
+    const departWin = questDepartWindow(def);
     const fee = questContractFee(def);
     const row = document.createElement("div");
     row.className = "card";
@@ -2426,18 +2487,24 @@ function renderMagistrateScreen() {
       const daysLeft = Math.max(0, Math.ceil((state.acceptedQuest.expireMinutes - absoluteGameMinutes()) / (24 * 60)));
       deadlineHtml = `<p style="font-size:0.75rem;color:var(--danger);margin:0.3rem 0 0;">期限: あと${daysLeft}日</p>`;
     }
+    // 行き先の案内: 専用ルート付き依頼はルート名+一発勝負の説明、通常依頼は従来の森の案内
+    const destinationHtml = routeDef
+      ? `<p style="font-size:0.8rem;">${routeDef.emoji || "🗺"}専用ルート「${routeDef.ja}」の${def.targetFloor}層目に対象が現れます。期限なしの一発勝負(撤退・全滅で失敗、契約金没収)。</p>
+         <p style="font-size:0.75rem;color:var(--dw-caption-color);margin:0.2rem 0 0;">出発可能時間: ${departWin ? `${formatClockTime(departWin.startMin)}〜${formatClockTime(departWin.endMin)}` : "いつでも"}(受注はいつでも可)</p>`
+      : `<p style="font-size:0.8rem;">深淵の森 ${def.targetFloor}層目に到達すると対象が現れます。</p>`;
     row.innerHTML = `
       <div class="roster-name">${def.emoji}${def.title}</div>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0.3rem 0;">依頼者: ${def.requester} <span style="font-size:0.68rem;">(契約金${fee}G)</span></p>
       <p style="font-size:0.8rem;margin:0 0 0.5rem;">${def.text}</p>
-      <p style="font-size:0.8rem;">深淵の森 ${def.targetFloor}層目に到達すると対象が現れます。</p>
+      ${destinationHtml}
       ${deadlineHtml}
     `;
     const btn = document.createElement("button");
     btn.style.marginTop = "0.5rem";
     if (isAccepted) {
       btn.className = "big danger";
-      btn.textContent = "依頼を取り下げる(契約金没収)";
+      // 専用ルート付き依頼は出発前の取りやめ=契約金返還(出発後の失敗だけが没収)。通常依頼は従来どおり没収
+      btn.textContent = state.acceptedQuest.route ? "依頼を取りやめる(出発前・契約金は返還)" : "依頼を取り下げる(契約金没収)";
       btn.onclick = () => abandonQuest();
     } else if (state.acceptedQuest) {
       btn.className = "big";
@@ -2446,6 +2513,10 @@ function renderMagistrateScreen() {
     } else if (clearedToday) {
       btn.className = "big";
       btn.textContent = "本日は達成済みです(翌日また受けられます)";
+      btn.disabled = true;
+    } else if (failedToday) {
+      btn.className = "big";
+      btn.textContent = "本日は失敗しています(翌日また挑戦できます)";
       btn.disabled = true;
     } else {
       // 所持金不足の時、以前はボタンをdisabledにして押せなくしていたが、見た目の変化が地味で
@@ -2471,22 +2542,57 @@ function renderMagistrateScreen() {
 function acceptQuest(enemyId) {
   if (state.acceptedQuest) return;
   if ((state.magistrateQuestClearedOn || {})[enemyId] === state.dayCount) return; // 同じ依頼を同日中に再受注させない
+  if ((state.magistrateQuestFailedOn || {})[enemyId] === state.dayCount) return; // 失敗した日はもう受けられない(モンハン形式、翌日再張り出し)
   const def = QUEST_DEFS[enemyId];
   const fee = questContractFee(def);
   if (state.gold < fee) return;
   state.gold -= fee; // 契約金は前払い。達成時に全額返還、失敗/取り下げ時は没収される
   state.acceptedQuest = {
     questKey: enemyId, enemyId: def.spawnId || enemyId, targetFloor: def.targetFloor, count: def.count, chasing: false,
-    contractFee: fee, expireMinutes: absoluteGameMinutes() + QUEST_DEADLINE_DAYS * 24 * 60,
+    contractFee: fee, route: def.route || null,
+    // 専用ルート付き依頼(モンハン形式)は期限なしの一発勝負。通常依頼は従来どおり期限あり
+    expireMinutes: def.route ? null : absoluteGameMinutes() + QUEST_DEADLINE_DAYS * 24 * 60,
   };
   saveState();
   playQuestAcceptStamp(def.title, () => { renderMagistrateScreen(); });
 }
-// 取り下げは契約金を返還しない(没収)。期限切れ(checkQuestDeadline)も同様に没収扱いになる
+// 取り下げは契約金を返還しない(没収)。期限切れ(checkQuestDeadline)も同様に没収扱いになる。
+// ただし専用ルート付き依頼(モンハン形式)だけは、まだ出発していない段階の取りやめ=契約金返還
+// (取り下げボタンは村でしか押せず、出発後の遠征は失敗(finishRetreat/defeat)側で精算されるため、
+// ここに来る時点で「出発前」であることが保証されている)
 function abandonQuest() {
+  if (state.acceptedQuest && state.acceptedQuest.route) state.gold += state.acceptedQuest.contractFee || 0;
   state.acceptedQuest = null;
   saveState();
   renderMagistrateScreen();
+}
+// ============ クエストダンジョン依頼の出発可能時間(モンハン形式) ============
+// QUEST_DEFSのdepartStart/departEnd("11:00"形式)を分数に解釈する。未設定ならいつでも出発可
+function parseClockHM(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || "").trim());
+  return m ? Math.min(1439, Number(m[1]) * 60 + Number(m[2])) : null;
+}
+function questDepartWindow(def) {
+  const startMin = parseClockHM(def && def.departStart);
+  const endMin = parseClockHM(def && def.departEnd);
+  return startMin != null && endMin != null ? { startMin, endMin } : null;
+}
+function isWithinDepartWindow(win) {
+  const m = state.clockMinutes != null ? state.clockMinutes : PHASE_START_MINUTES[state.timeOfDay || "day"];
+  // 跨日ウィンドウ(例: 22:00〜2:00)にも対応しておく
+  return win.startMin <= win.endMin ? (m >= win.startMin && m <= win.endMin) : (m >= win.startMin || m <= win.endMin);
+}
+// 時計を出発可能時間の開始時刻まで送る(村で待った扱い)。既に今日の枠を過ぎていた場合は翌日の開始時刻へ。
+// advanceCalendar経由にすることで、期限チェック・セーブ・背景の時間帯反映も一括で行われる
+function advanceClockToQuestWindow(win) {
+  advanceCalendar(() => {
+    if (state.clockMinutes == null) syncClockToPhase();
+    const delta = (win.startMin - state.clockMinutes + 1440) % 1440;
+    if (delta === 0) return;
+    if (win.startMin <= state.clockMinutes) state.dayCount = (state.dayCount || 1) + 1;
+    state.clockMinutes = win.startMin;
+    state.timeOfDay = phaseForClockMinutes(state.clockMinutes);
+  });
 }
 document.getElementById("magistrateBackBtnTop").onclick = () => { renderFacilityHome(); };
 document.getElementById("magistrateBackBtn").onclick = () => { renderFacilityHome(); };

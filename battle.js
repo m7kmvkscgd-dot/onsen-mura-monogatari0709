@@ -2619,6 +2619,16 @@ function defeat() {
       });
       return;
     }
+    // クエストダンジョン遠征中の全滅は依頼失敗(モンハン形式)。契約金没収+当日は再受注不可(翌日再張り出し)。
+    // 通常依頼(route無し)は従来どおり全滅では取り下げられず、期限切れまで受注状態が残る
+    if (state.acceptedQuest && state.acceptedQuest.route) {
+      const failedQDef = QUEST_DEFS[state.acceptedQuest.questKey];
+      advQuestFailed = { title: failedQDef ? failedQDef.title : "討伐依頼", fee: state.acceptedQuest.contractFee || 0 };
+      state.magistrateQuestFailedOn = state.magistrateQuestFailedOn || {};
+      state.magistrateQuestFailedOn[state.acceptedQuest.questKey] = state.dayCount;
+      state.acceptedQuest = null;
+    }
+    currentQuestRouteId = null;
     clearExpeditionSnapshot(); // 全滅で遠征終了。リロードしても町スタートに戻る
     saveState();
     toggleTimeOfDay();

@@ -54,6 +54,12 @@ function yamaBgSetForCurrentState() {
 }
 // 探索/戦闘の背景・野営背景は森/海岸/洞窟/廃城下町/門/古城/渓流/光る竹林/修験道/山のどのステージ中かで出し分ける
 function currentAreaBgSet() {
+  // クエストダンジョン(奉行所依頼の専用ルート): 現在層の区間定義から背景セットを引く。
+  // 区間の背景セットが未反映(BG_SETSに無い)場合は森の絵で代用する
+  if (currentStage === "questroute" && typeof questRouteSegmentFor === "function") {
+    const seg = questRouteSegmentFor(currentFloor);
+    return (seg && BG_SETS[seg.bg]) || BG_SETS.dungeon;
+  }
   // 深淵の森12層(巨木の伐採場)は専用の一枚絵に差し替える(前進/帰還どちらで立ち寄っても)。
   // typeofガードはMINING_DEFS(dungeon.js)を読み込まないツール系スクリプトからの誤呼び出し対策
   if (currentStage === "forest" && typeof MINING_DEFS !== "undefined" && currentFloor === MINING_DEFS.wood.floor) return BG_SETS.kyoboku;
@@ -646,6 +652,14 @@ function renderResultScreen(onContinue, isDefeat) {
       <div class="roster-name">🏯依頼達成: ${advQuestCompleted.title}</div>
       <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G${advQuestCompleted.xp > 0 ? ` + XP${advQuestCompleted.xp}` : ""}${matText}</p>
     `;
+  } else if (advQuestFailed) {
+    // クエストダンジョン依頼(モンハン形式)の失敗。全滅リザルト(isDefeat)でも表示する
+    questCard.style.display = "";
+    questCard.innerHTML = `
+      <div class="roster-name" style="color:var(--danger, #c95d54);">🏯依頼失敗: ${advQuestFailed.title}</div>
+      <p style="font-size:0.85rem;margin-top:0.3rem;">契約金${advQuestFailed.fee}Gは没収された…(明日また張り出される)</p>
+    `;
+    advQuestFailed = null; // 一度表示したら消費する(直後の襲撃戦など、無関係な次のリザルトへ紛れ込ませない)
   } else {
     questCard.style.display = "none";
   }

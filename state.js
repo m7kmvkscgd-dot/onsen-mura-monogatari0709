@@ -32,6 +32,7 @@ function defaultState() {
     defeatedOoInoshishi: false, // 大猪(猪の依頼の中ボス)を一度でも倒したか。ボス級指名討伐(荒熊等)が奉行所に張り出される解禁条件(一度trueになったらそのまま)
     magistrateQuestClearCount: 0, // 奉行所の依頼を達成した累計回数。大猪の依頼(QUEST_DEFS.inoshishiのminQuestClears)の張り出し解禁条件に使う
     magistrateQuestClearedOn: {}, // { questId: dayCount } 直近で達成した日。同じ日のうちは同じ依頼を再受注できないようにする(acceptQuest/renderMagistrateScreen参照)
+    magistrateQuestFailedOn: {}, // { questId: dayCount } クエストダンジョン依頼(モンハン形式)に失敗した日。当日は再受注不可、翌日は必ず再張り出しされる(refreshMagistrateQuestsIfNeeded参照)
     rescueQuestAccepted: false, // 破綻寸前パーティ救済クエスト(薬草摘み)を受注中かどうか
     rescueQuestItemObtained: false, // 森の対象階層で薬草を入手済みかどうか(受注中のみ意味を持つ)
     travelPrepShopLevel: 0, // 増築の1つ、旅支度屋のレベル(0=未建築、1=建築済み。村レベル4で解禁)。出発画面で野営具を購入できるようになる
