@@ -241,17 +241,16 @@
   state.gold = 0;
   check("全員療養中でもゲームオーバーにならない", checkGameOver() === false);
 
-  console.log("--- K: 透過立ち絵テスト(テストモード限定の差し替え、2026-07-31) ---");
+  console.log("--- K: 透過立ち絵(2026-08-01本採用、ENEMIES焼き込み) ---");
   const wasTestMode = testModeActive;
   testModeActive = false;
+  // 【2026-08-01本採用】透過立ち絵はテストモード限定を卒業し、ENEMIES定義へ焼き込み済み。
+  // 本番でもframeless+clear画像で出ることを確認する(テストモード限定の差し替え機構は廃止)
   const yakenProd = instantiateEnemyById("yaken");
-  check("本番では従来の額装イラストのまま", yakenProd.image === "assets/enemies/yaken.png" && !yakenProd.frameless);
-  testModeActive = true;
-  const yakenTest = instantiateEnemyById("yaken");
-  check("テストモード中は透過立ち絵+framelessに差し替わる", yakenTest.image === "assets/enemies/clear/yaken.png" && yakenTest.frameless === true);
+  check("本番でも透過立ち絵+frameless(2026-08-01本採用)", yakenProd.image === "assets/enemies/clear/yaken.png" && yakenProd.frameless === true && yakenProd.spriteScale === 0.85);
   const bossTest = instantiateEnemyById("boss_kasha");
-  check("表に無い敵はテストモードでも従来のまま", bossTest.image === ENEMIES.boss_kasha.image && !bossTest.frameless);
-  check("透過差し替え表の全idが実在する(10体+追加納品分)", Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).length >= 10 && Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).every((id) => !!ENEMIES[id]));
+  check("透過未対応の敵は従来のまま", bossTest.image === ENEMIES.boss_kasha.image && !bossTest.frameless);
+  check("旧・テスト差し替え表は廃止済み", typeof TEST_TRANSPARENT_ENEMY_IMAGES === "undefined" && typeof TEST_TRANSPARENT_ENEMY_SCALE === "undefined");
   testModeActive = wasTestMode;
 
   console.log("--- J: ボスは逃走しない(逃走+追撃システム全廃、2026-07-31) ---");

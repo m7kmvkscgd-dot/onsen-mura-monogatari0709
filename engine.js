@@ -1700,16 +1700,10 @@ function instantiateEnemy(pick) {
   const atkReductionPct = state.highDurabilityAtkReductionPct || 0;
   const atk = atkReductionPct > 0 ? Math.max(1, Math.round(pick.atk * (1 - atkReductionPct / 100))) : pick.atk;
   const def = defBonusPct > 0 ? pick.def + defBonusPct : pick.def;
-  // 透過立ち絵テスト(データ契約はdata.jsのTEST_TRANSPARENT_ENEMY_IMAGES参照):
-  // テストモード中だけ、対象の敵を木枠なしの透過立ち絵(frameless)へ差し替える。本番プレイは従来どおり
-  const clearImg = typeof testModeActive !== "undefined" && testModeActive && typeof TEST_TRANSPARENT_ENEMY_IMAGES !== "undefined"
-    ? TEST_TRANSPARENT_ENEMY_IMAGES[pick.id] : null;
-  // 細身/小柄な透過立ち絵の見た目補正(TEST_TRANSPARENT_ENEMY_SCALE)。frameless表示時のみ意味を持つ
-  const clearScale = clearImg && typeof TEST_TRANSPARENT_ENEMY_SCALE !== "undefined" ? TEST_TRANSPARENT_ENEMY_SCALE[pick.id] : null;
+  // (旧・透過立ち絵のテストモード限定差し替えは2026-08-01の本採用でENEMIES定義へ焼き込み済み。
+  //  image/frameless/spriteScaleは...pickのスプレッドでそのまま流れる)
   return {
     ...pick,
-    ...(clearImg ? { image: clearImg, frameless: true } : {}),
-    ...(clearScale ? { spriteScale: clearScale } : {}),
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,

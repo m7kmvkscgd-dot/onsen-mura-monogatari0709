@@ -202,11 +202,11 @@ function startBattle(enemies, pathDef, encounterText) {
       }
     });
   }
-  // シームレス戦闘遷移(テストモード試行、effects.js参照): 暗転なしで背景1.05倍ズーム+味方バーが
-  // 沈みつつ1.05倍・間隔+4px(カメラが一歩寄る)。敵の出現もフェード0.8→1.0倍に切り替わる(seamless-entry)。
+  // シームレス戦闘遷移(2026-08-01ユーザー承認で本採用、effects.js参照): 暗転なしで背景1.05倍ズーム。
+  // 敵の出現もフェード0.8→1.0倍に切り替わる(seamless-entry)。
   // 画面共通のフェードイン(screenFadeIn)も今回だけ抑止する=切替時に一瞬暗く見えていた正体(実機報告)。
-  // showScreenより前に仕込む必要があるためこの位置。本番プレイと襲撃戦は従来どおり(クラスも付かない)
-  const seamlessEntry = typeof testModeActive !== "undefined" && testModeActive && !raidBattleActive;
+  // showScreenより前に仕込む必要があるためこの位置。襲撃戦のみ従来どおり(クラスも付かない)
+  const seamlessEntry = !raidBattleActive;
   if (typeof resetSeamlessBattleCamera === "function") resetSeamlessBattleCamera(); // 前の戦闘のズーム残りを掃除
   const battleTopForSeamless = document.querySelector(".battle-top");
   if (battleTopForSeamless) battleTopForSeamless.classList.toggle("seamless-entry", seamlessEntry);

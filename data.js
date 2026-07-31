@@ -258,35 +258,35 @@ const ABILITY_DESC = {
 // 後半のがしゃどくろ・九尾の狐は中ボス、終盤の鬼神・羅刹王が最終ボス(いずれもisBoss:trueで
 // pickEncounterForFloor()により15の倍数フロアで単体ボス戦として優先的に選ばれる)
 const ENEMIES = {
-  yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/yaken.png", hp: 48, atk: 12, def: 15, spd: 6, goldMin: 4, goldMax: 9, xp: 8, minFloor: 1, maxFloor: 18,
+  yaken: { id: "yaken", ja: "野犬", image: "assets/enemies/clear/yaken.png", frameless: true, spriteScale: 0.85, hp: 48, atk: 12, def: 15, spd: 6, goldMin: 4, goldMax: 9, xp: 8, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "牙噛み", mult: 1.2, debuff: { type: "bleed", chance: 0.8, value: 2, turns: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/inoshishi.png", hp: 62, atk: 15, def: 15, spd: 4, goldMin: 7, goldMax: 14, xp: 9, minFloor: 1, maxFloor: 18,
+  inoshishi: { id: "inoshishi", ja: "猪", image: "assets/enemies/clear/inoshishi.png", frameless: true, hp: 62, atk: 15, def: 15, spd: 4, goldMin: 7, goldMax: 14, xp: 9, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "猪突猛進", mult: 2.02, debuff: { type: "bleed", chance: 0.35, value: 2, turnsMin: 1, turnsMax: 3 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/dokuhebi.png", hp: 44, atk: 14, def: 15, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
+  dokuhebi: { id: "dokuhebi", ja: "毒蛇", image: "assets/enemies/clear/dokuhebi.png", frameless: true, hp: 44, atk: 14, def: 15, spd: 7, goldMin: 6, goldMax: 12, xp: 9, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "毒牙", mult: 1.2, debuff: { type: "poison", chance: 1, value: 3 } },
     bigAttackCycle: { min: 3, max: 5 },
     onHitInflict: { type: "poison", chance: 0.5, value: 3 } },
-  oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/oogumo.png", hp: 58, atk: 14, def: 15, spd: 6, goldMin: 3, goldMax: 8, xp: 10, minFloor: 1, maxFloor: 18,
+  oogumo: { id: "oogumo", ja: "大蜘蛛", image: "assets/enemies/clear/oogumo.png", frameless: true, hp: 58, atk: 14, def: 15, spd: 6, goldMin: 3, goldMax: 8, xp: 10, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "糸搦め", mult: 1, debuff: { type: "spdDown", chance: 1, value: 0.5, turns: 3 } },
     bigAttackCycle: { min: 2, max: 4 } },
-  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/kodama.png", hp: 50, atk: 12, def: 25, spd: 5, goldMin: 5, goldMax: 10, xp: 9, minFloor: 1, maxFloor: 18, isPlant: true,
+  kodama: { id: "kodama", ja: "木霊", image: "assets/enemies/clear/kodama.png", frameless: true, hp: 50, atk: 12, def: 25, spd: 5, goldMin: 5, goldMax: 10, xp: 9, minFloor: 1, maxFloor: 18, isPlant: true,
     bigAttack: { name: "精気吸い", mult: 0.9, debuff: { type: "atkDown", chance: 0.5, value: 0.25, turns: 3 } },
     bigAttackCycle: { min: 4, max: 6 } },
-  kappa: { id: "kappa", ja: "河童", image: "assets/enemies/kappa.png", hp: 55, atk: 15, def: 15, spd: 6, goldMin: 7, goldMax: 13, xp: 10, minFloor: 1, maxFloor: 18,
+  kappa: { id: "kappa", ja: "河童", image: "assets/enemies/clear/kappa.png", frameless: true, spriteScale: 1.25, hp: 55, atk: 15, def: 15, spd: 6, goldMin: 7, goldMax: 13, xp: 10, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "河童相撲", mult: 1, debuff: { type: "defDown", chance: 0.8, value: 0.25, turns: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/hitotsume_kozo.png", hp: 48, atk: 15, def: 15, spd: 8, goldMin: 5, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 18,
+  hitotsume_kozo: { id: "hitotsume_kozo", ja: "一つ目小僧", image: "assets/enemies/clear/hitotsume_kozo.png", frameless: true, hp: 48, atk: 15, def: 15, spd: 8, goldMin: 5, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "一つ目睨み", mult: 1, debuff: { type: "spdDown", chance: 0.5, value: 0.3, turns: 3 } },
     bigAttackCycle: { min: 4, max: 6 } },
-  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/bake_danuki.png", hp: 62, atk: 15, def: 15, spd: 6, goldMin: 8, goldMax: 13, xp: 11, minFloor: 1, maxFloor: 18,
+  bake_danuki: { id: "bake_danuki", ja: "化け狸", image: "assets/enemies/clear/bake_danuki.png", frameless: true, spriteScale: 1.4, hp: 62, atk: 15, def: 15, spd: 6, goldMin: 8, goldMax: 13, xp: 11, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "狸囃子", mult: 1, debuff: { type: "silence", chance: 0.85, turns: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/onibi.png", hp: 40, atk: 15, def: 15, spd: 7, goldMin: 5, goldMax: 9, xp: 11, minFloor: 1, maxFloor: 18,
+  onibi: { id: "onibi", ja: "鬼火", image: "assets/enemies/clear/onibi.png", frameless: true, hp: 40, atk: 15, def: 15, spd: 7, goldMin: 5, goldMax: 9, xp: 11, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "鬼火纏い", mult: 0.4, ignoreGuardian: true, debuff: { type: "burn", chance: 1, turnsMin: 2, turnsMax: 3 } },
     onHitInflict: { type: "burn", chance: 0.3, turnsMin: 2, turnsMax: 3 } },
-  kamaitachi: { id: "kamaitachi", ja: "かまいたち", image: "assets/enemies/kamaitachi.png", hp: 55, atk: 18, def: 15, spd: 10, goldMin: 8, goldMax: 13, xp: 13, minFloor: 1, maxFloor: 18,
+  kamaitachi: { id: "kamaitachi", ja: "かまいたち", image: "assets/enemies/clear/kamaitachi.png", frameless: true, hp: 55, atk: 18, def: 15, spd: 10, goldMin: 8, goldMax: 13, xp: 13, minFloor: 1, maxFloor: 18,
     bigAttack: { name: "疾風斬", mult: 1, debuff: { type: "defDown", chance: 0.55, value: 0.2, turns: 3 } } },
   oo_inoshishi: { id: "oo_inoshishi", ja: "大猪", image: "assets/enemies/oo_inoshishi.png", hp: 431, atk: 23, def: 35, spd: 3, goldMin: 20, goldMax: 40, xp: 40, minFloor: 1, maxFloor: 18, isBoss: true, questOnly: true, isMidBoss: true,
     bigAttack: { name: "大猪突進", mult: 4 },
@@ -359,11 +359,11 @@ const ENEMIES = {
     bigAttack: { name: "黄泉の呪詛", mult: 1.3, debuff: { type: "dmgTakenUp", chance: 0.55, value: 0.25, turns: 3 } } },
   kishin_rasetsuo: { id: "kishin_rasetsuo", ja: "鬼神・羅刹王", image: "assets/enemies/kishin_rasetsuo.png", hp: 607, atk: 36, def: 35, spd: 12, goldMin: 220, goldMax: 320, xp: 420, minFloor: 62, maxFloor: 1498, isBoss: true,
     bigAttack: { name: "羅刹の薙ぎ払い", mult: 1.4, ignoreGuardian: true, debuff: { type: "stun", chance: 0.45, turns: 1 } } },
-  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", hp: 13, atk: 10, def: 10, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 18, isFlying: true, isSwarm: true,
+  nurari_koumori: { id: "nurari_koumori", ja: "ぬらりこうもり", image: "assets/enemies/clear/nurari_koumori.png", frameless: true, hp: 13, atk: 10, def: 10, spd: 9, goldMin: 3, goldMax: 5, xp: 5, minFloor: 1, maxFloor: 18, isFlying: true, isSwarm: true,
     bigAttack: { name: "羽ばたきの乱舞", mult: 0.85, debuff: { type: "stun", chance: 0.3, turns: 1 } },
     bigAttackCycle: { min: 2, max: 8 },
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
-  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/chochin_obake.png", hp: 20, atk: 7, def: 10, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
+  chochin_obake: { id: "chochin_obake", ja: "提灯おばけ", image: "assets/enemies/clear/chochin_obake.png", frameless: true, hp: 20, atk: 7, def: 10, spd: 5, goldMin: 3, goldMax: 6, xp: 5, minFloor: 1, maxFloor: 18, isSwarm: true,
     bigAttack: { name: "かがり火", mult: 0.75, debuff: { type: "burn", chance: 1, value: 1, turns: 1 } },
     bigAttackCycle: { min: 2, max: 8 } },
   kawappa: { id: "kawappa", ja: "かわっぱ", image: "assets/enemies/kawappa.png", hp: 49, atk: 13, def: 10, spd: 6, goldMin: 10, goldMax: 14, xp: 11, minFloor: 13, maxFloor: 43, isSwarm: true,
@@ -383,7 +383,7 @@ const ENEMIES = {
   cave_oomukade: { id: "cave_oomukade", ja: "大百足", image: "assets/enemies/oomukade.png", stage: "cave", hp: 77, atk: 18, def: 15, spd: 5, goldMin: 9, goldMax: 16, xp: 13, minFloor: 1, maxFloor: 15,
     bigAttack: { name: "百足の締め上げ", mult: 1.15, debuff: { type: "defDown", chance: 0.5, value: 0.25, turns: 3 } },
     bigAttackCycle: { min: 4, max: 6 } },
-  cave_nurarikoumori: { id: "cave_nurarikoumori", ja: "ぬらりこうもり", image: "assets/enemies/nurari_koumori.png", stage: "cave", hp: 30, atk: 10, def: 10, spd: 10, goldMin: 4, goldMax: 6, xp: 6, minFloor: 1, maxFloor: 15, isFlying: true, isSwarm: true,
+  cave_nurarikoumori: { id: "cave_nurarikoumori", ja: "ぬらりこうもり", image: "assets/enemies/clear/nurari_koumori.png", frameless: true, stage: "cave", hp: 30, atk: 10, def: 10, spd: 10, goldMin: 4, goldMax: 6, xp: 6, minFloor: 1, maxFloor: 15, isFlying: true, isSwarm: true,
     bigAttack: { name: "毒の牙", mult: 0.8, debuff: { type: "poison", chance: 0.75, value: 1, turns: 2, turnsMin: 1, turnsMax: 2 } },
     bigAttackCycle: { min: 4, max: 6 },
     onHitInflict: { type: "poison", chance: 0.4, value: 2, stacking: true } },
@@ -543,7 +543,7 @@ const ENEMIES = {
   // テキスト(口上/ギミック案)はCodex産のJSONをそのまま転記。画像は制作待ちのため
   // 提灯おばけ/雪女で暫定(quest_raw納品後に差し替え)。ステータスは序盤(tier1)向けの初期値で、
   // ボステストでの調整前提(回想soulStoryは2026-07-31の方針転換で撤去、ENEMIES末尾のコメント参照)
-  chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/chochin_obake.png", hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
+  chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/clear/chochin_obake.png", frameless: true, hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
     bigAttack: { name: "提灯の火", mult: 1.1, debuff: { type: "burn", chance: 0.5, turnsMin: 2, turnsMax: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
   amayome_shiranui: { id: "amayome_shiranui", ja: "雨嫁・白縫", image: "assets/enemies/yukionna.png", hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
@@ -716,42 +716,8 @@ const INJURY_REST_DAYS = 2;
 // 襲撃戦(大規模戦)は完成済みレイアウトのため、この設定に関わらず常にclassic相当で表示する
 const BATTLE_LAYOUT = "center_v1";
 
-// ============ 透過立ち絵テスト(テストモード限定、2026-07-31) ============
-// 商業クオリティ化の検証: 敵イラストの木枠(額装カード)をやめ、背景透過の立ち絵を
-// 戦闘背景へ直接立たせる表示のテスト導入。ユーザー制作の序盤10体透過版
-// (iCloud: 温泉村物語用/敵キャラ/序盤10体_透過)をアルファトリミング+接地影焼き込み
-// (鬼火のみ浮遊体のため影なし)で加工してassets/enemies/clear/に配置してある。
-// タイトルの「テストモード」等(testModeActive中)だけ、instantiateEnemy(engine.js)が
-// この表に載っている敵のimageを差し替えてframeless表示にする。本番プレイは従来の額装のまま。
-// 本採用が決まったらENEMIES側のimageを直接書き換えてこの表を廃止する
-const TEST_TRANSPARENT_ENEMY_IMAGES = {
-  yaken: "assets/enemies/clear/yaken.png",
-  inoshishi: "assets/enemies/clear/inoshishi.png",
-  dokuhebi: "assets/enemies/clear/dokuhebi.png",
-  oogumo: "assets/enemies/clear/oogumo.png",
-  kodama: "assets/enemies/clear/kodama.png",
-  kappa: "assets/enemies/clear/kappa.png",
-  hitotsume_kozo: "assets/enemies/clear/hitotsume_kozo.png",
-  bake_danuki: "assets/enemies/clear/bake_danuki.png",
-  onibi: "assets/enemies/clear/onibi.png",
-  kamaitachi: "assets/enemies/clear/kamaitachi.png",
-  // 追加納品分(2026-08-01): こうもり・提灯おばけ。どちらもisSwarm=小型表示
-  // (framelessの群れサイズはbattle.cssの.enemy-card.frameless.swarm参照)
-  nurari_koumori: "assets/enemies/clear/nurari_koumori.png",
-  cave_nurarikoumori: "assets/enemies/clear/nurari_koumori.png", // 洞窟版も同じこうもりの絵
-  chochin_obake: "assets/enemies/clear/chochin_obake.png",
-};
-// 透過立ち絵の個体別拡大率(2026-08-01ユーザー指摘「たぬき・カッパ・一つ目がめちゃ小さい」)。
-// 細身/小柄な絵は同じ正方形の箱にcontainすると視覚的な質量が小さく見えるため、対象だけ
-// 足元基準(transform-origin bottom)で拡大表示する。箱のレイアウト寸法は変えない=
-// 3体1行の幅計算・HPバー位置・行の高さに一切影響しない(battle.jsが--clear-scaleへ設定)
-// 基準は木霊(kodama、補正なし=箱いっぱい)。「木霊ぐらいのサイズがベスト」(2026-08-01)
-const TEST_TRANSPARENT_ENEMY_SCALE = {
-  bake_danuki: 1.4, // 1.25→1.4(2026-08-01「もう少しデカく」)
-  kappa: 1.25,
-  hitotsume_kozo: 1.0, // 1.3→1.0(「一つ目がでかい、木霊ぐらいが良い」→木霊と同じ高さに)
-  yaken: 0.85, // 横に広い絵で木霊より大きく見えるため縮小(「犬がでかい」)
-};
+// (旧TEST_TRANSPARENT_ENEMY_IMAGES/SCALEは2026-08-01の本採用でENEMIES定義へ焼き込み済み=テーブル廃止。
+// 透過差し替えの経緯はgit履歴参照)
 
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
 // 敵が毒/出血/炎上の蓄積ダメージを受ける瞬間の停止演出(effects.jsのplayEnemyDotStopSequence)で再生する
