@@ -736,6 +736,15 @@ const TEST_TRANSPARENT_ENEMY_IMAGES = {
   onibi: "assets/enemies/clear/onibi.png",
   kamaitachi: "assets/enemies/clear/kamaitachi.png",
 };
+// 透過立ち絵の個体別拡大率(2026-08-01ユーザー指摘「たぬき・カッパ・一つ目がめちゃ小さい」)。
+// 細身/小柄な絵は同じ正方形の箱にcontainすると視覚的な質量が小さく見えるため、対象だけ
+// 足元基準(transform-origin bottom)で拡大表示する。箱のレイアウト寸法は変えない=
+// 3体1行の幅計算・HPバー位置・行の高さに一切影響しない(battle.jsが--clear-scaleへ設定)
+const TEST_TRANSPARENT_ENEMY_SCALE = {
+  bake_danuki: 1.25,
+  kappa: 1.25,
+  hitotsume_kozo: 1.3,
+};
 
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
 // 敵が毒/出血/炎上の蓄積ダメージを受ける瞬間の停止演出(effects.jsのplayEnemyDotStopSequence)で再生する

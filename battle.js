@@ -298,6 +298,9 @@ function createEnemyCard(e) {
   // frameless指定の敵(百面師・うつろ等の大型ボス)は、カードの箱の見た目(枠線・背景・影)を外して
   // 透過PNGを戦闘背景の上へ直接立たせる(名前・HPバー・状態アイコンはそのまま)。battle.css参照
   if (e.frameless) card.classList.add("frameless");
+  // 細身/小柄な透過立ち絵の見た目補正(spriteScale、data.jsのTEST_TRANSPARENT_ENEMY_SCALE等)。
+  // transformなので箱のレイアウト寸法(3体1行の幅計算・HPバー位置)には影響しない
+  if (e.frameless && e.spriteScale) card.style.setProperty("--clear-scale", e.spriteScale);
   card.dataset.id = e.instanceId;
   card.innerHTML = `
       <div class="enemy-name">${e.label}</div>

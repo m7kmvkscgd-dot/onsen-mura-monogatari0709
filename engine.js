@@ -1704,9 +1704,12 @@ function instantiateEnemy(pick) {
   // テストモード中だけ、対象の敵を木枠なしの透過立ち絵(frameless)へ差し替える。本番プレイは従来どおり
   const clearImg = typeof testModeActive !== "undefined" && testModeActive && typeof TEST_TRANSPARENT_ENEMY_IMAGES !== "undefined"
     ? TEST_TRANSPARENT_ENEMY_IMAGES[pick.id] : null;
+  // 細身/小柄な透過立ち絵の見た目補正(TEST_TRANSPARENT_ENEMY_SCALE)。frameless表示時のみ意味を持つ
+  const clearScale = clearImg && typeof TEST_TRANSPARENT_ENEMY_SCALE !== "undefined" ? TEST_TRANSPARENT_ENEMY_SCALE[pick.id] : null;
   return {
     ...pick,
     ...(clearImg ? { image: clearImg, frameless: true } : {}),
+    ...(clearScale ? { spriteScale: clearScale } : {}),
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,

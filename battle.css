@@ -228,9 +228,9 @@
   /* svh対応ブラウザ(iOS15.4+)では「バーが出ている時の小さい方の高さ」基準で縮める(実際に
      見える範囲で計算するため実機とエミュレーションの差が出ない)。非対応は上のvh版で動く */
   .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2svh - 64px)); height: min(110px, 26vw, calc(23.2svh - 64px)); }
-  /* 【1.3倍化(2026-08-01ユーザー指示「相変わらず小さい、HPバーそのままで1.3倍」)】
+  /* 【1.1倍化(2026-08-01。1.3倍で試作→「デカすぎ」で1.1倍に確定)】
      全員がframelessの敵編成(battle.jsがall-framelessを付ける)だけ、枠が無いのを活かして
-     間隔(gap)と行paddingを最小化し、立ち絵上限を92pxの1.3倍=120pxへ拡大する。
+     間隔(gap)と行paddingを最小化し、立ち絵上限を92pxの1.1倍=101pxへ拡大する。
      1行保証は係数式をやめて厳密式で: カード幅=立ち絵+8px(左右padding2px+透明border2px、
      borderはターゲット選択リング用に必要)、gap4px×2、行padding4px×2
      → 3体合計=3×立ち絵+40px ≤ 100vw → 立ち絵 ≤ (100vw-40px)/3
@@ -239,8 +239,13 @@
      (縦のはみ出しはui.jsのpositionActionsBelowPartyBarのクランプが敵行を上へ寄せて吸収)。
      木枠カードが1体でも混ざる編成は上の従来式のまま */
   .enemy-row.all-frameless { gap: 4px; padding-left: 4px; padding-right: 4px; }
-  .enemy-row.all-frameless .enemy-card.frameless img.card-portrait-img { width: min(120px, calc((100vw - 40px) / 3)); height: min(120px, calc((100vw - 40px) / 3)); }
+  .enemy-row.all-frameless .enemy-card.frameless img.card-portrait-img { width: min(101px, calc((100vw - 40px) / 3)); height: min(101px, calc((100vw - 40px) / 3)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
+  /* 細身/小柄な立ち絵の個体別拡大(--clear-scale、battle.jsのcreateEnemyCardが設定)。
+     足元基準で上方向へ育てる=接地位置とHPバーはそのまま、頭側の余白へ伸びる */
+  .enemy-card.frameless img.card-portrait-img { transform: scale(var(--clear-scale, 1)); transform-origin: 50% 100%; }
+  /* 拡大した頭が敵名テキストを覆い隠さないよう、frameless時は名前を立ち絵より前面に出す */
+  .enemy-card.frameless .enemy-name { position: relative; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.6); }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。
      大きさは立ち絵幅に対する比率ではなくカード幅基準の割合(66%)で、全敵で見た目が揃う */
