@@ -164,8 +164,14 @@
      狙い: 透過立ち絵化で敵が画面上端の「空中」に見えていたのを、ログを上へ・敵列を画面中央帯へ下ろして
      背景の地面と足元を合わせる。襲撃戦はこのクラスが付かない(常に従来配置) */
   .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; z-index: 2; }
-  .battle-top.layout-center .enemy-row { margin-top: calc(26vh - 38px); height: 200px; }
+  /* 敵列はmarginではなく絶対配置で下ろす(margin-topだと固定配置の.battle-top自体と相殺して
+     位置が狂う)。top値は「カード上端=26vh」になるよう、行内の名前用padding-top(38px)を差し引く */
+  .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; }
   #battlePartyBar.layout-center { top: 49.2vh; }
+  /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
+     390px端末の3体戦で3枚目が折り返し→overflow:hiddenに隠れる不具合があった(枠が無いので
+     左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */
+  .enemy-card.frameless { padding-left: 2px; padding-right: 2px; }
   .enemy-row.crowded { gap: 0.25rem; }
   .enemy-card {
     position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;
@@ -195,8 +201,11 @@
   /* 透過立ち絵テスト(2026-07-31ユーザー指定「立ち絵だけ1.2倍、HPバーはそのまま」):
      framelessの立ち絵だけ92→110pxへ拡大。カード幅は立ち絵に合わせて広がるため、
      HPバー(と中の⚠️行)は従来の92px幅のまま中央寄せに固定して大きさを変えない。
-     img.card-portrait-img限定=DOT VFX(.dot-ailment-vfx)や斬撃VFXの寸法には影響させない */
-  .enemy-card.frameless img.card-portrait-img { width: 110px; height: 110px; }
+     img.card-portrait-img限定=DOT VFX(.dot-ailment-vfx)や斬撃VFXの寸法には影響させない。
+     【3体=絶対1行の保証】幅はmin(110px, 26vw): 狭い端末では縮んで、3枚+gap(0.8rem×2)+
+     行padding(0.6rem×2)+カードpadding(2px×6)が320px幅端末でも必ず1行に収まる
+     (390px→110px/375px→97.5px/320px→83.2px、いずれも合計が画面幅未満になる検算済みの式) */
+  .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw); height: min(110px, 26vw); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* frameless敵が討伐対象の時、金色のカード枠パルス(.quest-target)は「枠なし」の意図と矛盾する
      四角い縁として見えてしまうため消す(🎯アイコンは残るので対象表示は失われない)。
