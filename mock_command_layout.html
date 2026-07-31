@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>コマンド2×2+逃げる移設モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #bg { position: fixed; inset: 0; background: url('assets/bg/forest_day.jpg') center 32% / cover; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.10); }
+
+  #logBox { position: absolute; top: 8px; left: 12px; right: 12px; z-index: 3; height: 84px;
+    display: flex; flex-direction: column; justify-content: center;
+    background: linear-gradient(to bottom, rgba(43,43,43,0.89), rgba(24,24,24,0.87));
+    border: 2px solid #4b3728; border-radius: 11px; box-shadow: inset 0 0 0 2px #d9c49a;
+    padding: 12px 16px; font-size: 0.8rem; line-height: 1.6; }
+
+  .enemy-field { position: absolute; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; align-items: flex-end; gap: 12px; }
+  .ecard { text-align: center; }
+  .ecard img { width: min(110px, 26vw); height: min(110px, 26vw); object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .ename { font-size: 0.78rem; font-weight: 700; text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 3px rgba(0,0,0,0.95); }
+  .ehp { height: 9px; width: 84px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.25); }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+
+  #partyBar { position: absolute; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 14px; }
+  .pcard { width: 92px; text-align: center; background: rgba(52,54,64,0.92); border: 2px solid transparent; border-radius: 12px; padding: 5px 5px 7px; }
+  .pcard.acting { border-color: #c9a24a; box-shadow: 0 0 10px rgba(201,162,74,0.5); }
+  .pcard img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; }
+  .pcard .phbar { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pcard .phbar > div { height: 100%; width: 85%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pcard .pname { font-size: 0.72rem; margin-top: 3px; }
+
+  #actions { position: absolute; left: 10px; right: 10px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 13px 0; border-radius: 14px; border: 1px solid #8a7648;
+    background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; }
+  #actions button.primary { background: linear-gradient(180deg, #e8c877, #c9a24a); color: #241a08; border-color: #e8c877; }
+
+  /* 逃げる小ボタンの各案 */
+  #fleeBtn { position: absolute; z-index: 6; font-size: 0.82rem; font-weight: 700; padding: 8px 14px;
+    border-radius: 999px; border: 1px solid rgba(217,207,184,0.55);
+    background: rgba(24,20,16,0.82); color: #d9cfb8; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  #fleeBtn.posA { top: 104px; right: 10px; } /* A: ログ箱のすぐ下・右端 */
+  #fleeBtn.posB { top: 8px; right: 12px; }   /* B: 画面右上(ログ箱に右上で重なる帯) */
+  #fleeBtn.posC { right: 10px; }             /* C: 味方バーの右上に浮かせる(topはJS) */
+
+  #ctrl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(14,12,10,0.94);
+    border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #ctrl .r { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+  #ctrl button { font-size: 12px; padding: 7px 11px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #ctrl button.on { background: #c9a24a; color: #211a10; border-color: #c9a24a; font-weight: 700; }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.65); margin-top: 2px; }
+  body.hide-ctrl #ctrl { display: none; }
+  #peek { position: fixed; left: 10px; top: 8px; z-index: 40; font-size: 12px; padding: 7px 11px; border-radius: 999px;
+    border: 1px solid rgba(217,207,184,0.5); background: rgba(0,0,0,0.6); color: #d9cfb8; display: none; }
+  body.hide-ctrl #peek { display: block; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="logBox">一つ目小僧が現れた！<br>弥助の攻撃！一つ目小僧に14ダメージ！</div>
+<div class="enemy-field" id="enemyField"></div>
+<div id="partyBar"></div>
+<div id="actions"></div>
+<button id="fleeBtn">🏃逃げる</button>
+<button id="peek">調整に戻る</button>
+<div id="ctrl">
+  <div class="r" id="posChips">
+    <button data-pos="A">逃げる位置A: ログ下の右端</button>
+    <button data-pos="B">B: 画面右上</button>
+    <button data-pos="C">C: 味方バー右上</button>
+  </div>
+  <div class="r">
+    <button id="skillBtn">スキル数切替(会心の一矢⇔技)</button>
+    <button id="cntBtn">敵の体数</button>
+    <button id="hideBtn">調整UIを隠す</button>
+  </div>
+  <div id="note">コマンドは2×2固定(攻撃/会心の一矢or技/交代/道具)。逃げるは小ボタン化して下の圧迫を減らす案。位置はA〜Cで比較して選んでください。</div>
+</div>
+<script>
+const ENEMIES10 = [["yaken", "野犬"], ["kodama", "木霊"], ["bake_danuki", "化け狸"]];
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+let pos = localStorage.getItem("cmdMockPos") || "A";
+let manySkills = false;
+let count = 3;
+const $ = (id) => document.getElementById(id);
+
+function render() {
+  const innerH = window.innerHeight;
+  $("enemyField").innerHTML = ENEMIES10.slice(0, count).map(([id, ja]) =>
+    `<div class="ecard"><div class="ename">${ja}</div><img src="assets/enemies/clear/${id}.png"><div class="ehp"><div></div></div></div>`).join("");
+  $("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+    `<div class="pcard ${i === 1 ? "acting" : ""}"><img src="${img}"><div class="phbar"><div></div></div><div class="pname">${name}</div></div>`).join("");
+  // コマンド2×2(逃げるは含めない)
+  $("actions").innerHTML = `<button class="primary">攻撃</button><button>${manySkills ? "技" : "会心の一矢(MP2)"}</button><button>交代</button><button>道具</button>`;
+  // 縦配置は本体と同じ実測逆算(下から積む)
+  const actionsH = $("actions").getBoundingClientRect().height || 130;
+  const partyH = 150;
+  const pTop = Math.max(150, innerH - actionsH - 8 - 10 - partyH);
+  $("partyBar").style.top = pTop + "px";
+  $("actions").style.top = (pTop + partyH + 10) + "px";
+  const cardH = Math.min(110, window.innerWidth * 0.26) + 55;
+  const cardTop = Math.max(98, Math.min(Math.round(innerH * 0.26), pTop - cardH - 10));
+  $("enemyField").style.top = cardTop + "px";
+  // 逃げる位置
+  const flee = $("fleeBtn");
+  flee.className = "pos" + pos;
+  if (pos === "C") flee.style.top = (pTop - 40) + "px"; else flee.style.top = "";
+  [...$("posChips").children].forEach((b) => b.classList.toggle("on", b.dataset.pos === pos));
+}
+[...$("posChips").children].forEach((b) => { b.onclick = () => { pos = b.dataset.pos; localStorage.setItem("cmdMockPos", pos); render(); }; });
+$("skillBtn").onclick = () => { manySkills = !manySkills; render(); };
+$("cntBtn").onclick = () => { count = count % 3 + 1; render(); };
+$("hideBtn").onclick = () => document.body.classList.add("hide-ctrl");
+$("peek").onclick = () => document.body.classList.remove("hide-ctrl");
+window.addEventListener("resize", render);
+render();
+</script>
+</body>
+</html>
