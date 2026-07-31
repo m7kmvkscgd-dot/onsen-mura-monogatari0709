@@ -40,7 +40,7 @@
   .pcard .pname { font-size: 0.72rem; margin-top: 3px; color: #efe6d2; }
 
   #actions { position: absolute; left: 10px; right: 10px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-  #actions button { font-size: 1.05rem; font-weight: 700; padding: 14px 0; border-radius: 14px; border: 1px solid #8a7648; background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648; background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; }
   #actions button.primary { background: linear-gradient(180deg, #e8c877, #c9a24a); color: #241a08; border-color: #e8c877; }
   #actions button.full { grid-column: 1 / -1; }
 
@@ -80,13 +80,13 @@ const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter
 // enemyTop: 敵フィールドの上端 / log: ログの位置と見た目 / uiStyle: 敵の名前+HPの見せ方
 const PATTERNS = [
   { key: "A", name: "A: 現行", desc: "現行レイアウト(比較用)。敵が上端に浮いて見える問題の確認",
-    enemyTop: "44px", uiStyle: "top", log: { top: "37vh", cls: "" }, party: "56vh", actions: "72vh" },
+    enemyTop: "44px", uiStyle: "top", log: { top: "37vh", cls: "" }, party: "54vh", actions: "73.5vh" },
   { key: "B", name: "B: センター", desc: "敵を画面中央帯へ。ログは上部の薄い帯に移動。敵と味方の距離が縮まり対峙感が出る",
-    enemyTop: "20vh", uiStyle: "top", log: { top: "8px", cls: "slim" }, party: "56vh", actions: "72vh" },
+    enemyTop: "20vh", uiStyle: "top", log: { top: "8px", cls: "slim" }, party: "54vh", actions: "73.5vh" },
   { key: "C", name: "C: 接地+足元プレート", desc: "敵をさらに下げて地面に立たせ、名前とHPは足元の小さな札へ。ログは敵の上に半透明で浮かせる",
-    enemyTop: "26vh", uiStyle: "plate", log: { top: "9vh", cls: "floating" }, party: "56vh", actions: "72vh" },
+    enemyTop: "26vh", uiStyle: "plate", log: { top: "9vh", cls: "floating" }, party: "54vh", actions: "73.5vh" },
   { key: "D", name: "D: イラスト主役", desc: "UIを最小化して立ち絵を主役に。名前/HPは小さく、ログは上部1行。世界観重視の案",
-    enemyTop: "23vh", uiStyle: "mini", log: { top: "8px", cls: "slim" }, party: "58vh", actions: "73vh" },
+    enemyTop: "23vh", uiStyle: "mini", log: { top: "8px", cls: "slim" }, party: "55vh", actions: "74vh" },
 ];
 let patIdx = Number(localStorage.getItem("layoutMockPat") || 1);
 let bgIdx = 0;
