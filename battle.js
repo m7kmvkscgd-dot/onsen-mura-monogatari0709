@@ -915,11 +915,21 @@ function handleFieldDeaths() {
       return;
     }
     if (c.hp <= 0 && c.status === "active") {
-      // 戦闘不能=100%ロスト(完全消滅)。瀕死・担ぐ・救出システムは廃止済み(2026-07-26の3人化転換)
-      c.status = "lost";
-      removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
-      advLostHappened = true; // リザルトの朱印評価/「全員生還！」表示用
-      blog(`${c.name}は倒れた...帰らぬ人となった。`);
+      if (state.permadeathMode) {
+        // パーマデスモード(設定トグルON): 従来どおり戦闘不能=即ロスト(完全消滅)
+        c.status = "lost";
+        removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
+        blog(`${c.name}は倒れた...帰らぬ人となった。`);
+      } else {
+        // 標準(2026-08-01パーマデス廃止): 戦闘不能=重傷。遠征から強制離脱し、温泉村で
+        // INJURY_REST_DAYS日の湯治(編成不可)を経て復帰する(復帰処理はtickInjuryRecovery)。
+        // 本人には倒れた衝撃でストレス+100(上限まで)
+        c.status = "injured";
+        c.injuryRecoverOnDay = state.dayCount + INJURY_REST_DAYS;
+        c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 100);
+        blog(`${c.name}は深手を負って倒れた...(温泉療養${INJURY_REST_DAYS}日)`);
+      }
+      advLostHappened = true; // リザルトの朱印評価/「全員生還！」表示用(重傷も「無傷の生還ではない」扱い)
       newlyCritical.push(c);
       // 仲間が倒れた衝撃で、生き残っている他のメンバーのストレスが上がる
       fieldParty.forEach((ally) => {
@@ -944,7 +954,7 @@ function handleFieldDeaths() {
 // 交代コマンドとは別枠の無料登場(クールダウンを無視する)だが、登場後のクールダウンは3ターンに
 // リセットされる(登場直後に任意交代で回転させることはできない)。控えがいなければ何もしない
 function autoDeployReserveIfNeeded(newlyLost, onDone) {
-  const someoneLost = newlyLost.some((c) => c.status === "lost");
+  const someoneLost = newlyLost.some((c) => c.status === "lost" || c.status === "injured");
   if (!someoneLost || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
   const incoming = reserveFieldMember;
   reserveFieldMember = null;

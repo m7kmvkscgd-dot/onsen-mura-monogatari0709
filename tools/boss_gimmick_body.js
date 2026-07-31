@@ -149,7 +149,7 @@
   let proceedCalled = false;
   const rWipe = processGimmickRoundEffects(() => { proceedCalled = true; });
   check("全滅時はtrueを返し続きを呼ばない(全滅処理へ)", rWipe === true && !proceedCalled);
-  check("全員ロストになっている", fieldParty.every((c) => c.status === "lost"));
+  check("全員重傷になっている(標準=パーマデスOFF、2026-08-01)", fieldParty.every((c) => c.status === "injured"));
 
   console.log("--- F: 戦闘終了の後始末で場演出が消える ---");
   makeParty();
@@ -201,6 +201,45 @@
   check("クリックハンドラが付いている", typeof exitBtn.onclick === "function");
   check("大規模戦テストのボタンは撤去済み", !document.getElementById("titleTest2Btn"));
   check("ボステストのボタンがある", !!document.getElementById("titleBossTestBtn"));
+
+  console.log("--- L: 重傷=温泉療養システム(パーマデス標準廃止、2026-08-01) ---");
+  makeParty();
+  state.dayCount = 10;
+  state.permadeathMode = false;
+  state.roster.push(...fieldParty); // 名簿残留の検証用
+  battle = { enemies: [instantiateEnemyById("boss_kasha")], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 1, presence: {} };
+  renderBattleScreen();
+  const downed = fieldParty[0];
+  downed.fatigue = 20;
+  downed.hp = 0;
+  handleFieldDeaths();
+  check("戦闘不能=重傷になる(ロストしない)", downed.status === "injured");
+  check("名簿に残る", state.roster.some((c) => c.id === downed.id));
+  check("本人にストレス+100(上限まで)", downed.fatigue === FATIGUE_MAX);
+  check("療養期限=2日後", downed.injuryRecoverOnDay === 12);
+  check("隊列表示から外れる", !visibleFieldParty().some((c) => c.id === downed.id));
+  state.dayCount = 11;
+  tickInjuryRecovery();
+  check("1日では復帰しない", downed.status === "injured");
+  state.dayCount = 12;
+  tickInjuryRecovery();
+  check("2日で復帰しHP全快", downed.status === "active" && downed.hp === downed.maxHp);
+  check("復帰後もストレスは残る", downed.fatigue === FATIGUE_MAX);
+  // パーマデスモードON: 従来どおり即ロスト+名簿から削除
+  state.permadeathMode = true;
+  const downed2 = fieldParty[1];
+  downed2.hp = 0;
+  handleFieldDeaths();
+  check("トグルONなら従来どおりロスト+名簿削除", downed2.status === "lost" && !state.roster.some((c) => c.id === downed2.id));
+  state.permadeathMode = false;
+  // 全員重傷でもゲームオーバーにならない(療養で必ず復帰するため)
+  state.roster.length = 0;
+  const soloInjured = createBossTestCharacter("独り", "samurai", 3, "left");
+  soloInjured.status = "injured";
+  soloInjured.injuryRecoverOnDay = 99;
+  state.roster.push(soloInjured);
+  state.gold = 0;
+  check("全員療養中でもゲームオーバーにならない", checkGameOver() === false);
 
   console.log("--- K: 透過立ち絵テスト(テストモード限定の差し替え、2026-07-31) ---");
   const wasTestMode = testModeActive;

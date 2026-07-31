@@ -539,8 +539,11 @@ function statusTagClass(c) {
 // を正しく表現できる(ゲーム開始直後は所持金50・HIRE_COST20なので誤検出しない)
 // trueを返した場合、呼び出し元(renderTown)は通常の町画面表示を打ち切ってゲームオーバー画面に切り替える
 function checkGameOver() {
+  tickInjuryRecovery(); // 療養期限を過ぎた重傷者を先に復帰させてから判定する
   const noActive = state.roster.every((c) => c.status !== "active");
   if (!noActive) return false;
+  // 重傷(温泉療養中)の仲間は日数経過で必ず復帰する=詰みではない(時間を進めれば再開できる)
+  if (state.roster.some((c) => c.status === "injured")) return false;
   const canStillHire = state.gold >= HIRE_COST && state.roster.length < rosterCapacity();
   if (canStillHire) return false;
   showScreen("screen-gameover");

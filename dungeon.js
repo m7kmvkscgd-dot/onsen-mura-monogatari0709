@@ -190,7 +190,7 @@ function resumeExpeditionFromSave() {
   ruinsforestDestination = snap.ruinsforestDestination || null;
   manualRetreatMode = !!snap.manualRetreatMode;
   manualRetreatHomeVillage = snap.manualRetreatHomeVillage || null;
-  fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status !== "lost");
+  fieldParty = (snap.fieldPartyIds || []).map(getRosterChar).filter((c) => c && c.status === "active"); // ロストも重傷も隊列へ戻さない
   reserveFieldMember = snap.reserveId ? getRosterChar(snap.reserveId) : null;
   // 稼働できる仲間が誰も居ない(全員ロスト)なら再開のしようがないので、諦めて町へ
   if (fieldParty.filter((c) => c.status === "active").length === 0) {
@@ -395,7 +395,7 @@ function dlog(msg) {
 // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない
 // (4人編成でも常時表示されるアイコンは3つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
 function visibleFieldParty() {
-  return fieldParty.filter((c) => c.status !== "lost"); // 戦闘でロストした仲間は探索の隊列に並ばない
+  return fieldParty.filter((c) => c.status === "active"); // 戦闘でロスト/重傷になった仲間は探索の隊列に並ばない
 }
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく

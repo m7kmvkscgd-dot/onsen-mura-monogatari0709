@@ -330,6 +330,8 @@
   .status-tag.active { background: #234a2e; color: #7fe0a0; }
   .status-tag.critical { background: #4a2323; color: #e08787; }
   .status-tag.lost { background: #333; color: #888; }
+  /* 重傷=温泉療養中(2026-08-01)。ロストの灰色と違い「戻ってくる」前向きな状態なので湯気っぽい色味 */
+  .status-tag.injured { background: rgba(94,134,140,0.35); color: #a8d4d8; }
   .status-tag.bathing { background: #1f3a4a; color: #7fd4f0; border: 1px solid #3a7a95; }
   /* 入浴中が終わった後、次の遠征まで持ち越すバフ名表示。湯上がりのぽかぽかした雰囲気を出すため暖色系の配色にしてある */
   .status-tag.onsen-buffed { background: linear-gradient(135deg, #4a2a1f, #6b3a1f); color: #ffbe7a; border: 1px solid #d98a3d; }

@@ -1728,6 +1728,11 @@ let seamlessBattleUsed = false; // この戦闘がシームレス入りだった
 // 【試行その2(2026-08-01)】味方バーの移動(沈み/拡大/間隔広げ)は廃止: 「遭遇のたびに味方が動くのが
 // しつこい」というユーザー指摘で、旧・戦闘中のカメラ寄り状態を探索・戦闘共通の常時の定位置へ
 // 静的に昇格した(ui.cssの.party-bar.layout-center)。ここで動かすのは背景ズームだけになった
+// ゆっくり始まってゆっくり終わるease-in-out(2026-08-01ユーザー指定: ズームの出だしが
+// いきなり最大速度なのをやめる)。入り/逆再生の両方で使う
+function seamlessCamEase(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // easeInOutCubic
+}
 function seamlessBattleCameraIn() {
   seamlessBattleUsed = true;
   const bg = document.getElementById("battleBg");
@@ -1735,7 +1740,7 @@ function seamlessBattleCameraIn() {
   const tick = (now) => {
     if (!battle) return; // 演出中に戦闘が終わっていたら中断(後始末はteardown側)
     const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
-    const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const e = seamlessCamEase(t);
     if (bg) bg.style.setProperty("--battle-zoom", String(1 + 0.05 * e));
     if (t < 1) requestAnimationFrame(tick);
   };
@@ -1754,7 +1759,7 @@ function seamlessDungeonCameraOut() {
   const t0 = performance.now();
   const tick = (now) => {
     const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
-    const e = 1 - Math.pow(1 - t, 3);
+    const e = seamlessCamEase(t); // 逆再生も同じくゆっくり始まってゆっくり終わる
     const s = 1.05 - 0.05 * e;
     if (inner) inner.style.transform = t < 1 ? `scale(${s})` : "";
     if (t < 1) requestAnimationFrame(tick);

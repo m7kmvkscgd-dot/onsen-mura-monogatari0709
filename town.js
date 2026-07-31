@@ -357,6 +357,7 @@ function lodgeableMembers() {
 // 家で待機中の仲間も含む)、海の村/山伏の里は()=>fieldParty(その遠征で物理的にそこにいる
 // メンバーのみ)を渡す。ids: { rosterList, lodgeBtn, classGrid, classDesc, nameInput, createBtn, gold }
 function renderInnRosterList(ids, membersFn, onBack) {
+  tickInjuryRecovery(); // 療養期限を過ぎた重傷者を名簿表示の前に復帰させる
   const list = document.getElementById(ids.rosterList);
   const members = membersFn();
   list.innerHTML = "";
@@ -366,7 +367,7 @@ function renderInnRosterList(ids, membersFn, onBack) {
     const c2 = CLASSES[c.classId];
     const fullHealth = c.status === "active" && c.hp >= c.maxHp && c.mp >= c.maxMp;
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
-    const tagText = c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
+    const tagText = c.status === "injured" ? `療養中(あと${Math.max(1, (c.injuryRecoverOnDay || 0) - state.dayCount)}日)` : c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : fullHealth ? "満タン" : "待機中";
     const hpRatio = c.maxHp > 0 ? Math.max(0, c.hp / c.maxHp) * 100 : 0;
     const mpRatio = c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0;
     const pendingLevels = state.pendingSkillChoices.filter((e) => e.characterId === c.id).map((e) => e.level);
@@ -1179,6 +1180,7 @@ document.getElementById("bestiaryDetailNextBtn").onclick = () => {
 document.getElementById("bestiaryDetailCloseBtn").onclick = () => { playSfx("select"); document.getElementById("bestiaryDetailOverlay").style.display = "none"; };
 
 function renderPartySelect() {
+  tickInjuryRecovery(); // 療養期限を過ぎた重傷者を編成画面の前に復帰させる
   // 襲撃モード(迎撃準備): 同じ画面を「防衛隊選択+支度の買い物」として使い回す(ユーザー指示2026-07-28)。
   // 町へ戻る導線を全て隠し、出発ボタンの代わりに「迎え撃つ」ボタンを出す
   const raidPrep = !!state.raidPrepPending;
@@ -1253,7 +1255,7 @@ function renderPartySelect() {
     const row = document.createElement("div");
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
-    const tagText = c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
+    const tagText = c.status === "injured" ? `療養中(あと${Math.max(1, (c.injuryRecoverOnDay || 0) - state.dayCount)}日)` : c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
     // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする(襲撃戦は控えなしのため出さない)
     const isReserveSlot = !raidPrep && inParty && state.activePartyIds.length >= 4 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
     row.innerHTML = `

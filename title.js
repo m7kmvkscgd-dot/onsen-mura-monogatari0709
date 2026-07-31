@@ -809,6 +809,9 @@ function renderSettingsScreen() {
   const highEncounterBtn = document.getElementById("settingsHighEncounterToggle");
   highEncounterBtn.textContent = state.highEncounterMode ? "ON" : "OFF";
   highEncounterBtn.classList.toggle("is-on", state.highEncounterMode);
+  const permadeathBtn = document.getElementById("settingsPermadeathToggle");
+  permadeathBtn.textContent = state.permadeathMode ? "ON" : "OFF";
+  permadeathBtn.classList.toggle("is-on", state.permadeathMode);
   populateHighDurabilitySelects();
   document.getElementById("settingsHighDurabilityDefSelect").value = String(state.highDurabilityDefBonusPct || 0);
   document.getElementById("settingsHighDurabilityAtkSelect").value = String(state.highDurabilityAtkReductionPct || 0);
@@ -864,6 +867,12 @@ document.getElementById("settingsSoundToggle").onclick = () => {
 };
 document.getElementById("settingsHighEncounterToggle").onclick = () => {
   state.highEncounterMode = !state.highEncounterMode;
+  saveState();
+  playSfx("select");
+  renderSettingsScreen();
+};
+document.getElementById("settingsPermadeathToggle").onclick = () => {
+  state.permadeathMode = !state.permadeathMode;
   saveState();
   playSfx("select");
   renderSettingsScreen();

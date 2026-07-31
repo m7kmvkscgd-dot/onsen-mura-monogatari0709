@@ -88,6 +88,7 @@ function defaultState() {
     // 掛けて減らす(乗算。例: 20を選ぶと攻撃力×0.8)。どちらも0=OFF(instantiateEnemy参照)
     highDurabilityDefBonusPct: 0,
     highDurabilityAtkReductionPct: 0,
+    permadeathMode: false, // 設定画面のトグル。ONの間だけ戦闘不能=即ロスト(従来仕様)。OFF(標準)は重傷=温泉療養(data.js INJURY_REST_DAYS参照)
     goldDropAdjustment: 0, // 設定画面のドロップダウン「金調整」(0=OFF、1〜10)。敵1体が落とすゴールドからこの値を定額で差し引く(goldReward参照、0未満にはならない)。UI上は「-1」〜「-10」表記
     materials: { kawa: 0, hone: 0, ki: 0, tetsu: 0 }, // 敵ドロップ素材(皮/骨/木/鉄)の所持数。鞄(支援物資枠)は圧迫しない別枠で、温泉の売店の買取カウンターで売却できる(data.js MATERIALS参照)
     nextRaidDay: RAID_CONFIG.schedule.firstRaidDay, // 次の村襲撃が発生するdayCount(明朝型: この日の朝を村で迎えると襲撃戦が始まる)。遠征中に過ぎた場合は帰還後の次の朝に持ち越し(raid.js参照)
@@ -324,6 +325,17 @@ function getRosterChar(id) {
 function removeFromRoster(id) {
   const idx = state.roster.findIndex((c) => c.id === id);
   if (idx !== -1) state.roster.splice(idx, 1);
+}
+// 重傷(温泉療養)からの復帰判定。療養期限(injuryRecoverOnDay)を過ぎた仲間を稼働状態へ戻す。
+// 湯治明けなのでHPは全快、MPは据え置き、倒れた時のストレス+100もそのまま残る(ケアは別途温泉等で)。
+// 日付が進み得る画面(町/名簿/編成/ゲームオーバー判定)の描画時に都度呼ぶ遅延評価方式
+function tickInjuryRecovery() {
+  state.roster.forEach((c) => {
+    if (c.status === "injured" && state.dayCount >= (c.injuryRecoverOnDay || 0)) {
+      c.status = "active";
+      c.hp = c.maxHp;
+    }
+  });
 }
 
 // 出発パーティの上限。3人化転換(2026-07-26)により常に4(戦闘に出る3人+控え1人)。
