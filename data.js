@@ -735,6 +735,11 @@ const TEST_TRANSPARENT_ENEMY_IMAGES = {
   bake_danuki: "assets/enemies/clear/bake_danuki.png",
   onibi: "assets/enemies/clear/onibi.png",
   kamaitachi: "assets/enemies/clear/kamaitachi.png",
+  // 追加納品分(2026-08-01): こうもり・提灯おばけ。どちらもisSwarm=小型表示
+  // (framelessの群れサイズはbattle.cssの.enemy-card.frameless.swarm参照)
+  nurari_koumori: "assets/enemies/clear/nurari_koumori.png",
+  cave_nurarikoumori: "assets/enemies/clear/nurari_koumori.png", // 洞窟版も同じこうもりの絵
+  chochin_obake: "assets/enemies/clear/chochin_obake.png",
 };
 // 透過立ち絵の個体別拡大率(2026-08-01ユーザー指摘「たぬき・カッパ・一つ目がめちゃ小さい」)。
 // 細身/小柄な絵は同じ正方形の箱にcontainすると視覚的な質量が小さく見えるため、対象だけ

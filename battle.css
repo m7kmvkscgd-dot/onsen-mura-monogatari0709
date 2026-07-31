@@ -249,6 +249,10 @@
   .enemy-card.frameless img.card-portrait-img { object-position: 50% 100%; }
   /* 拡大した頭が敵名テキストを覆い隠さないよう、frameless時は名前を立ち絵より前面に出す */
   .enemy-card.frameless .enemy-name { position: relative; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.6); }
+  /* 群れ(isSwarm、こうもり/提灯おばけ等)のframelessは通常の101px式を使わず小型のまま
+     (額装swarmの48pxに1.1倍相当の53px)。all-frameless行の式より後置き+同数の詳細度で上書き */
+  .enemy-card.frameless.swarm img.card-portrait-img { width: 53px; height: 53px; }
+  .enemy-row.all-frameless .enemy-card.frameless.swarm img.card-portrait-img { width: 53px; height: 53px; }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。
      大きさは立ち絵幅に対する比率ではなくカード幅基準の割合(66%)で、全敵で見た目が揃う */

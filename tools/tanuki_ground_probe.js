@@ -12,9 +12,9 @@ const { webkit, devices } = require("playwright");
   await page.evaluate(() => document.getElementById("titleTestBtn").click());
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
-    const es = [instantiateEnemyById("inoshishi"), instantiateEnemyById("bake_danuki"), instantiateEnemyById("kodama")];
+    const es = [instantiateEnemyById("nurari_koumori"), instantiateEnemyById("chochin_obake"), instantiateEnemyById("yaken")];
     es.forEach((e) => { e.spd = 0; });
-    startBattle(es, null, "接地検証！");
+    startBattle(es, null, "透過差し替え検証！");
   });
   await page.waitForTimeout(1800);
   const info = await page.evaluate(() => {
