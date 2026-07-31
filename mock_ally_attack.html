@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>味方攻撃アニメ改善モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #stage { position: fixed; inset: 0; }
+  #bg { position: absolute; inset: 0; background: url('assets/bg/forest_day.jpg') center 32% / cover; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.12); }
+
+  .enemy-field { position: absolute; top: 128px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; }
+  .ecard { text-align: center; position: relative; }
+  .ename { font-size: 0.8rem; font-weight: 700; text-shadow: 0 0 6px rgba(0,0,0,0.9); }
+  .ebox { position: relative; width: 118px; height: 118px; margin: 0 auto; }
+  .ebox img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; }
+  .eshadow { position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); width: 66%; height: 12px; z-index: -1;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(8,6,4,0.42), rgba(8,6,4,0.22) 55%, transparent 72%); }
+  .ehp { height: 9px; width: 92px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; border: 1px solid rgba(255,255,255,0.25); overflow: hidden; }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .edmg { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); z-index: 7; font-weight: 900; font-size: 1.3rem;
+    color: #ffdf6b; text-shadow: 0 2px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8); opacity: 0; pointer-events: none; }
+  @keyframes dmgPop { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7); } 18% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); }
+    36% { transform: translate(-50%, -2px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+  @keyframes eHit { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+  /* 命中の斬撃線(本実装のslash-vfx相当の簡易版) */
+  .slash { position: absolute; left: 50%; top: 50%; width: 90px; height: 90px; z-index: 5; pointer-events: none; opacity: 0;
+    transform: translate(-50%, -50%) rotate(-24deg); }
+  .slash::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 4px; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, #fff 30%, #ffe9b8 70%, transparent); box-shadow: 0 0 10px rgba(255,240,190,0.9); }
+  @keyframes slashSweep { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-24deg) scale(0.5); }
+    25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-24deg) scale(1.25); } }
+
+  #partyBar { position: absolute; left: 50%; transform: translateX(-50%); top: 297px; z-index: 4;
+    width: 100%; max-width: 480px; display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); justify-content: center; }
+  .pm { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 10px; padding: 0.25rem; border: 2px solid transparent; }
+  .pm.acting { border-color: #c9a24a; box-shadow: 0 0 10px rgba(201,162,74,0.55); }
+  .pm img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; background: #353a44; }
+  .pm .hb { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pm .hb > div { height: 100%; width: 60%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pm .nm { font-size: 0.72rem; margin-top: 3px; }
+  /* 残像(案C): カードの複製を薄く残す */
+  .ghost { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.45; border-radius: 10px; overflow: hidden; }
+
+  #actions { position: absolute; left: 10px; right: 10px; top: 470px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648;
+    background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; pointer-events: none; }
+
+  /* ===== 味方攻撃モーション ===== */
+  /* 現行: 上へ-13px+scale1.03の0.3秒(attackLungeそのまま) */
+  @keyframes curLunge { 0% { transform: translateY(0); } 25% { transform: translateY(-13px) scale(1.03); } 100% { transform: translateY(0); } }
+  /* 案A: 予備動作つき(敵の採用案Aの鏡写し: 沈み込んで溜め→鋭く上へ) */
+  @keyframes antLungeUp {
+    0% { transform: translateY(0) scale(1); }
+    28% { transform: translateY(7px) scale(0.97); }             /* 沈み込む */
+    38% { transform: translateY(7px) scale(0.97); }             /* 一拍溜める */
+    50% { transform: translateY(-20px) scale(1.06); }           /* 鋭く踏み込む(当たる瞬間) */
+    62% { transform: translateY(-18px) scale(1.05); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 案B: ヒットストップ(深く踏み込んで一瞬止まる) */
+  @keyframes dashHoldUp {
+    0% { transform: translateY(0) scale(1); }
+    18% { transform: translateY(-24px) scale(1.08); }
+    46% { transform: translateY(-23px) scale(1.08); }           /* ヒットストップ */
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 案C: 残像ダッシュ(素早く2段で踏み込み、残像が尾を引く) */
+  @keyframes doubleDash {
+    0% { transform: translateY(0) scale(1); }
+    20% { transform: translateY(-10px) scale(1.02); }
+    32% { transform: translateY(-8px) scale(1.02); }
+    52% { transform: translateY(-26px) scale(1.08); }           /* 二段目(当たる瞬間) */
+    64% { transform: translateY(-24px) scale(1.07); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes ghostFade { 0% { opacity: 0.45; } 100% { opacity: 0; } }
+  @keyframes stageShake { 0%, 100% { transform: translate(0,0); } 20% { transform: translate(-4px, 3px); } 40% { transform: translate(4px, -3px); } 60% { transform: translate(-3px, 2px); } 80% { transform: translate(2px, -1px); } }
+
+  #ctrl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(14,12,10,0.94);
+    border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #ctrl .r { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
+  #ctrl .lbl { font-size: 11px; color: rgba(232,223,204,0.8); width: 100%; }
+  #ctrl button { font-size: 12px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #ctrl button:active { transform: scale(0.96); }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.65); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div class="enemy-field">
+    <div class="ecard">
+      <div class="ename">野犬</div>
+      <div class="ebox">
+        <div class="eshadow"></div>
+        <img id="eimg" src="assets/enemies/clear/yaken.png">
+        <div class="slash" id="slash"></div>
+      </div>
+      <div class="ehp"><div></div></div>
+    </div>
+  </div>
+  <div id="partyBar"></div>
+  <div id="actions"><button>攻撃</button><button>会心の一撃(MP2)</button><button>道具</button><button>交代</button></div>
+</div>
+<div id="ctrl">
+  <div class="lbl">味方の攻撃モーション(真ん中の弥助が攻撃、タップで再生):</div>
+  <div class="r">
+    <button data-n="cur">現行(踏み込みのみ)</button>
+    <button data-n="A">案A: 予備動作つき</button>
+  </div>
+  <div class="r">
+    <button data-n="B">案B: ヒットストップ</button>
+    <button data-n="C">案C: 残像二段ダッシュ</button>
+  </div>
+  <div id="note">敵の採用案(通常A)との相性なら案Aの鏡写しが統一感◎。攻撃の手応え重視なら案B、スピード感重視なら案C。全案とも命中時に斬撃線+敵の揺れ+ダメージポップつき。会心演出は現行のまま(このモックの対象外)。</div>
+</div>
+<script>
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+const $ = (id) => document.getElementById(id);
+let playing = false;
+
+$("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+  `<div class="pm${i === 1 ? " acting" : ""}" data-i="${i}"><img src="${img}"><div class="hb"><div></div></div><div class="nm">${name}</div></div>`).join("");
+const attacker = () => document.querySelectorAll(".pm")[1];
+
+function animOnce(el, name, dur, ease) {
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = `${name} ${dur}ms ${ease || "ease"}`;
+}
+function hitEnemy(delay) {
+  setTimeout(() => {
+    animOnce($("slash"), "slashSweep", 260, "ease-out");
+    animOnce($("eimg"), "eHit", 320);
+    const pop = document.createElement("div");
+    pop.className = "edmg";
+    pop.textContent = "14";
+    pop.style.animation = "dmgPop 0.9s ease forwards";
+    $("eimg").parentElement.appendChild(pop);
+    setTimeout(() => pop.remove(), 950);
+  }, delay);
+}
+function spawnGhost(times) {
+  // 残像: カードの見た目を複製して現在位置に置き、フェードで消す
+  const pm = attacker();
+  const rect = pm.getBoundingClientRect();
+  const g = pm.cloneNode(true);
+  g.classList.add("ghost");
+  g.classList.remove("acting");
+  g.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; width:${rect.width}px; margin:0; z-index:3; pointer-events:none;`;
+  document.body.appendChild(g);
+  g.style.animation = "ghostFade 0.3s ease-out forwards";
+  setTimeout(() => g.remove(), 320);
+}
+const PATTERNS = {
+  cur() { animOnce(attacker(), "curLunge", 300, "cubic-bezier(0.25,1,0.4,1)"); hitEnemy(90); end(450); },
+  A() { animOnce(attacker(), "antLungeUp", 620, "cubic-bezier(0.3,0.9,0.4,1)"); hitEnemy(310); end(700); },
+  B() { animOnce(attacker(), "dashHoldUp", 560, "cubic-bezier(0.2,0.9,0.3,1)"); hitEnemy(120); end(650); },
+  C() {
+    animOnce(attacker(), "doubleDash", 560, "cubic-bezier(0.3,0.9,0.4,1)");
+    setTimeout(() => spawnGhost(), 80);
+    setTimeout(() => spawnGhost(), 240);
+    hitEnemy(300);
+    end(650);
+  },
+};
+function end(ms) { setTimeout(() => { playing = false; }, ms); }
+document.querySelectorAll("#ctrl button[data-n]").forEach((b) => {
+  b.onclick = () => {
+    if (playing) return;
+    playing = true;
+    PATTERNS[b.dataset.n]();
+  };
+});
+</script>
+</body>
+</html>
