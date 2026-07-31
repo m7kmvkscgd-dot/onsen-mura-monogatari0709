@@ -166,7 +166,11 @@
   .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; z-index: 2; }
   /* 敵列はmarginではなく絶対配置で下ろす(margin-topだと固定配置の.battle-top自体と相殺して
      位置が狂う)。top値は「カード上端=26vh」になるよう、行内の名前用padding-top(38px)を差し引く */
-  .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; }
+  /* align-content:flex-start=行内の縦センタリング(基底の.enemy-rowはcenter)をやめて上詰めにする。
+     カード上端が常に26vhちょうどになり、下端の見積り(26vh+カード高さ≤味方バー49.2vh)が
+     画面高さに関わらず成立する(centerのままだと行高200pxとの差分の半分だけ下へ押されて、
+     320×568などの小さい端末で味方バーへ食い込んでいた) */
+  .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
   #battlePartyBar.layout-center { top: 49.2vh; }
   /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
      390px端末の3体戦で3枚目が折り返し→overflow:hiddenに隠れる不具合があった(枠が無いので
