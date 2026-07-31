@@ -35,14 +35,14 @@ const { webkit, devices } = require("playwright");
   await page.waitForTimeout(900); // 溜めの最中(620ms+)
   await page.screenshot({ path: "../tmp/bigatk_charge.png" });
   const mid = await page.evaluate(() => ({
-    dimOn: document.querySelector(".big-atk-dim").classList.contains("on"),
+    dimOn: (() => { const d = document.querySelector(".big-atk-dim"); return d ? d.classList.contains("on") : false; })(), // 暗転廃止後は常にfalseであること
     auraExists: !!document.querySelector(".big-atk-aura"),
   }));
   console.log("charge-mid:", JSON.stringify(mid));
   await page.waitForTimeout(1200); // 解放+着弾後
   await page.screenshot({ path: "../tmp/bigatk_after.png" });
   const after = await page.evaluate(() => ({
-    dimOff: !document.querySelector(".big-atk-dim").classList.contains("on"),
+    dimOff: (() => { const d = document.querySelector(".big-atk-dim"); return !d || !d.classList.contains("on"); })(),
     auraGone: !document.querySelector(".big-atk-aura"),
     logTail: (document.getElementById("battleLog").textContent || "").slice(-70),
   }));

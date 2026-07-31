@@ -194,6 +194,9 @@
     border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;
     background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+    /* 攻撃モーション等でカードがscaleする時、中央基準だと足が浮いて「一瞬縮んだ」ように
+       見えるため(2026-08-01たぬきで顕在化)、拡縮は常に足元(下端)基準にする */
+    transform-origin: 50% 100%;
   }
   /* 敵絵(セミリアル)とSDの味方絵の画風差を、UI側の額装(木枠+和紙背景)で緩和する。
      絵自体は変更せず、::beforeで敵絵の背後に古紙風の下地を敷くだけ */

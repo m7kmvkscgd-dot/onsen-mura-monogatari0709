@@ -434,10 +434,13 @@ function playEnemyAttackAnim(actor) {
   const card = enemyCardOf(actor);
   if (!card || !card.animate) return;
   card.classList.remove(...HIT_SHAKE_CLASSES); // 残留揺れのCSSアニメがtransformを取り合わないよう剥がす
+  // 予備動作のscale縮小はユーザー指摘(2026-08-01「一瞬たぬき小さくなってる」)で撤去し、
+  // 引きはtranslateYのみで表現。拡大側のscaleはCSSの.enemy-card transform-origin(下端基準)で
+  // 足元を接地させたまま迫り出す
   card.animate([
     { transform: "translateY(0) scale(1)" },
-    { transform: "translateY(-9px) scale(0.97)", offset: 0.28 }, // 予備動作: 身を引く
-    { transform: "translateY(-9px) scale(0.97)", offset: 0.38 }, // 一拍溜める
+    { transform: "translateY(-9px) scale(1)", offset: 0.28 }, // 予備動作: 身を引く
+    { transform: "translateY(-9px) scale(1)", offset: 0.38 }, // 一拍溜める
     { transform: "translateY(22px) scale(1.07)", offset: 0.5 },  // 鋭く踏み込む(当たる瞬間)
     { transform: "translateY(20px) scale(1.06)", offset: 0.62 },
     { transform: "translateY(0) scale(1)" },
@@ -460,8 +463,8 @@ function playEnemyBigAttackCharge(actor, onImpact) {
   const card = enemyCardOf(actor);
   if (!card || !card.animate) { onImpact(); return; }
   card.classList.remove(...HIT_SHAKE_CLASSES);
-  const { dim } = getBigAtkOverlays();
-  dim.classList.add("on");
+  // 溜め中の画面暗転(big-atk-dim)はユーザー指示で廃止(2026-08-01「画面暗くなるのいらない」)。
+  // オーラ+しゃがみ込みだけで溜めを表現する
   // 赤いオーラ(立ち絵の背後)。使い捨てで生成し、解放の瞬間に消す
   const box = card.querySelector(".enemy-portrait-box");
   const aura = document.createElement("div");
@@ -488,10 +491,7 @@ function playEnemyBigAttackCharge(actor, onImpact) {
       { transform: "translateY(28px) scale(1.15)", offset: 0.48 }, // 当たった瞬間を見せる
       { transform: "translateY(0) scale(1)" },
     ], { duration: 520, easing: "cubic-bezier(0.2,0.95,0.3,1)" });
-    setTimeout(() => {
-      dim.classList.remove("on");
-      onImpact();
-    }, ENEMY_BIG_BURST_IMPACT_MS);
+    setTimeout(onImpact, ENEMY_BIG_BURST_IMPACT_MS);
   };
   setTimeout(release, ENEMY_BIG_CHARGE_MS + 60);
 }
