@@ -1700,8 +1700,13 @@ function instantiateEnemy(pick) {
   const atkReductionPct = state.highDurabilityAtkReductionPct || 0;
   const atk = atkReductionPct > 0 ? Math.max(1, Math.round(pick.atk * (1 - atkReductionPct / 100))) : pick.atk;
   const def = defBonusPct > 0 ? pick.def + defBonusPct : pick.def;
+  // 透過立ち絵テスト(データ契約はdata.jsのTEST_TRANSPARENT_ENEMY_IMAGES参照):
+  // テストモード中だけ、対象の敵を木枠なしの透過立ち絵(frameless)へ差し替える。本番プレイは従来どおり
+  const clearImg = typeof testModeActive !== "undefined" && testModeActive && typeof TEST_TRANSPARENT_ENEMY_IMAGES !== "undefined"
+    ? TEST_TRANSPARENT_ENEMY_IMAGES[pick.id] : null;
   return {
     ...pick,
+    ...(clearImg ? { image: clearImg, frameless: true } : {}),
     instanceId: "e" + __enemySeq++,
     label: pick.ja,
     hp,

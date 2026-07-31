@@ -657,6 +657,27 @@ const ENEMIES = {
 // 以後のクエストは「ステージ+敵+ボス+テキストの物語(依頼文/区間フレーバー/口上/完了文)」構成、
 // クエスト専用背景の新規制作も停止(既存2ルートの背景は残す)。回想素材はassets/story/等に残置
 
+// ============ 透過立ち絵テスト(テストモード限定、2026-07-31) ============
+// 商業クオリティ化の検証: 敵イラストの木枠(額装カード)をやめ、背景透過の立ち絵を
+// 戦闘背景へ直接立たせる表示のテスト導入。ユーザー制作の序盤10体透過版
+// (iCloud: 温泉村物語用/敵キャラ/序盤10体_透過)をアルファトリミング+接地影焼き込み
+// (鬼火のみ浮遊体のため影なし)で加工してassets/enemies/clear/に配置してある。
+// タイトルの「テストモード」等(testModeActive中)だけ、instantiateEnemy(engine.js)が
+// この表に載っている敵のimageを差し替えてframeless表示にする。本番プレイは従来の額装のまま。
+// 本採用が決まったらENEMIES側のimageを直接書き換えてこの表を廃止する
+const TEST_TRANSPARENT_ENEMY_IMAGES = {
+  yaken: "assets/enemies/clear/yaken.png",
+  inoshishi: "assets/enemies/clear/inoshishi.png",
+  dokuhebi: "assets/enemies/clear/dokuhebi.png",
+  oogumo: "assets/enemies/clear/oogumo.png",
+  kodama: "assets/enemies/clear/kodama.png",
+  kappa: "assets/enemies/clear/kappa.png",
+  hitotsume_kozo: "assets/enemies/clear/hitotsume_kozo.png",
+  bake_danuki: "assets/enemies/clear/bake_danuki.png",
+  onibi: "assets/enemies/clear/onibi.png",
+  kamaitachi: "assets/enemies/clear/kamaitachi.png",
+};
+
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
 // 敵が毒/出血/炎上の蓄積ダメージを受ける瞬間の停止演出(effects.jsのplayEnemyDotStopSequence)で再生する
 // VFXと効果音の割り当て。sizeとoffsetX/Yはエディタのステージ(敵絵96px幅)基準のpx値で、実際のカードでは

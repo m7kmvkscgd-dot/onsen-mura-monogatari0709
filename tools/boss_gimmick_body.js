@@ -202,6 +202,19 @@
   check("大規模戦テストのボタンは撤去済み", !document.getElementById("titleTest2Btn"));
   check("ボステストのボタンがある", !!document.getElementById("titleBossTestBtn"));
 
+  console.log("--- K: 透過立ち絵テスト(テストモード限定の差し替え、2026-07-31) ---");
+  const wasTestMode = testModeActive;
+  testModeActive = false;
+  const yakenProd = instantiateEnemyById("yaken");
+  check("本番では従来の額装イラストのまま", yakenProd.image === "assets/enemies/yaken.png" && !yakenProd.frameless);
+  testModeActive = true;
+  const yakenTest = instantiateEnemyById("yaken");
+  check("テストモード中は透過立ち絵+framelessに差し替わる", yakenTest.image === "assets/enemies/clear/yaken.png" && yakenTest.frameless === true);
+  const bossTest = instantiateEnemyById("boss_kasha");
+  check("表に無い敵はテストモードでも従来のまま", bossTest.image === ENEMIES.boss_kasha.image && !bossTest.frameless);
+  check("対象10体ぶんの表がある", Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).length === 10 && Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).every((id) => !!ENEMIES[id]));
+  testModeActive = wasTestMode;
+
   console.log("--- J: ボスは逃走しない(逃走+追撃システム全廃、2026-07-31) ---");
   // HP30%未満のボスの手番をprocessNextで直接回し、旧システムなら逃走していた状況で
   // 戦闘が続行される(battleが破棄されない)ことを確認する。通常戦闘想定(bossTestActive=false)
