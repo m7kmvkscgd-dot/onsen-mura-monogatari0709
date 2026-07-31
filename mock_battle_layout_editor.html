@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>戦闘レイアウトエディタ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; touch-action: none; overscroll-behavior: none; }
+  #bg { position: fixed; inset: 0; background-size: cover; background-position: center 32%; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.10); }
+
+  .draggable { position: absolute; z-index: 2; }
+  .draggable.selected { outline: 2px dashed rgba(255,215,120,0.9); outline-offset: 4px; border-radius: 8px; }
+
+  .ecard { text-align: center; transform: translateX(-50%); }
+  .ecard img.pic { object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); pointer-events: none; }
+  .ename { font-size: 0.78rem; font-weight: 700; color: #f1e8d8; text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 3px rgba(0,0,0,0.95); }
+  .ehp { height: 9px; width: 84px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.25); }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .plate { display: inline-block; background: rgba(10,9,7,0.62); border: 1px solid rgba(217,207,184,0.28); border-radius: 8px; padding: 3px 8px 5px; margin-top: 2px; backdrop-filter: blur(2px); }
+  .plate .ename { font-size: 0.72rem; }
+  .plate .ehp { width: 76px; height: 7px; }
+  .style-mini .ename { font-size: 0.68rem; opacity: 0.9; }
+  .style-mini .ehp { width: 60px; height: 5px; margin-top: 2px; }
+
+  #logBox { left: 12px; right: 12px; background: rgba(20,17,14,0.72); border: 1px solid rgba(176,154,106,0.6); border-radius: 12px; padding: 8px 12px; line-height: 1.65; backdrop-filter: blur(2px); }
+  #partyBar { left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+  .pcard { text-align: center; background: rgba(52,54,64,0.92); border: 2px solid transparent; border-radius: 12px; padding: 5px 5px 7px; }
+  .pcard.acting { border-color: #c9a24a; box-shadow: 0 0 10px rgba(201,162,74,0.5); }
+  .pcard img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; pointer-events: none; }
+  .pcard .phbar { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pcard .phbar > div { height: 100%; width: 85%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pcard .pmbar { height: 5px; border-radius: 4px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 3px; }
+  .pcard .pmbar > div { height: 100%; width: 70%; background: #5b8fd9; }
+  .pcard .pname { font-size: 0.72rem; margin-top: 3px; }
+  #actions { left: 10px; right: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; transform-origin: top center; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648; background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; pointer-events: none; }
+  #actions button.primary { background: linear-gradient(180deg, #e8c877, #c9a24a); color: #241a08; border-color: #e8c877; }
+  #actions button.full { grid-column: 1 / -1; }
+
+  /* エディタUI */
+  #toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(14,12,10,0.94); border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  #toolbar .r { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+  #toolbar button { font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(217,207,184,0.4); background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #toolbar button.warn { border-color: rgba(209,80,63,0.6); color: #e8a99e; }
+  #selLabel { font-size: 12.5px; font-weight: 700; color: #ffd778; min-width: 6em; }
+  #out { font-size: 10.5px; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 5px 7px; color: #b9d8a8; word-break: break-all; user-select: all; -webkit-user-select: all; max-height: 3.6em; overflow-y: auto; }
+  #hint { position: fixed; top: 8px; left: 10px; right: 10px; z-index: 30; font-size: 11px; text-align: center; color: rgba(232,223,204,0.85); background: rgba(0,0,0,0.55); border-radius: 8px; padding: 5px 8px; pointer-events: none; }
+  body.hide-editor #toolbar, body.hide-editor #hint { display: none; }
+  body.hide-editor .draggable.selected { outline: none; }
+  #peek { position: fixed; right: 10px; top: 8px; z-index: 40; font-size: 12px; padding: 8px 11px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.5); background: rgba(0,0,0,0.6); color: #d9cfb8; display: none; }
+  body.hide-editor #peek { display: block; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="stage"></div>
+<div id="hint">要素をタップで選択→ドラッグで移動。2本指ピンチか±ボタンでサイズ変更。</div>
+<button id="peek">編集に戻る</button>
+<div id="toolbar">
+  <div class="r">
+    <span id="selLabel">選択なし</span>
+    <button id="minus">− 小さく</button>
+    <button id="plus">＋ 大きく</button>
+    <button id="styleBtn">表示形式</button>
+    <button id="cntBtn">体数</button>
+    <button id="bgBtn">背景</button>
+  </div>
+  <div class="r">
+    <button data-preset="A">A基準</button>
+    <button data-preset="B">B基準</button>
+    <button data-preset="C">C基準</button>
+    <button data-preset="D">D基準</button>
+    <button id="hideBtn">UI隠す</button>
+    <button id="resetBtn" class="warn">全リセット</button>
+  </div>
+  <div id="out"></div>
+</div>
+<script>
+const ENEMIES = [["yaken", "野犬"], ["kodama", "木霊"], ["bake_danuki", "化け狸"]];
+const BGS = ["assets/bg/forest_day.jpg", "assets/bg/forest_night.jpg", "assets/bg/forest_dusk.jpg", "assets/bg/warawanu_men_sando.jpg"];
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+const LS_KEY = "battleLayoutEditor_v1";
+const VW = () => window.innerWidth, VH = () => window.innerHeight;
+
+// レイアウト値。y系はvh(画面高%)、x系はpx。enemyOffsets=横並び基準位置からの[dx,dy]
+const DEFAULTS = {
+  style: "plate", count: 3, bgIdx: 0,
+  enemySize: 110, enemyTop: 26, gap: 12, enemyOffsets: [[0, 0], [0, 0], [0, 0]],
+  logTop: 9, logFont: 13,
+  partyTop: 54, partyCard: 92,
+  actionsTop: 73.5, actionScale: 1,
+};
+const PRESETS = {
+  A: { style: "top", enemyTop: 6, logTop: 37, partyTop: 54, actionsTop: 73.5, enemySize: 110 },
+  B: { style: "top", enemyTop: 20, logTop: 1, partyTop: 54, actionsTop: 73.5, enemySize: 110 },
+  C: { style: "plate", enemyTop: 26, logTop: 9, partyTop: 54, actionsTop: 73.5, enemySize: 110 },
+  D: { style: "mini", enemyTop: 23, logTop: 1, partyTop: 55, actionsTop: 74, enemySize: 120 },
+};
+let L = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_KEY) || "{}"));
+let selected = null; // "e0"|"e1"|"e2"|"log"|"party"|"actions"
+const $ = (id) => document.getElementById(id);
+
+function enemyBaseX(i, count) {
+  const step = L.enemySize + L.gap;
+  return VW() / 2 + (i - (count - 1) / 2) * step;
+}
+function buildStage() {
+  const stage = $("stage");
+  stage.innerHTML = "";
+  for (let i = 0; i < L.count; i++) {
+    const [id, ja] = ENEMIES[i];
+    const d = document.createElement("div");
+    d.className = "draggable ecard" + (L.style === "mini" ? " style-mini" : "");
+    d.dataset.key = "e" + i;
+    const namehp = L.style === "plate"
+      ? `<div class="plate"><div class="ename">${ja}</div><div class="ehp"><div></div></div></div>`
+      : `<div class="ename"></div><div class="ehp"><div></div></div>`;
+    d.innerHTML = L.style === "plate"
+      ? `<img class="pic" src="assets/enemies/clear/${id}.png">${namehp}`
+      : (L.style === "top"
+        ? `<div class="ename">${ja}</div><img class="pic" src="assets/enemies/clear/${id}.png"><div class="ehp"><div></div></div>`
+        : `<img class="pic" src="assets/enemies/clear/${id}.png"><div class="ename">${ja}</div><div class="ehp"><div></div></div>`);
+    stage.appendChild(d);
+  }
+  const log = document.createElement("div");
+  log.className = "draggable"; log.id = "logBox"; log.dataset.key = "log";
+  log.innerHTML = "野犬の群れが現れた！<br>小太郎の攻撃！野犬に12ダメージ！";
+  stage.appendChild(log);
+  const party = document.createElement("div");
+  party.className = "draggable"; party.id = "partyBar"; party.dataset.key = "party";
+  party.innerHTML = ALLIES.map(([img, name], i) =>
+    `<div class="pcard ${i === 0 ? "acting" : ""}"><img src="${img}"><div class="phbar"><div></div></div><div class="pmbar"><div></div></div><div class="pname">${name}</div></div>`).join("");
+  stage.appendChild(party);
+  const act = document.createElement("div");
+  act.className = "draggable"; act.id = "actions"; act.dataset.key = "actions";
+  act.innerHTML = `<button class="primary">攻撃</button><button>技</button><button>交代</button><button>道具</button><button class="full">逃げる</button>`;
+  stage.appendChild(act);
+  layout();
+}
+function layout() {
+  $("bg").style.backgroundImage = `url('${BGS[L.bgIdx % BGS.length]}')`;
+  for (let i = 0; i < L.count; i++) {
+    const el = document.querySelector(`[data-key="e${i}"]`);
+    if (!el) continue;
+    const off = L.enemyOffsets[i] || [0, 0];
+    el.style.left = (enemyBaseX(i, L.count) + off[0]) + "px";
+    el.style.top = `calc(${L.enemyTop}vh + ${off[1]}px)`;
+    const img = el.querySelector("img.pic");
+    img.style.width = L.enemySize + "px";
+    img.style.height = L.enemySize + "px";
+  }
+  const log = $("logBox");
+  log.style.top = L.logTop + "vh";
+  log.style.fontSize = L.logFont + "px";
+  const party = $("partyBar");
+  party.style.top = L.partyTop + "vh";
+  party.querySelectorAll(".pcard").forEach((c) => { c.style.width = L.partyCard + "px"; });
+  const act = $("actions");
+  act.style.top = L.actionsTop + "vh";
+  act.style.transform = `scale(${L.actionScale})`;
+  document.querySelectorAll(".draggable").forEach((el) => el.classList.toggle("selected", el.dataset.key === selected));
+  $("selLabel").textContent = selected
+    ? ({ e0: "敵1", e1: "敵2", e2: "敵3", log: "ログ", party: "味方バー", actions: "コマンド" })[selected]
+    : "選択なし";
+  $("out").textContent = JSON.stringify({
+    style: L.style, enemySize: L.enemySize, enemyTop: +L.enemyTop.toFixed(1), gap: L.gap,
+    enemyOffsets: L.enemyOffsets.map((o) => [Math.round(o[0]), Math.round(o[1])]),
+    logTop: +L.logTop.toFixed(1), logFont: L.logFont,
+    partyTop: +L.partyTop.toFixed(1), partyCard: L.partyCard,
+    actionsTop: +L.actionsTop.toFixed(1), actionScale: +L.actionScale.toFixed(2),
+  });
+}
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(L)); }
+
+// ===== ポインタ操作(タップ選択/ドラッグ移動/2本指ピンチでサイズ) =====
+const pointers = new Map();
+let dragStart = null; // { key, x, y, L0, dist0 }
+document.addEventListener("pointerdown", (e) => {
+  if (e.target.closest("#toolbar") || e.target.closest("#peek")) return;
+  const el = e.target.closest(".draggable");
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (el) {
+    if (selected !== el.dataset.key) { selected = el.dataset.key; layout(); }
+    e.preventDefault();
+  } else if (pointers.size === 1) {
+    selected = null; layout();
+  }
+  const snap = JSON.parse(JSON.stringify(L));
+  if (pointers.size === 1) {
+    dragStart = { key: selected, x: e.clientX, y: e.clientY, L0: snap };
+  } else if (pointers.size === 2 && selected) {
+    const pts = [...pointers.values()];
+    dragStart = { key: selected, pinch: true, L0: snap, dist0: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
+  }
+}, { passive: false });
+document.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!dragStart || !dragStart.key) return;
+  e.preventDefault();
+  const k = dragStart.key, L0 = dragStart.L0;
+  if (dragStart.pinch && pointers.size >= 2) {
+    const pts = [...pointers.values()];
+    const ratio = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) / dragStart.dist0;
+    if (k.startsWith("e")) L.enemySize = Math.round(Math.min(240, Math.max(60, L0.enemySize * ratio)));
+    else if (k === "log") L.logFont = Math.round(Math.min(20, Math.max(10, L0.logFont * ratio)));
+    else if (k === "party") L.partyCard = Math.round(Math.min(130, Math.max(64, L0.partyCard * ratio)));
+    else if (k === "actions") L.actionScale = Math.min(1.3, Math.max(0.7, L0.actionScale * ratio));
+    layout();
+    return;
+  }
+  const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+  if (k.startsWith("e")) {
+    const i = Number(k[1]);
+    const o0 = L0.enemyOffsets[i] || [0, 0];
+    L.enemyOffsets[i] = [o0[0] + dx, o0[1] + dy];
+  } else if (k === "log") L.logTop = L0.logTop + dy / VH() * 100;
+  else if (k === "party") L.partyTop = L0.partyTop + dy / VH() * 100;
+  else if (k === "actions") L.actionsTop = L0.actionsTop + dy / VH() * 100;
+  layout();
+}, { passive: false });
+const endPointer = (e) => { pointers.delete(e.pointerId); if (pointers.size === 0) { dragStart = null; save(); layout(); } };
+document.addEventListener("pointerup", endPointer);
+document.addEventListener("pointercancel", endPointer);
+
+// ===== ツールバー =====
+function bump(dir) {
+  if (!selected) return;
+  if (selected.startsWith("e")) L.enemySize = Math.min(240, Math.max(60, L.enemySize + dir * 6));
+  else if (selected === "log") L.logFont = Math.min(20, Math.max(10, L.logFont + dir));
+  else if (selected === "party") L.partyCard = Math.min(130, Math.max(64, L.partyCard + dir * 4));
+  else if (selected === "actions") L.actionScale = Math.min(1.3, Math.max(0.7, L.actionScale + dir * 0.05));
+  save(); layout();
+}
+$("plus").onclick = () => bump(1);
+$("minus").onclick = () => bump(-1);
+$("styleBtn").onclick = () => { L.style = { top: "plate", plate: "mini", mini: "top" }[L.style]; save(); buildStage(); };
+$("cntBtn").onclick = () => { L.count = L.count % 3 + 1; save(); buildStage(); };
+$("bgBtn").onclick = () => { L.bgIdx = (L.bgIdx + 1) % BGS.length; save(); layout(); };
+document.querySelectorAll("[data-preset]").forEach((b) => {
+  b.onclick = () => { Object.assign(L, PRESETS[b.dataset.preset], { enemyOffsets: [[0, 0], [0, 0], [0, 0]] }); save(); buildStage(); };
+});
+$("hideBtn").onclick = () => document.body.classList.add("hide-editor");
+$("peek").onclick = () => document.body.classList.remove("hide-editor");
+$("resetBtn").onclick = () => { L = JSON.parse(JSON.stringify(DEFAULTS)); save(); buildStage(); };
+window.addEventListener("resize", layout);
+buildStage();
+</script>
+</body>
+</html>
