@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>透過立ち絵サイズ調整モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; }
+  /* ===== 戦闘画面の再現部 ===== */
+  #stage { position: fixed; inset: 0; background-size: cover; background-position: center 30%; }
+  #stage::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.12); }
+  #enemyRow {
+    position: absolute; top: 30px; left: 0; right: 0; z-index: 2;
+    display: flex; justify-content: center; align-items: flex-end; gap: 10px;
+    padding: 0 6px;
+  }
+  .enemy-card { position: relative; text-align: center; }
+  .enemy-name {
+    font-size: 0.78rem; font-weight: 700; color: #f1e8d8; margin-bottom: 2px;
+    text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 3px rgba(0,0,0,0.95);
+  }
+  .enemy-card img {
+    object-fit: contain; display: block; margin: 0 auto;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); /* 本体battle.cssと同じ輪郭影 */
+  }
+  .hpbar {
+    height: 10px; border-radius: 6px; background: rgba(0,0,0,0.55);
+    margin: 4px auto 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.25);
+  }
+  .hpbar > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  /* ===== 調整パネル ===== */
+  #panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: rgba(18,16,14,0.93); border-top: 1px solid rgba(217,207,184,0.35);
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    color: #e8dfcc;
+  }
+  .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .row label { width: 7.5em; font-size: 12.5px; flex-shrink: 0; }
+  .row input[type=range] { flex: 1; height: 30px; }
+  .row .val { width: 3.6em; text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .chip {
+    font-size: 12px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.06); color: #d9cfb8;
+  }
+  .chip.on { background: #c9a24a; color: #211a10; border-color: #c9a24a; font-weight: 700; }
+  #out {
+    font-size: 11.5px; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 6px 8px;
+    color: #b9d8a8; word-break: break-all; user-select: all; -webkit-user-select: all;
+  }
+  .minirow { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .minirow button {
+    font-size: 12px; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #e8dfcc;
+  }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.55); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="enemyRow"></div>
+<div id="panel">
+  <div class="chips" id="enemyChips"></div>
+  <div class="row"><label>立ち絵サイズ(<span id="countLabel">3体</span>)</label><input type="range" id="size" min="70" max="230" value="92"><span class="val" id="sizeVal"></span></div>
+  <div class="row"><label>縦位置(下へ)</label><input type="range" id="offY" min="-30" max="80" value="0"><span class="val" id="offYVal"></span></div>
+  <div class="row"><label>HPバー幅</label><input type="range" id="hpW" min="50" max="160" value="92"><span class="val" id="hpWVal"></span></div>
+  <div class="row"><label>横間隔</label><input type="range" id="gap" min="0" max="40" value="10"><span class="val" id="gapVal"></span></div>
+  <div id="out"></div>
+  <div class="minirow">
+    <button id="bgBtn">背景切替</button>
+    <button id="resetBtn">この体数を初期値へ</button>
+  </div>
+  <div id="note">体数(1〜3)ごとにサイズを別々に記憶します。チップで敵を選ぶと体数が変わります。決まったら下の数値をそのままClaudeに伝えてください。</div>
+</div>
+<script>
+// 序盤10体の透過立ち絵(assets/enemies/clear/)。本体のテストモード差し替えと同じ画像を使う
+const ENEMIES10 = [
+  ["yaken", "野犬"], ["inoshishi", "猪"], ["dokuhebi", "毒蛇"], ["oogumo", "大蜘蛛"], ["kodama", "木霊"],
+  ["kappa", "河童"], ["hitotsume_kozo", "一つ目小僧"], ["bake_danuki", "化け狸"], ["onibi", "鬼火"], ["kamaitachi", "かまいたち"],
+];
+const BGS = ["assets/bg/forest_day.jpg", "assets/bg/forest_night.jpg", "assets/bg/forest_dusk.jpg", "assets/bg/warawanu_men_sando.jpg"];
+const LS_KEY = "clearSizeMock_v1";
+// 体数(1/2/3)ごとに別のサイズ設定を持つ(本体も体数でレイアウト密度が変わるため)
+const state = Object.assign({
+  selected: ["yaken", "kodama", "bake_danuki"],
+  bgIndex: 0,
+  perCount: {
+    1: { size: 150, offY: 0, hpW: 120, gap: 10 },
+    2: { size: 120, offY: 0, hpW: 100, gap: 10 },
+    3: { size: 92, offY: 0, hpW: 92, gap: 10 },
+  },
+}, JSON.parse(localStorage.getItem(LS_KEY) || "{}"));
+
+const $ = (id) => document.getElementById(id);
+function curCount() { return Math.max(1, Math.min(3, state.selected.length)); }
+function cur() { return state.perCount[curCount()]; }
+
+function renderChips() {
+  $("enemyChips").innerHTML = ENEMIES10.map(([id, ja]) =>
+    `<span class="chip ${state.selected.includes(id) ? "on" : ""}" data-id="${id}">${ja}</span>`).join("");
+  [...$("enemyChips").children].forEach((chip) => {
+    chip.onclick = () => {
+      const id = chip.dataset.id;
+      if (state.selected.includes(id)) {
+        if (state.selected.length <= 1) return; // 最低1体
+        state.selected = state.selected.filter((x) => x !== id);
+      } else {
+        state.selected.push(id);
+        while (state.selected.length > 3) state.selected.shift(); // 最大3体
+      }
+      save(); renderAll();
+    };
+  });
+}
+function renderStage() {
+  $("stage").style.backgroundImage = `url('${BGS[state.bgIndex % BGS.length]}')`;
+  const c = cur();
+  $("enemyRow").style.gap = c.gap + "px";
+  $("enemyRow").innerHTML = state.selected.map((id) => {
+    const ja = ENEMIES10.find(([i]) => i === id)[1];
+    return `<div class="enemy-card" style="transform: translateY(${c.offY}px);">
+      <div class="enemy-name">${ja}</div>
+      <img src="assets/enemies/clear/${id}.png" style="width:${c.size}px;height:${c.size}px;">
+      <div class="hpbar" style="width:${c.hpW}px;"><div></div></div>
+    </div>`;
+  }).join("");
+}
+function renderControls() {
+  const c = cur();
+  $("countLabel").textContent = curCount() + "体";
+  $("size").value = c.size; $("sizeVal").textContent = c.size + "px";
+  $("offY").value = c.offY; $("offYVal").textContent = c.offY + "px";
+  $("hpW").value = c.hpW; $("hpWVal").textContent = c.hpW + "px";
+  $("gap").value = c.gap; $("gapVal").textContent = c.gap + "px";
+  $("out").textContent = "設定値: " + JSON.stringify(state.perCount);
+}
+function renderAll() { renderChips(); renderStage(); renderControls(); }
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+["size", "offY", "hpW", "gap"].forEach((key) => {
+  $(key).oninput = () => {
+    cur()[key] = Number($(key).value);
+    save(); renderStage(); renderControls();
+  };
+});
+$("bgBtn").onclick = () => { state.bgIndex = (state.bgIndex + 1) % BGS.length; save(); renderStage(); };
+$("resetBtn").onclick = () => {
+  state.perCount[curCount()] = { 1: { size: 150, offY: 0, hpW: 120, gap: 10 }, 2: { size: 120, offY: 0, hpW: 100, gap: 10 }, 3: { size: 92, offY: 0, hpW: 92, gap: 10 } }[curCount()];
+  save(); renderAll();
+};
+renderAll();
+</script>
+</body>
+</html>
