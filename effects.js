@@ -369,6 +369,91 @@ function playAttackerLunge(actorId) {
   card.classList.add("attack-lunge");
   setTimeout(() => card.classList.remove("attack-lunge"), ATTACK_LUNGE_MS);
 }
+// ============ 敵の攻撃モーション(mock_enemy_attack.htmlでユーザー採用2026-08-01) ============
+// 通常=案A「予備動作つき踏み込み」: 身を引いて一拍溜め→鋭く味方側(下)へ踏み込む。
+// 大技=案C「溜め→解放」: 画面が暗くなり赤いオーラでしゃがみ込み→爆発的に突進(白フラッシュは
+// ユーザー指示で不採用)。従来は味方と共用のattackLunge(上=味方から遠ざかる向き)で安っぽかった。
+// どちらもWAAPI(常駐カードDOMへのelement.animate)=iOSの作りたてDOM問題を踏まない経路
+const ENEMY_ATK_ANIM_MS = 620;
+const ENEMY_ATK_IMPACT_MS = 310; // 案Aの踏み込みが当たる瞬間(50%地点)。ダメージ表示はここに同期
+const ENEMY_BIG_CHARGE_MS = 620;
+const ENEMY_BIG_BURST_IMPACT_MS = 170; // 解放(バースト)開始から当たりまで
+function enemyCardOf(actor) {
+  return document.querySelector(`#enemyRow .enemy-card[data-id="${actor.instanceId}"]`);
+}
+function playEnemyAttackAnim(actor) {
+  const card = enemyCardOf(actor);
+  if (!card || !card.animate) return;
+  card.classList.remove(...HIT_SHAKE_CLASSES); // 残留揺れのCSSアニメがtransformを取り合わないよう剥がす
+  card.animate([
+    { transform: "translateY(0) scale(1)" },
+    { transform: "translateY(-9px) scale(0.97)", offset: 0.28 }, // 予備動作: 身を引く
+    { transform: "translateY(-9px) scale(0.97)", offset: 0.38 }, // 一拍溜める
+    { transform: "translateY(22px) scale(1.07)", offset: 0.5 },  // 鋭く踏み込む(当たる瞬間)
+    { transform: "translateY(20px) scale(1.06)", offset: 0.62 },
+    { transform: "translateY(0) scale(1)" },
+  ], { duration: ENEMY_ATK_ANIM_MS, easing: "cubic-bezier(0.3,0.9,0.4,1)" });
+}
+// 大技の赤ビネット+暗転はシングルトン常駐(swap-fx-stageと同じ「温めておく」方針)
+let bigAtkOverlaySingleton = null;
+function getBigAtkOverlays() {
+  if (bigAtkOverlaySingleton && bigAtkOverlaySingleton.dim.isConnected) return bigAtkOverlaySingleton;
+  const dim = document.createElement("div");
+  dim.className = "big-atk-dim";
+  const vign = document.createElement("div");
+  vign.className = "big-atk-vignette";
+  document.body.appendChild(dim);
+  document.body.appendChild(vign);
+  bigAtkOverlaySingleton = { dim, vign };
+  return bigAtkOverlaySingleton;
+}
+function playEnemyBigAttackCharge(actor, onImpact) {
+  const card = enemyCardOf(actor);
+  if (!card || !card.animate) { onImpact(); return; }
+  card.classList.remove(...HIT_SHAKE_CLASSES);
+  const { dim } = getBigAtkOverlays();
+  dim.classList.add("on");
+  // 赤いオーラ(立ち絵の背後)。使い捨てで生成し、解放の瞬間に消す
+  const box = card.querySelector(".enemy-portrait-box");
+  const aura = document.createElement("div");
+  aura.className = "big-atk-aura";
+  if (box) box.insertBefore(aura, box.firstChild);
+  if (aura.animate) {
+    aura.animate([
+      { opacity: 0, transform: "translateX(-50%) scale(0.85)" },
+      { opacity: 1, offset: 0.55 },
+      { opacity: 0.85, transform: "translateX(-50%) scale(1.08)" },
+    ], { duration: ENEMY_BIG_CHARGE_MS, easing: "ease-out", fill: "forwards" });
+  }
+  const crouch = card.animate([
+    { transform: "translateY(0) scale(1)", filter: "brightness(1)" },
+    { transform: "translateY(-6px) scale(1.02, 0.94)", filter: "brightness(0.92)", offset: 0.35 },
+    { transform: "translateY(-8px) scale(1.04, 0.92)", filter: "brightness(0.88)" },
+  ], { duration: ENEMY_BIG_CHARGE_MS, easing: "ease-out", fill: "forwards" });
+  const release = () => {
+    aura.remove();
+    crouch.cancel(); // fill:forwardsのしゃがみ姿勢を解いてバーストへ引き継ぐ
+    card.animate([
+      { transform: "translateY(-8px) scale(1.04, 0.92)" },
+      { transform: "translateY(30px) scale(1.16)", offset: 0.3 },  // 爆発的な踏み込み
+      { transform: "translateY(28px) scale(1.15)", offset: 0.48 }, // 当たった瞬間を見せる
+      { transform: "translateY(0) scale(1)" },
+    ], { duration: 520, easing: "cubic-bezier(0.2,0.95,0.3,1)" });
+    setTimeout(() => {
+      dim.classList.remove("on");
+      onImpact();
+    }, ENEMY_BIG_BURST_IMPACT_MS);
+  };
+  setTimeout(release, ENEMY_BIG_CHARGE_MS + 60);
+}
+// 大技着弾の重み: 赤ビネット+大きめ画面揺れ(白フラッシュはユーザー指示で無し)
+function playBigAtkImpactFx() {
+  const { vign } = getBigAtkOverlays();
+  if (vign.animate) {
+    vign.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0 }], { duration: 700, easing: "ease-out" });
+  }
+  playScreenShakeCrit(); // 会心と同じ画面揺れを大技の着弾にも流用
+}
 function playCritEffects(targetId, actor, dmg) {
   setTimeout(() => {
     playScreenShakeCrit();

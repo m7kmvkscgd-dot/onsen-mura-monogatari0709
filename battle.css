@@ -265,6 +265,17 @@
     50% { transform: translateY(-15px) scale(var(--clear-scale, 1)); }
   }
   .enemy-card.frameless.airborne .enemy-portrait-box::after { width: 46%; height: 9px; opacity: 0.75; }
+  /* ===== 敵攻撃モーション刷新(2026-08-01、モック案A/C採用)の演出パーツ ===== */
+  /* 大技の溜め中の画面暗転(effects.jsのplayEnemyBigAttackChargeがonを付け外しする) */
+  .big-atk-dim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.3s; }
+  .big-atk-dim.on { background: rgba(0,0,0,0.28); }
+  /* 大技着弾の赤ビネット(WAAPIでopacityを振る。常駐シングルトン) */
+  .big-atk-vignette { position: fixed; inset: 0; z-index: 41; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(120,10,10,0) 55%, rgba(120,10,10,0.5) 100%); }
+  /* 溜め中の赤オーラ(立ち絵の背後、使い捨て生成) */
+  .big-atk-aura { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 120%; height: 108%;
+    z-index: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(ellipse 50% 62% at 50% 78%, rgba(200,30,20,0.5), rgba(200,30,20,0.18) 55%, transparent 75%); }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。
      大きさは立ち絵幅に対する比率ではなくカード幅基準の割合(66%)で、全敵で見た目が揃う */
@@ -424,7 +435,9 @@
     position: fixed; top: 0; left: 0; width: 55px; height: auto; z-index: 30;
     pointer-events: none; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
   }
-  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); animation: enemyLunge 0.5s ease-in-out; }
+  /* 手番ハイライトのみ(旧・enemyLungeの手番開始ホップは2026-08-01の攻撃モーション刷新で廃止。
+     攻撃の動きはeffects.jsのplayEnemyAttackAnim/playEnemyBigAttackChargeがWAAPIで再生する) */
+  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); }
   /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
   .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
   @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }

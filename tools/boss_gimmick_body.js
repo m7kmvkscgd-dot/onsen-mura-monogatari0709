@@ -251,7 +251,7 @@
   check("テストモード中は透過立ち絵+framelessに差し替わる", yakenTest.image === "assets/enemies/clear/yaken.png" && yakenTest.frameless === true);
   const bossTest = instantiateEnemyById("boss_kasha");
   check("表に無い敵はテストモードでも従来のまま", bossTest.image === ENEMIES.boss_kasha.image && !bossTest.frameless);
-  check("対象10体ぶんの表がある", Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).length === 10 && Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).every((id) => !!ENEMIES[id]));
+  check("透過差し替え表の全idが実在する(10体+追加納品分)", Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).length >= 10 && Object.keys(TEST_TRANSPARENT_ENEMY_IMAGES).every((id) => !!ENEMIES[id]));
   testModeActive = wasTestMode;
 
   console.log("--- J: ボスは逃走しない(逃走+追撃システム全廃、2026-07-31) ---");

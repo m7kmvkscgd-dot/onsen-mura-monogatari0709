@@ -656,10 +656,16 @@ function processNext() {
           actor.bigAttackCountdown = rollBigAttackCountdown(actor);
           // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
           // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
+          // 【大技モーション刷新2026-08-01(モック案C採用、白フラッシュ無し)】溜め(暗転+赤オーラ+
+          // しゃがみ込み)→解放(爆発的踏み込み)の演出後、当たる瞬間にダメージ確定〜表示を行う。
+          // ダメージ計算自体も解放後に回す(溜めの間もログや被弾が先行しないよう全部まとめて遅らせる)
+          playEnemyBigAttackCharge(actor, () => {
+          if (!battle) return; // 溜めの間に煙玉等で戦闘が終了していた場合の保険
           const hpBeforeBig = {};
           alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
           const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;
           const results = enemyBigAttack(actor, alive, blog);
+          if (results.some((r) => r.hit && !r.barricade) && !yatanokagamiActive) playBigAtkImpactFx(); // 赤ビネット+画面揺れ(命中時のみ)
           if (yatanokagamiActive) {
             // 八咫鏡の御守: 戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する
             let prevented = 0;
@@ -706,6 +712,7 @@ function processNext() {
             }
           };
           autoDeployReserveIfNeeded(newlyCriticalBig, continueAfterBig);
+          }); // ← playEnemyBigAttackChargeの着弾コールバック(大技モーション刷新2026-08-01)
           return;
         }
         if (actor.bigAttackCountdown === 1) {
@@ -733,7 +740,15 @@ function processNext() {
           if (targetsNow.length === 0 || actor.hp <= 0) { setTimeout(advanceTurn, 500); return; }
           const hpBeforeAtk = {};
           targetsNow.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
-          const result = enemyAttack(actor, targetsNow, blog, atkOpts);
+          // 【攻撃モーション刷新2026-08-01(モック案A採用)】ダメージ計算は即時に確定させるが、
+          // 見た目(ログ/ポップ/SE/HPバー/死亡処理)は踏み込みが「当たる瞬間」(ENEMY_ATK_IMPACT_MS)
+          // まで遅らせて同期する。ログはenemyAttackが書くため、いったん貯めて着弾時に流す
+          const pendingLogs = [];
+          const result = enemyAttack(actor, targetsNow, (m) => pendingLogs.push(m), atkOpts);
+          playEnemyAttackAnim(actor);
+          setTimeout(() => {
+          if (!battle) return; // 着弾待ちの間に煙玉等で戦闘が終了していた場合の保険
+          pendingLogs.forEach((m) => blog(m));
           if (result && result.barricade) {
             // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
           } else if (result && result.hit) {
@@ -762,6 +777,7 @@ function processNext() {
             }
           };
           autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
+          }, ENEMY_ATK_IMPACT_MS); // ← 着弾同期の遅延(攻撃モーション刷新2026-08-01)
         };
         doOneAttack(totalAttacks);
       }, enemyActionDelay);
