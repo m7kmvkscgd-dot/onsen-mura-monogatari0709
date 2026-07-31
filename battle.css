@@ -179,7 +179,7 @@
      (innerHeight)より約2割大きい。vhで縦位置を当て推量すると実機でボタン列が味方バーに重なった
      (ユーザー報告)ため、縦の配置は全てJS実測(ui.js positionActionsBelowPartyBarのcenterMode節)が
      毎回innerHeightから逆算して設定する。CSSはログ位置と器の形だけを持つ */
-  .battle-top.layout-center #battleLog { position: absolute; top: 53px; left: 12px; right: 12px; margin: 0; z-index: 2; } /* 8→38→53px(ユーザー指定で計45px下げ、2026-08-01) */
+  .battle-top.layout-center #battleLog { position: absolute; top: 48px; left: 12px; right: 12px; margin: 0; z-index: 2; } /* 8→38→53→48px(2026-08-01「テキストボックス5px上」) */
   /* topはJSが設定する(下のcalcはJS実行前の初期値)。align-content:flex-start=上詰め
      (センタリングだと行高との差分だけカードが下へ押されて位置計算が狂う) */
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }

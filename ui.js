@@ -1371,7 +1371,10 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
           const cardH = firstCard ? firstCard.offsetHeight : 170;
           const logBottom = log ? Math.round(log.getBoundingClientRect().bottom) : 100;
           const desired = Math.round(innerH * 0.26);
-          const cardTop = Math.max(logBottom + 6, Math.min(desired, pTop - cardH - 10));
+          // 2026-08-01ユーザー指定「敵の位置を全体的に10px上へ」: ログ側も同日5px上がったため
+          // (battle.cssのtop53→48px)、ログ連動の下限はギャップ6→1px(=合計-10px)、
+          // 26%基準の希望位置は-10pxで揃える。味方バーとの重なり防止クランプは従来のまま
+          const cardTop = Math.max(logBottom + 1, Math.min(desired - 10, pTop - cardH - 10));
           row.style.top = `${cardTop - 38}px`; // 38px=行内の名前用padding-topぶん
         }
       }
