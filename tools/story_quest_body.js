@@ -28,7 +28,7 @@
   check("区間の敵IDが実在する", route.segments.every((s) => (s.enemies || []).every((id) => !!ENEMIES[id])));
   const boss = ENEMIES.amayome_shiranui;
   check("ボスの口上4行", Array.isArray(boss.preBattleLines) && boss.preBattleLines.length === 4);
-  check("魂の回想: 一言+4場面", !!boss.soulStory && boss.soulStory.soulLine.length > 0 && boss.soulStory.scenes.length === 4);
+  check("回想(soulStory)はデータから撤去済み(2026-07-31方針転換)", !boss.soulStory);
   check("ギミック2種(赤緒/行列)", boss.gimmicks.length === 2 && boss.gimmickNotes.length === 2);
   check("提灯童/白縫は通常抽選に出ない", ENEMIES.chochin_warabe.questOnly && ENEMIES.chochin_warabe.maxFloor === 0 && boss.questOnly && boss.maxFloor === 0);
 
@@ -98,13 +98,21 @@
     runSoulCase();
   }
 
-  // E: v2演出(2026-07-31)対応版。魂の一言は静寂後に一文ずつ・ボタンは遅れて出現・
-  // ビューアは句点ごとのタップ送り+場面転換フェード。soulStoryGateScaleで間を1/50に縮めて検証する
+  // E: 回想機構の休眠テスト(2026-07-31方針転換で本番データからsoulStoryは撤去済み。
+  // 機構=showSoulStoryOffer/openSoulStoryViewerは残置のため、合成データを注入して
+  // 「データを足せばそのまま復活する」ことを保証し続ける)。soulStoryGateScaleで間を1/50に縮小
   function runSoulCase() {
-    console.log("--- E: 魂の回想(soulLine+ビューア、v2文章送り) ---");
+    console.log("--- E: 魂の回想機構(休眠、合成データ注入) ---");
     soulStoryGateScale = 0.02;
     makeParty();
     const b = instantiateEnemyById("amayome_shiranui");
+    b.soulStory = {
+      soulLine: "私は……誰を待っていたのでしょう。",
+      scenes: [
+        { text: "私には、呼んでくれる名すらありませんでした。この赤い緒があれば、どこにいても家族だと。", gates: { 0: 900 } },
+        { text: "迎えに来たよ、白縫、と。" },
+      ],
+    };
     battle = { enemies: [b], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 1, presence: {} };
     b.__enemyAllies = [b];
     renderBattleScreen();
@@ -129,8 +137,8 @@
       const viewer = document.getElementById("soulStoryOverlay");
       const textEl = document.getElementById("soulStoryText");
       check("ビューアが開き1場面目の1文目だけが出る", viewer.style.display === "flex" && textEl.textContent.includes("呼んでくれる名すら") && !textEl.textContent.includes("赤い緒があれば"));
-      viewer.click(); // ゲート(700ms×0.02=14ms)以内の連打は飲み込まれる
-      check("ゲート中のタップは無視される", !textEl.textContent.includes("けれど、あの人だけは"));
+      viewer.click(); // ゲート(注入したgates[0]=900ms×0.02=18ms)以内の連打は飲み込まれる
+      check("ゲート中のタップは無視される", !textEl.textContent.includes("赤い緒があれば"));
       // 以降はゲート明けを待ちながらタップを繰り返し、最終場面の最終文まで送る
       let taps = 0;
       const tapLoop = setInterval(() => {
@@ -184,13 +192,7 @@
     check("区間の敵IDが実在する", route2.segments.every((s) => (s.enemies || []).every((id) => !!ENEMIES[id])));
     const boss2 = ENEMIES.kagegui_sakazuki;
     check("ボスの口上4行", Array.isArray(boss2.preBattleLines) && boss2.preBattleLines.length === 4);
-    check("魂の回想: 一言+4場面", !!boss2.soulStory && boss2.soulStory.soulLine.length > 0 && boss2.soulStory.scenes.length === 4);
-    // 回想v2の演出データ(指示書の「間」): 場面3=閂の後1.5秒、場面4=名の後1.2秒、場面2=最終文ゆっくり
-    const sc2 = boss2.soulStory.scenes;
-    check("v2の間(gates)が設定されている", sc2[0].gates[1] === 800 && sc2[1].gates[3] === 1000 && sc2[2].gates[1] === 1500 && sc2[3].gates[1] === 1200);
-    check("v2のフェード上書き(fadeMs)が設定されている", sc2[1].fadeMs[4] === 900);
-    check("gatesの文idxが実際の文分割と噛み合う", splitSoulSentences(sc2[2].text)[1].includes("閂を外さなかった") && splitSoulSentences(sc2[3].text)[1].includes("お前たちの名だった"));
-    check("soulLineは2文に分割される", splitSoulSentences(boss2.soulStory.soulLine).length === 2);
+    check("回想(soulStory)はデータから撤去済み(2026-07-31方針転換)", !boss2.soulStory);
     check("ギミックメモは2件、構造化ギミックは1件(影写しは既存トリガーで表現不可のため未実装)", boss2.gimmickNotes.length === 2 && boss2.gimmicks.length === 1);
     check("影法師/逆月は通常抽選に出ない", ENEMIES.kageboshi.questOnly && ENEMIES.kageboshi.maxFloor === 0 && boss2.questOnly && boss2.maxFloor === 0);
 
