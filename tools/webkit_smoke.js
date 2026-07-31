@@ -49,8 +49,9 @@ const URL = "https://onsen-mura-monogatari.pages.dev/";
   // 毒表示中(1.6秒〜約2.6秒)
   await page.waitForTimeout(1100);
   await page.screenshot({ path: path.join(OUT, "webkit_dot_poison.png") });
-  // 敵の行動完了後
-  await page.waitForTimeout(2600);
+  // 敵の行動完了後(2026-08-01の攻撃モーション刷新でダメージ着弾が予備動作310ms後へ
+  // 遅延したため、待ちを600ms延長。初回flake対策)
+  await page.waitForTimeout(3200);
   await page.screenshot({ path: path.join(OUT, "webkit_after_attack.png") });
   const state = await page.evaluate(() => ({
     dimOffAfter: !document.getElementById("battleDotStopDim").classList.contains("on"),

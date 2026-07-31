@@ -15,6 +15,7 @@ const BGM_TRACKS = {
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
   cave_battle: "assets/bgm/cave_battle_bgm.mp3", // 洞窟の戦闘専用(ユーザー提供曲、2026-08-01。従来の「洞窟は戦闘BGMミュート」を置き換え)
+  quest_route_battle: "assets/bgm/quest_route_battle_bgm.mp3", // 奉行所クエストルートの通常戦闘専用(ユーザー提供曲、2026-08-01)。討伐対象/ボス/ルートBGM持ちクエストの方が優先
   // 渓流ステージの探索用フィールド曲(ユーザー提供音源、2026-07-20)。海岸と同じく探索中ずっと
   // 流し続ける専用チャンネル。早朝/朝/昼はvalley、夜だけvalley_night(戦闘専用曲はまだ無く、
   // 敵データが未実装のため戦闘自体が発生しない。実装され次第dungeon/dungeon_nightと同じ扱いを検討)
@@ -118,6 +119,16 @@ function playBattleBgm() {
     currentBgmKey = null;
     bgmPositions.quest_target_battle = 0;
     playBgm("quest_target_battle");
+    return;
+  }
+  // 奉行所クエストルート(questroute)の通常戦闘専用曲(ユーザー提供2026-08-01)。
+  // ここに来る時点で討伐対象(🎯)/中ボス/ボス/ルートBGM持ちクエスト(笑わぬ祭等)は
+  // 上の分岐で処理済み=それらが優先される。頭出し処理はcoast_battleと同じ
+  if (currentStage === "questroute") {
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.quest_route_battle = 0;
+    playBgm("quest_route_battle");
     return;
   }
   if (currentStage === "coast") {
@@ -284,7 +295,11 @@ const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含�
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
-const OPENING_BGM_VOLUME = 0.55;
+// タイトル/オープニングBGMの音量はファイル自体に焼き込み済み(2026-08-01、旧設計値0.55を
+// 音源へ適用。iOSは.volumeを無視するため実機で効かせるには音源側で下げるしかない=洞窟環境音と
+// 同じ方式。GainNode化の試みは実機無音退行でrevert済み。元音源はgit履歴+
+// tmp/opening_bgm_original_backup.mp3に残置)。JS側は二重減衰を避けて等倍にする
+const OPENING_BGM_VOLUME = 1.0;
 // ============ 音量調整(右上のスピーカーアイコン→0〜10のボタン) ============
 // 0(ミュート)〜1の倍率、0.1刻み。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
 // 他のBGM要素(opening/lodging/camp/ambient)はGainNode化していないため、この値では音量までは
