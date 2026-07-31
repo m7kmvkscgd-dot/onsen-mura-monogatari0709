@@ -920,6 +920,7 @@ function handleFieldDeaths() {
         c.status = "lost";
         removeFromRoster(c.id); // 名簿からも完全に削除する(ロストは戻ってこないため)
         blog(`${c.name}は倒れた...帰らぬ人となった。`);
+        playAllyKoFx(c, `${c.name}は倒れた…帰らぬ人となった`);
       } else {
         // 標準(2026-08-01パーマデス廃止): 戦闘不能=重傷。遠征から強制離脱し、温泉村で
         // INJURY_REST_DAYS日の湯治(編成不可)を経て復帰する(復帰処理はtickInjuryRecovery)。
@@ -928,6 +929,7 @@ function handleFieldDeaths() {
         c.injuryRecoverOnDay = state.dayCount + INJURY_REST_DAYS;
         c.fatigue = Math.min(FATIGUE_MAX, (c.fatigue || 0) + 100);
         blog(`${c.name}は深手を負って倒れた...(温泉療養${INJURY_REST_DAYS}日)`);
+        playAllyKoFx(c, `${c.name}は深手を負った…温泉療養${INJURY_REST_DAYS}日`);
       }
       advLostHappened = true; // リザルトの朱印評価/「全員生還！」表示用(重傷も「無傷の生還ではない」扱い)
       newlyCritical.push(c);
@@ -955,24 +957,34 @@ function handleFieldDeaths() {
 // リセットされる(登場直後に任意交代で回転させることはできない)。控えがいなければ何もしない
 function autoDeployReserveIfNeeded(newlyLost, onDone) {
   const someoneLost = newlyLost.some((c) => c.status === "lost" || c.status === "injured");
-  if (!someoneLost || !reserveFieldMember || reserveFieldMember.status !== "active") { onDone(); return; }
-  const incoming = reserveFieldMember;
-  reserveFieldMember = null;
-  fieldParty.push(incoming);
-  if (battle) {
+  if (!someoneLost || !reserveFieldMember || reserveFieldMember.status !== "active") {
+    // 誰か倒れたのに控えがいない場合も、倒れ演出(playAllyKoFx、約1.5秒)を見せ切ってから
+    // 戦闘を再開する(演出中に敵が次の行動を始めてしまうと倒れた事実が流れてしまうため)
+    if (someoneLost) { setTimeout(onDone, ALLY_KO_ANIM_MS); return; }
+    onDone();
+    return;
+  }
+  // 倒れ演出(1.5秒)→0.7秒の「間」→控えの走り込み、の順(モックmock_ko_anim.htmlでユーザーが
+  // 「A・0.7秒」を採用2026-08-01。以前は倒れた瞬間に即走り込みで「あっさりしすぎ」との指摘)
+  setTimeout(() => {
+    const incoming = reserveFieldMember;
+    // 「間」の待機中に状況が変わっていないかの再確認(控えが別経路で消えた等の保険)
+    if (!incoming || incoming.status !== "active" || !battle) { onDone(); return; }
+    reserveFieldMember = null;
+    fieldParty.push(incoming);
     battle.swapCooldown = 3;
     // 参加ターン比の経験値: 登場したこのラウンドから出場カウントを付ける
     battle.presence[incoming.id] = (battle.presence[incoming.id] || 0) + 1;
-  }
-  renderBattleScreen();
-  playSfx("swap_dash");
-  // ログの文字送りは走り込みとメインスレッドを食い合ってカクつくため、演出後に流す。
-  // 登場後に0.7秒の「間」を挟んでからターン進行を再開する。すぐ進めると直後の再描画で
-  // 「参上!」バナーが作り直しに巻き込まれて消えてしまうため(演出を最後まで見せるための猶予)
-  playSwapRunIn(incoming, () => {
-    blog(`控えの${incoming.name}が飛び出してきた！`);
-    setTimeout(onDone, 700);
-  });
+    renderBattleScreen();
+    playSfx("swap_dash");
+    // ログの文字送りは走り込みとメインスレッドを食い合ってカクつくため、演出後に流す。
+    // 登場後に0.7秒の「間」を挟んでからターン進行を再開する。すぐ進めると直後の再描画で
+    // 演出が作り直しに巻き込まれて消えてしまうため(演出を最後まで見せるための猶予)
+    playSwapRunIn(incoming, () => {
+      blog(`控えの${incoming.name}が飛び出してきた！`);
+      setTimeout(onDone, 700);
+    });
+  }, ALLY_KO_ANIM_MS + ALLY_KO_DEPLOY_PAUSE_MS);
 }
 
 // ============ 交代の確認ダイアログ+タッグ走り込み演出 ============

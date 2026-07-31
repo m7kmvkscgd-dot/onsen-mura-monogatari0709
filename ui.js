@@ -1188,6 +1188,15 @@ function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
     card.classList.add("acting-enter");
   }
   card.classList.toggle("targetable", targetable);
+  // 倒れ演出(playAllyKoFx、fill:forwardsで崩れた姿勢を保持)の解除。カードDOMは戦闘を
+  // またいで使い回されるため、療養から復帰した同じキャラのカードに崩れ姿勢が残らないよう、
+  // 生存状態の描画時にKOアニメだけをキャンセルする(id="allyKo"のみ対象、他のWAAPIは触らない)
+  if (!dead) {
+    const koImg = card.querySelector("img");
+    if (koImg && typeof koImg.getAnimations === "function") {
+      koImg.getAnimations().forEach((a) => { if (a.id === "allyKo") a.cancel(); });
+    }
+  }
   // 被弾の揺れ: 敵カード(updateEnemyCard)と同じ扱い。新しい揺れの時だけ剥がして付け直し、
   // 揺れ中の再描画では何もしない=アニメーションを途中で切らず完走させる(フェーズ5で
   // 「空文字時に剥がす」従来挙動の再現を撤去。残ったクラスは無害=付け直した瞬間しか再生されない)

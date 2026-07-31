@@ -703,3 +703,12 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.6); opacity: 0;
   }
   .mat-drop-count.show { opacity: 1; }
+  /* 味方戦闘不能の告知テキスト(effects.jsのshowAllyKoNoteがinnerHeight実測でtopをセットする。
+     倒れ演出=膝折れフェード自体はWAAPIでimgに直接掛けるためCSSは不要) */
+  .ally-ko-note {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    z-index: 45; pointer-events: none; opacity: 0;
+    font-weight: 800; font-size: 1.02rem; color: #ffe3c2;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.7);
+    white-space: nowrap;
+  }

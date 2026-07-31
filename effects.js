@@ -1778,6 +1778,57 @@ function resetSeamlessBattleCamera() {
   if (bar) { bar.style.removeProperty("--party-cam-y"); bar.style.removeProperty("--party-cam-s"); }
 }
 
+// ============ 味方戦闘不能(重傷/ロスト)の倒れ演出 ============
+// パーマデス廃止(2026-08-01)に伴い新設。モックmock_ko_anim.htmlの案A「膝折れフェード」+
+// 療養テキストON+控え登場まで0.7秒、をユーザーが採用(2026-08-01)。
+// 専用SE(ally_down.mp3、実測約1.5秒)と尺を合わせるためアニメは1500ms。
+// 立ち絵のimgにWAAPI(element.animate)で膝折れ→白黒沈み込みを再生し、fill:forwardsで
+// 崩れた姿勢のまま残す(.deadクラスの静的グレースケールへ瞬時に切り替わるより自然なため。
+// カードDOMは差分レンダラーで使い回されるので、戦闘中はアニメ結果がそのまま保持される)
+const ALLY_KO_ANIM_MS = 1500;
+const ALLY_KO_DEPLOY_PAUSE_MS = 700; // 倒れ演出が終わってから控えが走り込むまでの「間」
+function playAllyKoFx(c, noteText) {
+  try {
+    playSfx("ally_down"); // アニメ開始と同時に鳴らす(音と動きを合わせる指示)
+    const card = document.querySelector(`#battlePartyBar .party-member[data-id="${c.id}"]`);
+    const img = card ? card.querySelector("img") : null;
+    if (img && img.animate) {
+      // 多重発火の保険(同一戦闘で同じimgに再生済みのKOアニメが残っていたら消してから)
+      img.getAnimations().forEach((a) => { if (a.id === "allyKo") a.cancel(); });
+      const anim = img.animate([
+        { transform: "translateY(0) rotate(0deg)", filter: "grayscale(0) brightness(1)", opacity: 1 },
+        { transform: "translateY(2px) rotate(2deg)", filter: "grayscale(0.8) brightness(0.9)", opacity: 1, offset: 0.3 },
+        { transform: "translateY(8px) rotate(5deg)", filter: "grayscale(1) brightness(0.7)", opacity: 0.9, offset: 0.7 },
+        { transform: "translateY(12px) rotate(7deg)", filter: "grayscale(1) brightness(0.4)", opacity: 0.85 },
+      ], { duration: ALLY_KO_ANIM_MS, easing: "ease-in-out", fill: "forwards" });
+      anim.id = "allyKo";
+    }
+    if (noteText) showAllyKoNote(noteText);
+  } catch (e) {} // 演出は失敗してもゲーム進行(handleFieldDeaths)を止めない
+}
+// 倒れた瞬間に画面中央へ一瞬出す告知テキスト(「◯◯は深手を負った…温泉療養2日」)。
+// 重傷システムのルール説明を兼ねる(モックの「療養テキスト表示」ON採用)。
+// 位置はiOSのvh罠を避けてinnerHeight実測で置く
+function showAllyKoNote(text) {
+  const note = document.createElement("div");
+  note.className = "ally-ko-note";
+  note.textContent = text;
+  note.style.top = Math.round(window.innerHeight * 0.30) + "px";
+  document.body.appendChild(note);
+  if (note.animate) {
+    const anim = note.animate([
+      { opacity: 0, transform: "translateX(-50%) translateY(6px)" },
+      { opacity: 1, transform: "translateX(-50%) translateY(0)", offset: 0.12 },
+      { opacity: 1, transform: "translateX(-50%) translateY(0)", offset: 0.8 },
+      { opacity: 0, transform: "translateX(-50%) translateY(-4px)" },
+    ], { duration: 2400, easing: "linear", fill: "forwards" });
+    anim.onfinish = () => note.remove();
+    setTimeout(() => { if (note.isConnected) note.remove(); }, 3000); // onfinish不発時の保険
+  } else {
+    setTimeout(() => note.remove(), 2400);
+  }
+}
+
 // DOT VFXのフレーム画像も起動後に事前ロードしておく(初回再生のコマ落ち防止。攻撃VFXの
 // ウォームアップと同じ趣旨だが、こちらは頻度が低いためプール常駐まではしない)
 function preloadAilmentVfxFrames() {
