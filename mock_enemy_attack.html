@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>敵攻撃アニメ改善モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #stage { position: fixed; inset: 0; }
+  #bg { position: absolute; inset: 0; background: url('assets/bg/forest_day.jpg') center 32% / cover; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.12); }
+  /* 大技用の暗転/白フラッシュ/赤ビネット */
+  #dim { position: absolute; inset: 0; z-index: 3; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.3s; }
+  #flash { position: absolute; inset: 0; z-index: 9; background: #fff; opacity: 0; pointer-events: none; }
+  #vign { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(120,10,10,0) 55%, rgba(120,10,10,0.5) 100%); }
+
+  .enemy-field { position: absolute; top: 128px; left: 0; right: 0; z-index: 4; display: flex; justify-content: center; }
+  .ecard { text-align: center; position: relative; }
+  .ename { font-size: 0.8rem; font-weight: 700; text-shadow: 0 0 6px rgba(0,0,0,0.9); position: relative; z-index: 2; }
+  .ebox { position: relative; width: 118px; height: 118px; margin: 0 auto; }
+  .ebox img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; position: relative; z-index: 1; }
+  /* 接地影(本実装の共通CSS影と同等)。ジャンプ系で本体と分離して動かす */
+  .eshadow { position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); width: 66%; height: 12px; z-index: 0;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(8,6,4,0.42), rgba(8,6,4,0.22) 55%, transparent 72%); }
+  /* 溜めオーラ(案C): 立ち絵の背後で赤くパルスする */
+  .aura { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 120%; height: 108%; z-index: 0; opacity: 0;
+    background: radial-gradient(ellipse 50% 62% at 50% 78%, rgba(200,30,20,0.5), rgba(200,30,20,0.18) 55%, transparent 75%); }
+  .ehp { height: 9px; width: 92px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; border: 1px solid rgba(255,255,255,0.25); overflow: hidden; }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  /* 土埃(案Dの着地) */
+  .dust { position: absolute; bottom: 2px; left: 50%; width: 10px; height: 10px; border-radius: 50%; z-index: 2; opacity: 0;
+    background: radial-gradient(circle, rgba(180,160,130,0.85), rgba(150,130,100,0.4) 60%, transparent 75%); pointer-events: none; }
+
+  #partyBar { position: absolute; left: 50%; transform: translateX(-50%); top: 297px; z-index: 4;
+    width: 100%; max-width: 480px; display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); justify-content: center; }
+  .pm { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 10px; padding: 0.25rem; border: 2px solid transparent; }
+  .pm img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; background: #353a44; }
+  .pm .hb { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pm .hb > div { height: 100%; width: 60%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pm .nm { font-size: 0.72rem; margin-top: 3px; }
+  .dmgpop { position: absolute; left: 50%; top: 8%; transform: translateX(-50%); z-index: 7; font-weight: 900; font-size: 1.25rem;
+    color: #ffdf6b; text-shadow: 0 2px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8); opacity: 0; pointer-events: none; }
+  .dmgpop.big { font-size: 1.7rem; color: #ff8a5c; }
+  @keyframes dmgPop { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7); } 18% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); }
+    36% { transform: translate(-50%, -2px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+
+  #actions { position: absolute; left: 10px; right: 10px; top: 470px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648;
+    background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; pointer-events: none; }
+
+  /* ===== 通常攻撃 ===== */
+  /* 現行: 0.3秒の小さな踏み込み(本実装のattackLungeそのまま=味方と共用のため
+     敵も「上へ」動く。敵は本来プレイヤー側=下へ向かうべきで、これも安っぽさの一因) */
+  @keyframes curLunge { 0% { transform: translateY(0); } 25% { transform: translateY(-13px) scale(1.03); } 100% { transform: translateY(0); } }
+  /* 案A: 予備動作つき踏み込み(引いて→鋭く踏み込む→戻る) */
+  @keyframes antLunge {
+    0% { transform: translateY(0) scale(1); }
+    28% { transform: translateY(-9px) scale(0.97); }           /* 予備動作: 身を引く */
+    38% { transform: translateY(-9px) scale(0.97); }           /* 一拍ためる */
+    50% { transform: translateY(22px) scale(1.07); }           /* 鋭く踏み込む */
+    62% { transform: translateY(20px) scale(1.06); }           /* 当たった瞬間を見せる */
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 案B: 突進ヒットストップ(深く踏み込んで一瞬止まる) */
+  @keyframes dashHold {
+    0% { transform: translateY(0) scale(1); }
+    18% { transform: translateY(26px) scale(1.09); }
+    19% { transform: translateY(25px) scale(1.09); }
+    46% { transform: translateY(26px) scale(1.09); }           /* ヒットストップ(約0.15秒静止) */
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* ===== 大技 ===== */
+  /* 案C: 溜め→解放(しゃがみ込み+赤オーラ→爆発的踏み込み) */
+  @keyframes chargeCrouch {
+    0% { transform: translateY(0) scale(1); filter: brightness(1); }
+    35% { transform: translateY(-6px) scale(1.02, 0.94); filter: brightness(0.92); }
+    100% { transform: translateY(-8px) scale(1.04, 0.92); filter: brightness(0.88) drop-shadow(0 0 10px rgba(200,30,20,0.6)); }
+  }
+  @keyframes chargeBurst {
+    0% { transform: translateY(-8px) scale(1.04, 0.92); }
+    30% { transform: translateY(30px) scale(1.16); }
+    48% { transform: translateY(28px) scale(1.15); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes auraPulse { 0% { opacity: 0; transform: translateX(-50%) scale(0.85); } 55% { opacity: 1; } 100% { opacity: 0.85; transform: translateX(-50%) scale(1.08); } }
+  /* 案D: 飛びかかり(跳び上がって影が縮む→急降下して着地) */
+  @keyframes leapUp {
+    0% { transform: translateY(0) scale(1); }
+    22% { transform: translateY(6px) scale(1.03, 0.9); }       /* しゃがみ */
+    55% { transform: translateY(-64px) scale(0.96); }          /* 跳び上がる */
+    68% { transform: translateY(-60px) scale(0.96); }          /* 滞空 */
+    88% { transform: translateY(34px) scale(1.12); }           /* 急降下(通り過ぎ気味に) */
+    100% { transform: translateY(28px) scale(1.1); }
+  }
+  @keyframes leapLand { 0% { transform: translateY(28px) scale(1.1); } 100% { transform: translateY(0) scale(1); } }
+  @keyframes shadowShrink {
+    0% { transform: translateX(-50%) scale(1); opacity: 1; }
+    55% { transform: translateX(-50%) scale(0.45); opacity: 0.5; }
+    68% { transform: translateX(-50%) scale(0.45); opacity: 0.5; }
+    88% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1); }
+  }
+  /* 案E: カットイン(暗転して敵がぐっと迫る→戻って踏み込み) */
+  @keyframes cutinZoom {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(24px) scale(1.55); }
+    75% { transform: translateY(24px) scale(1.55); }           /* 迫った状態で睨む */
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 被弾側: 揺れ+赤フラッシュ */
+  @keyframes pmHit { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+  @keyframes pmHitBig { 0%, 100% { transform: translate(0,0); } 15% { transform: translate(-7px, 2px); } 30% { transform: translate(6px, -2px); } 45% { transform: translate(-5px, 1px); } 60% { transform: translate(4px, -1px); } 80% { transform: translate(-2px, 0); } }
+  @keyframes pmFlash { 0%, 100% { background: transparent; } 25% { background: rgba(209,60,45,0.4); } }
+  /* 画面揺れ(ステージごと) */
+  @keyframes stageShake { 0%, 100% { transform: translate(0,0); } 20% { transform: translate(-4px, 3px); } 40% { transform: translate(4px, -3px); } 60% { transform: translate(-3px, 2px); } 80% { transform: translate(2px, -1px); } }
+  @keyframes stageShakeBig { 0%, 100% { transform: translate(0,0); } 15% { transform: translate(-7px, 5px); } 30% { transform: translate(7px, -5px); } 45% { transform: translate(-5px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
+  @keyframes flashPop { 0% { opacity: 0; } 15% { opacity: 0.85; } 100% { opacity: 0; } }
+  @keyframes vignPop { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+  /* 大技予告の💢(現行と同じ位置イメージ) */
+  .telegraph { position: absolute; top: -6px; right: -4px; z-index: 3; font-size: 22px; opacity: 0; }
+  @keyframes telegraphPulse { 0% { opacity: 0; transform: scale(0.6); } 25% { opacity: 1; transform: scale(1.2); } 50% { transform: scale(1); } 100% { opacity: 1; } }
+
+  #ctrl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(14,12,10,0.94);
+    border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #ctrl .r { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
+  #ctrl .lbl { font-size: 11px; color: rgba(232,223,204,0.8); width: 100%; }
+  #ctrl button { font-size: 12px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #ctrl button:active { transform: scale(0.96); }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.65); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="dim"></div>
+  <div class="enemy-field">
+    <div class="ecard">
+      <div class="ename">野犬</div>
+      <div class="ebox">
+        <div class="aura" id="aura"></div>
+        <div class="eshadow" id="eshadow"></div>
+        <img id="eimg" src="assets/enemies/clear/yaken.png">
+        <div class="telegraph" id="telegraph">💢</div>
+      </div>
+      <div class="ehp"><div></div></div>
+    </div>
+  </div>
+  <div id="partyBar"></div>
+  <div id="actions"><button>攻撃</button><button>会心の一撃(MP2)</button><button>道具</button><button>交代</button></div>
+  <div id="vign"></div>
+  <div id="flash"></div>
+</div>
+<div id="ctrl">
+  <div class="lbl">通常攻撃(タップで再生):</div>
+  <div class="r">
+    <button data-n="cur">現行(踏み込みのみ)</button>
+    <button data-n="A">案A: 予備動作つき</button>
+    <button data-n="B">案B: ヒットストップ</button>
+  </div>
+  <div class="lbl">大技(💢予告つき、タップで再生):</div>
+  <div class="r">
+    <button data-n="C">案C: 溜め→解放</button>
+    <button data-n="D">案D: 飛びかかり</button>
+    <button data-n="E">案E: カットイン</button>
+  </div>
+  <div id="note">通常はA/Bどちらか+大技はC/D/Eから、が提案。組み合わせ自由(例:「通常A・大技C」)。動きだけのモックで、SE/ダメージ数値の演出は本実装で音と同期させます。</div>
+</div>
+<script>
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+const $ = (id) => document.getElementById(id);
+let playing = false;
+
+$("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+  `<div class="pm" data-i="${i}"><img src="${img}"><div class="hb"><div></div></div><div class="nm">${name}</div></div>`).join("");
+
+function animOnce(el, name, dur, ease, fill) {
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = `${name} ${dur}ms ${ease || "ease"} ${fill || ""}`;
+}
+function hitAlly(big, delay) {
+  setTimeout(() => {
+    const pm = document.querySelectorAll(".pm")[1];
+    animOnce(pm, big ? "pmHitBig" : "pmHit", big ? 500 : 350);
+    const f = document.createElement("div");
+    f.style.cssText = "position:absolute;inset:0;border-radius:10px;pointer-events:none;";
+    f.style.animation = `pmFlash ${big ? 500 : 350}ms ease`;
+    pm.appendChild(f);
+    setTimeout(() => f.remove(), big ? 520 : 370);
+    const pop = document.createElement("div");
+    pop.className = "dmgpop" + (big ? " big" : "");
+    pop.textContent = big ? "38" : "12";
+    pop.style.animation = "dmgPop 0.9s ease forwards";
+    pm.appendChild(pop);
+    setTimeout(() => pop.remove(), 950);
+    animOnce($("stage"), big ? "stageShakeBig" : "stageShake", big ? 420 : 280);
+    if (big) animOnce($("vign"), "vignPop", 700);
+  }, delay);
+}
+function whiteFlash(delay) {
+  setTimeout(() => animOnce($("flash"), "flashPop", 360), delay);
+}
+function showTelegraph(then) {
+  const t = $("telegraph");
+  animOnce(t, "telegraphPulse", 700, "ease", "forwards");
+  setTimeout(() => { t.style.animation = "none"; t.style.opacity = 0; then(); }, 900);
+}
+const img = () => $("eimg");
+const PATTERNS = {
+  cur() { animOnce(img(), "curLunge", 300, "cubic-bezier(0.25,1,0.4,1)"); hitAlly(false, 90); end(400); },
+  A() { animOnce(img(), "antLunge", 620, "cubic-bezier(0.3,0.9,0.4,1)"); hitAlly(false, 310); end(700); },
+  B() { animOnce(img(), "dashHold", 560, "cubic-bezier(0.2,0.9,0.3,1)"); hitAlly(false, 120); end(650); },
+  C() {
+    showTelegraph(() => {
+      $("dim").style.background = "rgba(0,0,0,0.28)";
+      animOnce(img(), "chargeCrouch", 620, "ease-out", "forwards");
+      animOnce($("aura"), "auraPulse", 620, "ease-out", "forwards");
+      setTimeout(() => {
+        $("aura").style.animation = "none"; $("aura").style.opacity = 0;
+        animOnce(img(), "chargeBurst", 520, "cubic-bezier(0.2,0.95,0.3,1)");
+        whiteFlash(120); hitAlly(true, 170);
+        setTimeout(() => { $("dim").style.background = "rgba(0,0,0,0)"; }, 400);
+        end(700);
+      }, 680);
+    });
+  },
+  D() {
+    showTelegraph(() => {
+      animOnce(img(), "leapUp", 900, "cubic-bezier(0.3,0.6,0.4,1)", "forwards");
+      animOnce($("eshadow"), "shadowShrink", 900, "cubic-bezier(0.3,0.6,0.4,1)", "forwards");
+      hitAlly(true, 800);
+      setTimeout(() => {
+        // 着地の土埃
+        for (let i = 0; i < 6; i++) {
+          const d = document.createElement("div");
+          d.className = "dust";
+          $("eimg").parentElement.appendChild(d);
+          const dx = (Math.random() - 0.5) * 70, dy = -(6 + Math.random() * 16), s = 1 + Math.random() * 1.6;
+          d.animate([
+            { opacity: 0.9, transform: `translate(-50%, 0) scale(${s * 0.5})` },
+            { opacity: 0, transform: `translate(calc(-50% + ${dx}px), ${dy}px) scale(${s})` },
+          ], { duration: 450 + Math.random() * 200, easing: "ease-out" });
+          setTimeout(() => d.remove(), 700);
+        }
+        animOnce(img(), "leapLand", 240, "ease-out");
+        animOnce($("eshadow"), "shadowShrink", 1, "linear"); // 影リセット
+        $("eshadow").style.animation = "none";
+      }, 900);
+      end(1300);
+    });
+  },
+  E() {
+    showTelegraph(() => {
+      $("dim").style.background = "rgba(0,0,0,0.45)";
+      animOnce(img(), "cutinZoom", 950, "cubic-bezier(0.25,0.9,0.3,1)");
+      setTimeout(() => { $("dim").style.background = "rgba(0,0,0,0)"; }, 750);
+      whiteFlash(700); hitAlly(true, 760);
+      end(1100);
+    });
+  },
+};
+function end(ms) { setTimeout(() => { playing = false; }, ms); }
+document.querySelectorAll("#ctrl button[data-n]").forEach((b) => {
+  b.onclick = () => {
+    if (playing) return;
+    playing = true;
+    PATTERNS[b.dataset.n]();
+  };
+});
+</script>
+</body>
+</html>
