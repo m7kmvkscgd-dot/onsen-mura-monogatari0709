@@ -4,8 +4,10 @@
     /* 会心の画面揺れ用に--crit-shake-x/yを追加(JSがrequestAnimationFrameで直接更新する)。
        bodyにtransformを掛ける方式だと、position:fixed要素の基準(containing block)が
        viewportからbodyに変わってしまい、実機で画面が一瞬ジャンプする不具合があったため、
-       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した */
-    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
+       揺らしたい要素自体のtransformにオフセットを足し込む方式に変更した。
+       --battle-zoom(末尾のscale)はシームレス戦闘遷移(テストモード試行2026-08-01)の背景カメラ寄り。
+       未設定時は従来と完全に同じ */
+    transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px)) scale(var(--battle-zoom, 1));
     width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
     background-size: cover; background-position: center; background-color: #1a1410; z-index: 0;
   }
@@ -390,6 +392,10 @@
   /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
   .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
   @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  /* シームレス戦闘遷移(テストモード試行2026-08-01): 敵は0.8倍からフェードしながら1.0倍へ(ユーザー指定)。
+     .battle-top.seamless-entryはstartBattleがテストモード時だけ付ける */
+  .battle-top.seamless-entry .enemy-card.entering { animation: enemyAppearSeamless 0.7s ease-out; }
+  @keyframes enemyAppearSeamless { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
   @keyframes enemyLunge {
     0% { transform: translateY(0); }
     35% { transform: translateY(14px); }

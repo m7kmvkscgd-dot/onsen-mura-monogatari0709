@@ -1713,6 +1713,71 @@ function openSoulStoryViewer(enemy) {
   showScene();
 }
 
+// ============ シームレス戦闘遷移(テストモード試行、2026-08-01ユーザー設計) ============
+// 暗転を使わず、探索画面と同じ構図のまま「カメラが一歩寄る」ことで戦闘へ入る。
+// 入り: 背景1→1.05倍ズーム+味方バーを8px下げつつ1→1.05倍(旧・暗転時間ぶんの650ms)。
+//       敵は0.8→1.0倍のフェード出現(battle.cssのenemyAppearSeamless)。‼️の合図は従来どおり残す
+// 出: 戦闘終了後、探索画面側で逆再生(1.05→1.0、8px→0)して元の探索の構図へ戻す。
+// 実装はカード個々ではなく「バー/背景要素のCSS変数」をrAFで直接更新する方式
+// (会心シェイクと同じ。カード個々への常時transformはiOS描画崩れの前科があるため使わない)
+const SEAMLESS_CAM_MS = 650;
+let seamlessBattleUsed = false; // この戦闘がシームレス入りだったか(終了時に逆再生するかの判定)
+function seamlessBattleCameraIn() {
+  seamlessBattleUsed = true;
+  const bg = document.getElementById("battleBg");
+  const bar = document.getElementById("battlePartyBar");
+  const t0 = performance.now();
+  const tick = (now) => {
+    if (!battle) return; // 演出中に戦闘が終わっていたら中断(後始末はteardown側)
+    const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
+    const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    if (bg) bg.style.setProperty("--battle-zoom", String(1 + 0.05 * e));
+    if (bar) {
+      bar.style.setProperty("--party-cam-y", `${Math.round(8 * e * 10) / 10}px`);
+      bar.style.setProperty("--party-cam-s", String(1 + 0.05 * e));
+    }
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+// 戦闘終了後の逆再生。探索画面へ切り替わった直後に呼ぶ(シームレス入りの戦闘だった時だけ動く)。
+// まず探索側の背景/味方バーを「寄った状態」に同期的にセットしてから、650msで元へ戻す
+function seamlessDungeonCameraOut() {
+  if (!seamlessBattleUsed) return;
+  seamlessBattleUsed = false;
+  const inner = document.getElementById("dungeonBgInner");
+  const bar = document.getElementById("dungeonPartyBar");
+  if (bar) { bar.style.setProperty("--party-cam-y", "8px"); bar.style.setProperty("--party-cam-s", "1.05"); }
+  if (inner) inner.style.transform = "scale(1.05)";
+  const t0 = performance.now();
+  const tick = (now) => {
+    const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
+    const e = 1 - Math.pow(1 - t, 3);
+    const s = 1.05 - 0.05 * e;
+    if (inner) inner.style.transform = t < 1 ? `scale(${s})` : "";
+    if (bar) {
+      if (t < 1) {
+        bar.style.setProperty("--party-cam-y", `${Math.round(8 * (1 - e) * 10) / 10}px`);
+        bar.style.setProperty("--party-cam-s", String(1 + 0.05 * (1 - e)));
+      } else {
+        bar.style.removeProperty("--party-cam-y");
+        bar.style.removeProperty("--party-cam-s");
+      }
+    }
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+// 戦闘側のカメラ変数の後始末(次の戦闘の開始時に必ず呼ぶ。teardown中に消すと
+// 勝利画面の表示中にズームが急に戻って見えるため、消すのは次の戦闘の直前)
+function resetSeamlessBattleCamera() {
+  seamlessBattleUsed = false; // 前の戦闘の使用フラグも掃除(全滅→町経由などで逆再生されずに残ったケースの保険)
+  const bg = document.getElementById("battleBg");
+  const bar = document.getElementById("battlePartyBar");
+  if (bg) bg.style.removeProperty("--battle-zoom");
+  if (bar) { bar.style.removeProperty("--party-cam-y"); bar.style.removeProperty("--party-cam-s"); }
+}
+
 // DOT VFXのフレーム画像も起動後に事前ロードしておく(初回再生のコマ落ち防止。攻撃VFXの
 // ウォームアップと同じ趣旨だが、こちらは頻度が低いためプール常駐まではしない)
 function preloadAilmentVfxFrames() {

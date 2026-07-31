@@ -172,6 +172,7 @@ function useSmokeBomb(actor) {
     pendingAllyPick = null;
     showScreen("screen-dungeon");
     renderDungeon();
+    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
   });
 }
 

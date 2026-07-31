@@ -203,6 +203,14 @@ function startBattle(enemies, pathDef, encounterText) {
     });
   }
   showScreen("screen-battle");
+  // シームレス戦闘遷移(テストモード試行、effects.js参照): 暗転なしで背景1.05倍ズーム+味方バーが
+  // 8px沈みつつ1.05倍(カメラが一歩寄る)。敵の出現もフェード0.8→1.0倍に切り替わる(seamless-entry)。
+  // 本番プレイと襲撃戦は従来どおり(クラスも付かない)
+  const seamlessEntry = typeof testModeActive !== "undefined" && testModeActive && !raidBattleActive;
+  if (typeof resetSeamlessBattleCamera === "function") resetSeamlessBattleCamera(); // 前の戦闘のズーム残りを掃除
+  const battleTopForSeamless = document.querySelector(".battle-top");
+  if (battleTopForSeamless) battleTopForSeamless.classList.toggle("seamless-entry", seamlessEntry);
+  if (seamlessEntry && typeof seamlessBattleCameraIn === "function") seamlessBattleCameraIn();
   playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。森は夜だけ専用曲、海岸はcoast_battle)
   blog(encounterText || (enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`));
   // おみくじ「吉」: 次の遠征の最初の戦闘だけ、味方の攻撃が最初の3回連続で確定会心になる
@@ -2562,6 +2570,7 @@ function victory() {
     }
     showScreen("screen-dungeon");
     renderDungeon();
+    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
   };
 }
 
@@ -2608,6 +2617,7 @@ function escapeBattle() {
   advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
   showScreen("screen-dungeon");
   renderDungeon();
+  if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
 }
 
 function defeat() {
