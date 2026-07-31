@@ -400,8 +400,8 @@ function playSkillCastFx(actor, skillName, onRelease) {
     const band = banner.querySelector(".band");
     band.textContent = skillName;
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
-    // 狩人/侍/薙刀士(侍と共通)/砲術師/忍者は専用音、その他の職業は汎用skill_cast
-    const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_samurai", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji" };
+    // 全8職業に専用音あり(薙刀士は侍と共通)。汎用skill_castは未知の職業/式神系のフォールバック
+    const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_samurai", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
     const castSfx = castSfxByClass[actor.classId] || "skill_cast";
     setTimeout(() => {
       playSfx(castSfx); // 技名が出る瞬間に再生
