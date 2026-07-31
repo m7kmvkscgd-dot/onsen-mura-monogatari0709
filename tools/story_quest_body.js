@@ -145,6 +145,48 @@
     check("3人+控え1で出発する", fieldParty.length === 3 && !!reserveFieldMember);
     check("1層目のフレーバーが流れる", dungeonLogLines.some((l) => l.includes("峠の奥から始まっていた")));
     check("テストモードでセーブ保護される", testModeActive === true);
+    runKagegiCase();
+  }
+
+  // G: 影盗り宿の十三号室(第2号)のデータ整合+十三枚目の席ギミック(round3毎に影法師召喚+拘束)
+  function runKagegiCase() {
+    console.log("--- G: 影盗り宿の十三号室のデータ整合とギミック ---");
+    const qDef2 = QUEST_DEFS.kagegui_sakazuki;
+    const route2 = QUEST_ROUTE_DEFS.tsukikage_yado;
+    check("依頼がルートに紐付く", !!qDef2 && qDef2.route === "tsukikage_yado" && !!route2);
+    check("ボスは最終層に配置", qDef2.targetFloor === route2.totalFloors);
+    check("区間4つ・fromFloor昇順", route2.segments.length === 4 && route2.segments.every((s, i) => i === 0 || s.fromFloor > route2.segments[i - 1].fromFloor));
+    check("区間の敵IDが実在する", route2.segments.every((s) => (s.enemies || []).every((id) => !!ENEMIES[id])));
+    const boss2 = ENEMIES.kagegui_sakazuki;
+    check("ボスの口上4行", Array.isArray(boss2.preBattleLines) && boss2.preBattleLines.length === 4);
+    check("魂の回想: 一言+4場面", !!boss2.soulStory && boss2.soulStory.soulLine.length > 0 && boss2.soulStory.scenes.length === 4);
+    check("ギミックメモは2件、構造化ギミックは1件(影写しは既存トリガーで表現不可のため未実装)", boss2.gimmickNotes.length === 2 && boss2.gimmicks.length === 1);
+    check("影法師/逆月は通常抽選に出ない", ENEMIES.kageboshi.questOnly && ENEMIES.kageboshi.maxFloor === 0 && boss2.questOnly && boss2.maxFloor === 0);
+
+    makeParty();
+    const b2 = instantiateEnemyById("kagegui_sakazuki");
+    battle = { enemies: [b2], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
+    b2.__enemyAllies = [b2];
+    initBattleGimmicks();
+    renderBattleScreen();
+    processGimmickTriggers();
+    check("ラウンド1では未発動", !battle.gimmicks.find((g) => g.def.id === "juusan").active);
+    battle.roundsTotal = 3;
+    processGimmickTriggers();
+    check("3ラウンド目の発動と同時に影法師が1体出現(immediate)", battle.gimmicks.find((g) => g.def.id === "juusan").active && battle.enemies.filter((e) => e.id === "kageboshi" && e.hp > 0).length === 1);
+    check("発動直後はまだ誰も拘束されない", fieldParty.every((c) => !(c.stunTurns > 0)));
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    check("周期前(2ラウンド)はそのまま", battle.enemies.filter((e) => e.id === "kageboshi" && e.hp > 0).length === 1 && fieldParty.every((c) => !(c.stunTurns > 0)));
+    processGimmickRoundEffects(() => {});
+    check("3ラウンド周期でmaxAlive(2)まで影法師が増える", battle.enemies.filter((e) => e.id === "kageboshi" && e.hp > 0).length === 2);
+    check("同じ周期で味方1人が拘束される", fieldParty.filter((c) => c.stunTurns > 0).length === 1);
+    fieldParty.forEach((c) => { c.stunTurns = 0; });
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    check("maxAlive2を超えて増えない(次周期は拘束のみ)", battle.enemies.filter((e) => e.id === "kageboshi" && e.hp > 0).length === 2);
+
     console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
     window.__failed = failed;
   }

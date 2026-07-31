@@ -32,6 +32,12 @@ const BG_SETS = {
   yamabushi: { dawn: "assets/bg/yamabushi_dawn.jpg", asa: "assets/bg/yamabushi_asa.jpg", day: "assets/bg/yamabushi_day.jpg", dusk: "assets/bg/yamabushi_dusk.jpg", night: "assets/bg/yamabushi_night.jpg" },
   yamabushiyado: { dawn: "assets/bg/yamabushiyado_dawn.jpg", asa: "assets/bg/yamabushiyado_asa.jpg", day: "assets/bg/yamabushiyado_day.jpg", dusk: "assets/bg/yamabushiyado_dusk.jpg", night: "assets/bg/yamabushiyado_night.jpg" },
   yamabushionsen: { dawn: "assets/bg/yamabushionsen_dawn.jpg", asa: "assets/bg/yamabushionsen_asa.jpg", day: "assets/bg/yamabushionsen_day.jpg", dusk: "assets/bg/yamabushionsen_dusk.jpg", night: "assets/bg/yamabushionsen_night.jpg" },
+  // 物語クエスト「影盗り宿の十三号室」(2026-07-31、専用ルートtsukikage_yado)。背景セットは各区間1枚絵(昼)のみ
+  // 納品されたため、洞窟(caveBgSetForCurrentState)と同じく5つの時間帯キー全てに同一画像を割り当てる
+  tsukikage_shukuba: { dawn: "assets/bg/tsukikage_shukuba.jpg", asa: "assets/bg/tsukikage_shukuba.jpg", day: "assets/bg/tsukikage_shukuba.jpg", dusk: "assets/bg/tsukikage_shukuba.jpg", night: "assets/bg/tsukikage_shukuba.jpg" },
+  tsukikage_ooma: { dawn: "assets/bg/tsukikage_ooma.jpg", asa: "assets/bg/tsukikage_ooma.jpg", day: "assets/bg/tsukikage_ooma.jpg", dusk: "assets/bg/tsukikage_ooma.jpg", night: "assets/bg/tsukikage_ooma.jpg" },
+  tsukikage_rouka: { dawn: "assets/bg/tsukikage_rouka.jpg", asa: "assets/bg/tsukikage_rouka.jpg", day: "assets/bg/tsukikage_rouka.jpg", dusk: "assets/bg/tsukikage_rouka.jpg", night: "assets/bg/tsukikage_rouka.jpg" },
+  tsukikage_kagami: { dawn: "assets/bg/tsukikage_kagami.jpg", asa: "assets/bg/tsukikage_kagami.jpg", day: "assets/bg/tsukikage_kagami.jpg", dusk: "assets/bg/tsukikage_kagami.jpg", night: "assets/bg/tsukikage_kagami.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";

@@ -588,6 +588,49 @@ const ENEMIES = {
           text: "違った。あの人は来なかったのではない。閉じ込められた戸を壊し、血を流しながら、私を追ってくれていた。ずっと聞こえなかった声が、今になってようやく届く――迎えに来たよ、白縫、と。" },
       ],
     } },
+  // 物語クエスト第2号「影盗り宿の十三号室」(2026-07-31、テキストはCodex産)。専用ルートtsukikage_yado行き、
+  // ステータスは鈴鳴峠(amayome_shiranui)と同格のtier1向け初期値、ボステストでの調整前提
+  kageboshi: { id: "kageboshi", ja: "影法師", image: "assets/enemies/kageboshi.png", hp: 45, atk: 15, def: 13, spd: 9, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
+    bigAttack: { name: "影の逆撫で", mult: 1.15, debuff: { type: "atkDown", chance: 0.4, value: 0.2, turns: 2 } },
+    bigAttackCycle: { min: 3, max: 5 } },
+  kagegui_sakazuki: { id: "kagegui_sakazuki", ja: "鏡喰い・逆月", image: "assets/enemies/kagegui_sakazuki.png", hp: 400, atk: 22, def: 24, spd: 10, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+    bigAttack: { name: "四腕の影薙ぎ", mult: 1.35, debuff: { type: "spdDown", chance: 0.5, value: 0.3, turns: 2 } },
+    bigAttackCycle: { min: 3, max: 4 },
+    statusImmune: ["bleed"],
+    preBattleLines: [
+      "宿帳には、もう名がある。",
+      "十二の影は満ちた。",
+      "十三人目は、お前たちだ。",
+      "女将は、そう数えた。",
+    ],
+    // 影写し(味方の技使用に反応して模倣する)はトリガーが既存機構(hpBelow/battleStart/round)に無いため
+    // 未実装。十三枚目の席のみroundトリガー+summon(影法師分離)+bindOne(動きが鈍る)で翻訳実装した
+    gimmicks: [
+      { id: "juusan", name: "十三枚目の席",
+        trigger: { type: "round", round: 3 },
+        announce: "鏡の客席に、影法師たちが並び始めた……！",
+        effects: [
+          { type: "summon", every: 3, enemyId: "kageboshi", count: 1, maxAlive: 2, immediate: true, text: "鏡の中から影法師が一体、客席を立った。" },
+          { type: "bindOne", every: 3, turns: 1, name: "十三枚目の席", text: "{target}の影が鏡へ引き込まれ、動きが鈍った！" },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "影写し", trigger: "味方が強い技を使った直後、鏡面へその姿が映った時に発動する。", effect: "直前に使われた技の性質を影として写し取り、逆月または影法師が歪んだ形で模倣する。" },
+      { name: "十三枚目の席", trigger: "戦いが進み、鏡の客席に影が揃い始めた時に発動する。", effect: "味方一人の影を一時的に身体から切り離して影法師として出現させる。切り離された本人は、影が戻るまで動きが鈍くなる。" },
+    ],
+    soulStory: {
+      soulLine: "私は、ただ数えただけだ。十三人目まで。",
+      scenes: [
+        { image: "assets/story/kagegui_sakazuki_1.jpg",
+          text: "私は長く、誰にも覗かれぬまま眠っていた。あの女は私を帳場へ置き、空の客間を映してみせた。そして言った――この宿を、誰もが振り返る宿にしてほしい、と。" },
+        { image: "assets/story/kagegui_sakazuki_2.jpg",
+          text: "私は代価を告げた。満月ごとに一人、その影をもらう。それだけだ。あの女は迷わず指を押し、客ならいくらでも来る、と笑った。" },
+        { image: "assets/story/kagegui_sakazuki_3.jpg",
+          text: "客は増え、銭は積まれ、あの女の顔から年月が消えた。私は約束どおり、差し出された影だけを食べた。一人目も、五人目も、十二人目も――名を書いたのは、すべてあの女だ。" },
+        { image: "assets/story/kagegui_sakazuki_4.jpg",
+          text: "噂が広がると、あの女は私を呪いと呼び、奉行所へ助けを求めた。討伐者を最後の供物にしてから私を砕き、銭を持って消えるつもりだった。私は誰も欺いていない。十三人目として数えられていたのは、お前たちだ。" },
+      ],
+    } },
 };
 
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
@@ -1814,6 +1857,13 @@ const QUEST_DEFS = {
     completionText: "雨の止んだ峠で、お春を含む行方不明者たちが眠るように倒れているのが見つかった。玄庵は拾われた銀の鈴を、崖際に残る名もない墓へ供えたという。翌朝、その鈴には新しい赤い組紐が結ばれていた。それから鈴鳴峠で、嫁入りの列を見た者はいない。",
     targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
     chaseText: "雨嫁・白縫が追いかけてきた！" },
+  // 物語クエスト第2号「影盗り宿の十三号室」(2026-07-31、テキストはCodex産)。専用ルートtsukikage_yado行き、
+  // ボスは最終層(targetFloor=8)に確定出現
+  kagegui_sakazuki: { emoji: "🪞", requester: "月影宿の女将・お咲", title: "影盗り宿の十三号室",
+    text: "雨夜の宿場にある月影宿で、泊まり客が影を失う怪異が続いております。影を失った者は日ごとに記憶が薄れ、やがて鏡の中へ消えるとの噂まで立ちました。すべては使われていない十三号室へ古鏡を運び込んでから始まったこと。どうか鏡に棲む妖を討ち、宿と客たちをお救いください。",
+    completionText: "月影宿の客たちには影が戻り、失われていた名前も少しずつ思い出された。宿は奉行所によって封鎖されたが、女将のお咲は取り調べの前に姿を消している。帳場からは売上金と宿帳の最後の一枚だけが持ち去られていた。割れた鏡の破片には今も、見る者より一拍遅れて動く影が映るという。",
+    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
+    chaseText: "鏡喰い・逆月が追いかけてきた！" },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
 // 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある
@@ -1886,6 +1936,24 @@ const QUEST_ROUTE_DEFS = {
         enemies: ["chochin_warabe"] },
       { fromFloor: 8, bg: "suzunari_gake", bgTitle: "月下の嫁入り崖",
         flavor: "崖の前には、花嫁を迎えるための席がひとつだけ空けられている。雨音の中で、女の声が「遅かったですね」と笑った。",
+        enemies: [] },
+    ],
+  },
+  // 物語クエスト第2号「影盗り宿の十三号室」(テキストはCodex産)
+  tsukikage_yado: {
+    ja: "月影宿", emoji: "🏮", totalFloors: 8,
+    segments: [
+      { fromFloor: 1, bg: "tsukikage_shukuba", bgTitle: "雨夜の宿場町",
+        flavor: "月影宿の行灯は雨の中でも明るい。だが濡れた石畳には、宿へ入る足跡だけがあり、出てきた跡はひとつもない。",
+        enemies: [] },
+      { fromFloor: 3, bg: "tsukikage_ooma", bgTitle: "影のない大広間",
+        flavor: "宴の膳には、まだ温かな料理が残っている。行灯はすべての物を照らしているのに、座布団の主だけは影すら残していなかった。",
+        enemies: ["kageboshi"] },
+      { fromFloor: 5, bg: "tsukikage_rouka", bgTitle: "十三号室へ続く廊下",
+        flavor: "十二枚の鏡は、こちらが通り過ぎてから遅れて曇る。廊下の奥で宿帳をめくる音がしたが、帳場はとうに空だった。",
+        enemies: ["kageboshi"] },
+      { fromFloor: 8, bg: "tsukikage_kagami", bgTitle: "逆さ月の鏡座敷",
+        flavor: "鏡の中では、十二人の影が客席に座っている。空いている最後の席だけが、こちらを向いていた。",
         enemies: [] },
     ],
   },
