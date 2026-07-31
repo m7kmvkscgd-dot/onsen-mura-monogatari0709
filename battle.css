@@ -158,6 +158,14 @@
     width: 100%; max-width: 480px; z-index: 4;
   }
   .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
+  /* ============ 戦闘レイアウトプリセット「center_v1」(2026-07-31、mock_battle_layout_editorのユーザー確定値) ============
+     従来レイアウト(classic)のルールは一切変更・削除していない。data.jsのBATTLE_LAYOUTを"classic"へ
+     変えるだけでこのセクションは丸ごと不使用になり完全に元へ戻る。適用はrenderBattleScreen(battle.js)。
+     狙い: 透過立ち絵化で敵が画面上端の「空中」に見えていたのを、ログを上へ・敵列を画面中央帯へ下ろして
+     背景の地面と足元を合わせる。襲撃戦はこのクラスが付かない(常に従来配置) */
+  .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; z-index: 2; }
+  .battle-top.layout-center .enemy-row { margin-top: calc(26vh - 38px); height: 200px; }
+  #battlePartyBar.layout-center { top: 49.2vh; }
   .enemy-row.crowded { gap: 0.25rem; }
   .enemy-card {
     position: relative; text-align: center; cursor: default; border-radius: var(--radius-md); padding: 0.4rem;

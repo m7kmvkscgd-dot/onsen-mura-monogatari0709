@@ -413,6 +413,11 @@ function renderBattleScreen() {
   // 大規模戦はテキストボックスと一緒に味方バーも下げる(結び目を見せるレイアウト。ボタン列は実測追従)
   const bpb = document.getElementById("battlePartyBar");
   if (bpb) bpb.classList.toggle("raid-battle-bar", massBattleSizingForced);
+  // 戦闘レイアウトプリセット(data.jsのBATTLE_LAYOUT参照): center_v1はログ上部・敵中央帯・味方バー49.2vhの
+  // 新配置(2026-07-31ユーザー調整)。襲撃戦(massBattleSizingForced)は完成済みレイアウトのため常に従来配置
+  const useCenterLayout = typeof BATTLE_LAYOUT !== "undefined" && BATTLE_LAYOUT === "center_v1" && !massBattleSizingForced;
+  if (battleTop) battleTop.classList.toggle("layout-center", useCenterLayout);
+  if (bpb) bpb.classList.toggle("layout-center", useCenterLayout);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });
