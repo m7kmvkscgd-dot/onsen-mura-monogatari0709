@@ -1085,6 +1085,16 @@
     </div>
   </div>
 
+  <!-- 物語クエストの回想ビューア(魂の回想、effects.js openSoulStoryViewer)。
+       場面ごとの一枚絵+回想テキストをタップでページ送りする。画像未提供の場面はテキストのみ -->
+  <div id="soulStoryOverlay" style="display:none;">
+    <img id="soulStoryImage" alt="">
+    <div class="soul-story-text-box">
+      <p id="soulStoryText"></p>
+      <div id="soulStoryHint"></div>
+    </div>
+  </div>
+
   <!-- 帰還完了(1→0層)の村到着シークエンス: 白明転→村の景色ズーム+鐘+一言→帰還成功バナー(ui.js playHomecomingSequence) -->
   <div id="homecomingOverlay" style="display:none;">
     <div id="homecomingBg"></div>

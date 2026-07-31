@@ -80,6 +80,9 @@ function serializeEnemy(id, e) {
   // どちらもここで保持しないと、エクスポート適用のたびに黙って消えてしまう
   if (e.gimmicks && e.gimmicks.length) extraLines.push(`gimmicks: ${jsLit(e.gimmicks)}`);
   if (e.gimmickNotes && e.gimmickNotes.length) extraLines.push(`gimmickNotes: ${jsLit(e.gimmickNotes)}`);
+  // 物語クエスト(2026-07-31): ボスの戦闘前口上と魂の回想も同様に保持する
+  if (e.preBattleLines && e.preBattleLines.length) extraLines.push(`preBattleLines: ${jsLit(e.preBattleLines)}`);
+  if (e.soulStory) extraLines.push(`soulStory: ${jsLit(e.soulStory)}`);
   let out = `  ${id}: { ${parts.join(", ")}`;
   if (extraLines.length > 0) {
     out += `,\n    ${extraLines.join(",\n    ")} },`;

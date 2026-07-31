@@ -653,6 +653,7 @@ function renderResultScreen(onContinue, isDefeat) {
     questCard.innerHTML = `
       <div class="roster-name">🏯依頼達成: ${advQuestCompleted.title}</div>
       <p style="font-size:0.85rem;margin-top:0.3rem;">報酬: ${advQuestCompleted.gold}G${advQuestCompleted.xp > 0 ? ` + XP${advQuestCompleted.xp}` : ""}${matText}</p>
+      ${advQuestCompleted.text ? `<p style="font-size:0.78rem;margin-top:0.5rem;line-height:1.7;color:var(--text-muted,#b6b0a2);">${advQuestCompleted.text}</p>` : ""}
     `;
   } else if (advQuestFailed) {
     // クエストダンジョン依頼(モンハン形式)の失敗。全滅リザルト(isDefeat)でも表示する

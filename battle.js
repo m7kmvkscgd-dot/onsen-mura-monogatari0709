@@ -230,7 +230,13 @@ function startBattle(enemies, pathDef, encounterText) {
     forceFirstStrike = true;
     blog("月読命の御守の加護で、夜陰に乗じて先手を取った！");
   }
-  nextRound(forceFirstStrike);
+  // 物語クエストのボス口上(preBattleLines): 定義があれば暗転オーバーレイで台詞を見せてから戦闘に入る
+  const orator = enemies.find((e) => Array.isArray(e.preBattleLines) && e.preBattleLines.length > 0);
+  if (orator && typeof playPreBattleLines === "function") {
+    playPreBattleLines(orator, () => { if (battle) nextRound(forceFirstStrike); });
+  } else {
+    nextRound(forceFirstStrike);
+  }
 }
 
 // テストモード中だけ表示される「タイトルへ戻る」ボタン(index.htmlのbattleTestExitBtn、表示切替は
@@ -2349,7 +2355,8 @@ function victory() {
     const qDef = QUEST_DEFS[battle.questKey];
     const questGold = questGoldReward(qDef) + (state.acceptedQuest.contractFee || 0); // 契約金は達成時に全額返還される
     const questMats = qDef.rewardMaterials || {}; // 討伐依頼の固定報酬素材(任意、奉行所エディタ参照)
-    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP, materials: questMats };
+    // completionText(物語クエストの後日談、GPT産)はリザルトのクエスト達成カードに表示される
+    advQuestCompleted = { title: qDef.title, gold: questGold, xp: QUEST_REWARD_XP, materials: questMats, text: qDef.completionText || null };
     totalGold += questGold;
     // 報酬素材は敵ドロップと同じstate.materials/advMaterialGainsに積む。リザルト画面の
     // 素材アイコン行(matRowEl、ui.js)にそのまま乗って表示される
@@ -2493,6 +2500,10 @@ function victory() {
   // 襲撃戦の勝利は探索画面ではなく町へ直帰する(探索を経由していないため)。
   // 演出フックの解除・柵耐久の永続化・次回襲撃の予約はfinishRaidBattle(raid.js)が行う
   document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : bossTestActive ? "タイトルへ戻る" : currentStageName() + "に戻る"}</button>`;
+  // 物語クエストの魂の回想(soulStory): 倒した敵に回想があれば、魂の浮遊+一言+
+  // 「残された記憶に触れる」ボタンを勝利画面に差し込む(ボステストでの検証でも出る)
+  const soulEnemy = battle.enemies.find((e) => e.hp <= 0 && e.soulStory && e.soulStory.scenes && e.soulStory.scenes.length);
+  if (soulEnemy && typeof showSoulStoryOffer === "function") showSoulStoryOffer(soulEnemy);
   document.getElementById("battleContinueBtn").onclick = () => {
     // ボステスト(title.js)は探索を経由していないため、勝利したらそのままタイトルへ直帰する
     // (テストモードなのでリロードすれば実セーブがそのまま生きている)

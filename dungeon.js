@@ -102,6 +102,20 @@ function questRouteSegmentFor(floor) {
   def.segments.slice().sort((a, b) => (a.fromFloor || 1) - (b.fromFloor || 1)).forEach((s) => { if (floor >= (s.fromFloor || 1)) seg = s; });
   return seg;
 }
+// 区間フレーバー(2026-07-31、物語クエスト): 区間の開始層に前進で到達した瞬間、segments[].flavor
+// (1〜2文の地の文)を探索ログに1回だけ流す。GPT/Codex産クエストの「道中に不穏さを一つ置く」演出。
+// 既読管理は遠征単位(questRouteFlavorShown、enterDungeonでリセット。リロード復元はしない=再表示は許容)
+let questRouteFlavorShown = {};
+function maybeShowQuestRouteFlavor() {
+  if (currentStage !== "questroute" || retreating) return;
+  const seg = questRouteSegmentFor(currentFloor);
+  if (!seg || !seg.flavor) return;
+  const key = seg.fromFloor || 1;
+  if (currentFloor !== key || questRouteFlavorShown[key]) return;
+  questRouteFlavorShown[key] = true;
+  dlog(seg.flavor);
+}
+
 // クエストルートの遭遇の組み立て。区間に敵ID指定があればそこから1〜3体、無ければ深淵の森の通常抽選を流用する。
 // 指定プールはquestOnlyの敵も許可する(通常抽選と違い、設計者が明示的に選んだ敵のため)
 function pickEncounterForQuestRoute(floor) {
@@ -360,6 +374,7 @@ function enterDungeon() {
   // クエストダンジョン(モンハン形式): 専用ルート付き依頼の受注中の出発はそのルート行き。
   // ルートidを遠征単位で確保する(討伐達成でacceptedQuestが消えた後も帰り道で参照するため)
   currentQuestRouteId = currentStage === "questroute" && state.acceptedQuest ? state.acceptedQuest.route || null : null;
+  questRouteFlavorShown = {}; // 区間フレーバーの既読管理は遠征ごとにリセット
   advEnemiesDefeated = 0;
   advMaxFloor = 0;
   advLostHappened = false;
@@ -385,6 +400,7 @@ function enterDungeon() {
   showScreen("screen-dungeon");
   renderDungeon();
   dlog(`${currentStageName()}に入った。`);
+  maybeShowQuestRouteFlavor(); // 物語クエスト: 1層目(最初の区間)の地の文は出発直後に流す
   // 遠征状態の永続化を開始する(以後saveState()のたびにstate.expeditionへ書き込まれる)
   expeditionActive = true;
   saveState();
@@ -1212,6 +1228,7 @@ function moveOneFloor(pathBias, enterTeahouse) {
     healPartyOnFloorMove();
     advanceExplorationClock(MINUTES_PER_FLOOR_FORWARD);
     maybeSpeakOnFloorAdvance();
+    maybeShowQuestRouteFlavor(); // 物語クエスト: 区間の開始層に入った瞬間の地の文(1回だけ)
   }
   checkQuestDeadline(); // 受注中の依頼が期限切れになっていないか確認する
   // 破綻寸前パーティ救済クエスト(薬草摘み): 受注中に森の対象階層へ到達したら、戦闘/宝箱の抽選とは

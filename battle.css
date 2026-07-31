@@ -74,6 +74,59 @@
     transform: translate(-50%, -50%); margin: 0; pointer-events: none; z-index: 3; filter: none;
   }
   .dot-ailment-vfx.blend-screen { mix-blend-mode: screen; }
+  /* ============ 物語クエスト演出(2026-07-31) ============ */
+  /* ボス戦前の口上オーバーレイ(effects.js playPreBattleLines) */
+  .pre-battle-lines-overlay {
+    position: fixed; inset: 0; z-index: 45;
+    background: rgba(6, 6, 10, 0.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; cursor: pointer;
+  }
+  .pre-battle-lines-box { max-width: 340px; }
+  .pre-battle-lines-box p {
+    color: #efe6d2; font-size: 16px; font-weight: 700; line-height: 2.1;
+    letter-spacing: 0.06em; margin: 0.9em 0; text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  }
+  .pre-battle-tap-hint {
+    position: absolute; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    color: rgba(239,230,210,0.55); font-size: 11px; letter-spacing: 0.1em;
+  }
+  /* 撃破後の魂の浮遊+一言(effects.js showSoulStoryOffer) */
+  .soul-rise {
+    position: absolute; left: 50%; top: 30%; width: 30px; z-index: 7;
+    transform: translateX(-50%); pointer-events: none;
+    filter: drop-shadow(0 0 10px rgba(150,200,255,0.9));
+    animation: soulRiseFloat 2.6s ease-in-out infinite;
+  }
+  @keyframes soulRiseFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.85; }
+    50% { transform: translateX(-50%) translateY(-14px); opacity: 1; }
+  }
+  .soul-line {
+    position: absolute; top: -34px; left: 50%; transform: translateX(-50%);
+    z-index: 7; white-space: nowrap; opacity: 0; transition: opacity 0.8s ease-out;
+    font-size: 12px; font-weight: 700; color: #cfe3ff; pointer-events: none;
+    text-shadow: 0 0 10px rgba(120,170,255,0.8), 0 2px 4px rgba(0,0,0,0.9);
+  }
+  .soul-line.show { opacity: 1; }
+  .soul-story-btn { border-color: rgba(150,200,255,0.5); color: #dbe9ff; }
+  /* 回想ビューア(魂の回想) */
+  #soulStoryOverlay {
+    position: fixed; inset: 0; z-index: 60; background: #050508;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    cursor: pointer;
+  }
+  #soulStoryImage {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; object-position: center;
+  }
+  .soul-story-text-box {
+    position: relative; z-index: 1; width: 100%; max-width: 480px;
+    padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(5,5,8,0.96) 60%, rgba(5,5,8,0));
+  }
+  #soulStoryText { color: #e8e2d4; font-size: 14.5px; line-height: 2.0; letter-spacing: 0.04em; margin: 0 0 10px; }
+  #soulStoryHint { color: rgba(232,226,212,0.45); font-size: 11px; text-align: center; letter-spacing: 0.1em; }
   /* テストモード中だけ表示される「タイトルへ戻る」(battle.js startBattleが表示を切り替える)。
      敵カード列より上のレイヤーで左上に小さく置く(通常プレイでは絶対に出ない) */
   #battleTestExitBtn {

@@ -1541,6 +1541,109 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
   };
   setTimeout(() => runStep(0), DOT_STOP_DIM_IN_MS);
 }
+// ============ 物語クエスト演出(2026-07-31、GPT/Codex量産パイプライン用) ============
+// ①ボス戦前の口上(preBattleLines): 戦闘開始時に暗転オーバーレイで台詞を1行ずつ表示してから
+//   戦闘に入る(タップで残り全行を即表示→もう一度タップで開始)。敵defのpreBattleLines(配列)が定義源
+// ②魂の回想(soulStory): ボス撃破の勝利画面で、魂が浮かびsoulLine(一言)が表示され、
+//   「残された記憶に触れる」ボタンから画像+テキストのページ送りビューアを開く(鬼滅形式)。
+//   scenesの画像(image)は未提供でも動く(テキストのみのページになる)
+function playPreBattleLines(enemy, onDone) {
+  const lines = enemy.preBattleLines || [];
+  if (!lines.length) { onDone(); return; }
+  const overlay = document.createElement("div");
+  overlay.className = "pre-battle-lines-overlay";
+  overlay.innerHTML = `<div class="pre-battle-lines-box">${lines.map((l) => `<p>「${l}」</p>`).join("")}</div><div class="pre-battle-tap-hint">タップで進む</div>`;
+  document.body.appendChild(overlay);
+  const ps = [...overlay.querySelectorAll("p")];
+  ps.forEach((p) => { p.style.opacity = "0"; });
+  let shown = 0;
+  let finished = false;
+  const timers = [];
+  const showNext = () => {
+    if (shown >= ps.length) return;
+    const p = ps[shown++];
+    p.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 450, easing: "ease-out", fill: "forwards" });
+    p.style.opacity = "1";
+  };
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    timers.forEach(clearTimeout);
+    lines.forEach((l) => blog(`「${l}」`)); // 戦闘ログにも全行を記録として残す
+    const fade = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, easing: "ease-out" });
+    fade.onfinish = () => { overlay.remove(); onDone(); };
+    setTimeout(() => { if (overlay.parentNode) { overlay.remove(); onDone(); } }, 600); // onfinish不発の保険
+  };
+  overlay.addEventListener("click", () => {
+    if (shown < ps.length) { while (shown < ps.length) showNext(); } // 1タップ目: 残りを全部出す
+    else finish(); // 全行表示済みならタップで戦闘開始
+  });
+  showNext();
+  for (let i = 1; i < ps.length; i++) timers.push(setTimeout(showNext, i * 1300));
+  timers.push(setTimeout(finish, ps.length * 1300 + 2200)); // 放置でも自動で戦闘へ
+}
+
+// 勝利画面に魂の演出+回想ボタンを差し込む(battle.jsのvictory()から呼ばれる)。
+// ボタンは押しても消えず、閉じたら再度読める(画面を離れるまで)
+function showSoulStoryOffer(enemy) {
+  const story = enemy.soulStory;
+  if (!story || !story.scenes || !story.scenes.length) return;
+  const card = findVisibleCard(enemy.instanceId);
+  if (card) {
+    const soul = document.createElement("img");
+    soul.className = "soul-rise";
+    soul.src = "assets/items/soul_shard.png";
+    card.appendChild(soul);
+    if (story.soulLine) {
+      const line = document.createElement("div");
+      line.className = "soul-line";
+      line.textContent = `「${story.soulLine}」`;
+      card.appendChild(line);
+      requestAnimationFrame(() => line.classList.add("show"));
+    }
+  }
+  const grid = document.getElementById("actionGrid");
+  const btn = document.createElement("button");
+  btn.className = "big soul-story-btn";
+  btn.id = "soulStoryBtn";
+  btn.textContent = "🕯 残された記憶に触れる";
+  btn.style.gridColumn = "1/-1";
+  grid.insertBefore(btn, grid.firstChild);
+  btn.onclick = () => {
+    playSfx("select");
+    openSoulStoryViewer(enemy);
+    state.soulStoriesSeen = state.soulStoriesSeen || {};
+    state.soulStoriesSeen[enemy.id] = true; // 図鑑での読み返し(将来実装)用の既読記録
+    saveState();
+  };
+}
+function openSoulStoryViewer(enemy) {
+  const scenes = enemy.soulStory.scenes;
+  const overlay = document.getElementById("soulStoryOverlay");
+  let idx = 0;
+  const render = () => {
+    const s = scenes[idx];
+    const img = document.getElementById("soulStoryImage");
+    img.style.display = "none";
+    img.onload = () => { img.style.display = ""; };
+    img.onerror = () => { img.style.display = "none"; }; // 画像未提供(制作待ち)はテキストのみで見せる
+    img.src = s.image || "";
+    document.getElementById("soulStoryText").textContent = s.text || "";
+    document.getElementById("soulStoryHint").textContent = idx < scenes.length - 1 ? `タップで次へ(${idx + 1}/${scenes.length})` : "タップで閉じる";
+  };
+  overlay.style.display = "flex";
+  overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: "ease-out" });
+  overlay.onclick = () => {
+    if (idx < scenes.length - 1) { idx++; render(); }
+    else {
+      const fade = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, easing: "ease-out" });
+      fade.onfinish = () => { overlay.style.display = "none"; };
+      setTimeout(() => { overlay.style.display = "none"; }, 600); // onfinish不発の保険
+    }
+  };
+  render();
+}
+
 // DOT VFXのフレーム画像も起動後に事前ロードしておく(初回再生のコマ落ち防止。攻撃VFXの
 // ウォームアップと同じ趣旨だが、こちらは頻度が低いためプール常駐まではしない)
 function preloadAilmentVfxFrames() {

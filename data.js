@@ -539,6 +539,55 @@ const ENEMIES = {
     bigAttack: { name: "骨の刃", mult: 1.2 },
     bigAttackCycle: { min: 4, max: 6 },
     statusImmune: ["bleed"] },
+  // ---- 物語クエスト「鈴鳴峠の嫁入り」(2026-07-31、GPT/Codex量産パイプライン第1号) ----
+  // テキスト(口上/回想/ギミック案)は全てCodex産のJSONをそのまま転記。画像は制作待ちのため
+  // 提灯おばけ/雪女で暫定(quest_raw納品後に差し替え)。ステータスは序盤(tier1)向けの初期値で、
+  // ボステストでの調整前提。回想画像のパス(assets/story/)は納品後に実体が置かれて表示される
+  chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/chochin_obake.png", hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
+    bigAttack: { name: "提灯の火", mult: 1.1, debuff: { type: "burn", chance: 0.5, turnsMin: 2, turnsMax: 2 } },
+    bigAttackCycle: { min: 3, max: 5 } },
+  amayome_shiranui: { id: "amayome_shiranui", ja: "雨嫁・白縫", image: "assets/enemies/yukionna.png", hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+    bigAttack: { name: "嫁入りの鈴", mult: 1.4, debuff: { type: "stun", chance: 0.4, turns: 1 } },
+    bigAttackCycle: { min: 3, max: 4 },
+    statusImmune: ["bleed"],
+    preBattleLines: [
+      "ようやく、来てくださったのですね……",
+      "鈴も、灯りも、皆そろいました。",
+      "さあ、この赤い緒を結びましょう。",
+      "今度こそ、私を置いていかないで。",
+    ],
+    gimmicks: [
+      { id: "akao", name: "花婿の赤緒",
+        trigger: { type: "battleStart" },
+        announce: "白縫が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！",
+        effects: [
+          { type: "bindOne", every: 3, turns: 1, name: "花婿の赤緒", text: "赤い組紐が{target}を花婿に見立てて縛り上げた！" },
+        ] },
+      { id: "tomurai", name: "弔いの嫁入り",
+        trigger: { type: "hpBelow", ratio: 0.6 },
+        announce: "峠に再び強い雨が降り始めた。提灯の灯りが、嫁入り行列となって白縫を取り囲む！",
+        effects: [
+          { type: "summon", every: 3, enemyId: "chochin_warabe", count: 2, maxAlive: 3, immediate: true, text: "提灯童たちが行列に加わった！" },
+          { type: "dmgTakenWhileMinions", mult: 0.7 },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "花婿の赤緒", trigger: "白縫が銀の鈴を一度鳴らした時に使用する。", effect: "赤い組紐で味方一人を花婿に見立てて縛り、しばらく行動できなくする。仲間が白縫へ攻撃を加えるたびに組紐が緩んでいく。" },
+      { name: "弔いの嫁入り", trigger: "戦いが長引き、峠に再び強い雨が降り始めた時に発動する。", effect: "周囲の灯りが消え、提灯童たちが嫁入り行列として現れる。提灯童が残っている間、白縫は行列に守られ、受ける攻撃の勢いを弱める。" },
+    ],
+    soulStory: {
+      soulLine: "私は……誰を待っていたのでしょう。",
+      scenes: [
+        { image: "assets/story/amayome_shiranui_1.jpg",
+          text: "私には、呼んでくれる名すらありませんでした。けれど、あの人だけは私を白縫と呼び、冷えた手を毎晩包んでくれたのです。この赤い緒があれば、どこにいても家族だと。" },
+        { image: "assets/story/amayome_shiranui_2.jpg",
+          text: "村の人たちは、山の上で立派な花婿が待っていると言いました。お峰様もすぐに迎えへ来るから、先に行きなさいと。格子の向こうで誰かが戸を叩いていたけれど、鳴り続ける鈴の音で何も聞こえませんでした。" },
+        { image: "assets/story/amayome_shiranui_3.jpg",
+          text: "崖の上に花婿はいませんでした。背中を押された時も、私は赤い緒を握って待っていました。最後まで迎えに来なかったあの人を恨みながら、鈴の音より深い闇へ落ちていったのです。" },
+        { image: "assets/story/amayome_shiranui_4.jpg",
+          text: "違った。あの人は来なかったのではない。閉じ込められた戸を壊し、血を流しながら、私を追ってくれていた。ずっと聞こえなかった声が、今になってようやく届く――迎えに来たよ、白縫、と。" },
+      ],
+    } },
 };
 
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
@@ -1758,6 +1807,13 @@ const QUEST_DEFS = {
   onryo: { emoji: "👻", requester: "安養寺 住職・玄海", title: "消えぬ怨み", text: "読経を重ねても、あの怨念だけは静まりませぬ…。寺に訪れる者も怯え、夜は誰も近寄らなくなりました。どうか、この迷える魂を救ってください。", targetFloor: 29, count: 2, tier: 2 },
   oomukade: { emoji: "🐛", requester: "飛脚・新八", title: "地を這う災厄", text: "この道が通れねぇと、荷も手紙も届けられません。仲間も毒にやられちまいました…。商人も旅人も皆困っています。どうか、街道を取り戻してください！", targetFloor: 33, count: 1, tier: 2 },
   kasha: { emoji: "🔥", requester: "墓守・源蔵", title: "燃え走る怪車", text: "弔いの最中にまで火車が現れ、亡き人をさらっていくんです…。死んだ者くらい安らかに眠らせてやりたい。このままでは供養もできません。どうか力を貸してください。", targetFloor: 36, count: 1, tier: 2 },
+  // 物語クエスト第1号「鈴鳴峠の嫁入り」(2026-07-31、テキストはCodex産)。専用ルートsuzunari行き、
+  // ボスは最終層(targetFloor=8)に確定出現。completionTextはリザルトの達成カードに表示される後日談
+  amayome_shiranui: { emoji: "☔", requester: "老薬師・玄庵", title: "鈴鳴峠の嫁入り",
+    text: "鈴鳴峠にて、雨の夜に旅人が消える怪異が続いている。現場には決まって、濡れた白無垢の切れ端と赤い組紐が残されていた。薬草を採りに向かった我が娘・お春も、三日前から戻っておらぬ。峠で目撃される花嫁姿の妖を討ち、行方不明者の手掛かりを探してほしい。",
+    completionText: "雨の止んだ峠で、お春を含む行方不明者たちが眠るように倒れているのが見つかった。玄庵は拾われた銀の鈴を、崖際に残る名もない墓へ供えたという。翌朝、その鈴には新しい赤い組紐が結ばれていた。それから鈴鳴峠で、嫁入りの列を見た者はいない。",
+    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
+    chaseText: "雨嫁・白縫が追いかけてきた！" },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
 // 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある
@@ -1811,7 +1867,29 @@ const BOSS_PURSUIT_ENCOUNTER_CHANCE = 0.6;
 //     fromFloor: この層から区間が始まる
 //     bg: 背景セット名(ui.jsのBG_SETSのキー。新規背景はエディタの「背景セット」タブでアップロード→Claudeがassets/bg/へ反映)
 //     enemies: この区間で出る敵IDの配列(questOnlyの敵も指定可)。空配列なら深淵の森の通常抽選を流用する
-const QUEST_ROUTE_DEFS = {};
+//   flavor: 区間の開始層に入った瞬間に探索ログへ流す1〜2文の地の文(物語クエスト、2026-07-31)
+//   bgTitle: 背景の題名(表示には使わない設計メモ。Codex納品のbg画像と対応付けるため保持)
+const QUEST_ROUTE_DEFS = {
+  // 物語クエスト第1号「鈴鳴峠の嫁入り」(テキストはCodex産)。背景セット(suzunari_*)は画像制作待ちのため
+  // 未登録=深淵の森の絵でフォールバック表示される(BG_SETSへ登録すれば自動で切り替わる)
+  suzunari: {
+    ja: "鈴鳴峠", emoji: "⛰", totalFloors: 8,
+    segments: [
+      { fromFloor: 1, bg: "suzunari_sando", bgTitle: "夕暮れの杉参道",
+        flavor: "雨に濡れた石段には、山を下った足跡だけが残っている。だが、その足跡はどれも峠の奥から始まっていた。",
+        enemies: [] },
+      { fromFloor: 3, bg: "suzunari_chochin", bgTitle: "灯の浮かぶ峠道",
+        flavor: "誰も持っていない提灯が、一定の間隔で山頂へ進んでいる。鈴の音が鳴るたび、列の最後尾がひとつ増えた。",
+        enemies: ["chochin_warabe"] },
+      { fromFloor: 5, bg: "suzunari_chaya", bgTitle: "打ち捨てられた婚礼茶屋",
+        flavor: "朽ちた婚礼膳には、二人分の盃だけが新しい。片方の縁には、乾くことのない紅が残っている。",
+        enemies: ["chochin_warabe"] },
+      { fromFloor: 8, bg: "suzunari_gake", bgTitle: "月下の嫁入り崖",
+        flavor: "崖の前には、花嫁を迎えるための席がひとつだけ空けられている。雨音の中で、女の声が「遅かったですね」と笑った。",
+        enemies: [] },
+    ],
+  },
+};
 
 
 // 状態異常/バフ/デバフアイコンの長押し・ホバー説明ツールチップ用の共通辞書。

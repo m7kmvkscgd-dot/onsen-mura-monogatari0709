@@ -26,6 +26,12 @@
 //   { type: "summon", every: N, enemyId, count, maxAlive, immediate, text }
 //       … 発動後、Nラウンドごとに雑魚(enemyId)をcount体召喚。場にいる同種の生存数がmaxAliveに
 //         達している分は湧かない。immediate:trueなら発動した瞬間にも1回召喚する
+//   { type: "bindOne", every: N, turns: 1, name: "花婿の赤緒", text: "…{target}…" }
+//       … 発動後、Nラウンドごとに味方1人をランダムに拘束(スタン扱い、行動不能)する。
+//         行動阻害系ギミックの汎用形(雨嫁・白縫の赤い組紐用に新設、2026-07-31)。textの{target}は対象名に置換
+//   { type: "dmgTakenWhileMinions", mult: 0.7 }
+//       … 自分以外の敵(取り巻き)が場に生きている間、持ち主の被ダメージを軽減し続ける
+//         (毎ラウンド掛け直しのdmgTaken statMod。取り巻きを先に倒せば素通しになる)
 //
 // 呼び出し側(battle.js)のフック:
 //   startBattle → initBattleGimmicks()(戦闘ごとの状態初期化+場演出のリセット)
@@ -157,6 +163,20 @@ function processGimmickRoundEffects(continueRound) {
       } else if (eff.type === "summon") {
         if (entry.roundsSinceActive % (eff.every || 1) !== 0) return;
         if (gimmickDoSummon(eff, entry.owner)) fired = true;
+      } else if (eff.type === "bindOne") {
+        if (entry.roundsSinceActive % (eff.every || 1) !== 0) return;
+        const candidates = aliveField().filter((c) => !(c.stunTurns > 0));
+        if (candidates.length === 0) return;
+        const t = candidates[Math.floor(Math.random() * candidates.length)];
+        applyStun(t, eff.turns || 1);
+        blog(eff.text ? eff.text.replace("{target}", t.label) : `${eff.name || entry.def.name || "拘束"}が${t.label}を縛り上げた！`);
+        popupOn(t.id, "💫拘束", "stun");
+        fired = true;
+      } else if (eff.type === "dmgTakenWhileMinions") {
+        // 取り巻きが生きている間だけ、毎ラウンド軽減を掛け直す(全滅していれば何もしない=素通し)。
+        // 表示の間は取らない(firedにしない)静かな効果
+        const hasMinions = battle.enemies.some((e) => e !== entry.owner && e.hp > 0);
+        if (hasMinions && entry.owner.hp > 0) applyStatMod(entry.owner, "dmgTaken", eff.mult || 0.7, 2);
       }
     });
   });
