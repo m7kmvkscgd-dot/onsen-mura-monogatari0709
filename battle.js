@@ -316,8 +316,15 @@ function updateEnemyCard(card, e) {
   card.classList.toggle("defeat-hidden", dead);
   // acting(enemyLunge)のような一回きりのCSSアニメーションは、クラスが「無い→有る」に変わった
   // 瞬間だけ再生される(付いたままの再描画では再生されない。以前はカード作り直しのたびに
-  // 最初から再生し直されていたが、それはこの差分更新化で直したい症状そのもの)
-  card.classList.toggle("acting", e.instanceId === battle.actingEnemyId);
+  // 最初から再生し直されていたが、それはこの差分更新化で直したい症状そのもの)。
+  // 【2026-07-31修正】被弾で付いた揺れクラス(hit-shake等)は完走後もカードに残る仕様だが、
+  // .enemy-card.hit-shake.hit-flash.hit-shake-*の方が.enemy-card.actingより詳細度が高く、
+  // animationプロパティを取り合って踏み込み(enemyLunge)を上書きしてしまう(=一度でも殴った敵は
+  // 攻撃前のプッシュモーションが二度と出ない実バグ。フェーズ5の「残っても無害」の見落とし)。
+  // 手番が付く瞬間(無→有の遷移)に揺れクラスを剥がしてからactingを付けることで毎ターン確実に再生する
+  const becomesActing = e.instanceId === battle.actingEnemyId;
+  if (becomesActing && !card.classList.contains("acting")) card.classList.remove(...HIT_SHAKE_CLASSES);
+  card.classList.toggle("acting", becomesActing);
   card.classList.toggle("targetable", targetable);
   card.classList.toggle("charging", !!e.bigAttackPending && !dead);
   // 出現演出は初回描画だけ。2回目以降の描画でクラスを剥がす(従来はカード作り直しで暗黙に消えていた)

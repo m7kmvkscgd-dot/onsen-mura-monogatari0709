@@ -1153,6 +1153,10 @@ function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
   // 確実に最初から再生する(地雷リスト2番の既存パターン)
   card.classList.remove("acting-enter");
   if (isActing && isFreshTurn) {
+    // 被弾で残った揺れクラス(hit-shake等)は.acting.acting-enterより詳細度が高く、手番スライド
+    // (actingSlideIn)のanimationを上書きして殺してしまうため、スライドを再生する瞬間に剥がす
+    // (敵カードの踏み込みと同じ2026-07-31の修正。詳細はupdateEnemyCard側のコメント参照)
+    card.classList.remove(...HIT_SHAKE_CLASSES);
     void card.offsetWidth;
     card.classList.add("acting-enter");
   }

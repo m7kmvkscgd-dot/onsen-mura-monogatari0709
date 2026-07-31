@@ -103,8 +103,49 @@
       check("炎上レベル1の割り当てが取れる", !!a1 && a1.frameCount === 60);
       check("未設定レベルは最も近い既存レベルへ寄せる", a9 === a1);
       check("未知の状態異常はnull", ailmentVfxAssignmentFor("stun", 1) === null);
+      runMotionRevivalCase();
       runAttackOrderCase();
     });
+  }
+
+  // G: 被弾で残った揺れクラス(hit-shake等)が、一回きりモーション(敵の踏み込みacting/味方の
+  // 手番スライドacting-enter/攻撃踏み込みattack-lunge)のanimationを詳細度で上書きして殺していた
+  // 実バグ(2026-07-31修正)の回帰テスト。モーション再生の瞬間に揺れクラスが剥がれることを確認する
+  function runMotionRevivalCase() {
+    console.log("--- G: 揺れクラス残留で一回きりモーションが死なない ---");
+    makeParty();
+    const eG = instantiateEnemyById("inoshishi");
+    setupBattle([eG]);
+    eG.__shakeUntil = Date.now() + 400;
+    eG.__shakeIntensity = "normal";
+    delete eG.__shakeRenderedFor;
+    renderBattleScreen();
+    const cardG = document.querySelector(`#enemyRow .enemy-card[data-id="${eG.instanceId}"]`);
+    check("(前提)被弾後の敵カードに揺れクラスが残る", cardG.classList.contains("hit-shake") && cardG.classList.contains("hit-flash"));
+    battle.actingEnemyId = eG.instanceId;
+    renderBattleScreen();
+    check("敵の手番開始で揺れクラスが剥がれ、踏み込み(acting)が付く", cardG.classList.contains("acting") && !cardG.classList.contains("hit-shake"));
+    battle.actingEnemyId = null;
+    // 味方: 揺れ残留→手番開始でacting-enter(スライド)が生きる
+    const ally = fieldParty[0];
+    ally.__shakeUntil = Date.now() + 400;
+    ally.__shakeIntensity = "normal";
+    delete ally.__shakeRenderedFor;
+    renderBattleScreen();
+    const allyCard = document.querySelector(`#battlePartyBar .party-member[data-id="${ally.id}"]`);
+    check("(前提)被弾後の味方カードに揺れクラスが残る", !!allyCard && allyCard.classList.contains("hit-shake"));
+    battle.actingId = ally.id;
+    lastPartyBarActingId.battlePartyBar = null; // 手番が切り替わった扱いにする
+    renderBattleScreen();
+    check("味方の手番開始で揺れクラスが剥がれ、スライド(acting-enter)が付く", allyCard.classList.contains("acting-enter") && !allyCard.classList.contains("hit-shake"));
+    // 味方: 揺れ残留→攻撃の踏み込み(playAttackerLunge)が生きる
+    ally.__shakeUntil = Date.now() + 400;
+    delete ally.__shakeRenderedFor;
+    renderBattleScreen();
+    check("(前提)揺れクラスを再度残す", allyCard.classList.contains("hit-shake"));
+    playAttackerLunge(ally.id);
+    check("攻撃の踏み込みで揺れクラスが剥がれattack-lungeが付く", allyCard.classList.contains("attack-lunge") && !allyCard.classList.contains("hit-shake"));
+    battle.actingId = null;
   }
 
   // F: 実際のprocessNext(敵ターン)を通しで動かし、敵の攻撃(enemyAttack)が

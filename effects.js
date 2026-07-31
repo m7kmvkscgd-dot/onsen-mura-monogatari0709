@@ -212,6 +212,9 @@ function playGuardCounterVisual(spearman, enemy, counterDmg, onDone) {
     playAttackVfx(enemy.instanceId, spearman, "normal");
     const card = findVisibleCard(spearman.id);
     if (card) {
+      // 直前の被弾で残った揺れクラスがcounter-bounceのanimationを詳細度で上書きして
+      // バウンスを殺すため、先に剥がす(updateEnemyCardの踏み込みと同じ2026-07-31の修正)
+      card.classList.remove(...HIT_SHAKE_CLASSES);
       card.classList.add("counter-bounce");
       setTimeout(() => card.classList.remove("counter-bounce"), GUARD_COUNTER_BOUNCE_MS);
     }
@@ -372,6 +375,9 @@ function playAttackerLunge(actorId) {
   if (actorId == null) return;
   const card = findVisibleCard(actorId);
   if (!card) return;
+  // 被弾で残った揺れクラスがattack-lungeのanimationを詳細度で上書きして踏み込みを殺すため、
+  // 先に剥がす(updateEnemyCardの敵の踏み込みと同じ2026-07-31の修正)
+  card.classList.remove(...HIT_SHAKE_CLASSES);
   card.classList.remove("attack-lunge");
   void card.offsetWidth; // 連続攻撃でも毎回最初から再生し直すためのリフロー強制
   card.classList.add("attack-lunge");
