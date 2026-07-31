@@ -265,25 +265,6 @@ let advMaterialGains = {}; // 今回の冒険で拾った素材(素材id -> 個�
 let advSoulShardGained = 0; // 今回の冒険で手に入れた魂のかけらの数。リザルトのレア演出用(素材と同じアイコン並びに出す)
 let advSoulLumpGained = 0; // 今回の冒険で実際に手に入れた魂の塊の数(上限で弾かれた分は含まない)。リザルトのレア演出用
 let retreating = false; // 里に戻る途中(進むボタンが「帰還」になり、階層を1つずつ下って歩いて帰る)
-// ============ ボス追撃モード: ボス/中ボスがHPが一定以下になると瀕死のまま逃走し、以後どのフロアでも
-// 一定確率で追いつく(討伐依頼のchasing/carryHpと同じ仕組みを、通常の(討伐依頼ではない)ボス/中ボスにも
-// 適用したもの)。里に戻る(finishRetreat)か新しい遠征を始める(enterDungeon)と「追撃モード」自体は
-// 終了する(この遠征内で追いかけ続ける緊張感は次の遠征には持ち越さない)が、見送った(捕まえられずに
-// 終わった)場合はその時点のHPをstate.woundedBosses(engine.js)に記録し、以後は時間経過で少しずつ
-// 回復しながら通常のボス枠として再出現する(recordBossWoundIfPursuing参照)
-// null | { enemyId, hp, maxHp, stage } ※stageは発生した場所(forest/coast)を覚えておき、
-// 別ステージに移動した場合は再遭遇の対象にならないようにする(dungeon.js側の判定で参照)
-let bossPursuit = null;
-// 追撃モードのまま(捕まえずに)遠征が終わった時、手負いのHPをstate.woundedBossesへ記録してから
-// bossPursuitをクリアする。討伐して倒しきった場合(battle.jsのvictory())はここを通らず、
-// 単にbossPursuit=nullするだけで良い(回復すべき「手負いの記録」自体が発生しないため)
-function recordBossWoundIfPursuing() {
-  if (bossPursuit) {
-    state.woundedBosses = state.woundedBosses || {};
-    state.woundedBosses[bossPursuit.enemyId] = { hp: bossPursuit.hp, maxHp: bossPursuit.maxHp, fledAtMinutes: absoluteGameMinutes() };
-  }
-  bossPursuit = null;
-}
 // ============ オート帰還: 「帰還」ボタンを押した後は無操作で0階層まで自動的に進み続ける ============
 // 背景ズームは1階層ごとにリセットせず、帰還開始時の階層〜0階層まで連続的に拡大し続ける(1階層=1秒)。
 // 戦闘/茶屋のいずれかが起きると暗転を挟んで一時停止する(時刻変化は例外で自動再開、
@@ -349,7 +330,6 @@ function enterDungeon() {
   ruinsforestDestination = null;
   manualRetreatMode = false;
   manualRetreatHomeVillage = null;
-  recordBossWoundIfPursuing(); // 通常はfinishRetreat()で既に処理済みのはずだが、念のための保険
   recordMaxFloorReached();
   pruneActiveParty();
   fieldParty = state.activePartyIds.map(getRosterChar).filter((c) => c && c.status === "active");
@@ -422,7 +402,6 @@ function renderDungeon() {
   document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
   document.getElementById("dungeonTimeBadge").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   updateQuestTargetBadge();
-  updateBossPursuitBadge();
   renderPartyBar("dungeonPartyBar", visibleFieldParty());
   document.getElementById("dungeonLog").style.display = "";
   document.getElementById("criticalAlert").innerHTML = ""; // 選択パネル(進路/イベント)の使い回し枠。表示中の再描画ガードはpath-choice-active側で行う
@@ -1075,7 +1054,6 @@ function finishRetreat() {
   stopCoastAreaBgm();
   retreating = false;
   clearExpeditionSnapshot(); // 帰還完了。リロードしても次からは町スタートに戻る
-  recordBossWoundIfPursuing(); // 里に戻った時点で追撃モードは終了。追撃中だったなら手負いのHPを記録する(見送った扱い)
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
@@ -1260,10 +1238,6 @@ function tryForceQuestEncounter() {
   // 全回復した状態で出現し直すと「逃げても意味がない」緊張感の代わりに「毎回振り出しに戻る」不公平感になるため
   if (isChaseEncounter && q.carryHp) {
     enemies.forEach((e, i) => { if (q.carryHp[i] != null) e.hp = Math.min(q.carryHp[i], e.maxHp); });
-    // 追いついた再戦は、逃げた時点で既にBOSS_FLEE_HP_RATIO以下のHPで出現し得る。何もしないと
-    // renderBattleScreen()の判定でその場即座にまた自動逃走してしまう(ボス追撃モードと同じ地雷、
-    // tryForceBossPursuitEncounter参照)ため、追いついた以上はこのインスタンスはもう自主逃走しない
-    enemies.forEach((e) => { e.__hasFledPursuit = true; });
   }
   enemies.forEach((e) => { e.isQuestTarget = true; }); // 敵カードに🎯マークと金色パルス枠を出すための目印
   const def = QUEST_DEFS[q.questKey];
@@ -1276,32 +1250,9 @@ function tryForceQuestEncounter() {
   });
   return true;
 }
-// ボス追撃モード中、フロア移動のたびに一定確率で追いつき再戦になる(討伐依頼のtryForceQuestEncounterと
-// 同じ仕組み)。討伐依頼と違い出現階層の縛りは無く、bossPursuitが発生したステージと同じステージでのみ
-// 有効(森で発生した追撃は森だけ、海岸へ移動していれば追いつかない)
-function tryForceBossPursuitEncounter() {
-  const p = bossPursuit;
-  if (!p || p.stage !== currentStage) return false;
-  if (Math.random() >= BOSS_PURSUIT_ENCOUNTER_CHANCE) return false;
-  const enemy = instantiateEnemyById(p.enemyId);
-  enemy.hp = Math.min(p.hp, enemy.maxHp); // 逃げた時点の(手負いの)HPを引き継ぐ
-  // 追いついた再戦の敵は、逃げた時点で既にBOSS_FLEE_HP_RATIO以下のHPで出現する(=何もしなければ
-  // renderBattleScreen()の判定でその場即座にまた逃走してしまい、プレイヤーが一度も攻撃できない
-  // まま無限に「追いつく→即逃げる」を繰り返すことになる)。追いついた以上は追い詰めた扱いとし、
-  // このインスタンスはもう自主逃走しない(倒すか、プレイヤー側が改めて逃げるかの二択になる)
-  enemy.__hasFledPursuit = true;
-  const def = ENEMIES[p.enemyId];
-  queueEncounterBattle([enemy], null, `${def.ja}に追いついた！`, () => {
-    battle.bossPursuitEnemyId = p.enemyId; // victory()でこの戦闘が追撃対象だったと判定するための目印
-    const alive = aliveField();
-    if (alive.length > 0) trySpeak(alive[Math.floor(Math.random() * alive.length)], "questTargetFound");
-  });
-  return true;
-}
 function resolveFloorArrival(pathBias) {
   if (tryForceQuestEncounter()) return;
-  if (tryForceBossPursuitEncounter()) return;
-  if (tryOfferMiningSite()) return; // 採掘場(森12層の巨木/洞窟6層の鉄鉱石)。討伐依頼・追撃より優先度は下
+  if (tryOfferMiningSite()) return; // 採掘場(森12層の巨木/洞窟6層の鉄鉱石)。討伐依頼より優先度は下
   rollEncounter(pathBias);
 }
 // 探索画面に、受注中の依頼の討伐対象と残り層数(or 追跡中)を常時表示するバッジ
@@ -1322,17 +1273,6 @@ function updateQuestTargetBadge() {
   }
   badge.style.visibility = "visible";
   badge.textContent = `🎯 ${enemyDef.ja}討伐: ${distanceText}`;
-}
-// 探索画面に、ボス追撃モード中だけ「追撃中！」バッジを表示する(討伐依頼のバッジと同じ枠組み)
-function updateBossPursuitBadge() {
-  const badge = document.getElementById("bossPursuitBadge");
-  if (!bossPursuit || bossPursuit.stage !== currentStage) {
-    badge.style.visibility = "hidden";
-    return;
-  }
-  const enemyDef = ENEMIES[bossPursuit.enemyId];
-  badge.style.visibility = "visible";
-  badge.textContent = `🔥 追撃中！ ${enemyDef.ja}`;
 }
 // 茶屋(建築済みの時、深淵の森20層(TEA_HOUSE_FLOOR)に着く時だけ確定で立ち寄れる。進む/帰還どちらの方向でも
 // その階へ向かう時は毎回この判定が通るため、行きと帰りに二回立ち寄ることもできる)

@@ -579,21 +579,6 @@ function processNext() {
         setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
         return;
       }
-      // ボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られている場合、自分の手番が回ってきたタイミングで
-      // 通常の行動(攻撃/大技/スタン硬直)の代わりに逃走する。以前はHPが閾値を割った瞬間(=プレイヤーの
-      // 攻撃直後)に即座に割り込んで逃げていたが、「敵の手番が来たら逃げる」という自然な流れにしてほしい
-      // というユーザー指示で、判定タイミングをこの敵自身の手番の先頭に移した。討伐依頼対象(isQuestTarget)も
-      // 含めて全てのボス/中ボスが対象(追跡先のシステムが違うだけ、triggerQuestBossFlee参照)。
-      // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
-      // 襲撃戦(raidBattleActive)では敵は逃走しない(ユーザー指定2026-07-29: 実機テストで大猪が
-      // HP低下逃走してしまった。襲撃は「村を守り切るか敗北か」の戦いなので追撃システムと馴染まない)
-      // ボステスト中もHP低下逃走はしない(ギミックを最後まで発火させて検証するモードのため)
-      if (!raidBattleActive && !bossTestActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
-        actor.__hasFledPursuit = true;
-        if (actor.isQuestTarget) triggerQuestBossFlee(actor);
-        else triggerBossFlee(actor);
-        return;
-      }
       if (actor.stunTurns > 0) {
         actor.stunTurns--;
         blog(`${actor.label}はスタンして動けない！`);
@@ -2384,9 +2369,6 @@ function victory() {
     state.magistrateQuestClearedOn = state.magistrateQuestClearedOn || {};
     state.magistrateQuestClearedOn[battle.questKey] = state.dayCount;
   }
-  // ボス追撃モード: 追いついて仕留めきった戦闘なら追撃状態を終了する(通常のgold/xp報酬は
-  // 下のbattle.enemies.forEachで他の敵と同じように処理されるため、ここでは状態のクリアのみ)
-  if (battle.bossPursuitEnemyId) bossPursuit = null;
   let soulLumpCount = 0;
   // 探索イベント「天狗の腕試し」に勝利: 魂のかけら1つ(胸のすく勝利)。特定の敵の足元ではなく
   // 巾着への回収時に直接カウントされる(el:nullの扱い、風鈴の音はドロップ分と同じ)
@@ -2539,78 +2521,11 @@ function markQuestChasingIfFled() {
     state.acceptedQuest.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
   }
 }
-// ボス追撃モード: 討伐依頼対象ではないボス/中ボスのHPがBOSS_FLEE_HP_RATIO以下の状態で自分の手番が
-// 来ると、プレイヤーの選択を待たずその手番で瀕死のまま戦闘から逃走する(escapeBattle()のプレイヤー主導の
-// 逃走とは違い、敵側が一方的に切り上げる形。呼び出し元はprocessNext()、判定タイミングの詳細はdata.js
-// BOSS_FLEE_HP_RATIOのコメント参照)。以後bossPursuitが立ち、tryForceBossPursuitEncounter()
-// (dungeon.js)が同じステージのフロア移動のたびに一定確率で追いつかせる
-function triggerBossFlee(enemy) {
-  // ボス側が戦闘を切り上げた場合も、足元の素材は置き去り=拾えない(勝利ではないため)
-  materialGroundDrops = [];
-  clearMaterialGroundDrops();
-  bossPursuit = { enemyId: enemy.id, hp: enemy.hp, maxHp: enemy.maxHp, stage: currentStage };
-  // 「◯◯が逃走した！」の告知バナー(effects.js playBossFleeBanner)を挟んでから、
-  // 戦闘の後片付け(BGM停止・battle=null・探索画面への遷移)を行う
-  playBossFleeBanner(enemy, () => {
-    if (!shouldKeepBossBgmOnFlee()) stopBattleBgm(); // 追撃中はボス戦BGMを止めない(shouldKeepBossBgmOnFlee側でbossPursuitも見る)
-    battle = null;
-    saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
-    pendingEnemyPick = null;
-    pendingAllyPick = null;
-    clearDotEffects(fieldParty); clearBattleTransientForms();
-    clearHawkState(fieldParty);
-    clearGuardState(fieldParty);
-    clearOmamoriIwanagaBonus(fieldParty);
-    fieldParty.forEach((c) => { c.fleeState = null; });
-    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-    showScreen("screen-dungeon");
-    renderDungeon();
-    dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-  });
-}
-// 討伐依頼対象のボス/中ボス(大猪など)がHPをBOSS_FLEE_HP_RATIO以下まで削られた時の自動逃走。
-// triggerBossFlee()のbossPursuitの代わりに、既存の討伐依頼追跡システム
-// (state.acceptedQuest.chasing/carryHp)へ直接書き込む点だけが違う(以後はtryForceQuestEncounter()が
-// 同じ仕組みで追いかけてくる。プレイヤーが手動で逃げた場合のmarkQuestChasingIfFled()と結果は同じ)
-function triggerQuestBossFlee(enemy) {
-  const q = state.acceptedQuest;
-  if (q && battle && battle.questKey === q.questKey) {
-    q.chasing = true;
-    q.carryHp = battle.enemies.filter((e) => e.isQuestTarget).map((e) => e.hp);
-  }
-  playBossFleeBanner(enemy, () => {
-    if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
-    battle = null;
-    saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
-    pendingEnemyPick = null;
-    pendingAllyPick = null;
-    clearDotEffects(fieldParty); clearBattleTransientForms();
-    clearHawkState(fieldParty);
-    clearGuardState(fieldParty);
-    clearOmamoriIwanagaBonus(fieldParty);
-    fieldParty.forEach((c) => { c.fleeState = null; });
-    advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
-    showScreen("screen-dungeon");
-    renderDungeon();
-    dlog(`${enemy.label}は手負いのまま逃げ出した！`);
-  });
-}
-// ボス追撃モードの再戦(battle.bossPursuitEnemyId)からプレイヤー側が逃げた(escapeBattle/
-// useSmokeBomb)場合、その時点のHPをbossPursuitへ書き戻す。これをしないと、追撃中に一部
-// ダメージを与えてから再度逃げた分が失われ、追いつくたびに同じHPで出現してしまう
-// (討伐依頼のmarkQuestChasingIfFled/carryHpと同じ考え方)
-function updateBossPursuitHpIfFled() {
-  if (battle && battle.bossPursuitEnemyId && bossPursuit && bossPursuit.enemyId === battle.bossPursuitEnemyId) {
-    const enemy = battle.enemies.find((e) => e.id === battle.bossPursuitEnemyId);
-    if (enemy) bossPursuit.hp = enemy.hp;
-  }
-}
 function escapeBattle() {
   // ボステストは探索を経由していないため、逃げ延びた場合も探索画面ではなくタイトルへ直帰する
   if (bossTestActive) { location.reload(); return; }
   fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   markQuestChasingIfFled();
-  updateBossPursuitHpIfFled();
   if (!shouldKeepBossBgmOnFlee()) stopBattleBgm();
   // 逃げた場合、足元に落ちている素材は置き去り=拾えない(ユーザー指定)
   materialGroundDrops = [];
@@ -2643,8 +2558,6 @@ function defeat() {
   // 全滅=素材は置き去り(拾えない)
   materialGroundDrops = [];
   clearMaterialGroundDrops();
-  updateBossPursuitHpIfFled(); // 追撃モードの再戦中に全滅した場合、その時点のダメージを反映してから記録する
-  recordBossWoundIfPursuing(); // 全滅で追撃を続けられなくなった場合も「見送った」扱いで手負いのHPを記録する
   stopBattleBgm();
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   fieldParty.forEach((c) => clearOnsenBuff(c)); // 遠征が終わったので温泉バフも失効させる

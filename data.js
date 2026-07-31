@@ -1893,13 +1893,8 @@ const RESCUE_QUEST_MAX_ACTIVE_MEMBERS = 1; // 稼働中(ロストを除く)の�
 // 確定戦闘(大猪等)から討伐せず逃げた場合、以後どのフロアでも(進む/帰還どちらでも)floor移動のたびに
 // この確率で追いかけてきて再戦闘になる(state.acceptedQuest.chasing、indexHtml側のtryForceQuestEncounter参照)
 const CHASE_ENCOUNTER_CHANCE = 0.6;
-// ボス/中ボス(isBoss/isMidBoss、討伐依頼対象も含む)のHPがこの割合以下になった状態でその敵自身の
-// 手番が回ってくると、通常の行動の代わりに瀕死のまま戦闘から逃走する(追撃モード開始)。HPが閾値を
-// 割った瞬間ではなく「その敵の手番が来たタイミング」で判定する(battle.jsのprocessNext参照)。
-// 追撃中は以後どのフロアでもこの確率で追いつき再戦になる(dungeon.jsのbossPursuit/
-// tryForceBossPursuitEncounter参照、討伐依頼のchasing/carryHpと同じ仕組み)
-const BOSS_FLEE_HP_RATIO = 0.3;
-const BOSS_PURSUIT_ENCOUNTER_CHANCE = 0.6;
+// 旧・ボス逃走+追撃システム(BOSS_FLEE_HP_RATIO/BOSS_PURSUIT_ENCOUNTER_CHANCE)は
+// 2026-07-31ユーザー指示で全廃。ボス/中ボスはHPが減っても逃走せず最後まで戦う
 
 // ============ クエストダンジョン(奉行所依頼の専用ルート、モンハン形式)定義 ============
 // 奉行所の依頼(QUEST_DEFS)にroute: "<このオブジェクトのキー>"を付けると、その依頼は「専用ルートへ

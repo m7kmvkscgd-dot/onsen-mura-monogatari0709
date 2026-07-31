@@ -39,12 +39,11 @@ function playExplorationAreaBgm() {
 // 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)。
 // 中ボス(battle.enemies内にMID_BOSS_BGM_IDSの敵が1体でもいる場合)はmid_boss_battle、
 // それ以外のボス(最終ボス・序盤緊急依頼ボス、isBoss:true)はboss_battleを、森・海岸問わず優先する
-// 討伐依頼の追跡(state.acceptedQuest.chasing)またはボス追撃モード(bossPursuit)の最中は、
-// 接敵→逃走/被追跡→再遭遇の間ずっと同じ相手との決着がついていないため、再遭遇のたびに
-// ボス曲を頭出しし直さず、途切れず流れ続けているBGMをそのまま続投させる
+// 討伐依頼の追跡(state.acceptedQuest.chasing)の最中は、接敵→逃走→再遭遇の間ずっと同じ相手との
+// 決着がついていないため、再遭遇のたびにボス曲を頭出しし直さず、途切れず流れ続けているBGMをそのまま続投させる
 // (ユーザー指摘: 大猪の追跡戦で再戦するたびに曲が最初から再生されてしまっていた不具合の対応)
 function isContinuingBossChase() {
-  return !!((state.acceptedQuest && state.acceptedQuest.chasing) || bossPursuit);
+  return !!(state.acceptedQuest && state.acceptedQuest.chasing);
 }
 // 戦闘BGMの強制上書きキー(大規模戦テスト/将来の村襲撃用)。nullなら通常のステージ別選曲
 let battleBgmOverrideKey = null;

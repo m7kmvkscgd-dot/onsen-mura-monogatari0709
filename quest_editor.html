@@ -186,7 +186,7 @@ const QUEST_DATA = {
     QUEST_COOLDOWN_DAYS, QUEST_DEADLINE_DAYS, QUEST_CONTRACT_FEE_DIVISOR,
     QUEST_GOLD_PER_FLOOR, QUEST_REWARD_MULT, QUEST_REWARD_XP,
     RESCUE_QUEST_GOLD_THRESHOLD, RESCUE_QUEST_MAX_ACTIVE_MEMBERS,
-    CHASE_ENCOUNTER_CHANCE, BOSS_FLEE_HP_RATIO, BOSS_PURSUIT_ENCOUNTER_CHANCE,
+    CHASE_ENCOUNTER_CHANCE,
   },
 };
 
@@ -204,8 +204,6 @@ const CONST_DEFS = [
   { key: "RESCUE_QUEST_GOLD_THRESHOLD", name: "救済クエスト発生: 所持金しきい値", desc: "所持金がこの値以下の時だけ張り出される" },
   { key: "RESCUE_QUEST_MAX_ACTIVE_MEMBERS", name: "救済クエスト発生: 稼働人数しきい値", desc: "瀕死/ロストを除く稼働中の仲間がこの人数以下の時だけ張り出される" },
   { key: "CHASE_ENCOUNTER_CHANCE", name: "討伐対象の追跡遭遇率", desc: "討伐せず逃げた対象が、以後フロア移動のたびに追いついてくる確率", isPct: true },
-  { key: "BOSS_FLEE_HP_RATIO", name: "ボスの逃走HP割合", desc: "ボス/中ボスがこのHP割合以下で自分の手番が来ると逃走する", isPct: true },
-  { key: "BOSS_PURSUIT_ENCOUNTER_CHANCE", name: "ボス追撃の遭遇率", desc: "逃走したボスが以後フロア移動のたびに追いついてくる確率", isPct: true },
 ];
 
 const MAT_IDS = ["kawa", "hone", "ki", "tetsu"];

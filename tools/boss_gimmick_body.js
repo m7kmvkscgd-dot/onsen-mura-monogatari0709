@@ -202,6 +202,24 @@
   check("大規模戦テストのボタンは撤去済み", !document.getElementById("titleTest2Btn"));
   check("ボステストのボタンがある", !!document.getElementById("titleBossTestBtn"));
 
+  console.log("--- J: ボスは逃走しない(逃走+追撃システム全廃、2026-07-31) ---");
+  // HP30%未満のボスの手番をprocessNextで直接回し、旧システムなら逃走していた状況で
+  // 戦闘が続行される(battleが破棄されない)ことを確認する。通常戦闘想定(bossTestActive=false)
+  makeParty();
+  const fleeBoss = instantiateEnemyById("boss_kasha");
+  fleeBoss.hp = Math.floor(fleeBoss.maxHp * 0.1); // 旧BOSS_FLEE_HP_RATIO(0.3)を大きく割るHP
+  setupGimmickBattle([fleeBoss]);
+  battle.roundsTotal = 1;
+  battle.order = [{ kind: "enemy", ref: fleeBoss }];
+  battle.orderIndex = 0;
+  const wasBossTest = bossTestActive;
+  bossTestActive = false;
+  processNext();
+  check("瀕死ボスの手番でも戦闘が破棄されない", battle !== null);
+  check("逃走関連の関数が完全に撤去済み", typeof triggerBossFlee === "undefined" && typeof playBossFleeBanner === "undefined" && typeof tryForceBossPursuitEncounter === "undefined");
+  check("逃走用の状態変数も撤去済み", typeof bossPursuit === "undefined");
+  bossTestActive = wasBossTest;
+
   console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
   window.__failed = failed;
 })();
