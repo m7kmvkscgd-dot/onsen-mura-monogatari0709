@@ -2322,7 +2322,11 @@ function victory() {
   fieldParty = fieldParty.filter((c) => !c.isClone);
   advEnemiesDefeated += battle.enemies.filter((e) => e.hp <= 0).length; // リザルトの戦績/朱印評価用(逃げた敵は数えない)
   stopBattleBgm();
-  playSfx("victory");
+  // 魂の回想(soulStory)持ちのボスを倒した時は勝利ファンファーレを鳴らさない(回想演出指示v2:
+  // 撃破と同時にBGMを止め、静寂→魂の一言→回想ボタンの流れを音で壊さない。SEの納品後は
+  // ここに和鏡の落下音・亀裂音が入る予定)。通常の勝利は従来どおり
+  const hasSoulStoryKill = battle.enemies.some((e) => e.hp <= 0 && e.soulStory && e.soulStory.scenes && e.soulStory.scenes.length);
+  if (!hasSoulStoryKill) playSfx("victory");
   unlockPeaceDialogueAfterVictory(); // 平和な掛け合い: この勝利をもって次に条件を満たした時1回だけ発火できるようにする
   fieldParty.forEach((c) => { if (c.campWeaponCareBattles > 0) c.campWeaponCareBattles--; });
   clearDotEffects(fieldParty); clearBattleTransientForms(); // 戦闘に勝ったので毒/炎上は持ち越さず治す

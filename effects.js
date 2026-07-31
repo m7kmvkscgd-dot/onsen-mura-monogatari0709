@@ -1568,65 +1568,137 @@ function playPreBattleLines(enemy, onDone) {
   timers.push(setTimeout(finish, ps.length * 1300 + 2200)); // 放置でも自動で戦闘へ
 }
 
+// ---- 回想の文章送り(回想演出指示v2、2026-07-31) ----
+// 場面のtextを句点(。)で一文ずつに分割し、タップごとに1文追加表示する(段落の一括表示をやめた)。
+// 自動送りは無し。次のタップ受付までは最低SOUL_STORY_MIN_GATE_MS空け(連打で全文が一瞬で流れるのを防ぐ)、
+// 場面データのgates[文idx]で「この文の後だけ長く待つ」を上書きできる(例: 「閂を外さなかった。」の後1.5秒)。
+// fadeMs[文idx]はその文のフェードイン時間の上書き(「表示速度を少し落とす」指示用、既定450ms)
+const SOUL_STORY_MIN_GATE_MS = 700;
+const SOUL_STORY_SCENE_FADE_MS = 700; // 場面転換の黒フェード(指示書の0.6〜0.9秒の中間)
+const SOUL_STORY_LINE_HOLD_MS = 800; // 魂の一言の前の静寂(SE納品後はここに和鏡の落下音〜亀裂音が入る)
+const SOUL_STORY_LINE_STEP_MS = 900; // 魂の一言が2文以上ある時の文間隔
+const SOUL_STORY_BTN_DELAY_MS = 1200; // 一言が出きってから回想ボタンが現れるまで
+let soulStoryGateScale = 1; // node vmテスト用の時間短縮フック(実プレイでは常に1)
+function splitSoulSentences(text) {
+  return (String(text || "").match(/[^。]*。|[^。]+/g) || []).map((s) => s.trim()).filter(Boolean);
+}
 // 勝利画面に魂の演出+回想ボタンを差し込む(battle.jsのvictory()から呼ばれる)。
-// ボタンは押しても消えず、閉じたら再度読める(画面を離れるまで)
+// ボタンは押しても消えず、閉じたら再度読める(画面を離れるまで)。
+// v2演出: 魂の一言は静寂を置いてから一文ずつ現れ、出きって少し置いてからボタンが現れる
 function showSoulStoryOffer(enemy) {
   const story = enemy.soulStory;
   if (!story || !story.scenes || !story.scenes.length) return;
   const card = findVisibleCard(enemy.instanceId);
+  const lineSentences = splitSoulSentences(story.soulLine);
   if (card) {
     const soul = document.createElement("img");
     soul.className = "soul-rise";
     soul.src = "assets/items/soul_shard.png";
     card.appendChild(soul);
-    if (story.soulLine) {
+    if (lineSentences.length) {
       const line = document.createElement("div");
       line.className = "soul-line";
-      line.textContent = `「${story.soulLine}」`;
       card.appendChild(line);
-      requestAnimationFrame(() => line.classList.add("show"));
+      lineSentences.forEach((s, i) => {
+        setTimeout(() => {
+          if (!line.parentNode) return; // 勝利画面を離れた後は何もしない
+          line.textContent = lineSentences.slice(0, i + 1).map((t) => `「${t}」`).join("");
+          line.classList.add("show");
+        }, (SOUL_STORY_LINE_HOLD_MS + i * SOUL_STORY_LINE_STEP_MS) * soulStoryGateScale);
+      });
     }
   }
-  const grid = document.getElementById("actionGrid");
-  const btn = document.createElement("button");
-  btn.className = "big soul-story-btn";
-  btn.id = "soulStoryBtn";
-  btn.textContent = "🕯 残された記憶に触れる";
-  btn.style.gridColumn = "1/-1";
-  grid.insertBefore(btn, grid.firstChild);
-  btn.onclick = () => {
-    playSfx("select");
-    openSoulStoryViewer(enemy);
-    state.soulStoriesSeen = state.soulStoriesSeen || {};
-    state.soulStoriesSeen[enemy.id] = true; // 図鑑での読み返し(将来実装)用の既読記録
-    saveState();
-  };
+  // 回想ボタンは魂の一言が出きってから少し間を置いて現れる(即表示しない、指示書「1.2秒後」)。
+  // 表示前にプレイヤーが「戻る」で画面を離れていたら差し込まない
+  const btnDelay = lineSentences.length
+    ? (SOUL_STORY_LINE_HOLD_MS + (lineSentences.length - 1) * SOUL_STORY_LINE_STEP_MS + SOUL_STORY_BTN_DELAY_MS) * soulStoryGateScale
+    : 0;
+  setTimeout(() => {
+    const grid = document.getElementById("actionGrid");
+    if (!battle || !grid || !document.getElementById("battleContinueBtn")) return;
+    const btn = document.createElement("button");
+    btn.className = "big soul-story-btn";
+    btn.id = "soulStoryBtn";
+    btn.textContent = "🕯 残された記憶に触れる";
+    btn.style.gridColumn = "1/-1";
+    grid.insertBefore(btn, grid.firstChild);
+    btn.onclick = () => {
+      playSfx("select");
+      openSoulStoryViewer(enemy);
+      state.soulStoriesSeen = state.soulStoriesSeen || {};
+      state.soulStoriesSeen[enemy.id] = true; // 図鑑での読み返し(将来実装)用の既読記録
+      saveState();
+    };
+  }, btnDelay);
 }
 function openSoulStoryViewer(enemy) {
   const scenes = enemy.soulStory.scenes;
   const overlay = document.getElementById("soulStoryOverlay");
+  const img = document.getElementById("soulStoryImage");
+  const textEl = document.getElementById("soulStoryText");
+  const hintEl = document.getElementById("soulStoryHint");
+  // 場面転換の黒フェード用レイヤー(画像もテキスト欄も覆う)。開き直しに備えてid再利用
+  let fadeEl = document.getElementById("soulSceneFade");
+  if (!fadeEl) {
+    fadeEl = document.createElement("div");
+    fadeEl.id = "soulSceneFade";
+    fadeEl.className = "soul-scene-fade";
+    overlay.appendChild(fadeEl);
+  }
   let idx = 0;
-  const render = () => {
+  let sentences = [];
+  let sentIdx = 0;
+  let gateUntil = 0; // このミリ秒時刻までタップを受け付けない(連打防止・演出の間の確保)
+  const updateHint = () => {
+    if (sentIdx < sentences.length) hintEl.textContent = `タップで進む(${idx + 1}/${scenes.length})`;
+    else hintEl.textContent = idx < scenes.length - 1 ? `タップで次へ(${idx + 1}/${scenes.length})` : "タップで閉じる";
+  };
+  const showNextSentence = () => {
     const s = scenes[idx];
-    const img = document.getElementById("soulStoryImage");
+    const span = document.createElement("span");
+    span.textContent = sentences[sentIdx];
+    span.style.opacity = "0";
+    textEl.appendChild(span);
+    const fadeMs = ((s.fadeMs && s.fadeMs[sentIdx]) || 450) * soulStoryGateScale;
+    span.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fadeMs, easing: "ease-out", fill: "forwards" });
+    span.style.opacity = "1";
+    gateUntil = Date.now() + ((s.gates && s.gates[sentIdx]) || SOUL_STORY_MIN_GATE_MS) * soulStoryGateScale;
+    sentIdx++;
+    updateHint();
+  };
+  const showScene = () => {
+    const s = scenes[idx];
     img.style.display = "none";
     img.onload = () => { img.style.display = ""; };
     img.onerror = () => { img.style.display = "none"; }; // 画像未提供(制作待ち)はテキストのみで見せる
     img.src = s.image || "";
-    document.getElementById("soulStoryText").textContent = s.text || "";
-    document.getElementById("soulStoryHint").textContent = idx < scenes.length - 1 ? `タップで次へ(${idx + 1}/${scenes.length})` : "タップで閉じる";
+    textEl.textContent = "";
+    sentences = splitSoulSentences(s.text);
+    sentIdx = 0;
+    showNextSentence(); // 場面の1文目は自動で出す(以降はタップ)
   };
   overlay.style.display = "flex";
   overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: "ease-out" });
   overlay.onclick = () => {
-    if (idx < scenes.length - 1) { idx++; render(); }
-    else {
+    if (Date.now() < gateUntil) return; // 間の途中のタップは飲み込む(指示書: 最低0.7秒)
+    if (sentIdx < sentences.length) { showNextSentence(); return; }
+    if (idx < scenes.length - 1) {
+      // 場面転換: 黒フェードの往路で画像・文章を差し替え、復路で明ける。フェード中の入力も弾く
+      const half = (SOUL_STORY_SCENE_FADE_MS / 2) * soulStoryGateScale;
+      gateUntil = Date.now() + half * 2;
+      fadeEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: half, easing: "ease-in", fill: "forwards" });
+      setTimeout(() => {
+        idx++;
+        showScene();
+        fadeEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: half, easing: "ease-out", fill: "forwards" });
+      }, half);
+    } else {
       const fade = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, easing: "ease-out" });
       fade.onfinish = () => { overlay.style.display = "none"; };
       setTimeout(() => { overlay.style.display = "none"; }, 600); // onfinish不発の保険
     }
   };
-  render();
+  showScene();
 }
 
 // DOT VFXのフレーム画像も起動後に事前ロードしておく(初回再生のコマ落ち防止。攻撃VFXの

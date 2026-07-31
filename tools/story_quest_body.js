@@ -98,8 +98,11 @@
     runSoulCase();
   }
 
+  // E: v2演出(2026-07-31)対応版。魂の一言は静寂後に一文ずつ・ボタンは遅れて出現・
+  // ビューアは句点ごとのタップ送り+場面転換フェード。soulStoryGateScaleで間を1/50に縮めて検証する
   function runSoulCase() {
-    console.log("--- E: 魂の回想(soulLine+ビューア) ---");
+    console.log("--- E: 魂の回想(soulLine+ビューア、v2文章送り) ---");
+    soulStoryGateScale = 0.02;
     makeParty();
     const b = instantiateEnemyById("amayome_shiranui");
     battle = { enemies: [b], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 1, presence: {} };
@@ -111,22 +114,41 @@
     showSoulStoryOffer(b);
     const card = document.querySelector(`#enemyRow .enemy-card[data-id="${b.instanceId}"]`);
     check("魂が浮かぶ", !!card.querySelector(".soul-rise"));
-    check("魂の一言が出る", card.querySelector(".soul-line") && card.querySelector(".soul-line").textContent.includes("誰を待っていたのでしょう"));
-    const btn = document.getElementById("soulStoryBtn");
-    check("「残された記憶に触れる」ボタンが出る", !!btn && btn.textContent.includes("残された記憶に触れる"));
-    btn.click();
-    const viewer = document.getElementById("soulStoryOverlay");
-    check("ビューアが開き1場面目が出る", viewer.style.display === "flex" && document.getElementById("soulStoryText").textContent.includes("呼んでくれる名すら"));
-    viewer.click(); viewer.click(); viewer.click();
-    check("4場面目まで送れる", document.getElementById("soulStoryText").textContent.includes("迎えに来たよ、白縫"));
-    check("既読が記録される", state.soulStoriesSeen && state.soulStoriesSeen.amayome_shiranui === true);
-    viewer.click(); // 最終場面でタップ→閉じる(フェード後)
-    const waitE = setInterval(() => {
-      if (viewer.style.display !== "none") return;
-      clearInterval(waitE);
-      check("最後のタップで閉じる", true);
-      runQuestTesterCase();
-    }, 120);
+    check("魂の一言は静寂中はまだ出ない", (card.querySelector(".soul-line").textContent || "") === "");
+    check("回想ボタンも即座には出ない", !document.getElementById("soulStoryBtn"));
+    const waitLine = setInterval(() => {
+      const btn = document.getElementById("soulStoryBtn");
+      if (!btn) return; // ボタンが出る=一言も出きっている時刻
+      clearInterval(waitLine);
+      check("魂の一言が一言遅れで出る", card.querySelector(".soul-line").textContent.includes("誰を待っていたのでしょう"));
+      check("「残された記憶に触れる」ボタンが出る", btn.textContent.includes("残された記憶に触れる"));
+      btn.click();
+      const viewer = document.getElementById("soulStoryOverlay");
+      const textEl = document.getElementById("soulStoryText");
+      check("ビューアが開き1場面目の1文目だけが出る", viewer.style.display === "flex" && textEl.textContent.includes("呼んでくれる名すら") && !textEl.textContent.includes("赤い緒があれば"));
+      viewer.click(); // ゲート(700ms×0.02=14ms)以内の連打は飲み込まれる
+      check("ゲート中のタップは無視される", !textEl.textContent.includes("けれど、あの人だけは"));
+      // 以降はゲート明けを待ちながらタップを繰り返し、最終場面の最終文まで送る
+      let taps = 0;
+      const tapLoop = setInterval(() => {
+        if (textEl.textContent.includes("迎えに来たよ、白縫")) {
+          clearInterval(tapLoop);
+          check("場面をまたいで最終文まで送れる", true);
+          check("既読が記録される", state.soulStoriesSeen && state.soulStoriesSeen.amayome_shiranui === true);
+          viewer.click(); // 最終場面でタップ→閉じる(フェード後)
+          const waitClose = setInterval(() => {
+            if (viewer.style.display !== "none") return;
+            clearInterval(waitClose);
+            check("最後のタップで閉じる", true);
+            soulStoryGateScale = 1;
+            runQuestTesterCase();
+          }, 120);
+          return;
+        }
+        viewer.click();
+        if (++taps > 40) { clearInterval(tapLoop); check("場面をまたいで最終文まで送れる", false, "40タップで到達せず"); soulStoryGateScale = 1; runQuestTesterCase(); }
+      }, 60);
+    }, 30);
   }
 
   // F: クエストテスト(タイトルの開発ツール)。抽選なしで受注→出発し、1層目のフレーバーまで流れる
@@ -160,6 +182,12 @@
     const boss2 = ENEMIES.kagegui_sakazuki;
     check("ボスの口上4行", Array.isArray(boss2.preBattleLines) && boss2.preBattleLines.length === 4);
     check("魂の回想: 一言+4場面", !!boss2.soulStory && boss2.soulStory.soulLine.length > 0 && boss2.soulStory.scenes.length === 4);
+    // 回想v2の演出データ(指示書の「間」): 場面3=閂の後1.5秒、場面4=名の後1.2秒、場面2=最終文ゆっくり
+    const sc2 = boss2.soulStory.scenes;
+    check("v2の間(gates)が設定されている", sc2[0].gates[1] === 800 && sc2[1].gates[3] === 1000 && sc2[2].gates[1] === 1500 && sc2[3].gates[1] === 1200);
+    check("v2のフェード上書き(fadeMs)が設定されている", sc2[1].fadeMs[4] === 900);
+    check("gatesの文idxが実際の文分割と噛み合う", splitSoulSentences(sc2[2].text)[1].includes("閂を外さなかった") && splitSoulSentences(sc2[3].text)[1].includes("お前たちの名だった"));
+    check("soulLineは2文に分割される", splitSoulSentences(boss2.soulStory.soulLine).length === 2);
     check("ギミックメモは2件、構造化ギミックは1件(影写しは既存トリガーで表現不可のため未実装)", boss2.gimmickNotes.length === 2 && boss2.gimmicks.length === 1);
     check("影法師/逆月は通常抽選に出ない", ENEMIES.kageboshi.questOnly && ENEMIES.kageboshi.maxFloor === 0 && boss2.questOnly && boss2.maxFloor === 0);
 

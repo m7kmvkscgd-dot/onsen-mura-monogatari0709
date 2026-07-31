@@ -127,6 +127,9 @@
   }
   #soulStoryText { color: #e8e2d4; font-size: 14.5px; line-height: 2.0; letter-spacing: 0.04em; margin: 0 0 10px; }
   #soulStoryHint { color: rgba(232,226,212,0.45); font-size: 11px; text-align: center; letter-spacing: 0.1em; }
+  /* 場面転換の黒フェード層(回想演出指示v2)。画像(z:0)もテキスト欄(z:1)も覆い、
+     opacityはelement.animate(fill:forwards)側で制御する。タップはoverlay本体に通す */
+  .soul-scene-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 2; }
   /* テストモード中だけ表示される「タイトルへ戻る」(battle.js startBattleが表示を切り替える)。
      敵カード列より上のレイヤーで左上に小さく置く(通常プレイでは絶対に出ない) */
   #battleTestExitBtn {
