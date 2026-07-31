@@ -1507,13 +1507,14 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
     const s = steps[i];
     const card = findVisibleCard(actor.instanceId);
     let chip = null;
+    let vfxMs = 0;
     if (card) {
       chip = document.createElement("div");
       chip.className = `dot-stop-chip ${s.chipCls}`;
       chip.textContent = `${s.icon} ${s.label}`;
       card.appendChild(chip);
       requestAnimationFrame(() => chip.classList.add("show"));
-      playAilmentVfxOnCard(card, ailmentVfxAssignmentFor(s.id, s.stack));
+      vfxMs = playAilmentVfxOnCard(card, ailmentVfxAssignmentFor(s.id, s.stack));
     }
     const dmg = s.tick(); // 実際のダメージ適用とログはengine.jsのtickBurn等がそのまま担当する
     if (dmg > 0) {
@@ -1524,10 +1525,13 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
       delete actor.__shakeRenderedFor;
     }
     renderBattleScreen();
+    // 停止時間はモック承認どおり「0.7秒」と「VFXの再生が終わるまで」の長い方(炎上のVFXは約1.3秒
+    // あるため、一律0.7秒で切ると炎が燃えている最中に明転→敵の攻撃が始まって見えてしまう。
+    // VFXが完全に消えてから次の種類/明転へ進むことで、演出終了→敵の行動モーションの順序を保証する)
     setTimeout(() => {
       if (chip) chip.remove();
       runStep(i + 1);
-    }, DOT_STOP_HOLD_MS + DOT_STOP_STEP_GAP_MS);
+    }, Math.max(DOT_STOP_HOLD_MS, vfxMs - 120) + DOT_STOP_STEP_GAP_MS);
   };
   setTimeout(() => runStep(0), DOT_STOP_DIM_IN_MS);
 }

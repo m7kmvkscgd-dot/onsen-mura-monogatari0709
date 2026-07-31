@@ -64,12 +64,13 @@
     check("VFXフリップブックが敵カード上にある", !!card && !!card.querySelector(".dot-ailment-vfx"));
     check("炎上VFXは加算合成", !!card && !!card.querySelector(".dot-ailment-vfx.blend-screen"));
   }, 500);
-  // 2種類目(毒)の表示中
+  // 2種類目(毒)の表示中(炎上ステップはVFX完走待ちでmax(700,1320-120)+140=1340ms続くため、
+  // 暗転260ms+1340msの後+400msの時点で確認する)
   setTimeout(() => {
     const card = document.querySelector(`#enemyRow .enemy-card[data-id="${eC.instanceId}"]`);
     const chip = card && card.querySelector(".dot-stop-chip");
     check("2種類目のチップが毒", !!chip && chip.textContent.includes("毒"), chip && chip.textContent);
-  }, 260 + 840 + 500);
+  }, 260 + 1340 + 400);
   const finishCheck = setInterval(() => {
     if (!cDone) return;
     clearInterval(finishCheck);
@@ -102,8 +103,43 @@
       check("炎上レベル1の割り当てが取れる", !!a1 && a1.frameCount === 60);
       check("未設定レベルは最も近い既存レベルへ寄せる", a9 === a1);
       check("未知の状態異常はnull", ailmentVfxAssignmentFor("stun", 1) === null);
+      runAttackOrderCase();
+    });
+  }
+
+  // F: 実際のprocessNext(敵ターン)を通しで動かし、敵の攻撃(enemyAttack)が
+  // 「停止演出の全種類+VFXの完走+明転+行動前の間」の後に初めて呼ばれることを時刻で検証する
+  function runAttackOrderCase() {
+    console.log("--- F: 敵の攻撃モーションは停止演出(VFX完走込み)の後 ---");
+    makeParty();
+    const eF = instantiateEnemyById("q_oni");
+    setupBattle([eF]);
+    eF.bigAttackCountdown = 3; // このターンは通常攻撃(大技でも予告でもない)
+    eF.burnTurns = 2; // 炎上VFX=60コマ×22ms=1320ms(停止0.7秒より長い→VFX完走まで待つはず)
+    eF.poison = 3;    // 毒VFX=9コマ×109ms=981ms
+    battle.order = [eF];
+    battle.orderIndex = 0;
+    let burnTickAt = 0, poisonTickAt = 0, attackAt = 0;
+    const origEnemyAttack = enemyAttack;
+    const origTickBurn = tickBurn;
+    const origTickPoison = tickPoison;
+    enemyAttack = (a, alive, log) => { attackAt = Date.now(); return origEnemyAttack(a, alive, log); };
+    tickBurn = (e, l) => { if (!burnTickAt) burnTickAt = Date.now(); return origTickBurn(e, l); };
+    tickPoison = (e, l) => { if (!poisonTickAt) poisonTickAt = Date.now(); return origTickPoison(e, l); };
+    processNext();
+    const waitF = setInterval(() => {
+      if (!attackAt) return;
+      clearInterval(waitF);
+      enemyAttack = origEnemyAttack;
+      tickBurn = origTickBurn;
+      tickPoison = origTickPoison;
+      // 炎上ステップの停止はmax(700, 1320-120)+140=1340ms。毒はその後に始まる
+      check("毒の表示は炎上VFXが終わってから", poisonTickAt - burnTickAt >= 1300, `${poisonTickAt - burnTickAt}ms`);
+      // 毒ステップの停止max(700, 981-120)+140=1001ms+明転250ms+行動前600ms=約1850ms後に攻撃
+      check("攻撃は最後のDOT表示+VFX完走+明転の後", attackAt - poisonTickAt >= 1700, `${attackAt - poisonTickAt}ms`);
+      check("攻撃までの合計が演出の総和以上(約3.4秒)", attackAt - burnTickAt >= 3000, `${attackAt - burnTickAt}ms`);
       console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
       window.__failed = failed;
-    });
+    }, 50);
   }
 })();
