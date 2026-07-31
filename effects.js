@@ -1778,7 +1778,8 @@ function seamlessDungeonCameraOut() {
       }
     }
     if (t < 1) requestAnimationFrame(tick);
-    else if (screenEl) screenEl.style.animation = ""; // 次回以降の画面切替は通常のフェードに戻す
+    // 注意: ここでscreenEl.style.animationを""に戻してはいけない(表示中の画面のinline animation:noneを
+    // 外すとscreenFadeInが頭から再生されて一瞬暗転する。復元はshowScreen側が次の画面切替時に行う)
   };
   requestAnimationFrame(tick);
 }

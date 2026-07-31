@@ -236,7 +236,14 @@ document.addEventListener("touchend", (e) => {
 }, { passive: false });
 // ============ 画面切り替え ============
 function showScreen(id) {
-  document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+  // シームレス戦闘遷移がscreenFadeIn抑止のために入れたinline animation:noneは、その画面が
+  // 表示中の間ずっと残す(表示中に外すとアニメーションが頭から再生されて一瞬暗転して見える。
+  // 実測でopacity0.08まで落ちる瞬間を確認、2026-08-01)。切替対象「以外」の画面のinlineは
+  // ここで毎回リセットするので、次にその画面へ普通に切り替わる時は通常のフェードに戻る
+  document.querySelectorAll(".screen").forEach((el) => {
+    el.classList.remove("active");
+    if (el.id !== id) el.style.animation = "";
+  });
   document.getElementById(id).classList.add("active");
 }
 

@@ -144,6 +144,9 @@ const openingBgmAudio = document.getElementById("openingBgmAudio");
 // GainNode構築に失敗した場合(古いブラウザ等)は、bgmAudio.volumeへの直接代入にフォールバックする。
 let bgmAudioCtx = null;
 let bgmGainNode = null;
+let openingGainNode = null; // オープニングBGM用(2026-08-01追加。iOSは<audio>.volumeを無視するため、
+// タイトル画面のBGMがずっと素の音量=うるさいまま鳴っていた。bgmAudioで実績のある同じ1本道パターンを
+// 「1要素ずつ広げる」方針(下のコメント)どおり2要素目として追加。失敗時は従来の.volumeフォールバック)
 try {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (AudioContextClass) {
@@ -151,10 +154,22 @@ try {
     const bgmSource = bgmAudioCtx.createMediaElementSource(bgmAudio);
     bgmGainNode = bgmAudioCtx.createGain();
     bgmSource.connect(bgmGainNode).connect(bgmAudioCtx.destination);
+    const openingSource = bgmAudioCtx.createMediaElementSource(openingBgmAudio);
+    openingGainNode = bgmAudioCtx.createGain();
+    openingSource.connect(openingGainNode).connect(bgmAudioCtx.destination);
   }
 } catch (e) {
   bgmAudioCtx = null;
   bgmGainNode = null;
+  openingGainNode = null;
+}
+// オープニングBGMの音量の読み書き(GainNode経路。非対応環境は従来の.volumeへフォールバック)
+function setOpeningBgmVolume(value) {
+  if (openingGainNode) openingGainNode.gain.value = value;
+  else openingBgmAudio.volume = value;
+}
+function getOpeningBgmVolume() {
+  return openingGainNode ? openingGainNode.gain.value : openingBgmAudio.volume;
 }
 function setBgmAudioVolume(value) {
   if (bgmGainNode) bgmGainNode.gain.value = value;
@@ -301,7 +316,7 @@ setBgmAudioVolume(baseTargetVolume());
 lodgingBgmAudio.volume = LODGING_BGM_VOLUME;
 campBgmAudio.volume = CAMP_BGM_VOLUME;
 ambientBgmAudio.volume = AMBIENT_BGM_VOLUME;
-openingBgmAudio.volume = OPENING_BGM_VOLUME;
+setOpeningBgmVolume(OPENING_BGM_VOLUME); // GainNode経路(iOSで.volumeが無視される問題への対応、2026-08-01)
 let audioUnlocked = false;
 let currentBgmKey = null;
 // 場面ごとの再生位置記憶(例: 町の曲は町に戻るたびに続きから再生される)。
@@ -376,20 +391,20 @@ function bgmVolumeForKey(key) {
 let openingBgmFadeToken = 0;
 function fadeOutOpeningBgm() {
   if (openingBgmAudio.paused) return;
-  const startVol = openingBgmAudio.volume;
+  const startVol = getOpeningBgmVolume();
   const startTime = performance.now();
   const myToken = ++openingBgmFadeToken;
   const durationMs = 600;
   function step() {
     if (openingBgmFadeToken !== myToken) return;
     const t = Math.min(1, (performance.now() - startTime) / durationMs);
-    openingBgmAudio.volume = startVol * (1 - t);
+    setOpeningBgmVolume(startVol * (1 - t));
     if (t < 1) {
       requestAnimationFrame(step);
     } else {
       openingBgmAudio.pause();
       openingBgmAudio.currentTime = 0;
-      openingBgmAudio.volume = OPENING_BGM_VOLUME;
+      setOpeningBgmVolume(OPENING_BGM_VOLUME);
     }
   }
   step();
