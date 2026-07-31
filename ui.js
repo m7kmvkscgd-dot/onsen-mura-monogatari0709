@@ -1342,6 +1342,12 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
       if (row) row.style.top = "";
     }
     const rect = partyBar.getBoundingClientRect();
+    // 逃げる小ボタン(戦闘のみ、位置C=味方バーの右上に浮かせる。2026-08-01ユーザー確定)。
+    // 味方バーの実測位置から44px上に置く(バーが実測配置で動いても常に右肩に追従する)
+    if (partyBarId === "battlePartyBar") {
+      const fleeBtn = document.getElementById("battleFleeBtn");
+      if (fleeBtn) fleeBtn.style.top = `${Math.max(8, Math.round(rect.top) - 44)}px`;
+    }
     let top = Math.round(rect.bottom) + 10;
     // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、
     // はみ出したぶんだけ全体を上へずらす。iOS SafariはURL バー/下部バー展開時の可視高さが

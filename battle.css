@@ -139,6 +139,16 @@
   .soul-scene-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 2; }
   /* テストモード中だけ表示される「タイトルへ戻る」(battle.js startBattleが表示を切り替える)。
      敵カード列より上のレイヤーで左上に小さく置く(通常プレイでは絶対に出ない) */
+  /* 逃げる小ボタン(位置C=味方バーの右上、2026-08-01)。コマンド欄を2×2に保つため独立させた。
+     縦位置(top)はui.js positionActionsBelowPartyBarが味方バーの実測位置から設定する */
+  #battleFleeBtn {
+    position: fixed; right: 10px; z-index: 6;
+    font-size: 0.82rem; font-weight: 700; padding: 7px 13px;
+    border-radius: 999px; border: 1px solid rgba(217,207,184,0.55);
+    background: rgba(24,20,16,0.82); color: #d9cfb8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  #battleFleeBtn:active { transform: scale(0.94); }
   #battleTestExitBtn {
     position: fixed; top: 6px; left: 8px; z-index: 8;
     font-size: 11px; padding: 5px 9px;

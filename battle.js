@@ -42,6 +42,10 @@ function clearBattleTransientForms() {
   });
   // ボスギミックの場演出(業火オーバーレイ/背景差し替え)も戦闘の後始末で必ず解除する
   if (typeof clearGimmickBattleFx === "function") clearGimmickBattleFx();
+  // 逃げる小ボタン(#battleFleeBtn)も戦闘の後始末(勝利/全滅/逃走/煙玉)で必ず隠す。
+  // 次の戦闘のrenderActionButtonsが改めて表示する
+  const fleeBtn = document.getElementById("battleFleeBtn");
+  if (fleeBtn) fleeBtn.style.display = "none";
 }
 function resetRaidBarricade(hp) {
   raidBarricadeHp = raidBarricadeMaxHp = hp;
@@ -2112,7 +2116,9 @@ function renderActionButtons(actor) {
         skillButtons.push(hawkGuardBtn);
       }
 
-      if (skillButtons.length >= 3) {
+      // 技が2つ以上ならサブメニュー化(2026-08-01ユーザー指定: コマンドを常に2×2=攻撃/技(or唯一の技)/
+      // 交代/道具に保つ。以前の閾値は3つ以上だったが、逃げるの小ボタン独立化とセットで2つ以上に変更)
+      if (skillButtons.length >= 2) {
         const skillMenuBtn = document.createElement("button");
         skillMenuBtn.className = "big";
         skillMenuBtn.textContent = "技";
@@ -2194,20 +2200,21 @@ function renderActionButtons(actor) {
     grid.appendChild(extinguishBtn);
   }
 
-  // 襲撃戦(村の防衛)では「逃げる」を出さない。自分の村から逃げる先が無く、
-  // 逃走=実質敗北の踏み倒しになってしまうため(raid.js参照)
-  if (!raidBattleActive) {
-    const fleeBtn = document.createElement("button");
-    fleeBtn.className = "big";
-    fleeBtn.textContent = "逃げる";
-    fleeBtn.onclick = () => {
-      if (battleActionLocked) return;
-      battleActionLocked = true;
-      fleeAction(actor);
-    };
-    grid.appendChild(fleeBtn);
-  }
+  // 逃げる: コマンド欄には置かず、味方バー右上の小ボタン(#battleFleeBtn、位置はui.jsが実測配置)を
+  // 表示する(2026-08-01ユーザー確定「位置C」。コマンド欄を2×2に保って下の圧迫を減らす)。
+  // 襲撃戦(村の防衛)では出さない: 自分の村から逃げる先が無く、逃走=実質敗北の踏み倒しになってしまうため
+  const fleeBtnEl = document.getElementById("battleFleeBtn");
+  if (fleeBtnEl) fleeBtnEl.style.display = raidBattleActive ? "none" : "";
 }
+// 逃げる小ボタンの実行。押した瞬間の手番のキャラ(battle.actingId)で逃走準備する。
+// 敵の手番中・行動解決中(battleActionLocked)・勝敗確定後(clearBattleTransientFormsで非表示)は効かない
+document.getElementById("battleFleeBtn").onclick = () => {
+  if (!battle || battleActionLocked) return;
+  const actor = fieldParty.find((c) => c.id === battle.actingId && c.hp > 0);
+  if (!actor) return;
+  battleActionLocked = true;
+  fleeAction(actor);
+};
 
 // 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
 function fleeAction(actor) {
