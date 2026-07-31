@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: 敵の蓄積ダメージ停止演出+VFX</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  /* ---- 戦闘シーン(本体の戦闘画面の簡易再現) ---- */
+  .scene {
+    position: relative; height: 330px; overflow: hidden;
+    background-image: url('assets/bg/forest_day.jpg');
+    background-size: cover; background-position: center;
+  }
+  .scene::after {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
+      linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
+  }
+  /* 停止演出中の暗転: 敵カードだけスポットライトに残して、他を沈める */
+  .stop-dim {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: rgba(8, 8, 12, 0.55); opacity: 0; transition: opacity 0.22s ease-out;
+  }
+  .stop-dim.on { opacity: 1; }
+
+  .enemy-area { position: absolute; top: 34px; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; }
+  .enemy-card {
+    position: relative; text-align: center; border-radius: 10px; padding: 0.4rem;
+    border: 2px solid transparent; width: 148px;
+    background: linear-gradient(155deg, #6b4a2e 0%, #4a3220 55%, #3a2818 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 3px 10px rgba(0,0,0,0.4);
+    transition: border-color 0.2s;
+  }
+  .enemy-card.acting { border-color: rgba(215,182,111,0.85); box-shadow: 0 0 12px rgba(215,182,111,0.4); }
+  .enemy-card::before {
+    content: ""; position: absolute; inset: 4px; z-index: 0; border-radius: 7px;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(circle at 78% 85%, rgba(0,0,0,0.15), transparent 60%),
+      #3c3527;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .enemy-portrait { position: relative; z-index: 1; width: 104px; height: 104px; object-fit: contain; }
+  .enemy-name { position: relative; z-index: 1; font-size: 12px; font-weight: 700; color: #f3e7c6; }
+  .status-row { position: relative; z-index: 1; min-height: 16px; font-size: 11px; letter-spacing: 2px; }
+  .hpbar { position: relative; z-index: 1; height: 7px; margin: 4px 6px 2px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
+  .hpbar i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #d5605a, #a93b36); border-radius: 4px; transition: width 0.35s ease-out; }
+
+  /* 敵の被弾シェイクと攻撃の踏み込み(本体の簡易再現) */
+  @keyframes cardShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 60% { transform: translateX(3px); } }
+  .enemy-card.shake { animation: cardShake 0.32s ease-out; }
+  @keyframes enemyLunge { 0% { transform: translateY(0); } 35% { transform: translateY(34px) scale(1.04); } 100% { transform: translateY(0); } }
+  .enemy-card.lunge { animation: enemyLunge 0.45s ease-in-out; }
+
+  /* VFXレイヤー(敵イラストの中心基準。sizeはpx、offsetはエディタ出力のpx値をそのまま使う) */
+  .vfx-layer { position: absolute; left: 50%; top: 58px; z-index: 4; pointer-events: none; }
+  .vfx-layer img { position: absolute; }
+  .vfx-layer img.blend-screen { mix-blend-mode: screen; }
+
+  /* 状態異常チップ(停止中に「今なんのダメージか」を明示する) */
+  .ailment-chip {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%) scale(0.8);
+    z-index: 5; white-space: nowrap; opacity: 0;
+    font-size: 13px; font-weight: 900; padding: 4px 12px; border-radius: 999px;
+    background: rgba(15,12,10,0.88); border: 1px solid rgba(255,255,255,0.25);
+    transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+  }
+  .ailment-chip.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  /* DOTダメージのポップ(現状=小さめ/新演出=大きめ、色は種類ごと) */
+  .dot-pop {
+    position: absolute; left: 50%; top: 34px; z-index: 6; transform: translateX(-50%);
+    font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.8); pointer-events: none;
+    animation: popFloat 1.4s ease-out forwards;
+  }
+  .dot-pop.small { font-size: 15px; }
+  .dot-pop.big { font-size: 24px; }
+  @keyframes popFloat {
+    0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
+    12% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.12); }
+    24% { transform: translateX(-50%) translateY(0) scale(1); }
+    78% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+  }
+  .c-poison { color: #c98add; } .c-bleed { color: #ff7d72; } .c-burn { color: #ffab4d; }
+
+  /* 戦闘ログ */
+  .log {
+    position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 3;
+    background: rgba(15,12,10,0.72); border: 1px solid rgba(215,182,111,0.35); border-radius: 8px;
+    min-height: 58px; max-height: 76px; overflow: hidden; padding: 6px 10px;
+    font-size: 11.5px; line-height: 1.55; display: flex; flex-direction: column; justify-content: flex-end;
+  }
+
+  /* ---- 操作パネル ---- */
+  .panel { padding: 12px 14px 40px; }
+  h1 { font-size: 15px; color: #f3e7c6; margin: 6px 0 2px; }
+  .note { font-size: 11px; color: #b6b0a2; line-height: 1.6; margin: 4px 0 10px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+  .row > span.lbl { font-size: 12px; color: #b6b0a2; flex-shrink: 0; width: 84px; }
+  .chip-toggle {
+    font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: 999px;
+    background: rgba(0,0,0,0.3); color: #8f887a; border: 1px solid #5d4d35;
+  }
+  .chip-toggle.on { background: #7b5d36; color: #f3e7c6; border-color: #d7b66f; }
+  select {
+    background: rgba(0,0,0,0.3); border: 1px solid #5d4d35; color: #ece8dc; border-radius: 8px;
+    padding: 7px 8px; font-size: 12px; font-family: inherit;
+  }
+  .play-btn {
+    display: block; width: 100%; margin: 8px 0; padding: 13px; font-size: 14px; font-weight: 800;
+    border-radius: 10px; border: 1px solid #5d4d35; color: #ece8dc; background: #2f3540;
+  }
+  .play-btn.primary { background: linear-gradient(180deg, #8a6a3d, #6d5230); border-color: #d7b66f; color: #fff6de; }
+  .play-btn:disabled { opacity: 0.45; }
+  .footnote { font-size: 10.5px; color: #8f887a; line-height: 1.6; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="scene" id="scene">
+    <div class="stop-dim" id="stopDim"></div>
+    <div class="enemy-area">
+      <div class="enemy-card" id="enemyCard">
+        <div class="ailment-chip" id="ailmentChip"></div>
+        <img class="enemy-portrait" src="assets/enemies/inoshishi.png" alt="猪">
+        <div class="vfx-layer" id="vfxLayer"></div>
+        <div class="enemy-name">猪</div>
+        <div class="status-row" id="statusRow"></div>
+        <div class="hpbar"><i id="hpFill"></i></div>
+      </div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="panel">
+    <h1>敵の蓄積ダメージ 停止演出モック</h1>
+    <p class="note">敵のターン開始時、毒/出血/炎上の蓄積ダメージが入る瞬間に<b>進行を一時停止し、VFX+ダメージを1種類ずつ見せてから</b>敵の行動へ移る案の確認用。VFX・効果音・サイズ/位置はVFXエディタでエクスポートした割り当てをそのまま使用。</p>
+
+    <div class="row">
+      <span class="lbl">状態異常</span>
+      <button class="chip-toggle on" id="tgPoison">🦠 毒</button>
+      <button class="chip-toggle on" id="tgBleed">🩸 出血</button>
+      <button class="chip-toggle on" id="tgBurn">🔥 炎上</button>
+    </div>
+    <div class="row">
+      <span class="lbl">停止の長さ</span>
+      <select id="holdSelect">
+        <option value="0">VFXの長さに任せる</option>
+        <option value="700">1種類につき0.7秒</option>
+        <option value="1000" selected>1種類につき1.0秒</option>
+        <option value="1300">1種類につき1.3秒</option>
+      </select>
+    </div>
+    <div class="row">
+      <span class="lbl">効果音</span>
+      <button class="chip-toggle on" id="tgSe">ON</button>
+    </div>
+
+    <button class="play-btn primary" id="btnNew">▶ 新しい演出で再生(停止+VFX)</button>
+    <button class="play-btn" id="btnOld">▶ 現状の演出で再生(比較用)</button>
+
+    <p class="footnote">
+      割り当て(エディタ出力より): 毒=kenney_fart(35px)+slime_04、出血=blood_impact(52px)+slime_01、炎上=flame_02(75px、加算合成)。<br>
+      現状の本体は「小さいポップが0.7秒間隔で流れるだけ」で、VFXも明確な停止もありません。新演出は「暗転スポットライト→種類チップ→VFX+大きめダメージ→次の種類→明転→敵の行動」の順です。
+    </p>
+  </div>
+</div>
+
+<script>
+// VFXエディタのエクスポート値をそのまま流用(ailment割り当て3件)
+const AILMENT_VFX = {
+  bleed: { framePrefix: "assets/vfx_library/codemanu_vfx_free/blood_impact/frame_", frameCount: 30, size: 52, offsetX: 0, offsetY: 0, blendScreen: false, frameMs: 19, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_01.ogg" },
+  burn: { framePrefix: "assets/vfx_library/flame_02_15x4/frame_", frameCount: 60, size: 75, offsetX: -1, offsetY: -14, blendScreen: true, frameMs: 22, se: null },
+  poison: { framePrefix: "assets/vfx_library/kenney_smoke/fart/frame_", frameCount: 9, size: 35, offsetX: -1, offsetY: -11, blendScreen: false, frameMs: 109, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg" },
+};
+// デモ用の蓄積ダメージ(毒=蓄積3/出血=蓄積4/炎上=最大HP8%相当)
+const AILMENTS = [
+  { key: "poison", icon: "🦠", label: "毒", cls: "c-poison", dmg: 3, logText: (d) => `猪は毒で${d}ダメージ！` },
+  { key: "bleed", icon: "🩸", label: "出血", cls: "c-bleed", dmg: 4, logText: (d) => `猪は出血で${d}ダメージ！` },
+  { key: "burn", icon: "🔥", label: "炎上", cls: "c-burn", dmg: 5, logText: (d) => `猪は炎上で${d}ダメージ！` },
+];
+const MAX_HP = 62;
+let hp = MAX_HP;
+let playing = false;
+const toggles = { poison: true, bleed: true, burn: true };
+let seOn = true;
+
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// フレーム画像のプリロード(初回再生のカクつき防止)
+Object.values(AILMENT_VFX).forEach((v) => {
+  for (let i = 1; i <= v.frameCount; i++) { const img = new Image(); img.src = `${v.framePrefix}${i}.png`; }
+});
+
+function logLine(text) {
+  const el = document.createElement("div");
+  el.textContent = text;
+  $("log").appendChild(el);
+  while ($("log").children.length > 4) $("log").removeChild($("log").firstChild);
+}
+function setHp(v) {
+  hp = Math.max(0, v);
+  $("hpFill").style.width = (hp / MAX_HP * 100) + "%";
+}
+function refreshStatusRow() {
+  $("statusRow").textContent = AILMENTS.filter((a) => toggles[a.key]).map((a) => a.icon).join("");
+}
+function popDamage(a, big) {
+  const el = document.createElement("div");
+  el.className = `dot-pop ${big ? "big" : "small"} ${a.cls}`;
+  el.textContent = `${a.icon}-${a.dmg}`;
+  $("enemyCard").appendChild(el);
+  setTimeout(() => el.remove(), 1450);
+}
+function shakeCard() {
+  const card = $("enemyCard");
+  card.classList.remove("shake");
+  void card.offsetWidth;
+  card.classList.add("shake");
+}
+function playSe(src) {
+  if (!seOn || !src) return;
+  const a = new Audio(src);
+  a.volume = 0.5;
+  a.play().catch(() => {});
+}
+// フリップブックVFXを1回再生し、所要msを返す(エディタと同じ「img差し替え」方式)
+function playVfx(v) {
+  const layer = $("vfxLayer");
+  layer.innerHTML = "";
+  const img = document.createElement("img");
+  img.style.width = v.size + "px";
+  img.style.marginLeft = (-(v.size / 2) + v.offsetX) + "px";
+  img.style.transform = `translateY(calc(-50% + ${v.offsetY}px))`;
+  if (v.blendScreen) img.classList.add("blend-screen");
+  img.src = `${v.framePrefix}1.png`;
+  layer.appendChild(img);
+  let frame = 1;
+  const timer = setInterval(() => {
+    frame++;
+    if (frame > v.frameCount) { clearInterval(timer); img.remove(); return; }
+    img.src = `${v.framePrefix}${frame}.png`;
+  }, v.frameMs);
+  return v.frameCount * v.frameMs;
+}
+function enemyAttack() {
+  const card = $("enemyCard");
+  card.classList.remove("lunge");
+  void card.offsetWidth;
+  card.classList.add("lunge");
+  logLine("猪の攻撃！小太郎に12ダメージ！");
+}
+function activeAilments() {
+  return AILMENTS.filter((a) => toggles[a.key]);
+}
+function resetRun() {
+  setHp(MAX_HP);
+  $("log").innerHTML = "";
+  refreshStatusRow();
+}
+
+// ---- 新演出: 暗転して1種類ずつ「チップ→VFX+ダメージ→保持」、終わったら明転して敵の行動 ----
+async function runNew() {
+  if (playing) return;
+  playing = true;
+  resetRun();
+  const list = activeAilments();
+  const card = $("enemyCard");
+  card.classList.add("acting");
+  logLine("猪のターン…");
+  await sleep(350);
+  if (list.length > 0) {
+    $("stopDim").classList.add("on"); // 進行停止の合図: 敵カードだけスポットライトに残す
+    await sleep(260);
+    const hold = Number($("holdSelect").value);
+    for (const a of list) {
+      const chip = $("ailmentChip");
+      chip.textContent = `${a.icon} ${a.label}`;
+      chip.className = `ailment-chip show ${a.cls}`;
+      const vfxMs = playVfx(AILMENT_VFX[a.key]);
+      playSe(AILMENT_VFX[a.key].se);
+      await sleep(120);
+      popDamage(a, true);
+      shakeCard();
+      setHp(hp - a.dmg);
+      logLine(a.logText(a.dmg));
+      // 停止時間: 「VFX任せ」ならVFXの再生時間ぶん、指定があればその長さぶん止める
+      await sleep(Math.max(hold, vfxMs - 120) + 180);
+      chip.classList.remove("show");
+      await sleep(140);
+    }
+    $("stopDim").classList.remove("on");
+    await sleep(300);
+  }
+  enemyAttack();
+  await sleep(600);
+  card.classList.remove("acting");
+  playing = false;
+}
+
+// ---- 現状の演出: 小さいポップが0.7秒間隔で流れるだけ(VFX/停止なし)、その後すぐ敵の行動 ----
+async function runOld() {
+  if (playing) return;
+  playing = true;
+  resetRun();
+  const list = activeAilments();
+  const card = $("enemyCard");
+  card.classList.add("acting");
+  logLine("猪のターン…");
+  await sleep(350);
+  list.forEach((a, i) => {
+    setTimeout(() => {
+      popDamage(a, false);
+      setHp(hp - a.dmg);
+      logLine(a.logText(a.dmg));
+    }, i * 700);
+  });
+  // 本体と同じ: 種類数×700msだけ待ってから行動(明確な「停止の見せ場」は無い)
+  await sleep(Math.max(600, list.length * 700));
+  enemyAttack();
+  await sleep(600);
+  card.classList.remove("acting");
+  playing = false;
+}
+
+[["tgPoison", "poison"], ["tgBleed", "bleed"], ["tgBurn", "burn"]].forEach(([id, key]) => {
+  $(id).onclick = () => {
+    toggles[key] = !toggles[key];
+    $(id).classList.toggle("on", toggles[key]);
+    refreshStatusRow();
+  };
+});
+$("tgSe").onclick = () => {
+  seOn = !seOn;
+  $("tgSe").classList.toggle("on", seOn);
+  $("tgSe").textContent = seOn ? "ON" : "OFF";
+};
+$("btnNew").onclick = runNew;
+$("btnOld").onclick = runOld;
+refreshStatusRow();
+setHp(MAX_HP);
+logLine("▼ 下のボタンで再生してください");
+</script>
+</body>
+</html>
