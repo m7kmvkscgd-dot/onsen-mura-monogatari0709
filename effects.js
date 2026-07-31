@@ -1759,7 +1759,7 @@ function seamlessDungeonCameraOut() {
   const t0 = performance.now();
   const tick = (now) => {
     const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
-    const e = seamlessCamEase(t); // 逆再生も同じくゆっくり始まってゆっくり終わる
+    const e = 1 - Math.pow(1 - t, 3); // 戻しは従来のeaseOut(出だし速め)。ease-in-outは入りのみ(2026-08-01ユーザー指定)
     const s = 1.05 - 0.05 * e;
     if (inner) inner.style.transform = t < 1 ? `scale(${s})` : "";
     if (t < 1) requestAnimationFrame(tick);
