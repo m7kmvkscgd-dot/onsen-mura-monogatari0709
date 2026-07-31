@@ -29,6 +29,8 @@ const BGM_TRACKS = {
   // クエスト専用ルート「笑わぬ祭」のルートBGM(探索・戦闘とも同曲を通しで流す。出典はdocs/BGM出典.md)。
   // QUEST_ROUTE_DEFS[routeId].bgmにこのキーを書くと、そのルートの探索/戦闘で流れる(下のquestRouteBgmKey参照)
   warawanu_matsuri: "assets/bgm/omatsuri_bayashi_bgm.mp3",
+  // クエスト専用ルート「帰らずの湯治道」のルートBGM(同上。出典はdocs/BGM出典.md)
+  kaerazu_tojiyado: "assets/bgm/kaerazu_wafuu_horror_bgm.mp3",
 };
 // 現在questroute(クエスト専用ルート)に居て、そのルートに専用BGM(QUEST_ROUTE_DEFS[].bgm)が
 // 定義されていればそのキーを返す。探索(playExplorationAreaBgm)と戦闘(playBattleBgm)の両方が参照し、

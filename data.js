@@ -650,6 +650,47 @@ const ENEMIES = {
       { name: "面替え", trigger: "数ターンごとに背負った面を一枚選び、自分の顔へ重ねる。", effect: "狐面では素早い連続攻撃、般若面では重い全体攻撃、翁面では守りを固めるなど、面に応じて戦い方が切り替わる。" },
       { name: "役者呼び", trigger: "顔の面を壊されるほどの大きな傷を受けた時に発動する。", effect: "舞台脇に積まれた古い面が藁の身体を得て、面かぶりとして戦いへ加わる。" },
     ] },
+  // ---- 物語クエスト第4号「帰らずの湯治宿」(2026-08-01、テキストはGPT産・新美術基準の透過スプライト) ----
+  // ステータスは序盤(tier1)向け初期値、ボステストでの調整前提
+  yubitari: { id: "yubitari", ja: "湯浸り", image: "assets/enemies/yubitari.png", hp: 46, atk: 14, def: 14, spd: 7, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true, frameless: true,
+    bigAttack: { name: "杉桶かぶせ", mult: 1.1, debuff: { type: "spdDown", chance: 0.45, value: 0.3, turns: 2 } },
+    bigAttackCycle: { min: 3, max: 5 } },
+  // 忘れ湯・お白: ギミック提案2案のうち「湯加減」をformCycle(ぬる湯=自己回復/煮え湯=全体場ダメージ)で
+  // 実装。「白煙」(視界低下)と「名前を流す」(技封印)は既存機構に無い仕組みが必要なため未実装、
+  // gimmickNotesに提案のまま残置(実装する時はFable 5判断で新機構を設計する)
+  wasureyu_oshira: { id: "wasureyu_oshira", ja: "忘れ湯・お白", image: "assets/enemies/wasureyu_oshira.png", hp: 440, atk: 20, def: 25, spd: 6, goldMin: 60, goldMax: 90, xp: 95, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true, frameless: true,
+    bigAttack: { name: "湯かき板薙ぎ", mult: 1.35, debuff: { type: "atkDown", chance: 0.45, value: 0.2, turns: 2 } },
+    bigAttackCycle: { min: 3, max: 4 },
+    statusImmune: ["burn"],
+    preBattleLines: [
+      "傷も、悔いも、名残も、みんな湯へ置いておゆき",
+      "帰りたいと思うから、人は苦しむのですよ",
+      "名などなくとも、ここでは誰も独りになりません",
+      "さあ――肩まで、ゆっくりお浸かり",
+    ],
+    gimmicks: [
+      { id: "yukagen", name: "湯加減",
+        trigger: { type: "battleStart" },
+        announce: "お白が湯かき板で大釜をゆっくり掻いた。湯気の色が、変わり始める…！",
+        effects: [
+          { type: "formCycle", every: 2, forms: [
+            { id: "nuruyu", name: "ぬる湯", announce: "「まずは、ぬるめから」…薄青い湯気が立ち、お白の傷が塞がっていく。",
+              regenPctMaxHp: 0.03 },
+            { id: "nieyu", name: "煮え湯", announce: "「少し、熱うしますよ」…白い湯気が刺すような熱気に変わった！",
+              fieldDamagePctMaxHp: 0.04, fieldDamageMin: 2, fieldDamageName: "煮え湯の熱気" },
+          ] },
+        ] },
+      { id: "yobimizu", name: "静かな宿の客",
+        trigger: { type: "hpBelow", ratio: 0.55 },
+        announce: "湯面が波立ち、湯浸りたちが静かに立ち上がった。「お客様を、お守りしなくては」",
+        effects: [
+          { type: "summon", every: 3, enemyId: "yubitari", count: 1, maxAlive: 2, immediate: true, text: "湯浸りが湯の中から起き上がった。" },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "湯加減", trigger: "数ターンごとに、お白が湯樋を切り替える構想。発動前に湯気の色と短い口上で次の湯加減を予告する。", effect: "『ぬる湯』では敵側がじわじわ回復し、『煮え湯』では全員が少量ずつ傷つき、『白煙』では次に狙われる者が見えにくくなる。湯樋のそばに現れる湯浸りを倒すと、その回の効果を弱められる案。" },
+      { name: "名前を流す", trigger: "お白の大技として、味方一人の名札を湯へ落とす構想。対象は事前に無地の湯札で明示する。", effect: "対象は一時的に固有技を思い出せず通常攻撃しか選べなくなる。名札を抱えた湯浸りを倒せばすぐ解除でき、放置しても短時間で戻る。完全な行動不能にはしない。" },
+    ] },
 };
 // 【方針転換 2026-07-31】物語クエストの回想シーン(soulStory)は開発フェーズの都合で一旦停止し、
 // 実装済み2クエスト(雨嫁・白縫/鏡喰い・逆月)からもデータを撤去した。表示機構(effects.jsの
@@ -1926,6 +1967,12 @@ const QUEST_DEFS = {
     completionText: "祭りが消えると、茂吉の仲間三人が参道に倒れていた。彼らは自分から面を受け取り、名も暮らしも捨てようとしたことだけを覚えていた。四人目は見つからなかったが、帰り道の古木には、穏やかに笑う新しい面が一枚掛けられていたという。それ以来、北の旧道で祭囃子を聞いても、決して音のする方へ顔を向けてはならないと伝えられている。",
     targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "warawanu_matsuri",
     chaseText: "百面師・うつろが追いかけてきた！" },
+  // 物語クエスト第4号「帰らずの湯治宿」(2026-08-01、テキストはGPT産)。専用ルートkaerazu_tojiyado行き
+  wasureyu_oshira: { emoji: "♨️", requester: "炭焼き・弥作", title: "帰らずの湯治宿",
+    text: "北の炭焼き道を越えた先、十年前に閉じたはずの白鷺湯治宿に灯が戻っています。湯に入った者は古傷も疲れも消えて帰ってきますが、数日もすると家も仕事も捨て、宿へ戻ってしまうのです。昨夜は薪運びの若者三人が帰りませんでした。宿の者に危害を加えぬよう様子を確かめ、まだ戻れる者を連れ帰ってください。",
+    completionText: "湯治宿の灯は消え、山道に立ちこめていた甘い湯気も薄れた。戻った客たちは自分の名を思い出したが、宿で何を手放したのかだけは語ろうとしない。空になった共同湯の脱衣籠には、見覚えのない無地の湯札が一枚残されていた。湯守はそれを燃やしたが、濡れた木は朝まで煙を吐き続けた。",
+    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "kaerazu_tojiyado",
+    chaseText: "忘れ湯・お白が追いかけてきた！" },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
 // 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある
@@ -2030,6 +2077,25 @@ const QUEST_ROUTE_DEFS = {
         enemies: ["menkaburi"] },
       { fromFloor: 8, bg: "warawanu_kagura", bgTitle: "観客なき神楽舞台",
         flavor: "神楽舞台には奏者がいない。それでも笛と太鼓は鳴り続け、舞台前に置かれた五枚の面だけが同じ調子で笑っている。",
+        enemies: [] },
+    ],
+  },
+  // 物語クエスト第4号「帰らずの湯治宿」(テキストはGPT産)。音響案(audio_plan.json)の多層ミックスは
+  // 既存音声機構の範囲外のため、専用BGM1本の通し再生(warawanu_matsuriと同方式)で採用
+  kaerazu_tojiyado: {
+    ja: "帰らずの湯治道", emoji: "🌫️", totalFloors: 8, bgm: "kaerazu_tojiyado",
+    segments: [
+      { fromFloor: 1, bg: "kaerazu_yumichi", bgTitle: "夕暮れの帰らず道",
+        flavor: "谷川と虫の音が、足を進めるほど遠ざかる。風に逆らって下りてきた湯煙の向こうに、閉じたはずの宿の灯が見えた。",
+        enemies: [] },
+      { fromFloor: 3, bg: "kaerazu_yado", bgTitle: "灯の戻った湯治宿",
+        flavor: "濡れた下駄はすべて戸口へ爪先を向け、外へ向いた一足がない。障子の内側には灯があるのに、人の影だけが映らない。",
+        enemies: ["yubitari"] },
+      { fromFloor: 5, bg: "kaerazu_yufuda", bgTitle: "名を流す湯札廊下",
+        flavor: "壁の湯札から墨が滴り、床の湯樋へ黒い筋を引いている。読めなくなった札の数だけ、奥の湯音が大きくなった。",
+        enemies: ["yubitari"] },
+      { fromFloor: 8, bg: "kaerazu_ookama", bgTitle: "地底の大湯釜",
+        flavor: "地下の湯釜は、火を焚く者もないまま煮え続けている。白い湯面には、こちらへ差し出された手の形だけが次々と浮かんでは消えた。",
         enemies: [] },
     ],
   },

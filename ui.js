@@ -43,6 +43,11 @@ const BG_SETS = {
   warawanu_yatai: { dawn: "assets/bg/warawanu_yatai.jpg", asa: "assets/bg/warawanu_yatai.jpg", day: "assets/bg/warawanu_yatai.jpg", dusk: "assets/bg/warawanu_yatai.jpg", night: "assets/bg/warawanu_yatai.jpg" },
   warawanu_men_sando: { dawn: "assets/bg/warawanu_men_sando.jpg", asa: "assets/bg/warawanu_men_sando.jpg", day: "assets/bg/warawanu_men_sando.jpg", dusk: "assets/bg/warawanu_men_sando.jpg", night: "assets/bg/warawanu_men_sando.jpg" },
   warawanu_kagura: { dawn: "assets/bg/warawanu_kagura.jpg", asa: "assets/bg/warawanu_kagura.jpg", day: "assets/bg/warawanu_kagura.jpg", dusk: "assets/bg/warawanu_kagura.jpg", night: "assets/bg/warawanu_kagura.jpg" },
+  // 物語クエスト「帰らずの湯治宿」(2026-08-01、専用ルートkaerazu_tojiyado)。同じく昼1枚を全時間帯へ流用
+  kaerazu_yumichi: { dawn: "assets/bg/kaerazu_yumichi.jpg", asa: "assets/bg/kaerazu_yumichi.jpg", day: "assets/bg/kaerazu_yumichi.jpg", dusk: "assets/bg/kaerazu_yumichi.jpg", night: "assets/bg/kaerazu_yumichi.jpg" },
+  kaerazu_yado: { dawn: "assets/bg/kaerazu_yado.jpg", asa: "assets/bg/kaerazu_yado.jpg", day: "assets/bg/kaerazu_yado.jpg", dusk: "assets/bg/kaerazu_yado.jpg", night: "assets/bg/kaerazu_yado.jpg" },
+  kaerazu_yufuda: { dawn: "assets/bg/kaerazu_yufuda.jpg", asa: "assets/bg/kaerazu_yufuda.jpg", day: "assets/bg/kaerazu_yufuda.jpg", dusk: "assets/bg/kaerazu_yufuda.jpg", night: "assets/bg/kaerazu_yufuda.jpg" },
+  kaerazu_ookama: { dawn: "assets/bg/kaerazu_ookama.jpg", asa: "assets/bg/kaerazu_ookama.jpg", day: "assets/bg/kaerazu_ookama.jpg", dusk: "assets/bg/kaerazu_ookama.jpg", night: "assets/bg/kaerazu_ookama.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";

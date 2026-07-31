@@ -41,6 +41,9 @@
 //         summon/dmgTakenWhileMinionsMult … 形態になった瞬間に雑魚を召喚し、この形態の間は取り巻きが
 //                            生きている限り被ダメ軽減を掛け直す(翁面)。軽減はgimmickApplyMinionShield経由で
 //                            他ギミック(笑わぬ祭のdmgTakenWhileMinions)と同一ラウンド内で重複しない
+//         regenPctMaxHp … この形態の間、毎ラウンド持ち主が最大HP割合ぶん回復する(お白の「ぬる湯」用、2026-08-01)
+//         fieldDamagePctMaxHp/fieldDamageMin/fieldDamageName … この形態の間、毎ラウンド味方全員へ
+//                            最大HP割合の場ダメージ(お白の「煮え湯」用。既存fieldDamage効果の形態内蔵版)
 //
 // 呼び出し側(battle.js)のフック:
 //   startBattle → initBattleGimmicks()(戦闘ごとの状態初期化+場演出のリセット)
@@ -226,6 +229,27 @@ function processGimmickRoundEffects(continueRound) {
         if (curForm.dmgTakenWhileMinionsMult) {
           const hasFormMinions = battle.enemies.some((e) => e !== entry.owner && e.hp > 0);
           if (hasFormMinions) gimmickApplyMinionShield(entry.owner, curForm.dmgTakenWhileMinionsMult);
+        }
+        // ぬる湯(regenPctMaxHp): この形態の間、毎ラウンド持ち主が回復する
+        if (curForm.regenPctMaxHp && entry.owner.hp > 0 && entry.owner.hp < entry.owner.maxHp) {
+          const heal = Math.max(1, Math.round(entry.owner.maxHp * curForm.regenPctMaxHp));
+          entry.owner.hp = Math.min(entry.owner.maxHp, entry.owner.hp + heal);
+          blog(`${curForm.name || "湯"}の温もりが${entry.owner.label}の傷を癒やした。(+${heal})`);
+          popupOn(entry.owner.instanceId, `+${heal}`, "heal");
+          fired = true;
+        }
+        // 煮え湯(fieldDamagePctMaxHp): この形態の間、毎ラウンド味方全員へ場ダメージ
+        if (curForm.fieldDamagePctMaxHp) {
+          const targets2 = aliveField();
+          if (targets2.length > 0) {
+            blog(`${curForm.fieldDamageName || curForm.name || "場の力"}が味方全員に降りかかった！`);
+            targets2.forEach((c) => {
+              const dmg = Math.max(curForm.fieldDamageMin != null ? curForm.fieldDamageMin : 1, Math.round(c.maxHp * curForm.fieldDamagePctMaxHp));
+              c.hp = Math.max(0, c.hp - dmg);
+              popupOn(c.id, `-${dmg}`, "dmg");
+            });
+            fired = true;
+          }
         }
       }
     });

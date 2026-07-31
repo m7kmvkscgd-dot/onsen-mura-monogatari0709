@@ -358,10 +358,56 @@
           clearInterval(waitBig);
           check("次の手番で全体大技が発動する", true);
           check("発動後は自前サイクルに戻る(次の大技は再び般若面待ち)", b2.bigAttackCountdown >= 90);
-          console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
-          window.__failed = failed;
+          runWasureyuCase();
         }, 120);
       }, 120);
     }, 120);
+  }
+
+  // I: 帰らずの湯治宿(第4号)。データ整合+湯加減(formCycle: ぬる湯=自己回復/煮え湯=全体場ダメージ)+
+  // 静かな宿の客(hpBelow55%召喚)+新美術基準のframeless表示を検証する
+  function runWasureyuCase() {
+    console.log("--- I: 帰らずの湯治宿(湯加減/召喚/frameless) ---");
+    const qDef4 = QUEST_DEFS.wasureyu_oshira;
+    const route4 = QUEST_ROUTE_DEFS.kaerazu_tojiyado;
+    check("依頼がルートに紐付く", !!qDef4 && qDef4.route === "kaerazu_tojiyado" && !!route4);
+    check("ボスは最終層・区間4つ・敵ID実在・BG登録済み", qDef4.targetFloor === route4.totalFloors && route4.segments.length === 4 && route4.segments.every((s) => !!BG_SETS[s.bg] && (s.enemies || []).every((id) => !!ENEMIES[id])));
+    const boss4 = ENEMIES.wasureyu_oshira;
+    check("口上4行・提案メモ2件・回想なし", boss4.preBattleLines.length === 4 && boss4.gimmickNotes.length === 2 && !boss4.soulStory);
+    check("ボスと湯浸りは新基準のframeless", boss4.frameless === true && ENEMIES.yubitari.frameless === true);
+    check("ルートBGMキーが実在する", route4.bgm === "kaerazu_tojiyado" && !!BGM_TRACKS.kaerazu_tojiyado);
+    check("湯浸り/お白は通常抽選に出ない", ENEMIES.yubitari.questOnly && ENEMIES.yubitari.maxFloor === 0 && boss4.questOnly && boss4.maxFloor === 0);
+
+    makeParty();
+    const b = instantiateEnemyById("wasureyu_oshira");
+    battle = { enemies: [b], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
+    b.__enemyAllies = [b];
+    initBattleGimmicks();
+    renderBattleScreen();
+    processGimmickTriggers();
+    check("開幕で湯加減が発動しぬる湯になる", b.__formId === "nuruyu");
+    b.hp = Math.floor(b.maxHp * 0.8);
+    const hpBefore = b.hp;
+    battle.roundsTotal = 1;
+    processGimmickRoundEffects(() => {});
+    check("ぬる湯の間は毎ラウンド自己回復する", b.hp > hpBefore);
+    const partyHp1 = fieldParty.map((c) => c.hp);
+    battle.roundsTotal = 2;
+    processGimmickRoundEffects(() => {});
+    check("2ラウンド周期で煮え湯へ", b.__formId === "nieyu");
+    battle.roundsTotal = 3;
+    const bossHpAtNieyu = b.hp;
+    processGimmickRoundEffects(() => {});
+    check("煮え湯の間は味方全員が場ダメージを受ける", fieldParty.every((c, i) => c.hp < partyHp1[i]));
+    check("煮え湯の間は回復しない", b.hp === bossHpAtNieyu);
+    battle.roundsTotal = 4;
+    processGimmickRoundEffects(() => {});
+    check("一巡してぬる湯へ戻る", b.__formId === "nuruyu");
+    b.hp = Math.floor(b.maxHp * 0.5);
+    processGimmickTriggers();
+    check("HP55%未満で湯浸りが1体召喚される", battle.enemies.filter((e) => e.id === "yubitari" && e.hp > 0).length === 1);
+
+    console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
+    window.__failed = failed;
   }
 })();
