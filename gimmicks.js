@@ -125,7 +125,10 @@ function gimmickApplyForm(entry, eff) {
   owner.__formAttacks = form.attacks || null;
   owner.__formAttackMult = form.attackMult || null;
   owner.__formBigAttackStance = !!form.bigAttackStance;
-  blog(`${owner.label}は【${form.name}】を顔へ重ねた。${form.announce || ""}`);
+  // 切替の言い回しはeff.switchTextでギミックごとに指定できる({label}/{form}が置換される。
+  // 例: 三面替え=「面を顔へ重ねた」、湯加減=「湯樋を引き替えた」)。未指定は汎用文
+  const tmpl = eff.switchText || "{label}は【{form}】に構えを変えた。";
+  blog(tmpl.replace("{label}", owner.label).replace("{form}", form.name) + (form.announce || ""));
   if (form.bigAttackStance) {
     triggerWarningFlash();
     playSfx("big_attack_warning");

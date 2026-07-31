@@ -630,7 +630,7 @@ const ENEMIES = {
         effects: [
           // 固定順(狐→般若→翁)で2ラウンドごとに面を替える。狐=軽い2回攻撃、
           // 般若=次の手番で構え(予告)→その次の手番で全体大技、翁=面かぶり召喚+生存中は被ダメ軽減
-          { type: "formCycle", every: 2, forms: [
+          { type: "formCycle", every: 2, switchText: "{label}は【{form}】を顔へ重ねた。", forms: [
             { id: "kitsune", name: "狐面", announce: "「次は、駆け回る者の顔にいたしましょう」", attacks: 2, attackMult: 0.6 },
             { id: "hannya", name: "般若面", announce: "「お怒りの顔も、祭りにはよく映えます」", bigAttackStance: true },
             { id: "okina", name: "翁面", announce: "「さあさ、古き笑いをお見せしましょう」",
@@ -673,7 +673,7 @@ const ENEMIES = {
         trigger: { type: "battleStart" },
         announce: "お白が湯かき板で大釜をゆっくり掻いた。湯気の色が、変わり始める…！",
         effects: [
-          { type: "formCycle", every: 2, forms: [
+          { type: "formCycle", every: 2, switchText: "{label}が湯樋を静かに引き替えた——【{form}】。", forms: [
             { id: "nuruyu", name: "ぬる湯", announce: "「まずは、ぬるめから」…薄青い湯気が立ち、お白の傷が塞がっていく。",
               regenPctMaxHp: 0.03 },
             { id: "nieyu", name: "煮え湯", announce: "「少し、熱うしますよ」…白い湯気が刺すような熱気に変わった！",
