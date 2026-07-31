@@ -53,9 +53,30 @@
   .hpbar { position: relative; z-index: 1; height: 7px; margin: 4px 6px 2px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
   .hpbar i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #d5605a, #a93b36); border-radius: 4px; transition: width 0.35s ease-out; }
 
-  /* 敵の被弾シェイクと攻撃の踏み込み(本体の簡易再現) */
-  @keyframes cardShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 60% { transform: translateX(3px); } }
-  .enemy-card.shake { animation: cardShake 0.32s ease-out; }
+  /* DOT被弾リアクション: 本体の通常被弾(animation.css)と同じノックバック+白フラッシュ+
+     ポートレートの潰れ伸びをそのまま流用し、さらに状態異常の色のグロー(光り)を重ねる */
+  @keyframes hitFlash { 0%, 100% { filter: brightness(1); } 30% { filter: brightness(2.4); } }
+  @keyframes hitKnockbackEnemyNormal {
+    0%   { transform: translateY(0); }
+    16%  { transform: translateY(-11px); }
+    44%  { transform: translateY(3px); }
+    70%  { transform: translateY(-1.3px); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes hitSquashPortraitNormal {
+    0%   { transform: scale(1, 1); }
+    12%  { transform: scale(1.2, 0.76); }
+    38%  { transform: scale(0.84, 1.2); }
+    64%  { transform: scale(1.06, 0.94); }
+    100% { transform: scale(1, 1); }
+  }
+  .enemy-card.dot-hit { animation: hitKnockbackEnemyNormal 150ms ease-out, hitFlash 180ms ease-out; }
+  @keyframes glowPoison { 0%, 100% { filter: drop-shadow(0 0 0 rgba(185,105,214,0)); } 30% { filter: drop-shadow(0 0 16px rgba(185,105,214,0.95)) drop-shadow(0 0 4px rgba(185,105,214,0.9)); } }
+  @keyframes glowBleed { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255,90,80,0)); } 30% { filter: drop-shadow(0 0 16px rgba(255,90,80,0.95)) drop-shadow(0 0 4px rgba(255,90,80,0.9)); } }
+  @keyframes glowBurn { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255,150,50,0)); } 30% { filter: drop-shadow(0 0 16px rgba(255,150,50,0.95)) drop-shadow(0 0 4px rgba(255,150,50,0.9)); } }
+  .enemy-card.dot-hit.glow-poison .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowPoison 520ms ease-out; }
+  .enemy-card.dot-hit.glow-bleed .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowBleed 520ms ease-out; }
+  .enemy-card.dot-hit.glow-burn .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowBurn 520ms ease-out; }
   @keyframes enemyLunge { 0% { transform: translateY(0); } 35% { transform: translateY(34px) scale(1.04); } 100% { transform: translateY(0); } }
   .enemy-card.lunge { animation: enemyLunge 0.45s ease-in-out; }
 
@@ -155,8 +176,8 @@
       <span class="lbl">停止の長さ</span>
       <select id="holdSelect">
         <option value="0">VFXの長さに任せる</option>
-        <option value="700">1種類につき0.7秒</option>
-        <option value="1000" selected>1種類につき1.0秒</option>
+        <option value="700" selected>1種類につき0.7秒(採用案)</option>
+        <option value="1000">1種類につき1.0秒</option>
         <option value="1300">1種類につき1.3秒</option>
       </select>
     </div>
@@ -170,7 +191,7 @@
 
     <p class="footnote">
       割り当て(エディタ出力より): 毒=kenney_fart(35px)+slime_04、出血=blood_impact(52px)+slime_01、炎上=flame_02(75px、加算合成)。<br>
-      現状の本体は「小さいポップが0.7秒間隔で流れるだけ」で、VFXも明確な停止もありません。新演出は「暗転スポットライト→種類チップ→VFX+大きめダメージ→次の種類→明転→敵の行動」の順です。
+      現状の本体は「小さいポップが0.7秒間隔で流れるだけ」で、VFXも明確な停止もありません。新演出は「暗転スポットライト→種類チップ→VFX+被弾リアクション(ノックバック+光+潰れ)+大きめダメージ→次の種類→明転→敵の行動」の順です。被弾リアクションは本体の通常攻撃被弾と同じ動きに、状態異常の色のグロー(毒=紫/出血=赤/炎上=橙)を足したものです。
     </p>
   </div>
 </div>
@@ -222,11 +243,13 @@ function popDamage(a, big) {
   $("enemyCard").appendChild(el);
   setTimeout(() => el.remove(), 1450);
 }
-function shakeCard() {
+// DOT被弾リアクション: 本体の通常被弾と同じ(ノックバック+白フラッシュ+潰れ伸び)+状態異常色のグロー。
+// 一回きりCSSアニメの再発火は「クラス除去→リフロー→付与」の原則どおり
+function dotHitReaction(ailmentKey) {
   const card = $("enemyCard");
-  card.classList.remove("shake");
+  card.classList.remove("dot-hit", "glow-poison", "glow-bleed", "glow-burn");
   void card.offsetWidth;
-  card.classList.add("shake");
+  card.classList.add("dot-hit", `glow-${ailmentKey}`);
 }
 function playSe(src) {
   if (!seOn || !src) return;
@@ -291,7 +314,7 @@ async function runNew() {
       playSe(AILMENT_VFX[a.key].se);
       await sleep(120);
       popDamage(a, true);
-      shakeCard();
+      dotHitReaction(a.key);
       setHp(hp - a.dmg);
       logLine(a.logText(a.dmg));
       // 停止時間: 「VFX任せ」ならVFXの再生時間ぶん、指定があればその長さぶん止める
