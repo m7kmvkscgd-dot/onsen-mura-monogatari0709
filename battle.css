@@ -184,6 +184,12 @@
      選択・状態表示は従来どおり機能する。名前・HPバー・状態アイコンも従来どおり */
   .enemy-card.frameless { background: none; box-shadow: none; }
   .enemy-card.frameless::before { display: none; }
+  /* 透過立ち絵テスト(2026-07-31ユーザー指定「立ち絵だけ1.2倍、HPバーはそのまま」):
+     framelessの立ち絵だけ92→110pxへ拡大。カード幅は立ち絵に合わせて広がるため、
+     HPバー(と中の⚠️行)は従来の92px幅のまま中央寄せに固定して大きさを変えない。
+     img.card-portrait-img限定=DOT VFX(.dot-ailment-vfx)や斬撃VFXの寸法には影響させない */
+  .enemy-card.frameless img.card-portrait-img { width: 110px; height: 110px; }
+  .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* frameless敵が討伐対象の時、金色のカード枠パルス(.quest-target)は「枠なし」の意図と矛盾する
      四角い縁として見えてしまうため消す(🎯アイコンは残るので対象表示は失われない)。
      対象選択中の赤パルス(.targetable)はタップ可能の合図として機能優先でそのまま残す */
