@@ -244,6 +244,9 @@
   /* 細身/小柄な立ち絵の個体別拡大(--clear-scale、battle.jsのcreateEnemyCardが設定)。
      足元基準で上方向へ育てる=接地位置とHPバーはそのまま、頭側の余白へ伸びる */
   .enemy-card.frameless img.card-portrait-img { transform: scale(var(--clear-scale, 1)); transform-origin: 50% 100%; }
+  /* 横長の立ち絵(化け狸320x296等)はcontainの既定=上下中央寄せだと足が浮いて見えるため、
+     framelessは常に下端(接地影の位置)へ寄せる。縦長の絵は高さいっぱいなので影響なし */
+  .enemy-card.frameless img.card-portrait-img { object-position: 50% 100%; }
   /* 拡大した頭が敵名テキストを覆い隠さないよう、frameless時は名前を立ち絵より前面に出す */
   .enemy-card.frameless .enemy-name { position: relative; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.6); }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
