@@ -1332,7 +1332,11 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
       // 「探索と戦闘で自キャラの位置を変えない」という元々の共通top:284px設計の、新レイアウト版)
       const RESERVED_ACTIONS_H = 132;
       const partyH = partyBar.getBoundingClientRect().height;
-      const pTop = Math.max(150, Math.round(innerH - RESERVED_ACTIONS_H - 8 - 10 - partyH));
+      // 【試行2026-08-01ユーザー指示】キャラ絵の位置を「探索パートの従来位置(top:284px)」へ固定で合わせる
+      // (戦闘・探索とも284=v2.3までの共通位置)。下から積む方式へ戻す時は下の行をbottomUpTopに差し替える
+      const bottomUpTop = Math.max(150, Math.round(innerH - RESERVED_ACTIONS_H - 8 - 10 - partyH));
+      void bottomUpTop; // (未使用警告避け。試行比較のため式は残置)
+      const pTop = 284;
       partyBar.style.top = `${pTop}px`;
       if (partyBarId === "battlePartyBar") {
         const row = document.getElementById("enemyRow");
