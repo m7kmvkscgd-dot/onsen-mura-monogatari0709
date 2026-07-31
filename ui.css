@@ -100,7 +100,8 @@
     display: flex; gap: var(--party-gap, 0.4rem); padding: 0.7rem 0.6rem;
     background: rgba(20,24,27,0.72); justify-content: center;
   }
-  .party-bar.layout-center { --party-cam-y: 13px; --party-cam-s: 1.05; --party-gap: 10.4px; }
+  /* 拡大(1.05倍)と間隔広げ(10.4px)は2026-08-01ユーザー指示で撤去(やる前に戻した)。残るのは13px下げのみ */
+  .party-bar.layout-center { --party-cam-y: 13px; }
   /* transform:translateZ(0)を常時ではなく.acting/:active等の個別状態だけに限定してある。
      常時transformを持たせると要素が独自のスタッキングコンテキスト/合成レイヤーを持ち続けることになり、
      iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
