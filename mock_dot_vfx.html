@@ -53,8 +53,8 @@
   .hpbar { position: relative; z-index: 1; height: 7px; margin: 4px 6px 2px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
   .hpbar i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #d5605a, #a93b36); border-radius: 4px; transition: width 0.35s ease-out; }
 
-  /* DOT被弾リアクション: 本体の通常被弾(animation.css)と同じノックバック+白フラッシュ+
-     ポートレートの潰れ伸びをそのまま流用し、さらに状態異常の色のグロー(光り)を重ねる */
+  /* DOT被弾リアクション: 本体の通常被弾(animation.css)と完全に同じ
+     「白い発光フラッシュ+上方向ノックバック+ポートレートの潰れ伸び」のみ(色付きグローは無し、ユーザー指定) */
   @keyframes hitFlash { 0%, 100% { filter: brightness(1); } 30% { filter: brightness(2.4); } }
   @keyframes hitKnockbackEnemyNormal {
     0%   { transform: translateY(0); }
@@ -71,12 +71,7 @@
     100% { transform: scale(1, 1); }
   }
   .enemy-card.dot-hit { animation: hitKnockbackEnemyNormal 150ms ease-out, hitFlash 180ms ease-out; }
-  @keyframes glowPoison { 0%, 100% { filter: drop-shadow(0 0 0 rgba(185,105,214,0)); } 30% { filter: drop-shadow(0 0 16px rgba(185,105,214,0.95)) drop-shadow(0 0 4px rgba(185,105,214,0.9)); } }
-  @keyframes glowBleed { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255,90,80,0)); } 30% { filter: drop-shadow(0 0 16px rgba(255,90,80,0.95)) drop-shadow(0 0 4px rgba(255,90,80,0.9)); } }
-  @keyframes glowBurn { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255,150,50,0)); } 30% { filter: drop-shadow(0 0 16px rgba(255,150,50,0.95)) drop-shadow(0 0 4px rgba(255,150,50,0.9)); } }
-  .enemy-card.dot-hit.glow-poison .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowPoison 520ms ease-out; }
-  .enemy-card.dot-hit.glow-bleed .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowBleed 520ms ease-out; }
-  .enemy-card.dot-hit.glow-burn .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out, glowBurn 520ms ease-out; }
+  .enemy-card.dot-hit .enemy-portrait { animation: hitSquashPortraitNormal 150ms ease-out; }
   @keyframes enemyLunge { 0% { transform: translateY(0); } 35% { transform: translateY(34px) scale(1.04); } 100% { transform: translateY(0); } }
   .enemy-card.lunge { animation: enemyLunge 0.45s ease-in-out; }
 
@@ -191,7 +186,7 @@
 
     <p class="footnote">
       割り当て(エディタ出力より): 毒=kenney_fart(35px)+slime_04、出血=blood_impact(52px)+slime_01、炎上=flame_02(75px、加算合成)。<br>
-      現状の本体は「小さいポップが0.7秒間隔で流れるだけ」で、VFXも明確な停止もありません。新演出は「暗転スポットライト→種類チップ→VFX+被弾リアクション(ノックバック+光+潰れ)+大きめダメージ→次の種類→明転→敵の行動」の順です。被弾リアクションは本体の通常攻撃被弾と同じ動きに、状態異常の色のグロー(毒=紫/出血=赤/炎上=橙)を足したものです。
+      現状の本体は「小さいポップが0.7秒間隔で流れるだけ」で、VFXも明確な停止もありません。新演出は「暗転スポットライト→種類チップ→VFX+被弾リアクション+大きめダメージ→次の種類→明転→敵の行動」の順で、処理順は炎上→毒→出血。被弾リアクションは本体の通常攻撃被弾と完全に同じ(白い発光+ノックバック+潰れ伸び)です。
     </p>
   </div>
 </div>
@@ -203,11 +198,12 @@ const AILMENT_VFX = {
   burn: { framePrefix: "assets/vfx_library/flame_02_15x4/frame_", frameCount: 60, size: 75, offsetX: -1, offsetY: -14, blendScreen: true, frameMs: 22, se: null },
   poison: { framePrefix: "assets/vfx_library/kenney_smoke/fart/frame_", frameCount: 9, size: 35, offsetX: -1, offsetY: -11, blendScreen: false, frameMs: 109, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg" },
 };
-// デモ用の蓄積ダメージ(毒=蓄積3/出血=蓄積4/炎上=最大HP8%相当)
+// デモ用の蓄積ダメージ(毒=蓄積3/出血=蓄積4/炎上=最大HP8%相当)。
+// 処理順は炎上→毒→出血(ユーザー指定2026-07-31)
 const AILMENTS = [
+  { key: "burn", icon: "🔥", label: "炎上", cls: "c-burn", dmg: 5, logText: (d) => `猪は炎上で${d}ダメージ！` },
   { key: "poison", icon: "🦠", label: "毒", cls: "c-poison", dmg: 3, logText: (d) => `猪は毒で${d}ダメージ！` },
   { key: "bleed", icon: "🩸", label: "出血", cls: "c-bleed", dmg: 4, logText: (d) => `猪は出血で${d}ダメージ！` },
-  { key: "burn", icon: "🔥", label: "炎上", cls: "c-burn", dmg: 5, logText: (d) => `猪は炎上で${d}ダメージ！` },
 ];
 const MAX_HP = 62;
 let hp = MAX_HP;
@@ -243,13 +239,13 @@ function popDamage(a, big) {
   $("enemyCard").appendChild(el);
   setTimeout(() => el.remove(), 1450);
 }
-// DOT被弾リアクション: 本体の通常被弾と同じ(ノックバック+白フラッシュ+潰れ伸び)+状態異常色のグロー。
+// DOT被弾リアクション: 本体の通常被弾と完全に同じ(白フラッシュ+ノックバック+潰れ伸び)。
 // 一回きりCSSアニメの再発火は「クラス除去→リフロー→付与」の原則どおり
-function dotHitReaction(ailmentKey) {
+function dotHitReaction() {
   const card = $("enemyCard");
-  card.classList.remove("dot-hit", "glow-poison", "glow-bleed", "glow-burn");
+  card.classList.remove("dot-hit");
   void card.offsetWidth;
-  card.classList.add("dot-hit", `glow-${ailmentKey}`);
+  card.classList.add("dot-hit");
 }
 function playSe(src) {
   if (!seOn || !src) return;
@@ -314,7 +310,7 @@ async function runNew() {
       playSe(AILMENT_VFX[a.key].se);
       await sleep(120);
       popDamage(a, true);
-      dotHitReaction(a.key);
+      dotHitReaction();
       setHp(hp - a.dmg);
       logLine(a.logText(a.dmg));
       // 停止時間: 「VFX任せ」ならVFXの再生時間ぶん、指定があればその長さぶん止める
