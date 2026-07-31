@@ -500,7 +500,10 @@ function ambientKeyForTimeOfDay(tod) {
 }
 // 洞窟1層目は深淵の森から地続きの入り口という位置づけのため、洞窟専用の音(cave_ambient)ではなく
 // 森の環境音(虫の声)のままにする(ユーザー指示、2026-07-21)。2層目以降で洞窟の音に切り替わる
-const CAVE_AMBIENT_VOLUME_RATIO = 0.8; // 洞窟内の音量は通常の環境音の80%(ユーザー指示)
+// 洞窟環境音の減衰はファイル自体に焼き込み済み(2026-08-01「うるさすぎる」→60%→同日「やっぱ40%」で40%へ。
+// iOSはJSからのaudio.volume指定を無視するため、実機で効かせるには音源側で下げるしかない。
+// 元ファイルはtmp/cave_ambient_original_backup.mp3とgit履歴に残置)。JS側の追加減衰は等倍に戻す
+const CAVE_AMBIENT_VOLUME_RATIO = 1.0;
 function playAmbientBgm(forceKey) {
   const useCaveAmbient = currentStage === "cave" && currentFloor > 1;
   const key = currentStage === "coast" ? "coast" : useCaveAmbient ? "cave" : (forceKey || ambientKeyForTimeOfDay(state.timeOfDay));
