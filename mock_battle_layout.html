@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>戦闘レイアウト案モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #bg { position: fixed; inset: 0; background-size: cover; background-position: center 32%; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.10); }
+
+  /* ===== 共通パーツ ===== */
+  .enemy-field { position: absolute; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; align-items: flex-end; gap: 12px; transition: top 0.35s ease; }
+  .ecard { position: relative; text-align: center; }
+  .ecard img.pic { width: 110px; height: 110px; object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .ename { font-size: 0.78rem; font-weight: 700; color: #f1e8d8; text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 3px rgba(0,0,0,0.95); }
+  .ehp { height: 9px; width: 92px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.25); }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  /* 足元プレート型(案C) */
+  .plate { display: inline-block; background: rgba(10,9,7,0.62); border: 1px solid rgba(217,207,184,0.28); border-radius: 8px; padding: 3px 8px 5px; margin-top: 2px; backdrop-filter: blur(2px); }
+  .plate .ename { font-size: 0.72rem; }
+  .plate .ehp { width: 76px; height: 7px; }
+  /* ミニマル型(案D) */
+  .mini .ename { font-size: 0.68rem; opacity: 0.9; }
+  .mini .ehp { width: 60px; height: 5px; margin-top: 2px; }
+
+  #logBox { position: absolute; left: 12px; right: 12px; z-index: 3; background: rgba(20,17,14,0.88); border: 1px solid #b09a6a; border-radius: 12px; padding: 12px 14px; font-size: 0.85rem; line-height: 1.7; transition: all 0.35s ease; }
+  #logBox.slim { padding: 7px 12px; font-size: 0.78rem; background: rgba(20,17,14,0.72); }
+  #logBox.floating { background: rgba(20,17,14,0.55); border-color: rgba(176,154,106,0.5); backdrop-filter: blur(3px); }
+
+  #partyBar { position: absolute; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 14px; }
+  .pcard { width: 92px; text-align: center; background: rgba(52,54,64,0.92); border: 2px solid transparent; border-radius: 12px; padding: 5px 5px 7px; }
+  .pcard.acting { border-color: #c9a24a; box-shadow: 0 0 10px rgba(201,162,74,0.5); }
+  .pcard img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; }
+  .pcard .phbar { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pcard .phbar > div { height: 100%; width: 85%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pcard .pmbar { height: 5px; border-radius: 4px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 3px; }
+  .pcard .pmbar > div { height: 100%; width: 70%; background: #5b8fd9; }
+  .pcard .pname { font-size: 0.72rem; margin-top: 3px; color: #efe6d2; }
+
+  #actions { position: absolute; left: 10px; right: 10px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 14px 0; border-radius: 14px; border: 1px solid #8a7648; background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; }
+  #actions button.primary { background: linear-gradient(180deg, #e8c877, #c9a24a); color: #241a08; border-color: #e8c877; }
+  #actions button.full { grid-column: 1 / -1; }
+
+  /* ===== 切替UI ===== */
+  #patternBar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; gap: 6px; padding: 8px 10px; background: rgba(0,0,0,0.55); overflow-x: auto; }
+  #patternBar button { flex-shrink: 0; font-size: 12.5px; font-weight: 700; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4); background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #patternBar button.on { background: #c9a24a; color: #211a10; border-color: #c9a24a; }
+  #subBar { position: fixed; top: 46px; right: 10px; z-index: 20; display: flex; flex-direction: column; gap: 6px; }
+  #subBar button { font-size: 11px; padding: 6px 9px; border-radius: 8px; border: 1px solid rgba(217,207,184,0.35); background: rgba(0,0,0,0.5); color: #d9cfb8; }
+  #desc { position: fixed; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); left: 10px; right: 10px; z-index: 20; font-size: 10.5px; color: rgba(232,223,204,0.75); background: rgba(0,0,0,0.55); border-radius: 8px; padding: 5px 8px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div class="enemy-field" id="enemyField"></div>
+<div id="logBox">野犬の群れが現れた！<br>小太郎の攻撃！野犬に12ダメージ！</div>
+<div id="partyBar"></div>
+<div id="actions">
+  <button class="primary">攻撃</button><button>技</button>
+  <button>交代</button><button>道具</button>
+  <button class="full">逃げる</button>
+</div>
+<div id="patternBar"></div>
+<div id="subBar">
+  <button id="bgBtn">背景</button>
+  <button id="cntBtn">体数</button>
+</div>
+<div id="desc"></div>
+<script>
+const ENEMIES10 = [
+  ["yaken", "野犬"], ["kodama", "木霊"], ["bake_danuki", "化け狸"], ["kappa", "河童"], ["onibi", "鬼火"],
+];
+const BGS = ["assets/bg/forest_day.jpg", "assets/bg/forest_night.jpg", "assets/bg/forest_dusk.jpg", "assets/bg/warawanu_men_sando.jpg"];
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+
+// レイアウト案の定義。数値は390×844(iPhone13)基準のおおよその配置
+// enemyTop: 敵フィールドの上端 / log: ログの位置と見た目 / uiStyle: 敵の名前+HPの見せ方
+const PATTERNS = [
+  { key: "A", name: "A: 現行", desc: "現行レイアウト(比較用)。敵が上端に浮いて見える問題の確認",
+    enemyTop: "44px", uiStyle: "top", log: { top: "37vh", cls: "" }, party: "56vh", actions: "72vh" },
+  { key: "B", name: "B: センター", desc: "敵を画面中央帯へ。ログは上部の薄い帯に移動。敵と味方の距離が縮まり対峙感が出る",
+    enemyTop: "20vh", uiStyle: "top", log: { top: "8px", cls: "slim" }, party: "56vh", actions: "72vh" },
+  { key: "C", name: "C: 接地+足元プレート", desc: "敵をさらに下げて地面に立たせ、名前とHPは足元の小さな札へ。ログは敵の上に半透明で浮かせる",
+    enemyTop: "26vh", uiStyle: "plate", log: { top: "9vh", cls: "floating" }, party: "56vh", actions: "72vh" },
+  { key: "D", name: "D: イラスト主役", desc: "UIを最小化して立ち絵を主役に。名前/HPは小さく、ログは上部1行。世界観重視の案",
+    enemyTop: "23vh", uiStyle: "mini", log: { top: "8px", cls: "slim" }, party: "58vh", actions: "73vh" },
+];
+let patIdx = Number(localStorage.getItem("layoutMockPat") || 1);
+let bgIdx = 0;
+let count = 3;
+const $ = (id) => document.getElementById(id);
+
+function render() {
+  const p = PATTERNS[patIdx];
+  $("bg").style.backgroundImage = `url('${BGS[bgIdx % BGS.length]}')`;
+  const picks = ENEMIES10.slice(0, count);
+  $("enemyField").style.top = p.enemyTop;
+  $("enemyField").innerHTML = picks.map(([id, ja]) => {
+    if (p.uiStyle === "plate") {
+      return `<div class="ecard"><img class="pic" src="assets/enemies/clear/${id}.png"><div class="plate"><div class="ename">${ja}</div><div class="ehp"><div></div></div></div></div>`;
+    }
+    if (p.uiStyle === "mini") {
+      return `<div class="ecard mini"><img class="pic" src="assets/enemies/clear/${id}.png"><div class="ename">${ja}</div><div class="ehp"><div></div></div></div>`;
+    }
+    return `<div class="ecard"><div class="ename">${ja}</div><img class="pic" src="assets/enemies/clear/${id}.png"><div class="ehp"><div></div></div></div>`;
+  }).join("");
+  const log = $("logBox");
+  log.className = p.log.cls;
+  log.style.top = p.log.top;
+  $("partyBar").style.top = p.party;
+  $("actions").style.top = p.actions;
+  $("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+    `<div class="pcard ${i === 0 ? "acting" : ""}"><img src="${img}"><div class="phbar"><div></div></div><div class="pmbar"><div></div></div><div class="pname">${name}</div></div>`).join("");
+  $("patternBar").innerHTML = PATTERNS.map((q, i) => `<button class="${i === patIdx ? "on" : ""}" data-i="${i}">${q.name}</button>`).join("");
+  [...$("patternBar").children].forEach((b) => { b.onclick = () => { patIdx = Number(b.dataset.i); localStorage.setItem("layoutMockPat", patIdx); render(); }; });
+  $("desc").textContent = p.desc;
+}
+$("bgBtn").onclick = () => { bgIdx++; render(); };
+$("cntBtn").onclick = () => { count = count % 3 + 1; render(); };
+render();
+</script>
+</body>
+</html>
