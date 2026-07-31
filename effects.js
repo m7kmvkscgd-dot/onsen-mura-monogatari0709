@@ -11,6 +11,7 @@ function findVfxEntity(targetId) {
 // 敵の大技予告(bigAttackPending)が発生した瞬間、画面端を一瞬だけ橙色に光らせる警告演出。
 // アニメーションを毎回頭から再生させるため、一度クラスを外してリフローを挟んでから付け直す
 function triggerWarningFlash() {
+  return; // 【無効化2026-08-01ユーザー指示】画面端の黄色フラッシュを試験的に停止(💢アイコン/警告音/ログは従来どおり)。戻す時はこの行を消すだけ
   const el = document.getElementById("screenWarningFlash");
   if (!el) return;
   el.style.animation = "none";
