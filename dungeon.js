@@ -2428,7 +2428,11 @@ function positionMiningBar() {
   if (!miningUiActive) return;
   const bar = document.getElementById("miningBar");
   const h = bar.getBoundingClientRect().height;
-  bar.style.top = Math.max(10, window.innerHeight - h - 10) + "px";
+  // 探索パーティアイコンと同じ高さへ上端を揃える(2026-08-01ユーザー指示「下すぎる」。
+  // center_v1の味方バー実表示位置=top284px+13px下げ)。画面が低くてバーがはみ出す端末でだけ
+  // 従来の「可視領域の下端基準」へクランプして押せなくなるのを防ぐ
+  const partyTop = (typeof BATTLE_LAYOUT !== "undefined" && BATTLE_LAYOUT === "center_v1") ? 297 : 284;
+  bar.style.top = Math.min(partyTop, Math.max(10, window.innerHeight - h - 10)) + "px";
 }
 function miningStressFillClass(v) {
   return "mining-stress-fill" + (v >= 80 ? " high" : v >= 50 ? " mid" : "");
