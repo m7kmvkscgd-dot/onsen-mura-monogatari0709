@@ -50,7 +50,7 @@
     reserveFieldMember = null;
   }
 
-  console.log("--- C: 火車の業火纏い(hpBelowトリガー+周期場ダメージ+オーバーレイ) ---");
+  console.log("--- C: 火車の業火纏い(hpBelowトリガー+4ターン毎の全体炎上付与+オーバーレイ) ---");
   makeParty();
   const kasha = instantiateEnemyById("boss_kasha");
   setupGimmickBattle([kasha]);
@@ -66,21 +66,44 @@
   battle.roundsTotal = 1;
   let proceeded = false;
   const r1 = processGimmickRoundEffects(() => { proceeded = true; });
-  check("発動1ラウンド目は場ダメージ無し(every:2)", r1 === false && !proceeded);
+  const r2 = processGimmickRoundEffects(() => { proceeded = true; });
+  const r3 = processGimmickRoundEffects(() => { proceeded = true; });
+  check("発動後1〜3ラウンド目は何も起きない(every:4)", r1 === false && r2 === false && r3 === false && !proceeded);
+  check("(前提)まだ誰も炎上していない", fieldParty.every((c) => !(c.burnTurns > 0)));
   const hpBefore = fieldParty.map((c) => c.hp);
-  const r2 = processGimmickRoundEffects(() => {});
-  check("2ラウンド目に場ダメージ発動", r2 === true);
-  const dmgOk = fieldParty.every((c, i) => {
-    const expected = Math.max(3, Math.round(c.maxHp * 0.06));
-    return hpBefore[i] - c.hp === expected;
-  });
-  check("全員に最大HP6%(最低3)のダメージ", dmgOk, fieldParty.map((c, i) => hpBefore[i] - c.hp).join(","));
+  const r4 = processGimmickRoundEffects(() => {});
+  check("4ラウンド目に発動する", r4 === true);
+  check("味方全員に炎上(2〜3ターン)が付与される", fieldParty.every((c) => c.burnTurns >= 2 && c.burnTurns <= 3), fieldParty.map((c) => c.burnTurns).join(","));
+  check("付与の瞬間は直接ダメージを受けない", fieldParty.every((c, i) => c.hp === hpBefore[i]));
+  check("炎上ティックで最大HP8%のダメージを受ける", (() => {
+    const c = fieldParty[0];
+    const before = c.hp;
+    const turnsBefore = c.burnTurns;
+    tickBurn(c, () => {});
+    return before - c.hp === Math.round(c.maxHp * BURN_DAMAGE_PCT) && c.burnTurns === turnsBefore - 1;
+  })());
+  check("さらに4ラウンド後にもう一度付与される", (() => {
+    fieldParty.forEach((c) => { c.burnTurns = 0; });
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    const mid = fieldParty.every((c) => !(c.burnTurns > 0));
+    processGimmickRoundEffects(() => {});
+    return mid && fieldParty.every((c) => c.burnTurns >= 2 && c.burnTurns <= 3);
+  })());
+  check("状態異常免疫中の味方には付与されない", (() => {
+    fieldParty.forEach((c) => { c.burnTurns = 0; });
+    fieldParty[0].statusImmuneTurns = 2;
+    for (let i = 0; i < 4; i++) processGimmickRoundEffects(() => {});
+    const ok = !(fieldParty[0].burnTurns > 0) && fieldParty[1].burnTurns > 0;
+    fieldParty[0].statusImmuneTurns = 0;
+    return ok;
+  })());
   check("倒れたボスのギミックは何もしない", (() => {
     kasha.hp = 0;
-    const before = fieldParty.map((c) => c.hp).join(",");
-    processGimmickRoundEffects(() => {});
-    processGimmickRoundEffects(() => {});
-    return fieldParty.map((c) => c.hp).join(",") === before;
+    fieldParty.forEach((c) => { c.burnTurns = 0; });
+    for (let i = 0; i < 8; i++) processGimmickRoundEffects(() => {});
+    return fieldParty.every((c) => !(c.burnTurns > 0));
   })());
 
   console.log("--- D: がしゃどくろの骨呼び(即時召喚+周期召喚+上限) ---");
@@ -111,15 +134,18 @@
   check("枠が空いたら次の周期で2体補充", battle.enemies.filter((e) => e.id === "gasha_kobone" && e.hp > 0).length === 3, `alive=${battle.enemies.filter((e) => e.id === "gasha_kobone" && e.hp > 0).length}`);
   check("倒された召喚骸骨のカード枠は畳まれる", battle.enemies.filter((e) => e.id === "gasha_kobone" && e.hp <= 0).every((e) => e.__clearedWave));
 
-  console.log("--- E: 場ダメージによる全滅処理 ---");
+  console.log("--- E: fieldDamage(直接場ダメージ)機構と全滅処理・battleStartトリガー ---");
   makeParty();
   const kasha2 = instantiateEnemyById("boss_kasha");
+  // 汎用機構の検証用に、開幕発動+毎ラウンド大ダメージの合成ギミックを差し込む
+  kasha2.gimmicks = [{ id: "test_wipe", name: "試験の劫火",
+    trigger: { type: "battleStart" },
+    effects: [{ type: "fieldDamage", every: 1, pctMaxHp: 0.5, min: 999, name: "試験の劫火" }] }];
   setupGimmickBattle([kasha2]);
-  kasha2.hp = 1;
   processGimmickTriggers();
+  check("battleStartトリガーは即発動する", battle.gimmicks[0].active);
   fieldParty.forEach((c) => { c.hp = 1; });
   battle.roundsTotal = 1;
-  battle.gimmicks[0].roundsSinceActive = 1; // 次のティックで場ダメージが出る状態にする
   let proceedCalled = false;
   const rWipe = processGimmickRoundEffects(() => { proceedCalled = true; });
   check("全滅時はtrueを返し続きを呼ばない(全滅処理へ)", rWipe === true && !proceedCalled);

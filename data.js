@@ -513,11 +513,11 @@ const ENEMIES = {
         announce: "火車が怒り狂い、あたり一面が業火に包まれた！",
         effects: [
           { type: "overlay", key: "blaze" },
-          { type: "fieldDamage", every: 2, pctMaxHp: 0.06, min: 3, name: "業火" },
+          { type: "fieldInflict", every: 4, name: "業火", inflict: { type: "burn", turnsMin: 2, turnsMax: 3 } },
         ] },
     ],
     gimmickNotes: [
-      { name: "業火纏い", trigger: "HPが50%を下回ると激怒する", effect: "背景が業火に包まれ(専用背景画像ができるまではCSSの炎演出で代用)、以後2ラウンドに1回、味方全員に最大HP6%(最低3)の炎ダメージ。場のダメージなので防御・かばう無視" },
+      { name: "業火纏い", trigger: "HPが50%を下回ると激怒する", effect: "背景が業火に包まれ(専用背景画像ができるまではCSSの炎演出で代用)、以後4ターンに一度、味方全員に炎上(2〜3ターン)を付与する。ダメージそのものではなく状態異常付与(ユーザー指定2026-07-31)" },
     ] },
   boss_gashadokuro: { id: "boss_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/gashadokuro.png", hp: 562, atk: 30, def: 35, spd: 9, goldMin: 90, goldMax: 130, xp: 150, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
     bigAttack: { name: "がしゃどくろの哭き", mult: 1.6, debuff: { type: "stun", chance: 0.5, turns: 1 } },

@@ -19,6 +19,10 @@
 //   { type: "fieldDamage", every: N, pctMaxHp: 0.06, min: 3, name: "業火" }
 //       … 発動後、Nラウンドごとのラウンドの節目に、味方全員へ最大HP割合の場ダメージ
 //         (ポケモンの天候ダメージのイメージ。敵の行動権を消費せず、防御・かばうも無視)
+//   { type: "fieldInflict", every: N, name: "業火", inflict: { type: "burn", turnsMin: 2, turnsMax: 3 } }
+//       … 発動後、Nラウンドごとに味方全員へ状態異常を付与する(火車の「4ターンに一度全体炎上」用)。
+//         inflictの中身はresolveDebuffEffect(engine.js)がそのまま解釈するので、大技のdebuffと同じ書式で
+//         burn以外(poison/bleed/stun等)も指定できる。免疫(statusImmuneTurns)や御守ガードも通常どおり効く
 //   { type: "summon", every: N, enemyId, count, maxAlive, immediate, text }
 //       … 発動後、Nラウンドごとに雑魚(enemyId)をcount体召喚。場にいる同種の生存数がmaxAliveに
 //         達している分は湧かない。immediate:trueなら発動した瞬間にも1回召喚する
@@ -141,6 +145,14 @@ function processGimmickRoundEffects(continueRound) {
           c.hp = Math.max(0, c.hp - dmg);
           popupOn(c.id, `-${dmg}`, "dmg");
         });
+        fired = true;
+      } else if (eff.type === "fieldInflict") {
+        if (entry.roundsSinceActive % (eff.every || 1) !== 0) return;
+        const targets = aliveField();
+        if (targets.length === 0 || !eff.inflict) return;
+        blog(`${eff.name || entry.def.name || "場の力"}が味方全員に襲いかかった！`);
+        // 付与の中身(種類/ターン数/値)と免疫の扱いは、敵の大技デバフと同じresolveDebuffEffectに任せる
+        targets.forEach((c) => { resolveDebuffEffect(c, eff.inflict.type, eff.inflict, blog); });
         fired = true;
       } else if (eff.type === "summon") {
         if (entry.roundsSinceActive % (eff.every || 1) !== 0) return;
