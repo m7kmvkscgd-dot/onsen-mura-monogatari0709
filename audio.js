@@ -14,6 +14,7 @@ const BGM_TRACKS = {
   coast: "assets/bgm/coast_bgm.mp3",
   coast_night: "assets/bgm/coast_night_bgm.mp3",
   coast_battle: "assets/bgm/coast_battle_bgm.mp3",
+  cave_battle: "assets/bgm/cave_battle_bgm.mp3", // 洞窟の戦闘専用(ユーザー提供曲、2026-08-01。従来の「洞窟は戦闘BGMミュート」を置き換え)
   // 渓流ステージの探索用フィールド曲(ユーザー提供音源、2026-07-20)。海岸と同じく探索中ずっと
   // 流し続ける専用チャンネル。早朝/朝/昼はvalley、夜だけvalley_night(戦闘専用曲はまだ無く、
   // 敵データが未実装のため戦闘自体が発生しない。実装され次第dungeon/dungeon_nightと同じ扱いを検討)
@@ -71,9 +72,13 @@ function playBattleBgm() {
     playBgm(battleBgmOverrideKey);
     return;
   }
-  // 洞窟内は戦闘BGMをミュートする(ユーザー指示、2026-07-21)。cave_ambient(環境音)は戦闘中も鳴り続ける
+  // 洞窟の戦闘は専用BGM(ユーザー提供曲2026-08-01。旧・戦闘BGMミュート運用2026-07-21を置き換え)。
+  // cave_ambient(環境音)は従来どおり戦闘中も鳴り続ける。頭出し処理はcoast_battleと同じ
   if (currentStage === "cave") {
-    if (currentBgmKey) stopBattleBgm();
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.cave_battle = 0;
+    playBgm("cave_battle");
     return;
   }
   // ルートBGM付きのクエスト専用ルート(笑わぬ祭など): ボス戦含む全戦闘で探索と同じ曲を
