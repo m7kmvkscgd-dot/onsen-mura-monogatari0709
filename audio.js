@@ -154,13 +154,20 @@ try {
     const bgmSource = bgmAudioCtx.createMediaElementSource(bgmAudio);
     bgmGainNode = bgmAudioCtx.createGain();
     bgmSource.connect(bgmGainNode).connect(bgmAudioCtx.destination);
+  }
+} catch (e) {
+  bgmAudioCtx = null;
+  bgmGainNode = null;
+}
+// オープニング側は別tryで隔離: 万一ここが失敗しても、実績のあるbgmAudio側の経路を巻き添えにしない
+// (過去の「複数要素を一括で移行して全滅」事故の教訓。失敗時は従来の.volumeフォールバックで動き続ける)
+try {
+  if (bgmAudioCtx) {
     const openingSource = bgmAudioCtx.createMediaElementSource(openingBgmAudio);
     openingGainNode = bgmAudioCtx.createGain();
     openingSource.connect(openingGainNode).connect(bgmAudioCtx.destination);
   }
 } catch (e) {
-  bgmAudioCtx = null;
-  bgmGainNode = null;
   openingGainNode = null;
 }
 // オープニングBGMの音量の読み書き(GainNode経路。非対応環境は従来の.volumeへフォールバック)
