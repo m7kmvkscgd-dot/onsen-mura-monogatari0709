@@ -635,11 +635,15 @@ function consumeOmamoriIzanami(actor) {
   return true;
 }
 // 自分のターンの一番最初に呼ぶ共通処理(毒/炎上のダメージ+継続回復+バフ/デバフの残りターン消化)。ダメージ量を返す
-function tickTurnStartEffects(entity, log) {
+// opts.skipDots: 毒/出血/炎上のダメージ適用だけを飛ばす(敵ターンのDOT停止演出(effects.jsの
+// playEnemyDotStopSequence)が先にtickBurn等を1種類ずつ直接呼んで適用済みのケース用。
+// 二重適用を防ぎつつ、DOT以外のターン開始処理はここに一本化したまま保つ、2026-07-31)
+function tickTurnStartEffects(entity, log, opts) {
   if (entity.stunResistTurns > 0) entity.stunResistTurns--;
-  const poisonDmg = tickPoison(entity, log);
-  const burnDmg = tickBurn(entity, log);
-  const bleedDmg = tickBleed(entity, log);
+  const skipDots = !!(opts && opts.skipDots);
+  const poisonDmg = skipDots ? 0 : tickPoison(entity, log);
+  const burnDmg = skipDots ? 0 : tickBurn(entity, log);
+  const bleedDmg = skipDots ? 0 : tickBleed(entity, log);
   const dmg = poisonDmg + burnDmg + bleedDmg;
   // 温泉バフ「湯治」: 自分のターンの最初に毎回HPの2%を回復する
   if (entity.hp > 0 && entity.onsenBuffKey === "touji") {

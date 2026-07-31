@@ -541,6 +541,18 @@ const ENEMIES = {
     statusImmune: ["bleed"] },
 };
 
+// ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
+// 敵が毒/出血/炎上の蓄積ダメージを受ける瞬間の停止演出(effects.jsのplayEnemyDotStopSequence)で再生する
+// VFXと効果音の割り当て。sizeとoffsetX/Yはエディタのステージ(敵絵96px幅)基準のpx値で、実際のカードでは
+// 敵絵の表示幅に合わせて比例スケールされる。stackLevelは「毒/出血の蓄積値、炎上の残りターン数」に対応する
+// レベルで、再生時はその時点の値に最も近いstackLevelの割り当てが選ばれる(現状はユーザーがレベル1のみ設定済み。
+// エディタから新しいエクスポートが来たら、この配列に項目を追加/差し替えする)
+const AILMENT_VFX_ASSIGNMENTS = [
+  { ailmentId: "bleed", stackLevel: 1, framePrefix: "assets/vfx_library/codemanu_vfx_free/blood_impact/frame_", frameCount: 30, size: 52, offsetX: 0, offsetY: 0, blendScreen: false, frameMs: 19, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_01.ogg" },
+  { ailmentId: "burn", stackLevel: 1, framePrefix: "assets/vfx_library/flame_02_15x4/frame_", frameCount: 60, size: 75, offsetX: -1, offsetY: -14, blendScreen: true, frameMs: 22, se: null },
+  { ailmentId: "poison", stackLevel: 1, framePrefix: "assets/vfx_library/kenney_smoke/fart/frame_", frameCount: 9, size: 35, offsetX: -1, offsetY: -11, blendScreen: false, frameMs: 109, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg" },
+];
+
 // ============ 素材(敵ドロップ) ============
 // 敵を倒すと確率で落とす素材4種。現状の使い道は温泉の売店での売却のみ(鍛冶/建築への
 // 組み込みは後日設計)。ボス/中ボス(isBoss)のドロップ設計は保留中のため対象外。

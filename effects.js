@@ -1439,6 +1439,111 @@ function spawnCatapultDust(x, y, n) {
   }
 }
 
+// ============ 敵のDOT(毒/出血/炎上)停止演出(2026-07-31、モックmock_dot_vfx.htmlでユーザー承認) ============
+// 敵のターン開始時にDOTの蓄積ダメージが入る瞬間、進行を一時停止して「暗転(敵カードだけスポットライトに
+// 残る)→種類チップ→VFX+効果音+被弾リアクション(通常被弾と同じ白フラッシュ)→ダメージ適用」を
+// 炎上→毒→出血の順に1種類ずつ見せる。ダメージ適用そのもの(tickBurn/tickPoison/tickBleed)もこの
+// シーケンスが1種類ずつ直接呼ぶため、呼び出し元(battle.jsの敵ターン)はtickTurnStartEffectsに
+// skipDotsを渡して二重適用を防ぐ。VFX/効果音の割り当てはAILMENT_VFX_ASSIGNMENTS(data.js、
+// VFXエディタのエクスポート)から、その時点の蓄積値に最も近いstackLevelの項目を選ぶ
+const DOT_STOP_HOLD_MS = 700; // 1種類ごとの停止時間(モックの選択肢からユーザーが0.7秒を採用)
+const DOT_STOP_DIM_IN_MS = 260; // 暗転が乗り切ってから最初の種類を見せるまでの間
+const DOT_STOP_STEP_GAP_MS = 140; // 種類と種類の間の小休止(チップの消え際)
+const DOT_STOP_DIM_OUT_MS = 250; // 明転してから敵の行動フローへ戻るまでの間
+const AILMENT_VFX_STAGE_PORTRAIT_W = 96; // VFXエディタのステージ敵絵の幅(px)。size/offsetの基準
+function ailmentVfxAssignmentFor(ailmentId, stackValue) {
+  const list = (typeof AILMENT_VFX_ASSIGNMENTS !== "undefined" ? AILMENT_VFX_ASSIGNMENTS : []).filter((a) => a.ailmentId === ailmentId);
+  if (list.length === 0) return null;
+  return list.reduce((best, a) => (Math.abs(a.stackLevel - stackValue) < Math.abs(best.stackLevel - stackValue) ? a : best));
+}
+// フリップブックVFXを敵カードの絵の中心に重ねて1回再生する。sizeとoffsetはエディタのステージ
+// (敵絵96px幅)基準のpx値なので、実際の敵絵の表示幅(通常92px/大規模戦は60px以下)に比例させる
+function playAilmentVfxOnCard(card, assignment) {
+  if (!card || !assignment) return 0;
+  const portrait = card.querySelector(".card-portrait-img");
+  const scale = portrait && portrait.clientWidth > 0 ? portrait.clientWidth / AILMENT_VFX_STAGE_PORTRAIT_W : 1;
+  const img = document.createElement("img");
+  img.className = "dot-ailment-vfx" + (assignment.blendScreen ? " blend-screen" : "");
+  img.style.width = Math.max(8, Math.round(assignment.size * scale)) + "px";
+  img.style.height = "auto";
+  const cx = portrait ? portrait.offsetLeft + portrait.clientWidth / 2 : card.clientWidth / 2;
+  const cy = portrait ? portrait.offsetTop + portrait.clientHeight / 2 : card.clientHeight / 2;
+  img.style.left = Math.round(cx + assignment.offsetX * scale) + "px";
+  img.style.top = Math.round(cy + assignment.offsetY * scale) + "px";
+  img.src = `${assignment.framePrefix}1.png`;
+  card.appendChild(img);
+  let frame = 1;
+  const frameMs = assignment.frameMs || 30;
+  const timer = setInterval(() => {
+    frame++;
+    if (frame > assignment.frameCount) { clearInterval(timer); img.remove(); return; }
+    img.src = `${assignment.framePrefix}${frame}.png`;
+  }, frameMs);
+  // 効果音: エディタで割り当てた素材をそのまま鳴らす(エディタのプレビュー再生と同じ方式)
+  if (assignment.se) {
+    const se = new Audio(assignment.se);
+    se.volume = 0.5;
+    se.play().catch(() => {});
+  }
+  return assignment.frameCount * frameMs;
+}
+// 本体シーケンス。DOTが1つも無ければ何もせず即onDoneを呼ぶ(従来と同じ同期タイミングを保つ)
+function playEnemyDotStopSequence(actor, blogFn, onDone) {
+  const steps = [];
+  // 処理順は炎上→毒→出血(ユーザー指定)。stackはVFXのstackLevel選択に使う現在の蓄積値/残りターン
+  if (actor.burnTurns > 0) steps.push({ id: "burn", icon: "🔥", label: "炎上", popCls: actor.isPlant ? "burn-plant" : "burn", chipCls: "dot-chip-burn", stack: actor.burnTurns, tick: () => tickBurn(actor, blogFn) });
+  if (actor.poison > 0) steps.push({ id: "poison", icon: "🦠", label: "毒", popCls: "poison", chipCls: "dot-chip-poison", stack: actor.poison, tick: () => tickPoison(actor, blogFn) });
+  if (actor.bleed > 0) steps.push({ id: "bleed", icon: "🩸", label: "出血", popCls: "bleed", chipCls: "dot-chip-bleed", stack: actor.bleed, tick: () => tickBleed(actor, blogFn) });
+  if (steps.length === 0) { onDone(); return; }
+  const dim = document.getElementById("battleDotStopDim");
+  if (dim) dim.classList.add("on");
+  const finish = () => {
+    if (dim) dim.classList.remove("on");
+    setTimeout(onDone, DOT_STOP_DIM_OUT_MS);
+  };
+  const runStep = (i) => {
+    // 途中で敵が力尽きたら残りの種類は省略して締める(死体に0ダメージの表示を続けない)
+    if (!battle || i >= steps.length || actor.hp <= 0) { finish(); return; }
+    const s = steps[i];
+    const card = findVisibleCard(actor.instanceId);
+    let chip = null;
+    if (card) {
+      chip = document.createElement("div");
+      chip.className = `dot-stop-chip ${s.chipCls}`;
+      chip.textContent = `${s.icon} ${s.label}`;
+      card.appendChild(chip);
+      requestAnimationFrame(() => chip.classList.add("show"));
+      playAilmentVfxOnCard(card, ailmentVfxAssignmentFor(s.id, s.stack));
+    }
+    const dmg = s.tick(); // 実際のダメージ適用とログはengine.jsのtickBurn等がそのまま担当する
+    if (dmg > 0) {
+      popupOn(actor.instanceId, `${s.icon}-${dmg}`, s.popCls);
+      // 通常攻撃の被弾と同じリアクション(白フラッシュ+ノックバック+潰れ伸び)を再発火させる
+      actor.__shakeUntil = Date.now() + 400;
+      actor.__shakeIntensity = "normal";
+      delete actor.__shakeRenderedFor;
+    }
+    renderBattleScreen();
+    setTimeout(() => {
+      if (chip) chip.remove();
+      runStep(i + 1);
+    }, DOT_STOP_HOLD_MS + DOT_STOP_STEP_GAP_MS);
+  };
+  setTimeout(() => runStep(0), DOT_STOP_DIM_IN_MS);
+}
+// DOT VFXのフレーム画像も起動後に事前ロードしておく(初回再生のコマ落ち防止。攻撃VFXの
+// ウォームアップと同じ趣旨だが、こちらは頻度が低いためプール常駐まではしない)
+function preloadAilmentVfxFrames() {
+  if (typeof AILMENT_VFX_ASSIGNMENTS === "undefined" || typeof Image === "undefined") return;
+  AILMENT_VFX_ASSIGNMENTS.forEach((a) => {
+    for (let i = 1; i <= a.frameCount; i++) {
+      const im = new Image();
+      im.src = `${a.framePrefix}${i}.png`;
+    }
+  });
+}
+setTimeout(preloadAilmentVfxFrames, 3000);
+
 // 起動時に攻撃VFXのウォームアップを実行する(全フレームの事前デコード+表示用プールの常駐化。
 // iOSの「作りたて要素のアニメ序盤が描画されない」「フレーム画像のデコード遅延でコマ落ちする」対策)
 warmUpAttackVfxAssets();

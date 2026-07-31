@@ -1031,6 +1031,9 @@
     <div class="battle-bg" id="battleBg"></div>
     <!-- ボスギミックの場演出(業火/鬼火など)を背景の上に重ねるオーバーレイ。クラス付与で表示(gimmicks.js) -->
     <div id="battleGimmickOverlay"></div>
+    <!-- 敵のDOT(毒/出血/炎上)停止演出の暗転レイヤー。背景より上・敵カード列より下に挟み、
+         DOTダメージを見せている間だけ.onで点灯する(effects.js playEnemyDotStopSequence) -->
+    <div id="battleDotStopDim"></div>
     <div id="screenWarningFlash"></div>
     <!-- テストモード中(title.jsのテスト系ボタン経由)だけ表示される「タイトルへ戻る」ボタン。
          通常プレイの戦闘画面には出ない(startBattleがtestModeActiveを見て表示を切り替える) -->

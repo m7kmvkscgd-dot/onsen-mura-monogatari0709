@@ -552,151 +552,154 @@ function processNext() {
     // 自分のターンでなくなったので、前のターンの行動ボタンが残って誤タップできてしまわないよう消す
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
-    const dot = tickTurnStartEffects(actor, blog);
-    if (dot.total > 0) popupOn(actor.instanceId, `-${dot.total}`, "dmg");
-    popupDotStack(actor.instanceId, dot, actor.isPlant ? "burn-plant" : "burn");
-    // 毒/出血/炎上が同時に何種類も出ている時、ポップアップが順番に表示し終わる前に
-    // 敵の攻撃モーションが始まってしまうと忙しなく見えるため、実際に表示される種類数だけ
-    // 行動開始を後ろ倒しにする(表示が無ければ従来通りの600ms、種類が増えるほど長く待つ)
-    const dotTypeCount = [dot.poison, dot.bleed, dot.burn].filter((v) => v > 0).length;
-    const enemyActionDelay = dotTypeCount > 0 ? dotTypeCount * DOT_POPUP_STAGGER_MS : 600;
-    if (actor.hp <= 0) {
-      renderBattleScreen();
-      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
-      return;
-    }
-    // ボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られている場合、自分の手番が回ってきたタイミングで
-    // 通常の行動(攻撃/大技/スタン硬直)の代わりに逃走する。以前はHPが閾値を割った瞬間(=プレイヤーの
-    // 攻撃直後)に即座に割り込んで逃げていたが、「敵の手番が来たら逃げる」という自然な流れにしてほしい
-    // というユーザー指示で、判定タイミングをこの敵自身の手番の先頭に移した。討伐依頼対象(isQuestTarget)も
-    // 含めて全てのボス/中ボスが対象(追跡先のシステムが違うだけ、triggerQuestBossFlee参照)。
-    // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
-    // 襲撃戦(raidBattleActive)では敵は逃走しない(ユーザー指定2026-07-29: 実機テストで大猪が
-    // HP低下逃走してしまった。襲撃は「村を守り切るか敗北か」の戦いなので追撃システムと馴染まない)
-    // ボステスト中もHP低下逃走はしない(ギミックを最後まで発火させて検証するモードのため)
-    if (!raidBattleActive && !bossTestActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
-      actor.__hasFledPursuit = true;
-      if (actor.isQuestTarget) triggerQuestBossFlee(actor);
-      else triggerBossFlee(actor);
-      return;
-    }
-    if (actor.stunTurns > 0) {
-      actor.stunTurns--;
-      blog(`${actor.label}はスタンして動けない！`);
-      popupOn(actor.instanceId, "💫スタン", "stun");
-      renderBattleScreen();
-      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
-      return;
-    }
-    // ガマの「丸呑み」で行動不能にされている間はスキップする
-    if (actor.swallowedTurns > 0) {
-      actor.swallowedTurns--;
-      blog(`${actor.label}は丸呑みにされて動けない！`);
-      renderBattleScreen();
-      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
-      return;
-    }
-    setTimeout(() => {
-      // 大技サイクル: 敵ごとのbigAttackCountdownが0になったターンに大技発動、残り1で予告(このターンは
-      // 通常攻撃のまま)。間隔(平均何ターンに一度か/ばらつき/即効)は敵ごとのbigAttackCycleで個別指定でき、
-      // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
-      const bigAttackDue = (actor.bigAttackCountdown || 0) <= 0;
-      if (bigAttackDue) {
-        actor.bigAttackPending = false;
-        actor.bigAttackCountdown = rollBigAttackCountdown(actor);
-        // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
-        // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
-        const hpBeforeBig = {};
-        alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
-        const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;
-        const results = enemyBigAttack(actor, alive, blog);
-        if (yatanokagamiActive) {
-          // 八咫鏡の御守: 戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する
-          let prevented = 0;
-          results.forEach((r) => {
-            if (r.barricade) return; // 柵が受けた大技は八咫鏡の対象外(味方は無傷のため)
-            if (r.hit && r.dmg > 0) {
-              const before = hpBeforeBig[r.target.id];
-              const actualLoss = before - r.target.hp;
-              if (actualLoss > 0) { r.target.hp = Math.min(r.target.maxHp, before); prevented += actualLoss; }
-            }
-          });
-          if (prevented > 0) {
-            battle.omamoriUsed.yatanokagami = true;
-            const reflectDmg = Math.max(1, Math.round(prevented * 0.5));
-            actor.hp = Math.max(0, actor.hp - reflectDmg);
-            blog(`八咫鏡の御守が大技を打ち消し、${actor.label}に${reflectDmg}ダメージを跳ね返した！`);
-            playSfx("evade");
-          }
-        } else {
-          results.forEach((r) => {
-            if (r.barricade) return; // 柵が受けた: 味方向けの演出は不要
-            if (r.hit) {
-              popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
-              playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
-              // ボス/中ボスの大技だけ、画面シェイク+被弾カードの赤い閃光/衝撃波で「重い一撃」を強調する
-              // (雑魚の大技には付けない、ユーザー指示)
-              if (actor.isBoss || actor.isMidBoss) playBossBigAttackImpact(r.target.id);
-            } else {
-              playSfx("evade");
-            }
-          });
-        }
-        alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
-        const newlyCriticalBig = handleFieldDeaths();
+    // 敵のDOT(毒/出血/炎上)の蓄積ダメージは、停止演出(effects.jsのplayEnemyDotStopSequence)が
+    // 炎上→毒→出血の順に「暗転+種類チップ+VFX+効果音+被弾リアクション+ダメージ適用」を
+    // 1種類ずつ(1種類につき0.7秒停止)処理する(モックmock_dot_vfx.htmlでユーザー承認2026-07-31。
+    // 旧・小さいポップを0.7秒間隔で流すだけの表示は廃止)。DOT以外のターン開始処理(継続回復・
+    // バフ経過など)は従来どおりtickTurnStartEffects側が担当する(skipDots指定でDOTの二重適用を防ぐ)
+    const continueEnemyTurn = () => {
+      if (!battle) return; // 停止演出中に煙玉等で戦闘が終了していた場合の保険
+      tickTurnStartEffects(actor, blog, { skipDots: true });
+      const enemyActionDelay = 600; // DOTの見せ場は停止演出側で消化済みのため、行動開始までは常に既定の600ms
+      if (actor.hp <= 0) {
         renderBattleScreen();
-        const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
-        const continueAfterBig = () => {
-          const bigCounterResult = results.find((r) => r.guardCounterDmg);
-          if (bigCounterResult) {
-            // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-            playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
-          } else {
-            setTimeout(advanceTurnAfterBig, 500);
-          }
-        };
-        autoDeployReserveIfNeeded(newlyCriticalBig, continueAfterBig);
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
         return;
       }
-      if (actor.bigAttackCountdown === 1) {
-        actor.bigAttackPending = true;
-        // 単体大技ならこの瞬間に狙う相手を確定する(ターゲットマーク表示と実際の被弾対象を一致させるため)
-        commitBigAttackTelegraphTarget(actor, alive);
-        // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
-        // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる
-        // (extraBigAttacksでローテーションする敵は、予告時点で次の技が確定しているため先出しできる)
-        if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
-        triggerWarningFlash();
-        playSfx("big_attack_warning");
-        actor.bigAttackCountdown -= 1;
-      } else {
-        actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);
+      // ボス/中ボスがHPをBOSS_FLEE_HP_RATIO以下まで削られている場合、自分の手番が回ってきたタイミングで
+      // 通常の行動(攻撃/大技/スタン硬直)の代わりに逃走する。以前はHPが閾値を割った瞬間(=プレイヤーの
+      // 攻撃直後)に即座に割り込んで逃げていたが、「敵の手番が来たら逃げる」という自然な流れにしてほしい
+      // というユーザー指示で、判定タイミングをこの敵自身の手番の先頭に移した。討伐依頼対象(isQuestTarget)も
+      // 含めて全てのボス/中ボスが対象(追跡先のシステムが違うだけ、triggerQuestBossFlee参照)。
+      // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
+      // 襲撃戦(raidBattleActive)では敵は逃走しない(ユーザー指定2026-07-29: 実機テストで大猪が
+      // HP低下逃走してしまった。襲撃は「村を守り切るか敗北か」の戦いなので追撃システムと馴染まない)
+      // ボステスト中もHP低下逃走はしない(ギミックを最後まで発火させて検証するモードのため)
+      if (!raidBattleActive && !bossTestActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
+        actor.__hasFledPursuit = true;
+        if (actor.isQuestTarget) triggerQuestBossFlee(actor);
+        else triggerBossFlee(actor);
+        return;
       }
-      const hpBeforeAtk = {};
-      alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
-      const result = enemyAttack(actor, alive, blog);
-      if (result && result.barricade) {
-        // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
-      } else if (result && result.hit) {
-        popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-        playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
-        checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
-      } else if (result) {
-        playSfx("evade");
+      if (actor.stunTurns > 0) {
+        actor.stunTurns--;
+        blog(`${actor.label}はスタンして動けない！`);
+        popupOn(actor.instanceId, "💫スタン", "stun");
+        renderBattleScreen();
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        return;
       }
-      const newlyCritical = handleFieldDeaths();
-      renderBattleScreen();
-      const advanceTurn = () => { battle.orderIndex++; processNext(); };
-      const continueAfterAttack = () => {
-        if (result && result.guardCounterDmg) {
-          // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-          playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
-        } else {
-          setTimeout(advanceTurn, 500);
+      // ガマの「丸呑み」で行動不能にされている間はスキップする
+      if (actor.swallowedTurns > 0) {
+        actor.swallowedTurns--;
+        blog(`${actor.label}は丸呑みにされて動けない！`);
+        renderBattleScreen();
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+        return;
+      }
+      setTimeout(() => {
+        // 大技サイクル: 敵ごとのbigAttackCountdownが0になったターンに大技発動、残り1で予告(このターンは
+        // 通常攻撃のまま)。間隔(平均何ターンに一度か/ばらつき/即効)は敵ごとのbigAttackCycleで個別指定でき、
+        // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
+        const bigAttackDue = (actor.bigAttackCountdown || 0) <= 0;
+        if (bigAttackDue) {
+          actor.bigAttackPending = false;
+          actor.bigAttackCountdown = rollBigAttackCountdown(actor);
+          // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
+          // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
+          const hpBeforeBig = {};
+          alive.forEach((c) => { hpBeforeBig[c.id] = c.hp; });
+          const yatanokagamiActive = hasOmamori("yatanokagami") && !battle.omamoriUsed.yatanokagami;
+          const results = enemyBigAttack(actor, alive, blog);
+          if (yatanokagamiActive) {
+            // 八咫鏡の御守: 戦闘中、最初に敵が大技を放った時にそれを無効化し、想定ダメージの50%を反射する
+            let prevented = 0;
+            results.forEach((r) => {
+              if (r.barricade) return; // 柵が受けた大技は八咫鏡の対象外(味方は無傷のため)
+              if (r.hit && r.dmg > 0) {
+                const before = hpBeforeBig[r.target.id];
+                const actualLoss = before - r.target.hp;
+                if (actualLoss > 0) { r.target.hp = Math.min(r.target.maxHp, before); prevented += actualLoss; }
+              }
+            });
+            if (prevented > 0) {
+              battle.omamoriUsed.yatanokagami = true;
+              const reflectDmg = Math.max(1, Math.round(prevented * 0.5));
+              actor.hp = Math.max(0, actor.hp - reflectDmg);
+              blog(`八咫鏡の御守が大技を打ち消し、${actor.label}に${reflectDmg}ダメージを跳ね返した！`);
+              playSfx("evade");
+            }
+          } else {
+            results.forEach((r) => {
+              if (r.barricade) return; // 柵が受けた: 味方向けの演出は不要
+              if (r.hit) {
+                popupOn(r.target.id, `-${r.dmg}`, "dmg", dmgShakeIntensity(true));
+                playSfx(hitTakenSfxFor(r.dmg, r.target.maxHp));
+                // ボス/中ボスの大技だけ、画面シェイク+被弾カードの赤い閃光/衝撃波で「重い一撃」を強調する
+                // (雑魚の大技には付けない、ユーザー指示)
+                if (actor.isBoss || actor.isMidBoss) playBossBigAttackImpact(r.target.id);
+              } else {
+                playSfx("evade");
+              }
+            });
+          }
+          alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
+          const newlyCriticalBig = handleFieldDeaths();
+          renderBattleScreen();
+          const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
+          const continueAfterBig = () => {
+            const bigCounterResult = results.find((r) => r.guardCounterDmg);
+            if (bigCounterResult) {
+              // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+              playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
+            } else {
+              setTimeout(advanceTurnAfterBig, 500);
+            }
+          };
+          autoDeployReserveIfNeeded(newlyCriticalBig, continueAfterBig);
+          return;
         }
-      };
-      autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
-    }, enemyActionDelay);
+        if (actor.bigAttackCountdown === 1) {
+          actor.bigAttackPending = true;
+          // 単体大技ならこの瞬間に狙う相手を確定する(ターゲットマーク表示と実際の被弾対象を一致させるため)
+          commitBigAttackTelegraphTarget(actor, alive);
+          // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
+          // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる
+          // (extraBigAttacksでローテーションする敵は、予告時点で次の技が確定しているため先出しできる)
+          if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
+          triggerWarningFlash();
+          playSfx("big_attack_warning");
+          actor.bigAttackCountdown -= 1;
+        } else {
+          actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);
+        }
+        const hpBeforeAtk = {};
+        alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
+        const result = enemyAttack(actor, alive, blog);
+        if (result && result.barricade) {
+          // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
+        } else if (result && result.hit) {
+          popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+          playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+          checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
+        } else if (result) {
+          playSfx("evade");
+        }
+        const newlyCritical = handleFieldDeaths();
+        renderBattleScreen();
+        const advanceTurn = () => { battle.orderIndex++; processNext(); };
+        const continueAfterAttack = () => {
+          if (result && result.guardCounterDmg) {
+            // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+            playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
+          } else {
+            setTimeout(advanceTurn, 500);
+          }
+        };
+        autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
+      }, enemyActionDelay);
+    };
+    playEnemyDotStopSequence(actor, blog, continueEnemyTurn);
   } else if (actor.isShikigami) {
     // 式神: プレイヤー操作不要で自動的に行動する(resolveShikigamiAction参照。タイプごとに通常攻撃/連撃/
     // 特技(狐火・回復・結界・スタン・沈黙等)/庇うを使い分ける)
