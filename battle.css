@@ -202,10 +202,13 @@
      framelessの立ち絵だけ92→110pxへ拡大。カード幅は立ち絵に合わせて広がるため、
      HPバー(と中の⚠️行)は従来の92px幅のまま中央寄せに固定して大きさを変えない。
      img.card-portrait-img限定=DOT VFX(.dot-ailment-vfx)や斬撃VFXの寸法には影響させない。
-     【3体=絶対1行の保証】幅はmin(110px, 26vw): 狭い端末では縮んで、3枚+gap(0.8rem×2)+
-     行padding(0.6rem×2)+カードpadding(2px×6)が320px幅端末でも必ず1行に収まる
-     (390px→110px/375px→97.5px/320px→83.2px、いずれも合計が画面幅未満になる検算済みの式) */
-  .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw); height: min(110px, 26vw); }
+     【3体=絶対1行の保証】幅はmin(110px, 26vw, 23.2vh-64px):
+     ・26vw項…狭い端末で縮み、3枚+gap+行padding+カードpaddingが320px幅でも必ず1行に収まる
+       (390px→110px/375px→97.5px/320px→83.2px、いずれも合計が画面幅未満になる検算済みの式)
+     ・23.2vh-64px項…背の低い端末(SE等)でcenter_v1レイアウトの「敵26vh〜味方バー49.2vh」の
+       帯(23.2vh)からカード(立ち絵+名前+HPバー≈立ち絵+62px)がはみ出して味方バーに
+       重ならないよう、高さ方向でも縮める(844px→134=無効/667px→91/568px→68) */
+  .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2vh - 64px)); height: min(110px, 26vw, calc(23.2vh - 64px)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* frameless敵が討伐対象の時、金色のカード枠パルス(.quest-target)は「枠なし」の意図と矛盾する
      四角い縁として見えてしまうため消す(🎯アイコンは残るので対象表示は失われない)。
