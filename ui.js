@@ -1326,25 +1326,32 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
       // 空になる)に高さ0で再計算されて味方バーが下へ落ち、ボタンが戻ると跳ね上がる=攻撃のたびに
       // レイアウトが動いて見えていた(実機報告2026-08-01)。コマンドは2×2固定になったため
       // 高さはほぼ一定で、固定予約で常に同じ位置に安定する(消火等で稀に3行になるターンは
-      // 下の既存クランプがボタン列側を少し上へ寄せて吸収する)
+      // 下の既存クランプがボタン列側を少し上へ寄せて吸収する)。
+      // この計算は戦闘(battlePartyBar)と探索(dungeonPartyBar)で全く同じ=両画面で自キャラと
+      // ボタンの位置が一致し、戦闘開始の暗転明けでレイアウトが動かない(2026-08-01ユーザー要望。
+      // 「探索と戦闘で自キャラの位置を変えない」という元々の共通top:284px設計の、新レイアウト版)
       const RESERVED_ACTIONS_H = 132;
       const partyH = partyBar.getBoundingClientRect().height;
       const pTop = Math.max(150, Math.round(innerH - RESERVED_ACTIONS_H - 8 - 10 - partyH));
       partyBar.style.top = `${pTop}px`;
-      const row = document.getElementById("enemyRow");
-      const log = document.getElementById("battleLog");
-      if (row) {
-        const firstCard = row.querySelector(".enemy-card");
-        const cardH = firstCard ? Math.round(firstCard.getBoundingClientRect().height) : 170;
-        const logBottom = log ? Math.round(log.getBoundingClientRect().bottom) : 100;
-        const desired = Math.round(innerH * 0.26);
-        const cardTop = Math.max(logBottom + 6, Math.min(desired, pTop - cardH - 10));
-        row.style.top = `${cardTop - 38}px`; // 38px=行内の名前用padding-topぶん
+      if (partyBarId === "battlePartyBar") {
+        const row = document.getElementById("enemyRow");
+        const log = document.getElementById("battleLog");
+        if (row) {
+          const firstCard = row.querySelector(".enemy-card");
+          const cardH = firstCard ? Math.round(firstCard.getBoundingClientRect().height) : 170;
+          const logBottom = log ? Math.round(log.getBoundingClientRect().bottom) : 100;
+          const desired = Math.round(innerH * 0.26);
+          const cardTop = Math.max(logBottom + 6, Math.min(desired, pTop - cardH - 10));
+          row.style.top = `${cardTop - 38}px`; // 38px=行内の名前用padding-topぶん
+        }
       }
     } else {
       partyBar.style.top = "";
-      const row = document.getElementById("enemyRow");
-      if (row) row.style.top = "";
+      if (partyBarId === "battlePartyBar") {
+        const row = document.getElementById("enemyRow");
+        if (row) row.style.top = "";
+      }
     }
     const rect = partyBar.getBoundingClientRect();
     // 逃げる小ボタン(戦闘のみ、位置C=味方バーの右上に浮かせる。2026-08-01ユーザー確定)。

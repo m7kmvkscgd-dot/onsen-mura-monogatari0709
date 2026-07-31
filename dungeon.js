@@ -399,6 +399,10 @@ function visibleFieldParty() {
 }
 function renderDungeon() {
   hideStatusTooltip(); // 再描画でアイコン要素が作り直されるため、表示中の説明ツールチップが宙に浮かないよう消しておく
+  // 戦闘レイアウトcenter_v1の時は探索の味方バーも同じ実測配置に乗せる(positionActionsBelowPartyBarの
+  // layout-center節が同一の計算で位置決めする)。探索→戦闘の暗転明けで自キャラとボタンの位置が
+  // 一切動かなくなる(2026-08-01ユーザー要望。classicへ戻せば従来の共通top:284pxに戻る)
+  document.getElementById("dungeonPartyBar").classList.toggle("layout-center", typeof BATTLE_LAYOUT !== "undefined" && BATTLE_LAYOUT === "center_v1");
   document.getElementById("floorBadgeText").textContent = `${currentFloor}層目`;
   document.getElementById("dungeonTimeBadge").textContent = `${TIME_PHASE_LABEL[state.timeOfDay || "day"]} ${formatClockTime(state.clockMinutes)}`;
   updateQuestTargetBadge();
