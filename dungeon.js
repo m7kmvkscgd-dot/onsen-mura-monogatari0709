@@ -2070,18 +2070,8 @@ const DUNGEON_EVENTS = [
       { icon: "🙈", label: "気づかないふりをする", desc: "関わらないでおく", onPick: () => { dlog("気づかないふりをして歩き続けた。いつの間にか気配は消えていた。"); renderDungeon(); } },
     ],
   },
-  {
-    id: "tanuki", title: "化け狸の賭場", image: "assets/events/tanuki.png",
-    flavor: "狸が壺を振っている。「丁か半か、乗ってきな」",
-    choices: () => [
-      {
-        icon: "🎲", label: "壺に乗る", desc: "賭け金を自分で決める", disabled: state.gold < 1,
-        disabledMsg: "お金が足りません",
-        onPick: () => { showTanukiBetModal(); },
-      },
-      { icon: "🚶", label: "乗らない", desc: "賭け事はしない", onPick: () => { dlog("「つまらないねえ」狸は壺を抱えて茂みに消えた。"); renderDungeon(); } },
-    ],
-  },
+  // 「化け狸の賭場」イベントは2026-08-01ユーザー指示で削除(賭け金モーダルtanukiBetOverlay=index.html、
+  // showTanukiBetModal関数ごと撤去。画像assets/events/tanuki.pngのみ残置)
   {
     id: "well", title: "古井戸", image: "assets/events/well.png",
     flavor: "涸れ井戸の底で、何かが光っている。",
@@ -2165,43 +2155,7 @@ const DUNGEON_EVENTS = [
     ],
   },
 ];
-// 化け狸の賭場の賭け金入力(ユーザー指示2026-07-18: 「有り金の半分」固定から自分で金額を決める方式へ)。
-// 勝率50%・勝てば賭け金と同額が上乗せ・負ければ没収、というルール自体は従来のまま。
-// 1〜所持金の範囲で自由入力+早押しボタン(10G/半分/全額)。「やめる」は選択肢の「乗らない」と同じ扱い
-function showTanukiBetModal() {
-  const overlay = document.getElementById("tanukiBetOverlay");
-  const input = document.getElementById("tanukiBetInput");
-  document.getElementById("tanukiBetGoldText").textContent = `所持金 ${state.gold}G — いくら賭ける？`;
-  input.max = String(state.gold);
-  input.value = String(Math.max(1, Math.floor(state.gold / 2)));
-  overlay.style.display = "flex";
-  const close = () => { overlay.style.display = "none"; };
-  document.getElementById("tanukiBet10").onclick = () => { input.value = String(Math.min(10, state.gold)); };
-  document.getElementById("tanukiBetHalf").onclick = () => { input.value = String(Math.max(1, Math.floor(state.gold / 2))); };
-  document.getElementById("tanukiBetAll").onclick = () => { input.value = String(state.gold); };
-  document.getElementById("tanukiBetCancel").onclick = () => {
-    close();
-    dlog("「つまらないねえ」狸は壺を抱えて茂みに消えた。");
-    renderDungeon();
-  };
-  document.getElementById("tanukiBetGo").onclick = () => {
-    const bet = Math.floor(Number(input.value));
-    if (!Number.isFinite(bet) || bet < 1 || bet > state.gold) {
-      showInfoModal(`賭け金は1〜${state.gold}Gの間で決めてください`);
-      return;
-    }
-    close();
-    if (Math.random() < 0.5) {
-      dlog(`「あんた強運だね」賭けた${bet}Gが倍になって返ってきた！`);
-      grantEventGold(bet);
-    } else {
-      state.gold -= bet;
-      dlog(`「残念、また来な」狸は笑いながら${bet}Gを掻き集めた…。`);
-      saveState();
-    }
-    renderDungeon();
-  };
-}
+// (化け狸の賭場showTanukiBetModalは2026-08-01ユーザー指示でイベントごと削除)
 // イベント発生の入り口(rollEncounterから呼ばれる)。未消化のイベントが無ければfalseを返して静寂にフォールバック
 function tryStartDungeonEvent() {
   const pool = DUNGEON_EVENTS.filter((ev) => !expeditionSeenEventIds.has(ev.id));
