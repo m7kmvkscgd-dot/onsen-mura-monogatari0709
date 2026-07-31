@@ -159,17 +159,12 @@ try {
   bgmAudioCtx = null;
   bgmGainNode = null;
 }
-// オープニング側は別tryで隔離: 万一ここが失敗しても、実績のあるbgmAudio側の経路を巻き添えにしない
-// (過去の「複数要素を一括で移行して全滅」事故の教訓。失敗時は従来の.volumeフォールバックで動き続ける)
-try {
-  if (bgmAudioCtx) {
-    const openingSource = bgmAudioCtx.createMediaElementSource(openingBgmAudio);
-    openingGainNode = bgmAudioCtx.createGain();
-    openingSource.connect(openingGainNode).connect(bgmAudioCtx.destination);
-  }
-} catch (e) {
-  openingGainNode = null;
-}
+// 【revert 2026-08-01】オープニングのGainNode接続は実機タイトルでBGMが完全無音になる退行を
+// 起こしたため撤回(MediaElementSourceに接続した要素は元の出力を奪われるため、経路が機能しないと
+// 音量調整どころか無音になる。原因の深掘りは実機でしかできないため、まず動いていた状態へ戻す)。
+// openingGainNodeはnullのまま=下のsetOpeningBgmVolumeは従来の.volume直接代入で動く
+// (iOSでは.volumeが無視され素の音量で鳴る=「うるさい」は未解決に戻る。対策は音源側の
+// 音量を下げた別ファイルを用意する方式を検討予定=WebAudioに触らない安全ルート)
 // オープニングBGMの音量の読み書き(GainNode経路。非対応環境は従来の.volumeへフォールバック)
 function setOpeningBgmVolume(value) {
   if (openingGainNode) openingGainNode.gain.value = value;
