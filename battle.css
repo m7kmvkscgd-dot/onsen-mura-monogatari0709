@@ -253,6 +253,18 @@
      (額装swarmの48pxに1.1倍相当の53px)。all-frameless行の式より後置き+同数の詳細度で上書き */
   .enemy-card.frameless.swarm img.card-portrait-img { width: 53px; height: 53px; }
   .enemy-row.all-frameless .enemy-card.frameless.swarm img.card-portrait-img { width: 53px; height: 53px; }
+  /* 飛行中(airborne、battle.jsがisFlyingから付与): 本体を浮かせてゆっくり上下させ、影は地面に
+     残して小さく薄くする(「空とんでるやつの影が地面にないとおかしい」2026-08-01)。
+     transformは個体拡大の--clear-scaleと合成。撃ち落としでクラスが外れれば着地する */
+  .enemy-card.frameless.airborne img.card-portrait-img {
+    transform: translateY(-11px) scale(var(--clear-scale, 1));
+    animation: airborneBob 2.6s ease-in-out infinite;
+  }
+  @keyframes airborneBob {
+    0%, 100% { transform: translateY(-11px) scale(var(--clear-scale, 1)); }
+    50% { transform: translateY(-15px) scale(var(--clear-scale, 1)); }
+  }
+  .enemy-card.frameless.airborne .enemy-portrait-box::after { width: 46%; height: 9px; opacity: 0.75; }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。
      大きさは立ち絵幅に対する比率ではなくカード幅基準の割合(66%)で、全敵で見た目が揃う */

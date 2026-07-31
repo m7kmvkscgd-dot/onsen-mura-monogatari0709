@@ -329,6 +329,9 @@ function updateEnemyCard(card, e) {
   const dead = e.hp <= 0;
   const targetable = !!pendingEnemyPick && !dead;
   card.classList.toggle("swarm", !!e.isSwarm);
+  // 飛行中は立ち絵を浮かせて接地影と分離する(frameless時のみ意味を持つ、battle.cssのairborne)。
+  // 撃ち落とされてisFlyingが外れると次の再描画で自然に着地する
+  card.classList.toggle("airborne", !!e.isFlying);
   card.classList.toggle("midboss", !!e.isMidBoss);
   card.classList.toggle("quest-target", !!e.isQuestTarget);
   // 襲撃戦のカード幅は編成「枠」(ボス級4/通常2/大群1)に比例させる(ユーザー指定2026-07-29:
