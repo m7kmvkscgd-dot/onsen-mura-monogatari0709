@@ -251,7 +251,7 @@ const ABILITY_DESC = {
 };
 
 // key: id, ja, image, hp, atk, def, spd, goldMin, goldMax, xp, minFloor, maxFloor, isBoss
-// isFlying: true = 明らかに空を飛んでいる敵(素のステータスは変更なし)。近接攻撃の命中率が25%下がる。
+// isFlying: true = 明らかに空を飛んでいる敵(素のステータスは変更なし)。近接攻撃の命中率が20%下がる(2026-08-01に25%からナーフ)。
 // 狩人/砲術士が命中させると80%で撃ち落として解除でき、成功時は1ターンのスタンも追加で付与する
 // (詳細はengine.js側のrollHit/maybeShootDown参照)
 // 序盤(Lv1-10)/中盤(Lv11-25)/後半(Lv26-40)/終盤(Lv41-50〜)の4段階、計40種。

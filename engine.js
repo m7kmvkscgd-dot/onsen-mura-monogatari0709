@@ -1893,7 +1893,7 @@ function skillRangeType(actor, skill) {
   return RANGED_TREE_SKILL_CLASSES.has(actor.classId) ? "ranged" : "melee";
 }
 // 飛行(🪽)の敵に対しては近接攻撃の命中率が下がる(遠距離攻撃は影響なし)
-const FLYING_MELEE_ACCURACY_PENALTY = 0.25;
+const FLYING_MELEE_ACCURACY_PENALTY = 0.20; // 0.25→0.20(2026-08-01ユーザー指示でナーフ)
 const FLYING_EVASION_BONUS = 0.05; // 飛行の敵自身の回避率+5%(素早さ由来の回避とは別枠、遠距離攻撃にも効く)
 const FLYING_MIN_HIT_CHANCE = 0.10; // 通常のMIN_HIT_CHANCEより低い専用の下限(飛行を狙い撃ちする近接が機能しなくなりすぎないよう最低限だけ確保)
 // 狩人/砲術士が飛行の敵に攻撃を命中させた時、この確率で「撃ち落とす」(以後isFlyingが解除され近接も当てやすくなる)
