@@ -1322,9 +1322,14 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
     // 味方バー約53%)に一致し、狭い実機ではその比率を保ったまま自動的に詰まる
     if (partyBar.classList.contains("layout-center")) {
       const innerH = window.innerHeight;
-      const actionsH = actions.getBoundingClientRect().height;
+      // ボタン領域は実測ではなく固定値で「予約」する。実測だと攻撃の解決中(グリッドが一時的に
+      // 空になる)に高さ0で再計算されて味方バーが下へ落ち、ボタンが戻ると跳ね上がる=攻撃のたびに
+      // レイアウトが動いて見えていた(実機報告2026-08-01)。コマンドは2×2固定になったため
+      // 高さはほぼ一定で、固定予約で常に同じ位置に安定する(消火等で稀に3行になるターンは
+      // 下の既存クランプがボタン列側を少し上へ寄せて吸収する)
+      const RESERVED_ACTIONS_H = 132;
       const partyH = partyBar.getBoundingClientRect().height;
-      const pTop = Math.max(150, Math.round(innerH - actionsH - 8 - 10 - partyH));
+      const pTop = Math.max(150, Math.round(innerH - RESERVED_ACTIONS_H - 8 - 10 - partyH));
       partyBar.style.top = `${pTop}px`;
       const row = document.getElementById("enemyRow");
       const log = document.getElementById("battleLog");
@@ -1346,7 +1351,7 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
     // 味方バーの実測位置から44px上に置く(バーが実測配置で動いても常に右肩に追従する)
     if (partyBarId === "battlePartyBar") {
       const fleeBtn = document.getElementById("battleFleeBtn");
-      if (fleeBtn) fleeBtn.style.top = `${Math.max(8, Math.round(rect.top) - 44)}px`;
+      if (fleeBtn) fleeBtn.style.top = `${Math.max(8, Math.round(rect.top) - 36)}px`; // -44から8px下げ(2026-08-01ユーザー指定)
     }
     let top = Math.round(rect.bottom) + 10;
     // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、
