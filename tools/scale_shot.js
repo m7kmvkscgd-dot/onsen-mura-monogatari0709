@@ -14,7 +14,7 @@ const { webkit, devices } = require("playwright");
   await page.evaluate(() => document.getElementById("titleTestBtn").click());
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
-    const es = [instantiateEnemyById("bake_danuki"), instantiateEnemyById("kappa"), instantiateEnemyById("hitotsume_kozo")];
+    const es = [instantiateEnemyById("yaken"), instantiateEnemyById("kodama"), instantiateEnemyById("hitotsume_kozo")];
     es.forEach((e) => { e.spd = 0; });
     startBattle(es, null, "スケール検証！");
   });

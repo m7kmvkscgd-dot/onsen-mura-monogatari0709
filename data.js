@@ -740,10 +740,12 @@ const TEST_TRANSPARENT_ENEMY_IMAGES = {
 // 細身/小柄な絵は同じ正方形の箱にcontainすると視覚的な質量が小さく見えるため、対象だけ
 // 足元基準(transform-origin bottom)で拡大表示する。箱のレイアウト寸法は変えない=
 // 3体1行の幅計算・HPバー位置・行の高さに一切影響しない(battle.jsが--clear-scaleへ設定)
+// 基準は木霊(kodama、補正なし=箱いっぱい)。「木霊ぐらいのサイズがベスト」(2026-08-01)
 const TEST_TRANSPARENT_ENEMY_SCALE = {
   bake_danuki: 1.4, // 1.25→1.4(2026-08-01「もう少しデカく」)
   kappa: 1.25,
-  hitotsume_kozo: 1.3,
+  hitotsume_kozo: 1.0, // 1.3→1.0(「一つ目がでかい、木霊ぐらいが良い」→木霊と同じ高さに)
+  yaken: 0.85, // 横に広い絵で木霊より大きく見えるため縮小(「犬がでかい」)
 };
 
 // ============ 状態異常VFX割り当て(VFXアニメーションエディタのailmentエクスポート、2026-07-31) ============
