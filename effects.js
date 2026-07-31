@@ -356,7 +356,7 @@ function playScreenShakeOnKillOnly(target, isCrit) {
 // 問題があり、進行中の踏み込みを記録して負のanimation-delayで途中復帰させる仕組み
 // (activeAttackLunge/resumeAttackLungeOnCard)を挟んでいたが、差分更新化(2026-07-26)でカードDOMが
 // 再描画を生き延びるようになったため撤去した。クラスを付けたら後はCSSアニメーションが完走する
-const ATTACK_LUNGE_MS = 300;
+const ATTACK_LUNGE_MS = 560; // 300→560(2026-08-01、味方踏み込みをモック案B「ヒットストップ」へ刷新)
 function playAttackerLunge(actorId) {
   if (actorId == null) return;
   const card = findVisibleCard(actorId);

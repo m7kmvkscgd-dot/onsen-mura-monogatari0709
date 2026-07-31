@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>味方必殺技アニメモック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #stage { position: fixed; inset: 0; }
+  #bg { position: absolute; inset: 0; background: url('assets/bg/forest_day.jpg') center 32% / cover; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.12); }
+  #dim { position: absolute; inset: 0; z-index: 3; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.25s; }
+
+  .enemy-field { position: absolute; top: 128px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; }
+  .ecard { text-align: center; position: relative; }
+  .ename { font-size: 0.8rem; font-weight: 700; text-shadow: 0 0 6px rgba(0,0,0,0.9); }
+  .ebox { position: relative; width: 118px; height: 118px; margin: 0 auto; }
+  .ebox img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; }
+  .eshadow { position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); width: 66%; height: 12px; z-index: -1;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(8,6,4,0.42), rgba(8,6,4,0.22) 55%, transparent 72%); }
+  .ehp { height: 9px; width: 92px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; border: 1px solid rgba(255,255,255,0.25); overflow: hidden; }
+  .ehp > div { height: 100%; width: 78%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .edmg { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); z-index: 7; font-weight: 900; font-size: 1.55rem;
+    color: #ff9d5c; text-shadow: 0 2px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8); opacity: 0; pointer-events: none; }
+  @keyframes dmgPop { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7); } 18% { opacity: 1; transform: translate(-50%, -4px) scale(1.2); }
+    36% { transform: translate(-50%, -2px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -16px); } }
+  @keyframes eHitBig { 0%, 100% { transform: translate(0,0); } 15% { transform: translate(-8px, 3px); } 30% { transform: translate(7px, -3px); } 45% { transform: translate(-5px, 2px); } 60% { transform: translate(4px, -1px); } 80% { transform: translate(-2px, 0); } }
+  .slash { position: absolute; left: 50%; top: 50%; width: 110px; height: 110px; z-index: 5; pointer-events: none; opacity: 0;
+    transform: translate(-50%, -50%) rotate(-24deg); }
+  .slash::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 5px; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, #fff 30%, #ffd98a 70%, transparent); box-shadow: 0 0 14px rgba(255,220,150,0.95); }
+  .slash.second { transform: translate(-50%, -50%) rotate(38deg); }
+  @keyframes slashSweep { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, -24deg)) scale(0.45); }
+    22% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, -24deg)) scale(1.35); } }
+  @keyframes stageShakeBig { 0%, 100% { transform: translate(0,0); } 15% { transform: translate(-6px, 5px); } 30% { transform: translate(6px, -4px); } 45% { transform: translate(-5px, 3px); } 60% { transform: translate(4px, -2px); } 80% { transform: translate(-2px, 1px); } }
+
+  #partyBar { position: absolute; left: 50%; transform: translateX(-50%); top: 297px; z-index: 4;
+    width: 100%; max-width: 480px; display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); justify-content: center; }
+  .pm { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 10px; padding: 0.25rem; border: 2px solid transparent; }
+  .pm.acting { border-color: #c9a24a; box-shadow: 0 0 10px rgba(201,162,74,0.55); }
+  .pm img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; background: #353a44; }
+  .pm .hb { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pm .hb > div { height: 100%; width: 60%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pm .nm { font-size: 0.72rem; margin-top: 3px; }
+
+  #actions { position: absolute; left: 10px; right: 10px; top: 470px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648;
+    background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; pointer-events: none; }
+
+  /* ===== 必殺技パーツ ===== */
+  /* 通常攻撃(採用済み案B): 深い踏み込み+ヒットストップ */
+  @keyframes dashHoldUp {
+    0% { transform: translateY(0) scale(1); }
+    18% { transform: translateY(-24px) scale(1.08); }
+    46% { transform: translateY(-23px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 案A: 金色の気合い発光(溜め)→技名帯→強ヒットストップ */
+  @keyframes gatherGlow {
+    0% { box-shadow: 0 0 0 rgba(255,214,110,0); filter: brightness(1); }
+    45% { box-shadow: 0 0 26px rgba(255,214,110,0.95); filter: brightness(1.35); }
+    100% { box-shadow: 0 0 8px rgba(255,214,110,0.4); filter: brightness(1.05); }
+  }
+  @keyframes dashHoldStrong {
+    0% { transform: translateY(0) scale(1); }
+    16% { transform: translateY(-30px) scale(1.12); }
+    52% { transform: translateY(-29px) scale(1.12); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  #skillBanner { position: absolute; left: 0; right: 0; top: 236px; z-index: 6; text-align: center; pointer-events: none; opacity: 0; }
+  #skillBanner .band { display: inline-block; padding: 5px 26px; font-weight: 900; font-size: 1.05rem; letter-spacing: 0.12em;
+    color: #fff7e6; background: linear-gradient(90deg, transparent, rgba(120,20,16,0.92) 18%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 82%, transparent);
+    border-top: 1px solid rgba(255,214,110,0.8); border-bottom: 1px solid rgba(255,214,110,0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+  @keyframes bannerSweep {
+    0% { opacity: 0; transform: translateX(-40px); }
+    18% { opacity: 1; transform: translateX(0); }
+    78% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(30px); }
+  }
+  /* 案B: 駆け抜け斬り(実際に敵の位置まで駆け上がる)。JSでtranslateを計算してWAAPI再生 */
+  .ghost { pointer-events: none; opacity: 0.4; border-radius: 10px; }
+  @keyframes ghostFade { to { opacity: 0; } }
+  /* 案C: 集中線ズーム */
+  #focusLines { position: absolute; inset: -20%; z-index: 5; pointer-events: none; opacity: 0;
+    background: repeating-conic-gradient(from 0deg at 50% 32%, rgba(255,255,255,0.34) 0deg 1.6deg, transparent 1.6deg 11deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 32%, transparent 90px, #000 220px);
+    mask-image: radial-gradient(circle at 50% 32%, transparent 90px, #000 220px); }
+  @keyframes focusPulse { 0% { opacity: 0; transform: scale(1.06) rotate(0deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1) rotate(4deg); } }
+
+  #ctrl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(14,12,10,0.94);
+    border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #ctrl .r { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
+  #ctrl .lbl { font-size: 11px; color: rgba(232,223,204,0.8); width: 100%; }
+  #ctrl button { font-size: 12px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #ctrl button:active { transform: scale(0.96); }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.65); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="dim"></div>
+  <div id="focusLines"></div>
+  <div class="enemy-field">
+    <div class="ecard">
+      <div class="ename">野犬</div>
+      <div class="ebox">
+        <div class="eshadow"></div>
+        <img id="eimg" src="assets/enemies/clear/yaken.png">
+        <div class="slash" id="slash1"></div>
+        <div class="slash second" id="slash2" style="--rot:38deg;"></div>
+      </div>
+      <div class="ehp"><div></div></div>
+    </div>
+  </div>
+  <div id="skillBanner"><span class="band">会心の一矢</span></div>
+  <div id="partyBar"></div>
+  <div id="actions"><button>攻撃</button><button class="hl">会心の一矢(MP2)</button><button>道具</button><button>交代</button></div>
+</div>
+<div id="ctrl">
+  <div class="lbl">味方の必殺技モーション(真ん中の弥助が使用、タップで再生):</div>
+  <div class="r">
+    <button data-n="cur">現行相当(通常攻撃Bと同じ)</button>
+    <button data-n="A">案A: 気合い発光+技名帯</button>
+  </div>
+  <div class="r">
+    <button data-n="B">案B: 駆け抜け斬り</button>
+    <button data-n="C">案C: 集中線ズーム</button>
+  </div>
+  <div id="note">必殺技(MP技)を通常攻撃(採用案B)からどう格上げするかの比較。案A=軽い(全職業に流用しやすい)、案B=派手(カードが実際に敵まで駆ける、近接向き)、案C=中間(集中線+ズームの気合い演出、遠距離職でも違和感なし)。組み合わせ(例: 案A+Cの合体)も可。</div>
+</div>
+<script>
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+const $ = (id) => document.getElementById(id);
+let playing = false;
+
+$("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+  `<div class="pm${i === 1 ? " acting" : ""}" data-i="${i}"><img src="${img}"><div class="hb"><div></div></div><div class="nm">${name}</div></div>`).join("");
+const attacker = () => document.querySelectorAll(".pm")[1];
+
+function animOnce(el, name, dur, ease, fill) {
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = `${name} ${dur}ms ${ease || "ease"} ${fill || ""}`;
+}
+function hitEnemy(delay, opts) {
+  const o = opts || {};
+  setTimeout(() => {
+    animOnce($("slash1"), "slashSweep", 280, "ease-out");
+    if (o.double) setTimeout(() => animOnce($("slash2"), "slashSweep", 280, "ease-out"), 110);
+    animOnce($("eimg"), "eHitBig", 460);
+    animOnce($("stage"), "stageShakeBig", 420);
+    const pop = document.createElement("div");
+    pop.className = "edmg";
+    pop.textContent = "32";
+    pop.style.animation = "dmgPop 1s ease forwards";
+    $("eimg").parentElement.appendChild(pop);
+    setTimeout(() => pop.remove(), 1050);
+  }, delay);
+}
+function spawnGhostAt(el) {
+  const rect = el.getBoundingClientRect();
+  const g = el.cloneNode(true);
+  g.classList.add("ghost");
+  g.classList.remove("acting");
+  g.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; width:${rect.width}px; margin:0; z-index:5; pointer-events:none; opacity:0.4;`;
+  document.body.appendChild(g);
+  g.style.animation = "ghostFade 0.28s ease-out forwards";
+  setTimeout(() => g.remove(), 300);
+}
+const PATTERNS = {
+  cur() { animOnce(attacker(), "dashHoldUp", 560, "cubic-bezier(0.2,0.9,0.3,1)"); hitEnemy(120); end(700); },
+  A() {
+    // 気合い発光(0.4秒)→技名帯(0.7秒、発光と少し重ねる)→強ヒットストップ
+    const pm = attacker();
+    animOnce(pm.querySelector("img"), "gatherGlow", 450, "ease-out");
+    setTimeout(() => animOnce($("skillBanner"), "bannerSweep", 760, "ease"), 180);
+    setTimeout(() => {
+      animOnce(pm, "dashHoldStrong", 620, "cubic-bezier(0.2,0.9,0.3,1)");
+      hitEnemy(130, { double: true });
+    }, 700);
+    end(1500);
+  },
+  B() {
+    // 駆け抜け斬り: 敵カードの位置まで実際に駆け上がって斬り、素早く戻る
+    const pm = attacker();
+    const from = pm.getBoundingClientRect();
+    const to = $("eimg").getBoundingClientRect();
+    const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+    const dy = (to.top + to.height * 0.7) - (from.top + from.height / 2);
+    const run = pm.animate([
+      { transform: "translate(0,0) scale(1)" },
+      { transform: "translate(0,6px) scale(0.97)", offset: 0.18 },
+      { transform: `translate(${dx * 0.5}px, ${dy * 0.55}px) scale(1.02)`, offset: 0.42 },
+      { transform: `translate(${dx}px, ${dy}px) scale(1.05)`, offset: 0.62 },
+      { transform: `translate(${dx}px, ${dy}px) scale(1.05)`, offset: 0.75 },
+      { transform: "translate(0,0) scale(1)" },
+    ], { duration: 900, easing: "cubic-bezier(0.3,0.8,0.35,1)" });
+    const ghostTimes = [340, 430, 520];
+    ghostTimes.forEach((t) => setTimeout(() => spawnGhostAt(pm), t));
+    hitEnemy(560, { double: true });
+    end(1000);
+  },
+  C() {
+    // 集中線ズーム: 画面が少し暗くなり集中線が敵に走る+使用者が一回り迫り出す→強ヒットストップ
+    $("dim").style.background = "rgba(0,0,0,0.22)";
+    animOnce($("focusLines"), "focusPulse", 800, "ease-out");
+    const pm = attacker();
+    pm.animate([
+      { transform: "translateY(0) scale(1)" },
+      { transform: "translateY(-8px) scale(1.14)", offset: 0.35 },
+      { transform: "translateY(-8px) scale(1.14)", offset: 0.55 },
+      { transform: "translateY(0) scale(1)" },
+    ], { duration: 620, easing: "ease-out" });
+    setTimeout(() => {
+      animOnce(pm, "dashHoldStrong", 620, "cubic-bezier(0.2,0.9,0.3,1)");
+      hitEnemy(130, { double: true });
+      setTimeout(() => { $("dim").style.background = "rgba(0,0,0,0)"; }, 350);
+    }, 620);
+    end(1400);
+  },
+};
+function end(ms) { setTimeout(() => { playing = false; }, ms); }
+document.querySelectorAll("#ctrl button[data-n]").forEach((b) => {
+  b.onclick = () => {
+    if (playing) return;
+    playing = true;
+    PATTERNS[b.dataset.n]();
+  };
+});
+</script>
+</body>
+</html>

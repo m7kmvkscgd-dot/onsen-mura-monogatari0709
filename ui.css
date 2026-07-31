@@ -146,10 +146,14 @@
   }
   /* 攻撃の踏み込み(effects.js playAttackerLunge)。counter-bounceと同枠の一回きりモーションで、
      着弾の瞬間に鋭く前へ出てスッと戻る(2026-07-26、「一撃の重み」演出) */
-  .party-member.attack-lunge, .enemy-card.attack-lunge { animation: attackLunge 0.3s cubic-bezier(0.25, 1, 0.4, 1); }
+  /* 味方の攻撃踏み込み: モック案B「ヒットストップ」採用(2026-08-01)。深く踏み込んで
+     当たった瞬間に一拍静止してから戻る(旧: -13px/0.3秒の小さな踏み込み)。
+     敵はこのクラスを使わなくなった(effects.jsのplayEnemyAttackAnimがWAAPIで再生) */
+  .party-member.attack-lunge, .enemy-card.attack-lunge { animation: attackLunge 0.56s cubic-bezier(0.2, 0.9, 0.3, 1); }
   @keyframes attackLunge {
     0% { transform: translateY(0) translateZ(0); }
-    25% { transform: translateY(-13px) scale(1.03) translateZ(0); }
+    18% { transform: translateY(-24px) scale(1.08) translateZ(0); }
+    46% { transform: translateY(-23px) scale(1.08) translateZ(0); }
     100% { transform: translateY(0) translateZ(0); }
   }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
