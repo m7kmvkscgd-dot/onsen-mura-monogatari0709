@@ -400,6 +400,7 @@ function playSkillCastFx(actor, skillName, onRelease) {
     const band = banner.querySelector(".band");
     band.textContent = skillName;
     setTimeout(() => {
+      playSfx("skill_cast"); // 技名が出る瞬間の専用SE(ユーザー支給2026-08-01、音量60%=SFX_GAIN)
       if (banner.animate) {
         banner.animate([
           { opacity: 0, transform: "translateX(-40px)" },
