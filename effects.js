@@ -357,18 +357,62 @@ function playScreenShakeOnKillOnly(target, isCrit) {
 // (activeAttackLunge/resumeAttackLungeOnCard)を挟んでいたが、差分更新化(2026-07-26)でカードDOMが
 // 再描画を生き延びるようになったため撤去した。クラスを付けたら後はCSSアニメーションが完走する
 const ATTACK_LUNGE_MS = 560; // 300→560(2026-08-01、味方踏み込みをモック案B「ヒットストップ」へ刷新)
-function playAttackerLunge(actorId) {
+const ATTACK_LUNGE_STRONG_MS = 620; // 必殺技用の強ヒットストップ(モック案Aの解放部分)
+function playAttackerLunge(actorId, strong) {
   if (actorId == null) return;
   const card = findVisibleCard(actorId);
   if (!card) return;
+  const cls = strong ? "attack-lunge-strong" : "attack-lunge";
   // 被弾で残った揺れクラスがattack-lungeのanimationを詳細度で上書きして踏み込みを殺すため、
   // 先に剥がす(updateEnemyCardの敵の踏み込みと同じ2026-07-31の修正)
   card.classList.remove(...HIT_SHAKE_CLASSES);
-  card.classList.remove("attack-lunge");
+  card.classList.remove("attack-lunge", "attack-lunge-strong");
   void card.offsetWidth; // 連続攻撃でも毎回最初から再生し直すためのリフロー強制
-  card.classList.add("attack-lunge");
-  setTimeout(() => card.classList.remove("attack-lunge"), ATTACK_LUNGE_MS);
+  card.classList.add(cls);
+  setTimeout(() => card.classList.remove(cls), strong ? ATTACK_LUNGE_STRONG_MS : ATTACK_LUNGE_MS);
 }
+// ============ 味方の必殺技キャスト演出(mock_ally_skill.htmlの案Aをユーザー採用2026-08-01) ============
+// 気合いの金色発光(0.45秒)→技名帯が画面に走る(0.76秒、発光と重ねる)→0.7秒後に技本体実行。
+// スキルツリー技(runTreeSkill)と基本アビリティ(会心の一撃等)の共通入口で呼ばれる。
+// かばうだけは咄嗟の防御なので対象外(battle.js側で分岐)
+const SKILL_CAST_MS = 700;
+let skillBannerSingleton = null;
+function getSkillBannerSingleton() {
+  if (skillBannerSingleton && skillBannerSingleton.isConnected) return skillBannerSingleton;
+  const wrap = document.createElement("div");
+  wrap.className = "skill-cast-banner";
+  wrap.innerHTML = `<span class="band"></span>`;
+  document.body.appendChild(wrap);
+  skillBannerSingleton = wrap;
+  return wrap;
+}
+function playSkillCastFx(actor, skillName, onRelease) {
+  try {
+    const card = findVisibleCard(actor.id);
+    const img = card ? card.querySelector("img") : null;
+    if (!img || !img.animate) { onRelease(); return; }
+    img.animate([
+      { boxShadow: "0 0 0 rgba(255,214,110,0)", filter: "brightness(1)" },
+      { boxShadow: "0 0 26px rgba(255,214,110,0.95)", filter: "brightness(1.35)", offset: 0.45 },
+      { boxShadow: "0 0 8px rgba(255,214,110,0.4)", filter: "brightness(1.05)" },
+    ], { duration: 450, easing: "ease-out" });
+    const banner = getSkillBannerSingleton();
+    const band = banner.querySelector(".band");
+    band.textContent = skillName;
+    setTimeout(() => {
+      if (banner.animate) {
+        banner.animate([
+          { opacity: 0, transform: "translateX(-40px)" },
+          { opacity: 1, transform: "translateX(0)", offset: 0.18 },
+          { opacity: 1, transform: "translateX(0)", offset: 0.78 },
+          { opacity: 0, transform: "translateX(30px)" },
+        ], { duration: 760, easing: "ease" });
+      }
+    }, 180);
+    setTimeout(onRelease, SKILL_CAST_MS);
+  } catch (e) { onRelease(); } // 演出に失敗しても技本体は必ず実行する
+}
+
 // ============ 敵の攻撃モーション(mock_enemy_attack.htmlでユーザー採用2026-08-01) ============
 // 通常=案A「予備動作つき踏み込み」: 身を引いて一拍溜め→鋭く味方側(下)へ踏み込む。
 // 大技=案C「溜め→解放」: 画面が暗くなり赤いオーラでしゃがみ込み→爆発的に突進(白フラッシュは

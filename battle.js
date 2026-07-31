@@ -1375,6 +1375,13 @@ function runTreeSkill(actor, skill) {
     renderActionButtons(actor);
     return;
   }
+  // 【必殺技キャスト演出(モック案A採用2026-08-01)】気合い発光+技名帯を見せてから技本体
+  // (runTreeSkillBody、対象選択を含む従来の全処理)を実行する。使用不可の早期return
+  // (上の怒声系ガード)は演出より前に弾いておく
+  playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill));
+}
+function runTreeSkillBody(actor, skill) {
+  const action = skill.action;
   // 八幡神の御守: 戦闘中最初に使う技のMP消費が0になる(消費前にコスト分を先に補充しておき、
   // useTreeSkill内の通常の減算と相殺させることで実質無償化する)
   const cost = skillMpCost(actor, skill.mp, skill.action);
@@ -1417,7 +1424,7 @@ function runTreeSkill(actor, skill) {
           playSfx("evade");
         }
         renderBattleScreen();
-        if (i === 0) playAttackerLunge(actor.id); // 踏み込みは最初の一撃だけ(連撃のたびに跳ねるとしつこい)
+        if (i === 0) playAttackerLunge(actor.id, true); // 踏み込みは最初の一撃だけ(連撃のたびに跳ねるとしつこい)。技なので強ヒットストップ
       }, i * STAGGER_MS);
     });
     setTimeout(() => {
@@ -1601,7 +1608,7 @@ function runTreeSkill(actor, skill) {
               playAttackVfx(t.instanceId, actor, "skill");
             } else if (!h.hit && t.hp > 0) playSfx("evade");
             renderBattleScreen();
-            if (i === 0) playAttackerLunge(actor.id);
+            if (i === 0) playAttackerLunge(actor.id, true); // 技なので強ヒットストップ
           }, i * STAGGER_MS);
         });
         setTimeout(() => {
@@ -1624,7 +1631,7 @@ function runTreeSkill(actor, skill) {
       // (演出の間はボタンを消して連打を防ぐ)
       document.getElementById("actionGrid").innerHTML = "";
       renderBattleScreen();
-      playAttackerLunge(actor.id);
+      playAttackerLunge(actor.id, true); // 技なので強ヒットストップ
       if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, r.crit);
       const STAGGER_MS = 260;
       r.hits.forEach((hitInfo, i) => {
@@ -1660,7 +1667,7 @@ function runTreeSkill(actor, skill) {
     }
     else if (r) playSfx("evade");
     renderBattleScreen();
-    playAttackerLunge(actor.id);
+    playAttackerLunge(actor.id, true); // 技なので強ヒットストップ
     if (r && r.hit) playAttackVfx(target.instanceId, actor, "skill");
     if (r && lastHawkFollowupHappened) playHawkAttackVfx(actor, r.hawkTargetId || target.instanceId); // 技が外れても鷹は独立して追撃する。倒した場合は別の対象へ
     // 暗殺術など: このスキルでキルした場合はターンを消費せず、もう一度行動できる
@@ -2063,8 +2070,8 @@ function renderActionButtons(actor) {
         abBtn.onclick = () => {
           if (battleActionLocked) return;
           battleActionLocked = true;
-          if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "guard") {
+            // かばうは咄嗟の防御姿勢なのでキャスト演出なしの即時発動のまま
             playSfx("guard");
             useAbility(actor, actor, "guard", blog);
             maybeSpeakOnGuard(actor);
@@ -2074,6 +2081,10 @@ function renderActionButtons(actor) {
             finishPlayerAction();
             return;
           }
+          // 【必殺技キャスト演出(モック案A採用2026-08-01)】基本アビリティ(会心の一撃/治癒の術/
+          // 薙ぎ払い等)もスキルツリー技と同じ気合い発光+技名帯を通してから本体を実行する
+          playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
+          if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
             playAttackSfxWithSwish(actor.classId);
             const targetsList = targetableEnemies();
@@ -2099,7 +2110,7 @@ function renderActionButtons(actor) {
               applyAbilityAoeSelfBuffs(actor, ability, hitTargets.length); // 円舞(薙ぎ払いの命中数に応じて自分に回避バフ)など
             }
             renderBattleScreen();
-            playAttackerLunge(actor.id);
+            playAttackerLunge(actor.id, true); // 技なので強ヒットストップ
             playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
             triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
@@ -2119,11 +2130,12 @@ function renderActionButtons(actor) {
             }
             else if (result && !result.failed) playSfx("evade");
             renderBattleScreen();
-            playAttackerLunge(actor.id);
+            playAttackerLunge(actor.id, true); // 技なので強ヒットストップ
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
             if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, result && result.crit));
           });
+          }); // ← playSkillCastFxのコールバック閉じ(必殺技キャスト演出2026-08-01)
         };
         attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
         skillButtons.push(abBtn);

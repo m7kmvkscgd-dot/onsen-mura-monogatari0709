@@ -156,6 +156,14 @@
     46% { transform: translateY(-23px) scale(1.08) translateZ(0); }
     100% { transform: translateY(0) translateZ(0); }
   }
+  /* 必殺技用の強ヒットストップ(モック案Aの解放部分。playAttackerLunge(id, true)で使う) */
+  .party-member.attack-lunge-strong { animation: attackLungeStrong 0.62s cubic-bezier(0.2, 0.9, 0.3, 1); }
+  @keyframes attackLungeStrong {
+    0% { transform: translateY(0) translateZ(0); }
+    16% { transform: translateY(-30px) scale(1.12) translateZ(0); }
+    52% { transform: translateY(-29px) scale(1.12) translateZ(0); }
+    100% { transform: translateY(0) translateZ(0); }
+  }
   .party-member.targeted { border-color: var(--danger); box-shadow: 0 0 10px rgba(209,80,63,0.6); }
   .party-member.targetable { cursor: pointer; border-color: rgba(76,175,111,0.75); box-shadow: 0 0 10px rgba(76,175,111,0.5); animation: targetPulseAlly 1.1s ease-in-out infinite; }
   .party-member.targetable:active { transform: scale(0.94) translateZ(0); }
