@@ -216,6 +216,14 @@
        重ならないよう、高さ方向でも縮める(844px→134=無効/667px→91/568px→68) */
   .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2vh - 64px)); height: min(110px, 26vw, calc(23.2vh - 64px)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
+  /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
+     立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。
+     大きさは立ち絵幅に対する比率ではなくカード幅基準の割合(66%)で、全敵で見た目が揃う */
+  .enemy-card.frameless .enemy-portrait-box::after {
+    content: ""; position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%);
+    width: 66%; height: 12px; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(8,6,4,0.42), rgba(8,6,4,0.22) 55%, transparent 72%);
+  }
   /* frameless敵が討伐対象の時、金色のカード枠パルス(.quest-target)は「枠なし」の意図と矛盾する
      四角い縁として見えてしまうため消す(🎯アイコンは残るので対象表示は失われない)。
      対象選択中の赤パルス(.targetable)はタップ可能の合図として機能優先でそのまま残す */
