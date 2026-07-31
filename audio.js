@@ -715,12 +715,51 @@ function playSfx(name) {
 // ページがバックグラウンドから復帰した瞬間にもAudioContextの復旧を試みておく(念のための保険)。
 // bgmAudioも、SE再生時のオーディオフォーカス関連などで意図せず一時停止したまま
 // currentBgmKeyだけが再生中のつもりで固まってしまうことがあるため、同様に復旧を試みる
+// bgmAudio以外の常駐オーディオ(環境音/オープニング/宿泊/野営)のタブ復帰復旧(2026-08-01、実機報告
+// 「タブを切り替えると音がバグりまくる」への対応)。bgmAudioで実証済みの「壊れたらsrcを読み直して
+// メディアパイプラインごと作り直す」方式の横展開。これらの要素はループ用途で位置検出による壊れ判定が
+// できない(ループ巻き戻りと区別がつかない)ため、「隠れる前に鳴っていたら復帰時に無条件で作り直す」
+// 単純方式にする(復帰の瞬間はどのみち無音なので、読み直しによる体感の差は無い)
+let auxAudioStash = [];
+function stashAuxAudioOnHidden() {
+  auxAudioStash = [
+    { el: ambientBgmAudio, was: !ambientBgmAudio.paused, pos: 0, resume: () => !!currentAmbientKey },
+    { el: openingBgmAudio, was: !openingBgmAudio.paused, pos: 0, resume: () => !currentBgmKey }, // タイトルを離れていたら鳴らし直さない
+    { el: lodgingBgmAudio, was: !lodgingBgmAudio.paused, pos: lodgingBgmAudio.currentTime || 0, resume: () => true },
+    { el: campBgmAudio, was: !campBgmAudio.paused, pos: campBgmAudio.currentTime || 0, resume: () => true },
+  ];
+}
+function recoverAuxAudioOnVisible() {
+  auxAudioStash.forEach((s) => {
+    if (!s.was || !s.resume()) return;
+    const el = s.el;
+    const src = el.getAttribute("src") || el.src;
+    if (!src) return;
+    el.src = src; // 同じURLでも代入でload algorithmが走り、壊れたパイプラインが作り直される
+    el.load();
+    const seekAndPlay = () => {
+      try { if (s.pos > 0) el.currentTime = s.pos; } catch (e) {}
+      el.play().catch(() => {});
+    };
+    if (el.readyState >= 1) seekAndPlay();
+    else el.addEventListener("loadedmetadata", seekAndPlay, { once: true });
+  });
+  auxAudioStash = [];
+}
 document.addEventListener("visibilitychange", () => {
   // タブが隠れる瞬間に現在の再生位置を退避する。iOSはバックグラウンドで要素の位置を
   // 0付近へリセットすることがあり、復帰時にそのまま鳴らすと曲頭からの再生になってしまう
   if (document.visibilityState === "hidden" && currentBgmKey && !bgmAudio.paused) {
     bgmPositions[currentBgmKey] = bgmAudio.currentTime;
+    stashAuxAudioOnHidden();
     return;
+  }
+  if (document.visibilityState === "hidden") {
+    stashAuxAudioOnHidden();
+    return;
+  }
+  if (document.visibilityState === "visible" && audioUnlocked) {
+    recoverAuxAudioOnVisible();
   }
   if (document.visibilityState === "visible" && sfxAudioCtx && sfxAudioCtx.state === "suspended") {
     sfxAudioCtx.resume().catch(() => {});
