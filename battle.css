@@ -163,17 +163,15 @@
      変えるだけでこのセクションは丸ごと不使用になり完全に元へ戻る。適用はrenderBattleScreen(battle.js)。
      狙い: 透過立ち絵化で敵が画面上端の「空中」に見えていたのを、ログを上へ・敵列を画面中央帯へ下ろして
      背景の地面と足元を合わせる。襲撃戦はこのクラスが付かない(常に従来配置) */
-  /* margin:0=共通ルールの margin 0.5rem 1rem を外し、モックで調整した「上端10.1vh・左右12px」に
-     ぴったり合わせる(marginが残ると8px下+左右28pxインセットになり、320×568端末で敵の頭に1px接触していた) */
-  .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; margin: 0; z-index: 2; }
-  /* 敵列はmarginではなく絶対配置で下ろす(margin-topだと固定配置の.battle-top自体と相殺して
-     位置が狂う)。top値は「カード上端=26vh」になるよう、行内の名前用padding-top(38px)を差し引く */
-  /* align-content:flex-start=行内の縦センタリング(基底の.enemy-rowはcenter)をやめて上詰めにする。
-     カード上端が常に26vhちょうどになり、下端の見積り(26vh+カード高さ≤味方バー49.2vh)が
-     画面高さに関わらず成立する(centerのままだと行高200pxとの差分の半分だけ下へ押されて、
-     320×568などの小さい端末で味方バーへ食い込んでいた) */
+  /* 【実機教訓2026-08-01】iOSのCSS vhは「バーを畳んだ大ビューポート」基準で、実際に見える高さ
+     (innerHeight)より約2割大きい。vhで縦位置を当て推量すると実機でボタン列が味方バーに重なった
+     (ユーザー報告)ため、縦の配置は全てJS実測(ui.js positionActionsBelowPartyBarのcenterMode節)が
+     毎回innerHeightから逆算して設定する。CSSはログ位置と器の形だけを持つ */
+  .battle-top.layout-center #battleLog { position: absolute; top: 8px; left: 12px; right: 12px; margin: 0; z-index: 2; }
+  /* topはJSが設定する(下のcalcはJS実行前の初期値)。align-content:flex-start=上詰め
+     (センタリングだと行高との差分だけカードが下へ押されて位置計算が狂う) */
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
-  #battlePartyBar.layout-center { top: 49.2vh; }
+  /* #battlePartyBar.layout-centerのtopもJSが実測で設定する(CSSでは指定しない) */
   /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
      390px端末の3体戦で3枚目が折り返し→overflow:hiddenに隠れる不具合があった(枠が無いので
      左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */
@@ -215,6 +213,9 @@
        帯(23.2vh)からカード(立ち絵+名前+HPバー≈立ち絵+62px)がはみ出して味方バーに
        重ならないよう、高さ方向でも縮める(844px→134=無効/667px→91/568px→68) */
   .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2vh - 64px)); height: min(110px, 26vw, calc(23.2vh - 64px)); }
+  /* svh対応ブラウザ(iOS15.4+)では「バーが出ている時の小さい方の高さ」基準で縮める(実際に
+     見える範囲で計算するため実機とエミュレーションの差が出ない)。非対応は上のvh版で動く */
+  .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2svh - 64px)); height: min(110px, 26vw, calc(23.2svh - 64px)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。

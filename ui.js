@@ -1314,6 +1314,33 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
   const actions = document.querySelector(actionsSelector);
   if (!partyBar || !actions) return;
   const apply = () => {
+    // 戦闘レイアウトcenter_v1(battle.jsがlayout-centerクラスを付ける): 縦の配置をCSSのvh当て推量では
+    // なく、実際に見えている高さ(innerHeight)から下から順に逆算して設定する。iOSのCSS vhはバーを
+    // 畳んだ大ビューポート基準のため、vh指定だと実機でボタン列が味方バーに重なった(2026-08-01実機報告)。
+    // 逆算: ボタン列下端=画面内(-8px) → 味方バー=その上(-10px) → 敵列=中央帯(26%)を希望しつつ
+    // 味方バーと最低10px空け、ログ(上部)とも最低6px空ける。広い画面ではユーザー調整値(敵26%/
+    // 味方バー約53%)に一致し、狭い実機ではその比率を保ったまま自動的に詰まる
+    if (partyBar.classList.contains("layout-center")) {
+      const innerH = window.innerHeight;
+      const actionsH = actions.getBoundingClientRect().height;
+      const partyH = partyBar.getBoundingClientRect().height;
+      const pTop = Math.max(150, Math.round(innerH - actionsH - 8 - 10 - partyH));
+      partyBar.style.top = `${pTop}px`;
+      const row = document.getElementById("enemyRow");
+      const log = document.getElementById("battleLog");
+      if (row) {
+        const firstCard = row.querySelector(".enemy-card");
+        const cardH = firstCard ? Math.round(firstCard.getBoundingClientRect().height) : 170;
+        const logBottom = log ? Math.round(log.getBoundingClientRect().bottom) : 100;
+        const desired = Math.round(innerH * 0.26);
+        const cardTop = Math.max(logBottom + 6, Math.min(desired, pTop - cardH - 10));
+        row.style.top = `${cardTop - 38}px`; // 38px=行内の名前用padding-topぶん
+      }
+    } else {
+      partyBar.style.top = "";
+      const row = document.getElementById("enemyRow");
+      if (row) row.style.top = "";
+    }
     const rect = partyBar.getBoundingClientRect();
     let top = Math.round(rect.bottom) + 10;
     // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、
