@@ -2139,23 +2139,6 @@ function renderActionButtons(actor) {
       }
     }
 
-    // 交代: 控えがいる時だけ表示。パーティ共有のクールダウン制(3ターン、開幕から使用可。
-    // ラウンドの節目で1減る=nextRound参照。倒れた時の自動登場autoDeployReserveIfNeededは
-    // クールダウンを無視するが、登場後はクールダウンが3にリセットされる)。ターンは消費せず、
-    // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(変身解除と同じ「無消費」パターン)。
-    // 押すと即交代ではなく、控えのステータスを確認するダイアログを挟んでから成立する
-    if (reserveFieldMember && reserveFieldMember.status === "active") {
-      const cd = battle.swapCooldown || 0;
-      const swapBtn = document.createElement("button");
-      swapBtn.className = "big";
-      swapBtn.textContent = cd > 0 ? `交代(あと${cd}T)` : "交代";
-      swapBtn.disabled = cd > 0;
-      swapBtn.onclick = () => {
-        if (battleActionLocked || (battle.swapCooldown || 0) > 0) return;
-        showSwapConfirmDialog(actor);
-      };
-      grid.appendChild(swapBtn);
-    }
   }
 
   // 変身解除: 任意のタイミングで解除できる。ターンを消費せずそのまま行動選択に戻る(交代と同じ「無消費の意思決定」パターン)
@@ -2199,6 +2182,26 @@ function renderActionButtons(actor) {
   itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
   itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
+
+  // 交代: 控えがいる時だけ表示。パーティ共有のクールダウン制(3ターン、開幕から使用可。
+  // ラウンドの節目で1減る=nextRound参照。倒れた時の自動登場autoDeployReserveIfNeededは
+  // クールダウンを無視するが、登場後はクールダウンが3にリセットされる)。ターンは消費せず、
+  // 入れ替わった控えのキャラがそのまま同じ手番で行動できる(変身解除と同じ「無消費」パターン)。
+  // 押すと即交代ではなく、控えのステータスを確認するダイアログを挟んでから成立する。
+  // 配置は道具の後=2×2の右下(2026-08-01ユーザー指定)。表示条件は移動前と完全に同じ
+  // (変身中も交代可、影分身は関数冒頭のearlyリターンでここへ到達しない)
+  if (reserveFieldMember && reserveFieldMember.status === "active") {
+    const cd = battle.swapCooldown || 0;
+    const swapBtn = document.createElement("button");
+    swapBtn.className = "big";
+    swapBtn.textContent = cd > 0 ? `交代(あと${cd}T)` : "交代";
+    swapBtn.disabled = cd > 0;
+    swapBtn.onclick = () => {
+      if (battleActionLocked || (battle.swapCooldown || 0) > 0) return;
+      showSwapConfirmDialog(actor);
+    };
+    grid.appendChild(swapBtn);
+  }
 
   // 消火: からくり屋敷を建てるまでは使えない。味方に炎上中の仲間が1人でもいる時だけ表示。
   // 煙玉を1個消費して使い、パーティ全員の炎上を治す。温泉卵と同様にターンを消費しない(誤タップ防止のため使用前に確認を挟む)
