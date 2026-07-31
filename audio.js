@@ -26,14 +26,28 @@ const BGM_TRACKS = {
   quest_target_battle: "assets/bgm/quest_target_only_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用(中ボス/ボスを除く)。ただし中ボス/ボスの方が優先度が高い
   tengu_battle: "assets/bgm/tengu_battle_bgm.mp3", // 天狗の腕試し(イベント戦)専用(ユーザー提供曲、2026-07-18追加)
   raid_battle: "assets/bgm/yokai_no_shutai.mp3", // 大規模戦(村襲撃プロトタイプ)専用(ユーザー提供曲「yokai-no-shūtai」、2026-07-27追加)
+  // クエスト専用ルート「笑わぬ祭」のルートBGM(探索・戦闘とも同曲を通しで流す。出典はdocs/BGM出典.md)。
+  // QUEST_ROUTE_DEFS[routeId].bgmにこのキーを書くと、そのルートの探索/戦闘で流れる(下のquestRouteBgmKey参照)
+  warawanu_matsuri: "assets/bgm/omatsuri_bayashi_bgm.mp3",
 };
+// 現在questroute(クエスト専用ルート)に居て、そのルートに専用BGM(QUEST_ROUTE_DEFS[].bgm)が
+// 定義されていればそのキーを返す。探索(playExplorationAreaBgm)と戦闘(playBattleBgm)の両方が参照し、
+// 探索→戦闘→探索を通して同じ曲を途切れず流し続ける(playBgmの同一キーガードで頭出しされない)
+function questRouteBgmKey() {
+  if (typeof currentStage === "undefined" || currentStage !== "questroute") return null;
+  if (typeof questRouteDef !== "function") return null;
+  const def = questRouteDef();
+  return def && def.bgm && BGM_TRACKS[def.bgm] ? def.bgm : null;
+}
 // 中ボス(最終ボスの一段階手前、floor26+のがしゃどくろ・九尾の狐・大蟹王)専用のBGMを鳴らす対象。
 // 最終ボス(kishin_rasetsuo/kaiyoujo_ou)や序盤緊急依頼ボス(isBoss:trueだがこのSetには含めない)は
 // 従来通りboss_battleのまま
 const MID_BOSS_BGM_IDS = new Set(["gashadokuro", "kyubi_no_kitsune", "oo_kani_ou"]);
 // 探索中に流す曲を選ぶ(森はアンビエントのみ、海岸/渓流はそれぞれ専用の探索曲2曲)。戦闘終了時にstopBattleBgm()からも呼ばれる
 function playExplorationAreaBgm() {
-  if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
+  const routeBgm = questRouteBgmKey();
+  if (routeBgm) playBgm(routeBgm);
+  else if (currentStage === "coast") playBgm(state.timeOfDay === "night" ? "coast_night" : "coast");
   else if (currentStage === "valley") playBgm(state.timeOfDay === "night" ? "valley_night" : "valley");
 }
 // 戦闘BGMを時間帯・ステージに応じて選ぶ。森は夜だけ専用曲、海岸はcoast_battle(昼夜共通)。
@@ -60,6 +74,10 @@ function playBattleBgm() {
     if (currentBgmKey) stopBattleBgm();
     return;
   }
+  // ルートBGM付きのクエスト専用ルート(笑わぬ祭など): ボス戦含む全戦闘で探索と同じ曲を
+  // 頭出しせずそのまま流し続ける(祭囃子が途切れない不気味さを優先。ボス曲より優先)
+  const routeBgm = questRouteBgmKey();
+  if (routeBgm) { playBgm(routeBgm); return; }
   const continuingChase = isContinuingBossChase();
   // 天狗の腕試し(イベント戦)専用BGM。追跡戦は存在しないので毎回頭から再生する
   if (battle && battle.enemies && battle.enemies.some((e) => e.id === "tengu_shiren")) {

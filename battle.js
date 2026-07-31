@@ -281,6 +281,9 @@ function anyCrowScoutActive() {
 function createEnemyCard(e) {
   const card = document.createElement("div");
   card.className = "enemy-card";
+  // frameless指定の敵(百面師・うつろ等の大型ボス)は、カードの箱の見た目(枠線・背景・影)を外して
+  // 透過PNGを戦闘背景の上へ直接立たせる(名前・HPバー・状態アイコンはそのまま)。battle.css参照
+  if (e.frameless) card.classList.add("frameless");
   card.dataset.id = e.instanceId;
   card.innerHTML = `
       <div class="enemy-name">${e.label}</div>
@@ -596,6 +599,22 @@ function processNext() {
         return;
       }
       setTimeout(() => {
+        // 三面替え・般若面(gimmicks.jsのformCycle): 面を替えた後の最初の手番は攻撃せず、
+        // 既存の大技サイクルと同じ形の「構え」(予告表示+ターゲット確定)だけを行う。
+        // countdownを0にしておくことで、次の手番は下のbigAttackDue経路がそのまま全体大技を発動する
+        // (=予告から発動まで必ず丸1手番の対策時間がある。パーマデス制のため予告なし大技は禁止)
+        if (actor.__formBigAttackStance) {
+          actor.__formBigAttackStance = false;
+          actor.bigAttackPending = true;
+          actor.bigAttackCountdown = 0;
+          commitBigAttackTelegraphTarget(actor, alive);
+          blog(`${actor.label}が般若の面の奥で息を溜めている…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
+          triggerWarningFlash();
+          playSfx("big_attack_warning");
+          renderBattleScreen();
+          setTimeout(() => { battle.orderIndex++; processNext(); }, 900);
+          return;
+        }
         // 大技サイクル: 敵ごとのbigAttackCountdownが0になったターンに大技発動、残り1で予告(このターンは
         // 通常攻撃のまま)。間隔(平均何ターンに一度か/ばらつき/即効)は敵ごとのbigAttackCycleで個別指定でき、
         // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
@@ -671,30 +690,48 @@ function processNext() {
         } else {
           actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);
         }
-        const hpBeforeAtk = {};
-        alive.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
-        const result = enemyAttack(actor, alive, blog);
-        if (result && result.barricade) {
-          // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
-        } else if (result && result.hit) {
-          popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
-          playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
-          checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
-        } else if (result) {
-          playSfx("evade");
-        }
-        const newlyCritical = handleFieldDeaths();
-        renderBattleScreen();
+        // 通常攻撃。三面替えの狐面(gimmicks.jsのformCycle)中は__formAttacks回の連続攻撃になり、
+        // 1発あたりの攻撃力は__formAttackMult倍に落ちる(手数で追い詰める形態)。通常の敵は従来どおり1回
+        const totalAttacks = Math.max(1, actor.__formAttacks || 1);
+        const atkOpts = actor.__formAttackMult ? { atkMult: actor.__formAttackMult } : undefined;
         const advanceTurn = () => { battle.orderIndex++; processNext(); };
-        const continueAfterAttack = () => {
-          if (result && result.guardCounterDmg) {
-            // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-            playGuardCounterVisual(result.target, actor, result.guardCounterDmg, advanceTurn);
-          } else {
-            setTimeout(advanceTurn, 500);
+        const doOneAttack = (remaining) => {
+          if (!battle) return; // 連続攻撃の合間に戦闘が終了していた場合の保険
+          const targetsNow = aliveField();
+          if (targetsNow.length === 0 || actor.hp <= 0) { setTimeout(advanceTurn, 500); return; }
+          const hpBeforeAtk = {};
+          targetsNow.forEach((c) => { hpBeforeAtk[c.id] = c.hp; });
+          const result = enemyAttack(actor, targetsNow, blog, atkOpts);
+          if (result && result.barricade) {
+            // 柵が受けた: 味方向けのポップ/被弾SE/ピンチ判定は不要(柵側の演出はapplyRaidBarricadeDamageが再生)
+          } else if (result && result.hit) {
+            popupOn(result.target.id, `-${result.dmg}`, "dmg", dmgShakeIntensity(false));
+            playSfx(hitTakenSfxFor(result.dmg, result.target.maxHp));
+            checkPinchTrigger(result.target, hpBeforeAtk[result.target.id]);
+          } else if (result) {
+            playSfx("evade");
           }
+          const newlyCritical = handleFieldDeaths();
+          renderBattleScreen();
+          const proceed = () => {
+            // 反撃等で自分が倒れた/相手が居なくなったら残りの連続攻撃は打ち切って手番を終える
+            if (remaining > 1 && battle && actor.hp > 0 && aliveField().length > 0) {
+              setTimeout(() => doOneAttack(remaining - 1), 450);
+            } else {
+              setTimeout(advanceTurn, 500);
+            }
+          };
+          const continueAfterAttack = () => {
+            if (result && result.guardCounterDmg) {
+              // かばう反撃(会心の返し): 敵の攻撃演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
+              playGuardCounterVisual(result.target, actor, result.guardCounterDmg, proceed);
+            } else {
+              proceed();
+            }
+          };
+          autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
         };
-        autoDeployReserveIfNeeded(newlyCritical, continueAfterAttack);
+        doOneAttack(totalAttacks);
       }, enemyActionDelay);
     };
     playEnemyDotStopSequence(actor, blog, continueEnemyTurn);

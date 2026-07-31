@@ -38,6 +38,11 @@ const BG_SETS = {
   tsukikage_ooma: { dawn: "assets/bg/tsukikage_ooma.jpg", asa: "assets/bg/tsukikage_ooma.jpg", day: "assets/bg/tsukikage_ooma.jpg", dusk: "assets/bg/tsukikage_ooma.jpg", night: "assets/bg/tsukikage_ooma.jpg" },
   tsukikage_rouka: { dawn: "assets/bg/tsukikage_rouka.jpg", asa: "assets/bg/tsukikage_rouka.jpg", day: "assets/bg/tsukikage_rouka.jpg", dusk: "assets/bg/tsukikage_rouka.jpg", night: "assets/bg/tsukikage_rouka.jpg" },
   tsukikage_kagami: { dawn: "assets/bg/tsukikage_kagami.jpg", asa: "assets/bg/tsukikage_kagami.jpg", day: "assets/bg/tsukikage_kagami.jpg", dusk: "assets/bg/tsukikage_kagami.jpg", night: "assets/bg/tsukikage_kagami.jpg" },
+  // 物語クエスト「笑わぬ祭の面売り」(2026-07-31、専用ルートwarawanu_matsuri)。同じく昼1枚を全時間帯へ流用
+  warawanu_kazamichi: { dawn: "assets/bg/warawanu_kazamichi.jpg", asa: "assets/bg/warawanu_kazamichi.jpg", day: "assets/bg/warawanu_kazamichi.jpg", dusk: "assets/bg/warawanu_kazamichi.jpg", night: "assets/bg/warawanu_kazamichi.jpg" },
+  warawanu_yatai: { dawn: "assets/bg/warawanu_yatai.jpg", asa: "assets/bg/warawanu_yatai.jpg", day: "assets/bg/warawanu_yatai.jpg", dusk: "assets/bg/warawanu_yatai.jpg", night: "assets/bg/warawanu_yatai.jpg" },
+  warawanu_men_sando: { dawn: "assets/bg/warawanu_men_sando.jpg", asa: "assets/bg/warawanu_men_sando.jpg", day: "assets/bg/warawanu_men_sando.jpg", dusk: "assets/bg/warawanu_men_sando.jpg", night: "assets/bg/warawanu_men_sando.jpg" },
+  warawanu_kagura: { dawn: "assets/bg/warawanu_kagura.jpg", asa: "assets/bg/warawanu_kagura.jpg", day: "assets/bg/warawanu_kagura.jpg", dusk: "assets/bg/warawanu_kagura.jpg", night: "assets/bg/warawanu_kagura.jpg" },
 };
 // 洞窟の奥(2〜7層=浅い層、8層以降=深い層)は地下のため時間帯で見た目が変わらず、1枚絵で固定
 const CAVE_SHALLOW_BG_URL = "assets/bg/cave_shallow.jpg";

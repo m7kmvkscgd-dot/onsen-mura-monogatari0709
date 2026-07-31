@@ -219,8 +219,149 @@
     processGimmickRoundEffects(() => {});
     processGimmickRoundEffects(() => {});
     check("maxAlive2を超えて増えない(次周期は拘束のみ)", battle.enemies.filter((e) => e.id === "kageboshi" && e.hp > 0).length === 2);
+    runWarawanuCase();
+  }
 
-    console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
-    window.__failed = failed;
+  // H: 笑わぬ祭の面売り(第3号)。データ整合+三面替え(formCycle: 狐→般若→翁の固定順、
+  // 狐=2回攻撃/般若=構え→予告→全体大技/翁=召喚+取り巻き軽減)+笑わぬ祭(hpBelow50%)+
+  // ルートBGM+フレームレス表示を検証する
+  function runWarawanuCase() {
+    console.log("--- H: 笑わぬ祭の面売り(三面替え/笑わぬ祭/BGM/フレームレス) ---");
+    const qDef3 = QUEST_DEFS.hyakumenshi_utsuro;
+    const route3 = QUEST_ROUTE_DEFS.warawanu_matsuri;
+    check("依頼がルートに紐付く", !!qDef3 && qDef3.route === "warawanu_matsuri" && !!route3);
+    check("ボスは最終層に配置", qDef3.targetFloor === route3.totalFloors);
+    check("区間4つ・fromFloor昇順・敵IDが実在", route3.segments.length === 4 && route3.segments.every((s, i) => (i === 0 || s.fromFloor > route3.segments[i - 1].fromFloor) && (s.enemies || []).every((id) => !!ENEMIES[id])));
+    check("背景セット4つがBG_SETSに登録済み", route3.segments.every((s) => !!BG_SETS[s.bg]));
+    const boss3 = ENEMIES.hyakumenshi_utsuro;
+    check("ボスの口上4行・ギミックメモ2件・回想なし", boss3.preBattleLines.length === 4 && boss3.gimmickNotes.length === 2 && !boss3.soulStory);
+    check("構造化ギミック2件(三面替え+笑わぬ祭)", boss3.gimmicks.length === 2 && boss3.gimmicks[0].effects[0].type === "formCycle" && boss3.gimmicks[1].trigger.type === "hpBelow");
+    check("大技は全体攻撃で自前サイクルは実質無効(般若面専用)", boss3.bigAttack.aoe === true && boss3.bigAttackCycle.min === 99);
+    check("面かぶり/うつろは通常抽選に出ない", ENEMIES.menkaburi.questOnly && ENEMIES.menkaburi.maxFloor === 0 && boss3.questOnly && boss3.maxFloor === 0);
+    check("ルートBGMキーが実在する", route3.bgm === "warawanu_matsuri" && !!BGM_TRACKS.warawanu_matsuri);
+
+    // フレームレス表示: ボスのカードだけ箱の見た目を外すクラスが付く
+    const cardBoss = createEnemyCard(instantiateEnemyById("hyakumenshi_utsuro"));
+    const cardNormal = createEnemyCard(instantiateEnemyById("menkaburi"));
+    check("ボスのカードにframelessクラス", cardBoss.classList.contains("frameless"));
+    check("通常敵のカードには付かない", !cardNormal.classList.contains("frameless"));
+
+    // ルートBGM: 探索も戦闘も同じキーが選ばれ、戦闘終了で止まらない
+    currentStage = "questroute";
+    currentQuestRouteId = "warawanu_matsuri";
+    check("questRouteBgmKeyがルート曲を返す", questRouteBgmKey() === "warawanu_matsuri");
+    makeParty();
+    const bossBgm = instantiateEnemyById("hyakumenshi_utsuro");
+    battle = { enemies: [bossBgm], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
+    playBattleBgm();
+    check("ボス戦でもルート曲が流れる(ボス曲より優先)", currentBgmKey === "warawanu_matsuri");
+    stopBattleBgm();
+    check("戦闘終了でもルート曲は止まらない", currentBgmKey === "warawanu_matsuri");
+    currentStage = "forest";
+    currentQuestRouteId = null;
+    check("ルートを離れるとルート曲キーは選ばれない", questRouteBgmKey() === null);
+
+    // 三面替え: 発動→狐面、2ラウンドごとに般若→翁→狐の固定順
+    makeParty();
+    const b3 = instantiateEnemyById("hyakumenshi_utsuro");
+    battle = { enemies: [b3], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
+    b3.__enemyAllies = [b3];
+    initBattleGimmicks();
+    renderBattleScreen();
+    processGimmickTriggers();
+    check("開幕で三面替えが発動し狐面になる", b3.__formId === "kitsune" && b3.__formAttacks === 2 && b3.__formAttackMult === 0.6);
+    battle.roundsTotal = 1;
+    processGimmickRoundEffects(() => {});
+    check("1ラウンドでは面は替わらない", b3.__formId === "kitsune");
+    processGimmickRoundEffects(() => {});
+    check("2ラウンド周期で般若面へ(構えフラグが立ち連続攻撃は解除)", b3.__formId === "hannya" && b3.__formBigAttackStance === true && !b3.__formAttacks);
+    processGimmickRoundEffects(() => {});
+    processGimmickRoundEffects(() => {});
+    check("さらに2ラウンドで翁面へ+面かぶり1体召喚", b3.__formId === "okina" && battle.enemies.filter((e) => e.id === "menkaburi" && e.hp > 0).length === 1);
+    b3.statMods = [];
+    battle.roundsTotal = 2; // 実ゲームではラウンドごとに増える(軽減の掛け直しは1ラウンド1回ガードがある)
+    processGimmickRoundEffects(() => {});
+    check("翁面中は取り巻きが居る間だけ被ダメ軽減", b3.statMods.filter((m) => m.stat === "dmgTaken" && m.mult === 0.7).length === 1);
+    battle.enemies.forEach((e) => { if (e.id === "menkaburi") e.hp = 0; });
+    b3.statMods = [];
+    processGimmickRoundEffects(() => {});
+    check("翁面から狐面へ一巡する(取り巻き全滅で軽減なし)", b3.__formId === "kitsune" && !b3.statMods.some((m) => m.stat === "dmgTaken"));
+
+    // 笑わぬ祭: HP50%未満で一度だけ発動、面かぶり2体即時召喚+生存中の被ダメ軽減(翁面と同一ラウンド重複なし)
+    b3.hp = Math.floor(b3.maxHp * 0.4);
+    processGimmickTriggers();
+    const waraEntry = battle.gimmicks.find((g) => g.def.id === "warawanu");
+    check("HP50%未満で笑わぬ祭が発動+面かぶり2体", waraEntry.active && battle.enemies.filter((e) => e.id === "menkaburi" && e.hp > 0).length === 2);
+    check("台詞がログに出る", battleLogLines.some((l) => l.includes("顔を失くせば、何も悲しまずに済む")));
+    b3.statMods = [];
+    battle.roundsTotal = 10;
+    processGimmickRoundEffects(() => {});
+    check("軽減は翁面と重複せず1本だけ掛かる", b3.statMods.filter((m) => m.stat === "dmgTaken").length === 1);
+    battle.enemies.forEach((e) => { if (e.id === "menkaburi") e.hp = 0; });
+    b3.statMods = [];
+    battle.roundsTotal = 11;
+    processGimmickRoundEffects(() => {});
+    check("面かぶり全滅で軽減が解除される", !b3.statMods.some((m) => m.stat === "dmgTaken"));
+    battle.roundsTotal = 12;
+    processGimmickRoundEffects(() => {});
+    check("周期補充で面かぶりが戻る(上限3)", battle.enemies.filter((e) => e.id === "menkaburi" && e.hp > 0).length >= 2 && battle.enemies.filter((e) => e.id === "menkaburi" && e.hp > 0).length <= 3);
+
+    runWarawanuTurnCase();
+  }
+
+  // H続き: 実際の手番処理(processNext)で狐面の2回攻撃と般若面の構え→全体大技を通しで検証する
+  function runWarawanuTurnCase() {
+    makeParty();
+    const b = instantiateEnemyById("hyakumenshi_utsuro");
+    battle = { enemies: [b], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 1, presence: {} };
+    b.__enemyAllies = [b];
+    battle.gimmicks = []; // 周期切り替えを止め、形態フラグを手動で固定して手番だけを検証する
+    renderBattleScreen();
+    // 狐面: 2回攻撃+1発あたり0.6倍
+    b.__formId = "kitsune"; b.__formAttacks = 2; b.__formAttackMult = 0.6;
+    let atkCalls = 0; let atkMultSeen = null;
+    const origEnemyAttack = enemyAttack;
+    enemyAttack = function (enemy, targets, log, opts) {
+      atkCalls++; atkMultSeen = opts && opts.atkMult;
+      return origEnemyAttack(enemy, targets, log, opts);
+    };
+    battle.order = [b];
+    battle.orderIndex = 0;
+    processNext();
+    const waitFox = setInterval(() => {
+      if (atkCalls < 2) return;
+      clearInterval(waitFox);
+      enemyAttack = origEnemyAttack;
+      check("狐面は1手番で2回攻撃する", atkCalls === 2);
+      check("1発あたりの攻撃力は0.6倍で渡る", atkMultSeen === 0.6);
+      // 般若面: 構えの手番は攻撃せず予告だけ→次の手番で全体大技
+      makeParty();
+      const b2 = instantiateEnemyById("hyakumenshi_utsuro");
+      battle = { enemies: [b2], order: [b2], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 1, presence: {} };
+      b2.__enemyAllies = [b2];
+      battle.gimmicks = [];
+      renderBattleScreen();
+      b2.__formBigAttackStance = true;
+      const hpBeforeStance = fieldParty.map((c) => c.hp);
+      processNext();
+      const waitStance = setInterval(() => {
+        if (!b2.bigAttackPending) return;
+        clearInterval(waitStance);
+        check("構えの手番は攻撃せず予告が立つ", fieldParty.every((c, i) => c.hp === hpBeforeStance[i]) && b2.bigAttackCountdown === 0);
+        check("予告がログに出る(技名つき)", battleLogLines.some((l) => l.includes("般若の面の奥で息を溜めている") && l.includes("般若百鬼")));
+        battle.order = [b2];
+        battle.orderIndex = 0;
+        processNext();
+        const waitBig = setInterval(() => {
+          const damaged = fieldParty.filter((c, i) => c.hp < hpBeforeStance[i]).length;
+          if (damaged < 2) return; // 全体大技: 回避を考慮して3人中2人以上の被弾で判定
+          clearInterval(waitBig);
+          check("次の手番で全体大技が発動する", true);
+          check("発動後は自前サイクルに戻る(次の大技は再び般若面待ち)", b2.bigAttackCountdown >= 90);
+          console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
+          window.__failed = failed;
+        }, 120);
+      }, 120);
+    }, 120);
   }
 })();

@@ -61,7 +61,9 @@ function jsLit(v) {
   return String(v);
 }
 
-const ENEMY_FLAG_KEYS = ["isPlant", "isBoss", "questOnly", "isMidBoss", "isFlying", "isSwarm"];
+// frameless: カード枠なしで透過PNGを戦闘背景へ直接表示する表示フラグ(百面師・うつろ、2026-07-31)。
+// ここに載せないとエクスポート適用のたびに黙って消えるため必ず保持する
+const ENEMY_FLAG_KEYS = ["isPlant", "isBoss", "questOnly", "isMidBoss", "isFlying", "isSwarm", "frameless"];
 const ENEMY_STAT_KEYS = ["hp", "atk", "def", "spd", "goldMin", "goldMax", "xp", "minFloor", "maxFloor"];
 
 function serializeEnemy(id, e) {

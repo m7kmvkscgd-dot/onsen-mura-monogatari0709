@@ -605,6 +605,51 @@ const ENEMIES = {
       { name: "影写し", trigger: "味方が強い技を使った直後、鏡面へその姿が映った時に発動する。", effect: "直前に使われた技の性質を影として写し取り、逆月または影法師が歪んだ形で模倣する。" },
       { name: "十三枚目の席", trigger: "戦いが進み、鏡の客席に影が揃い始めた時に発動する。", effect: "味方一人の影を一時的に身体から切り離して影法師として出現させる。切り離された本人は、影が戻るまで動きが鈍くなる。" },
     ] },
+  // ---- 物語クエスト第3号「笑わぬ祭の面売り」(2026-07-31、テキストはGPT産)。専用ルートwarawanu_matsuri。
+  // ステータスは序盤(tier1)向け初期値、ボステストでの調整前提 ----
+  menkaburi: { id: "menkaburi", ja: "面かぶり", image: "assets/enemies/menkaburi.png", hp: 44, atk: 14, def: 13, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
+    bigAttack: { name: "空の面差し", mult: 1.15, debuff: { type: "atkDown", chance: 0.4, value: 0.2, turns: 2 } },
+    bigAttackCycle: { min: 3, max: 5 } },
+  // 百面師・うつろ: bigAttackCycleを99に固定=自前の大技サイクルは回らず、大技(般若百鬼)は
+  // 三面替えギミックの般若面(formCycle、gimmicks.js)だけが予告→発動させる。frameless=カード枠なしで
+  // 透過PNGを戦闘背景へ直接表示(battle.js updateEnemyCard/battle.cssの.enemy-card.frameless)
+  hyakumenshi_utsuro: { id: "hyakumenshi_utsuro", ja: "百面師・うつろ", image: "assets/enemies/hyakumenshi_utsuro.png", hp: 430, atk: 20, def: 24, spd: 7, goldMin: 60, goldMax: 90, xp: 95, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true, frameless: true,
+    bigAttack: { name: "般若百鬼", mult: 1.05, aoe: true, debuff: { type: "burn", chance: 0.35, turnsMin: 2, turnsMax: 2 } },
+    bigAttackCycle: { min: 99, max: 99 },
+    statusImmune: ["bleed"],
+    preBattleLines: [
+      "面を外せと申すか。",
+      "名を捨てて、ようやく笑えた者たちに。",
+      "帰る顔など、もう残っておらぬ。",
+      "それでも連れ戻すなら――お前たちの顔を置いてゆけ。",
+    ],
+    gimmicks: [
+      { id: "sanmengae", name: "三面替え",
+        trigger: { type: "battleStart" },
+        announce: "うつろの背の木枠が軋み、百枚の面が一斉に鳴った。面が替わるたび、戦い方も変わる…！",
+        effects: [
+          // 固定順(狐→般若→翁)で2ラウンドごとに面を替える。狐=軽い2回攻撃、
+          // 般若=次の手番で構え(予告)→その次の手番で全体大技、翁=面かぶり召喚+生存中は被ダメ軽減
+          { type: "formCycle", every: 2, forms: [
+            { id: "kitsune", name: "狐面", announce: "「次は、駆け回る者の顔にいたしましょう」", attacks: 2, attackMult: 0.6 },
+            { id: "hannya", name: "般若面", announce: "「お怒りの顔も、祭りにはよく映えます」", bigAttackStance: true },
+            { id: "okina", name: "翁面", announce: "「さあさ、古き笑いをお見せしましょう」",
+              summon: { enemyId: "menkaburi", count: 1, maxAlive: 3, text: "翁面の招きで、面かぶりが舞台へ上がった！" },
+              dmgTakenWhileMinionsMult: 0.7 },
+          ] },
+        ] },
+      { id: "warawanu", name: "笑わぬ祭",
+        trigger: { type: "hpBelow", ratio: 0.5 },
+        announce: "白い無地の面に、乾いた音を立ててひびが走った。「笑え。笑え。顔を失くせば、何も悲しまずに済む」",
+        effects: [
+          { type: "summon", every: 3, enemyId: "menkaburi", count: 2, maxAlive: 3, immediate: true, text: "舞台脇の古い面が藁の身体を得て、面かぶりが戦いに加わった！" },
+          { type: "dmgTakenWhileMinions", mult: 0.7 },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "面替え", trigger: "数ターンごとに背負った面を一枚選び、自分の顔へ重ねる。", effect: "狐面では素早い連続攻撃、般若面では重い全体攻撃、翁面では守りを固めるなど、面に応じて戦い方が切り替わる。" },
+      { name: "役者呼び", trigger: "顔の面を壊されるほどの大きな傷を受けた時に発動する。", effect: "舞台脇に積まれた古い面が藁の身体を得て、面かぶりとして戦いへ加わる。" },
+    ] },
 };
 // 【方針転換 2026-07-31】物語クエストの回想シーン(soulStory)は開発フェーズの都合で一旦停止し、
 // 実装済み2クエスト(雨嫁・白縫/鏡喰い・逆月)からもデータを撤去した。表示機構(effects.jsの
@@ -1843,6 +1888,12 @@ const QUEST_DEFS = {
     completionText: "月影宿の客たちには影が戻り、失われていた名前も少しずつ思い出された。宿は奉行所によって封鎖されたが、女将のお咲は取り調べの前に姿を消している。帳場からは売上金と宿帳の最後の一枚だけが持ち去られていた。割れた鏡の破片には今も、見る者より一拍遅れて動く影が映るという。",
     targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
     chaseText: "鏡喰い・逆月が追いかけてきた！" },
+  // 物語クエスト第3号「笑わぬ祭の面売り」(2026-07-31、テキストはGPT産)。専用ルートwarawanu_matsuri行き
+  hyakumenshi_utsuro: { emoji: "🎭", requester: "薬種行商・茂吉", title: "笑わぬ祭の面売り",
+    text: "北の旧道を越える途中、地図にない祭りへ迷い込みました。屋台には火が入り、笛も太鼓も鳴っているのに、客も囃子方も一人として見当たりません。同行していた四人は、面売りから面を受け取った途端に祭りの奥へ消えました。夜が明けても戻らず、旧道では今も祭囃子が聞こえます。どうか仲間たちを捜し、面売りの怪異を鎮めてください。",
+    completionText: "祭りが消えると、茂吉の仲間三人が参道に倒れていた。彼らは自分から面を受け取り、名も暮らしも捨てようとしたことだけを覚えていた。四人目は見つからなかったが、帰り道の古木には、穏やかに笑う新しい面が一枚掛けられていたという。それ以来、北の旧道で祭囃子を聞いても、決して音のする方へ顔を向けてはならないと伝えられている。",
+    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "warawanu_matsuri",
+    chaseText: "百面師・うつろが追いかけてきた！" },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
 // 3件目は(2件目が出た場合のみ)QUEST_BOARD_THIRD_SLOT_CHANCEの抽選で、毎日必ず3件揃うとは限らないようにしてある
@@ -1928,6 +1979,25 @@ const QUEST_ROUTE_DEFS = {
         enemies: ["kageboshi"] },
       { fromFloor: 8, bg: "tsukikage_kagami", bgTitle: "逆さ月の鏡座敷",
         flavor: "鏡の中では、十二人の影が客席に座っている。空いている最後の席だけが、こちらを向いていた。",
+        enemies: [] },
+    ],
+  },
+  // 物語クエスト第3号「笑わぬ祭の面売り」(テキストはGPT産)。bgm=このルートの探索・戦闘で流れる
+  // 専用BGMのキー(BGM_TRACKS参照。audio.jsのplayExplorationAreaBgm/playBattleBgmが読む)
+  warawanu_matsuri: {
+    ja: "笑わぬ祭", emoji: "🏮", totalFloors: 8, bgm: "warawanu_matsuri",
+    segments: [
+      { fromFloor: 1, bg: "warawanu_kazamichi", bgTitle: "風車の夕道",
+        flavor: "杉の向こうから、笛と太鼓が途切れ途切れに聞こえる。風はあるのに、街道に並ぶ紙風車だけが一つも回っていない。",
+        enemies: [] },
+      { fromFloor: 3, bg: "warawanu_yatai", bgTitle: "無人の祭り屋台",
+        flavor: "屋台の団子はまだ温かく、金魚桶の水も揺れている。それでも通りには、店を開いた者も祭りを楽しむ者もいない。",
+        enemies: ["menkaburi"] },
+      { fromFloor: 5, bg: "warawanu_men_sando", bgTitle: "百面の参道",
+        flavor: "木々に吊られた面は、こちらが通り過ぎてから小さく揺れた。面の裏には、茂吉が捜す四人の名が新しい墨で記されている。",
+        enemies: ["menkaburi"] },
+      { fromFloor: 8, bg: "warawanu_kagura", bgTitle: "観客なき神楽舞台",
+        flavor: "神楽舞台には奏者がいない。それでも笛と太鼓は鳴り続け、舞台前に置かれた五枚の面だけが同じ調子で笑っている。",
         enemies: [] },
     ],
   },

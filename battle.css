@@ -178,6 +178,12 @@
     box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
   }
   .enemy-card img, .enemy-card .enemy-name, .enemy-card .status-icon-row, .enemy-card .hp-with-warning { position: relative; z-index: 1; }
+  /* frameless指定の敵(百面師・うつろ等、data.jsの敵defにframeless:true): カードの箱の見た目
+     (背景グラデ・影・::beforeの古紙下地=額装)を外し、透過PNGの立ち絵を戦闘背景へ直接立たせる。
+     borderは通常時transparentのまま残す=targetable(赤パルス)/quest-target(金枠)等の
+     選択・状態表示は従来どおり機能する。名前・HPバー・状態アイコンも従来どおり */
+  .enemy-card.frameless { background: none; box-shadow: none; }
+  .enemy-card.frameless::before { display: none; }
   .enemy-card.targetable { cursor: pointer; border-color: rgba(209,80,63,0.6); box-shadow: 0 0 10px rgba(209,80,63,0.45); animation: targetPulse 1.1s ease-in-out infinite; }
   .enemy-card.targetable:active { transform: scale(0.94); }
   @keyframes targetPulse {

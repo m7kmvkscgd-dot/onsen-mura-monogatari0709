@@ -416,8 +416,9 @@ function renderDungeon() {
   // stopBattleBgmで探索用に戻る。どちらのチャンネルも戦闘中に止めない
   playAmbientBgm();
   // 中ボス/ボスから逃げて追いかけられている間はボス曲を鳴らし続けたいため、その間は
-  // 探索用BGMへ上書きし直さない(isBossBgmActive、shouldKeepBossBgmOnFleeと同じ仕組み)
-  if ((currentStage === "coast" || currentStage === "valley") && !isBossBgmActive()) playExplorationAreaBgm();
+  // 探索用BGMへ上書きし直さない(isBossBgmActive、shouldKeepBossBgmOnFleeと同じ仕組み)。
+  // ルートBGM付きのクエスト専用ルート(笑わぬ祭)は探索中も専用曲を流す(questRouteBgmKey、audio.js)
+  if ((currentStage === "coast" || currentStage === "valley" || questRouteBgmKey()) && !isBossBgmActive()) playExplorationAreaBgm();
   updateSceneBackgrounds(); // 探索中の時計が時間帯の境界を跨いだ時に、背景がその場で切り替わるように
   // 村からの手動帰還中(manualRetreatMode)は、通常の「帰還」ラベルではなく引き続き「進む」の
   // ままにする(ユーザー指示: あくまで進むという操作感のまま)。里に戻るボタンも隠さず、

@@ -32,6 +32,15 @@
 //   { type: "dmgTakenWhileMinions", mult: 0.7 }
 //       … 自分以外の敵(取り巻き)が場に生きている間、持ち主の被ダメージを軽減し続ける
 //         (毎ラウンド掛け直しのdmgTaken statMod。取り巻きを先に倒せば素通しになる)
+//   { type: "formCycle", every: N, forms: [ { id, name, announce, ...形態効果 } ] }
+//       … 発動時に先頭の形態になり、以後Nラウンドごとに固定順で次の形態へ替わる(末尾の次は先頭へ)。
+//         百面師・うつろの「三面替え」用に新設(2026-07-31)。形態効果は次の3種を組み合わせる:
+//         attacks/attackMult … 通常攻撃がattacks回の連続攻撃になり、1発あたりの攻撃力がattackMult倍(狐面)
+//         bigAttackStance … 形態になった後の最初の手番は攻撃せず「構え」(既存の大技予告と同じ表示)だけを行い、
+//                            次の手番で持ち主のbigAttack(全体大技)が発動する(般若面。予告→対策の間が必ず1手番ある)
+//         summon/dmgTakenWhileMinionsMult … 形態になった瞬間に雑魚を召喚し、この形態の間は取り巻きが
+//                            生きている限り被ダメ軽減を掛け直す(翁面)。軽減はgimmickApplyMinionShield経由で
+//                            他ギミック(笑わぬ祭のdmgTakenWhileMinions)と同一ラウンド内で重複しない
 //
 // 呼び出し側(battle.js)のフック:
 //   startBattle → initBattleGimmicks()(戦闘ごとの状態初期化+場演出のリセット)
@@ -96,10 +105,38 @@ function processGimmickTriggers() {
         updateSceneBackgrounds();
       } else if (eff.type === "summon" && eff.immediate) {
         gimmickDoSummon(eff, entry.owner);
+      } else if (eff.type === "formCycle") {
+        entry.formIndex = 0; // 発動と同時に先頭の形態(狐面)になる
+        gimmickApplyForm(entry, eff);
       }
     });
     renderBattleScreen();
   });
+}
+// formCycleの形態切り替えの実体。持ち主に形態フラグを立て(古い形態のフラグは全消去)、
+// 予告文をログへ流す。般若面(bigAttackStance)は危険の合図として警告フラッシュ+警告音も鳴らす
+function gimmickApplyForm(entry, eff) {
+  const owner = entry.owner;
+  const form = eff.forms[(entry.formIndex || 0) % eff.forms.length];
+  owner.__formId = form.id;
+  owner.__formAttacks = form.attacks || null;
+  owner.__formAttackMult = form.attackMult || null;
+  owner.__formBigAttackStance = !!form.bigAttackStance;
+  blog(`${owner.label}は【${form.name}】を顔へ重ねた。${form.announce || ""}`);
+  if (form.bigAttackStance) {
+    triggerWarningFlash();
+    playSfx("big_attack_warning");
+  }
+  if (form.summon) gimmickDoSummon(form.summon, owner);
+  renderBattleScreen();
+}
+// 「取り巻きが生きている間の被ダメ軽減」の掛け直し。翁面(formCycle)と笑わぬ祭(dmgTakenWhileMinions)の
+// 両方が同時に条件を満たしても、同一ラウンドに二重掛けして軽減が乗算で深くならないようにする
+function gimmickApplyMinionShield(owner, mult) {
+  if (!battle || owner.hp <= 0) return;
+  if (owner.__gimmickShieldRound === battle.roundsTotal) return;
+  owner.__gimmickShieldRound = battle.roundsTotal;
+  applyStatMod(owner, "dmgTaken", mult, 2);
 }
 
 // 雑魚召喚の実体。襲撃戦の多段ウェーブ(raidTryAdvanceWave)と同じ「battle.enemiesへ後から足す」方式。
@@ -174,9 +211,22 @@ function processGimmickRoundEffects(continueRound) {
         fired = true;
       } else if (eff.type === "dmgTakenWhileMinions") {
         // 取り巻きが生きている間だけ、毎ラウンド軽減を掛け直す(全滅していれば何もしない=素通し)。
-        // 表示の間は取らない(firedにしない)静かな効果
+        // 表示の間は取らない(firedにしない)静かな効果。翁面(formCycle)と同一ラウンドで重複しない
         const hasMinions = battle.enemies.some((e) => e !== entry.owner && e.hp > 0);
-        if (hasMinions && entry.owner.hp > 0) applyStatMod(entry.owner, "dmgTaken", eff.mult || 0.7, 2);
+        if (hasMinions) gimmickApplyMinionShield(entry.owner, eff.mult || 0.7);
+      } else if (eff.type === "formCycle") {
+        // 周期が満ちたら固定順で次の面へ(狐→般若→翁→狐…)
+        if (entry.roundsSinceActive % (eff.every || 2) === 0) {
+          entry.formIndex = (entry.formIndex || 0) + 1;
+          gimmickApplyForm(entry, eff);
+          fired = true;
+        }
+        // 翁面の間: 取り巻きが生きていれば被ダメ軽減を掛け直す(静かな効果、firedにしない)
+        const curForm = eff.forms[(entry.formIndex || 0) % eff.forms.length];
+        if (curForm.dmgTakenWhileMinionsMult) {
+          const hasFormMinions = battle.enemies.some((e) => e !== entry.owner && e.hp > 0);
+          if (hasFormMinions) gimmickApplyMinionShield(entry.owner, curForm.dmgTakenWhileMinionsMult);
+        }
       }
     });
   });

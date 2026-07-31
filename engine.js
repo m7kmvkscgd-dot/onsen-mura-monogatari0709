@@ -2613,13 +2613,16 @@ function noteRaidFocusTarget(member) {
   battle.raidRoundTargetCounts[member.id] = (battle.raidRoundTargetCounts[member.id] || 0) + 1;
 }
 
-function enemyAttack(enemy, targets, log) {
+// opts.atkMult: この一撃だけ攻撃力に掛ける倍率(三面替え・狐面の連続攻撃で1発あたりを軽くする用。
+// battle.jsの敵通常攻撃ループが渡す。未指定=従来どおり等倍)
+function enemyAttack(enemy, targets, log, opts) {
+  const atkVal = Math.max(1, Math.round(enemy.atk * ((opts && opts.atkMult) || 1)));
   // 【村襲撃】バリケードが立っている間、飛行以外の敵は味方ではなくバリケード自体を攻撃対象にする
   // (以前は味方を狙った攻撃を着弾時に柵へ差し替えていたため、味方の回避判定で柵が無傷になったり
   // 見切り反撃が柵越しに発動する矛盾があった。ユーザー指摘2026-07-27)。柵は動けないので必中、
   // ダメージは防御0相当の素の攻撃ロール。通常プレイはraidBarricadeHp=0のためこの分岐は素通り
   if (typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0 && !enemy.isFlying) {
-    const dmg = rollBasicAttack(enemy.atk, 0);
+    const dmg = rollBasicAttack(atkVal, 0);
     log(`${enemy.label}はバリケードに${dmg}ダメージ！`);
     applyRaidBarricadeDamage(dmg);
     return { target: null, dmg, hit: true, barricade: true };
@@ -2642,7 +2645,7 @@ function enemyAttack(enemy, targets, log) {
     onEvadeSuccess(target, enemy, log);
     return { target, dmg: null, hit: false };
   }
-  let rawDmg = rollBasicAttack(enemy.atk, effectiveStat(target, "def"));
+  let rawDmg = rollBasicAttack(atkVal, effectiveStat(target, "def"));
   let suffix = "";
   if (target.guarding) {
     rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
