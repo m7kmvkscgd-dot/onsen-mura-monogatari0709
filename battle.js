@@ -2489,7 +2489,11 @@ function victory() {
   // 物語クエストの魂の回想(soulStory): 倒した敵に回想があれば、魂の浮遊+一言+
   // 「残された記憶に触れる」ボタンを勝利画面に差し込む(ボステストでの検証でも出る)
   const soulEnemy = battle.enemies.find((e) => e.hp <= 0 && e.soulStory && e.soulStory.scenes && e.soulStory.scenes.length);
-  if (soulEnemy && typeof showSoulStoryOffer === "function") showSoulStoryOffer(soulEnemy);
+  if (soulEnemy && typeof showSoulStoryOffer === "function") {
+    showSoulStoryOffer(soulEnemy); // 演出中は「戻る」を隠す(effects.js側が演出完了時に戻す)
+    // 保険: 演出側で何か起きても「戻る」が出ないまま詰まないよう、8秒後に必ず再表示する
+    setTimeout(() => { const c = document.getElementById("battleContinueBtn"); if (c) c.style.display = ""; }, 8000);
+  }
   document.getElementById("battleContinueBtn").onclick = () => {
     // ボステスト(title.js)は探索を経由していないため、勝利したらそのままタイトルへ直帰する
     // (テストモードなのでリロードすれば実セーブがそのまま生きている)

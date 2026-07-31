@@ -1584,38 +1584,50 @@ function splitSoulSentences(text) {
 }
 // 勝利画面に魂の演出+回想ボタンを差し込む(battle.jsのvictory()から呼ばれる)。
 // ボタンは押しても消えず、閉じたら再度読める(画面を離れるまで)。
-// v2演出: 魂の一言は静寂を置いてから一文ずつ現れ、出きって少し置いてからボタンが現れる
+// v2演出: 魂の一言は静寂を置いてから一文ずつ現れ、出きって少し置いてからボタンが現れる。
+// 【重要】魂と一言は死んだ敵カードの中に入れない: 撃破済みカードは.defeat-hidden(visibility:hidden)
+// +.dead(opacity:0.25)で、子要素をどう頑張っても見えない/薄くなる(実機で「回想が流れない」報告の原因)。
+// カードの位置だけ借りて、#screen-battle直下の独立レイヤー(.soul-offer-fx)に出す。
+// 演出が終わって回想ボタンが出るまでは「戻る」(battleContinueBtn)を隠し、見逃し離脱を防ぐ
 function showSoulStoryOffer(enemy) {
   const story = enemy.soulStory;
   if (!story || !story.scenes || !story.scenes.length) return;
-  const card = findVisibleCard(enemy.instanceId);
+  document.querySelectorAll(".soul-offer-fx").forEach((el) => el.remove()); // 連戦の残骸掃除
   const lineSentences = splitSoulSentences(story.soulLine);
-  if (card) {
-    const soul = document.createElement("img");
-    soul.className = "soul-rise";
-    soul.src = "assets/items/soul_shard.png";
-    card.appendChild(soul);
-    if (lineSentences.length) {
-      const line = document.createElement("div");
-      line.className = "soul-line";
-      card.appendChild(line);
-      lineSentences.forEach((s, i) => {
-        setTimeout(() => {
-          if (!line.parentNode) return; // 勝利画面を離れた後は何もしない
-          line.textContent = lineSentences.slice(0, i + 1).map((t) => `「${t}」`).join("");
-          line.classList.add("show");
-        }, (SOUL_STORY_LINE_HOLD_MS + i * SOUL_STORY_LINE_STEP_MS) * soulStoryGateScale);
-      });
-    }
-  }
+  const contBtn = document.getElementById("battleContinueBtn");
+  if (contBtn) contBtn.style.display = "none"; // 演出完了(ボタン挿入)時に戻す
+  const screen = document.getElementById("screen-battle") || document.body;
+  const card = findVisibleCard(enemy.instanceId);
+  const rect = card ? card.getBoundingClientRect() : null;
+  const wrap = document.createElement("div");
+  wrap.className = "soul-offer-fx";
+  // visibility:hiddenのカードもレイアウト上の位置は保っているので、浮かぶ高さだけ借りる
+  wrap.style.top = rect && rect.top > 0 ? `${Math.max(60, rect.top)}px` : "24vh";
+  const soul = document.createElement("img");
+  soul.className = "soul-rise";
+  soul.src = "assets/items/soul_shard.png";
+  wrap.appendChild(soul);
+  const line = document.createElement("div");
+  line.className = "soul-line";
+  wrap.appendChild(line);
+  screen.appendChild(wrap);
+  lineSentences.forEach((s, i) => {
+    setTimeout(() => {
+      if (!wrap.isConnected) return; // 画面を離れた後は何もしない
+      line.textContent = lineSentences.slice(0, i + 1).map((t) => `「${t}」`).join("");
+      line.classList.add("show");
+    }, (SOUL_STORY_LINE_HOLD_MS + i * SOUL_STORY_LINE_STEP_MS) * soulStoryGateScale);
+  });
   // 回想ボタンは魂の一言が出きってから少し間を置いて現れる(即表示しない、指示書「1.2秒後」)。
-  // 表示前にプレイヤーが「戻る」で画面を離れていたら差し込まない
+  // 同じタイミングで「戻る」も再表示する
   const btnDelay = lineSentences.length
     ? (SOUL_STORY_LINE_HOLD_MS + (lineSentences.length - 1) * SOUL_STORY_LINE_STEP_MS + SOUL_STORY_BTN_DELAY_MS) * soulStoryGateScale
     : 0;
   setTimeout(() => {
     const grid = document.getElementById("actionGrid");
-    if (!battle || !grid || !document.getElementById("battleContinueBtn")) return;
+    const cont = document.getElementById("battleContinueBtn");
+    if (cont) cont.style.display = "";
+    if (!battle || !grid || !cont || document.getElementById("soulStoryBtn")) return;
     const btn = document.createElement("button");
     btn.className = "big soul-story-btn";
     btn.id = "soulStoryBtn";

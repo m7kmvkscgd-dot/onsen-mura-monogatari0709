@@ -112,16 +112,19 @@
     renderBattleScreen();
     document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">戻る</button>`;
     showSoulStoryOffer(b);
-    const card = document.querySelector(`#enemyRow .enemy-card[data-id="${b.instanceId}"]`);
-    check("魂が浮かぶ", !!card.querySelector(".soul-rise"));
-    check("魂の一言は静寂中はまだ出ない", (card.querySelector(".soul-line").textContent || "") === "");
+    const fx = document.querySelector("#screen-battle .soul-offer-fx");
+    check("魂が独立レイヤーに浮かぶ", !!fx && !!fx.querySelector(".soul-rise"));
+    check("魂は死んだ敵カードの中には居ない(visibility:hiddenで見えなくなる)", !document.querySelector(".enemy-card .soul-rise"));
+    check("魂の一言は静寂中はまだ出ない", (fx.querySelector(".soul-line").textContent || "") === "");
     check("回想ボタンも即座には出ない", !document.getElementById("soulStoryBtn"));
+    check("演出中は「戻る」が隠れる", document.getElementById("battleContinueBtn").style.display === "none");
     const waitLine = setInterval(() => {
       const btn = document.getElementById("soulStoryBtn");
       if (!btn) return; // ボタンが出る=一言も出きっている時刻
       clearInterval(waitLine);
-      check("魂の一言が一言遅れで出る", card.querySelector(".soul-line").textContent.includes("誰を待っていたのでしょう"));
+      check("魂の一言が一言遅れで出る", fx.querySelector(".soul-line").textContent.includes("誰を待っていたのでしょう"));
       check("「残された記憶に触れる」ボタンが出る", btn.textContent.includes("残された記憶に触れる"));
+      check("演出完了で「戻る」が再表示される", document.getElementById("battleContinueBtn").style.display !== "none");
       btn.click();
       const viewer = document.getElementById("soulStoryOverlay");
       const textEl = document.getElementById("soulStoryText");
