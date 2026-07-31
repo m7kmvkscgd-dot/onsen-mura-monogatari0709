@@ -569,8 +569,11 @@ function pickDungeonAllyTarget(promptText, onPicked) {
   DUNGEON_BOTTOM_BTN_IDS.forEach((id) => { document.getElementById(id).style.display = "none"; });
   const picker = document.getElementById("dungeonTargetPicker");
   picker.style.display = "flex";
+  // 見出し行(「誰に◯◯を使いますか？」)は表示しない(2026-08-01ユーザー指示: ボタンだけで
+  // 意味は伝わるので、その分ダイアログを小さくする)。promptText引数は呼び出し側の
+  // 文脈が分かるよう引数としては残置(現状未表示)
+  void promptText;
   picker.innerHTML = `
-    <p style="width:100%;margin:0;font-size:0.82rem;"><strong>${promptText}</strong></p>
     ${targets.map((c) => `<button class="big" data-target-id="${c.id}">${c.name} (${c.hp}/${c.maxHp})</button>`).join("")}
     ${reserveTarget ? `<button class="big" data-target-id="${reserveTarget.id}">控え:${reserveTarget.name} (${reserveTarget.hp}/${reserveTarget.maxHp})</button>` : ""}
     <button class="big" id="cancelDungeonTargetBtn">やめる</button>
