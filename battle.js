@@ -19,6 +19,9 @@ let battleActionLocked = false;
 // ウェーブ間や撃破途中で見た目がガタつくため)。タイトルの大規模戦テスト(title.js)が立てる。
 // 通常探索の戦闘は従来通り「5体以上の時だけ」縮小
 let massBattleSizingForced = false;
+// ボステスト(title.js)中フラグ。trueの間は勝利/敗北/逃走が全てlocation.reload()でタイトルへ直帰し、
+// ボスのHP低下逃走(追撃モード)も発生しない(最後まで戦ってギミックを検証するためのモード)
+let bossTestActive = false;
 // ============ 村襲撃バリケード(2026-07-27ユーザー確定仕様、モックで演出確認済み) ============
 // 柵が立っている間(raidBarricadeHp>0)、飛行(isFlying)以外の敵の攻撃は全てバリケードが肩代わりする
 // (横取りはengine.js applyDamageToTargetの先頭)。HP0で倒壊し、以降は通常戦闘。
@@ -37,6 +40,8 @@ function clearBattleTransientForms() {
     c.__hyakkaExtraUsedThisTurn = false;
     c.__battleHitCount = 0;
   });
+  // ボスギミックの場演出(業火オーバーレイ/背景差し替え)も戦闘の後始末で必ず解除する
+  if (typeof clearGimmickBattleFx === "function") clearGimmickBattleFx();
 }
 function resetRaidBarricade(hp) {
   raidBarricadeHp = raidBarricadeMaxHp = hp;
@@ -106,6 +111,11 @@ function startBattle(enemies, pathDef, encounterText) {
   // 貫き矢(狩人)など「倒した敵の余りダメージを他の敵に分け与える」系のスキルがengine.js側から
   // 他の敵を参照できるようにするための、敵全体への自己参照(__alliesの敵版)
   enemies.forEach((e) => { e.__enemyAllies = enemies; });
+  // ボスギミック(gimmicks.js): この戦闘の敵が持つギミックの実行状態を初期化し、場演出をリセットする
+  if (typeof initBattleGimmicks === "function") initBattleGimmicks();
+  // テストモード中(タイトルのテスト系ボタン経由)だけ、戦闘画面左上に「タイトルへ戻る」ボタンを出す
+  const testExitBtn = document.getElementById("battleTestExitBtn");
+  if (testExitBtn) testExitBtn.style.display = (typeof testModeActive !== "undefined" && testModeActive) ? "" : "none";
   // 新しい戦闘のたびに前回の逃走状態/状態異常/一時バフ/戦闘限定の受動効果をリセット(毒などが戦闘をまたいで残らないように)
   fieldParty.forEach((c) => {
     c.fleeState = null;
@@ -222,6 +232,15 @@ function startBattle(enemies, pathDef, encounterText) {
   }
   nextRound(forceFirstStrike);
 }
+
+// テストモード中だけ表示される「タイトルへ戻る」ボタン(index.htmlのbattleTestExitBtn、表示切替は
+// startBattle)。長いテストの誤タップで全部やり直しにならないよう、確認を挟んでからreload(全滅時と同じ手順)
+document.getElementById("battleTestExitBtn").onclick = () => {
+  showConfirmModal("テストを終了してタイトルへ戻りますか？", [
+    { label: "はい", className: "big danger", onClick: () => location.reload() },
+    { label: "いいえ", className: "big" },
+  ]);
+};
 
 function aliveField() {
   return fieldParty.filter((c) => c.hp > 0 && c.status === "active" && c.fleeState !== "fled");
@@ -474,31 +493,40 @@ function nextRound(forceFirstStrike) {
   // raidTryAdvanceWave()が湧かせて戦闘を続行させる(trueを返した時だけ町へ戻らず続行)
   if (aliveEnemies().length === 0 && !(typeof raidTryAdvanceWave === "function" && raidTryAdvanceWave())) { victory(); return; }
   if (alive.length === 0) { handleNoOneLeftToFight(); return; }
-  // 投石器: ラウンドが1つ完了した直後に発動する(battle.roundsTotal>0=このnextRound呼び出しが
-  // 戦闘開始直後の初回ではないことの目印。0のままなら開戦直後なのでまだ何も起きていない)。
-  // 戻り値は投擲演出の所要ms(2026-07-29に演出化)。石が飛んでいる間は次ラウンドの手番開始を
-  // 待たせ、着弾でダメージが確定してから手番順を組む(=石で倒した敵が行動順に混ざらない)
-  const catapultFxMs = battle.roundsTotal > 0 ? fireCatapultOnRoundEnd() : 0;
-  // 交代コマンドのクールダウンはラウンドの節目で1減る
-  if (battle.swapCooldown > 0) battle.swapCooldown--;
-  // 参加ターン比の経験値配分用: このラウンドに戦場へ出ていたメンバーを記録する。
-  // ラウンド途中で交代したキャラは出た側にも別途加算する(=交代ターンは双方にカウント、victory参照)
-  battle.roundsTotal++;
-  alive.forEach((c) => { battle.presence[c.id] = (battle.presence[c.id] || 0) + 1; });
-  const beginRound = () => {
-    if (!battle) return; // 演出待ちの間に戦闘が終了していた場合の保険
-    battle.order = turnOrder([...aliveField(), ...aliveEnemies()]);
-    // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
-    if (forceFirstStrike) {
-      const allies = battle.order.filter((e) => e.instanceId === undefined);
-      const foes = battle.order.filter((e) => e.instanceId !== undefined);
-      battle.order = [...allies, ...foes];
-    }
-    battle.orderIndex = 0;
-    processNext();
+  // ラウンドの節目の処理一式。ボスギミックの周期効果(場ダメージ・召喚)が発動した場合は
+  // processGimmickRoundEffects(gimmicks.js)が演出の間を取ってからこの続きを呼ぶため、関数に切り出してある
+  const continueRound = () => {
+    if (!battle) return; // ギミック演出待ちの間に戦闘が終了していた場合の保険
+    // 投石器: ラウンドが1つ完了した直後に発動する(battle.roundsTotal>0=このnextRound呼び出しが
+    // 戦闘開始直後の初回ではないことの目印。0のままなら開戦直後なのでまだ何も起きていない)。
+    // 戻り値は投擲演出の所要ms(2026-07-29に演出化)。石が飛んでいる間は次ラウンドの手番開始を
+    // 待たせ、着弾でダメージが確定してから手番順を組む(=石で倒した敵が行動順に混ざらない)
+    const catapultFxMs = battle.roundsTotal > 0 ? fireCatapultOnRoundEnd() : 0;
+    // 交代コマンドのクールダウンはラウンドの節目で1減る
+    if (battle.swapCooldown > 0) battle.swapCooldown--;
+    // 参加ターン比の経験値配分用: このラウンドに戦場へ出ていたメンバーを記録する。
+    // ラウンド途中で交代したキャラは出た側にも別途加算する(=交代ターンは双方にカウント、victory参照)
+    battle.roundsTotal++;
+    aliveField().forEach((c) => { battle.presence[c.id] = (battle.presence[c.id] || 0) + 1; });
+    const beginRound = () => {
+      if (!battle) return; // 演出待ちの間に戦闘が終了していた場合の保険
+      battle.order = turnOrder([...aliveField(), ...aliveEnemies()]);
+      // おみくじ「小吉」: この戦闘の最初のラウンドだけ、味方全員を敵より先に行動させる(先制確定)
+      if (forceFirstStrike) {
+        const allies = battle.order.filter((e) => e.instanceId === undefined);
+        const foes = battle.order.filter((e) => e.instanceId !== undefined);
+        battle.order = [...allies, ...foes];
+      }
+      battle.orderIndex = 0;
+      processNext();
+    };
+    if (catapultFxMs > 0) setTimeout(beginRound, catapultFxMs);
+    else beginRound();
   };
-  if (catapultFxMs > 0) setTimeout(beginRound, catapultFxMs);
-  else beginRound();
+  // ボスギミックの周期効果は投石器より前・戦闘開始直後の初回は除く(roundsTotal>0)で解決する。
+  // trueが返った時はギミック側がcontinueRoundの続きを引き受けている(全滅時は呼ばれず全滅処理へ)
+  if (battle.roundsTotal > 0 && typeof processGimmickRoundEffects === "function" && processGimmickRoundEffects(continueRound)) return;
+  continueRound();
 }
 
 function processNext() {
@@ -506,6 +534,9 @@ function processNext() {
   if (!battle) return;
   battle.actingId = null;
   battle.actingEnemyId = null;
+  // ボスギミックのトリガー判定(gimmicks.js): 毎手番の節目に、HP割合などの発動条件を満たした
+  // ギミックを発動させる(例: ボスがHP50%を割った直後、次の手番が始まる前に激怒が入る)
+  if (typeof processGimmickTriggers === "function") processGimmickTriggers();
   if (aliveEnemies().length === 0) {
     renderBattleScreen();
     if (!(typeof raidTryAdvanceWave === "function" && raidTryAdvanceWave())) { victory(); return; }
@@ -542,7 +573,8 @@ function processNext() {
     // __hasFledPursuitで同じ敵が1戦闘中に何度も発動しないようにする
     // 襲撃戦(raidBattleActive)では敵は逃走しない(ユーザー指定2026-07-29: 実機テストで大猪が
     // HP低下逃走してしまった。襲撃は「村を守り切るか敗北か」の戦いなので追撃システムと馴染まない)
-    if (!raidBattleActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
+    // ボステスト中もHP低下逃走はしない(ギミックを最後まで発火させて検証するモードのため)
+    if (!raidBattleActive && !bossTestActive && (actor.isBoss || actor.isMidBoss) && !actor.__hasFledPursuit && actor.hp / actor.maxHp <= BOSS_FLEE_HP_RATIO) {
       actor.__hasFledPursuit = true;
       if (actor.isQuestTarget) triggerQuestBossFlee(actor);
       else triggerBossFlee(actor);
@@ -2450,8 +2482,11 @@ function victory() {
   saveState();
   // 襲撃戦の勝利は探索画面ではなく町へ直帰する(探索を経由していないため)。
   // 演出フックの解除・柵耐久の永続化・次回襲撃の予約はfinishRaidBattle(raid.js)が行う
-  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : currentStageName() + "に戻る"}</button>`;
+  document.getElementById("actionGrid").innerHTML = `<button class="big primary" id="battleContinueBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : bossTestActive ? "タイトルへ戻る" : currentStageName() + "に戻る"}</button>`;
   document.getElementById("battleContinueBtn").onclick = () => {
+    // ボステスト(title.js)は探索を経由していないため、勝利したらそのままタイトルへ直帰する
+    // (テストモードなのでリロードすれば実セーブがそのまま生きている)
+    if (bossTestActive) { location.reload(); return; }
     battle = null;
     saveState(); // 遠征スナップショットのinBattleを戻す(リロード時の逃走ペナルティ誤発動防止)
     clearHawkState(fieldParty);
@@ -2550,6 +2585,8 @@ function updateBossPursuitHpIfFled() {
   }
 }
 function escapeBattle() {
+  // ボステストは探索を経由していないため、逃げ延びた場合も探索画面ではなくタイトルへ直帰する
+  if (bossTestActive) { location.reload(); return; }
   fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   markQuestChasingIfFled();
   updateBossPursuitHpIfFled();
@@ -2597,8 +2634,10 @@ function defeat() {
   clearOmikujiExpeditionEffect();
   resetPeaceDialogueState();
   blog(raidBattleActive ? `防衛隊は全滅した...村は荒らされてしまった。` : `パーティは全滅した...誰も帰ってこなかった。`);
-  document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : "町に戻る"}</button>`;
+  document.getElementById("actionGrid").innerHTML = `<button class="big" id="battleBackTownBtn" style="grid-column:1/-1;">${raidBattleActive ? "村に戻る" : bossTestActive ? "タイトルへ戻る" : "町に戻る"}</button>`;
   document.getElementById("battleBackTownBtn").onclick = () => {
+    // ボステストの全滅はリザルト画面を経由せずタイトルへ直帰する(遠征データが無いため)
+    if (bossTestActive) { location.reload(); return; }
     stopAmbientBgm();
     stopCoastAreaBgm();
     battle = null;

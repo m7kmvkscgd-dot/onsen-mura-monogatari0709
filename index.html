@@ -89,10 +89,12 @@
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
         <span>テストモード</span>
       </button>
-      <!-- 大規模戦テスト(2026-07-27): 襲撃戦プロトタイプ。5人(控えなし)vs猪5体(頭数ナーフなし)で即戦闘 -->
-      <button class="title-menu-btn" id="titleTest2Btn" style="opacity:0.65;">
+      <!-- ボステスト(2026-07-31、大規模戦テストを置き換え): 味方4枠(職業/レベル/型/装備)と
+           敵(ボス+お供)を自由に組み、敵ステータスをその場調整して即戦闘できる開発用ツール。
+           ボスギミック(gimmicks.js)の発火検証もここで行う -->
+      <button class="title-menu-btn" id="titleBossTestBtn" style="opacity:0.65;">
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
-        <span>大規模戦テスト</span>
+        <span>ボステスト</span>
       </button>
       <!-- 襲撃テスト(2026-07-29): 平均レベルだけ指定し、防衛隊の人数/職業/スキル/見張り台・
            バリケード・投石器の有無を全てランダムに振って即・実際の襲撃戦(raid.js本番ロジック)を
@@ -174,6 +176,32 @@
       </div>
       <button class="big" id="raidTestRollBtn" style="margin-top:1rem;">🎲 サイコロを振って開始</button>
       <button class="big title-sub-back-btn" id="raidTestBackBtn">戻る</button>
+    </div>
+  </div>
+
+  <!-- ボステスト(2026-07-31): 味方4枠(3人+控え1)の職業/レベル/スキルの型と装備有無、
+       敵(ボス1+お供最大3)とそのステータス上書きを設定して即戦闘に入る開発用ツール。
+       中身の行(味方枠・敵枠・ステータス欄)はtitle.jsが動的に組み立てる -->
+  <div class="screen" id="screen-boss-test">
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.webp')"></div>
+    <div class="title-sub-panel">
+      <h1>ボステスト</h1>
+      <p class="title-setting-caption">味方4枠(3人+控え1)と敵(ボス+お供)を組んで即戦闘。敵ステータスはその場で上書きでき、調整結果は敵エディタと同じJSON差分で書き出せます。セーブには影響しません。</p>
+      <div class="block-label">味方(上から3人が戦闘参加、4枠目は控え)</div>
+      <div id="bossTestAllyRows"></div>
+      <div class="title-setting-row">
+        <span>装備(武器/防具)</span>
+        <button class="title-toggle-btn" id="bossTestEquipToggle"></button>
+      </div>
+      <p class="title-setting-caption">ONの間、各職業ともそのレベルで解禁済みの段階まで武器/防具を購入済みとして扱います。</p>
+      <div class="block-label">敵(1枠目がボス、2〜4枠目はお供・空欄可)</div>
+      <div id="bossTestEnemyRows"></div>
+      <div id="bossTestStatRows"></div>
+      <button class="big primary" id="bossTestStartBtn" style="margin-top:1rem;">⚔️ 戦闘開始</button>
+      <button class="big" id="bossTestExportBtn">敵ステータスをJSON出力</button>
+      <textarea id="bossTestExportArea" style="display:none;"></textarea>
+      <button class="big" id="bossTestCopyBtn" style="display:none;">JSONをコピー</button>
+      <button class="big title-sub-back-btn" id="bossTestBackBtn">戻る</button>
     </div>
   </div>
 
@@ -1001,7 +1029,12 @@
   <!-- 戦闘 -->
   <div class="screen" id="screen-battle">
     <div class="battle-bg" id="battleBg"></div>
+    <!-- ボスギミックの場演出(業火/鬼火など)を背景の上に重ねるオーバーレイ。クラス付与で表示(gimmicks.js) -->
+    <div id="battleGimmickOverlay"></div>
     <div id="screenWarningFlash"></div>
+    <!-- テストモード中(title.jsのテスト系ボタン経由)だけ表示される「タイトルへ戻る」ボタン。
+         通常プレイの戦闘画面には出ない(startBattleがtestModeActiveを見て表示を切り替える) -->
+    <button id="battleTestExitBtn" style="display:none;">タイトルへ戻る</button>
     <div class="battle-top" id="battleTop">
       <div class="enemy-row" id="enemyRow"></div>
       <!-- 襲撃バリケード(大規模戦モードのみ表示、ユーザー提供イラスト2026-07-27。両端の杭が画像端=画面端に合う設計)。
@@ -1302,6 +1335,7 @@
 <script src="skills.js"></script>
 <script src="items.js"></script>
 <script src="battle.js"></script>
+<script src="gimmicks.js"></script>
 <script src="dungeon.js"></script>
 <script src="camp.js"></script>
 <script src="town.js"></script>

@@ -76,6 +76,10 @@ function serializeEnemy(id, e) {
   if (e.onHitInflict) extraLines.push(`onHitInflict: ${jsLit(e.onHitInflict)}`);
   if (e.statusImmune && e.statusImmune.length) extraLines.push(`statusImmune: ${jsLit(e.statusImmune)}`);
   if (e.elite) extraLines.push(`elite: ${jsLit(e.elite)}`);
+  // ボスギミック(2026-07-31): gimmicks=エンジンが読む構造化データ、gimmickNotes=エディターの自由記述メモ。
+  // どちらもここで保持しないと、エクスポート適用のたびに黙って消えてしまう
+  if (e.gimmicks && e.gimmicks.length) extraLines.push(`gimmicks: ${jsLit(e.gimmicks)}`);
+  if (e.gimmickNotes && e.gimmickNotes.length) extraLines.push(`gimmickNotes: ${jsLit(e.gimmickNotes)}`);
   let out = `  ${id}: { ${parts.join(", ")}`;
   if (extraLines.length > 0) {
     out += `,\n    ${extraLines.join(",\n    ")} },`;

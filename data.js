@@ -500,6 +500,45 @@ const ENEMIES = {
   kaiyoujo_ou: { id: "kaiyoujo_ou", ja: "海妖女王", image: "assets/enemies/kaiyoujo_ou.png", stage: "coast", hp: 650, atk: 37, def: 35, spd: 11, goldMin: 230, goldMax: 330, xp: 430, minFloor: 62, maxFloor: 1498, isBoss: true,
     bigAttack: { name: "妖女王の呪詛", mult: 1.3, debuff: { type: "poison", chance: 0.5, value: 3 } },
     onHitInflict: { type: "burn", chance: 0.25, turnsMin: 2, turnsMax: 3 } },
+  // ---- ボスギミックの試作ボス(2026-07-31、ボステスト用) ----
+  // questOnly+maxFloor:0のため通常の階層抽選には一切出ない(タイトルの「ボステスト」から呼び出して検証する)。
+  // gimmicksはgimmicks.jsのトリガー→効果機構が読む構造化データ、gimmickNotesは敵エディターのギミック欄
+  // (自由記述の設計メモ、エンジンは読まない)。ステータスは調整前提の初期値(ボステスト画面で上書き可)
+  boss_kasha: { id: "boss_kasha", ja: "火車", image: "assets/enemies/kasha.png", hp: 480, atk: 30, def: 25, spd: 10, goldMin: 90, goldMax: 130, xp: 150, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+    bigAttack: { name: "業火の相貌", mult: 1.5, debuff: { type: "burn", chance: 0.6, turnsMin: 2, turnsMax: 3 } },
+    bigAttackCycle: { min: 3, max: 4 },
+    gimmicks: [
+      { id: "blaze", name: "業火纏い",
+        trigger: { type: "hpBelow", ratio: 0.5 },
+        announce: "火車が怒り狂い、あたり一面が業火に包まれた！",
+        effects: [
+          { type: "overlay", key: "blaze" },
+          { type: "fieldDamage", every: 2, pctMaxHp: 0.06, min: 3, name: "業火" },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "業火纏い", trigger: "HPが50%を下回ると激怒する", effect: "背景が業火に包まれ(専用背景画像ができるまではCSSの炎演出で代用)、以後2ラウンドに1回、味方全員に最大HP6%(最低3)の炎ダメージ。場のダメージなので防御・かばう無視" },
+    ] },
+  boss_gashadokuro: { id: "boss_gashadokuro", ja: "がしゃどくろ", image: "assets/enemies/gashadokuro.png", hp: 562, atk: 30, def: 35, spd: 9, goldMin: 90, goldMax: 130, xp: 150, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+    bigAttack: { name: "がしゃどくろの哭き", mult: 1.6, debuff: { type: "stun", chance: 0.5, turns: 1 } },
+    statusImmune: ["bleed"],
+    gimmicks: [
+      { id: "bonecall", name: "骨呼びの怨嗟",
+        trigger: { type: "hpBelow", ratio: 0.7 },
+        announce: "骨山に紫の鬼火が纏わりつき、がしゃどくろが骨の眷属を呼び起こした！",
+        effects: [
+          { type: "overlay", key: "onibi" },
+          { type: "summon", every: 3, enemyId: "gasha_kobone", count: 2, maxAlive: 4, immediate: true, text: "骨山から骸骨が這い出してきた！" },
+        ] },
+    ],
+    gimmickNotes: [
+      { name: "骨呼びの怨嗟", trigger: "HPが70%を下回ると骨山が目覚める", effect: "紫の鬼火の演出とともに骸骨(gasha_kobone)を即2体召喚し、以後3ラウンドごとに2体ずつ追加召喚。場に骸骨は最大4体まで" },
+    ] },
+  // がしゃどくろ(試作ボス)が召喚する骨の眷属。通常抽選には出ない(絵は骸骨武者を暫定流用)
+  gasha_kobone: { id: "gasha_kobone", ja: "骸骨", image: "assets/enemies/gaikotsu_musha.png", hp: 40, atk: 16, def: 10, spd: 8, goldMin: 0, goldMax: 2, xp: 5, minFloor: 1, maxFloor: 0, questOnly: true,
+    bigAttack: { name: "骨の刃", mult: 1.2 },
+    bigAttackCycle: { min: 4, max: 6 },
+    statusImmune: ["bleed"] },
 };
 
 // ============ 素材(敵ドロップ) ============

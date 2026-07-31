@@ -329,52 +329,290 @@ document.getElementById("titleTestBtn").onclick = () => {
   enterDungeon(); // 画面遷移・BGM・遠征トラッカーのリセットまで通常の出発と同じ
 };
 
-// ============ 大規模戦テスト(2026-07-27) ============
-// 村襲撃システム(5人戦)のプロトタイプ確認用。侍/槍士/薙刀士/忍者/砲術士(=見張り台枠の想定)の
-// 5人・控えなし・全員Lv2(Lv2スキルは毎回ランダムに選択)で、探索を経由せず即・猪5体との戦闘に入る。
-// 敵は頭数ナーフなし(襲撃はウェーブの編成コスト(枠合計10、猪=2枠×5)で難易度を設計する方針の検証)。
-// テストモード1と同じくsaveState無効(実セーブ保護)、全滅/帰還でタイトルへ戻る
-document.getElementById("titleTest2Btn").onclick = () => {
-  playSfx("select");
-  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
-  state = defaultState();
-  // 陰陽師はLv3で式神召喚(3右)を必ず取得(式神=6人目の召喚テスト用、ユーザー指定)。
-  // 6人が上限: 既存の召喚ガード(分身/式神が1体でもいると追加召喚不可)により、式神が出ている間は
-  // 忍者の影分身は使えない=7人には絶対にならない
-  const specs = [["晴明", "onmyoji"], ["権六", "spearman"], ["巴", "naginata"], ["霧丸", "ninja"], ["玄蕃", "gunner"]];
-  const chars = specs.map(([name, classId]) => {
-    const c = createCharacter(name, classId, state.classUpgrades);
-    grantXp(c, xpToNext(1), () => {}); // Lv2へ
-    const choice = SKILL_TREES[classId] && SKILL_TREES[classId][2];
-    if (choice) {
-      const side = Math.random() < 0.5 ? "left" : "right";
-      applySkillChoice(c, { ...choice[side], side }, 2); // スキルは毎回ランダム(ユーザー指定)
-    }
-    if (classId === "onmyoji") {
-      grantXp(c, xpToNext(2), () => {}); // Lv3へ
-      applySkillChoice(c, { ...SKILL_TREES.onmyoji[3].right, side: "right" }, 3); // 式神召喚を確定取得
-    }
-    return c;
+// ============ ボステスト(2026-07-31、大規模戦テストを置き換え) ============
+// 味方4枠(3人+控え1、本番のパーティ構成と同じ)の職業/レベル/スキルの型/装備有無と、
+// 敵(ボス1+お供最大3)+ステータス上書きを設定して即戦闘に入る開発用ツール。
+// ボスギミック(gimmicks.js)が実際に発火する状態で戦えるのが最大の目的で、
+// 「調整→開始→設定画面に戻って再調整→再戦」のループを回す(戦闘中のリアルタイム編集はしない)。
+// 調整した敵ステータスは敵エディタと同じENEMIES_CHANGED差分形式でJSON出力でき、
+// 既存の適用フロー(pipeline/apply_enemy_editor_export.js)にそのまま乗る。
+// 他のテストモードと同じくtestModeActiveでセーブ保護、勝敗/逃走は全てタイトルへ直帰(battle.jsのbossTestActive分岐)
+const BOSS_TEST_STAT_KEYS = ["hp", "atk", "def", "spd"];
+let bossTestConfig = {
+  allies: [
+    { classId: "samurai", level: 5, tree: "random" },
+    { classId: "spearman", level: 5, tree: "random" },
+    { classId: "onmyoji", level: 5, tree: "random" },
+    { classId: "hunter", level: 5, tree: "random" },
+  ],
+  equipOn: true,
+  enemies: ["boss_kasha", "", "", ""],
+  // 敵枠ごとのステータス上書き { hp, atk, def, spd }(枠の敵を選び直すとマスター値で初期化される)
+  statOverrides: [null, null, null, null],
+};
+function bossTestEnemyIdsSorted() {
+  const ids = Object.keys(ENEMIES);
+  const isBossLike = (id) => ENEMIES[id].isBoss || ENEMIES[id].isMidBoss;
+  return { bosses: ids.filter(isBossLike), others: ids.filter((id) => !isBossLike(id)) };
+}
+function bossTestDefaultStats(enemyId) {
+  const e = ENEMIES[enemyId];
+  return e ? { hp: e.hp, atk: e.atk, def: e.def, spd: e.spd } : null;
+}
+// 味方1枠ぶんの行(職業/レベル/型)を作る。selectのonchangeは設定オブジェクトの書き換えだけ行い、
+// 画面全体は再描画しない(型の選択肢だけは職業に依存するため、職業変更時にその場で作り直す)
+function bossTestBuildAllyRow(idx) {
+  const spec = bossTestConfig.allies[idx];
+  const row = document.createElement("div");
+  row.className = "boss-test-slot";
+  const classSel = document.createElement("select");
+  classSel.className = "title-select";
+  Object.keys(CLASSES).forEach((cid) => {
+    const opt = document.createElement("option");
+    opt.value = cid;
+    opt.textContent = CLASSES[cid].ja;
+    classSel.appendChild(opt);
   });
+  classSel.value = spec.classId;
+  const levelSel = document.createElement("select");
+  levelSel.className = "title-select bt-level";
+  for (let lv = 1; lv <= MAX_LEVEL; lv++) {
+    const opt = document.createElement("option");
+    opt.value = String(lv);
+    opt.textContent = `Lv.${lv}`;
+    levelSel.appendChild(opt);
+  }
+  levelSel.value = String(spec.level);
+  const treeSel = document.createElement("select");
+  treeSel.className = "title-select bt-tree";
+  const fillTreeOptions = () => {
+    const names = SKILL_TREE_NAMES[spec.classId] || { left: "左", right: "右" };
+    treeSel.innerHTML = "";
+    [["random", "🎲ランダム"], ["left", `${names.left}固定`], ["right", `${names.right}固定`]].forEach(([v, label]) => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = label;
+      treeSel.appendChild(opt);
+    });
+    treeSel.value = spec.tree;
+  };
+  fillTreeOptions();
+  classSel.onchange = () => { spec.classId = classSel.value; spec.tree = "random"; fillTreeOptions(); };
+  levelSel.onchange = () => { spec.level = Number(levelSel.value) || 1; };
+  treeSel.onchange = () => { spec.tree = treeSel.value; };
+  row.appendChild(classSel);
+  row.appendChild(levelSel);
+  row.appendChild(treeSel);
+  return row;
+}
+// 敵1枠ぶんのselect。1枠目はボスを先頭グループに出す(お供枠は全敵から自由に選べる+空欄可)
+function bossTestBuildEnemyRow(idx) {
+  const row = document.createElement("div");
+  row.className = "boss-test-slot";
+  const sel = document.createElement("select");
+  sel.className = "title-select";
+  const { bosses, others } = bossTestEnemyIdsSorted();
+  const addOptions = (parent, ids) => {
+    ids.forEach((id) => {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${ENEMIES[id].ja} [${id}]`;
+      parent.appendChild(opt);
+    });
+  };
+  if (idx > 0) {
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "(なし)";
+    sel.appendChild(empty);
+  }
+  const bossGroup = document.createElement("optgroup");
+  bossGroup.label = "ボス/中ボス";
+  addOptions(bossGroup, bosses);
+  sel.appendChild(bossGroup);
+  const otherGroup = document.createElement("optgroup");
+  otherGroup.label = "雑魚";
+  addOptions(otherGroup, others);
+  sel.appendChild(otherGroup);
+  sel.value = bossTestConfig.enemies[idx] || (idx === 0 ? "boss_kasha" : "");
+  bossTestConfig.enemies[idx] = sel.value;
+  sel.onchange = () => {
+    bossTestConfig.enemies[idx] = sel.value;
+    bossTestConfig.statOverrides[idx] = sel.value ? bossTestDefaultStats(sel.value) : null;
+    renderBossTestStatRows(); // 敵の入れ替えは構造が変わるのでステータス欄だけ作り直す
+  };
+  row.appendChild(sel);
+  return row;
+}
+// 選択中の敵枠ぶんのステータス上書き欄。数値inputのoninputは設定の書き換えのみで再描画しない
+// (エディタ系の「入力のたびに再描画してフォーカスが飛ぶ」事故の再発防止)
+function renderBossTestStatRows() {
+  const wrap = document.getElementById("bossTestStatRows");
+  wrap.innerHTML = "";
+  bossTestConfig.enemies.forEach((enemyId, idx) => {
+    if (!enemyId) return;
+    if (!bossTestConfig.statOverrides[idx]) bossTestConfig.statOverrides[idx] = bossTestDefaultStats(enemyId);
+    const ov = bossTestConfig.statOverrides[idx];
+    const box = document.createElement("div");
+    box.className = "boss-test-stat-box";
+    const head = document.createElement("div");
+    head.className = "boss-test-stat-head";
+    head.textContent = `${idx + 1}. ${ENEMIES[enemyId].ja}のステータス`;
+    box.appendChild(head);
+    const grid = document.createElement("div");
+    grid.className = "boss-test-stat-grid";
+    [["hp", "HP"], ["atk", "攻"], ["def", "防"], ["spd", "速"]].forEach(([key, label]) => {
+      const field = document.createElement("label");
+      field.className = "boss-test-stat-field";
+      field.innerHTML = `<span>${label}</span>`;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.inputMode = "numeric";
+      input.value = String(ov[key]);
+      input.oninput = () => { ov[key] = Math.max(0, Number(input.value) || 0); };
+      field.appendChild(input);
+      grid.appendChild(field);
+    });
+    box.appendChild(grid);
+    wrap.appendChild(box);
+  });
+}
+function renderBossTestScreen() {
+  const allyWrap = document.getElementById("bossTestAllyRows");
+  allyWrap.innerHTML = "";
+  bossTestConfig.allies.forEach((_, idx) => allyWrap.appendChild(bossTestBuildAllyRow(idx)));
+  const enemyWrap = document.getElementById("bossTestEnemyRows");
+  enemyWrap.innerHTML = "";
+  bossTestConfig.enemies.forEach((_, idx) => enemyWrap.appendChild(bossTestBuildEnemyRow(idx)));
+  renderBossTestStatRows();
+  const equipBtn = document.getElementById("bossTestEquipToggle");
+  equipBtn.textContent = bossTestConfig.equipOn ? "ON" : "OFF";
+  equipBtn.classList.toggle("is-on", bossTestConfig.equipOn);
+  document.getElementById("bossTestExportArea").style.display = "none";
+  document.getElementById("bossTestCopyBtn").style.display = "none";
+}
+document.getElementById("titleBossTestBtn").onclick = () => {
+  playSfx("select");
+  renderBossTestScreen();
+  showScreen("screen-boss-test");
+};
+document.getElementById("bossTestBackBtn").onclick = () => {
+  playSfx("select");
+  showScreen("screen-title");
+  renderTitleScreen();
+};
+document.getElementById("bossTestEquipToggle").onclick = () => {
+  playSfx("select");
+  bossTestConfig.equipOn = !bossTestConfig.equipOn;
+  const equipBtn = document.getElementById("bossTestEquipToggle");
+  equipBtn.textContent = bossTestConfig.equipOn ? "ON" : "OFF";
+  equipBtn.classList.toggle("is-on", bossTestConfig.equipOn);
+};
+// 装備トグルON時の自動購入: 各職業とも「そのレベルで解禁済みの段階」まで購入済み扱いにする
+// (EQUIPMENTのtier.levelが解禁レベル。同じ職業が複数枠いる場合は最高レベルに合わせる)。
+// createCharacterが購入状態(state.classUpgrades)から装備ボーナスを計算するため、キャラ生成前に呼ぶ
+function bossTestApplyEquipUpgrades(specs) {
+  const levelByClass = {};
+  specs.forEach((s) => { levelByClass[s.classId] = Math.max(levelByClass[s.classId] || 0, s.level); });
+  Object.keys(levelByClass).forEach((classId) => {
+    const eq = EQUIPMENT[classId];
+    if (!eq) return;
+    const ownedTiers = (tiers) => tiers.filter((t) => t.level <= levelByClass[classId]).length;
+    state.classUpgrades[classId] = { weapon: ownedTiers(eq.weapon), armor: ownedTiers(eq.armor) };
+  });
+}
+// 指定レベルまでlevelUpを繰り返しながらスキルを取らせてキャラを作る(createRaidTestCharacterと
+// 同じ方式)。treeMode="left"/"right"なら毎レベル同じ側で固定、"random"なら左右ランダム
+function createBossTestCharacter(name, classId, targetLevel, treeMode) {
+  const c = createCharacter(name, classId, state.classUpgrades);
+  for (let lv = 2; lv <= targetLevel; lv++) {
+    levelUp(c, () => {});
+    const choice = SKILL_TREES[classId] && SKILL_TREES[classId][lv];
+    if (choice) {
+      const side = treeMode === "left" || treeMode === "right" ? treeMode : (Math.random() < 0.5 ? "left" : "right");
+      applySkillChoice(c, { ...choice[side], side }, lv);
+    }
+  }
+  c.hp = c.maxHp;
+  c.mp = c.maxMp;
+  return c;
+}
+document.getElementById("bossTestStartBtn").onclick = () => {
+  playSfx("select");
+  const enemyIds = bossTestConfig.enemies.filter(Boolean);
+  if (enemyIds.length === 0 || !bossTestConfig.enemies[0]) {
+    showInfoModal("1枠目のボスを選んでください");
+    return;
+  }
+  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
+  bossTestActive = true; // 勝敗/逃走のタイトル直帰・ボスのHP低下逃走の無効化(battle.js)
+  state = defaultState();
+  if (bossTestConfig.equipOn) bossTestApplyEquipUpgrades(bossTestConfig.allies);
+  const names = [...RAID_TEST_NAMES].sort(() => Math.random() - 0.5);
+  const chars = bossTestConfig.allies.map((spec, i) => createBossTestCharacter(names[i] || `試験隊${i + 1}`, spec.classId, spec.level, spec.tree));
   state.roster.push(...chars);
   state.activePartyIds = chars.map((c) => c.id);
-  state.pendingSkillChoices = []; // 上でスキルは選択済みのため、レベルアップで積まれた選択待ちは消す
-  currentStage = "forest";
-  enterDungeon();
-  // enterDungeonは4人目以降を控えへ回すため、5人全員を戦闘参加に上書きする(襲撃戦は控えなしの5人)
-  fieldParty = chars;
-  reserveFieldMember = null;
-  // 襲撃らしい見た目と音: 背景は村の出発画面(departure)、BGMはユーザー提供の専用曲。
-  // enterDungeon()内の背景更新は上書き代入より先に走っているため、代入後にもう一度反映する
-  battleBgOverrideSet = BG_SETS.departure;
-  battleBgmOverrideKey = "raid_battle";
-  massBattleSizingForced = true; // 襲撃戦は敵が何体でも敵カードを縮小サイズで統一(ユーザー指定)
-  raidWatchtowerCharId = chars[4].id; // 玄蕃(砲術士)を見張り台の高所表示に(watchtower-slot、実機の見た目確認用。本実装はraid.js)
-  resetRaidBarricade(100); // 柵HP(テスト用の仮値100。建築レベル連動・バランス数値はユーザーが後日調整)
+  state.pendingSkillChoices = []; // スキルは生成時に選択済みのため、レベルアップで積まれた選択待ちは消す
+  fieldParty = chars.slice(0, 3); // 本番と同じ3人+控え1の構成
+  reserveFieldMember = chars[3] || null;
+  // 背景はボスのステージの絵をそのまま使う(探索は経由しない)
+  const boss = ENEMIES[bossTestConfig.enemies[0]];
+  currentStage = boss.stage || "forest";
+  currentFloor = Math.max(1, boss.minFloor || 1);
+  retreating = false;
   updateSceneBackgrounds();
-  const raiders = [];
-  for (let i = 0; i < 5; i++) raiders.push(instantiateEnemyById("inoshishi"));
-  startBattle(raiders, null, "大規模戦テスト: 猪の群れが押し寄せてきた！");
+  const enemies = bossTestConfig.enemies.map((id, idx) => {
+    if (!id) return null;
+    const e = instantiateEnemyById(id);
+    if (!e) return null;
+    const ov = bossTestConfig.statOverrides[idx];
+    if (ov) {
+      e.hp = e.maxHp = Math.max(1, ov.hp);
+      e.atk = Math.max(1, ov.atk);
+      e.def = Math.max(0, ov.def);
+      e.spd = Math.max(1, ov.spd);
+    }
+    return e;
+  }).filter(Boolean);
+  startBattle(enemies, null, `ボステスト: ${boss.ja}が立ちはだかる！`);
+};
+// 調整した敵ステータスを、敵エディタのエクスポートと同じENEMIES_CHANGED差分形式で出力する
+// (マスター値から変更のあった敵だけ、敵オブジェクト全体を出す=適用スクリプトのマージ単位と同じ)。
+// 同じ敵を複数枠に置いて別々の値にした場合は後の枠が勝つ
+function buildBossTestExportText() {
+  const changed = {};
+  bossTestConfig.enemies.forEach((id, idx) => {
+    if (!id || !ENEMIES[id]) return;
+    const ov = bossTestConfig.statOverrides[idx];
+    if (!ov) return;
+    const base = ENEMIES[id];
+    if (BOSS_TEST_STAT_KEYS.every((k) => Number(ov[k]) === base[k])) return;
+    changed[id] = { ...base, hp: Number(ov.hp), atk: Number(ov.atk), def: Number(ov.def), spd: Number(ov.spd) };
+  });
+  let out = `// ボステストで調整した敵 — ${Object.keys(changed).length}体(enemy_editor.htmlのエクスポートと同形式)\n`;
+  out += `const ENEMIES_CHANGED = ${JSON.stringify(changed, null, 2)};\n\n`;
+  out += `const ENEMIES_REMOVED = [];\n\n`;
+  out += `const ENEMY_WEAKNESS_CHANGED = {};\n\n`;
+  out += `const ENEMY_WEAKNESS_REMOVED = [];\n\n`;
+  out += `const ENEMY_MATERIAL_DROPS_CHANGED = {};\n\n`;
+  out += `const ENEMY_MATERIAL_DROPS_REMOVED = [];\n`;
+  return out;
+}
+document.getElementById("bossTestExportBtn").onclick = () => {
+  playSfx("select");
+  const area = document.getElementById("bossTestExportArea");
+  area.value = buildBossTestExportText();
+  area.style.display = "";
+  document.getElementById("bossTestCopyBtn").style.display = "";
+};
+document.getElementById("bossTestCopyBtn").onclick = () => {
+  const area = document.getElementById("bossTestExportArea");
+  area.select();
+  navigator.clipboard.writeText(area.value).then(() => {
+    const btn = document.getElementById("bossTestCopyBtn");
+    btn.textContent = "コピーしました！";
+    setTimeout(() => { btn.textContent = "JSONをコピー"; }, 1500);
+  }).catch(() => { document.execCommand("copy"); });
 };
 
 // ============ 襲撃テストモード(2026-07-29、2026-07-29ユーザー指摘で村レベル/防衛設備を指定制に変更) ============

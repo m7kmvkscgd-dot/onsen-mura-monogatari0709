@@ -22,6 +22,36 @@
       radial-gradient(ellipse 230px 150px at 50% 92px, rgba(255,246,222,0.14), rgba(255,246,222,0) 70%),
       linear-gradient(to bottom, rgba(20,24,27,0.2), rgba(20,24,27,0.7) 55%, rgba(20,24,27,0.9));
   }
+  /* ボスギミックの場演出オーバーレイ(gimmicks.jsがクラスを付け外しする)。背景(z-index:0)と
+     敵カード列(.battle-top、z-index:5)の間に挟み、専用背景画像ができるまでの代用も兼ねる */
+  #battleGimmickOverlay {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0);
+    width: 100%; max-width: 480px; height: 100vh; height: 100dvh;
+    z-index: 1; pointer-events: none; display: none;
+  }
+  #battleGimmickOverlay.gimmick-blaze {
+    display: block;
+    background:
+      radial-gradient(ellipse at 50% 112%, rgba(255,96,20,0.55), rgba(255,60,0,0.24) 45%, transparent 72%),
+      linear-gradient(to top, rgba(255,120,30,0.35), transparent 60%);
+    animation: gimmickOverlayFlicker 1.6s ease-in-out infinite;
+  }
+  #battleGimmickOverlay.gimmick-onibi {
+    display: block;
+    background:
+      radial-gradient(ellipse at 50% 112%, rgba(150,60,220,0.5), rgba(90,20,160,0.22) 45%, transparent 72%),
+      linear-gradient(to top, rgba(120,40,200,0.3), transparent 55%);
+    animation: gimmickOverlayFlicker 2.2s ease-in-out infinite;
+  }
+  @keyframes gimmickOverlayFlicker { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+  /* テストモード中だけ表示される「タイトルへ戻る」(battle.js startBattleが表示を切り替える)。
+     敵カード列より上のレイヤーで左上に小さく置く(通常プレイでは絶対に出ない) */
+  #battleTestExitBtn {
+    position: fixed; top: 6px; left: 8px; z-index: 8;
+    font-size: 11px; padding: 5px 9px;
+    background: rgba(20,24,27,0.75); color: #d9cfb8;
+    border: 1px solid rgba(217,207,184,0.4); border-radius: 8px;
+  }
   .battle-top {
     position: fixed; top: 0; left: 50%;
     transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));

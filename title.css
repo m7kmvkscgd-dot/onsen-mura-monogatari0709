@@ -169,6 +169,29 @@
   }
   .title-sub-back-btn { width: 100%; margin-top: 6px; }
 
+  /* ============ ボステスト(screen-boss-test、2026-07-31) ============
+     390px実機幅で3つのselectが横に収まるよう、固定pxではなくflexの伸縮で割り付ける */
+  .block-label { text-align: left; font-size: 12px; font-weight: 700; color: var(--dw-gold, #d7b66f); margin: 14px 0 4px; }
+  .boss-test-slot { display: flex; gap: 6px; align-items: center; margin: 6px 0; }
+  .boss-test-slot .title-select { flex: 1; min-width: 0; text-align: left; text-align-last: left; padding: 0 10px; }
+  .boss-test-slot .bt-level { flex: 0 0 68px; }
+  .boss-test-slot .bt-tree { flex: 0 0 118px; }
+  .boss-test-stat-box { margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md, 10px); }
+  .boss-test-stat-head { text-align: left; font-size: 12px; color: var(--dw-body-color); margin-bottom: 6px; }
+  .boss-test-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .boss-test-stat-field { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--dw-caption-color); text-align: left; }
+  .boss-test-stat-field input {
+    width: 100%; box-sizing: border-box; height: 32px; padding: 0 6px;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--dw-card-border); border-radius: 8px;
+    color: var(--dw-body-color); font-size: 13px; font-weight: 700;
+  }
+  #bossTestExportArea {
+    width: 100%; box-sizing: border-box; min-height: 150px; margin-top: 8px;
+    background: rgba(0,0,0,0.4); border: 1px solid var(--dw-card-border); border-radius: 8px;
+    color: var(--dw-body-color); font-family: monospace; font-size: 10px; padding: 8px;
+  }
+  #screen-boss-test .title-sub-panel { max-height: 86vh; max-height: 86dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
   /* ============ 製作者より(タイトル画面に重なるオーバーレイ。画面遷移はしない) ============
      読み物として自然に読めるよう、中央揃えではなく左揃えのレイアウトにしてある。
      余白を大きめに取り、見出し/本文/署名の3段階で文字サイズにメリハリを付けた。

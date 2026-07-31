@@ -140,6 +140,8 @@ function dayLikeOf(tod) {
 }
 // 戦闘背景の強制上書き(BG_SETSのセットを入れる。大規模戦テスト/将来の村襲撃用)。nullなら通常のステージ別背景
 let battleBgOverrideSet = null;
+// ボスギミックによる戦闘背景の差し替え(gimmicks.jsが設定する1枚絵のURL。時間帯無視で最優先)
+let gimmickBattleBgUrl = null;
 function updateSceneBackgrounds() {
   const tod = state.timeOfDay || "day";
   const dayLike = dayLikeOf(tod);
@@ -147,7 +149,7 @@ function updateSceneBackgrounds() {
   document.getElementById("tavernHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("statusHero").style.backgroundImage = `url('${BG_SETS.tavern[tod]}')`;
   document.getElementById("dungeonBgInner").style.backgroundImage = `url('${currentAreaBgSet()[tod]}')`;
-  document.getElementById("battleBg").style.backgroundImage = `url('${(battleBgOverrideSet || currentAreaBgSet())[tod]}')`;
+  document.getElementById("battleBg").style.backgroundImage = `url('${gimmickBattleBgUrl || (battleBgOverrideSet || currentAreaBgSet())[tod]}')`;
   // 帰還方向(温泉村へ向かっている)の時は背景を水平反転する。「進む/帰還」ボタンの表示ラベルではなく
   // 実際にretreatingかどうか(山伏の里/海の村からの「元来た道を歩いて戻る」中も含め、常に家へ
   // 向かっているかを表す)を見る(ユーザー指示、2026-07-21)
