@@ -163,7 +163,9 @@
      変えるだけでこのセクションは丸ごと不使用になり完全に元へ戻る。適用はrenderBattleScreen(battle.js)。
      狙い: 透過立ち絵化で敵が画面上端の「空中」に見えていたのを、ログを上へ・敵列を画面中央帯へ下ろして
      背景の地面と足元を合わせる。襲撃戦はこのクラスが付かない(常に従来配置) */
-  .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; z-index: 2; }
+  /* margin:0=共通ルールの margin 0.5rem 1rem を外し、モックで調整した「上端10.1vh・左右12px」に
+     ぴったり合わせる(marginが残ると8px下+左右28pxインセットになり、320×568端末で敵の頭に1px接触していた) */
+  .battle-top.layout-center #battleLog { position: absolute; top: 10.1vh; left: 12px; right: 12px; margin: 0; z-index: 2; }
   /* 敵列はmarginではなく絶対配置で下ろす(margin-topだと固定配置の.battle-top自体と相殺して
      位置が狂う)。top値は「カード上端=26vh」になるよう、行内の名前用padding-top(38px)を差し引く */
   /* align-content:flex-start=行内の縦センタリング(基底の.enemy-rowはcenter)をやめて上詰めにする。
