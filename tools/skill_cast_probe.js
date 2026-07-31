@@ -15,8 +15,9 @@ const { webkit, devices } = require("playwright");
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
     const e = instantiateEnemyById("yaken");
-    e.spd = 0; e.hp = 9999; e.maxHp = 9999;
-    startBattle([e], null, "技演出検証！");
+    const e2 = instantiateEnemyById("yaken");
+    [e, e2].forEach((x) => { x.spd = 0; x.hp = 9999; x.maxHp = 9999; });
+    startBattle([e, e2], null, "技演出検証！");
   });
   await page.waitForTimeout(1600);
   // 技系ボタン(通常攻撃/道具/交代/逃げる以外)を押す
@@ -30,15 +31,19 @@ const { webkit, devices } = require("playwright");
   });
   console.log("pressed:", pressed);
   await page.waitForTimeout(400);
+  const before = await page.evaluate(() => ({
+    bannerOpacityBeforePick: (() => { const b = document.querySelector(".skill-cast-banner"); return b ? getComputedStyle(b).opacity : "0"; })(),
+    pickerActive: !!document.querySelector(".enemy-card.targetable"),
+  }));
+  console.log("選択前(帯はまだ出ないはず):", JSON.stringify(before));
+  await page.evaluate(() => { const c = document.querySelector(".enemy-card.targetable"); if (c) c.click(); });
+  await page.waitForTimeout(400);
   await page.screenshot({ path: "../tmp/skill_cast_mid.png" });
   const mid = await page.evaluate(() => ({
     bannerText: (document.querySelector(".skill-cast-banner .band") || {}).textContent || "",
     bannerVisible: (() => { const b = document.querySelector(".skill-cast-banner"); return b ? getComputedStyle(b).opacity : "none"; })(),
   }));
-  console.log("t=400ms:", JSON.stringify(mid));
-  await page.waitForTimeout(600);
-  // 対象選択が出ていれば敵をタップ
-  await page.evaluate(() => { const c = document.querySelector(".enemy-card.targetable"); if (c) c.click(); });
+  console.log("選択後400ms(帯が出ているはず):", JSON.stringify(mid));
   await page.waitForTimeout(1200);
   const after = await page.evaluate(() => (document.getElementById("battleLog").textContent || "").slice(-70));
   console.log("log:", JSON.stringify(after));

@@ -1375,10 +1375,26 @@ function runTreeSkill(actor, skill) {
     renderActionButtons(actor);
     return;
   }
-  // 【必殺技キャスト演出(モック案A採用2026-08-01)】気合い発光+技名帯を見せてから技本体
-  // (runTreeSkillBody、対象選択を含む従来の全処理)を実行する。使用不可の早期return
-  // (上の怒声系ガード)は演出より前に弾いておく
-  playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill));
+  // 【必殺技キャスト演出(モック案A採用2026-08-01)】気合い発光+技名帯→技本体。
+  // 対象選択(敵/味方)を伴う技は「選択してから技名と音」(2026-08-01ユーザー指示)のため
+  // 入口では鳴らさず、各分岐の選択後コールバック内で鳴らす(treeSkillFxAfterPick)。
+  // 使用不可の早期return(上の怒声系ガード)は演出より前に弾いておく
+  if (treeSkillFxAfterPick(action)) runTreeSkillBody(actor, skill);
+  else playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill));
+}
+// 対象選択を伴う(=キャスト演出を選択後に出す)技の判定。runTreeSkillBodyの分岐実体と対応させる。
+// 変身/式神召喚の種類ピッカーは戦場の対象選択ではないため入口演出のまま
+function treeSkillFxAfterPick(action) {
+  if (!action) return false;
+  if (action.pickTargets === 2) return true; // 迅雷突き(敵2回選択)
+  if (action.kind === "dismissShikigamiDebuff" || action.kind === "stunNoCost") return true; // 敵単体選択
+  if (action.kind === "shieldAlly") return true; // 結界(味方選択)
+  if (action.kind === "heal" && !action.aoe) return true; // 単体回復(味方選択)
+  const NO_PICK_KINDS = ["transform", "guardCounterSelf", "damageRandomMulti", "shieldSelf", "summonShikigami",
+    "debuffAllNoCost", "kishinka", "buffSelf", "buffParty", "buffPartyNoCost", "summonHawk", "heal"];
+  if (NO_PICK_KINDS.includes(action.kind)) return false;
+  // 未知のkind=ダメージ系フォールスルー: 全体(aoe)は選択なし、単体は敵選択あり
+  return !action.aoe;
 }
 function runTreeSkillBody(actor, skill) {
   const action = skill.action;
@@ -1457,13 +1473,13 @@ function runTreeSkillBody(actor, skill) {
       renderActionButtons(actor);
       return;
     }
-    pickSingleEnemyTarget((target) => {
+    pickSingleEnemyTarget((target) => playSkillCastFx(actor, skill.name, () => {
       playSfx("select");
       const result = useTreeSkill(actor, target, skill, blog);
       renderBattleScreen();
       if (result && result.debuffed) playAttackVfx(target.instanceId, actor, "skill");
       finishPlayerAction();
-    });
+    }));
     return;
   }
   // 撒菱など: ターンを消費しないので、行動確定後は普通に行動選択へ戻す(変化の術/鷹を呼ぶと同じ扱い)
@@ -1476,13 +1492,13 @@ function runTreeSkillBody(actor, skill) {
   }
   // 影縫いなど: ターンを消費しない単体スタン。対象を選んでから解決する
   if (action.kind === "stunNoCost") {
-    pickSingleEnemyTarget((target) => {
+    pickSingleEnemyTarget((target) => playSkillCastFx(actor, skill.name, () => {
       playSfx("guard");
       const result = useTreeSkill(actor, target, skill, blog);
       renderBattleScreen();
       if (result && result.stunned) playAttackVfx(target.instanceId, actor, "skill");
       renderActionButtons(actor);
-    });
+    }));
     return;
   }
   // 鬼神化(2026-07-30): 遠征中一度だけの変身。ターンを消費しない(発動後そのまま行動を選べる)
@@ -1588,7 +1604,7 @@ function runTreeSkillBody(actor, skill) {
   // 2体選び終えてから技を1回だけ実行し(MP消費も1回)、演出は乱れ斬りと同じずらし再生
   if (action.pickTargets === 2) {
     pickSingleEnemyTarget((t1) => {
-      pickSingleEnemyTarget((t2) => {
+      pickSingleEnemyTarget((t2) => playSkillCastFx(actor, skill.name, () => {
         playAttackSfxWithSwish(actor.classId);
         const picked = [t1, t2];
         const result = useTreeSkill(actor, picked, skill, blog);
@@ -1615,11 +1631,11 @@ function runTreeSkillBody(actor, skill) {
           if (!maybeSpeakAllDefeated()) maybeSpeakOnCrit(actor, anyCrit);
           maybeCritFollowupThenFinish(actor, anyCrit);
         }, rs.length * STAGGER_MS + 50);
-      });
+      }));
     });
     return;
   }
-  pickSingleEnemyTarget((target) => {
+  pickSingleEnemyTarget((target) => playSkillCastFx(actor, skill.name, () => {
     playAttackSfxWithSwish(actor.classId);
     const result = useTreeSkill(actor, target, skill, blog);
     const r = result && result.dmgs && result.dmgs[0];
@@ -1681,7 +1697,7 @@ function runTreeSkillBody(actor, skill) {
       return;
     }
     triggerShootDownEvents(r && r.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, r && r.crit));
-  });
+  }));
 }
 
 // スキルツリーの単体回復スキル用、味方の対象選択(既存のrenderAllyTargetsは回復薬/治癒の術専用のため別関数にしてある)
@@ -1693,13 +1709,13 @@ function renderTreeSkillAllyPicker(actor, skill) {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
-    btn.onclick = () => {
+    btn.onclick = () => playSkillCastFx(actor, skill.name, () => {
       playSfx("heal");
       const result = useTreeSkill(actor, target, skill, blog);
       if (result && result.healed && result.healed[0]) { popupOn(target.id, `+${result.healed[0].heal}`, "heal"); maybeSpeakHealed(target); }
       renderBattleScreen();
       finishPlayerAction();
-    };
+    });
     grid.appendChild(btn);
   });
   const backBtn = document.createElement("button");
@@ -1718,13 +1734,13 @@ function renderTreeSkillShieldAllyPicker(actor, skill) {
     const btn = document.createElement("button");
     btn.className = "big";
     btn.textContent = `${target.name} (${target.hp}/${target.maxHp})`;
-    btn.onclick = () => {
+    btn.onclick = () => playSkillCastFx(actor, skill.name, () => {
       playSfx("select");
       const result = useTreeSkill(actor, target, skill, blog);
       if (result && result.shielded) popupOn(target.id, `結界+${result.barrierHp}`, "heal");
       renderBattleScreen();
       finishPlayerAction();
-    };
+    });
     grid.appendChild(btn);
   });
   const backBtn = document.createElement("button");
@@ -2081,11 +2097,12 @@ function renderActionButtons(actor) {
             finishPlayerAction();
             return;
           }
-          // 【必殺技キャスト演出(モック案A採用2026-08-01)】基本アビリティ(会心の一撃/治癒の術/
-          // 薙ぎ払い等)もスキルツリー技と同じ気合い発光+技名帯を通してから本体を実行する
-          playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
+          // 【必殺技キャスト演出(モック案A採用2026-08-01)】対象選択がある会心の一撃等は
+          // 「選択してから技名と音」(同日ユーザー指示)のため選択後に、全体技はここで演出。
+          // 治癒の術は味方選択後(resolveAllyTarget)側で演出する
           if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+            playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
             playAttackSfxWithSwish(actor.classId);
             const targetsList = targetableEnemies();
             const result = useAbility(actor, targetsList, ability, blog);
@@ -2114,10 +2131,11 @@ function renderActionButtons(actor) {
             playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
             triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
+            }); // ← 全体技のplaySkillCastFxコールバック閉じ
             return;
           }
-          // 単体系(会心の一撃/奇襲/呪符ノ術など)
-          pickSingleEnemyTarget((target) => {
+          // 単体系(会心の一撃/奇襲/呪符ノ術など): 対象を選んでからキャスト演出→実行
+          pickSingleEnemyTarget((target) => playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
             playAttackSfxWithSwish(actor.classId);
             const result = useAbility(actor, target, ability, blog);
             if (result && result.hit) {
@@ -2134,8 +2152,7 @@ function renderActionButtons(actor) {
             if (result && result.hit) playAttackVfx(target.instanceId, actor, "skill");
             if (result && lastHawkFollowupHappened) playHawkAttackVfx(actor, result.hawkTargetId || target.instanceId); // アビリティが外れても鷹は独立して追撃する。倒した場合は別の対象へ
             triggerShootDownEvents(result && result.shotDown ? [target] : [], () => maybeCritFollowupThenFinish(actor, result && result.crit));
-          });
-          }); // ← playSkillCastFxのコールバック閉じ(必殺技キャスト演出2026-08-01)
+          }));
         };
         attachSkillLongPressTooltip(abBtn, ABILITY_LABEL[ability], ABILITY_DESC[ability]);
         skillButtons.push(abBtn);
@@ -2309,10 +2326,17 @@ document.getElementById("screen-battle").addEventListener("pointerdown", (e) => 
 
 function resolveAllyTarget(actor, kind, target) {
   if (kind === "heal") {
-    playSfx("heal");
-    const result = useAbility(actor, target, "heal", blog);
-    if (result && result.heal) { popupOn(target.id, `+${result.heal}`, "heal"); maybeSpeakHealed(target); }
-  } else if (kind === "hawkGuard") {
+    // 治癒の術は必殺技キャスト演出つき(2026-08-01「対象選択してから技名と音」)
+    playSkillCastFx(actor, ABILITY_LABEL.heal, () => {
+      playSfx("heal");
+      const result = useAbility(actor, target, "heal", blog);
+      if (result && result.heal) { popupOn(target.id, `+${result.heal}`, "heal"); maybeSpeakHealed(target); }
+      renderBattleScreen();
+      finishPlayerAction();
+    });
+    return;
+  }
+  if (kind === "hawkGuard") {
     actor.mp -= HAWK_GUARD_MP_COST;
     actor.hawkGuardTargetId = target.id;
     blog(`${actor.label}の鷹が${target.label}を守るために身構えた！`);
