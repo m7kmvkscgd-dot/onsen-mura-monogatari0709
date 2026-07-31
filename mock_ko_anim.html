@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>戦闘不能演出モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #111; color: #efe6d2; }
+  #bg { position: fixed; inset: 0; background: url('assets/bg/forest_day.jpg') center 32% / cover; }
+  #bg::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,0.12); }
+  /* 画面端の赤ビネット(案B用) */
+  #koVignette { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(120,10,10,0) 52%, rgba(120,10,10,0.55) 100%); }
+
+  .enemy-field { position: absolute; top: 155px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; }
+  .ecard { text-align: center; }
+  .ecard img { width: 110px; height: 110px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+  .ename { font-size: 0.78rem; font-weight: 700; text-shadow: 0 0 6px rgba(0,0,0,0.9); }
+  .ehp { height: 9px; width: 92px; border-radius: 6px; background: rgba(0,0,0,0.55); margin: 3px auto 0; border: 1px solid rgba(255,255,255,0.25); overflow: hidden; }
+  .ehp > div { height: 100%; width: 66%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+
+  #partyBar { position: absolute; left: 50%; transform: translateX(-50%); top: 297px; z-index: 4;
+    width: 100%; max-width: 480px; display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    background: rgba(20,24,27,0.72); justify-content: center; }
+  .pm { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: 10px; padding: 0.25rem; border: 2px solid transparent; }
+  .pm img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; display: block; background: #353a44; }
+  .pm .hb { height: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 4px; }
+  .pm .hb > div { height: 100%; width: 60%; background: linear-gradient(180deg, #7ed67e, #46a95c); }
+  .pm .nm { font-size: 0.72rem; margin-top: 3px; }
+
+  #actions { position: absolute; left: 10px; right: 10px; top: 470px; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  #actions button { font-size: 1.05rem; font-weight: 700; padding: 11px 0; border-radius: 14px; border: 1px solid #8a7648;
+    background: linear-gradient(180deg, #3a3126, #241e16); color: #e8dfcc; pointer-events: none; }
+
+  /* ===== KO演出パーツ ===== */
+  /* 案A: 膝折れフェード(白黒化して沈みながら消える) */
+  @keyframes koKneel {
+    0% { transform: translateY(0) rotate(0); opacity: 1; filter: grayscale(0); }
+    30% { transform: translateY(2px) rotate(2deg); filter: grayscale(0.8); }
+    70% { transform: translateY(8px) rotate(5deg); opacity: 0.75; filter: grayscale(1) brightness(0.75); }
+    100% { transform: translateY(14px) rotate(7deg); opacity: 0; filter: grayscale(1) brightness(0.6); }
+  }
+  /* 案B: 崩れ落ち(横に倒れ込む) */
+  @keyframes koFall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; filter: grayscale(0); }
+    25% { transform: translateY(-4px) rotate(-6deg); filter: grayscale(0.5); }
+    100% { transform: translateY(26px) rotate(78deg); opacity: 0; filter: grayscale(1) brightness(0.55); }
+  }
+  /* 案C: 魂抜け(本体はその場で薄くなり、魂が抜けて昇る) */
+  @keyframes koSoulUp {
+    0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+    25% { transform: translate(-50%, -14px) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -54px) scale(0.9); opacity: 0; }
+  }
+  @keyframes koGhostFade {
+    0% { opacity: 1; filter: grayscale(0); }
+    40% { opacity: 0.85; filter: grayscale(1) brightness(0.8); }
+    100% { opacity: 0; filter: grayscale(1) brightness(0.6); }
+  }
+  @keyframes koHitFlash { 0%, 100% { background: transparent; } 25% { background: rgba(209,60,45,0.35); } }
+  @keyframes koVignettePulse { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes cardCollapse { from { max-width: 95px; opacity: 1; } to { max-width: 0; opacity: 0; padding-left: 0; padding-right: 0; margin: 0; } }
+  @keyframes reserveIn {
+    0% { transform: translateX(70px); opacity: 0; }
+    60% { transform: translateX(-6px); opacity: 1; }
+    80% { transform: translateX(2px); }
+    100% { transform: translateX(0); }
+  }
+  .injury-note { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); z-index: 6; white-space: nowrap;
+    font-size: 0.72rem; font-weight: 900; color: #ffd9c4; text-shadow: 0 0 8px rgba(0,0,0,0.95), 0 2px 3px rgba(0,0,0,0.95);
+    opacity: 0; pointer-events: none; }
+  @keyframes injuryNote { 0% { opacity: 0; transform: translate(-50%, 6px); } 20% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+
+  #ctrl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(14,12,10,0.94);
+    border-top: 1px solid rgba(217,207,184,0.35); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #ctrl .r { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
+  #ctrl button { font-size: 12px; padding: 7px 11px; border-radius: 999px; border: 1px solid rgba(217,207,184,0.4);
+    background: rgba(255,255,255,0.08); color: #d9cfb8; }
+  #ctrl button.on { background: #c9a24a; color: #211a10; border-color: #c9a24a; font-weight: 700; }
+  #ctrl button.play { background: #7ec96f; color: #14260f; border-color: #7ec96f; font-weight: 900; padding: 9px 16px; }
+  #note { font-size: 10.5px; color: rgba(232,223,204,0.65); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="koVignette"></div>
+<div class="enemy-field"><div class="ecard"><div class="ename">野犬</div><img src="assets/enemies/clear/yaken.png"><div class="ehp"><div></div></div></div></div>
+<div id="partyBar"></div>
+<div id="actions"><button>攻撃</button><button>会心の一撃(MP2)</button><button>道具</button><button>交代</button></div>
+<div id="ctrl">
+  <div class="r" id="patChips">
+    <button data-p="A">A: 膝折れフェード</button>
+    <button data-p="B">B: 崩れ落ち+赤ビネット</button>
+    <button data-p="C">C: 魂抜け</button>
+  </div>
+  <div class="r">
+    <span style="font-size:11px;">控え登場までの間:</span>
+    <button data-d="700">0.7秒(現行)</button>
+    <button data-d="1300">1.3秒</button>
+    <button data-d="2000">2秒</button>
+  </div>
+  <div class="r">
+    <button class="play" id="playBtn">▶ 倒れる→控え登場を再生</button>
+    <button id="noteBtn">療養テキスト表示: ON</button>
+  </div>
+  <div id="note">パターンと間を選んで再生。「療養テキスト」は倒れた場所に「温泉療養2日」と一瞬出す案(重傷システムの説明を兼ねる)。決まったら組み合わせを教えてください。</div>
+</div>
+<script>
+const ALLIES = [["assets/class_samurai.png", "小太郎"], ["assets/class_hunter.png", "弥助"], ["assets/class_onmyoji.png", "静"]];
+const RESERVE = ["assets/class_spearman.png", "権六"];
+let pattern = localStorage.getItem("koMockPat") || "A";
+let delayMs = Number(localStorage.getItem("koMockDelay") || 1300);
+let showNote = true;
+let playing = false;
+const $ = (id) => document.getElementById(id);
+
+function buildBar() {
+  $("partyBar").innerHTML = ALLIES.map(([img, name], i) =>
+    `<div class="pm" data-i="${i}"><img src="${img}"><div class="hb"><div></div></div><div class="nm">${name}</div></div>`).join("");
+}
+function renderCtrl() {
+  [...$("patChips").children].forEach((b) => b.classList.toggle("on", b.dataset.p === pattern));
+  [...document.querySelectorAll("[data-d]")].forEach((b) => b.classList.toggle("on", Number(b.dataset.d) === delayMs));
+  $("noteBtn").textContent = `療養テキスト表示: ${showNote ? "ON" : "OFF"}`;
+  $("noteBtn").classList.toggle("on", showNote);
+}
+function play() {
+  if (playing) return;
+  playing = true;
+  buildBar();
+  const victim = document.querySelector('.pm[data-i="1"]');
+  const img = victim.querySelector("img");
+  // 被弾の赤フラッシュは全パターン共通(今の被弾表現の直後から始まる想定)
+  victim.style.animation = "koHitFlash 0.3s ease-out";
+  const KO_MS = pattern === "B" ? 1100 : 1000;
+  setTimeout(() => {
+    if (pattern === "A") img.style.animation = `koKneel ${KO_MS}ms ease-in forwards`;
+    if (pattern === "B") {
+      img.style.animation = `koFall ${KO_MS}ms cubic-bezier(0.5, 0, 0.8, 0.4) forwards`;
+      $("koVignette").style.animation = "koVignettePulse 1.1s ease-out";
+      setTimeout(() => { $("koVignette").style.animation = ""; }, 1150);
+    }
+    if (pattern === "C") {
+      img.style.animation = `koGhostFade ${KO_MS}ms ease-in forwards`;
+      const soul = document.createElement("img");
+      soul.src = "assets/items/soul_shard.png";
+      soul.style.cssText = "position:absolute;left:50%;top:8px;width:26px;z-index:7;filter:drop-shadow(0 0 8px rgba(150,200,255,0.9));";
+      soul.style.animation = `koSoulUp ${KO_MS + 200}ms ease-out forwards`;
+      victim.appendChild(soul);
+    }
+    if (showNote) {
+      const note = document.createElement("div");
+      note.className = "injury-note";
+      note.textContent = "弥助は深手を負った…温泉療養2日";
+      note.style.animation = "injuryNote 1.8s ease-out forwards";
+      document.body.appendChild(note);
+      setTimeout(() => note.remove(), 1900);
+    }
+    // 倒れ演出が終わってからカード枠を畳む→指定の間→控えが走り込む
+    setTimeout(() => {
+      victim.style.animation = `cardCollapse 0.35s ease-in forwards`;
+      setTimeout(() => {
+        victim.remove();
+        setTimeout(() => {
+          const r = document.createElement("div");
+          r.className = "pm";
+          r.innerHTML = `<img src="${RESERVE[0]}"><div class="hb"><div></div></div><div class="nm">${RESERVE[1]}</div>`;
+          r.style.animation = "reserveIn 0.45s cubic-bezier(0.2, 0.8, 0.4, 1)";
+          $("partyBar").appendChild(r);
+          setTimeout(() => { playing = false; }, 600);
+        }, delayMs);
+      }, 360);
+    }, KO_MS + 80);
+  }, 220);
+}
+[...$("patChips").children].forEach((b) => { b.onclick = () => { pattern = b.dataset.p; localStorage.setItem("koMockPat", pattern); renderCtrl(); }; });
+[...document.querySelectorAll("[data-d]")].forEach((b) => { b.onclick = () => { delayMs = Number(b.dataset.d); localStorage.setItem("koMockDelay", delayMs); renderCtrl(); }; });
+$("noteBtn").onclick = () => { showNote = !showNote; renderCtrl(); };
+$("playBtn").onclick = play;
+buildBar();
+renderCtrl();
+</script>
+</body>
+</html>
