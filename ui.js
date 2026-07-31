@@ -1196,6 +1196,9 @@ function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
     if (koImg && typeof koImg.getAnimations === "function") {
       koImg.getAnimations().forEach((a) => { if (a.id === "allyKo") a.cancel(); });
     }
+    // カード畳み(collapseAllyKoCard)の痕跡も掃除する(通常は畳まれたカードは次の再描画で
+    // DOMごと消えるため通らないが、万一使い回された場合の保険)
+    if (card.style.display === "none") { card.style.display = ""; card.style.overflow = ""; card.style.minWidth = ""; }
   }
   // 被弾の揺れ: 敵カード(updateEnemyCard)と同じ扱い。新しい揺れの時だけ剥がして付け直し、
   // 揺れ中の再描画では何もしない=アニメーションを途中で切らず完走させる(フェーズ5で
@@ -1362,7 +1365,10 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
         const log = document.getElementById("battleLog");
         if (row) {
           const firstCard = row.querySelector(".enemy-card");
-          const cardH = firstCard ? Math.round(firstCard.getBoundingClientRect().height) : 170;
+          // offsetHeightで測る(transform無視のレイアウト高さ)。getBoundingClientRectだと
+          // シームレス登場アニメのscale(0.8)中に2割低く測れてしまい、初撃の再描画で
+          // 本来の高さに測り直されて敵行が上へ9pxほど跳ねていた(実機報告2026-08-01)
+          const cardH = firstCard ? firstCard.offsetHeight : 170;
           const logBottom = log ? Math.round(log.getBoundingClientRect().bottom) : 100;
           const desired = Math.round(innerH * 0.26);
           const cardTop = Math.max(logBottom + 6, Math.min(desired, pTop - cardH - 10));

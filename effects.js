@@ -1786,10 +1786,15 @@ function resetSeamlessBattleCamera() {
 // 崩れた姿勢のまま残す(.deadクラスの静的グレースケールへ瞬時に切り替わるより自然なため。
 // カードDOMは差分レンダラーで使い回されるので、戦闘中はアニメ結果がそのまま保持される)
 const ALLY_KO_ANIM_MS = 1500;
-const ALLY_KO_DEPLOY_PAUSE_MS = 700; // 倒れ演出が終わってから控えが走り込むまでの「間」
+const ALLY_KO_SE_DELAY_MS = 500; // 倒れ始めから効果音の開始までの間(ユーザー指定2026-08-01)
+const ALLY_KO_COLLAPSE_MS = 350; // 倒れ演出の後にカードを畳んで消す時間(モックのcardCollapse相当)
+const ALLY_KO_DEPLOY_PAUSE_MS = 700; // カードが畳まれてから控えが走り込むまでの「間」
 function playAllyKoFx(c, noteText) {
   try {
-    playSfx("ally_down"); // アニメ開始と同時に鳴らす(音と動きを合わせる指示)
+    setTimeout(() => { try { playSfx("ally_down"); } catch (e) {} }, ALLY_KO_SE_DELAY_MS);
+    // 演出(倒れ1.5秒+畳み0.35秒)が終わるまでは表示リストに残す猶予(battle.jsの
+    // battleDisplayPartyが参照。これが無いと演出途中の再描画でカードごと消えてしまう)
+    c.__koFxUntil = Date.now() + ALLY_KO_ANIM_MS + ALLY_KO_COLLAPSE_MS;
     const card = document.querySelector(`#battlePartyBar .party-member[data-id="${c.id}"]`);
     const img = card ? card.querySelector("img") : null;
     // 倒れる前に立ち絵を現在のストレス表情へ差し替える(重傷時はhandleFieldDeathsで先に
@@ -1813,10 +1818,27 @@ function playAllyKoFx(c, noteText) {
         { transform: "translateY(12px) rotate(7deg)", filter: "grayscale(1) brightness(0.4)", opacity: 0.85 },
       ], { duration: ALLY_KO_ANIM_MS, easing: "ease-in-out", fill: "forwards" });
       anim.id = "allyKo";
+      // 倒れ切ったらカードを畳んで表示から消す(「倒れたやつが画面に残り続ける」ユーザー指摘
+      // 2026-08-01→モック採用案どおりの挙動へ。cancel時=生存復帰の再描画ではonfinishは飛ばない)
+      anim.onfinish = () => { try { collapseAllyKoCard(card); } catch (e) {} };
     }
     if (noteText) showAllyKoNote(noteText);
   } catch (e) {} // 演出は失敗してもゲーム進行(handleFieldDeaths)を止めない
 }
+// 倒れ演出後のカード畳み: 横幅を0へ縮めながらフェードアウトし、隣のカードが自然に詰まる
+// (次の再描画=控え登場時にbattleDisplayPartyから外れてDOMごと掃除される。それまでの
+// つなぎとしてdisplay:noneにしておく)
+function collapseAllyKoCard(card) {
+  if (!card || !card.isConnected || !card.animate) return;
+  card.style.overflow = "hidden";
+  card.style.minWidth = "0";
+  const a = card.animate([
+    { opacity: 1, width: card.offsetWidth + "px" },
+    { opacity: 0, width: "0px" },
+  ], { duration: ALLY_KO_COLLAPSE_MS, easing: "ease-in", fill: "forwards" });
+  a.onfinish = () => { card.style.display = "none"; };
+}
+
 // 倒れた瞬間に画面中央へ一瞬出す告知テキスト(「◯◯は深手を負った…温泉療養2日」)。
 // 重傷システムのルール説明を兼ねる(モックの「療養テキスト表示」ON採用)。
 // 位置はiOSのvh罠を避けてinnerHeight実測で置く

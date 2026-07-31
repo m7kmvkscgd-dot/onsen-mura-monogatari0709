@@ -228,6 +228,18 @@
   /* svh対応ブラウザ(iOS15.4+)では「バーが出ている時の小さい方の高さ」基準で縮める(実際に
      見える範囲で計算するため実機とエミュレーションの差が出ない)。非対応は上のvh版で動く */
   .enemy-card.frameless img.card-portrait-img { width: min(110px, 26vw, calc(23.2svh - 64px)); height: min(110px, 26vw, calc(23.2svh - 64px)); }
+  /* 【1.3倍化(2026-08-01ユーザー指示「相変わらず小さい、HPバーそのままで1.3倍」)】
+     全員がframelessの敵編成(battle.jsがall-framelessを付ける)だけ、枠が無いのを活かして
+     間隔(gap)と行paddingを最小化し、立ち絵上限を92pxの1.3倍=120pxへ拡大する。
+     1行保証は係数式をやめて厳密式で: カード幅=立ち絵+8px(左右padding2px+透明border2px、
+     borderはターゲット選択リング用に必要)、gap4px×2、行padding4px×2
+     → 3体合計=3×立ち絵+40px ≤ 100vw → 立ち絵 ≤ (100vw-40px)/3
+     (390px→116.7/320px→93.3。実機WebKitで3体1行を検証済み)。旧23.2svh項は味方バー固定top284px化で
+     基準が実測px帯(ログ下端〜284px)に変わり役目を失ったため、このモードでは外す
+     (縦のはみ出しはui.jsのpositionActionsBelowPartyBarのクランプが敵行を上へ寄せて吸収)。
+     木枠カードが1体でも混ざる編成は上の従来式のまま */
+  .enemy-row.all-frameless { gap: 4px; padding-left: 4px; padding-right: 4px; }
+  .enemy-row.all-frameless .enemy-card.frameless img.card-portrait-img { width: min(120px, calc((100vw - 40px) / 3)); height: min(120px, calc((100vw - 40px) / 3)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* 全敵共通の接地影(新美術基準2026-07-31: 透過PNG本体へ影を焼き込まず、ゲーム画面側で統一する)。
      立ち絵の足元に柔らかい楕円をradial-gradientで敷く。z-index:0=立ち絵(z:1)の背面。

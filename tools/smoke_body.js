@@ -149,9 +149,13 @@
   // ロスト(戦闘不能=即ロスト)
   fieldParty[2].hp = 0;
   fieldParty[2].status = "lost";
+  fieldParty[2].__koFxUntil = Date.now() + 60000; // KO演出(倒れ+畳み)中はカードが残る猶予
   renderBattleScreen();
   const c3card = bar.querySelector('.party-member[data-id="c3"]');
-  check("ロストでdeadクラス", c3card && c3card.classList.contains("dead"));
+  check("KO演出中はカードが残りdeadクラス", c3card && c3card.classList.contains("dead"));
+  fieldParty[2].__koFxUntil = 0;
+  renderBattleScreen();
+  check("KO演出後は倒れたカードが表示から消える(2026-08-01仕様)", !bar.querySelector('.party-member[data-id=\"c3\"]'));
 
   console.log("--- フェーズ2: 味方バー差分更新 ---");
   const c1now = bar.querySelector('.party-member[data-id="c1"]');
@@ -223,7 +227,7 @@
   reserveFieldMember = outgoing;
   renderBattleScreen();
   const ids = [...bar.querySelectorAll(".party-member")].map((el) => el.dataset.id).join(",");
-  check("交代で同じ位置に新キャラのカード", ids === "c1,c9,c3", ids);
+  check("交代で同じ位置に新キャラのカード(倒れたc3は表示されない)", ids === "c1,c9", ids);
   check("交代演出のセレクタでカードが引ける", !!document.querySelector('#battlePartyBar .party-member[data-id="c9"]'));
 
   // 式神召喚: 4枚目のカードが末尾に追加される(実イラスト無し=絵文字ポートレート)

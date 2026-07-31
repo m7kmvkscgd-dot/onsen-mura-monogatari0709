@@ -401,7 +401,11 @@ function renderBattleScreen() {
   // 逃走完了(fleeState==="fled")した仲間は、この戦闘の間だけ表示から消える(探索画面に戻れば元通り表示される)
   // 控え(reserveFieldMember)は控えに入っている間は画面上のアイコン表示に含めない(4人編成でも
   // 常時表示されるアイコンは4つのまま。交代ボタンを押した時のピッカーでのみ姿を見せる)
-  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled");
+  // 倒れた(重傷/ロスト)仲間はカードごと表示から外す(KO演出=倒れ→カード畳みが終わるまでは
+  // __koFxUntilの猶予で残し、演出途中の再描画でカードが消し飛ばないようにする。2026-08-01
+  // ユーザー指摘「倒れたやつが画面に残り続ける」→モック採用案どおり畳んで消す挙動へ)
+  const battleDisplayParty = fieldParty.filter((c) => c.fleeState !== "fled" &&
+    (c.status === "active" || (c.__koFxUntil && Date.now() < c.__koFxUntil)));
   renderPartyBar("battlePartyBar", battleDisplayParty, battle.actingId);
   const row = document.getElementById("enemyRow");
   // 【差分更新方式(2026-07-26、iOS演出品質の根本対策)】以前は毎回row.innerHTML=""で全カードを
@@ -418,6 +422,9 @@ function renderBattleScreen() {
   // (raid.js raidTryAdvanceWave参照。通常戦闘では常にundefinedなので従来どおり枠が残る)
   const visibleEnemies = battle.enemies.filter((e) => !(e.swallowedTurns > 0) && !e.__clearedWave);
   row.classList.toggle("crowded", visibleEnemies.length >= 4);
+  // 全員がframeless(透過立ち絵)の敵編成は、枠が無いぶん間隔を詰めて立ち絵自体を大きく表示できる
+  // (battle.cssの.enemy-row.all-framelessサイズ式)。木枠カードが混ざる編成は従来サイズのまま
+  row.classList.toggle("all-frameless", visibleEnemies.length > 0 && visibleEnemies.every((e) => e.frameless));
   // 5体以上の大規模戦は敵カードを味方カード(5人表示)と同格のサイズへ縮小し、折り返さず1行に収める
   // (2026-07-27実機報告: 通常サイズのまま5体並べると2行に折り返してテキストボックスと衝突していた)
   row.classList.toggle("mass-battle", massBattleSizingForced || visibleEnemies.length >= 5);
@@ -958,14 +965,14 @@ function handleFieldDeaths() {
 function autoDeployReserveIfNeeded(newlyLost, onDone) {
   const someoneLost = newlyLost.some((c) => c.status === "lost" || c.status === "injured");
   if (!someoneLost || !reserveFieldMember || reserveFieldMember.status !== "active") {
-    // 誰か倒れたのに控えがいない場合も、倒れ演出(playAllyKoFx、約1.5秒)を見せ切ってから
+    // 誰か倒れたのに控えがいない場合も、倒れ演出(倒れ+カード畳み)を見せ切ってから
     // 戦闘を再開する(演出中に敵が次の行動を始めてしまうと倒れた事実が流れてしまうため)
-    if (someoneLost) { setTimeout(onDone, ALLY_KO_ANIM_MS); return; }
+    if (someoneLost) { setTimeout(onDone, ALLY_KO_ANIM_MS + ALLY_KO_COLLAPSE_MS); return; }
     onDone();
     return;
   }
-  // 倒れ演出(1.5秒)→0.7秒の「間」→控えの走り込み、の順(モックmock_ko_anim.htmlでユーザーが
-  // 「A・0.7秒」を採用2026-08-01。以前は倒れた瞬間に即走り込みで「あっさりしすぎ」との指摘)
+  // 倒れ演出(1.5秒)→カード畳み(0.35秒)→0.7秒の「間」→控えの走り込み、の順(モック
+  // mock_ko_anim.htmlでユーザーが「A・0.7秒」を採用2026-08-01。以前は即走り込みで「あっさりしすぎ」)
   setTimeout(() => {
     const incoming = reserveFieldMember;
     // 「間」の待機中に状況が変わっていないかの再確認(控えが別経路で消えた等の保険)
@@ -984,7 +991,7 @@ function autoDeployReserveIfNeeded(newlyLost, onDone) {
       blog(`控えの${incoming.name}が飛び出してきた！`);
       setTimeout(onDone, 700);
     });
-  }, ALLY_KO_ANIM_MS + ALLY_KO_DEPLOY_PAUSE_MS);
+  }, ALLY_KO_ANIM_MS + ALLY_KO_COLLAPSE_MS + ALLY_KO_DEPLOY_PAUSE_MS);
 }
 
 // ============ 交代の確認ダイアログ+タッグ走り込み演出 ============
