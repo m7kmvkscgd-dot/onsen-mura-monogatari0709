@@ -1920,7 +1920,7 @@ function resetSeamlessBattleCamera() {
 // 崩れた姿勢のまま残す(.deadクラスの静的グレースケールへ瞬時に切り替わるより自然なため。
 // カードDOMは差分レンダラーで使い回されるので、戦闘中はアニメ結果がそのまま保持される)
 const ALLY_KO_ANIM_MS = 1500;
-const ALLY_KO_SE_DELAY_MS = 800; // 倒れ始めから効果音の開始までの間(2026-08-01ユーザー指定、500→800)
+const ALLY_KO_SE_DELAY_MS = 1300; // 倒れ始めから効果音の開始までの間(2026-08-01ユーザー指定、500→800→1300)
 const ALLY_KO_COLLAPSE_MS = 350; // 倒れ演出の後にカードを畳んで消す時間(モックのcardCollapse相当)
 const ALLY_KO_DEPLOY_PAUSE_MS = 700; // カードが畳まれてから控えが走り込むまでの「間」
 function playAllyKoFx(c, noteText) {
