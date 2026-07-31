@@ -1,5 +1,8 @@
 {
   "name": "onsen-smoke-tools",
   "private": true,
-  "dependencies": { "jsdom": "^25.0.0" }
+  "dependencies": {
+    "jsdom": "^25.0.0",
+    "playwright": "^1.62.1"
+  }
 }
