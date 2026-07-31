@@ -82,10 +82,6 @@ function playBattleBgm() {
     playBgm("cave_battle");
     return;
   }
-  // ルートBGM付きのクエスト専用ルート(笑わぬ祭など): ボス戦含む全戦闘で探索と同じ曲を
-  // 頭出しせずそのまま流し続ける(祭囃子が途切れない不気味さを優先。ボス曲より優先)
-  const routeBgm = questRouteBgmKey();
-  if (routeBgm) { playBgm(routeBgm); return; }
   const continuingChase = isContinuingBossChase();
   // 天狗の腕試し(イベント戦)専用BGM。追跡戦は存在しないので毎回頭から再生する
   if (battle && battle.enemies && battle.enemies.some((e) => e.id === "tengu_shiren")) {
@@ -111,6 +107,11 @@ function playBattleBgm() {
     playBgm("boss_battle");
     return;
   }
+  // ルートBGM付きのクエスト専用ルート(笑わぬ祭など): 通常戦闘は探索と同じ曲を頭出しせず
+  // そのまま流し続ける(祭囃子が途切れない不気味さを優先)。ただしボス/中ボス戦は上の分岐が
+  // 先に取り、ちゃんとボス曲を流す(2026-08-01ユーザー指示。旧仕様の「ボス曲より優先」を廃止)
+  const routeBgm = questRouteBgmKey();
+  if (routeBgm) { playBgm(routeBgm); return; }
   // 奉行所の討伐依頼対象(🎯、isQuestTarget)との戦闘専用BGM。中ボス/ボス(isBoss:trueの依頼対象も
   // 含む)は上の2つの分岐で既に処理済みのため、ここに来る時点でボス級ではないと確定している
   if (battle && battle.enemies && battle.enemies.some((e) => e.isQuestTarget)) {

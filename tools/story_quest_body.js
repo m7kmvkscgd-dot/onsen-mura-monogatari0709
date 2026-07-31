@@ -254,7 +254,12 @@
     const bossBgm = instantiateEnemyById("hyakumenshi_utsuro");
     battle = { enemies: [bossBgm], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
     playBattleBgm();
-    check("ボス戦でもルート曲が流れる(ボス曲より優先)", currentBgmKey === "warawanu_matsuri");
+    check("ルート上のボス戦はボス曲を流す(2026-08-01仕様変更)", currentBgmKey === "boss_battle");
+    // 通常戦闘は従来どおりルート曲が途切れず流れ続ける
+    const normalBgm = instantiateEnemyById("yaken");
+    battle = { enemies: [normalBgm], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
+    playBattleBgm();
+    check("ルート上の通常戦闘はルート曲のまま", currentBgmKey === "warawanu_matsuri");
     stopBattleBgm();
     check("戦闘終了でもルート曲は止まらない", currentBgmKey === "warawanu_matsuri");
     currentStage = "forest";
