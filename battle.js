@@ -202,14 +202,16 @@ function startBattle(enemies, pathDef, encounterText) {
       }
     });
   }
-  showScreen("screen-battle");
   // シームレス戦闘遷移(テストモード試行、effects.js参照): 暗転なしで背景1.05倍ズーム+味方バーが
-  // 8px沈みつつ1.05倍(カメラが一歩寄る)。敵の出現もフェード0.8→1.0倍に切り替わる(seamless-entry)。
-  // 本番プレイと襲撃戦は従来どおり(クラスも付かない)
+  // 沈みつつ1.05倍・間隔+4px(カメラが一歩寄る)。敵の出現もフェード0.8→1.0倍に切り替わる(seamless-entry)。
+  // 画面共通のフェードイン(screenFadeIn)も今回だけ抑止する=切替時に一瞬暗く見えていた正体(実機報告)。
+  // showScreenより前に仕込む必要があるためこの位置。本番プレイと襲撃戦は従来どおり(クラスも付かない)
   const seamlessEntry = typeof testModeActive !== "undefined" && testModeActive && !raidBattleActive;
   if (typeof resetSeamlessBattleCamera === "function") resetSeamlessBattleCamera(); // 前の戦闘のズーム残りを掃除
   const battleTopForSeamless = document.querySelector(".battle-top");
   if (battleTopForSeamless) battleTopForSeamless.classList.toggle("seamless-entry", seamlessEntry);
+  document.getElementById("screen-battle").style.animation = seamlessEntry ? "none" : "";
+  showScreen("screen-battle");
   if (seamlessEntry && typeof seamlessBattleCameraIn === "function") seamlessBattleCameraIn();
   playBattleBgm(); // 戦闘専用BGMを開始する(探索中は流れず、戦闘開始の合図として鳴る。森は夜だけ専用曲、海岸はcoast_battle)
   blog(encounterText || (enemies.length > 1 ? `${enemies.map((e) => e.label).join("、")}が現れた！` : `${enemies[0].label}が現れた！`));
@@ -2568,9 +2570,9 @@ function victory() {
       renderTown();
       return;
     }
+    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生(showScreenより前=共通フェードの抑止が効くように)
     showScreen("screen-dungeon");
     renderDungeon();
-    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
   };
 }
 
@@ -2615,9 +2617,9 @@ function escapeBattle() {
   });
   // 逃げても階層は後退させない(以前は里の方向へ1階層分後退していたが、その場に留まる仕様に変更)
   advanceExplorationClock(MINUTES_PER_FLOOR_RETREAT);
+  if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生(showScreenより前=共通フェードの抑止が効くように)
   showScreen("screen-dungeon");
   renderDungeon();
-  if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
 }
 
 function defeat() {

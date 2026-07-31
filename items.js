@@ -170,9 +170,9 @@ function useSmokeBomb(actor) {
     battle = null;
     pendingEnemyPick = null;
     pendingAllyPick = null;
+    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生(showScreenより前=共通フェードの抑止が効くように)
     showScreen("screen-dungeon");
     renderDungeon();
-    if (typeof seamlessDungeonCameraOut === "function") seamlessDungeonCameraOut(); // シームレス入りの戦闘なら逆再生で探索の構図へ戻す
   });
 }
 

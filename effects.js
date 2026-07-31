@@ -1721,6 +1721,9 @@ function openSoulStoryViewer(enemy) {
 // 実装はカード個々ではなく「バー/背景要素のCSS変数」をrAFで直接更新する方式
 // (会心シェイクと同じ。カード個々への常時transformはiOS描画崩れの前科があるため使わない)
 const SEAMLESS_CAM_MS = 650;
+const SEAMLESS_CAM_Y = 13; // 味方バーの沈み量px(8→13、2026-08-01ユーザー指定+5px)
+const SEAMLESS_GAP_FROM = 6.4; // 味方同士の間隔: 探索時0.4rem=6.4px
+const SEAMLESS_GAP_TO = 10.4; // 戦闘中は+4px(2026-08-01ユーザー指定)
 let seamlessBattleUsed = false; // この戦闘がシームレス入りだったか(終了時に逆再生するかの判定)
 function seamlessBattleCameraIn() {
   seamlessBattleUsed = true;
@@ -1733,21 +1736,29 @@ function seamlessBattleCameraIn() {
     const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
     if (bg) bg.style.setProperty("--battle-zoom", String(1 + 0.05 * e));
     if (bar) {
-      bar.style.setProperty("--party-cam-y", `${Math.round(8 * e * 10) / 10}px`);
+      bar.style.setProperty("--party-cam-y", `${Math.round(SEAMLESS_CAM_Y * e * 10) / 10}px`);
       bar.style.setProperty("--party-cam-s", String(1 + 0.05 * e));
+      bar.style.setProperty("--party-gap", `${Math.round((SEAMLESS_GAP_FROM + (SEAMLESS_GAP_TO - SEAMLESS_GAP_FROM) * e) * 10) / 10}px`);
     }
     if (t < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
-// 戦闘終了後の逆再生。探索画面へ切り替わった直後に呼ぶ(シームレス入りの戦闘だった時だけ動く)。
-// まず探索側の背景/味方バーを「寄った状態」に同期的にセットしてから、650msで元へ戻す
+// 戦闘終了後の逆再生。戦闘終了処理がshowScreen("screen-dungeon")の【直前】に呼ぶ(シームレス入りの
+// 戦闘だった時だけ動く)。①探索画面の共通フェードイン(screenFadeIn)を今回だけ抑止し(=これが
+// 「一瞬の暗転」に見えていた)、②探索側の背景/味方バーを「寄った状態」に同期セットしてから650msで戻す
 function seamlessDungeonCameraOut() {
   if (!seamlessBattleUsed) return;
   seamlessBattleUsed = false;
+  const screenEl = document.getElementById("screen-dungeon");
+  if (screenEl) screenEl.style.animation = "none"; // 共通のscreenFadeInを今回だけ止める(後で戻す)
   const inner = document.getElementById("dungeonBgInner");
   const bar = document.getElementById("dungeonPartyBar");
-  if (bar) { bar.style.setProperty("--party-cam-y", "8px"); bar.style.setProperty("--party-cam-s", "1.05"); }
+  if (bar) {
+    bar.style.setProperty("--party-cam-y", `${SEAMLESS_CAM_Y}px`);
+    bar.style.setProperty("--party-cam-s", "1.05");
+    bar.style.setProperty("--party-gap", `${SEAMLESS_GAP_TO}px`);
+  }
   if (inner) inner.style.transform = "scale(1.05)";
   const t0 = performance.now();
   const tick = (now) => {
@@ -1757,14 +1768,17 @@ function seamlessDungeonCameraOut() {
     if (inner) inner.style.transform = t < 1 ? `scale(${s})` : "";
     if (bar) {
       if (t < 1) {
-        bar.style.setProperty("--party-cam-y", `${Math.round(8 * (1 - e) * 10) / 10}px`);
+        bar.style.setProperty("--party-cam-y", `${Math.round(SEAMLESS_CAM_Y * (1 - e) * 10) / 10}px`);
         bar.style.setProperty("--party-cam-s", String(1 + 0.05 * (1 - e)));
+        bar.style.setProperty("--party-gap", `${Math.round((SEAMLESS_GAP_TO - (SEAMLESS_GAP_TO - SEAMLESS_GAP_FROM) * e) * 10) / 10}px`);
       } else {
         bar.style.removeProperty("--party-cam-y");
         bar.style.removeProperty("--party-cam-s");
+        bar.style.removeProperty("--party-gap");
       }
     }
     if (t < 1) requestAnimationFrame(tick);
+    else if (screenEl) screenEl.style.animation = ""; // 次回以降の画面切替は通常のフェードに戻す
   };
   requestAnimationFrame(tick);
 }

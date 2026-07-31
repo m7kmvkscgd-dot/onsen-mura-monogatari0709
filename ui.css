@@ -92,7 +92,8 @@
        iOSでポップアップ描画が壊れる前科があるため厳禁(バーは元々常時transform持ちなので安全) */
     transform: translateX(-50%) translateY(var(--party-cam-y, 0px)) scale(var(--party-cam-s, 1));
     width: 100%; max-width: 480px; z-index: 4;
-    display: flex; gap: 0.4rem; padding: 0.7rem 0.6rem;
+    /* --party-gap: シームレス戦闘遷移が戦闘中だけ間隔を広げる用(未設定時は従来の0.4rem) */
+    display: flex; gap: var(--party-gap, 0.4rem); padding: 0.7rem 0.6rem;
     background: rgba(20,24,27,0.72); justify-content: center;
   }
   /* transform:translateZ(0)を常時ではなく.acting/:active等の個別状態だけに限定してある。
