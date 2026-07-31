@@ -83,26 +83,16 @@
         <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
         <span>製作者より</span>
       </button>
-      <!-- 開発用テストモード(2026-07-27): 侍/狩人/陰陽師+控え槍士(全Lv1)で即・深淵の森へ出発。
-           セーブは一切書き込まず(saveStateが無効化される)、帰還/全滅でタイトルに戻る -->
-      <button class="title-menu-btn" id="titleTestBtn" style="opacity:0.65;">
-        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
-        <span>テストモード</span>
-      </button>
-      <!-- ボステスト(2026-07-31、大規模戦テストを置き換え): 味方4枠(職業/レベル/型/装備)と
-           敵(ボス+お供)を自由に組み、敵ステータスをその場調整して即戦闘できる開発用ツール。
-           ボスギミック(gimmicks.js)の発火検証もここで行う -->
-      <button class="title-menu-btn" id="titleBossTestBtn" style="opacity:0.65;">
-        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
-        <span>ボステスト</span>
-      </button>
-      <!-- 襲撃テスト(2026-07-29): 平均レベルだけ指定し、防衛隊の人数/職業/スキル/見張り台・
-           バリケード・投石器の有無を全てランダムに振って即・実際の襲撃戦(raid.js本番ロジック)を
-           開始するテストモード。押すたびに違う組み合わせで試せる(ユーザー指定「サイコロを振る」) -->
-      <button class="title-menu-btn" id="titleRaidTestBtn" style="opacity:0.65;">
-        <svg class="title-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 3 3 6 0 9-3-3-3-6 0-9zM4 13c3-1 6 0 8 2 2-2 5-3 8-2-1 4-4 8-8 9-4-1-7-5-8-9z"/></svg>
-        <span>襲撃テスト(サイコロ)</span>
-      </button>
+      <!-- 開発用テストボタン群(2026-07-31に小型2列グリッドへ整理。本編4ボタンが窮屈になったため)。
+           テストモード=固定パーティで即・森へ / ボステスト=味方と敵を組んで即戦闘+ギミック検証 /
+           襲撃テスト=設定を振って即・襲撃戦 / クエストテスト=奉行所依頼を抽選なしで即受注→出発。
+           全てtestModeActiveでセーブ保護、終了はタイトルへリロード -->
+      <div class="title-dev-grid">
+        <button class="title-menu-btn dev" id="titleTestBtn"><span>テストモード</span></button>
+        <button class="title-menu-btn dev" id="titleBossTestBtn"><span>ボステスト</span></button>
+        <button class="title-menu-btn dev" id="titleRaidTestBtn"><span>襲撃テスト</span></button>
+        <button class="title-menu-btn dev" id="titleQuestTestBtn"><span>クエストテスト</span></button>
+      </div>
     </div>
     <div class="title-footer">Ver 1.0　© 温泉村物語</div>
   </div>
@@ -202,6 +192,29 @@
       <textarea id="bossTestExportArea" style="display:none;"></textarea>
       <button class="big" id="bossTestCopyBtn" style="display:none;">JSONをコピー</button>
       <button class="big title-sub-back-btn" id="bossTestBackBtn">戻る</button>
+    </div>
+  </div>
+
+  <!-- クエストテスト(2026-07-31): 奉行所の依頼を日替わり張り出し抽選を待たずに即受注して出発する
+       開発用ツール。物語クエスト(専用ルート/フレーバー/口上/魂の回想/完了文)の通し検証が主目的。
+       味方はボステストと同じ設定(bossTestConfig)を共用する -->
+  <div class="screen" id="screen-quest-test">
+    <div class="title-sub-bg" style="background-image:url('assets/title/title_bg.webp')"></div>
+    <div class="title-sub-panel">
+      <h1>クエストテスト</h1>
+      <p class="title-setting-caption">奉行所の依頼を張り出し抽選なしで即受注して出発します(契約金なし)。専用ルート付き依頼(🛤)は物語演出の通し確認ができます。味方はボステストと同じ設定を使います。</p>
+      <div class="title-setting-row">
+        <span>依頼</span>
+        <select class="title-select" id="questTestSelect" style="flex:1;margin-left:8px;text-align:left;text-align-last:left;"></select>
+      </div>
+      <div class="block-label">味方(上から3人が戦闘参加、4枠目は控え)</div>
+      <div id="questTestAllyRows"></div>
+      <div class="title-setting-row">
+        <span>装備(武器/防具)</span>
+        <button class="title-toggle-btn" id="questTestEquipToggle"></button>
+      </div>
+      <button class="big primary" id="questTestStartBtn" style="margin-top:1rem;">🏯 受注して出発</button>
+      <button class="big title-sub-back-btn" id="questTestBackBtn">戻る</button>
     </div>
   </div>
 

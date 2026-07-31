@@ -125,8 +125,27 @@
       if (viewer.style.display !== "none") return;
       clearInterval(waitE);
       check("最後のタップで閉じる", true);
-      console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
-      window.__failed = failed;
+      runQuestTesterCase();
     }, 120);
+  }
+
+  // F: クエストテスト(タイトルの開発ツール)。抽選なしで受注→出発し、1層目のフレーバーまで流れる
+  function runQuestTesterCase() {
+    console.log("--- F: クエストテスターとタイトル整理 ---");
+    check("タイトルのdevグリッドに4ボタン", document.querySelectorAll(".title-dev-grid .title-menu-btn").length === 4);
+    check("クエストテストボタンがある", !!document.getElementById("titleQuestTestBtn"));
+    battle = null;
+    renderQuestTestScreen();
+    const sel = document.getElementById("questTestSelect");
+    check("依頼リストの先頭は専用ルート付き", sel.value === "amayome_shiranui", sel.value);
+    check("味方枠4つが出る", document.querySelectorAll("#questTestAllyRows .boss-test-slot").length === 4);
+    document.getElementById("questTestStartBtn").onclick();
+    check("受注状態が本番と同じ形で作られる", state.acceptedQuest && state.acceptedQuest.questKey === "amayome_shiranui" && state.acceptedQuest.route === "suzunari" && state.acceptedQuest.contractFee === 0);
+    check("専用ルートへ出発する", currentStage === "questroute" && currentQuestRouteId === "suzunari" && currentFloor === 1);
+    check("3人+控え1で出発する", fieldParty.length === 3 && !!reserveFieldMember);
+    check("1層目のフレーバーが流れる", dungeonLogLines.some((l) => l.includes("峠の奥から始まっていた")));
+    check("テストモードでセーブ保護される", testModeActive === true);
+    console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
+    window.__failed = failed;
   }
 })();

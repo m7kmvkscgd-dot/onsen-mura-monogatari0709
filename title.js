@@ -615,6 +615,76 @@ document.getElementById("bossTestCopyBtn").onclick = () => {
   }).catch(() => { document.execCommand("copy"); });
 };
 
+// ============ クエストテスト(2026-07-31) ============
+// 奉行所の依頼を日替わり張り出し抽選を待たずに即受注→出発する開発用ツール。物語クエスト
+// (専用ルートのフレーバー/口上/魂の回想/完了文)を通しで検証するのが主目的。
+// 味方はボステストと同じ設定(bossTestConfig.allies/equipOn)と生成関数を共用し、
+// 出発は本番と同じ受注状態(state.acceptedQuest)を作ってenterDungeon()を呼ぶだけ
+// (=区間解決・確定戦闘・失敗精算・リザルトまで全て本番ロジック。契約金は0)
+function renderQuestTestScreen() {
+  const sel = document.getElementById("questTestSelect");
+  if (sel.options.length === 0) {
+    // 専用ルート付き(物語クエスト)を先頭グループに出す
+    const keys = Object.keys(QUEST_DEFS);
+    const withRoute = keys.filter((k) => QUEST_DEFS[k].route);
+    const withoutRoute = keys.filter((k) => !QUEST_DEFS[k].route);
+    [...withRoute, ...withoutRoute].forEach((k) => {
+      const d = QUEST_DEFS[k];
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = `${d.emoji} ${d.title}${d.route ? " 🛤" : ""}`;
+      sel.appendChild(opt);
+    });
+    if (withRoute.length > 0) sel.value = withRoute[0];
+  }
+  const allyWrap = document.getElementById("questTestAllyRows");
+  allyWrap.innerHTML = "";
+  bossTestConfig.allies.forEach((_, idx) => allyWrap.appendChild(bossTestBuildAllyRow(idx)));
+  const equipBtn = document.getElementById("questTestEquipToggle");
+  equipBtn.textContent = bossTestConfig.equipOn ? "ON" : "OFF";
+  equipBtn.classList.toggle("is-on", bossTestConfig.equipOn);
+}
+document.getElementById("titleQuestTestBtn").onclick = () => {
+  playSfx("select");
+  renderQuestTestScreen();
+  showScreen("screen-quest-test");
+};
+document.getElementById("questTestBackBtn").onclick = () => {
+  playSfx("select");
+  showScreen("screen-title");
+  renderTitleScreen();
+};
+document.getElementById("questTestEquipToggle").onclick = () => {
+  playSfx("select");
+  bossTestConfig.equipOn = !bossTestConfig.equipOn;
+  const equipBtn = document.getElementById("questTestEquipToggle");
+  equipBtn.textContent = bossTestConfig.equipOn ? "ON" : "OFF";
+  equipBtn.classList.toggle("is-on", bossTestConfig.equipOn);
+};
+document.getElementById("questTestStartBtn").onclick = () => {
+  playSfx("select");
+  const questKey = document.getElementById("questTestSelect").value;
+  const qDef = QUEST_DEFS[questKey];
+  if (!qDef) return;
+  testModeActive = true; // ここから先はセーブ書き込み禁止(実セーブ保護)
+  state = defaultState();
+  if (bossTestConfig.equipOn) bossTestApplyEquipUpgrades(bossTestConfig.allies);
+  const names = [...RAID_TEST_NAMES].sort(() => Math.random() - 0.5);
+  const chars = bossTestConfig.allies.map((spec, i) => createBossTestCharacter(names[i] || `試験隊${i + 1}`, spec.classId, spec.level, spec.tree));
+  state.roster.push(...chars);
+  state.activePartyIds = chars.map((c) => c.id); // 4人目はenterDungeon()が控えに回す(本番と同じ)
+  state.pendingSkillChoices = [];
+  state.inventory.potion = 5; // 道中検証用の回復薬
+  // 本番の受注処理(town.js acceptQuest)と同じ形のacceptedQuestを契約金0で作る
+  state.acceptedQuest = {
+    questKey, enemyId: qDef.spawnId || questKey, targetFloor: qDef.targetFloor, count: qDef.count, chasing: false,
+    contractFee: 0, route: qDef.route || null,
+    expireMinutes: qDef.route ? null : absoluteGameMinutes() + QUEST_DEADLINE_DAYS * 24 * 60,
+  };
+  currentStage = qDef.route ? "questroute" : "forest";
+  enterDungeon();
+};
+
 // ============ 襲撃テストモード(2026-07-29、2026-07-29ユーザー指摘で村レベル/防衛設備を指定制に変更) ============
 // 平均レベル・襲撃相手の村レベル・見張り台/バリケード(木の柵)/投石器の有無はユーザーが指定する
 // (当初は全部ランダムにしたが「村レベルは指定させろ・防衛設備の有無もこっちで指定させろ・
