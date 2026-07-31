@@ -91,11 +91,16 @@
        未設定時は従来と完全に同じ(translateX(-50%)のみ)。バー全体に掛ける=カード個々への常時transformは
        iOSでポップアップ描画が壊れる前科があるため厳禁(バーは元々常時transform持ちなので安全) */
     transform: translateX(-50%) translateY(var(--party-cam-y, 0px)) scale(var(--party-cam-s, 1));
+    /* ↓試行その2(2026-08-01ユーザー指示「遭遇のたびに味方が動くのがしつこい」): 旧・戦闘中の
+       カメラ寄り状態(13px下+1.05倍+間隔10.4px)を、探索・戦闘共通の「常時の定位置」として静的に
+       適用する。=遭遇時に味方はもう動かず、探索と戦闘で完全に同じ位置(動くのは背景ズームと
+       敵のフェードのみ)。layout-centerクラスはrenderDungeon/renderBattleScreenが付ける */
     width: 100%; max-width: 480px; z-index: 4;
     /* --party-gap: シームレス戦闘遷移が戦闘中だけ間隔を広げる用(未設定時は従来の0.4rem) */
     display: flex; gap: var(--party-gap, 0.4rem); padding: 0.7rem 0.6rem;
     background: rgba(20,24,27,0.72); justify-content: center;
   }
+  .party-bar.layout-center { --party-cam-y: 13px; --party-cam-s: 1.05; --party-gap: 10.4px; }
   /* transform:translateZ(0)を常時ではなく.acting/:active等の個別状態だけに限定してある。
      常時transformを持たせると要素が独自のスタッキングコンテキスト/合成レイヤーを持ち続けることになり、
      iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の

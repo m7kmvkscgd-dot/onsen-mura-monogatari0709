@@ -1722,25 +1722,21 @@ function openSoulStoryViewer(enemy) {
 // 実装はカード個々ではなく「バー/背景要素のCSS変数」をrAFで直接更新する方式
 // (会心シェイクと同じ。カード個々への常時transformはiOS描画崩れの前科があるため使わない)
 const SEAMLESS_CAM_MS = 650;
-const SEAMLESS_CAM_Y = 13; // 味方バーの沈み量px(8→13、2026-08-01ユーザー指定+5px)
-const SEAMLESS_GAP_FROM = 6.4; // 味方同士の間隔: 探索時0.4rem=6.4px
-const SEAMLESS_GAP_TO = 10.4; // 戦闘中は+4px(2026-08-01ユーザー指定)
+// 味方バーの沈み13px/拡大1.05倍/間隔10.4pxは試行その2で常時の定位置へ昇格し、
+// ui.cssの.party-bar.layout-centerに静的定義として移動した(アニメーションはしない)
 let seamlessBattleUsed = false; // この戦闘がシームレス入りだったか(終了時に逆再生するかの判定)
+// 【試行その2(2026-08-01)】味方バーの移動(沈み/拡大/間隔広げ)は廃止: 「遭遇のたびに味方が動くのが
+// しつこい」というユーザー指摘で、旧・戦闘中のカメラ寄り状態を探索・戦闘共通の常時の定位置へ
+// 静的に昇格した(ui.cssの.party-bar.layout-center)。ここで動かすのは背景ズームだけになった
 function seamlessBattleCameraIn() {
   seamlessBattleUsed = true;
   const bg = document.getElementById("battleBg");
-  const bar = document.getElementById("battlePartyBar");
   const t0 = performance.now();
   const tick = (now) => {
     if (!battle) return; // 演出中に戦闘が終わっていたら中断(後始末はteardown側)
     const t = Math.min(1, (now - t0) / SEAMLESS_CAM_MS);
     const e = 1 - Math.pow(1 - t, 3); // easeOutCubic
     if (bg) bg.style.setProperty("--battle-zoom", String(1 + 0.05 * e));
-    if (bar) {
-      bar.style.setProperty("--party-cam-y", `${Math.round(SEAMLESS_CAM_Y * e * 10) / 10}px`);
-      bar.style.setProperty("--party-cam-s", String(1 + 0.05 * e));
-      bar.style.setProperty("--party-gap", `${Math.round((SEAMLESS_GAP_FROM + (SEAMLESS_GAP_TO - SEAMLESS_GAP_FROM) * e) * 10) / 10}px`);
-    }
     if (t < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -1754,12 +1750,6 @@ function seamlessDungeonCameraOut() {
   const screenEl = document.getElementById("screen-dungeon");
   if (screenEl) screenEl.style.animation = "none"; // 共通のscreenFadeInを今回だけ止める(後で戻す)
   const inner = document.getElementById("dungeonBgInner");
-  const bar = document.getElementById("dungeonPartyBar");
-  if (bar) {
-    bar.style.setProperty("--party-cam-y", `${SEAMLESS_CAM_Y}px`);
-    bar.style.setProperty("--party-cam-s", "1.05");
-    bar.style.setProperty("--party-gap", `${SEAMLESS_GAP_TO}px`);
-  }
   if (inner) inner.style.transform = "scale(1.05)";
   const t0 = performance.now();
   const tick = (now) => {
@@ -1767,17 +1757,6 @@ function seamlessDungeonCameraOut() {
     const e = 1 - Math.pow(1 - t, 3);
     const s = 1.05 - 0.05 * e;
     if (inner) inner.style.transform = t < 1 ? `scale(${s})` : "";
-    if (bar) {
-      if (t < 1) {
-        bar.style.setProperty("--party-cam-y", `${Math.round(SEAMLESS_CAM_Y * (1 - e) * 10) / 10}px`);
-        bar.style.setProperty("--party-cam-s", String(1 + 0.05 * (1 - e)));
-        bar.style.setProperty("--party-gap", `${Math.round((SEAMLESS_GAP_TO - (SEAMLESS_GAP_TO - SEAMLESS_GAP_FROM) * e) * 10) / 10}px`);
-      } else {
-        bar.style.removeProperty("--party-cam-y");
-        bar.style.removeProperty("--party-cam-s");
-        bar.style.removeProperty("--party-gap");
-      }
-    }
     if (t < 1) requestAnimationFrame(tick);
     // 注意: ここでscreenEl.style.animationを""に戻してはいけない(表示中の画面のinline animation:noneを
     // 外すとscreenFadeInが頭から再生されて一瞬暗転する。復元はshowScreen側が次の画面切替時に行う)
