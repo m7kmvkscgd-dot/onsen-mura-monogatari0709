@@ -1160,17 +1160,7 @@ async function playSwapRunIn(incoming, onDone) {
     // ステージ自体は土埃の舞い残り(最大+0.4秒程度)を見せ切ってから待機位置へ戻す
     stage.img.style.opacity = "";
     setTimeout(() => removePortraitFxStage(stage), 420);
-    const bn = document.createElement("span");
-    bn.className = "swap-in-banner";
-    bn.textContent = `${incoming.name}、参上!`;
-    card.appendChild(bn);
-    bn.animate([
-      { transform: "translateX(-50%) scale(0)", opacity: 1 },
-      { transform: "translateX(-50%) scale(1.15)", opacity: 1, offset: 0.25 },
-      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.35 },
-      { transform: "translateX(-50%) scale(1)", opacity: 1, offset: 0.8 },
-      { transform: "translateX(-50%) scale(0.9)", opacity: 0 },
-    ], { duration: 900, easing: "ease-out" }).onfinish = () => bn.remove();
+    // 「◯◯、参上!」バナーは2026-08-01ユーザー指示で廃止(走り込み+土埃+SEの演出はそのまま)
     battleActionLocked = false;
     onDone();
   };
