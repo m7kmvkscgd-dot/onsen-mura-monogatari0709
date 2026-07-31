@@ -1792,6 +1792,17 @@ function playAllyKoFx(c, noteText) {
     playSfx("ally_down"); // アニメ開始と同時に鳴らす(音と動きを合わせる指示)
     const card = document.querySelector(`#battlePartyBar .party-member[data-id="${c.id}"]`);
     const img = card ? card.querySelector("img") : null;
+    // 倒れる前に立ち絵を現在のストレス表情へ差し替える(重傷時はhandleFieldDeathsで先に
+    // ストレス+100済み=発狂顔)。差し替えないと「真顔のまま倒れる」(ユーザー指摘2026-08-01)。
+    // portraitKeyも同期しておかないと、次の再描画(控え登場時)がimgを作り直して
+    // fill:forwardsの崩れ姿勢ごと消してしまう
+    if (img && card && !c.isShikigami && typeof characterPortraitSrc === "function") {
+      const src = characterPortraitSrc(c);
+      if (src && !img.src.endsWith(src)) {
+        img.src = src;
+        card.__portraitKey = `img:${src}`;
+      }
+    }
     if (img && img.animate) {
       // 多重発火の保険(同一戦闘で同じimgに再生済みのKOアニメが残っていたら消してから)
       img.getAnimations().forEach((a) => { if (a.id === "allyKo") a.cancel(); });

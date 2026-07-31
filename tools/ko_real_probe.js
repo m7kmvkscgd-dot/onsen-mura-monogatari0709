@@ -45,6 +45,8 @@ const path = require("path");
   await page.screenshot({ path: path.join("..", "tmp", "ko_real_mid.png") });
   const mid = await page.evaluate(() => ({
     barCards: document.querySelectorAll("#battlePartyBar .party-member").length,
+    victimImg: (document.querySelector('#battlePartyBar .party-member img') || {}).src || "",
+    victimFatigue: fieldParty[0].fatigue,
     noteShown: !!document.querySelector(".ally-ko-note"),
     noteText: (document.querySelector(".ally-ko-note") || {}).textContent || "",
     done: window.__koDone,
@@ -62,6 +64,7 @@ const path = require("path");
     barCards: document.querySelectorAll("#battlePartyBar .party-member").length,
     reserveOnField: fieldParty.some((c) => c.id === "probe_reserve"),
     victimStatus: fieldParty[0] ? fieldParty[0].status : "?",
+    victimImgAfter: (document.querySelector('#battlePartyBar .party-member img') || {}).src || "",
     logTail: (document.getElementById("battleLog").textContent || "").slice(-80),
   }));
   console.log("t=2700ms:", JSON.stringify(after));
