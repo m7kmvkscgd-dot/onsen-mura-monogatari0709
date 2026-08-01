@@ -55,7 +55,8 @@
   #allies { position: absolute; left: 0; right: 0; bottom: 20.5%; z-index: 4; display: flex; justify-content: center; gap: 16px; }
   .hero { position: relative; text-align: center; width: 100px; transition: transform 0.25s ease; }
   .hero img.face { width: 95px; height: 95px; object-fit: contain; display: block; margin: 0 auto;
-    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)); }
+    background: rgba(53,58,68,0.92); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
   .hero .ring { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: 82px; height: 16px;
     border-radius: 50%; border: 2px solid rgba(215,182,111,0); pointer-events: none; }
   .hero.acting { transform: translateY(4px) scale(1.04); }
@@ -132,7 +133,7 @@
     <ul>
       <li><b>基準は森の雑魚戦。</b>画面にあるのは「1行ログ/敵+足元HP/味方+密着バー/札4枚/逃げる」だけ。チップ・カウンタ・サブ文字の類は全部剥がした。</li>
       <li><b>雑魚は128px</b>(現行の約1.25倍)で堂々と立たせる。名前は常設しない。</li>
-      <li><b>味方は箱・帯なしの立ち絵95px。</b>手番は金の輪+わずかな前進+明るさ。</li>
+      <li><b>味方はポートレート枠あり(元UI同様、絵の端切れを枠で隠す)。</b>画面横断の帯は廃止のまま。手番は金の輪+わずかな前進+明るさ。</li>
       <li><b>ボス戦だけ</b>上部に名前+太ゲージが出る(それ以外の装飾なし)。ボス248px+提灯童は手前に小さく。</li>
       <li>タップ演出: 攻撃=対象の足元に赤リング+HP減、技=技名札。</li>
     </ul>
