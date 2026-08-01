@@ -64,8 +64,8 @@
 <script>
 // 所持形見のサンプル。横スクロール確認用に多め。cdDays=その形見固有のクールダウン日数(仕様)、
 // cdLeft=いま冷却中の残り日数(0=使用可)。鏡片と狐面を冷却中にして見え方を確認する
+// 「持って行かない」ボタンは廃止: 選択中の形見をもう一度タップすると解除(ユーザー指定)
 const KATAMI = [
-  { id: "none",     icon: "✖️", name: "持って行かない", effect: "", cdDays: 0, cdLeft: 0 },
   { id: "akao",     icon: "🎗️", name: "花婿の赤緒",   effect: "敵1体を組紐で縛り上げる", cdDays: 2, cdLeft: 0 },
   { id: "kagami",   icon: "🪞", name: "逆月の鏡片",   effect: "次の被弾1回を影が身代わりで受ける", cdDays: 3, cdLeft: 2 },
   { id: "yunohana", icon: "🧴", name: "湯の花の小瓶", effect: "味方1人のHPを癒やし、炎上と毒を洗い流す", cdDays: 1, cdLeft: 0 },
@@ -78,7 +78,7 @@ let selected = "akao";
 function pick(id) {
   const k = KATAMI.find((x) => x.id === id);
   if (k.cdLeft > 0) return; // クールダウン中は選べない
-  selected = id;
+  selected = selected === id ? null : id; // 選択中をもう一度タップ=解除
   render();
 }
 function render() {
@@ -88,7 +88,7 @@ function render() {
       ${k.cdLeft > 0 ? `<span class="cd">あと${k.cdLeft}日</span>` : ""}
     </button>`).join("");
   const sel = KATAMI.find((x) => x.id === selected);
-  document.getElementById("chipEffect").innerHTML = sel.effect
+  document.getElementById("chipEffect").innerHTML = sel
     ? `<strong>${sel.name}</strong>: ${sel.effect} <span class="cd-note">(クールダウン${sel.cdDays}日)</span>`
     : "形見を持たずに出発する";
 }
