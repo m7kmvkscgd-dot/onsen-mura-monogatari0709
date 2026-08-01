@@ -546,7 +546,8 @@ const ENEMIES = {
   chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/clear/chochin_warabe.png", frameless: true, hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
     bigAttack: { name: "提灯の火", mult: 1.1, debuff: { type: "burn", chance: 0.5, turnsMin: 2, turnsMax: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  amayome_shiranui: { id: "amayome_shiranui", ja: "雨嫁・白縫", image: "assets/enemies/amayome_shiranui.png", frameless: true, hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+  // 表示名は2026-08-01のK1改名確定で「雨嫁・白縫」→「鈴鳴の花嫁・お鈴」へ(内部ID/画像パスはセーブ互換のため不変)
+  amayome_shiranui: { id: "amayome_shiranui", ja: "鈴鳴の花嫁・お鈴", image: "assets/enemies/amayome_shiranui.png", frameless: true, hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
     bigAttack: { name: "嫁入りの鈴", mult: 1.4, debuff: { type: "stun", chance: 0.4, turns: 1 } },
     bigAttackCycle: { min: 3, max: 4 },
     statusImmune: ["bleed"],
@@ -559,7 +560,7 @@ const ENEMIES = {
     gimmicks: [
       { id: "akao", name: "花婿の赤緒",
         trigger: { type: "battleStart" },
-        announce: "白縫が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！",
+        announce: "お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！",
         effects: [
           { type: "bindOne", every: 3, turns: 1, name: "花婿の赤緒", text: "赤い組紐が{target}を花婿に見立てて縛り上げた！" },
         ] },
@@ -567,7 +568,7 @@ const ENEMIES = {
       // 廃止し、trigger:"secondForm"=第二形態シーケンス(口上→絵/背景切替→本命BGM)の締めで発動する
       { id: "tomurai", name: "弔いの嫁入り",
         trigger: { type: "secondForm" },
-        announce: "峠に再び強い雨が降り始めた。提灯の灯りが、嫁入り行列となって白縫を取り囲む！",
+        announce: "峠に再び強い雨が降り始めた。提灯の灯りが、嫁入り行列となってお鈴を取り囲む！",
         effects: [
           { type: "summon", every: 3, enemyId: "chochin_warabe", count: 2, maxAlive: 3, immediate: true, text: "提灯童たちが行列に加わった！" },
           { type: "dmgTakenWhileMinions", mult: 0.7 },
@@ -588,8 +589,8 @@ const ENEMIES = {
       gimmickId: "tomurai",
     },
     gimmickNotes: [
-      { name: "花婿の赤緒", trigger: "白縫が銀の鈴を一度鳴らした時に使用する。", effect: "赤い組紐で味方一人を花婿に見立てて縛り、しばらく行動できなくする。仲間が白縫へ攻撃を加えるたびに組紐が緩んでいく。" },
-      { name: "弔いの嫁入り", trigger: "戦いが長引き、峠に再び強い雨が降り始めた時に発動する。", effect: "周囲の灯りが消え、提灯童たちが嫁入り行列として現れる。提灯童が残っている間、白縫は行列に守られ、受ける攻撃の勢いを弱める。" },
+      { name: "花婿の赤緒", trigger: "お鈴が銀の鈴を一度鳴らした時に使用する。", effect: "赤い組紐で味方一人を花婿に見立てて縛り、しばらく行動できなくする。仲間がお鈴へ攻撃を加えるたびに組紐が緩んでいく。" },
+      { name: "弔いの嫁入り", trigger: "戦いが長引き、峠に再び強い雨が降り始めた時に発動する。", effect: "周囲の灯りが消え、提灯童たちが嫁入り行列として現れる。提灯童が残っている間、お鈴は行列に守られ、受ける攻撃の勢いを弱める。" },
     ] },
   // 物語クエスト第2号「影盗り宿の十三号室」(2026-07-31、テキストはCodex産)。専用ルートtsukikage_yado行き、
   // ステータスは鈴鳴峠(amayome_shiranui)と同格のtier1向け初期値、ボステストでの調整前提
@@ -754,8 +755,10 @@ const AILMENT_VFX_ASSIGNMENTS = [
 // (村の日数基準)に入り、冷めるまで出発時に選べない。永久所持で使っても消滅しない。
 // image=nullの間は絵文字(icon)をチップに表示する(イラストはCodex制作、届き次第差し替え)
 const KATAMI_DEFS = {
-  hanayome_akao: { id: "hanayome_akao", ja: "花婿の赤緒", icon: "🎗️", image: "assets/items/katami_akao.png", cdDays: 2, bossId: "amayome_shiranui",
-    desc: "敵1体を赤い組紐で縛り上げ、1ターン行動不能にする" },
+  // 表示名は2026-08-01のK1改名確定で「花婿の赤緒」→「お鈴の結び縄」へ(内部ID/画像パスは不変。
+  // ボスギミック名の「花婿の赤緒」は別物なのでそのまま)
+  hanayome_akao: { id: "hanayome_akao", ja: "お鈴の結び縄", icon: "🎗️", image: "assets/items/katami_akao.png", cdDays: 2, bossId: "amayome_shiranui",
+    desc: "敵1体を結び縄で縛り上げ、1ターン行動不能にする" },
   // 逆月の鏡片はクエスト「影盗り宿の十三号室」の廃案(2026-08-01)に伴い入手経路ごと休眠。
   // 効果コード(items.jsのkatami_kagami/engine.jsのkatamiShadowGuard)は残置=無害。復活はこの行を戻すだけ
   // sakazuki_kagami: { id: "sakazuki_kagami", ja: "逆月の鏡片", icon: "🪞", image: null, cdDays: 3, bossId: "kagegui_sakazuki",
@@ -1981,7 +1984,7 @@ const QUEST_DEFS = {
     text: "鈴鳴峠にて、雨の夜に旅人が消える怪異が続いている。現場には決まって、濡れた白無垢の切れ端と赤い組紐が残されていた。薬草を採りに向かった我が娘・お春も、三日前から戻っておらぬ。峠で目撃される花嫁姿の妖を討ち、行方不明者の手掛かりを探してほしい。",
     completionText: "雨の止んだ峠で、お春を含む行方不明者たちが眠るように倒れているのが見つかった。玄庵は拾われた銀の鈴を、崖際に残る名もない墓へ供えたという。翌朝、その鈴には新しい赤い組紐が結ばれていた。それから鈴鳴峠で、嫁入りの列を見た者はいない。",
     targetFloor: 12, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
-    chaseText: "雨嫁・白縫が追いかけてきた！" },
+    chaseText: "鈴鳴の花嫁・お鈴が追いかけてきた！" },
   // 物語クエスト第2号「影盗り宿の十三号室」は廃案(2026-08-01ユーザー決定、素材は没ファイルフォルダへ)。
   // 奉行所に張り出されないようQUEST_DEFSから外して休眠(敵kagegui_sakazuki/kageboshi・ルート
   // tsukikage_yado・背景tsukikage_*.jpgはデータ残置=無害。復活させる場合はこのブロックを戻すだけ)

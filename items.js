@@ -149,7 +149,7 @@ function useKatami(actor, def) {
     pickSingleEnemyTarget((target) => {
       consumeKatamiUse();
       applyStun(target, 1);
-      blog(`${actor.label}が赤緒を掲げると、組紐が${target.label}へ伸びて縛り上げた！`);
+      blog(`${actor.label}が結び縄を掲げると、縄が${target.label}へ伸びて縛り上げた！`);
       popupOn(target.instanceId, "💫拘束", "stun");
       playSfx("big_attack_warning");
       renderBattleScreen();
