@@ -2917,8 +2917,11 @@ const BATTLE_LAYOUT_OFFSETS = {
           card.style.translate = `${o.x}px ${o.y}px`;
           const img = card.querySelector(".card-portrait-img");
           if (!img) return;
-          img.style.height = (isBossType ? bossH : mobH) + "px";
-          img.style.width = "auto";
+          // 本番CSSと同じ「正方形の器+contain」を保つ(width:autoだと提灯童のような縦長PNGで
+          // カードごと幅が痩せて細長くなる事故。2026-08-02ユーザー報告)
+          const sizePx = (isBossType ? bossH : mobH) + "px";
+          img.style.height = sizePx;
+          img.style.width = sizePx;
           img.style.maxWidth = "none";
           img.style.aspectRatio = "auto";
         });
