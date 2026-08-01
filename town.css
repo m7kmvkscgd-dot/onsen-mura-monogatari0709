@@ -401,7 +401,7 @@
     box-shadow: var(--dw-card-shadow); padding: 14px 16px; margin-bottom: var(--dw-space-card-gap);
   }
   .equip-class-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--dw-heading-color); }
-  .equip-class-title img { width: 32px; height: 32px; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .equip-class-title img { width: 32px; height: 32px; object-fit: contain; background: var(--portrait-bg); border-radius: var(--radius-xs); }
 
   /* 温泉の入浴完了ポップアップ(町画面でのみ表示。checkOnsenReliefPopups参照) */
   .onsen-relief-overlay {
@@ -424,7 +424,7 @@
   }
   .onsen-relief-img {
     width: 64px; height: 64px; object-fit: cover; object-position: top center;
-    background: #353a44; border-radius: var(--radius-sm); flex-shrink: 0;
+    background: var(--portrait-bg); border-radius: var(--radius-sm); flex-shrink: 0;
   }
   .onsen-relief-info { flex: 1; min-width: 0; }
   .onsen-relief-name { font-weight: 700; font-size: 0.88rem; color: var(--dw-heading-color); margin-bottom: 0.3rem; }
@@ -633,7 +633,7 @@
   .building-card.locked { cursor: default; opacity: 0.85; }
   .building-card-icon-wrap, .building-detail-icon-wrap {
     display: flex; align-items: center; justify-content: center; overflow: hidden;
-    border-radius: var(--radius-xs); background: #353a44;
+    border-radius: var(--radius-xs); background: var(--portrait-bg);
   }
   .building-card-icon-wrap { width: 100%; aspect-ratio: 1/1; }
   /* 施設詳細モーダル(#buildingDetailOverlay)内の大きいアイコン。図鑑モーダルの
@@ -645,7 +645,7 @@
   .building-icon-img { width: 100%; height: 100%; object-fit: contain; }
   /* silhouette: 職業雇用画面の未解禁カードと同じ手法。filter:brightness(0)は要素自身の
      background-colorも含めて丸ごと暗くしてしまうため、img自体の背景は透明にし、フィルターの
-     掛からない親(.building-card-icon-wrap、背景#353a44)側で輪郭とのコントラストを出している */
+     掛からない親(.building-card-icon-wrap、背景var(--portrait-bg))側で輪郭とのコントラストを出している */
   .building-icon-img.silhouette { filter: brightness(0); background: transparent; }
   /* 建築可能(未建築)はモノクロで表示し、建築するとカラーになる(2026-07-29ユーザー指示の
      黒塗り→白黒→カラーの3状態)。silhouetteと同じ理由でフィルターはimg/絵文字側にだけ掛ける */

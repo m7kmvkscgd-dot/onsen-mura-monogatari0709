@@ -124,7 +124,7 @@
     letter-spacing: 0.06em; margin: 0 0 0.5rem; text-shadow: 0 1px 6px rgba(0,0,0,0.7);
   }
   .critical-alert-portrait { width: 128px; height: 128px; margin: 0 auto 0.45rem; }
-  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: contain; background: #353a44; border-radius: 8px; }
+  .critical-alert-portrait img { width: 100%; height: 100%; object-fit: contain; background: var(--portrait-bg); border-radius: 8px; }
   .critical-alert-name { text-align: center; font-size: 1.1rem; font-weight: 800; color: #efe2c2; margin: 0 0 0.4rem; }
   .critical-alert-timer { display: flex; align-items: baseline; justify-content: center; gap: 0.35rem; margin: 0 0 0.35rem; }
   .critical-alert-timer-label { font-size: 0.7rem; color: #e08e84; font-weight: 600; }
@@ -624,7 +624,7 @@ body.mining-active #dungeonPartyBar { display: none; }
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 .mining-face img {
-  width: 64px; height: 64px; object-fit: contain; background: #353a44;
+  width: 64px; height: 64px; object-fit: contain; background: var(--portrait-bg);
   border-radius: 10px; border: 2px solid rgba(255,255,255,0.25); display: block;
 }
 .mining-face .nm { font-size: 0.62rem; font-weight: 700; margin-top: 2px; text-align: center; }
@@ -638,7 +638,7 @@ body.mining-active #dungeonPartyBar { display: none; }
 .mining-stress-num { font-size: 0.6rem; font-weight: 900; color: rgba(232,224,208,0.9); margin-top: 1px; text-align: center; white-space: nowrap; }
 .mining-work-row { display: flex; align-items: center; gap: 10px; }
 .mining-work-face { width: 64px; flex-shrink: 0; }
-.mining-work-face img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 10px; border: 2px solid var(--accent); display: block; }
+.mining-work-face img { width: 64px; height: 64px; object-fit: contain; background: var(--portrait-bg); border-radius: 10px; border: 2px solid var(--accent); display: block; }
 .mining-work-btns { flex: 1; min-width: 0; }
 .mining-dig-btn {
   display: block; width: 100%; font-family: inherit; text-align: center;

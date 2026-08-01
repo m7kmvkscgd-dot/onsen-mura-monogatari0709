@@ -1493,7 +1493,7 @@ function showDepartConfirm(stage) {
     row.className = "card";
     row.style.cssText = "display:flex; align-items:center; gap:0.6rem;";
     row.innerHTML = `
-      <img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:#353a44;border-radius:6px;flex-shrink:0;">
+      <img src="${characterPortraitSrc(c)}" style="width:44px;height:44px;object-fit:contain;background:var(--portrait-bg);border-radius:6px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
         <div>${c.name}(${c2.ja} Lv${c.level}・${c.personality || "-"})${isReserve ? ' <span class="status-tag bathing">控え</span>' : ""}</div>
         <div class="hpbar-track"><div class="hpbar-fill${hpRatio < 30 ? " low" : ""}" style="width:${hpRatio}%"></div></div>

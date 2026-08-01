@@ -80,7 +80,7 @@
   .result-xp-row { display: flex; gap: 0.6rem; align-items: flex-start; }
   .result-xp-portrait {
     width: 44px; height: 44px; flex-shrink: 0; object-fit: contain;
-    background: #353a44; border-radius: var(--radius-xs); border: 1px solid rgba(217,196,154,0.35);
+    background: var(--portrait-bg); border-radius: var(--radius-xs); border: 1px solid rgba(217,196,154,0.35);
   }
   .result-xp-row .result-xp-main { flex: 1; min-width: 0; }
   /* レベルアップした瞬間の顔アイコンのきらめき */
@@ -147,7 +147,7 @@
   /* 発言者の顔(ストレス段階に応じた立ち絵がそのまま入る) */
   .homecoming-speaker-img {
     width: 50px; height: 50px; flex-shrink: 0; object-fit: contain;
-    background: #353a44; border-radius: 50%; border: 1px solid rgba(217,196,154,0.5);
+    background: var(--portrait-bg); border-radius: 50%; border: 1px solid rgba(217,196,154,0.5);
   }
   .homecoming-speech-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .homecoming-speaker { color: #d9c49a; margin-right: 0.5em; font-size: 0.85em; }
