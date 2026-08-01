@@ -268,7 +268,8 @@
      (縦のはみ出しはui.jsのpositionActionsBelowPartyBarのクランプが敵行を上へ寄せて吸収)。
      木枠カードが1体でも混ざる編成は上の従来式のまま */
   .enemy-row.all-frameless { gap: 4px; padding-left: 4px; padding-right: 4px; }
-  .enemy-row.all-frameless .enemy-card.frameless img.card-portrait-img { width: min(101px, calc((100vw - 40px) / 3)); height: min(101px, calc((100vw - 40px) / 3)); }
+  /* 上限101→97px(2026-08-01ユーザー実機調整の雑魚戦JSON mobH:97) */
+  .enemy-row.all-frameless .enemy-card.frameless img.card-portrait-img { width: min(97px, calc((100vw - 40px) / 3)); height: min(97px, calc((100vw - 40px) / 3)); }
   .enemy-card.frameless .hp-with-warning { max-width: 92px; margin-left: auto; margin-right: auto; }
   /* 細身/小柄な立ち絵の個体別拡大(--clear-scale、battle.jsのcreateEnemyCardが設定)。
      足元基準で上方向へ育てる=接地位置とHPバーはそのまま、頭側の余白へ伸びる */

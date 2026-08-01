@@ -2827,14 +2827,16 @@ function defeat() {
 // 味方バー/文章枠/コマンド欄/逃げる/歯車=ui.jsのpositionActionsBelowPartyBar。
 // 調整モード(下記initSizeTuner)はこの値を起点に上乗せで動き、JSON書き出しも絶対値になるため、
 // ユーザーから次のJSONが来たらこのテーブルを丸ごと差し替えるだけでよい。
-// ※ユーザー調整時のlogBox:y-147(画面外へ退避)は「文章枠の1行化」(battle.css)として本採用したため0
+// 2026-08-01第2版(ユーザー「雑魚戦のUIはこれで頼む」のJSON): 文章枠は中段(+105)へ、雑魚+18、
+// コマンド-20、逃げるは左下(-274,+577。ログ基準の初期位置からの移動量)。雑魚の立ち絵上限
+// 101→97pxはbattle.cssのall-framelessルール側に焼き込み
 const BATTLE_LAYOUT_OFFSETS = {
   boss: { x: 0, y: 0 },
-  mob: { x: 0, y: 110 },
+  mob: { x: 0, y: 18 },
   partyBar: { x: 0, y: 108 },
-  logBox: { x: 0, y: 0 },
-  commands: { x: 0, y: -30 },
-  flee: { x: 2, y: 66 },
+  logBox: { x: 0, y: 105 },
+  commands: { x: 0, y: -20 },
+  flee: { x: -274, y: 577 },
   gear: { x: 0, y: 0 },
 };
 
@@ -2864,7 +2866,7 @@ const BATTLE_LAYOUT_OFFSETS = {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;"><strong>調整モード(実機・戦闘画面で有効)</strong><button id="tunerMinBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;">最小化</button></div>
       <div id="tunerBody">
         <label style="display:block;">ボス立ち絵の高さ: <span id="tvBoss">150</span>px <input id="tsBoss" type="range" min="100" max="300" value="150" style="width:100%;"></label>
-        <label style="display:block;">雑魚立ち絵の高さ: <span id="tvMob">101</span>px <input id="tsMob" type="range" min="60" max="150" value="101" style="width:100%;"></label>
+        <label style="display:block;">雑魚立ち絵の高さ: <span id="tvMob">97</span>px <input id="tsMob" type="range" min="60" max="150" value="97" style="width:100%;"></label>
         <label style="display:block;">味方カードの幅: <span id="tvAlly">93</span>px <input id="tsAlly" type="range" min="58" max="115" value="93" style="width:100%;"></label>
         <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
           <button id="tunerSummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を左右に出す</button>
