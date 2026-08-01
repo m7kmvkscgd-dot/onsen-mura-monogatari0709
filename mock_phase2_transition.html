@@ -27,7 +27,9 @@
   .bosswrap .nm { font-size: 0.82rem; font-weight: 700; text-shadow: 0 1px 3px #000; margin-top: 2px; }
   .hpbar { width: 190px; height: 12px; border-radius: 99px; background: #3a3a3a; margin: 5px auto 0;
     border: 1px solid rgba(0,0,0,0.75); overflow: hidden; }
-  .hpbar i { display: block; height: 100%; width: 49%; background: #e0a83a; }
+  .hpbar i { display: block; height: 100%; width: 14%; background: #d1503f; }
+  /* 第二形態のHP回復アニメ中は禍々しい光をまとわせる */
+  .hpbar i.refilling { background: linear-gradient(90deg, #7a1f7a, #c04ad1); box-shadow: 0 0 10px rgba(190,80,210,0.8); }
 
   /* 演出レイヤー */
   .blackout { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 4; pointer-events: none; transition: opacity 1s ease; }
@@ -63,7 +65,7 @@
       <div class="bosswrap" id="bosswrap">
         <img id="bossimg" src="assets/enemies/amayome_shiranui.png">
         <div class="nm">鈴鳴の花嫁・お鈴</div>
-        <div class="hpbar"><i></i></div>
+        <div class="hpbar"><i id="bossHpFill"></i></div>
       </div>
       <div class="logbox" id="logbox">HPが50%を切った——(下のボタンで移行演出を再生)</div>
       <div class="vignette" id="vignette"></div>
@@ -123,7 +125,28 @@ function resetAll() {
   resetVisual();
   $("logbox").textContent = "HPが50%を切った——(下のボタンで移行演出を再生)";
 }
+// とどめ演出: HPバーを0へ(即時ドレイン)
+function drainHpToZero() {
+  const f = $("bossHpFill");
+  f.classList.remove("refilling");
+  f.style.transition = "width 0.35s ease";
+  f.style.width = "0%";
+}
+// 第二形態のHP回復: 0→100%を指定時間かけて満たす(禍々しい紫の光つき)
+function refillHp(ms) {
+  return new Promise((resolve) => {
+    const f = $("bossHpFill");
+    f.classList.add("refilling");
+    f.style.transition = `width ${ms}ms ease-in-out`;
+    requestAnimationFrame(() => { f.style.width = "100%"; });
+    setTimeout(() => { f.classList.remove("refilling"); f.style.transition = ""; resolve(); }, ms + 150);
+  });
+}
 function resetVisual() {
+  const f = $("bossHpFill");
+  f.classList.remove("refilling");
+  f.style.transition = "none";
+  f.style.width = "14%";
   $("bg2").style.opacity = "0";
   $("bg1").style.filter = "";
   $("bossimg").src = "assets/enemies/amayome_shiranui.png";
@@ -243,6 +266,11 @@ async function run(pattern) {
     swapToPhase2(); shake(); vignettePulse();
     announce();
   } else if (pattern === 3) {
+    // 採用フロー(2026-08-01改): 1本目のHPを削り切った瞬間に発動する(HP50%発動は廃止)
+    $("logbox").textContent = "とどめの一撃！お鈴のHPが尽きた——";
+    drainHpToZero();
+    shake();
+    await sleep(700);
     intro.pause();
     await sleep(400);
     $("blackout").style.opacity = "1"; // 完全な闇へ
@@ -254,6 +282,8 @@ async function run(pattern) {
     $("blackout").style.opacity = "0";
     thunder.currentTime = 0; thunder.play().catch(() => {}); // 暗転が明けた瞬間にドーン(雷9・頭の無音カット済み)
     shake(); vignettePulse();
+    await sleep(400); // 暗転が「完全に」明けてから(fade 0.35秒+ひと呼吸)
+    await refillHp(2000); // HPバーが0→100%まで約2秒かけて満ちる
     announce();
   } else if (pattern === 4) {
     intro.pause();
