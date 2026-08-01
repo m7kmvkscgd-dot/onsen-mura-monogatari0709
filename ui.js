@@ -1280,8 +1280,29 @@ function updatePartyMemberCard(card, c, isActing, isFreshTurn) {
   }
   nmEl.textContent = `${c.name}${transformDef ? ` ${transformDef.emoji}${transformDef.ja}` : ""}`;
 }
+// ============ 行内レイアウトのFLIPスライド(mock_layout_slide.htmlでユーザー承認2026-08-01) ============
+// 召喚・消滅・並び替えでカードの位置が変わる時、既存カードを旧位置から新位置へ0.43秒で滑らせる
+// (動き出しゆっくりのスローイン曲線はユーザー実機調整)。位置はoffsetLeft/offsetTop(レイアウト座標)で
+// 測る=被弾揺れ等のtransform中でも誤検知しない。新規カードは対象外(既存の出現演出.enteringに任せる)。
+// 位置が変わらない通常の再描画ではdx/dy=0で何も起きない=差分更新の原則はそのまま
+function captureRowLayout(row) {
+  const m = new Map();
+  [...row.children].forEach((el) => m.set(el, { x: el.offsetLeft, y: el.offsetTop }));
+  return m;
+}
+function playRowLayoutSlide(row, olds) {
+  [...row.children].forEach((el) => {
+    const o = olds.get(el);
+    if (!o || !el.animate) return;
+    const dx = o.x - el.offsetLeft;
+    const dy = o.y - el.offsetTop;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 430, easing: "cubic-bezier(.55,0,.25,1)" });
+  });
+}
 function renderPartyBar(elId, combatants, actingCharId) {
   const bar = document.getElementById(elId);
+  const layoutOlds = captureRowLayout(bar); // FLIPスライド用に描画前のカード位置を記録
   const isFreshTurn = actingCharId != null && lastPartyBarActingId[elId] !== actingCharId;
   lastPartyBarActingId[elId] = actingCharId != null ? actingCharId : null;
   // 影分身/式神で追加の1体が出ている間は、狭いスマホ画面でもカードが収まるよう一回り小さくする。
@@ -1329,6 +1350,7 @@ function renderPartyBar(elId, combatants, actingCharId) {
     }
     prevCard = card;
   });
+  playRowLayoutSlide(bar, layoutOlds); // 式神/分身の追加・消滅・交代の並び直しをスーッと滑らせる
   activateHpTrails(bar);
   combatants.forEach((c) => renderVfxFor(c.id));
 }

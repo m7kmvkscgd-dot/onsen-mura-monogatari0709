@@ -421,14 +421,16 @@ function positionTanzakuBanner(banner, band, anchorRect, extraDrop) {
   banner.style.top = `${Math.max(4, Math.round(anchorRect.top + (extraDrop || 0)) - 105)}px`;
 }
 // 札のスライド(Codexデモ準拠2026-08-01): 上から静かに現れ、短く留まり、下へ抜けながら消える。
-// SKILL_CAST_MS(700ms=技本体の発動タイミング)内に収める。fill:forwardsで終端(opacity0)を保持
+// 表示は900ms(「短くて読めない」との指摘で700msから+0.2秒、同日ユーザー指定。敵の大技予告も同じ時間)。
+// 技本体の発動タイミング(SKILL_CAST_MS=700ms)はそのまま=札の余韻だけが攻撃モーションに少し重なる。
+// fill:forwardsで終端(opacity0)を保持
 function playTanzakuSlide(banner) {
   banner.animate([
     { opacity: 0, transform: "translateY(-9px)" },
-    { opacity: 0.95, transform: "translateY(0)", offset: 0.16 },
-    { opacity: 0.95, transform: "translateY(0)", offset: 0.72 },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.13 },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.78 },
     { opacity: 0, transform: "translateY(6px)" },
-  ], { duration: 700, easing: "ease", fill: "forwards" });
+  ], { duration: 900, easing: "ease", fill: "forwards" });
 }
 // 敵の大技予告の短冊(紫): 構えの瞬間(bigAttackPending=true)にbattle.jsから呼ばれる。
 // 次に来る大技名を敵イラストの右肩に立てる(下端の食い込みはイラスト上端+30pxを基準=モックの敵ボタンと同じ)

@@ -454,6 +454,7 @@ function renderBattleScreen() {
   if (battleTop) battleTop.classList.toggle("layout-center", useCenterLayout);
   if (bpb) bpb.classList.toggle("layout-center", useCenterLayout);
   // 表示対象でなくなったカードだけ取り除く(前の戦闘の残り=instanceIdは全戦闘を通じて一意、または丸呑み中)
+  const rowLayoutOlds = captureRowLayout(row); // FLIPスライド用に描画前のカード位置を記録(除去より前に測る)
   const visibleIds = new Set(visibleEnemies.map((e) => String(e.instanceId)));
   [...row.children].forEach((el) => { if (!visibleIds.has(el.dataset.id)) el.remove(); });
   const newlyDeadForReaction = []; // 撃破リアクションはループを抜けた後にまとめて起動する(下記コメント参照)
@@ -494,6 +495,7 @@ function renderBattleScreen() {
     rollMaterialDropOnDeath(entity, card);
   });
   battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
+  playRowLayoutSlide(row, rowLayoutOlds); // 召喚・枠畳みでカードが動く時だけスーッと滑らせる(FLIP、モック承認2026-08-01)
   activateHpTrails(row);
   fieldParty.forEach((c) => renderVfxFor(c.id));
   battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
