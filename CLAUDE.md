@@ -47,7 +47,7 @@
 - **KO演出**: 倒れSE(1.3秒遅延)+発狂顔切替→膝折れ1.5秒→カード畳み消滅→0.7秒→控え走り込み。療養テキスト表示あり
 - **透過立ち絵は本採用**: 序盤13体+提灯童のENEMIES定義へ焼き込み(frameless+個体spriteScale)。旧TEST_TRANSPARENTテーブル廃止。雑魚サイズは木霊(101px)基準の遠近則、飛行はairborne浮遊+地面影。**納品PNGは下端の半透明ゴミをチェックしてから取り込む**(化け狸で足浮き事故)
 - **シームレス戦闘遷移も本採用**(襲撃戦のみ従来の暗転)
-- **iOS音量問題の標準対処**: audio.volumeはiOSで無効のため、python(miniaudio+lameenc)で音源に焼き込む(タイトルBGM55%・洞窟環境音40%で解消済み。元音源はgit履歴)
+- **iOS音量問題の標準対処(2026-08-02更新)**: audio.volumeはiOSで無効。全BGM/環境音/SEをWeb Audio経由の音量制御へ移行済み(bgm/ambient/openingは各専用AudioContext+MediaElementSource1本、宿泊/野営はAudioBufferSource。**同一AudioContextへの複数MediaElementSource追加は過去2回実機退行の共通形なので厳禁**。AudioContextは4個上限)。opening/cave_ambientは50%/40%焼き込み済みファイル+Gain補正の二段構成(焼き直しはpython miniaudio+lameencで元音源tmp/*_original_backup.mp3から。加工済みへの再加工禁止)。マスター音量0〜10は全チャンネルに乗る。実機確認は2026-08-02移行分がまだ
 - 残り実機確認: 新モーション/シームレス/KO演出の通しプレイ
 
 ## 次回このプロジェクトを再開する時の手順

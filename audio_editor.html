@@ -108,22 +108,30 @@ const BGM_ITEMS = [
   { key: "coast", ja: "海岸の探索(昼)", file: "assets/bgm/coast_bgm.mp3", vol: 1.0 },
   { key: "coast_night", ja: "海岸の探索(夜)", file: "assets/bgm/coast_night_bgm.mp3", vol: 1.0 },
   { key: "coast_battle", ja: "海岸の戦闘", file: "assets/bgm/coast_battle_bgm.mp3", vol: 1.0 },
+  { key: "cave_battle", ja: "洞窟の戦闘", file: "assets/bgm/cave_battle_bgm.mp3", vol: 0.8 },
   { key: "valley", ja: "渓流の探索(昼)", file: "assets/bgm/valley_bgm.mp3", vol: 0.8 },
   { key: "valley_night", ja: "渓流の探索(夜)", file: "assets/bgm/valley_night_bgm.mp3", vol: 0.8 },
   { key: "boss_battle", ja: "ボス戦", file: "assets/bgm/quest_target_battle_bgm.mp3", vol: 0.8 },
   { key: "mid_boss_battle", ja: "中ボス戦", file: "assets/bgm/quest_target_battle_bgm.mp3", vol: 0.8 },
+  { key: "boss_battle_intro", ja: "ボス戦・第一形態", file: "assets/bgm/boss_intro_bgm.mp3", vol: 0.8 },
+  { key: "boss_battle_climax", ja: "ボス戦・第二形態", file: "assets/bgm/yokai_no_shutai.mp3", vol: 0.8 },
   { key: "quest_target_battle", ja: "討伐依頼対象戦(🎯)", file: "assets/bgm/quest_target_only_battle_bgm.mp3", vol: 0.8 },
+  { key: "quest_route_battle", ja: "奉行所ルートの通常戦闘", file: "assets/bgm/quest_route_battle_bgm.mp3", vol: 0.8 },
   { key: "tengu_battle", ja: "天狗の腕試し", file: "assets/bgm/tengu_battle_bgm.mp3", vol: 0.8 },
   { key: "raid_battle", ja: "襲撃戦", file: "assets/bgm/yokai_no_shutai.mp3", vol: 0.8 },
+  { key: "warawanu_matsuri", ja: "笑わぬ祭", file: "assets/bgm/omatsuri_bayashi_bgm.mp3", vol: 0.8 },
+  { key: "kaerazu_tojiyado", ja: "帰らずの湯治宿", file: "assets/bgm/kaerazu_wafuu_horror_bgm.mp3", vol: 0.8 },
 ];
-// 別チャンネル(bgmAudioとは別の<audio>要素)。【注意】iOS実機はJSからの.volume指定を無視するため、
-// このチャンネルの音量変更は現状PCでしか効かない(GainNode移行は過去に事故があり慎重案件)
+// 別チャンネル(bgmAudioとは別経路)。2026-08-02のGainNode/AudioBufferSource移行でiOS実機でも
+// 音量が効くようになった。volは「マスター音量10の時の実効音量」。
+// bakedはファイル自体への焼き込み済み倍率(opening/cave_ambientのみ): ゲーム側のGainは vol÷baked で
+// 掛かるため、試聴も同じ計算(previewGainFor)で「ゲームで実際に聞こえる音量」に合わせる
 const CHANNEL_ITEMS = [
-  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5, ios: true },
-  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5, ios: true },
-  { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45, ios: true },
-  { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, ios: true, max: 1 },
-  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.5, ios: true },
+  { key: "lodging", ja: "宿泊の朝(おはよう曲)", file: "assets/bgm/lodging_bgm.mp3", vol: 0.5 },
+  { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5 },
+  { key: "ambient", ja: "環境音(虫の声/波)", file: "assets/bgm/insect_day.mp3", vol: 0.45 },
+  { key: "cave_ambient", ja: "└ 洞窟内の環境音(最終音量)", file: "assets/bgm/cave_ambient.mp3", vol: 0.4, baked: 0.4, max: 1 },
+  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.5, baked: 0.5 },
 ];
 // 効果音: ゲーム側はSFX_GAIN表(未記載は1.0)。WebAudioのGainNodeなのでiOS実機でも効く。max=2.0
 const SFX_ITEMS = [
@@ -192,11 +200,19 @@ const STORAGE_KEY = "onsen_audio_editor_v1";
 let edits = { bgm: {}, channels: {}, sfx: {} };
 try { edits = Object.assign({ bgm: {}, channels: {}, sfx: {} }, JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}); } catch (e) {}
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(edits)); }
+// 基準値テーブルに存在しないキーの保存済み編集を捨てる(キー改名時に幽霊の編集件数が残らないように。
+// 例: 旧「cave_ambient_ratio」→2026-08-02に「cave_ambient(最終音量)」へ意味ごと変更)
+function pruneUnknownEditKeys() {
+  [["bgm", BGM_ITEMS], ["sfx", SFX_ITEMS], ["channels", CHANNEL_ITEMS]].forEach(([sec, items]) => {
+    Object.keys(edits[sec]).forEach((k) => { if (!items.some((i) => i.key === k)) delete edits[sec][k]; });
+  });
+}
+pruneUnknownEditKeys();
 
 const SECTIONS = [
   { key: "bgm", label: "🎵 BGM", items: BGM_ITEMS, max: 1, note: "実効音量(0〜100%)。ゲーム側は基準0.8×倍率の式だが、ここではキーごとの実際の音量をそのまま編集する。" },
   { key: "sfx", label: "🔔 効果音", items: SFX_ITEMS, max: 2, note: "100%=等倍。200%まで上げられる(WebAudioのゲイン。iOS実機でも効く)。" },
-  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "⚠️このタブの音量は現状iOS実機ではJSから変更できない(PCのみ反映)。変更したい場合はGainNode移行が必要で、過去に事故があるため慎重に相談。" },
+  { key: "channels", label: "📻 その他", items: CHANNEL_ITEMS, max: 1, note: "2026-08-02のWeb Audio移行でiOS実機でも音量変更が効く。値は「マスター音量10の時の実効音量」(ゲーム内0〜10ボタンがこの値にさらに掛かる)。試聴はゲームで実際に聞こえる最終音量。" },
 ];
 let activeSection = "bgm";
 
@@ -209,14 +225,23 @@ function countEdits() {
 }
 
 // ---- 試聴 ----
-const previewAudio = new Audio(); // BGM/チャンネル用(1本を使い回し)
+// BGM/チャンネルの試聴も2026-08-02からWeb Audio(AudioBufferSource+GainNode)経由。
+// 従来のnew Audio()+.volume方式はiPhoneで音量が変わらず(iOSは.volumeを無視)、さらに焼き込み済み
+// ファイル(opening等)に.volumeを重ね掛けしてPCでは二重減衰になっていた。previewGainFor()=
+// vol÷baked でゲーム本番と同じ最終音量になる。長いBGMはデコード結果をキャッシュして再取得しない
+const previewAudio = new Audio(); // フォールバック用(Web Audio非対応環境のみ。1本を使い回し)
 previewAudio.loop = true;
 let previewBtnEl = null;
 let previewRowKey = null;
+let previewToken = 0; // 停止/切替/連打でデコード待ちの古い再生要求を無効化する世代トークン
+let previewSource = null;
+let previewGainNode = null;
+const previewBufferPromises = {}; // file -> Promise<AudioBuffer>(連打時の多重fetch/decode防止つきキャッシュ)
 const AC = window.AudioContext || window.webkitAudioContext;
 const sfxCtx = AC ? new AC() : null;
 const sfxBuffers = {};
 function sfxFile(key) { return `assets/sfx/${key}.${SFX_EXT[key] || "mp3"}`; }
+function previewGainFor(sec, item) { return currentVol(sec, item) / (item.baked || 1); }
 function playSfxPreview(key, gain) {
   if (!sfxCtx) return;
   const start = (buf) => {
@@ -235,6 +260,9 @@ function playSfxPreview(key, gain) {
   else go();
 }
 function stopBgmPreview() {
+  previewToken++; // デコード待ちの開始要求が残っていても鳴らさない
+  if (previewSource) { try { previewSource.stop(); } catch (e) {} previewSource = null; }
+  previewGainNode = null;
   previewAudio.pause();
   if (previewBtnEl) previewBtnEl.classList.remove("playing");
   if (previewBtnEl) previewBtnEl.textContent = "▶";
@@ -244,14 +272,43 @@ function stopBgmPreview() {
 function toggleBgmPreview(btn, sec, item) {
   if (previewRowKey === sec + ":" + item.key) { stopBgmPreview(); return; }
   stopBgmPreview();
-  previewAudio.src = item.file;
-  previewAudio.volume = Math.min(1, currentVol(sec, item));
-  previewAudio.currentTime = 0;
-  previewAudio.play().catch(() => {});
   previewBtnEl = btn;
   previewRowKey = sec + ":" + item.key;
   btn.classList.add("playing");
-  btn.textContent = "⏸";
+  if (!sfxCtx) {
+    // フォールバック(Web Audio非対応環境のみ): 従来の要素試聴。焼き込み分は割れないため近似
+    previewAudio.src = item.file;
+    previewAudio.volume = Math.min(1, currentVol(sec, item));
+    previewAudio.currentTime = 0;
+    previewAudio.play().catch(() => {});
+    btn.textContent = "⏸";
+    return;
+  }
+  btn.textContent = "…"; // デコード待ち表示(キャッシュ済みなら一瞬で⏸になる)
+  const myToken = previewToken;
+  const startBuf = (buffer) => {
+    if (myToken !== previewToken) return; // 待っている間に停止/別の行へ切替済み
+    const source = sfxCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    previewGainNode = sfxCtx.createGain();
+    previewGainNode.gain.value = previewGainFor(sec, item);
+    source.connect(previewGainNode).connect(sfxCtx.destination);
+    source.start(0);
+    previewSource = source;
+    btn.textContent = "⏸";
+  };
+  const go = () => {
+    if (!previewBufferPromises[item.file]) {
+      previewBufferPromises[item.file] = fetch(item.file)
+        .then((r) => r.arrayBuffer())
+        .then((d) => sfxCtx.decodeAudioData(d))
+        .catch((e) => { delete previewBufferPromises[item.file]; throw e; }); // 失敗はキャッシュしない(再タップで再試行)
+    }
+    previewBufferPromises[item.file].then(startBuf).catch(() => { if (myToken === previewToken) stopBgmPreview(); });
+  };
+  if (sfxCtx.state !== "running") sfxCtx.resume().then(go).catch(go);
+  else go();
 }
 
 // ---- 描画 ----
@@ -276,7 +333,8 @@ function render() {
           <button class="reset-one" data-act="reset">戻す</button>
         </div>
         <div class="slider-row">
-          <input type="range" min="0" max="${max}" step="0.05" value="${v}" data-act="slider">
+          <!-- step=0.01: 基準値に0.56/0.96等の1%刻みがあり、0.05刻みだと触れただけで55%/95%へ丸められてしまう -->
+          <input type="range" min="0" max="${max}" step="0.01" value="${v}" data-act="slider">
         </div>
       </div>`;
   }).join("");
@@ -292,9 +350,12 @@ function render() {
       else edits[sec.key][key] = v;
       valEl.textContent = Math.round(v * 100) + "%";
       row.classList.toggle("edited", edits[sec.key][key] != null);
-      // 再生中の試聴へリアルタイム反映
+      // 再生中の試聴へリアルタイム反映(Web Audio経路はGain、フォールバック経路のみ.volume)
       if (sec.key === "sfx") { /* 効果音は次の再生から反映(短いのでそのままでよい) */ }
-      else if (previewRowKey === sec.key + ":" + key) previewAudio.volume = Math.min(1, v);
+      else if (previewRowKey === sec.key + ":" + key) {
+        if (previewGainNode) previewGainNode.gain.value = v / (item.baked || 1);
+        else previewAudio.volume = Math.min(1, v);
+      }
       save();
       refreshCount();
       document.querySelectorAll(".tab").forEach((b, i) => b.classList.toggle("has-edits", Object.keys(edits[SECTIONS[i].key]).length > 0));
@@ -342,6 +403,7 @@ document.getElementById("importDoBtn").onclick = () => {
     const text = document.getElementById("importInput").value.replace(/^\s*\/\/.*$/gm, "");
     const data = JSON.parse(text);
     edits = { bgm: data.bgm || {}, channels: data.channels || {}, sfx: data.sfx || {} };
+    pruneUnknownEditKeys(); // 旧キー(cave_ambient_ratio等)を含む昔のエクスポートを読み込んでも幽霊編集にしない
     save();
     status.textContent = "読み込みました";
     stopBgmPreview();
