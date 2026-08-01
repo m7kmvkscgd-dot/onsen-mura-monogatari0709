@@ -27,17 +27,6 @@ function dmgShakeIntensity(isSkill) {
 // 「出てすぐ消えて読めない」というユーザー指摘を受けて延長した(.dmg-popのCSSアニメーション
 // 時間(battle.css)ともセットで変更すること)
 const POPUP_DISPLAY_MS = 2000;
-// ターン開始時の毒/出血/炎上ダメージは、複数が同時に発生すると1個しかないポップアップ枠を
-// 即座に奪い合い、後から発生した種類にすぐ上書きされて前の数字を読む間もなく消えていた。
-// 種類ごとに間隔を空けて1つずつ表示することで、それぞれ読めるようにする
-const DOT_POPUP_STAGGER_MS = 700;
-function popupDotStack(targetId, dot, burnCls) {
-  const entries = [];
-  if (dot.poison > 0) entries.push({ text: `🦠-${dot.poison}`, cls: "poison" });
-  if (dot.bleed > 0) entries.push({ text: `🩸-${dot.bleed}`, cls: "bleed" });
-  if (dot.burn > 0) entries.push({ text: `🔥-${dot.burn}`, cls: burnCls || "burn" });
-  entries.forEach((e, i) => setTimeout(() => popupOn(targetId, e.text, e.cls), i * DOT_POPUP_STAGGER_MS));
-}
 function popupOn(targetId, text, cls, intensity) {
   const entity = findVfxEntity(targetId);
   if (!entity) return;
@@ -386,9 +375,7 @@ function getSkillBannerSingleton() {
   skillBannerSingleton = wrap;
   return wrap;
 }
-// opts.noBanner: 技名短冊を出さない(発光とSEだけ)。対象選択を伴わない技(全体技/自己バフ等)は
-// 「まだ技名を出さなくていい」(2026-08-01ユーザー指示)ため、こちらを指定する
-function playSkillCastFx(actor, skillName, onRelease, opts) {
+function playSkillCastFx(actor, skillName, onRelease) {
   try {
     const card = findVisibleCard(actor.id);
     const img = card ? card.querySelector("img") : null;
@@ -399,7 +386,6 @@ function playSkillCastFx(actor, skillName, onRelease, opts) {
       { filter: "brightness(1.24) drop-shadow(0 0 7px rgba(255,210,108,0.5))", offset: 0.48 },
       { filter: "brightness(1.04)" },
     ], { duration: 430, easing: "ease-out" });
-    if (!(opts && opts.noBanner)) {
     const banner = getSkillBannerSingleton(); // 2026-08-02以降このシングルトンは味方の技名専用(敵は構え状態のstance-tanzaku)
     const band = banner.querySelector(".band");
     band.textContent = skillName;
@@ -408,7 +394,6 @@ function playSkillCastFx(actor, skillName, onRelease, opts) {
     positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 20);
     // 札アニメは即時開始し、SKILL_CAST_MS(700ms)内に収める(Codexデモ準拠。SEのタイミングは従来どおり180ms)
     if (banner.animate) playTanzakuSlide(banner);
-    }
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
     // 全8職業に個別の専用音あり(薙刀士も2026-08-01に独立)。汎用skill_castは未知の職業/式神系のフォールバック
     const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_naginata", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
@@ -529,17 +514,15 @@ function playEnemyAttackAnim(actor) {
     { transform: "translateY(0) scale(1)" },
   ], { duration: ENEMY_ATK_ANIM_MS, easing: "cubic-bezier(0.3,0.9,0.4,1)" });
 }
-// 大技の赤ビネット+暗転はシングルトン常駐(swap-fx-stageと同じ「温めておく」方針)
+// 大技の赤ビネットはシングルトン常駐(swap-fx-stageと同じ「温めておく」方針)。
+// 旧・暗転要素(big-atk-dim)は2026-08-01の暗転廃止以降どこも付け外ししない死に要素だったため撤去(2026-08-02)
 let bigAtkOverlaySingleton = null;
 function getBigAtkOverlays() {
-  if (bigAtkOverlaySingleton && bigAtkOverlaySingleton.dim.isConnected) return bigAtkOverlaySingleton;
-  const dim = document.createElement("div");
-  dim.className = "big-atk-dim";
+  if (bigAtkOverlaySingleton && bigAtkOverlaySingleton.vign.isConnected) return bigAtkOverlaySingleton;
   const vign = document.createElement("div");
   vign.className = "big-atk-vignette";
-  document.body.appendChild(dim);
   document.body.appendChild(vign);
-  bigAtkOverlaySingleton = { dim, vign };
+  bigAtkOverlaySingleton = { vign };
   return bigAtkOverlaySingleton;
 }
 function playEnemyBigAttackCharge(actor, onImpact) {
@@ -1120,9 +1103,8 @@ function statusIconsFor(entity) {
   if (entity.statMods && entity.statMods.some((m) => m.stat === "atk" && m.mult < 1)) s += statusIconHtml("atkDown");
   if (entity.statMods && entity.statMods.some((m) => m.stat === "def" && m.mult < 1)) s += statusIconHtml("defDown");
   if (entity.statMods && entity.statMods.some((m) => m.stat === "dmgTaken" && m.mult > 1)) s += statusIconHtml("dmgTakenUp");
-  // 大技の構え中(bigAttackPending)は、HPバー横の💢マーク(big-attack-warning-icon)だけで示す。
-  // 以前はここ(状態異常アイコン列)にも三角形の警告SVGを重複して出していたが、
-  // 同じ情報を2箇所で示すのは冗長なため削除した(ユーザー指示)。ツールチップは💢側に統合済み
+  // 大技の構え中(bigAttackPending)はここには何も出さない: 予告は構え状態(赤オーラ+震え+技名短冊、
+  // syncBigAttackStance)が担う(💢アイコンは2026-08-02廃止)
   return s;
 }
 

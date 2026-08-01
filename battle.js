@@ -369,12 +369,12 @@ function updateEnemyCard(card, e) {
   card.classList.toggle("slot-normal", slotTier === "normal");
   card.classList.toggle("dead", dead);
   card.classList.toggle("defeat-hidden", dead);
-  // acting(enemyLunge)のような一回きりのCSSアニメーションは、クラスが「無い→有る」に変わった
+  // 一回きりのCSSアニメーション(かつてのactingホップ等)は、クラスが「無い→有る」に変わった
   // 瞬間だけ再生される(付いたままの再描画では再生されない。以前はカード作り直しのたびに
   // 最初から再生し直されていたが、それはこの差分更新化で直したい症状そのもの)。
   // 【2026-07-31修正】被弾で付いた揺れクラス(hit-shake等)は完走後もカードに残る仕様だが、
   // .enemy-card.hit-shake.hit-flash.hit-shake-*の方が.enemy-card.actingより詳細度が高く、
-  // animationプロパティを取り合って踏み込み(enemyLunge)を上書きしてしまう(=一度でも殴った敵は
+  // animationプロパティを取り合って攻撃モーションを上書きしてしまう(=一度でも殴った敵は
   // 攻撃前のプッシュモーションが二度と出ない実バグ。フェーズ5の「残っても無害」の見落とし)。
   // 手番が付く瞬間(無→有の遷移)に揺れクラスを剥がしてからactingを付けることで毎ターン確実に再生する
   const becomesActing = e.instanceId === battle.actingEnemyId;
@@ -2393,7 +2393,7 @@ document.getElementById("battleFleeBtn").onclick = () => {
   fleeAction(actor);
 };
 
-// 道具メニュー: 回復薬(対象を選ぶ)と煙玉(即・全員離脱)の2択
+// 逃走準備: このターンは行動を消費して構え、次のラウンドの節目で全員逃走が成立する(continueRound側)
 function fleeAction(actor) {
   actor.fleeState = "preparing";
   blog(`${actor.label}は逃走準備を始めた！`);
@@ -2780,11 +2780,7 @@ function victory() {
   };
 }
 
-// レベルアップで選べるスキルツリーがある分だけ、選択待ち(state.pendingSkillChoices)に積む。
-// 以前は戦闘終了直後に強制的に2択オーバーレイを出していたが、1戦で2レベル以上連続で上がった時に
-// 「character.levelを見て記録キーにする」実装だった影響で選択内容の記録が壊れるバグがあったため、
-// 記録は明示的にlevelを渡す形(applySkillChoice参照)に修正した上で、選ぶタイミングも
-// 「宿屋の名簿画面で任意に選ぶ」方式に変更した(openSkillChoiceFor参照)
+// 討伐対象から逃げた時: 依頼を「追跡中」にし、与えたダメージを持ち越して再戦させる
 function markQuestChasingIfFled() {
   if (battle && battle.questKey && state.acceptedQuest && state.acceptedQuest.questKey === battle.questKey) {
     state.acceptedQuest.chasing = true;

@@ -296,16 +296,14 @@
   }
   .enemy-card.frameless.airborne .enemy-portrait-box::after { width: 46%; height: 9px; opacity: 0.75; }
   /* ===== 敵攻撃モーション刷新(2026-08-01、モック案A/C採用)の演出パーツ ===== */
-  /* 大技の溜め中の画面暗転(effects.jsのplayEnemyBigAttackChargeがonを付け外しする) */
-  .big-atk-dim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.3s; }
-  .big-atk-dim.on { background: rgba(0,0,0,0.28); }
   /* 大技着弾の赤ビネット(WAAPIでopacityを振る。常駐シングルトン) */
   .big-atk-vignette { position: fixed; inset: 0; z-index: 41; pointer-events: none; opacity: 0;
     background: radial-gradient(ellipse at center, rgba(120,10,10,0) 55%, rgba(120,10,10,0.5) 100%); }
-  /* 技名の札(effects.jsのplaySkillCastFx/playEnemyBigAttackTanzakuがWAAPIで流す。常駐シングルトン)。
-     2026-08-01夜にCodex比較デモ(codex-image-gallery/public/battle-vfx-direction-test)の#tanzaku仕様へ変更:
-     明朝体の縦書き・黒茶の札+金の細縁・行動キャラの右肩(横-23px/上-105px)・上から現れ下へ抜ける。
-     味方必殺技=金縁の朱札、敵の大技予告=紫の札(.enemy-big)。left/topはJSがカード実測位置から設定する */
+  /* 味方の技名の札(effects.jsのplaySkillCastFxがWAAPIで流す。常駐シングルトン)。
+     Codex比較デモの#tanzaku仕様(2026-08-01): 明朝体の縦書き・黒茶の札+金の細縁・行動キャラの
+     右肩(横-23px/上-85px)・上から現れ下へ抜ける。left/topはJSがカード実測位置から設定する。
+     ※敵の大技の紫短冊は2026-08-02にこのシングルトンから独立し、構え状態の.stance-tanzaku
+     (敵カードの子要素、syncBigAttackStance)へ移行済み */
   .skill-cast-banner { position: fixed; left: 0; top: 0; z-index: 42; pointer-events: none; opacity: 0; }
   .skill-cast-banner .band { display: block; writing-mode: vertical-rl; white-space: nowrap;
     padding: 8px 6px 9px; border: 1px solid #e4c06b; color: #fff4cf;
@@ -531,12 +529,6 @@
      .battle-top.seamless-entryはstartBattleがテストモード時だけ付ける */
   .battle-top.seamless-entry .enemy-card.entering { animation: enemyAppearSeamless 0.7s ease-out; }
   @keyframes enemyAppearSeamless { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-  @keyframes enemyLunge {
-    0% { transform: translateY(0); }
-    35% { transform: translateY(14px); }
-    65% { transform: translateY(-3px); }
-    100% { transform: translateY(0); }
-  }
   /* 大技の構え中(bigAttackPending)の敵。「赤い鼓動」の指定を受けて色は対象選択中と同じ赤系にしたが、
      対象選択のtargetPulse(なだらかな単純パルス)とは違い、「ドクン、ドクン」の二拍子(心拍)の
      揺れ方にすることで、色が同じでも見分けが付くようにしてある */
@@ -553,15 +545,6 @@
   .enemy-debuff-icons:empty { display: none; }
   .hp-with-warning { display: flex; align-items: center; gap: 4px; }
   .hp-with-warning .hpbar-track { flex: 1; }
-  /* イラスト右上(🎯の左隣)に出す💢アイコン(大技構え中の対象敵だけ)。🪽/🎯と同じ絶対配置+
-     ドロップシャドウの意匠に揃えつつ、心拍と合わせて軽く拍動させる */
-  .big-attack-warning-icon { display: inline-flex; font-size: 20px; color: #d95c50; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); animation: bigAttackIconBeat 1s ease-in-out infinite; }
-  .big-attack-warning-icon svg { width: 15px; height: 15px; }
-  @keyframes bigAttackIconBeat {
-    0%, 28%, 60%, 100% { transform: scale(1); }
-    14% { transform: scale(1.3); }
-    42% { transform: scale(1.15); }
-  }
   @keyframes screenWarningFlash {
     0% { opacity: 0; }
     30% { opacity: 1; }

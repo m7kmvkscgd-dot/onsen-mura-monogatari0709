@@ -1605,6 +1605,7 @@ let battleLogShowing = false;
 let battleLogFastForward = false;
 let battleLogWaitTimer = null;
 let battleLogWaitFn = null;
+let battleLogGen = 0; // 戦闘ごとの世代。前の戦闘の文字送り完了コールバックが新戦闘のポンプを乱さないように
 const BATTLE_LOG_MIN_SHOW = 850;
 function updateBattleLogQueueBadge() {
   const el = document.getElementById("battleLog");
@@ -1626,7 +1627,9 @@ function pumpBattleLog() {
   const msg = battleLogQueue.shift();
   updateBattleLogQueueBadge();
   const startedAt = Date.now();
+  const myGen = battleLogGen;
   appendTypewriterLog("battleLog", "battleLogArrow", msg, () => {
+    if (myGen !== battleLogGen) return; // 既に次の戦闘が始まっている(リセット済み)なら何もしない
     const wait = battleLogFastForward ? 0 : Math.max(0, BATTLE_LOG_MIN_SHOW - (Date.now() - startedAt));
     battleLogWaitFn = () => {
       battleLogWaitFn = null;
@@ -1650,6 +1653,7 @@ function fastForwardBattleLog() {
 }
 // 戦闘開始時のリセット(battle.jsのstartBattleから呼ぶ。前の戦闘の残りが次の戦闘に流れ込まないように)
 function resetBattleLogQueue() {
+  battleLogGen++;
   battleLogQueue = [];
   battleLogShowing = false;
   battleLogFastForward = false;

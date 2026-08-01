@@ -64,13 +64,15 @@
     check("VFXフリップブックが敵カード上にある", !!card && !!card.querySelector(".dot-ailment-vfx"));
     check("炎上VFXは加算合成", !!card && !!card.querySelector(".dot-ailment-vfx.blend-screen"));
   }, 500);
-  // 2種類目(毒)の表示中(炎上ステップはVFX完走待ちでmax(700,1320-120)+140=1340ms続くため、
-  // 暗転260ms+1340msの後+400msの時点で確認する)
+  // 2種類目(毒)の表示中に確認する。タイミングは実装定数から動的に計算する(2026-08-02:
+  // 旧テストはVFX尺22ms/コマ時代の固定値1340msを直書きしており、炎上13ms化(2026-08-01)で壊れていた)
+  const vfxMsOf = (id) => { const a = AILMENT_VFX_ASSIGNMENTS.find((x) => x.ailmentId === id); return a ? a.frameCount * a.frameMs : 0; };
+  const stepMsOf = (id) => Math.max(700, vfxMsOf(id) - 120) + 140; // effects.js runStepの式と同じ
   setTimeout(() => {
     const card = document.querySelector(`#enemyRow .enemy-card[data-id="${eC.instanceId}"]`);
     const chip = card && card.querySelector(".dot-stop-chip");
     check("2種類目のチップが毒", !!chip && chip.textContent.includes("毒"), chip && chip.textContent);
-  }, 260 + 1340 + 400);
+  }, 60 + stepMsOf("burn") + 400);
   const finishCheck = setInterval(() => {
     if (!cDone) return;
     clearInterval(finishCheck);
@@ -174,11 +176,12 @@
       enemyAttack = origEnemyAttack;
       tickBurn = origTickBurn;
       tickPoison = origTickPoison;
-      // 炎上ステップの停止はmax(700, 1320-120)+140=1340ms。毒はその後に始まる
-      check("毒の表示は炎上VFXが終わってから", poisonTickAt - burnTickAt >= 1300, `${poisonTickAt - burnTickAt}ms`);
-      // 毒ステップの停止max(700, 981-120)+140=1001ms+明転250ms+行動前600ms=約1850ms後に攻撃
-      check("攻撃は最後のDOT表示+VFX完走+明転の後", attackAt - poisonTickAt >= 1700, `${attackAt - poisonTickAt}ms`);
-      check("攻撃までの合計が演出の総和以上(約3.4秒)", attackAt - burnTickAt >= 3000, `${attackAt - burnTickAt}ms`);
+      // タイミングは実装定数から動的に計算(2026-08-02: 炎上13ms化に固定値が追随していなかったのを修正)
+      const vfxMs = (id) => { const a = AILMENT_VFX_ASSIGNMENTS.find((x) => x.ailmentId === id); return a ? a.frameCount * a.frameMs : 0; };
+      const stepMs = (id) => Math.max(700, vfxMs(id) - 120) + 140;
+      check("毒の表示は炎上VFXが終わってから", poisonTickAt - burnTickAt >= stepMs("burn") - 100, `${poisonTickAt - burnTickAt}ms (期待≧${stepMs("burn") - 100})`);
+      check("攻撃は最後のDOT表示+VFX完走+明転の後", attackAt - poisonTickAt >= stepMs("poison") + 200 + 600 - 150, `${attackAt - poisonTickAt}ms`);
+      check("攻撃までの合計が演出の総和以上", attackAt - burnTickAt >= stepMs("burn") + stepMs("poison") + 200 + 600 - 200, `${attackAt - burnTickAt}ms`);
       console.log(failed === 0 ? "✅ 全テスト通過" : `❌ ${failed}件失敗`);
       window.__failed = failed;
     }, 50);
