@@ -277,7 +277,18 @@ function gimmickDoSummon(eff, owner) {
     }
   }
   if (spawned.length === 0) return false;
-  battle.enemies = battle.enemies.concat(spawned);
+  // 召喚した雑魚はボス(owner)の左右へバランスよく差し込み、ボスが常に列の中央へ残るようにする
+  // (2026-08-01ユーザー指定「ボスは形態変化しても雑魚召喚しても必ず真ん中」)。既存カードは
+  // DOMの並べ替えをしない原則(引き継ぎ文書の地雷リスト6番)のため、新規カードの挿入位置だけで整える
+  spawned.forEach((e) => {
+    const idx = battle.enemies.indexOf(owner);
+    if (idx === -1) { battle.enemies.push(e); return; }
+    const countable = (x) => x !== owner && x.hp > 0 && !x.__clearedWave;
+    const leftCount = battle.enemies.slice(0, idx).filter(countable).length;
+    const rightCount = battle.enemies.slice(idx + 1).filter(countable).length;
+    if (leftCount <= rightCount) battle.enemies.splice(idx, 0, e); // 少ない側=左へ(ボスの直前)
+    else battle.enemies.splice(idx + 1, 0, e); // 右へ(ボスの直後)
+  });
   // 貫き矢の余りダメージ分配など、敵同士の相互参照(__enemyAllies)を新しい配列で配り直す
   battle.enemies.forEach((e) => { e.__enemyAllies = battle.enemies; });
   battle.justAppeared = true; // 新しく作られるカードにだけ出現演出が付く(既存カードは再生されない)
