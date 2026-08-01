@@ -63,7 +63,7 @@
       <button class="good" onclick="spawnAlly(true)">改善: スーッと移動</button>
     </div>
     <div class="row2"><button onclick="location.reload()">↺ リセット</button></div>
-    <p class="note">「スーッと」は既存カードが新しい位置へ0.32秒かけて滑り、新入りは半透明+少し縮んだ状態からふわっと現れます。連打で何体でも追加可(敵は左右交互)。</p>
+    <p class="note">「スーッと」は既存カードが新しい位置へ0.43秒かけて滑り(動き出しはゆっくり→なめらかに加速)、新入りは半透明+少し縮んだ状態からふわっと現れます。連打で何体でも追加可(敵は左右交互)。</p>
   </div>
 </div>
 
@@ -79,13 +79,13 @@ function flipInsert(container, makeCard, insertRef, animate) {
     if (el === card) return;
     const dx = (olds.get(el) ?? el.getBoundingClientRect().left) - el.getBoundingClientRect().left;
     if (Math.abs(dx) > 0.5) {
-      el.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], { duration: 320, easing: "cubic-bezier(.2,.75,.25,1)" });
+      el.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], { duration: 430, easing: "cubic-bezier(.55,0,.25,1)" });
     }
   });
   card.animate([
     { opacity: 0, transform: "translateY(8px) scale(0.9)" },
     { opacity: 1, transform: "translateY(0) scale(1)" },
-  ], { duration: 340, delay: 120, easing: "ease-out", fill: "backwards" });
+  ], { duration: 340, delay: 230, easing: "ease-out", fill: "backwards" });
 }
 let enemySide = 0;
 function spawnEnemy(smooth) {
