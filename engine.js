@@ -1951,13 +1951,13 @@ function rollHit(actor, target, rangeType) {
 
 // ダメージ技共通: 外れたら回避ログだけ出してダメージ無しで返す。rangeTypeは"melee"/"ranged"(飛行の敵への
 // 命中率補正・撃ち落としの判定に使う)。shotDown: 狩人/砲術士が飛行の敵に命中させた時、確率で🪽を解除する
-function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType, isMagic) {
+function rollAttackOrMiss(actor, target, rollFn, log, extraCritRate, rangeType, isMagic, ctx) {
   if (!rollHit(actor, target, rangeType)) {
     log(`${target.label}は${actor.label}の攻撃をかわした！`);
     const hawkTarget = maybeHawkFollowup(actor, target, log); // 本体の攻撃が外れても鷹は独立して追撃する
     return { hit: false, dmg: null, crit: false, hawkTargetId: hawkTarget ? hawkTarget.instanceId : null };
   }
-  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate, null, isMagic);
+  const dmg = applyDamageToTarget(target, rollFn(), log, actor.label, actor, null, extraCritRate, null, isMagic, ctx);
   const crit = lastHitWasCrit; // このヒット固有の会心判定(直後にshotDown等の別処理でlastHitWasCritが上書きされる前に確保する)
   const shotDown = maybeShootDown(actor, target);
   const hawkTarget = maybeHawkFollowup(actor, target, log); // 対象を倒していれば、鷹は別の生存中の敵をランダムに狙う
@@ -2012,7 +2012,7 @@ function performAttack(actor, target, log, opts) {
   // opts.atkMult: 形見「うつろの狐面」の2回攻撃(威力50%×2)など、通常攻撃の1振りの威力を割り引く時に使う。
   // ダメージ式はatkに線形(atk×mitigation)なので、atkに掛ければそのまま威力倍率になる
   const atkMult = (opts && opts.atkMult) || 1;
-  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(Math.max(1, Math.round(effectiveStat(actor, "atk") * atkMult)), effectiveStat(target, "def")), log, undefined, normalAttackRangeType(actor));
+  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(Math.max(1, Math.round(effectiveStat(actor, "atk") * atkMult)), effectiveStat(target, "def")), log, undefined, normalAttackRangeType(actor), undefined, { attackKind: "normal" });
   // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
   if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
   // 狩人「追い討ち」: 出血中の敵への通常攻撃が命中すると、出血スタックを3追加する
@@ -2087,7 +2087,11 @@ function anyOtherAllyGuarding(entity) {
 }
 // ダメージ適用の共通処理。会心判定/被ダメージ軽減/一度だけの生存効果(覚悟・空蝉)/反撃(迎撃)を
 // ここでまとめて処理し、最終的に与えたダメージ量を返す。ログは「静香は鬼火に50ダメージ！」の1行のみ(技名などの装飾は付けない)
-function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName, isMagic) {
+function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, extraCritRate, bigAttackName, isMagic, ctx) {
+  // ctx.attackKind: "normal"=通常攻撃(性能はperformAttack経由のみ)。「通常攻撃時」限定の受動効果
+  // (onHitInflicts/onHitSelfHealPct/onHitLifestealPct/onHitSelfStackBuff)はこれが立っている時だけ発動する。
+  // 従来は技・全体技・ツリー技のダメージでも発動しており、説明文(「通常攻撃時」)と食い違っていた(2026-08-02修正)
+  const isNormalAttackCtx = !!(ctx && ctx.attackKind === "normal");
   logSuffix = logSuffix || "";
   // 【村襲撃/大規模戦】バリケードが立っている間、飛行以外の敵→味方の攻撃は全てバリケードが肩代わりする
   // (ユーザー確定仕様2026-07-27: 全肩代わり。攻撃ごと受け止めるため付随する状態異常も味方には届かない)。
@@ -2336,7 +2340,7 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     actor.nextSkillFreeMp = true;
   }
   // 通常攻撃に乗る状態異常付与の受動効果(毒刃・毒矢など): 攻撃が当たった時に確率判定する。複数選んでいれば全て判定する
-  if (actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
+  if (isNormalAttackCtx && actor && actor.passives && actor.passives.onHitInflicts && target.hp > 0) {
     actor.passives.onHitInflicts.forEach((oh) => {
       // targetSlower条件つき(疾風の出血付与など): 対象が自分より素早さが遅い時だけ判定する
       if (oh.condition === "targetSlower" && !(effectiveStat(actor, "spd") > effectiveStat(target, "spd"))) return;
@@ -2354,17 +2358,17 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
     });
   }
   // 通常攻撃が命中するたび、自分の最大HPの一定割合を回復する(汎用フック、現状未使用)
-  if (actor && actor.passives && actor.passives.onHitSelfHealPct) {
+  if (isNormalAttackCtx && actor && actor.passives && actor.passives.onHitSelfHealPct) {
     const healAmt = Math.max(1, Math.round(actor.maxHp * actor.passives.onHitSelfHealPct));
     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
   }
   // 覇気など: 通常攻撃で与えたダメージの一定割合だけ自分のHPを回復する
-  if (actor && actor.passives && actor.passives.onHitLifestealPct && dmg > 0) {
+  if (isNormalAttackCtx && actor && actor.passives && actor.passives.onHitLifestealPct && dmg > 0) {
     const healAmt = Math.max(1, Math.round(dmg * actor.passives.onHitLifestealPct));
     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
   }
   // 剛槍など: 通常攻撃が命中するたび、自分のステータスが蓄積的に上がる
-  if (actor && actor.passives && actor.passives.onHitSelfStackBuff) {
+  if (isNormalAttackCtx && actor && actor.passives && actor.passives.onHitSelfStackBuff) {
     const b = actor.passives.onHitSelfStackBuff;
     applyStackingStatMod(actor, "onHitSelfStackBuff", b.stat, b.perStack, b.maxStacks, b.turns);
   }
