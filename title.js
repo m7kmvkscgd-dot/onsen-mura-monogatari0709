@@ -560,6 +560,13 @@ document.getElementById("bossTestStartBtn").onclick = () => {
   currentStage = boss.stage || "forest";
   currentFloor = Math.max(1, boss.minFloor || 1);
   retreating = false;
+  // クエストボス(専用ルート持ち)は現地=ルート最終区間(ボスエリア)の背景で戦わせる(ユーザー指摘
+  // 2026-08-01: 鈴鳴峠のボスなのに森で戦っていた)。battleBgOverrideSetは襲撃戦と同じ戦闘背景の
+  // 上書き機構。ボステストの終了は常にlocation.reloadのため後始末は不要
+  const bossQuestDef = typeof QUEST_DEFS !== "undefined" ? QUEST_DEFS[boss.id] : null;
+  const bossRouteDef = bossQuestDef && bossQuestDef.route ? QUEST_ROUTE_DEFS[bossQuestDef.route] : null;
+  const bossAreaSeg = bossRouteDef ? bossRouteDef.segments[bossRouteDef.segments.length - 1] : null;
+  battleBgOverrideSet = bossAreaSeg && BG_SETS[bossAreaSeg.bg] ? BG_SETS[bossAreaSeg.bg] : null;
   updateSceneBackgrounds();
   const enemies = bossTestConfig.enemies.map((id, idx) => {
     if (!id) return null;

@@ -32,6 +32,12 @@ const BG_SETS = {
   yamabushi: { dawn: "assets/bg/yamabushi_dawn.jpg", asa: "assets/bg/yamabushi_asa.jpg", day: "assets/bg/yamabushi_day.jpg", dusk: "assets/bg/yamabushi_dusk.jpg", night: "assets/bg/yamabushi_night.jpg" },
   yamabushiyado: { dawn: "assets/bg/yamabushiyado_dawn.jpg", asa: "assets/bg/yamabushiyado_asa.jpg", day: "assets/bg/yamabushiyado_day.jpg", dusk: "assets/bg/yamabushiyado_dusk.jpg", night: "assets/bg/yamabushiyado_night.jpg" },
   yamabushionsen: { dawn: "assets/bg/yamabushionsen_dawn.jpg", asa: "assets/bg/yamabushionsen_asa.jpg", day: "assets/bg/yamabushionsen_day.jpg", dusk: "assets/bg/yamabushionsen_dusk.jpg", night: "assets/bg/yamabushionsen_night.jpg" },
+  // 物語クエスト「鈴鳴峠の嫁入り」(専用ルートsuzunari)。画像は2026-07-31納品済みだったが
+  // BG_SETSへの登録が漏れており森でフォールバックしていた(ユーザー指摘2026-08-01)。他ルートと同じく昼1枚を全時間帯へ
+  suzunari_sando: { dawn: "assets/bg/suzunari_sando.jpg", asa: "assets/bg/suzunari_sando.jpg", day: "assets/bg/suzunari_sando.jpg", dusk: "assets/bg/suzunari_sando.jpg", night: "assets/bg/suzunari_sando.jpg" },
+  suzunari_chochin: { dawn: "assets/bg/suzunari_chochin.jpg", asa: "assets/bg/suzunari_chochin.jpg", day: "assets/bg/suzunari_chochin.jpg", dusk: "assets/bg/suzunari_chochin.jpg", night: "assets/bg/suzunari_chochin.jpg" },
+  suzunari_chaya: { dawn: "assets/bg/suzunari_chaya.jpg", asa: "assets/bg/suzunari_chaya.jpg", day: "assets/bg/suzunari_chaya.jpg", dusk: "assets/bg/suzunari_chaya.jpg", night: "assets/bg/suzunari_chaya.jpg" },
+  suzunari_gake: { dawn: "assets/bg/suzunari_gake.jpg", asa: "assets/bg/suzunari_gake.jpg", day: "assets/bg/suzunari_gake.jpg", dusk: "assets/bg/suzunari_gake.jpg", night: "assets/bg/suzunari_gake.jpg" },
   // 物語クエスト「影盗り宿の十三号室」(2026-07-31、専用ルートtsukikage_yado)。背景セットは各区間1枚絵(昼)のみ
   // 納品されたため、洞窟(caveBgSetForCurrentState)と同じく5つの時間帯キー全てに同一画像を割り当てる
   tsukikage_shukuba: { dawn: "assets/bg/tsukikage_shukuba.jpg", asa: "assets/bg/tsukikage_shukuba.jpg", day: "assets/bg/tsukikage_shukuba.jpg", dusk: "assets/bg/tsukikage_shukuba.jpg", night: "assets/bg/tsukikage_shukuba.jpg" },
