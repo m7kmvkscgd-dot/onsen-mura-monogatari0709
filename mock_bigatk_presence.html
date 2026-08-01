@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>敵大技の存在感 改善モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #101014; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  h1 { font-size: 0.95rem; padding: 12px; max-width: 430px; margin: 0 auto; }
+  .stage {
+    position: relative; width: 100%; max-width: 430px; height: 560px; margin: 0 auto;
+    background: url("assets/bg/forest_day.jpg") center 35% / cover no-repeat; overflow: hidden;
+  }
+  .stage-inner { position: absolute; inset: 0; } /* 画面揺れはこの層に掛ける */
+  /* 敵(実寸97px) */
+  .enemy { position: absolute; top: 130px; left: 50%; translate: -50% 0; width: 120px; text-align: center; }
+  .enemy .nm { font-size: 0.78rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.9); margin-bottom: 4px; }
+  .enemy .wrap { position: relative; display: inline-block; }
+  .enemy img.sprite { height: 97px; position: relative; z-index: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  .aura {
+    position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%) scale(0.6); width: 150%; height: 120%;
+    opacity: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 50% 62% at 50% 78%, rgba(200,30,20,0.6), rgba(200,30,20,0.22) 55%, transparent 75%);
+  }
+  .enemy .hp { width: 84px; height: 8px; margin: 3px auto 0; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
+  .enemy .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; }
+  /* 味方(実寸93px、帯なし) */
+  .allies { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.4rem; }
+  .ally { width: 93px; text-align: center; position: relative; }
+  .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: rgba(20,24,27,0.72); border-radius: 8px; }
+  .ally .hp { height: 8px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; margin-top: 3px; }
+  .ally .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; transition: width 0.25s; }
+  .ally .nm { font-size: 0.72rem; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  /* 紫短冊(実物と同じ意匠) */
+  .tanzaku {
+    position: absolute; z-index: 8; opacity: 0; pointer-events: none;
+    writing-mode: vertical-rl; white-space: nowrap; padding: 8px 6px 9px;
+    border: 1px solid #b98fe0; color: #f3eaff; background: linear-gradient(#4a1a6e, #1d0a30);
+    box-shadow: 0 0 0 1px rgba(22,10,32,0.75), 0 3px 8px rgba(0,0,0,0.75);
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 14px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em;
+  }
+  /* ダメージポップ */
+  .dmg { position: absolute; font-weight: 900; color: #ff9c8a; text-shadow: 0 0 4px #000, 0 2px 4px #000; pointer-events: none; z-index: 9; animation: dmgUp 0.9s ease-out forwards; }
+  @keyframes dmgUp { 0% { transform: translateY(6px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-30px); opacity: 0; } }
+  /* 赤ビネット */
+  .vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 7;
+    background: radial-gradient(ellipse 75% 75% at center, transparent 55%, rgba(160,10,5,0.55) 100%); }
+  /* 着弾の白閃光(被弾者の上) */
+  .flash { position: absolute; inset: 0; background: rgba(255,240,220,0.9); border-radius: 8px; opacity: 0; pointer-events: none; z-index: 3; }
+  /* カットイン(案B): 敵の拡大立ち絵が紫帯に乗って横切る */
+  .cutin { position: absolute; left: 0; right: 0; top: 150px; height: 150px; z-index: 10; pointer-events: none; overflow: hidden; display: none; }
+  .cutin .band2 { position: absolute; inset: 0; background: linear-gradient(100deg, rgba(30,8,50,0) 0%, rgba(42,12,72,0.9) 18%, rgba(42,12,72,0.9) 82%, rgba(30,8,50,0) 100%); border-top: 1px solid rgba(185,143,224,0.7); border-bottom: 1px solid rgba(185,143,224,0.7); }
+  .cutin img { position: absolute; height: 220px; top: -34px; left: 100%; filter: drop-shadow(0 0 14px rgba(150,60,220,0.6)); }
+  .cutin .name { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-family: "Yu Mincho", serif; font-size: 30px; font-weight: 900; color: #f6ecff; text-shadow: 0 0 10px rgba(150,60,220,0.9), 0 2px 4px #000; letter-spacing: 0.15em; opacity: 0; }
+  /* 操作パネル */
+  .panel { max-width: 430px; margin: 0 auto; padding: 12px 12px 44px; }
+  .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 12px 0 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35; background: #2a2620; color: #ece8dc; }
+  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.play { background: #1f2d24; border-color: #3f6d4e; font-weight: 700; }
+  .note { font-size: 0.74rem; line-height: 1.75; color: #cfc9b8; margin-top: 8px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
+  .note b { color: #d9c49a; }
+</style>
+</head>
+<body>
+<h1>敵大技の存在感 改善モック(実寸・音あり)</h1>
+<div class="stage" id="stage">
+  <div class="stage-inner" id="stageInner">
+    <div class="enemy" id="enemy">
+      <div class="nm">野犬</div>
+      <div class="wrap">
+        <div class="aura" id="aura"></div>
+        <img class="sprite" id="enemyImg" src="assets/enemies/clear/yaken.png" alt="">
+      </div>
+      <div class="hp"><b></b></div>
+    </div>
+    <div class="allies">
+      <div class="ally"><img src="assets/class_naginata.png"><div class="flash" id="flash-al1"></div><div class="hp"><b id="hp-al1"></b></div><div class="nm">楓</div></div>
+      <div class="ally" id="al2"><img src="assets/class_hunter.png"><div class="flash" id="flash-al2"></div><div class="hp"><b id="hp-al2"></b></div><div class="nm">小夜</div></div>
+      <div class="ally"><img src="assets/class_onmyoji.png"><div class="flash" id="flash-al3"></div><div class="hp"><b id="hp-al3"></b></div><div class="nm">晴明</div></div>
+    </div>
+    <div class="tanzaku" id="tz">牙噛み</div>
+  </div>
+  <div class="vignette" id="vig"></div>
+  <div class="cutin" id="cutin"><div class="band2"></div><img id="cutinImg" src="assets/enemies/clear/yaken.png"><div class="name" id="cutinName">牙噛み</div></div>
+</div>
+<div class="panel">
+  <div class="sec-label">■ 方式</div>
+  <div class="row">
+    <button class="mode on" data-mode="now">現状(溜め0.6秒)</button>
+    <button class="mode" data-mode="a">案A: 溜め1.4秒+着弾強化</button>
+    <button class="mode" data-mode="b">案B: A+カットイン</button>
+  </div>
+  <div class="row" style="margin-top:6px;">
+    <label style="font-size:0.78rem;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="seOn" checked>効果音あり(実SE+溜めの轟音は仮合成)</label>
+  </div>
+  <div class="sec-label">■ 再生</div>
+  <div class="row"><button class="play" id="playBtn">▶ 大技を再生</button></div>
+  <div class="note">
+    <b>現状</b>: 溜め0.62秒→突進。通常攻撃とほぼ同じ「一拍→前に出る」で、差分は赤オーラと赤ビネットだけ<br>
+    <b>案A</b>: 溜めを1.4秒に延長し段階化(オーラが育つ→本体が震える→暗く沈む)+轟音。着弾は
+    <b>一瞬の静止(120ms)→白閃光→深い揺れ→大きめのダメージ数字</b>で「重い一撃」を作る<br>
+    <b>案B</b>: 案Aに加えて、溜め中に敵の拡大立ち絵が紫帯で横切る<b>カットイン</b>(既存の絵を流用、新規素材不要)。存在感は最大、テンポは+0.7秒<br>
+    ※技ごとの固有VFX(牙/土煙など)は別途Codexルートで。このモックは「時間と重さ」の比較用
+  </div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let mode = "now";
+  document.querySelectorAll(".mode").forEach((b) => {
+    b.onclick = () => { document.querySelectorAll(".mode").forEach((x) => x.classList.remove("on")); b.classList.add("on"); mode = b.dataset.mode; };
+  });
+  const seWarning = new Audio("assets/sfx/big_attack_warning.mp3");
+  const seImpact = new Audio("assets/sfx/hit_taken_4.mp3");
+  const seOn = () => $("seOn").checked;
+  // 溜めの轟音(ゴゴゴ…)だけ既存素材が無いためWebAudioの仮合成(ノイズ+ローパス)。本採用時は実素材に差し替え
+  let ac = null;
+  function rumble(ms) {
+    if (!seOn()) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const len = Math.round(ac.sampleRate * (ms / 1000));
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (0.4 + 0.6 * Math.sin(i / 900));
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 95;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.9, ac.currentTime + ms / 1000 * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + ms / 1000);
+      src.connect(lp); lp.connect(g); g.connect(ac.destination);
+      src.start();
+    } catch (e) {}
+  }
+  function play(a) { if (seOn()) { try { a.currentTime = 0; a.play(); } catch (e) {} } }
+
+  const img = $("enemyImg"), aura = $("aura"), tz = $("tz"), vig = $("vig"), inner = $("stageInner");
+  function placeTanzaku() {
+    const er = $("enemy").getBoundingClientRect(), sr = $("stage").getBoundingClientRect();
+    tz.style.left = (er.right - sr.left - 16) + "px";
+    tz.style.top = (er.top - sr.top - 10) + "px";
+  }
+  function tanzakuIn() { placeTanzaku(); tz.animate([{ opacity: 0, transform: "translateY(-9px)" }, { opacity: 0.95, transform: "translateY(0)" }], { duration: 200, fill: "forwards" }); }
+  function tanzakuOut() { tz.animate([{ opacity: 0.95 }, { opacity: 0 }], { duration: 220, fill: "forwards" }); }
+  function dmgPop(size, text) {
+    const t = $("al2").getBoundingClientRect(), sr = $("stage").getBoundingClientRect();
+    const d = document.createElement("div");
+    d.className = "dmg"; d.textContent = text;
+    d.style.fontSize = size + "rem";
+    d.style.left = (t.left - sr.left + t.width / 2 - 14) + "px";
+    d.style.top = (t.top - sr.top + 20) + "px";
+    $("stage").appendChild(d);
+    setTimeout(() => d.remove(), 950);
+  }
+  function shake(strength, ms) {
+    const kf = [];
+    for (let i = 0; i <= 8; i++) kf.push({ transform: `translate(${(i % 2 ? -1 : 1) * strength * (1 - i / 8)}px, ${(i % 3 ? 1 : -1) * strength * 0.6 * (1 - i / 8)}px)` });
+    kf.push({ transform: "translate(0,0)" });
+    inner.animate(kf, { duration: ms, easing: "linear" });
+  }
+  function vignetteFx(peak, ms) { vig.animate([{ opacity: 0 }, { opacity: peak, offset: 0.25 }, { opacity: 0 }], { duration: ms, easing: "ease-out" }); }
+  function burst(cb) {
+    img.animate([
+      { transform: "translateY(0) scale(1)" },
+      { transform: "translateY(30px) scale(1.06)", offset: 0.55 },
+      { transform: "translateY(0) scale(1)" },
+    ], { duration: 340, easing: "cubic-bezier(.2,.9,.3,1)" });
+    setTimeout(cb, 170);
+  }
+  function impact(strong) {
+    const f = $("flash-al2");
+    const doHit = () => {
+      play(seImpact);
+      f.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 260, easing: "ease-out" });
+      $("hp-al2").style.width = "55%";
+      dmgPop(strong ? 1.6 : 1.05, "-18");
+      shake(strong ? 8 : 3, strong ? 450 : 220);
+      vignetteFx(strong ? 0.95 : 0.6, strong ? 700 : 450);
+    };
+    if (strong) {
+      // 一瞬の静止(ヒットストップ120ms): 何も動かない間を作ってから炸裂させる
+      setTimeout(doHit, 120);
+    } else doHit();
+  }
+  function chargeSimple(cb) {
+    aura.animate([{ opacity: 0 }, { opacity: 0.55 }], { duration: 620, fill: "forwards" });
+    img.animate([{ transform: "translateY(0)" }, { transform: "translateY(4px) scale(0.97)" }], { duration: 620, fill: "forwards" }).onfinish = () => {
+      img.getAnimations().forEach((a) => a.cancel());
+      aura.getAnimations().forEach((a) => a.cancel());
+      aura.style.opacity = 0;
+      cb();
+    };
+  }
+  function chargeStrong(cb) {
+    rumble(1400);
+    // オーラが育つ
+    aura.animate([
+      { opacity: 0, transform: "translateX(-50%) scale(0.6)" },
+      { opacity: 0.5, transform: "translateX(-50%) scale(0.9)", offset: 0.45 },
+      { opacity: 0.95, transform: "translateX(-50%) scale(1.18)" },
+    ], { duration: 1400, easing: "ease-in", fill: "forwards" });
+    // 本体: 沈み込み+暗転+終盤の震え
+    img.animate([
+      { transform: "translateY(0) scale(1)", filter: "brightness(1)" },
+      { transform: "translateY(4px) scale(0.97)", filter: "brightness(0.72)", offset: 0.5 },
+      { transform: "translateY(5px) scale(0.96)", filter: "brightness(0.62)" },
+    ], { duration: 1400, easing: "ease-in", fill: "forwards" });
+    const jitter = setInterval(() => {
+      img.style.translate = `${(Math.random() * 2 - 1) * 2.2}px 0px`;
+    }, 40);
+    setTimeout(() => {
+      clearInterval(jitter);
+      img.style.translate = "";
+      img.getAnimations().forEach((a) => a.cancel());
+      aura.getAnimations().forEach((a) => a.cancel());
+      aura.style.opacity = 0;
+      img.style.filter = "";
+      cb();
+    }, 1400);
+  }
+  function cutin(cb) {
+    const c = $("cutin"), ci = $("cutinImg"), cn = $("cutinName");
+    c.style.display = "block";
+    ci.animate([
+      { left: "100%" },
+      { left: "12%", offset: 0.42, easing: "cubic-bezier(.2,.9,.3,1)" },
+      { left: "6%", offset: 0.8 },
+      { left: "-70%" },
+    ], { duration: 820, fill: "forwards" });
+    cn.animate([{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], { duration: 820, fill: "forwards" });
+    c.animate([{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.88 }, { opacity: 0 }], { duration: 820, fill: "forwards" }).onfinish = () => { c.style.display = "none"; };
+    setTimeout(cb, 700);
+  }
+
+  let playing = false;
+  $("playBtn").onclick = () => {
+    if (playing) return;
+    playing = true;
+    $("hp-al2").style.width = "100%";
+    play(seWarning);
+    tanzakuIn();
+    const finish = () => setTimeout(() => { tanzakuOut(); playing = false; }, 1400);
+    if (mode === "now") {
+      chargeSimple(() => burst(() => { impact(false); finish(); }));
+    } else if (mode === "a") {
+      chargeStrong(() => burst(() => { impact(true); finish(); }));
+    } else {
+      cutin(() => chargeStrong(() => burst(() => { impact(true); finish(); })));
+    }
+  };
+</script>
+</body>
+</html>
