@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: 召喚時のレイアウト切替をスーッと</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  .scene { position: sticky; top: 0; z-index: 10; height: 430px; overflow: hidden;
+    background-image: url('assets/bg/suzunari_gake.jpg'); background-size: cover; background-position: center 30%;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
+  .scene::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.15), rgba(20,24,27,0.5) 60%, rgba(20,24,27,0.75)); }
+  .enemy-row { position: absolute; top: 26px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; gap: 8px; align-items: flex-end; }
+  .ecard { width: 108px; text-align: center; }
+  .ecard img { width: 100%; display: block; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
+  .ecard.small { width: 78px; }
+  .ecard .nm { font-size: 0.72rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  .ecard .hp { height: 8px; border-radius: 99px; background: #3a3a3a; margin-top: 3px; overflow: hidden; border: 1px solid rgba(0,0,0,0.7); }
+  .ecard .hp i { display: block; height: 100%; width: 90%; background: #4caf6f; }
+  .allies { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; display: flex; justify-content: center; gap: 8px; }
+  .ally { width: 90px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
+  .allies.five .ally { width: 74px; }
+  .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: 6px; }
+  .ally .nm { font-size: 0.68rem; font-weight: 700; }
+  .ally .hp { height: 6px; border-radius: 99px; background: #3a3a3a; margin-top: 3px; overflow: hidden; }
+  .ally .hp i { display: block; height: 100%; width: 85%; background: #4caf6f; }
+
+  .panel { padding: 0.7rem 0.9rem 3rem; }
+  .panel h2 { font-size: 0.9rem; margin: 0.8rem 0 0.3rem; }
+  .row2 { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+  .row2 button { flex: 1; padding: 0.6rem 0; border-radius: 9px; border: 1px solid #4a505a; background: #232830; color: #ece8dc; font-size: 0.8rem; font-weight: 700; }
+  .row2 button.good { border-color: #6d5a35; background: #3a3020; color: #f0e2b8; }
+  .panel p.note { font-size: 11px; color: #9aa79f; margin: 0.2rem 0 0.6rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scene">
+    <div class="enemy-row" id="erow">
+      <div class="ecard" data-boss="1"><img src="assets/enemies/amayome_shiranui.png"><div class="nm">お鈴</div><div class="hp"><i></i></div></div>
+    </div>
+    <div class="allies" id="arow">
+      <div class="ally"><img src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="hp"><i></i></div></div>
+      <div class="ally"><img src="assets/class_hunter.png"><div class="nm">小夜</div><div class="hp"><i></i></div></div>
+      <div class="ally"><img src="assets/class_onmyoji.png"><div class="nm">晴明</div><div class="hp"><i></i></div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>敵の召喚(提灯童がボスの左右へ)</h2>
+    <div class="row2">
+      <button onclick="spawnEnemy(false)">現行: パッと切替</button>
+      <button class="good" onclick="spawnEnemy(true)">改善: スーッと移動</button>
+    </div>
+    <h2>味方の追加(式神召喚)</h2>
+    <div class="row2">
+      <button onclick="spawnAlly(false)">現行: パッと切替</button>
+      <button class="good" onclick="spawnAlly(true)">改善: スーッと移動</button>
+    </div>
+    <div class="row2"><button onclick="location.reload()">↺ リセット</button></div>
+    <p class="note">「スーッと」は既存カードが新しい位置へ0.32秒かけて滑り、新入りは半透明+少し縮んだ状態からふわっと現れます。連打で何体でも追加可(敵は左右交互)。</p>
+  </div>
+</div>
+
+<script>
+// FLIP方式: 追加前の各カードの位置を記録→DOM追加→追加後の位置との差分ぶんだけtranslateで巻き戻し→0へアニメ
+function flipInsert(container, makeCard, insertRef, animate) {
+  const olds = new Map();
+  [...container.children].forEach((el) => olds.set(el, el.getBoundingClientRect().left));
+  const card = makeCard();
+  container.insertBefore(card, insertRef);
+  if (!animate) return;
+  [...container.children].forEach((el) => {
+    if (el === card) return;
+    const dx = (olds.get(el) ?? el.getBoundingClientRect().left) - el.getBoundingClientRect().left;
+    if (Math.abs(dx) > 0.5) {
+      el.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], { duration: 320, easing: "cubic-bezier(.2,.75,.25,1)" });
+    }
+  });
+  card.animate([
+    { opacity: 0, transform: "translateY(8px) scale(0.9)" },
+    { opacity: 1, transform: "translateY(0) scale(1)" },
+  ], { duration: 340, delay: 120, easing: "ease-out", fill: "backwards" });
+}
+let enemySide = 0;
+function spawnEnemy(smooth) {
+  const row = document.getElementById("erow");
+  const boss = row.querySelector('[data-boss]');
+  const left = enemySide++ % 2 === 0; // 左右交互(本編のボス中央維持と同じ)
+  flipInsert(row, () => {
+    const d = document.createElement("div");
+    d.className = "ecard small";
+    d.innerHTML = `<img src="assets/enemies/clear/chochin_warabe.png"><div class="nm">提灯童</div><div class="hp"><i></i></div>`;
+    return d;
+  }, left ? boss : boss.nextElementSibling, smooth);
+}
+function spawnAlly(smooth) {
+  const row = document.getElementById("arow");
+  flipInsert(row, () => {
+    const d = document.createElement("div");
+    d.className = "ally";
+    d.innerHTML = `<img src="assets/icons/shikigami/komainu.png" onerror="this.src='assets/class_onmyoji.png'"><div class="nm">狛犬</div><div class="hp"><i></i></div>`;
+    return d;
+  }, null, smooth);
+  if (row.children.length >= 5) row.classList.add("five");
+}
+</script>
+</body>
+</html>
