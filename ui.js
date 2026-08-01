@@ -1392,16 +1392,18 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
       }
     }
     const rect = partyBar.getBoundingClientRect();
-    // 逃げる小ボタン(戦闘のみ): テキストボックス(戦闘ログ)の右上角の内側に重ねる
-    // (2026-08-01ユーザー指定。旧・位置C=味方バー右上は「邪魔」とのことで廃止)。
+    // 逃げる小ボタン(戦闘のみ): テキストボックス(戦闘ログ)の「外」、枠のすぐ上の右端に置く
+    // (2026-08-01ユーザー指定。最初に入れた「枠の内側に重ねる」はボックスの外と再指摘で修正。
+    // 旧・位置C=味方バー右上は「邪魔」とのことで廃止)。
     // ログはfixedではなく.battle-top内のabsoluteのため、実測rectからfixed座標へ変換して追従させる
     if (partyBarId === "battlePartyBar") {
       const fleeBtn = document.getElementById("battleFleeBtn");
       const logEl = document.getElementById("battleLog");
       if (fleeBtn && logEl) {
         const lr = logEl.getBoundingClientRect();
-        fleeBtn.style.top = `${Math.max(4, Math.round(lr.top) + 5)}px`;
-        fleeBtn.style.right = `${Math.max(6, Math.round(window.innerWidth - lr.right) + 5)}px`;
+        const btnH = fleeBtn.offsetHeight || 33;
+        fleeBtn.style.top = `${Math.max(2, Math.round(lr.top) - btnH - 4)}px`;
+        fleeBtn.style.right = `${Math.max(6, Math.round(window.innerWidth - lr.right))}px`;
       }
     }
     let top = Math.round(rect.bottom) + 10;
