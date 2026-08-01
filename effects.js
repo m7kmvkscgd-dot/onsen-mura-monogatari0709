@@ -1741,6 +1741,69 @@ function playLinesOverlay(lines, onDone) {
   timers.push(setTimeout(finish, ps.length * 1300 + 2200)); // 放置でも自動で戦闘へ
 }
 
+// ---- ボス第二形態の演出部品(2026-08-01、mock_phase2_transition.html案3改をユーザー採用) ----
+// 完全な闇へ沈む黒幕(1秒フェードイン)。戻し/後始末は呼び出し元(gimmicks.js)が行う
+function createSecondFormBlackout() {
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;inset:0;background:#000;opacity:0;z-index:40;pointer-events:none;transition:opacity 1s ease;";
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = "1"; });
+  return el;
+}
+// 解放の白フラッシュ(0.7秒で乗って明ける。使い捨て要素)
+function playSecondFormFlash() {
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;inset:0;background:#fff;opacity:0;z-index:60;pointer-events:none;";
+  document.body.appendChild(el);
+  const a = el.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }], { duration: 700, easing: "ease" });
+  a.onfinish = () => el.remove();
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 900);
+}
+// 第二形態の口上: 戦闘前口上(全行積み上げ)と違い、闇の中で「1文出す→消す→次」の順送り。
+// タップでその文を早送り。onLastLine=最後の文が表示された瞬間のフック(本命BGMの頭出しに使う)
+function playSecondFormLines(lines, onLastLine, onDone) {
+  if (!lines.length) { if (onLastLine) onLastLine(); onDone(); return; }
+  const overlay = document.createElement("div");
+  overlay.className = "pre-battle-lines-overlay";
+  overlay.innerHTML = `<div class="pre-battle-lines-box"></div><div class="pre-battle-tap-hint">タップで進む</div>`;
+  document.body.appendChild(overlay);
+  const box = overlay.querySelector(".pre-battle-lines-box");
+  let idx = 0, skip = null;
+  const next = () => {
+    if (idx >= lines.length) {
+      lines.forEach((l) => blog(`「${l}」`)); // 戦闘ログにも全行を記録として残す
+      overlay.remove();
+      onDone();
+      return;
+    }
+    const isLast = idx === lines.length - 1;
+    box.innerHTML = `<p style="opacity:0;">「${lines[idx]}」</p>`;
+    const p = box.querySelector("p");
+    if (p.animate) p.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 450, easing: "ease-out", fill: "forwards" });
+    p.style.opacity = "1";
+    if (isLast && onLastLine) onLastLine();
+    idx++;
+    let advanced = false;
+    const advance = () => {
+      if (advanced) return;
+      advanced = true;
+      skip = null;
+      let moved = false;
+      const go = () => { if (moved) return; moved = true; next(); };
+      if (p.animate) {
+        const a = p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease" });
+        a.onfinish = go;
+      }
+      setTimeout(go, 430); // onfinish不発の保険(goは一度きり)
+    };
+    const hold = isLast ? 2100 : 1400; // 最後の文だけ本命曲の立ち上がりに合わせて長めに見せる
+    const t = setTimeout(advance, 450 + hold);
+    skip = () => { clearTimeout(t); advance(); };
+  };
+  overlay.addEventListener("click", () => { if (skip) skip(); });
+  next();
+}
+
 // ---- 回想の文章送り(回想演出指示v2、2026-07-31) ----
 // 場面のtextを句点(。)で一文ずつに分割し、タップごとに1文追加表示する(段落の一括表示をやめた)。
 // 自動送りは無し。次のタップ受付までは最低SOUL_STORY_MIN_GATE_MS空け(連打で全文が一瞬で流れるのを防ぐ)、

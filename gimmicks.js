@@ -143,6 +143,10 @@ function initSecondFormState() {
     if (e.secondForm && !battle.secondForm) battle.secondForm = { owner: e, def: e.secondForm, fired: false };
   });
 }
+// シーケンスは「案3改: 暗転からの解放」(mock_phase2_transition.htmlでユーザー採用2026-08-01):
+// 導入BGM停止→0.4秒→画面が完全な闇へ(1秒)→闇の中で口上を1文ずつ(出て消えて次、タップ早送り可)→
+// 最後の文が表示された瞬間に本命BGM(yokai_no_shutai)頭出し→口上明けに白フラッシュ+雷鳴SE→
+// フラッシュの下で怒り背景+怒り形態絵へ切替→明けたら第二形態→0.6秒置いて怒りギミック発動
 function maybeStartSecondFormSequence(onDone) {
   if (!battle || !battle.secondForm) return false;
   const sf = battle.secondForm;
@@ -151,22 +155,36 @@ function maybeStartSecondFormSequence(onDone) {
   sf.fired = true; // 開始した時点で発火済み(演出中の再入・二重発動を防ぐ)
   if (typeof stopBossIntroBgm === "function") stopBossIntroBgm();
   renderBattleScreen();
-  // 導入曲が止まった無音の間(600ms)を置いてから口上へ。口上はタップ送り/放置自動送りの共通オーバーレイ
+  const blackout = createSecondFormBlackout(); // 0.4秒の静寂の後、1秒かけて闇へ沈む(fadeはCSS遷移)
+  const bail = () => { if (blackout.parentNode) blackout.remove(); onDone(); }; // 演出中に戦闘が終わった時の後始末
   setTimeout(() => {
-    if (!battle) return; // 無音の間に煙玉等で戦闘が終わっていた場合の保険
-    playLinesOverlay(sf.def.lines || [], () => {
-      if (!battle) return;
-      // 口上明け: 怒り背景+怒り形態の立ち絵へ切り替え(updateEnemyCardがsrcの差分だけ反映する)
-      if (sf.def.bg) { gimmickBattleBgUrl = sf.def.bg; updateSceneBackgrounds(); }
-      if (sf.def.image) sf.owner.image = sf.def.image;
-      renderBattleScreen();
-      if (typeof playBossClimaxBgm === "function") playBossClimaxBgm(true);
-      // 怒り限定ギミック(trigger:"secondForm")をここで発動する
-      const entry = (battle.gimmicks || []).find((g) => g.owner === sf.owner && g.def.id === sf.def.gimmickId);
-      if (entry && !entry.active) { activateGimmickEntry(entry); renderBattleScreen(); }
-      onDone();
+    if (!battle) { bail(); return; }
+    playSecondFormLines(sf.def.lines || [], () => {
+      if (typeof playBossClimaxBgm === "function") playBossClimaxBgm(true); // 最後の文と同時に本命曲
+    }, () => {
+      if (!battle) { bail(); return; }
+      playSecondFormFlash();
+      playSfx("phase2_thunder"); // 解放の雷鳴(合成SE)
+      setTimeout(() => {
+        if (!battle) { bail(); return; }
+        // フラッシュが乗り切っている間に怒り背景+怒り形態の立ち絵へ切替(updateEnemyCardがsrc差分を反映)
+        if (sf.def.bg) { gimmickBattleBgUrl = sf.def.bg; updateSceneBackgrounds(); }
+        if (sf.def.image) sf.owner.image = sf.def.image;
+        renderBattleScreen();
+        blackout.style.transition = "opacity 0.35s ease";
+        blackout.style.opacity = "0";
+        setTimeout(() => { if (blackout.parentNode) blackout.remove(); }, 450);
+        if (typeof playBigAtkImpactFx === "function") playBigAtkImpactFx(); // 赤ビネット+画面揺れ
+        // 雷鳴が鳴り響く間を0.6秒置いてから怒りギミック(告知+召喚)を発動して進行再開
+        setTimeout(() => {
+          if (!battle) { onDone(); return; }
+          const entry = (battle.gimmicks || []).find((g) => g.owner === sf.owner && g.def.id === sf.def.gimmickId);
+          if (entry && !entry.active) { activateGimmickEntry(entry); renderBattleScreen(); }
+          onDone();
+        }, 600);
+      }, 180);
     });
-  }, 600);
+  }, 1400);
   return true;
 }
 // formCycleの形態切り替えの実体。持ち主に形態フラグを立て(古い形態のフラグは全消去)、

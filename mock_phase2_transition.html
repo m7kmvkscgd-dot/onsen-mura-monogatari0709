@@ -93,6 +93,7 @@ const LINES = [
 ];
 const intro = new Audio("assets/bgm/boss_intro_bgm.mp3"); intro.loop = true;
 const climax = new Audio("assets/bgm/yokai_no_shutai.mp3"); climax.loop = true;
+const thunder = new Audio("assets/sfx/phase2_thunder.mp3"); // 解放の瞬間の雷鳴(合成SE)
 let running = false;
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -236,6 +237,7 @@ async function run(pattern) {
     await sleep(1000);
     await playLinesSequential(() => startClimax()); // 1文ずつ表示、最後の文が出た瞬間に本命曲
     whiteFlash(700);
+    thunder.currentTime = 0; thunder.play().catch(() => {}); // 解放と同時に雷鳴
     await sleep(180); // フラッシュが乗り切った瞬間に切替(明けたら第二形態)
     swapToPhase2();
     $("blackout").style.opacity = "0";
