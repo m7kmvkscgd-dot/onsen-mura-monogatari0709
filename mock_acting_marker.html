@@ -11,7 +11,10 @@
   .stage { position: relative; width: 100%; max-width: 430px; height: 430px; margin: 0 auto;
     background: url("assets/bg/forest_day.jpg") center 35% / cover no-repeat; overflow: hidden; }
   .row { position: absolute; top: 110px; left: 0; right: 0; display: flex; justify-content: center; gap: 12px; }
-  .en { width: 110px; text-align: center; position: relative; border: 2px solid transparent; border-radius: 10px; padding: 4px 2px; }
+  .en { width: 110px; text-align: center; position: relative; border: 2px solid transparent; border-radius: 10px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; }
+  /* 頭上バー案(2026-08-02): 名前を消してHPバーを頭の上へ */
+  .hpbar-top .en .nm { display: none; }
+  .hpbar-top .en .hp { order: -1; margin: 0 auto 5px; }
   .en .nm { font-size: 0.78rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.9); margin-bottom: 4px; position: relative; z-index: 2; }
   .en .wrap { position: relative; display: inline-block; }
   .en img { height: 97px; position: relative; z-index: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
@@ -61,7 +64,7 @@
   .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 12px 0 6px; }
   .btnrow { display: flex; gap: 6px; flex-wrap: wrap; }
   button { font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35; background: #2a2620; color: #ece8dc; }
-  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
   button.play { background: #1f2d24; border-color: #3f6d4e; }
   .note { font-size: 0.74rem; line-height: 1.75; color: #cfc9b8; margin-top: 8px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
   .note b { color: #d9c49a; }
@@ -89,6 +92,10 @@
     <button class="mode" data-mode="outline">案2: 縁取り発光</button>
     <button class="mode" data-mode="spot">案3: 背後の光</button>
   </div>
+  <div class="sec-label">■ 名前とHPバー</div>
+  <div class="btnrow">
+    <button id="hpTopBtn">名前なし+HPバー頭上: OFF</button>
+  </div>
   <div class="sec-label">■ 動きの確認</div>
   <div class="btnrow">
     <button class="play" id="playBtn">▶ 攻撃モーション再生(マーカーの追従を見る)</button>
@@ -103,13 +110,25 @@
 </div>
 <script>
   const stage = document.getElementById("stage");
+  let hpTop = false;
+  let markerMode = "ring";
+  function applyStage() {
+    stage.className = "stage mode-" + markerMode + (hpTop ? " hpbar-top" : "");
+  }
   document.querySelectorAll(".mode").forEach((b) => {
     b.onclick = () => {
       document.querySelectorAll(".mode").forEach((x) => x.classList.remove("on"));
       b.classList.add("on");
-      stage.className = "stage mode-" + b.dataset.mode;
+      markerMode = b.dataset.mode;
+      applyStage();
     };
   });
+  document.getElementById("hpTopBtn").onclick = (e) => {
+    hpTop = !hpTop;
+    e.target.textContent = "名前なし+HPバー頭上: " + (hpTop ? "ON" : "OFF");
+    e.target.classList.toggle("on", hpTop);
+    applyStage();
+  };
   document.getElementById("playBtn").onclick = () => {
     const a = document.getElementById("actor");
     a.animate([
