@@ -756,8 +756,10 @@ const AILMENT_VFX_ASSIGNMENTS = [
 const KATAMI_DEFS = {
   hanayome_akao: { id: "hanayome_akao", ja: "花婿の赤緒", icon: "🎗️", image: "assets/items/katami_akao.png", cdDays: 2, bossId: "amayome_shiranui",
     desc: "敵1体を赤い組紐で縛り上げ、1ターン行動不能にする" },
-  sakazuki_kagami: { id: "sakazuki_kagami", ja: "逆月の鏡片", icon: "🪞", image: null, cdDays: 3, bossId: "kagegui_sakazuki",
-    desc: "味方1人の影を分離し、次に受ける攻撃1回を身代わりで無効化する" },
+  // 逆月の鏡片はクエスト「影盗り宿の十三号室」の廃案(2026-08-01)に伴い入手経路ごと休眠。
+  // 効果コード(items.jsのkatami_kagami/engine.jsのkatamiShadowGuard)は残置=無害。復活はこの行を戻すだけ
+  // sakazuki_kagami: { id: "sakazuki_kagami", ja: "逆月の鏡片", icon: "🪞", image: null, cdDays: 3, bossId: "kagegui_sakazuki",
+  //   desc: "味方1人の影を分離し、次に受ける攻撃1回を身代わりで無効化する" },
   utsuro_kitsunemen: { id: "utsuro_kitsunemen", ja: "うつろの狐面", icon: "🦊", image: null, cdDays: 3, bossId: "hyakumenshi_utsuro",
     desc: "面をかぶった本人の通常攻撃が、その戦闘の間ずっと2回攻撃(威力50%×2)になる" },
   oshira_yunohana: { id: "oshira_yunohana", ja: "湯の花の小瓶", icon: "🫙", image: null, cdDays: 1, bossId: "wasureyu_oshira",
@@ -1980,13 +1982,14 @@ const QUEST_DEFS = {
     completionText: "雨の止んだ峠で、お春を含む行方不明者たちが眠るように倒れているのが見つかった。玄庵は拾われた銀の鈴を、崖際に残る名もない墓へ供えたという。翌朝、その鈴には新しい赤い組紐が結ばれていた。それから鈴鳴峠で、嫁入りの列を見た者はいない。",
     targetFloor: 12, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
     chaseText: "雨嫁・白縫が追いかけてきた！" },
-  // 物語クエスト第2号「影盗り宿の十三号室」(2026-07-31、テキストはCodex産)。専用ルートtsukikage_yado行き、
-  // ボスは最終層に確定出現(13層=十三号室の題名合わせ)
-  kagegui_sakazuki: { emoji: "🪞", requester: "月影宿の女将・お咲", title: "影盗り宿の十三号室",
-    text: "雨夜の宿場にある月影宿で、泊まり客が影を失う怪異が続いております。影を失った者は日ごとに記憶が薄れ、やがて鏡の中へ消えるとの噂まで立ちました。すべては使われていない十三号室へ古鏡を運び込んでから始まったこと。どうか鏡に棲む妖を討ち、宿と客たちをお救いください。",
-    completionText: "月影宿の客たちには影が戻り、失われていた名前も少しずつ思い出された。宿は奉行所によって封鎖されたが、女将のお咲は取り調べの前に姿を消している。帳場からは売上金と宿帳の最後の一枚だけが持ち去られていた。割れた鏡の破片には今も、見る者より一拍遅れて動く影が映るという。",
-    targetFloor: 13, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
-    chaseText: "鏡喰い・逆月が追いかけてきた！" },
+  // 物語クエスト第2号「影盗り宿の十三号室」は廃案(2026-08-01ユーザー決定、素材は没ファイルフォルダへ)。
+  // 奉行所に張り出されないようQUEST_DEFSから外して休眠(敵kagegui_sakazuki/kageboshi・ルート
+  // tsukikage_yado・背景tsukikage_*.jpgはデータ残置=無害。復活させる場合はこのブロックを戻すだけ)
+  // kagegui_sakazuki: { emoji: "🪞", requester: "月影宿の女将・お咲", title: "影盗り宿の十三号室",
+  //   text: "雨夜の宿場にある月影宿で、泊まり客が影を失う怪異が続いております。影を失った者は日ごとに記憶が薄れ、やがて鏡の中へ消えるとの噂まで立ちました。すべては使われていない十三号室へ古鏡を運び込んでから始まったこと。どうか鏡に棲む妖を討ち、宿と客たちをお救いください。",
+  //   completionText: "月影宿の客たちには影が戻り、失われていた名前も少しずつ思い出された。宿は奉行所によって封鎖されたが、女将のお咲は取り調べの前に姿を消している。帳場からは売上金と宿帳の最後の一枚だけが持ち去られていた。割れた鏡の破片には今も、見る者より一拍遅れて動く影が映るという。",
+  //   targetFloor: 13, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
+  //   chaseText: "鏡喰い・逆月が追いかけてきた！" },
   // 物語クエスト第3号「笑わぬ祭の面売り」(2026-07-31、テキストはGPT産)。専用ルートwarawanu_matsuri行き
   hyakumenshi_utsuro: { emoji: "🎭", requester: "薬種行商・茂吉", title: "笑わぬ祭の面売り",
     text: "北の旧道を越える途中、地図にない祭りへ迷い込みました。屋台には火が入り、笛も太鼓も鳴っているのに、客も囃子方も一人として見当たりません。同行していた四人は、面売りから面を受け取った途端に祭りの奥へ消えました。夜が明けても戻らず、旧道では今も祭囃子が聞こえます。どうか仲間たちを捜し、面売りの怪異を鎮めてください。",
