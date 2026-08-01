@@ -55,16 +55,18 @@
     font-size: 0.66rem; padding: 5px 9px; border-radius: 8px; border: 1px solid #6d5a35; background: rgba(38,30,18,0.9); color: #f0e2b8; }
 
   /* ── 味方: 箱と帯を廃止、霞の上に立ち絵+細い2連バー ── */
-  #allies { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 4; display: flex; justify-content: center; gap: 22px; }
-  .hero { position: relative; text-align: center; width: 92px; }
-  .hero img.face { width: 86px; height: 86px; object-fit: contain; display: block; margin: 0 auto;
+  #allies { position: absolute; left: 0; right: 0; bottom: 20.5%; z-index: 4; display: flex; justify-content: center; gap: 16px; }
+  .hero { position: relative; text-align: center; width: 100px; }
+  .hero img.face { width: 95px; height: 95px; object-fit: contain; display: block; margin: 0 auto;
     filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)); }
   .hero .ring { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); width: 78px; height: 16px;
     border-radius: 50%; border: 2px solid rgba(215,182,111,0); pointer-events: none; }
   .hero.acting .ring { border-color: rgba(215,182,111,0.85); box-shadow: 0 0 12px rgba(215,182,111,0.5); }
-  .hero.acting img.face { filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(255,214,110,0.35)); }
-  .hero .nm { font-size: 0.7rem; font-weight: 700; margin-top: 2px; text-shadow: 0 1px 3px #000; }
-  .hero .bars { width: 84px; margin: 3px auto 0; }
+  .hero.acting img.face { filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(255,214,110,0.35)) brightness(1.12); }
+  .hero.acting { transform: translateY(4px) scale(1.04); }
+  .hero { transition: transform 0.25s ease; }
+  .hero .nm { font-size: 0.7rem; font-weight: 700; margin-top: 0; text-shadow: 0 1px 3px #000; }
+  .hero .bars { width: 88px; margin: 1px auto 0; }
   .hero .hp { height: 6px; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.85); border: 1px solid rgba(0,0,0,0.8); }
   .hero .hp i { display: block; height: 100%; width: 85%; background: linear-gradient(90deg, #3f9e63, #57c07d); }
   .hero .mp { height: 4px; margin-top: 2px; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.85); border: 1px solid rgba(0,0,0,0.8); }
@@ -73,7 +75,7 @@
   /* ── 下段: コマンドは和風の札4枚(縦書き) ── */
   #commands { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2%); z-index: 5;
     display: flex; justify-content: center; gap: 12px; }
-  .fuda { width: 68px; height: 108px; border-radius: 6px 6px 10px 10px; position: relative;
+  .fuda { width: 68px; height: 88px; border-radius: 6px 6px 10px 10px; position: relative;
     writing-mode: vertical-rl; display: flex; align-items: center; justify-content: center;
     font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 1.06rem; font-weight: 700; letter-spacing: 0.3em;
     color: #efe3c2; background: linear-gradient(170deg, #33291a, #201810 70%, #171009);
@@ -96,6 +98,8 @@
   .pip.off { background: transparent; color: #8a7448; }
   #bossPlate .sub { display: flex; justify-content: space-between; margin-top: 3px; font-size: 0.6rem; color: #cdbf9d; }
   #bossPlate .sub .st::before { content: '●'; color: #c14a3c; margin-right: 4px; }
+  .hero .nextchip { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 0.54rem;
+    color: #cdbf9d; border: 1px solid rgba(205,191,157,0.5); background: rgba(16,14,10,0.75); border-radius: 3px; padding: 0 5px; letter-spacing: 0.1em; }
   .hero .turnchip { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.56rem; font-weight: 800;
     color: #1c1509; background: #c9a24a; border-radius: 3px; padding: 1px 6px; letter-spacing: 0.14em; display: none; }
   .hero.acting .turnchip { display: block; }
@@ -140,7 +144,7 @@
 
   <div id="allies">
     <div class="hero acting"><span class="turnchip">手番</span><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
-    <div class="hero"><div class="ring"></div><img class="face" src="assets/class_hunter.png"><div class="nm">小夜</div><div class="bars"><div class="hp"><i style="width:62%"></i></div><div class="mp"><i style="width:40%"></i></div></div></div>
+    <div class="hero"><span class="nextchip">次</span><div class="ring"></div><img class="face" src="assets/class_hunter.png"><div class="nm">小夜</div><div class="bars"><div class="hp"><i style="width:62%"></i></div><div class="mp"><i style="width:40%"></i></div></div></div>
     <div class="hero"><div class="ring"></div><img class="face" src="assets/class_onmyoji.png"><div class="nm">晴明</div><div class="bars"><div class="hp"><i style="width:91%"></i></div><div class="mp"><i style="width:88%"></i></div></div></div>
   </div>
 
@@ -180,13 +184,23 @@ function toggleMode() {
     ? "お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！"
     : "深淵の森で妖怪の群れに遭遇した！";
 }
+function targetRing(el) {
+  const g = el.querySelector(".ground");
+  if (!g) return;
+  const ring = document.createElement("div");
+  ring.style.cssText = "position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:70%;height:16px;border-radius:50%;border:2px solid rgba(209,80,63,0.9);box-shadow:0 0 10px rgba(209,80,63,0.55);pointer-events:none;";
+  el.appendChild(ring);
+  ring.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: 700 }).onfinish = () => ring.remove();
+}
 function demoAttack() {
   if (bossMode) {
+    targetRing(document.getElementById("bossFoe"));
     hp = Math.max(6, hp - 9);
     document.getElementById("bossHp").style.width = hp + "%";
     const boss = document.querySelector("#bossFoe img");
     boss.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.9)", offset: 0.25 }, { filter: "brightness(1)" }], { duration: 300 });
   } else {
+    targetRing(document.getElementById("mobTarget"));
     mobHp = Math.max(4, mobHp - 16);
     document.getElementById("mobHp").style.width = mobHp + "%";
     const m = document.querySelector("#mobTarget img");
