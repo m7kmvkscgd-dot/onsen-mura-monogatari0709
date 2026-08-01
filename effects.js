@@ -401,7 +401,8 @@ function playSkillCastFx(actor, skillName, onRelease, opts) {
     ], { duration: 430, easing: "ease-out" });
     if (!(opts && opts.noBanner)) {
     const banner = getSkillBannerSingleton();
-    banner.classList.remove("enemy-big"); // 敵大技予告(紫)と共用のため、味方使用時は必ず金赤へ戻す
+    if (typeof tanzakuShowToken !== "undefined") tanzakuShowToken++; // 保留中の「大技短冊を下ろす」処理がこの表示を消さないように
+    banner.classList.remove("enemy-big"); // 敵大技(紫)と共用のため、味方使用時は必ず金赤へ戻す
     const band = banner.querySelector(".band");
     band.textContent = skillName;
     // 表示位置(CodexデモcastCommon()準拠2026-08-01): 技を使う本人のカードの右肩(横-23px/上-105px)。
@@ -446,6 +447,7 @@ function playEnemyBigAttackTanzaku(enemy) {
     const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
     if (!img || !name) return;
     const banner = getSkillBannerSingleton();
+    tanzakuShowToken++; // 保留中の「発動時短冊を下ろす」処理がこの予告表示を消さないように
     banner.classList.add("enemy-big");
     const band = banner.querySelector(".band");
     band.textContent = name;
@@ -453,9 +455,12 @@ function playEnemyBigAttackTanzaku(enemy) {
     if (banner.animate) playTanzakuSlide(banner);
   } catch (e) {} // 演出の失敗で戦闘進行を止めない
 }
-// 大技「発動時」の紫短冊(2026-08-01ユーザー指示「敵の攻撃アニメーション終わるまで出しとけ」):
-// スライドインして出っぱなしにし、battle.js側が攻撃演出の完了時にhideTanzakuBanner()で下ろす。
-// 予告(構え)時の900msスライド(上のplayEnemyBigAttackTanzaku)とは別物
+// 大技「発動時」の紫短冊(2026-08-01ユーザー指示「敵の攻撃アニメーション終わるまで出しとけ」+
+// 同日「出てくる時間が短い」): スライドインして出っぱなしにし、battle.js側が攻撃演出の完了時に
+// hideTanzakuBanner()を呼ぶが、表示開始からTANZAKU_MIN_HOLD_MSは必ず出続ける(演出が先に
+// 終わっても、最低表示時間が満ちるまで下ろさない)。予告(構え)時の900msスライドとは別物
+const TANZAKU_MIN_HOLD_MS = 2200;
+let tanzakuShowToken = 0; // 遅延した下ろし処理が「次の表示」を誤って消さないための世代カウンタ
 function playEnemyBigAttackTanzakuHold(enemy) {
   try {
     const card = findVisibleCard(enemy.instanceId);
@@ -463,6 +468,8 @@ function playEnemyBigAttackTanzakuHold(enemy) {
     const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
     if (!img || !name) return;
     const banner = getSkillBannerSingleton();
+    tanzakuShowToken++;
+    banner.__holdShownAt = Date.now();
     banner.classList.add("enemy-big");
     const band = banner.querySelector(".band");
     band.textContent = name;
@@ -476,10 +483,17 @@ function playEnemyBigAttackTanzakuHold(enemy) {
 function hideTanzakuBanner() {
   try {
     if (!skillBannerSingleton || !skillBannerSingleton.isConnected || !skillBannerSingleton.animate) return;
-    skillBannerSingleton.animate([
-      { opacity: 0.95, transform: "translateY(0)" },
-      { opacity: 0, transform: "translateY(6px)" },
-    ], { duration: 220, easing: "ease-in", fill: "forwards" });
+    const banner = skillBannerSingleton;
+    const shownAt = banner.__holdShownAt || 0;
+    const wait = Math.max(0, TANZAKU_MIN_HOLD_MS - (Date.now() - shownAt));
+    const token = tanzakuShowToken;
+    setTimeout(() => {
+      if (token !== tanzakuShowToken) return; // 既に別の短冊表示が始まっていたら触らない
+      banner.animate([
+        { opacity: 0.95, transform: "translateY(0)" },
+        { opacity: 0, transform: "translateY(6px)" },
+      ], { duration: 220, easing: "ease-in", fill: "forwards" });
+    }, wait);
   } catch (e) {}
 }
 
