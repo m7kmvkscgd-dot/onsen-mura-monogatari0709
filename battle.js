@@ -686,6 +686,11 @@ function processNext() {
           if (!actor.__stanceSkillName) actor.__stanceSkillName = peekNextBigAttackName(actor);
           actor.bigAttackPending = false;
           actor.bigAttackCountdown = rollBigAttackCountdown(actor);
+          // 予告なしで初手から発動する敵(bigAttackCycle.instantや初期位相0)は、この時点まで構え状態が
+          // 一度も描画されていない。溜めに入る前に一度描画して、構え(オーラ+震え+技名短冊)を
+          // 立ち上げてから溜め演出を始める(2026-08-02ユーザー報告「初手大技で短冊が出ない」)。
+          // 通常の予告済み敵では構えは表示済みで、この描画は差分なしの空振りになるだけで無害
+          renderBattleScreen();
           // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
           // (ユーザー指示、2026-07-21。enemyBigAttack内のlog呼び出し・applyDamageToTargetのbigAttackName引数で処理)
           // 【大技モーション刷新2026-08-01(モック案C採用、白フラッシュ無し)】溜め(暗転+赤オーラ+
