@@ -67,6 +67,7 @@ function initBattleGimmicks() {
       battle.gimmicks.push({ owner: e, def, active: false, roundsSinceActive: 0 });
     });
   });
+  initSecondFormState(); // ボス第二形態(secondForm)の発火状態も戦闘ごとに初期化する
   clearGimmickBattleFx();
 }
 
@@ -83,6 +84,9 @@ function gimmickTriggerMet(entry) {
   if (t.type === "hpBelow") return entry.owner.hp > 0 && entry.owner.hp / entry.owner.maxHp < (t.ratio != null ? t.ratio : 0.5);
   if (t.type === "battleStart") return true;
   if (t.type === "round") return (battle.roundsTotal || 0) >= (t.round || 1);
+  // secondForm: 自力では発動しない。第二形態シーケンス(maybeStartSecondFormSequence)の締めで
+  // activateGimmickEntryが直接発動させる(HP判定はsecondForm側が一元管理=二重発動の根絶)
+  if (t.type === "secondForm") return false;
   return false;
 }
 
@@ -93,32 +97,77 @@ function processGimmickTriggers() {
   battle.gimmicks.forEach((entry) => {
     if (entry.active || entry.owner.hp <= 0) return;
     if (!gimmickTriggerMet(entry)) return;
-    entry.active = true;
-    entry.roundsSinceActive = 0;
     // hpBelowギミックの発動=第二形態相当(2026-08-01ユーザー指定)。二段構成BGMの対象ボスなら
-    // ここで導入曲→本命曲(yokai_no_shutai)へ頭出しで切り替える(audio.js playBossClimaxBgm参照。
-    // 将来の第二形態フルシーケンス(無音→口上→背景/ボス絵切替→曲開始)もこの発火点に組み込む)
+    // ここで導入曲→本命曲(yokai_no_shutai)へ頭出しで切り替える(正式なsecondForm定義を持つボスは
+    // この経路には来ず、maybeStartSecondFormSequenceがフル演出付きで切り替える)
     if (entry.def.trigger && entry.def.trigger.type === "hpBelow" && typeof playBossClimaxBgm === "function") playBossClimaxBgm();
-    if (entry.def.announce) blog(entry.def.announce);
-    else blog(`${entry.owner.label}の【${entry.def.name || "ギミック"}】が発動した！`);
-    triggerWarningFlash();
-    playSfx("big_attack_warning");
-    (entry.def.effects || []).forEach((eff) => {
-      if (eff.type === "overlay") {
-        const el = gimmickOverlayEl();
-        if (el) el.className = "gimmick-" + eff.key;
-      } else if (eff.type === "bg") {
-        gimmickBattleBgUrl = eff.image;
-        updateSceneBackgrounds();
-      } else if (eff.type === "summon" && eff.immediate) {
-        gimmickDoSummon(eff, entry.owner);
-      } else if (eff.type === "formCycle") {
-        entry.formIndex = 0; // 発動と同時に先頭の形態(狐面)になる
-        gimmickApplyForm(entry, eff);
-      }
-    });
+    activateGimmickEntry(entry);
     renderBattleScreen();
   });
+}
+// ギミック発動の実体(告知+場演出+即時効果)。通常トリガー(processGimmickTriggers)と
+// 第二形態シーケンス(maybeStartSecondFormSequence、trigger:"secondForm"のギミックを直接発動)の共通部
+function activateGimmickEntry(entry) {
+  entry.active = true;
+  entry.roundsSinceActive = 0;
+  if (entry.def.announce) blog(entry.def.announce);
+  else blog(`${entry.owner.label}の【${entry.def.name || "ギミック"}】が発動した！`);
+  triggerWarningFlash();
+  playSfx("big_attack_warning");
+  (entry.def.effects || []).forEach((eff) => {
+    if (eff.type === "overlay") {
+      const el = gimmickOverlayEl();
+      if (el) el.className = "gimmick-" + eff.key;
+    } else if (eff.type === "bg") {
+      gimmickBattleBgUrl = eff.image;
+      updateSceneBackgrounds();
+    } else if (eff.type === "summon" && eff.immediate) {
+      gimmickDoSummon(eff, entry.owner);
+    } else if (eff.type === "formCycle") {
+      entry.formIndex = 0; // 発動と同時に先頭の形態(狐面)になる
+      gimmickApplyForm(entry, eff);
+    }
+  });
+}
+
+// ============ ボス第二形態(secondForm、2026-08-01) ============
+// ENEMIES[boss].secondForm = { hpBelow, lines, image, bg, gimmickId } を持つボスは、HPが閾値(既定50%)を
+// 切った直後の手番の節目に、以下のフルシーケンスを一度だけ実行する(K1指定の流れ2026-08-01):
+//   現在の行動演出完了→導入BGM停止(無音)→第二形態口上(タップ送り)→怒り背景+怒り形態絵へ切替→
+//   口上明けに本命BGM(yokai_no_shutai)開始→怒り限定ギミック(trigger:"secondForm")発動
+// battle.jsのprocessNext冒頭から呼ばれ、開始したらtrueを返す(呼び出し元は進行を止め、onDoneで再開する)
+function initSecondFormState() {
+  if (!battle) return;
+  battle.secondForm = null;
+  battle.enemies.forEach((e) => {
+    if (e.secondForm && !battle.secondForm) battle.secondForm = { owner: e, def: e.secondForm, fired: false };
+  });
+}
+function maybeStartSecondFormSequence(onDone) {
+  if (!battle || !battle.secondForm) return false;
+  const sf = battle.secondForm;
+  if (sf.fired || sf.owner.hp <= 0) return false;
+  if (sf.owner.hp / sf.owner.maxHp >= (sf.def.hpBelow != null ? sf.def.hpBelow : 0.5)) return false;
+  sf.fired = true; // 開始した時点で発火済み(演出中の再入・二重発動を防ぐ)
+  if (typeof stopBossIntroBgm === "function") stopBossIntroBgm();
+  renderBattleScreen();
+  // 導入曲が止まった無音の間(600ms)を置いてから口上へ。口上はタップ送り/放置自動送りの共通オーバーレイ
+  setTimeout(() => {
+    if (!battle) return; // 無音の間に煙玉等で戦闘が終わっていた場合の保険
+    playLinesOverlay(sf.def.lines || [], () => {
+      if (!battle) return;
+      // 口上明け: 怒り背景+怒り形態の立ち絵へ切り替え(updateEnemyCardがsrcの差分だけ反映する)
+      if (sf.def.bg) { gimmickBattleBgUrl = sf.def.bg; updateSceneBackgrounds(); }
+      if (sf.def.image) sf.owner.image = sf.def.image;
+      renderBattleScreen();
+      if (typeof playBossClimaxBgm === "function") playBossClimaxBgm(true);
+      // 怒り限定ギミック(trigger:"secondForm")をここで発動する
+      const entry = (battle.gimmicks || []).find((g) => g.owner === sf.owner && g.def.id === sf.def.gimmickId);
+      if (entry && !entry.active) { activateGimmickEntry(entry); renderBattleScreen(); }
+      onDone();
+    });
+  }, 600);
+  return true;
 }
 // formCycleの形態切り替えの実体。持ち主に形態フラグを立て(古い形態のフラグは全消去)、
 // 予告文をログへ流す。般若面(bigAttackStance)は危険の合図として警告フラッシュ+警告音も鳴らす

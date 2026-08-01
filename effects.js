@@ -1668,7 +1668,12 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
 //   「残された記憶に触れる」ボタンから画像+テキストのページ送りビューアを開く(鬼滅形式)。
 //   scenesの画像(image)は未提供でも動く(テキストのみのページになる)
 function playPreBattleLines(enemy, onDone) {
-  const lines = enemy.preBattleLines || [];
+  playLinesOverlay(enemy.preBattleLines || [], onDone);
+}
+// 口上オーバーレイの共通実体(2026-08-01に戦闘前口上から切り出し)。戦闘前口上(preBattleLines)と
+// 第二形態口上(secondForm.lines、gimmicks.jsのmaybeStartSecondFormSequence)の両方が使う。
+// タップで残り全行→もう一度タップで閉じる/放置でも自動で閉じる、は従来の戦闘前口上と同じ挙動
+function playLinesOverlay(lines, onDone) {
   if (!lines.length) { onDone(); return; }
   const overlay = document.createElement("div");
   overlay.className = "pre-battle-lines-overlay";

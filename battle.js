@@ -371,6 +371,10 @@ function updateEnemyCard(card, e) {
     void card.offsetWidth;
     card.classList.add(...shake.split(/\s+/));
   }
+  // 第二形態(secondForm)などでe.imageが差し替わった時だけ立ち絵のsrcを更新する(差分更新の原則:
+  // 表示内容が実際に変わった時だけ触る。カードを作り直すと透過立ち絵が1フレーム消えるため)
+  const portraitImg = card.querySelector(".card-portrait-img");
+  if (portraitImg && portraitImg.getAttribute("src") !== e.image) portraitImg.src = e.image;
   // 立ち絵の上に重ねる動的アイコン(飛行/大技予告💢/依頼対象/次ターン行動バッジ)は毎回作り直す。
   // 全てposition:absoluteの小要素で、アニメーションの起点にはならないため作り直しても問題ない。
   // DOM上の並び(デバフアイコン列の手前)も従来のマークアップと同じに保つ
@@ -584,6 +588,10 @@ function processNext() {
   if (!battle) return;
   battle.actingId = null;
   battle.actingEnemyId = null;
+  // ボス第二形態(secondForm、gimmicks.js): HP50%を切った直後の手番の節目に、進行を止めて
+  // フルシーケンス(導入BGM停止→無音→口上→怒り背景/絵切替→本命BGM→怒りギミック)を挟む。
+  // 開始したらtrueが返るのでここで一旦returnし、演出明けのonDoneでprocessNextを再開する
+  if (typeof maybeStartSecondFormSequence === "function" && maybeStartSecondFormSequence(() => processNext())) return;
   // ボスギミックのトリガー判定(gimmicks.js): 毎手番の節目に、HP割合などの発動条件を満たした
   // ギミックを発動させる(例: ボスがHP50%を割った直後、次の手番が始まる前に激怒が入る)
   if (typeof processGimmickTriggers === "function") processGimmickTriggers();

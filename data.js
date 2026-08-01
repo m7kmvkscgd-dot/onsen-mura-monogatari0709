@@ -543,10 +543,10 @@ const ENEMIES = {
   // テキスト(口上/ギミック案)はCodex産のJSONをそのまま転記。画像は制作待ちのため
   // 提灯おばけ/雪女で暫定(quest_raw納品後に差し替え)。ステータスは序盤(tier1)向けの初期値で、
   // ボステストでの調整前提(回想soulStoryは2026-07-31の方針転換で撤去、ENEMIES末尾のコメント参照)
-  chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/clear/chochin_obake.png", frameless: true, hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
+  chochin_warabe: { id: "chochin_warabe", ja: "提灯童", image: "assets/enemies/clear/chochin_warabe.png", frameless: true, hp: 42, atk: 14, def: 12, spd: 8, goldMin: 6, goldMax: 11, xp: 10, minFloor: 1, maxFloor: 0, questOnly: true,
     bigAttack: { name: "提灯の火", mult: 1.1, debuff: { type: "burn", chance: 0.5, turnsMin: 2, turnsMax: 2 } },
     bigAttackCycle: { min: 3, max: 5 } },
-  amayome_shiranui: { id: "amayome_shiranui", ja: "雨嫁・白縫", image: "assets/enemies/yukionna.png", hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
+  amayome_shiranui: { id: "amayome_shiranui", ja: "雨嫁・白縫", image: "assets/enemies/amayome_shiranui.png", frameless: true, hp: 380, atk: 21, def: 25, spd: 9, goldMin: 60, goldMax: 90, xp: 90, minFloor: 1, maxFloor: 0, isBoss: true, questOnly: true,
     bigAttack: { name: "嫁入りの鈴", mult: 1.4, debuff: { type: "stun", chance: 0.4, turns: 1 } },
     bigAttackCycle: { min: 3, max: 4 },
     statusImmune: ["bleed"],
@@ -563,14 +563,30 @@ const ENEMIES = {
         effects: [
           { type: "bindOne", every: 3, turns: 1, name: "花婿の赤緒", text: "赤い組紐が{target}を花婿に見立てて縛り上げた！" },
         ] },
+      // 弔いの嫁入りは第二形態(secondForm)の怒りギミックへ統合(2026-08-01)。旧hpBelow0.6の単独発動は
+      // 廃止し、trigger:"secondForm"=第二形態シーケンス(口上→絵/背景切替→本命BGM)の締めで発動する
       { id: "tomurai", name: "弔いの嫁入り",
-        trigger: { type: "hpBelow", ratio: 0.6 },
+        trigger: { type: "secondForm" },
         announce: "峠に再び強い雨が降り始めた。提灯の灯りが、嫁入り行列となって白縫を取り囲む！",
         effects: [
           { type: "summon", every: 3, enemyId: "chochin_warabe", count: 2, maxAlive: 3, immediate: true, text: "提灯童たちが行列に加わった！" },
           { type: "dmgTakenWhileMinions", mult: 0.7 },
         ] },
     ],
+    // 第二形態(2026-08-01、素材+口上はCodex納品phase2_design.md)。HP50%を切った直後の手番の節目に
+    // gimmicks.jsのmaybeStartSecondFormSequenceが「導入BGM停止→無音→口上→怒り背景+怒り絵へ切替→
+    // 本命BGM(yokai_no_shutai)→gimmickIdのギミック発動」を一括で実行する
+    secondForm: {
+      hpBelow: 0.5,
+      lines: [
+        "……また、私を置いていくのですか",
+        "ならば、この峠から誰ひとり帰しません",
+        "鈴も、灯りも、皆そろいました――今度こそ、あなたを花婿に",
+      ],
+      image: "assets/enemies/amayome_shiranui_phase2.png",
+      bg: "assets/bg/suzunari_gake_phase2.jpg",
+      gimmickId: "tomurai",
+    },
     gimmickNotes: [
       { name: "花婿の赤緒", trigger: "白縫が銀の鈴を一度鳴らした時に使用する。", effect: "赤い組紐で味方一人を花婿に見立てて縛り、しばらく行動できなくする。仲間が白縫へ攻撃を加えるたびに組紐が緩んでいく。" },
       { name: "弔いの嫁入り", trigger: "戦いが長引き、峠に再び強い雨が降り始めた時に発動する。", effect: "周囲の灯りが消え、提灯童たちが嫁入り行列として現れる。提灯童が残っている間、白縫は行列に守られ、受ける攻撃の勢いを弱める。" },

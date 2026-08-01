@@ -479,14 +479,23 @@ const BATTLE_BGM_FADE_OUT_MS = 3000;
 function isBossBgmActive() {
   return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle" || currentBgmKey === "quest_target_battle" || currentBgmKey === "boss_battle_intro" || currentBgmKey === "boss_battle_climax";
 }
-// 第二形態(hpBelowトリガーのギミック)を持つボス/中ボスかどうか。二段構成BGMの対象判定
+// 第二形態を持つボス/中ボスかどうか。二段構成BGMの対象判定。正式なsecondForm定義(白縫)に加え、
+// secondForm未移行のhpBelowギミック持ちボス(お白/うつろ/試作火車等)も暫定的に対象へ含める
 function bossHasSecondForm(e) {
-  return !!((e.isBoss || e.isMidBoss) && (e.gimmicks || []).some((g) => g.trigger && g.trigger.type === "hpBelow"));
+  return !!((e.isBoss || e.isMidBoss) && (e.secondForm || (e.gimmicks || []).some((g) => g.trigger && g.trigger.type === "hpBelow")));
 }
-// 第二形態の発動の瞬間にgimmicks.jsから呼ばれる: 導入曲を止めて本命曲(yokai_no_shutai)を頭出しする。
-// 導入曲が流れている時だけ切り替える(通常のボス曲で戦っている第二形態なしボスには何もしない)
-function playBossClimaxBgm() {
+// 第二形態シーケンスの冒頭でgimmicks.jsから呼ばれる: 導入曲を止めて無音を作る(口上の間は雨音だけの想定)
+function stopBossIntroBgm() {
   if (currentBgmKey !== "boss_battle_intro") return;
+  battleBgmFadeToken++;
+  bgmAudio.pause();
+  currentBgmKey = null;
+}
+// 第二形態の発動の瞬間にgimmicks.jsから呼ばれる: 本命曲(yokai_no_shutai)を頭出しする。
+// 通常は導入曲が流れている時だけ切り替えるが、第二形態シーケンス(stopBossIntroBgmで無音を挟む)からは
+// force=trueで呼ばれ、停止済み(currentBgmKey=null)の状態からでも本命曲を開始する
+function playBossClimaxBgm(force) {
+  if (!force && currentBgmKey !== "boss_battle_intro") return;
   battleBgmFadeToken++;
   currentBgmKey = null;
   bgmPositions.boss_battle_climax = 0;
