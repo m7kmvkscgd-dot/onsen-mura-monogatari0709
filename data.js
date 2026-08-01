@@ -1957,30 +1957,31 @@ const QUEST_DEFS = {
   oomukade: { emoji: "🐛", requester: "飛脚・新八", title: "地を這う災厄", text: "この道が通れねぇと、荷も手紙も届けられません。仲間も毒にやられちまいました…。商人も旅人も皆困っています。どうか、街道を取り戻してください！", targetFloor: 33, count: 1, tier: 2 },
   kasha: { emoji: "🔥", requester: "墓守・源蔵", title: "燃え走る怪車", text: "弔いの最中にまで火車が現れ、亡き人をさらっていくんです…。死んだ者くらい安らかに眠らせてやりたい。このままでは供養もできません。どうか力を貸してください。", targetFloor: 36, count: 1, tier: 2 },
   // 物語クエスト第1号「鈴鳴峠の嫁入り」(2026-07-31、テキストはCodex産)。専用ルートsuzunari行き、
-  // ボスは最終層(targetFloor=8)に確定出現。completionTextはリザルトの達成カードに表示される後日談
+  // ボスは最終層(targetFloor=totalFloors)に確定出現。completionTextはリザルトの達成カードに表示される後日談。
+  // 階層は2026-08-01の12〜15層標準(K1指定)へ再配分済み: 鈴鳴峠12/影盗り宿13/笑わぬ祭14/湯治宿15
   amayome_shiranui: { emoji: "☔", requester: "老薬師・玄庵", title: "鈴鳴峠の嫁入り",
     text: "鈴鳴峠にて、雨の夜に旅人が消える怪異が続いている。現場には決まって、濡れた白無垢の切れ端と赤い組紐が残されていた。薬草を採りに向かった我が娘・お春も、三日前から戻っておらぬ。峠で目撃される花嫁姿の妖を討ち、行方不明者の手掛かりを探してほしい。",
     completionText: "雨の止んだ峠で、お春を含む行方不明者たちが眠るように倒れているのが見つかった。玄庵は拾われた銀の鈴を、崖際に残る名もない墓へ供えたという。翌朝、その鈴には新しい赤い組紐が結ばれていた。それから鈴鳴峠で、嫁入りの列を見た者はいない。",
-    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
+    targetFloor: 12, count: 1, tier: 1, rewardGold: 200, route: "suzunari",
     chaseText: "雨嫁・白縫が追いかけてきた！" },
   // 物語クエスト第2号「影盗り宿の十三号室」(2026-07-31、テキストはCodex産)。専用ルートtsukikage_yado行き、
-  // ボスは最終層(targetFloor=8)に確定出現
+  // ボスは最終層に確定出現(13層=十三号室の題名合わせ)
   kagegui_sakazuki: { emoji: "🪞", requester: "月影宿の女将・お咲", title: "影盗り宿の十三号室",
     text: "雨夜の宿場にある月影宿で、泊まり客が影を失う怪異が続いております。影を失った者は日ごとに記憶が薄れ、やがて鏡の中へ消えるとの噂まで立ちました。すべては使われていない十三号室へ古鏡を運び込んでから始まったこと。どうか鏡に棲む妖を討ち、宿と客たちをお救いください。",
     completionText: "月影宿の客たちには影が戻り、失われていた名前も少しずつ思い出された。宿は奉行所によって封鎖されたが、女将のお咲は取り調べの前に姿を消している。帳場からは売上金と宿帳の最後の一枚だけが持ち去られていた。割れた鏡の破片には今も、見る者より一拍遅れて動く影が映るという。",
-    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
+    targetFloor: 13, count: 1, tier: 1, rewardGold: 200, route: "tsukikage_yado",
     chaseText: "鏡喰い・逆月が追いかけてきた！" },
   // 物語クエスト第3号「笑わぬ祭の面売り」(2026-07-31、テキストはGPT産)。専用ルートwarawanu_matsuri行き
   hyakumenshi_utsuro: { emoji: "🎭", requester: "薬種行商・茂吉", title: "笑わぬ祭の面売り",
     text: "北の旧道を越える途中、地図にない祭りへ迷い込みました。屋台には火が入り、笛も太鼓も鳴っているのに、客も囃子方も一人として見当たりません。同行していた四人は、面売りから面を受け取った途端に祭りの奥へ消えました。夜が明けても戻らず、旧道では今も祭囃子が聞こえます。どうか仲間たちを捜し、面売りの怪異を鎮めてください。",
     completionText: "祭りが消えると、茂吉の仲間三人が参道に倒れていた。彼らは自分から面を受け取り、名も暮らしも捨てようとしたことだけを覚えていた。四人目は見つからなかったが、帰り道の古木には、穏やかに笑う新しい面が一枚掛けられていたという。それ以来、北の旧道で祭囃子を聞いても、決して音のする方へ顔を向けてはならないと伝えられている。",
-    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "warawanu_matsuri",
+    targetFloor: 14, count: 1, tier: 1, rewardGold: 200, route: "warawanu_matsuri",
     chaseText: "百面師・うつろが追いかけてきた！" },
   // 物語クエスト第4号「帰らずの湯治宿」(2026-08-01、テキストはGPT産)。専用ルートkaerazu_tojiyado行き
   wasureyu_oshira: { emoji: "♨️", requester: "炭焼き・弥作", title: "帰らずの湯治宿",
     text: "北の炭焼き道を越えた先、十年前に閉じたはずの白鷺湯治宿に灯が戻っています。湯に入った者は古傷も疲れも消えて帰ってきますが、数日もすると家も仕事も捨て、宿へ戻ってしまうのです。昨夜は薪運びの若者三人が帰りませんでした。宿の者に危害を加えぬよう様子を確かめ、まだ戻れる者を連れ帰ってください。",
     completionText: "湯治宿の灯は消え、山道に立ちこめていた甘い湯気も薄れた。戻った客たちは自分の名を思い出したが、宿で何を手放したのかだけは語ろうとしない。空になった共同湯の脱衣籠には、見覚えのない無地の湯札が一枚残されていた。湯守はそれを燃やしたが、濡れた木は朝まで煙を吐き続けた。",
-    targetFloor: 8, count: 1, tier: 1, rewardGold: 200, route: "kaerazu_tojiyado",
+    targetFloor: 15, count: 1, tier: 1, rewardGold: 200, route: "kaerazu_tojiyado",
     chaseText: "忘れ湯・お白が追いかけてきた！" },
 };
 const QUEST_BOARD_SIZE = 3; // 張り出される依頼の最大枚数。1件目は確定、2件目はQUEST_BOARD_SECOND_SLOT_CHANCE、
@@ -2036,36 +2037,36 @@ const QUEST_ROUTE_DEFS = {
   // 物語クエスト第1号「鈴鳴峠の嫁入り」(テキストはCodex産)。背景セット(suzunari_*)は画像制作待ちのため
   // 未登録=深淵の森の絵でフォールバック表示される(BG_SETSへ登録すれば自動で切り替わる)
   suzunari: {
-    ja: "鈴鳴峠", emoji: "⛰", totalFloors: 8,
+    ja: "鈴鳴峠", emoji: "⛰", totalFloors: 12,
     segments: [
       { fromFloor: 1, bg: "suzunari_sando", bgTitle: "夕暮れの杉参道",
         flavor: "雨に濡れた石段には、山を下った足跡だけが残っている。だが、その足跡はどれも峠の奥から始まっていた。",
         enemies: [] },
-      { fromFloor: 3, bg: "suzunari_chochin", bgTitle: "灯の浮かぶ峠道",
+      { fromFloor: 4, bg: "suzunari_chochin", bgTitle: "灯の浮かぶ峠道",
         flavor: "誰も持っていない提灯が、一定の間隔で山頂へ進んでいる。鈴の音が鳴るたび、列の最後尾がひとつ増えた。",
         enemies: ["chochin_warabe"] },
-      { fromFloor: 5, bg: "suzunari_chaya", bgTitle: "打ち捨てられた婚礼茶屋",
+      { fromFloor: 8, bg: "suzunari_chaya", bgTitle: "打ち捨てられた婚礼茶屋",
         flavor: "朽ちた婚礼膳には、二人分の盃だけが新しい。片方の縁には、乾くことのない紅が残っている。",
         enemies: ["chochin_warabe"] },
-      { fromFloor: 8, bg: "suzunari_gake", bgTitle: "月下の嫁入り崖",
+      { fromFloor: 11, bg: "suzunari_gake", bgTitle: "月下の嫁入り崖",
         flavor: "崖の前には、花嫁を迎えるための席がひとつだけ空けられている。雨音の中で、女の声が「遅かったですね」と笑った。",
         enemies: [] },
     ],
   },
   // 物語クエスト第2号「影盗り宿の十三号室」(テキストはCodex産)
   tsukikage_yado: {
-    ja: "月影宿", emoji: "🏮", totalFloors: 8,
+    ja: "月影宿", emoji: "🏮", totalFloors: 13,
     segments: [
       { fromFloor: 1, bg: "tsukikage_shukuba", bgTitle: "雨夜の宿場町",
         flavor: "月影宿の行灯は雨の中でも明るい。だが濡れた石畳には、宿へ入る足跡だけがあり、出てきた跡はひとつもない。",
         enemies: [] },
-      { fromFloor: 3, bg: "tsukikage_ooma", bgTitle: "影のない大広間",
+      { fromFloor: 4, bg: "tsukikage_ooma", bgTitle: "影のない大広間",
         flavor: "宴の膳には、まだ温かな料理が残っている。行灯はすべての物を照らしているのに、座布団の主だけは影すら残していなかった。",
         enemies: ["kageboshi"] },
-      { fromFloor: 5, bg: "tsukikage_rouka", bgTitle: "十三号室へ続く廊下",
+      { fromFloor: 8, bg: "tsukikage_rouka", bgTitle: "十三号室へ続く廊下",
         flavor: "十二枚の鏡は、こちらが通り過ぎてから遅れて曇る。廊下の奥で宿帳をめくる音がしたが、帳場はとうに空だった。",
         enemies: ["kageboshi"] },
-      { fromFloor: 8, bg: "tsukikage_kagami", bgTitle: "逆さ月の鏡座敷",
+      { fromFloor: 11, bg: "tsukikage_kagami", bgTitle: "逆さ月の鏡座敷",
         flavor: "鏡の中では、十二人の影が客席に座っている。空いている最後の席だけが、こちらを向いていた。",
         enemies: [] },
     ],
@@ -2073,18 +2074,18 @@ const QUEST_ROUTE_DEFS = {
   // 物語クエスト第3号「笑わぬ祭の面売り」(テキストはGPT産)。bgm=このルートの探索・戦闘で流れる
   // 専用BGMのキー(BGM_TRACKS参照。audio.jsのplayExplorationAreaBgm/playBattleBgmが読む)
   warawanu_matsuri: {
-    ja: "笑わぬ祭", emoji: "🏮", totalFloors: 8, bgm: "warawanu_matsuri",
+    ja: "笑わぬ祭", emoji: "🏮", totalFloors: 14, bgm: "warawanu_matsuri",
     segments: [
       { fromFloor: 1, bg: "warawanu_kazamichi", bgTitle: "風車の夕道",
         flavor: "杉の向こうから、笛と太鼓が途切れ途切れに聞こえる。風はあるのに、街道に並ぶ紙風車だけが一つも回っていない。",
         enemies: [] },
-      { fromFloor: 3, bg: "warawanu_yatai", bgTitle: "無人の祭り屋台",
+      { fromFloor: 5, bg: "warawanu_yatai", bgTitle: "無人の祭り屋台",
         flavor: "屋台の団子はまだ温かく、金魚桶の水も揺れている。それでも通りには、店を開いた者も祭りを楽しむ者もいない。",
         enemies: ["menkaburi"] },
-      { fromFloor: 5, bg: "warawanu_men_sando", bgTitle: "百面の参道",
+      { fromFloor: 9, bg: "warawanu_men_sando", bgTitle: "百面の参道",
         flavor: "木々に吊られた面は、こちらが通り過ぎてから小さく揺れた。面の裏には、茂吉が捜す四人の名が新しい墨で記されている。",
         enemies: ["menkaburi"] },
-      { fromFloor: 8, bg: "warawanu_kagura", bgTitle: "観客なき神楽舞台",
+      { fromFloor: 12, bg: "warawanu_kagura", bgTitle: "観客なき神楽舞台",
         flavor: "神楽舞台には奏者がいない。それでも笛と太鼓は鳴り続け、舞台前に置かれた五枚の面だけが同じ調子で笑っている。",
         enemies: [] },
     ],
@@ -2092,18 +2093,18 @@ const QUEST_ROUTE_DEFS = {
   // 物語クエスト第4号「帰らずの湯治宿」(テキストはGPT産)。音響案(audio_plan.json)の多層ミックスは
   // 既存音声機構の範囲外のため、専用BGM1本の通し再生(warawanu_matsuriと同方式)で採用
   kaerazu_tojiyado: {
-    ja: "帰らずの湯治道", emoji: "🌫️", totalFloors: 8, bgm: "kaerazu_tojiyado",
+    ja: "帰らずの湯治道", emoji: "🌫️", totalFloors: 15, bgm: "kaerazu_tojiyado",
     segments: [
       { fromFloor: 1, bg: "kaerazu_yumichi", bgTitle: "夕暮れの帰らず道",
         flavor: "谷川と虫の音が、足を進めるほど遠ざかる。風に逆らって下りてきた湯煙の向こうに、閉じたはずの宿の灯が見えた。",
         enemies: [] },
-      { fromFloor: 3, bg: "kaerazu_yado", bgTitle: "灯の戻った湯治宿",
+      { fromFloor: 5, bg: "kaerazu_yado", bgTitle: "灯の戻った湯治宿",
         flavor: "濡れた下駄はすべて戸口へ爪先を向け、外へ向いた一足がない。障子の内側には灯があるのに、人の影だけが映らない。",
         enemies: ["yubitari"] },
-      { fromFloor: 5, bg: "kaerazu_yufuda", bgTitle: "名を流す湯札廊下",
+      { fromFloor: 10, bg: "kaerazu_yufuda", bgTitle: "名を流す湯札廊下",
         flavor: "壁の湯札から墨が滴り、床の湯樋へ黒い筋を引いている。読めなくなった札の数だけ、奥の湯音が大きくなった。",
         enemies: ["yubitari"] },
-      { fromFloor: 8, bg: "kaerazu_ookama", bgTitle: "地底の大湯釜",
+      { fromFloor: 13, bg: "kaerazu_ookama", bgTitle: "地底の大湯釜",
         flavor: "地下の湯釜は、火を焚く者もないまま煮え続けている。白い湯面には、こちらへ差し出された手の形だけが次々と浮かんでは消えた。",
         enemies: [] },
     ],
