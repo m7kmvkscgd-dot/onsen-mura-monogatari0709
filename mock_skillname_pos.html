@@ -111,6 +111,20 @@
 
     <div class="row" style="border-top:1px dashed #4a505a;padding-top:0.55rem;"><div class="label">案I: 本人アイコンの右肩に縦書き短冊(ユーザー案)<small>使ったキャラのカード右上から立ち上る。味方必殺技=金赤、敵の大技(構え)=敵イラストの右肩に紫</small></div>
       <button onclick="caseI(0)">左</button><button onclick="caseI(1)">中</button><button onclick="caseI(2)">右</button><button onclick="caseIEnemy()">敵</button></div>
+
+    <!-- 案Iの調整卓: サイズ2種+位置スライダー。「調整モード」ONで中キャラに出しっぱなしにして動かせる -->
+    <div style="border:1px solid #4a505a;border-radius:9px;padding:0.55rem 0.6rem;margin-top:0.2rem;">
+      <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
+        <strong style="font-size:0.8rem;">案Iの調整卓</strong>
+        <button id="sizeBtn" onclick="toggleSize()" style="border-radius:8px;border:1px solid #4a505a;background:#2e3540;color:#ece8dc;font-size:0.75rem;font-weight:700;padding:0.3rem 0.7rem;">サイズ: 大</button>
+        <button id="pinBtn" onclick="togglePin()" style="border-radius:8px;border:1px solid #4a505a;background:#2e3540;color:#ece8dc;font-size:0.75rem;font-weight:700;padding:0.3rem 0.7rem;">調整モード: OFF</button>
+      </div>
+      <label style="font-size:0.72rem;color:#9aa79f;display:block;">横位置(カード右端からのずれ): <span id="dxVal">-14</span>px
+        <input type="range" id="dx" min="-60" max="30" value="-14" style="width:100%;" oninput="tunerChanged()"></label>
+      <label style="font-size:0.72rem;color:#9aa79f;display:block;margin-top:0.3rem;">縦位置(アイコン上端への食い込み): <span id="dyVal">18</span>px
+        <input type="range" id="dy" min="-30" max="70" value="18" style="width:100%;" oninput="tunerChanged()"></label>
+      <p style="font-size:0.7rem;color:#9aa79f;margin:0.4rem 0 0;">調整モードONで中キャラに固定表示→スライダーで動かす→決まった数値をClaudeに伝えてください。左/中/右/敵ボタンにも同じ設定が反映されます。</p>
+    </div>
   </div>
 </div>
 
@@ -170,16 +184,27 @@ function caseH(i) {
     r.left - s.left + r.width / 2, r.bottom - s.top - 26, r.width + 8);
 }
 // 案I: 使った本人のアイコンの右肩から縦書き短冊が立ち上る。
-// 下端をカード上端のやや下に重ね、右端はカードの右端から少しはみ出す位置
-function spawnTanzaku(html, anchorRect, riseFrom) {
+// 位置は調整卓のdx(カード右端からのずれ)/dy(アイコン上端への食い込み)を反映する
+let tanzakuSmall = false;
+let pinned = null; // 調整モードの固定表示要素
+const tunerDx = () => Number(document.getElementById("dx").value);
+const tunerDy = () => Number(document.getElementById("dy").value);
+function tanzakuHtml(text, enemy) {
+  const sizeCss = tanzakuSmall ? "font-size:0.82rem;padding:14px 5px;letter-spacing:0.14em;" : "";
+  return `<span class="tanzaku${enemy ? " enemy-big" : ""}" style="${sizeCss}">${text}</span>`;
+}
+function placeTanzaku(el, anchorRect, riseFrom) {
   const s = sceneEl();
+  const h = el.firstChild.getBoundingClientRect().height || 130;
+  el.style.left = `${anchorRect.right - s.left + tunerDx()}px`;
+  el.style.top = `${riseFrom - s.top - h + tunerDy()}px`;
+}
+function spawnTanzaku(html, anchorRect, riseFrom) {
   const el = document.createElement("div");
   el.className = "fx-item";
   el.innerHTML = html;
   document.getElementById("fx").appendChild(el);
-  const h = el.firstChild.getBoundingClientRect().height || 130;
-  el.style.left = `${anchorRect.right - s.left - 14}px`; // 右肩(カード右端の少し内側)から立てる
-  el.style.top = `${riseFrom - s.top - h + 18}px`; // 下端がアイコン上端の少し下に食い込む
+  placeTanzaku(el, anchorRect, riseFrom);
   el.animate([
     { opacity: 0, transform: "translateY(14px)" },
     { opacity: 1, transform: "translateY(0)", offset: 0.18 },
@@ -190,11 +215,38 @@ function spawnTanzaku(html, anchorRect, riseFrom) {
 function caseI(i) {
   glow(i);
   const r = allyRect(i);
-  spawnTanzaku(`<span class="tanzaku">${nextSkill()}</span>`, r, r.top);
+  spawnTanzaku(tanzakuHtml(nextSkill(), false), r, r.top);
 }
 function caseIEnemy() {
   const img = document.querySelector(".enemy img").getBoundingClientRect();
-  spawnTanzaku(`<span class="tanzaku enemy-big">嫁入りの鈴</span>`, img, img.top + 30);
+  spawnTanzaku(tanzakuHtml("嫁入りの鈴", true), img, img.top + 30);
+}
+// ---- 調整卓 ----
+function toggleSize() {
+  tanzakuSmall = !tanzakuSmall;
+  document.getElementById("sizeBtn").textContent = tanzakuSmall ? "サイズ: 小" : "サイズ: 大";
+  if (pinned) refreshPinned();
+}
+function togglePin() {
+  if (pinned) { pinned.remove(); pinned = null; }
+  else {
+    pinned = document.createElement("div");
+    pinned.className = "fx-item";
+    pinned.style.opacity = "1";
+    document.getElementById("fx").appendChild(pinned);
+    refreshPinned();
+  }
+  document.getElementById("pinBtn").textContent = pinned ? "調整モード: ON" : "調整モード: OFF";
+}
+function refreshPinned() {
+  if (!pinned) return;
+  pinned.innerHTML = tanzakuHtml("燕返しの太刀", false);
+  placeTanzaku(pinned, allyRect(1), allyRect(1).top);
+}
+function tunerChanged() {
+  document.getElementById("dxVal").textContent = tunerDx();
+  document.getElementById("dyVal").textContent = tunerDy();
+  if (pinned) refreshPinned();
 }
 </script>
 </body>
