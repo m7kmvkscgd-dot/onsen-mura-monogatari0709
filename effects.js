@@ -459,7 +459,7 @@ function playEnemyBigAttackTanzaku(enemy) {
 // 同日「出てくる時間が短い」): スライドインして出っぱなしにし、battle.js側が攻撃演出の完了時に
 // hideTanzakuBanner()を呼ぶが、表示開始からTANZAKU_MIN_HOLD_MSは必ず出続ける(演出が先に
 // 終わっても、最低表示時間が満ちるまで下ろさない)。予告(構え)時の900msスライドとは別物
-const TANZAKU_MIN_HOLD_MS = 2200;
+const TANZAKU_MIN_HOLD_MS = 1800; // 2200→1800(2026-08-01「長い、1.8秒にしろ」)
 let tanzakuShowToken = 0; // 遅延した下ろし処理が「次の表示」を誤って消さないための世代カウンタ
 function playEnemyBigAttackTanzakuHold(enemy) {
   try {
