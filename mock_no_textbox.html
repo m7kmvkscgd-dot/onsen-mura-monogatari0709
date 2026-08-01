@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>テキストボックス廃止案モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #101014; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  h1 { font-size: 0.95rem; padding: 12px; max-width: 430px; margin: 0 auto; }
+  .stage {
+    position: relative; width: 100%; max-width: 430px; height: 560px; margin: 0 auto;
+    background: url("assets/bg/forest_day.jpg") center 35% / cover no-repeat; overflow: hidden;
+  }
+  /* ===== 敵(実寸: 立ち絵101px、接地影は本編CSS共通表現の簡易再現) ===== */
+  .enemy { position: absolute; top: 118px; width: 110px; text-align: center; }
+  .enemy .nm { font-size: 0.78rem; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); margin-bottom: 4px; }
+  .enemy img { height: 101px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  .enemy .hp { width: 84px; height: 8px; margin: 3px auto 0; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
+  .enemy .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; transition: width 0.3s; }
+  /* ===== 味方(実寸93px、帯なし) ===== */
+  .allies { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.4rem; }
+  .ally { width: 93px; text-align: center; position: relative; }
+  .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: 8px; }
+  .ally .hp { height: 8px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; margin-top: 3px; }
+  .ally .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; transition: width 0.3s; }
+  .ally .nm { font-size: 0.72rem; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  /* ===== 案2: 状態チップ(常設・全案共通の土台) ===== */
+  .chips { display: flex; justify-content: center; gap: 3px; margin-top: 3px; min-height: 18px; }
+  .chip {
+    font-size: 0.62rem; line-height: 1; padding: 3px 5px; border-radius: 8px; color: #fff;
+    background: rgba(20,16,14,0.85); border: 1px solid rgba(217,196,154,0.55);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6); white-space: nowrap;
+  }
+  .chip.debuff { border-color: rgba(217,120,100,0.8); }
+  .chip .t { color: #d9c49a; margin-left: 1px; }
+  .chip.pop { animation: chipIn 0.25s ease-out; }
+  @keyframes chipIn { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  /* ===== ダメージポップ(既存の再現) ===== */
+  .dmg { position: absolute; font-weight: 900; font-size: 1.25rem; color: #fff; text-shadow: 0 0 4px #000, 0 2px 4px #000; pointer-events: none; animation: dmgUp 0.8s ease-out forwards; }
+  .dmg.dot { color: #c9a2e0; font-size: 1rem; }
+  .dmg.ally-hit { color: #ff9c8a; }
+  @keyframes dmgUp { 0% { transform: translateY(6px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-26px); opacity: 0; } }
+  /* ===== 案1: その場ポップ(出来事を起きた場所に出す) ===== */
+  .spotpop {
+    position: absolute; left: 50%; translate: -50% 0; z-index: 6;
+    font-size: 0.72rem; font-weight: 700; color: #ffe9c8; white-space: nowrap;
+    background: linear-gradient(155deg, rgba(80,50,30,0.95), rgba(40,26,16,0.95));
+    border: 1px solid #d9c49a; border-radius: 9px; padding: 4px 9px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7); pointer-events: none;
+    animation: spotIn 1.15s ease-out forwards;
+  }
+  @keyframes spotIn { 0% { transform: scale(0.4); opacity: 0; } 14% { transform: scale(1.08); opacity: 1; } 22% { transform: scale(1); } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(8px) scale(0.85); } }
+  /* ===== 案3: 上端トースト ===== */
+  .toast {
+    position: absolute; top: 10px; left: 50%; translate: -50% 0; z-index: 7;
+    font-size: 0.76rem; color: #fff; white-space: nowrap;
+    background: rgba(18,16,20,0.92); border: 1px solid #6d5a35; border-left: 3px solid #d9c49a;
+    border-radius: 8px; padding: 6px 14px; box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+    animation: toastIn 1.5s ease-out forwards; pointer-events: none;
+  }
+  @keyframes toastIn { 0% { transform: translateY(-14px); opacity: 0; } 12% { transform: translateY(0); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+  /* ===== 案4: 縦書き短冊ティッカー ===== */
+  .tanzaku {
+    position: absolute; top: 56px; right: 8px; z-index: 7;
+    writing-mode: vertical-rl; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 0.78rem; letter-spacing: 2px; color: #f2e6cc; white-space: nowrap;
+    background: linear-gradient(175deg, #3a2c1c 0%, #241a10 100%);
+    border: 1px solid #d9c49a; border-radius: 4px; padding: 10px 5px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.7); pointer-events: none;
+    animation: tzIn 1.6s ease-out forwards;
+  }
+  .tanzaku.second { right: 34px; }
+  @keyframes tzIn { 0% { transform: translateY(-12px); opacity: 0; } 12% { transform: translateY(0); opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(10px); } }
+  /* チップの説明ポップ(タップ) */
+  .tip {
+    position: absolute; z-index: 9; font-size: 0.7rem; line-height: 1.5; color: #fff;
+    background: rgba(18,16,20,0.95); border: 1px solid #d9c49a; border-radius: 9px; padding: 7px 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.7); max-width: 210px;
+  }
+  .hitfx { animation: hitShake 0.3s; }
+  @keyframes hitShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 60% { transform: translateX(4px); } }
+  .acting-glow img { outline: 2px solid #e8c56a; outline-offset: -2px; border-radius: 8px; box-shadow: 0 0 12px rgba(232,197,106,0.7); }
+  .ko { animation: koFade 0.8s ease-in forwards; }
+  @keyframes koFade { to { opacity: 0; transform: translateY(10px); } }
+  /* ===== 操作パネル ===== */
+  .panel { max-width: 430px; margin: 0 auto; padding: 12px 12px 44px; }
+  .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 12px 0 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35; background: #2a2620; color: #ece8dc; }
+  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.play { background: #1f2d24; border-color: #3f6d4e; }
+  .note { font-size: 0.74rem; line-height: 1.75; color: #cfc9b8; margin-top: 8px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
+  .note b { color: #d9c49a; }
+</style>
+</head>
+<body>
+<h1>テキストボックス廃止: 置き換え案モック(実寸)</h1>
+<div class="stage" id="stage">
+  <div class="enemy" id="en1" style="left: 60px;">
+    <div class="nm">野犬</div>
+    <img src="assets/enemies/clear/yaken.png" alt="">
+    <div class="hp"><b id="hp-en1"></b></div>
+    <div class="chips" id="chips-en1"></div>
+  </div>
+  <div class="enemy" id="en2" style="right: 60px;">
+    <div class="nm">野犬</div>
+    <img src="assets/enemies/clear/yaken.png" alt="">
+    <div class="hp"><b id="hp-en2"></b></div>
+    <div class="chips" id="chips-en2"></div>
+  </div>
+  <div class="allies">
+    <div class="ally" id="al1"><img src="assets/class_naginata.png" alt=""><div class="hp"><b id="hp-al1"></b></div><div class="chips" id="chips-al1"></div><div class="nm">楓</div></div>
+    <div class="ally" id="al2"><img src="assets/class_hunter.png" alt=""><div class="hp"><b id="hp-al2"></b></div><div class="chips" id="chips-al2"></div><div class="nm">小夜</div></div>
+    <div class="ally" id="al3"><img src="assets/class_onmyoji.png" alt=""><div class="hp"><b id="hp-al3"></b></div><div class="chips" id="chips-al3"></div><div class="nm">晴明</div></div>
+  </div>
+</div>
+<div class="panel">
+  <div class="sec-label">■ 出来事の出し方を選ぶ(状態チップは全案共通の土台)</div>
+  <div class="row">
+    <button class="mode on" data-mode="spot">案1: その場ポップ</button>
+    <button class="mode" data-mode="toast">案3: 上端トースト</button>
+    <button class="mode" data-mode="tanzaku">案4: 縦書き短冊</button>
+    <button class="mode" data-mode="none">チップのみ(案2単独)</button>
+  </div>
+  <div class="sec-label">■ 再生(実戦テンポ: 攻撃→出血付与→敵の反撃→毒→毒ダメ→撃破)</div>
+  <div class="row">
+    <button class="play" id="playBtn">▶ 1ターンを通しで再生</button>
+    <button id="resetBtn">リセット</button>
+  </div>
+  <div class="note">
+    <b>考え方: テキストの役割を「状態」と「出来事」に分解して、箱ごと捨てる</b><br>
+    ・<b>状態</b>(相手/味方が今どうなってるか)=<b>案2: 状態チップ</b>が常設で担当。HPバー下に「出血2」「毒3」「防↓」が残り続け、<b>タップで説明</b>が出る(モックでもタップ可)。これが「状況がわかる」の本命<br>
+    ・<b>出来事</b>(いま何が起きたか)=一瞬だけ出す。その出し方が案1/3/4:<br>
+    &nbsp;&nbsp;<b>案1 その場ポップ</b>: 出来事が起きた本人の頭上に出る。目線移動ゼロ、直感性最強。おすすめ<br>
+    &nbsp;&nbsp;<b>案3 上端トースト</b>: 画面上端に要点だけ。整理されるが、戦場と目線が上下に割れる<br>
+    &nbsp;&nbsp;<b>案4 縦書き短冊</b>: 和風で雰囲気は一番。ただし技名短冊と混ざって見える懸念<br>
+    ・ダメージ数字は今までどおりポップアップ、技名は短冊、勝利/全滅は中央バナーで変更なし<br>
+    ・<b>推奨: 案1+案2</b>。履歴の振り返りは歯車メニューに「戦闘記録」として残せば保険も効く
+  </div>
+</div>
+<script>
+  let mode = "spot";
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  document.querySelectorAll(".mode").forEach((b) => {
+    b.onclick = () => { document.querySelectorAll(".mode").forEach((x) => x.classList.remove("on")); b.classList.add("on"); mode = b.dataset.mode; };
+  });
+
+  const CHIP_DESC = {
+    bleed: "出血: 行動のたびに少しダメージ。数字は残りターン",
+    poison: "毒: 毎ターンHPの一部を失う。数字は残りターン",
+    defdown: "防御力低下: 受けるダメージが増える",
+  };
+  function addChip(ownerId, kind, label, turns) {
+    const wrap = $("chips-" + ownerId);
+    const c = document.createElement("span");
+    c.className = "chip pop" + (kind ? " debuff" : "");
+    c.dataset.kind = kind;
+    c.innerHTML = label + (turns ? '<span class="t">' + turns + "</span>" : "");
+    c.onclick = (e) => { e.stopPropagation(); showTip(c, CHIP_DESC[kind] || ""); };
+    wrap.appendChild(c);
+  }
+  let tipEl = null;
+  function showTip(anchor, text) {
+    hideTip();
+    tipEl = document.createElement("div");
+    tipEl.className = "tip";
+    tipEl.textContent = text;
+    stage.appendChild(tipEl);
+    const a = anchor.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    tipEl.style.left = Math.max(6, Math.min(s.width - 216, a.left - s.left - 60)) + "px";
+    tipEl.style.top = (a.top - s.top - 54) + "px";
+  }
+  function hideTip() { if (tipEl) { tipEl.remove(); tipEl = null; } }
+  stage.addEventListener("click", hideTip);
+
+  function dmgPop(targetId, text, cls) {
+    const t = $(targetId), s = stage.getBoundingClientRect(), r = t.getBoundingClientRect();
+    const d = document.createElement("div");
+    d.className = "dmg " + (cls || "");
+    d.textContent = text;
+    d.style.left = (r.left - s.left + r.width / 2 - 10) + "px";
+    d.style.top = (r.top - s.top + 26) + "px";
+    stage.appendChild(d);
+    setTimeout(() => d.remove(), 850);
+  }
+  // 出来事を現在のモードで1件出す。spot=対象の頭上、toast=上端、tanzaku=右端縦書き
+  let tzCount = 0;
+  function event(targetId, text) {
+    if (mode === "none") return;
+    if (mode === "spot") {
+      const t = $(targetId), s = stage.getBoundingClientRect(), r = t.getBoundingClientRect();
+      const p = document.createElement("div");
+      p.className = "spotpop";
+      p.textContent = text;
+      p.style.left = (r.left - s.left + r.width / 2) + "px";
+      p.style.top = Math.max(4, r.top - s.top - 24) + "px";
+      stage.appendChild(p);
+      setTimeout(() => p.remove(), 1200);
+    } else if (mode === "toast") {
+      const p = document.createElement("div");
+      p.className = "toast";
+      p.textContent = text;
+      stage.appendChild(p);
+      setTimeout(() => p.remove(), 1550);
+    } else {
+      const p = document.createElement("div");
+      p.className = "tanzaku" + (tzCount % 2 ? " second" : "");
+      tzCount++;
+      p.textContent = text;
+      stage.appendChild(p);
+      setTimeout(() => p.remove(), 1650);
+    }
+  }
+  function hit(id) { const el = $(id); el.classList.add("hitfx"); setTimeout(() => el.classList.remove("hitfx"), 320); }
+  function glow(id, on) { $(id).classList.toggle("acting-glow", on); }
+  function setHp(id, pct) { $("hp-" + id).style.width = pct + "%"; }
+
+  function reset() {
+    ["en1", "en2", "al1", "al2", "al3"].forEach((id) => {
+      $("chips-" + id).innerHTML = "";
+      setHp(id, 100);
+      $(id).classList.remove("ko");
+      $(id).style.opacity = "";
+    });
+    hideTip();
+  }
+  $("resetBtn").onclick = reset;
+
+  let playing = false;
+  $("playBtn").onclick = () => {
+    if (playing) return;
+    playing = true;
+    reset();
+    const steps = [
+      [0, () => glow("al1", true)],
+      [350, () => { hit("en1"); dmgPop("en1", "12"); setHp("en1", 55); }],
+      [800, () => { event("en1", "出血を与えた！"); addChip("en1", "bleed", "🩸出血", 2); }],
+      [1700, () => { glow("al1", false); hit("al2"); dmgPop("al2", "8", "ally-hit"); setHp("al2", 72); }],
+      [2350, () => { event("al2", "毒を受けた…"); addChip("al2", "poison", "☠毒", 3); }],
+      [3400, () => { dmgPop("en1", "2", "dot"); setHp("en1", 40); }],
+      [4100, () => { hit("en1"); dmgPop("en1", "14"); setHp("en1", 0); }],
+      [4600, () => { $("en1").classList.add("ko"); event("en2", "野犬を倒した！"); }],
+      [5400, () => { playing = false; }],
+    ];
+    steps.forEach(([t, fn]) => setTimeout(fn, t));
+  };
+</script>
+</body>
+</html>
