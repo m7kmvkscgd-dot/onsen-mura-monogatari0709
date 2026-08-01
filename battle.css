@@ -198,11 +198,16 @@
      (innerHeight)より約2割大きい。vhで縦位置を当て推量すると実機でボタン列が味方バーに重なった
      (ユーザー報告)ため、縦の配置は全てJS実測(ui.js positionActionsBelowPartyBarのcenterMode節)が
      毎回innerHeightから逆算して設定する。CSSはログ位置と器の形だけを持つ */
-  .battle-top.layout-center #battleLog { position: absolute; top: 48px; left: 12px; right: 12px; margin: 0; z-index: 2; } /* 8→38→53→48px(2026-08-01「テキストボックス5px上」) */
+  /* 2026-08-01ユーザー指示「でかいしいらんかも。一行にせんか？」: 戦闘の文章枠は1行ぶんの高さへ縮小
+     (探索の#dungeonLogは従来の84px3行のまま)。古い行の削除はappendTypewriterLogの高さ駆動トリミングが
+     そのまま面倒を見る。topの経緯: 8→38→53→48px(2026-08-01「テキストボックス5px上」) */
+  .battle-top.layout-center #battleLog { position: absolute; top: 48px; left: 12px; right: 12px; margin: 0; z-index: 2; height: 40px; padding-top: 6px; padding-bottom: 6px; }
   /* topはJSが設定する(下のcalcはJS実行前の初期値)。align-content:flex-start=上詰め
      (センタリングだと行高との差分だけカードが下へ押されて位置計算が狂う) */
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
   /* #battlePartyBar.layout-centerのtopもJSが実測で設定する(CSSでは指定しない) */
+  /* 味方バーの黒帯は通常戦闘では廃止(2026-08-01ユーザーJSON allyBarBand:false)。探索・襲撃戦は従来どおり */
+  #battlePartyBar.layout-center { background: transparent; }
   /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
      390px端末の3体戦で3枚目が折り返す不具合があった(当時はoverflow:hiddenで丸ごと隠れて
      「敵が消えた」ように見えた。枠が無いので左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */

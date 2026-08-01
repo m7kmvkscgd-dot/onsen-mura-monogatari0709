@@ -106,7 +106,7 @@
      常時transformを持たせると要素が独自のスタッキングコンテキスト/合成レイヤーを持ち続けることになり、
      iOS Safariでそのカードの位置を参照する外部要素(過去のダメージ数字ポップアップ、吹き出しセリフ)の
      再描画・位置取得が更新されなくなる不具合の原因になっていた可能性が高いため外した */
-  .party-member { flex: 0 1 95px; max-width: 95px; text-align: center; position: relative; border-radius: var(--radius-sm); padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+  .party-member { flex: 0 1 93px; max-width: 93px; text-align: center; position: relative; border-radius: var(--radius-sm); padding: 0.25rem; border: 2px solid transparent; transition: border-color 0.2s, background 0.2s, transform 0.2s; } /* 95→93px(2026-08-01ユーザー実機調整) */
   /* 影分身/式神で5人目が出ている間だけ、幅の狭いスマホでも5枚が収まるよう一回り小さくする
      (茶屋の回復サマリー画面で既に使っているcamp-rest-manyと同じ「人数で切り替える」パターン) */
   .party-bar-five .party-member { flex-basis: 76px; max-width: 76px; }

@@ -472,6 +472,12 @@ function renderBattleScreen() {
       row.insertBefore(card, prevCard ? prevCard.nextElementSibling : row.firstElementChild);
     }
     updateEnemyCard(card, e);
+    // 本採用レイアウトオフセット(ボスと雑魚で別)。調整モード起動中はそちらの現在値を優先する。
+    // translateプロパティはtransform(攻撃モーション等)と独立に合成されるため演出を壊さない
+    {
+      const lo = (window.__tunerOffsets || BATTLE_LAYOUT_OFFSETS)[e.isBoss || e.isMidBoss ? "boss" : "mob"];
+      card.style.translate = useCenterLayout ? `${lo.x}px ${lo.y}px` : "";
+    }
     prevCard = card;
     // 撃破リアクションは「初めて死亡を検知した描画」の時だけ起動する(再描画のたびに再生し直さない、
     // shakeClassFor()と同じ考え方)。起動自体はこのループを抜けた後にまとめて行う(下記参照)。
@@ -2814,6 +2820,23 @@ function defeat() {
 }
 
 
+// ============ 戦闘レイアウトの本採用オフセット(2026-08-01ユーザー実機調整のJSONより) ============
+// 通常戦闘(layout-center)にのみ適用する各部品の移動量px(襲撃戦のレイアウトには触れない)。
+// カード類はyのみ、ボタン類はx/y。適用箇所: 敵カード=battle.jsのrenderBattleScreen内ループ、
+// 味方バー/文章枠/コマンド欄/逃げる/歯車=ui.jsのpositionActionsBelowPartyBar。
+// 調整モード(下記initSizeTuner)はこの値を起点に上乗せで動き、JSON書き出しも絶対値になるため、
+// ユーザーから次のJSONが来たらこのテーブルを丸ごと差し替えるだけでよい。
+// ※ユーザー調整時のlogBox:y-147(画面外へ退避)は「文章枠の1行化」(battle.css)として本採用したため0
+const BATTLE_LAYOUT_OFFSETS = {
+  boss: { x: 0, y: 0 },
+  mob: { x: 0, y: 110 },
+  partyBar: { x: 0, y: 108 },
+  logBox: { x: 0, y: 0 },
+  commands: { x: 0, y: -30 },
+  flee: { x: 2, y: 66 },
+  gear: { x: 0, y: 0 },
+};
+
 // ============ 実機サイズ調整モード(?sizeTuner=1、2026-08-01) ============
 // 手組みモックは実機のサイズ感と合わない(ユーザー指摘)ため、本物の戦闘画面の上でボス/雑魚/味方の
 // サイズを直接いじって数値を決める開発用ツール。URLに?sizeTuner=1が無ければ一切何もしない。
@@ -2825,11 +2848,14 @@ function defeat() {
     if (!new URLSearchParams(location.search).has("sizeTuner") && localStorage.getItem("onsen_size_tuner_on") !== "1") return;
     // カード類(ボス/雑魚/味方バー/ログ)は縦のみ、ボタン類(コマンド欄/逃げる/歯車)は縦横自由に
     // ドラッグできる(2026-08-01「あらゆるボタンを動かせるように」)。オフセットはCSSのtranslate
-    // プロパティで加算(transformとは独立して合成されるため、既存のtranslateX(-50%)等を壊さない)
-    const offsets = { boss: { x: 0, y: 0 }, mob: { x: 0, y: 0 }, partyBar: { x: 0, y: 0 }, logBox: { x: 0, y: 0 }, commands: { x: 0, y: 0 }, flee: { x: 0, y: 0 }, gear: { x: 0, y: 0 } };
+    // プロパティで加算(transformとは独立して合成されるため、既存のtranslateX(-50%)等を壊さない)。
+    // 起点は本採用値(BATTLE_LAYOUT_OFFSETS)=調整モードは現在のゲームの見た目から続きで動かせて、
+    // JSON書き出しも絶対値になる。window.__tunerOffsetsで公開し、ゲーム側の適用箇所も調整中はこれを読む
+    const offsets = JSON.parse(JSON.stringify(BATTLE_LAYOUT_OFFSETS));
+    window.__tunerOffsets = offsets;
     const Y_ONLY = { boss: true, mob: true, partyBar: true, logBox: true }; // 接地/整列が狂うものは縦のみ
     const BTN_ELS = { commands: () => document.querySelector(".battle-actions"), flee: () => $id("battleFleeBtn"), gear: () => $id("battleMuteBtn") };
-    let bandOff = false;
+    let bandOff = true; // 帯なしが本採用(2026-08-01ユーザーJSON allyBarBand:false)
     let arrangeMode = false;
     const panel = document.createElement("div");
     panel.style.cssText = "position:fixed;bottom:8px;left:8px;right:8px;z-index:99;background:rgba(16,16,20,0.92);border:1px solid #6d5a35;border-radius:10px;padding:8px 10px;font-size:11px;color:#ece8dc;";
@@ -2838,11 +2864,11 @@ function defeat() {
       <div id="tunerBody">
         <label style="display:block;">ボス立ち絵の高さ: <span id="tvBoss">150</span>px <input id="tsBoss" type="range" min="100" max="300" value="150" style="width:100%;"></label>
         <label style="display:block;">雑魚立ち絵の高さ: <span id="tvMob">101</span>px <input id="tsMob" type="range" min="60" max="150" value="101" style="width:100%;"></label>
-        <label style="display:block;">味方カードの幅: <span id="tvAlly">95</span>px <input id="tsAlly" type="range" min="58" max="115" value="95" style="width:100%;"></label>
+        <label style="display:block;">味方カードの幅: <span id="tvAlly">93</span>px <input id="tsAlly" type="range" min="58" max="115" value="93" style="width:100%;"></label>
         <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
           <button id="tunerSummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を左右に出す</button>
           <button id="tunerUnsummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を消す</button>
-          <button id="tunerBandBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">味方の帯: あり</button>
+          <button id="tunerBandBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">味方の帯: なし</button>
           <button id="tunerArrangeBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">配置モード: OFF</button>
           <button id="tunerJsonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">JSON書き出し</button>
         </div>
@@ -2883,7 +2909,8 @@ function defeat() {
       });
       const bar = $id("battlePartyBar");
       if (bar) {
-        bar.style.background = bandOff ? "transparent" : "";
+        // 帯なしが本採用CSS(#battlePartyBar.layout-center)になったため、「あり」へ戻す時は明示的に色を書く
+        bar.style.background = bandOff ? "transparent" : "rgba(20,24,27,0.72)";
         bar.style.translate = `${offsets.partyBar.x}px ${offsets.partyBar.y}px`;
       }
       const logEl = $id("battleLog");
