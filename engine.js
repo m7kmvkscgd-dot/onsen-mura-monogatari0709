@@ -1983,11 +1983,14 @@ function applyOverkillPierce(target, hpBeforeHit, dmg, log, actor) {
   log(`貫通した一撃が${splashTarget.label}に${splashDmg}ダメージ！`);
   if (splashTarget.hp <= 0 && actor) lastEnemyKillActor = actor;
 }
-function performAttack(actor, target, log) {
+function performAttack(actor, target, log, opts) {
   // 出血中の対象かどうかは攻撃前(=この攻撃自身の効果が乗る前)の状態で判定する
   const wasBleeding = (target.bleed || 0) > 0;
   const hpBeforeHit = target.hp; // 貫き矢(通常攻撃のオーバーキル貫通)判定用
-  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(effectiveStat(actor, "atk"), target.def), log, undefined, normalAttackRangeType(actor));
+  // opts.atkMult: 形見「うつろの狐面」の2回攻撃(威力50%×2)など、通常攻撃の1振りの威力を割り引く時に使う。
+  // ダメージ式はatkに線形(atk×mitigation)なので、atkに掛ければそのまま威力倍率になる
+  const atkMult = (opts && opts.atkMult) || 1;
+  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(Math.max(1, Math.round(effectiveStat(actor, "atk") * atkMult)), target.def), log, undefined, normalAttackRangeType(actor));
   // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
   if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
   // 狩人「追い討ち」: 出血中の敵への通常攻撃が命中すると、出血スタックを3追加する
@@ -2080,6 +2083,13 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
       log(`${hawkOwner.label}の鷹が${target.label}をかばって消えた！`);
       return 0;
     }
+  }
+  // 形見「逆月の鏡片」: 分離した影が、敵からの次の攻撃1回を身代わりで無効化する(戦闘中のみ、反撃なし)。
+  // 忍者の身代わりの術(migawariShieldActive)と同じ「完全無効化」枠だが、由来が別のため独立フラグで持つ
+  if (actor && actor.instanceId !== undefined && target.katamiShadowGuard) {
+    target.katamiShadowGuard = false;
+    log(`${target.label}の影が${actorLabel}の攻撃を受け止め、静かに散った！`);
+    return 0;
   }
   // 身代わりの術: 次に受ける攻撃を(全体攻撃を含め)完全に無効化する。反撃は無い、心眼の構えとは別枠
   if (actor && target.migawariShieldActive) {

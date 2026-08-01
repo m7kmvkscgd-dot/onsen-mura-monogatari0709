@@ -25,6 +25,11 @@ const BGM_TRACKS = {
   // 2026-07-20にユーザー提供曲(quest_target_only_battle_bgm.mp3)へ分離
   boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 最終ボス・序盤緊急依頼ボス専用(森・海岸共通、時間帯問わず)
   mid_boss_battle: "assets/bgm/quest_target_battle_bgm.mp3", // 中ボス専用(森・海岸共通、時間帯問わず)
+  // 第二形態(hpBelowギミック)を持つ物語ボス専用の二段構成BGM(2026-08-01ユーザー指定):
+  // 通常形態=導入用のボス曲(ユーザー提供)、第二形態発動の瞬間に本命曲(yokai_no_shutai、
+  // 襲撃戦と同じ曲ファイル)へ頭出しで切り替える。第二形態を持たないボス/中ボスは従来どおり
+  boss_battle_intro: "assets/bgm/boss_intro_bgm.mp3",
+  boss_battle_climax: "assets/bgm/yokai_no_shutai.mp3",
   quest_target_battle: "assets/bgm/quest_target_only_battle_bgm.mp3", // 奉行所の討伐依頼対象(🎯)との戦闘専用(中ボス/ボスを除く)。ただし中ボス/ボスの方が優先度が高い
   tengu_battle: "assets/bgm/tengu_battle_bgm.mp3", // 天狗の腕試し(イベント戦)専用(ユーザー提供曲、2026-07-18追加)
   raid_battle: "assets/bgm/yokai_no_shutai.mp3", // 大規模戦(村襲撃プロトタイプ)専用(ユーザー提供曲「yokai-no-shūtai」、2026-07-27追加)
@@ -89,6 +94,17 @@ function playBattleBgm() {
     currentBgmKey = null;
     bgmPositions.tengu_battle = 0;
     playBgm("tengu_battle");
+    return;
+  }
+  // 第二形態(hpBelowギミック)を持つボス/中ボスの戦闘は二段構成: まず導入曲(boss_battle_intro)で
+  // 始め、第二形態の発動(processGimmickTriggers→playBossClimaxBgm)で本命曲へ切り替わる。
+  // 追跡再遭遇中は導入曲/本命曲のどちらが流れていてもそのまま続投する(頭出しし直さない)
+  if (battle && battle.enemies && battle.enemies.some((e) => bossHasSecondForm(e))) {
+    if (continuingChase && (currentBgmKey === "boss_battle_intro" || currentBgmKey === "boss_battle_climax")) { playBgm(currentBgmKey); return; }
+    battleBgmFadeToken++;
+    currentBgmKey = null;
+    bgmPositions.boss_battle_intro = 0;
+    playBgm("boss_battle_intro");
     return;
   }
   if (battle && battle.enemies && battle.enemies.some((e) => MID_BOSS_BGM_IDS.has(e.id))) {
@@ -461,18 +477,31 @@ const BATTLE_BGM_FADE_OUT_MS = 3000;
 // ユーザー指摘を受け、討伐するまではボス曲を止めずに流し続けるようにした
 // (escapeBattle/useSmokeBombのどちらの離脱経路からもmarkQuestChasingIfFled()の直後に呼ぶ)
 function isBossBgmActive() {
-  return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle" || currentBgmKey === "quest_target_battle";
+  return currentBgmKey === "boss_battle" || currentBgmKey === "mid_boss_battle" || currentBgmKey === "quest_target_battle" || currentBgmKey === "boss_battle_intro" || currentBgmKey === "boss_battle_climax";
+}
+// 第二形態(hpBelowトリガーのギミック)を持つボス/中ボスかどうか。二段構成BGMの対象判定
+function bossHasSecondForm(e) {
+  return !!((e.isBoss || e.isMidBoss) && (e.gimmicks || []).some((g) => g.trigger && g.trigger.type === "hpBelow"));
+}
+// 第二形態の発動の瞬間にgimmicks.jsから呼ばれる: 導入曲を止めて本命曲(yokai_no_shutai)を頭出しする。
+// 導入曲が流れている時だけ切り替える(通常のボス曲で戦っている第二形態なしボスには何もしない)
+function playBossClimaxBgm() {
+  if (currentBgmKey !== "boss_battle_intro") return;
+  battleBgmFadeToken++;
+  currentBgmKey = null;
+  bgmPositions.boss_battle_climax = 0;
+  playBgm("boss_battle_climax");
 }
 function shouldKeepBossBgmOnFlee() {
   return isContinuingBossChase() && isBossBgmActive();
 }
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle" && currentBgmKey !== "tengu_battle") return;
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle" && currentBgmKey !== "tengu_battle" && currentBgmKey !== "boss_battle_intro" && currentBgmKey !== "boss_battle_climax") return;
   const key = currentBgmKey;
-  // ボス戦(boss_battle/mid_boss_battle/quest_target_battle)や天狗戦は森・海岸共通の1トラックのため、
-  // 戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
+  // ボス戦(boss_battle/mid_boss_battle/quest_target_battle/二段構成のintro/climax)や天狗戦は
+  // 森・海岸共通の1トラックのため、戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
   // (coast_battleは元々このキー自体で確定していた)
-  const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle" || key === "tengu_battle") && currentStage === "coast");
+  const wasCoastBattle = key === "coast_battle" || ((key === "boss_battle" || key === "mid_boss_battle" || key === "quest_target_battle" || key === "tengu_battle" || key === "boss_battle_intro" || key === "boss_battle_climax") && currentStage === "coast");
   const startVol = getBgmAudioVolume();
   const startTime = performance.now();
   const myFadeToken = ++battleBgmFadeToken;

@@ -398,6 +398,15 @@
         </div>
       </div>
 
+      <!-- 形見(物語ボスの遺品、パーティ共有の切り札): 1つも持っていない間はセクションごと非表示。
+           チップはアイコンのみ横1行(横スクロール)+下に説明文1行、再タップで解除(mock_katami_depart.html案B改) -->
+      <div id="katamiSection" style="display:none;">
+        <hr class="dw-divider">
+        <h2>🎐 形見 <span style="font-size:12px;color:var(--dw-caption-color);font-weight:400;">1つだけ持っていけます</span></h2>
+        <div class="katami-chip-bar" id="katamiChipBar"></div>
+        <p class="katami-effect-line" id="katamiEffectLine"></p>
+      </div>
+
       <hr class="dw-divider">
       <h2>出発メンバーを選ぶ</h2>
       <p style="font-size:13px;color:var(--dw-caption-color);margin:0 0 0.5rem;" id="partySelectMaxHint">タップで出発パーティに入れる(最大4人・4人目に選んだ人は控え)</p>

@@ -39,6 +39,8 @@ function clearBattleTransientForms() {
     c.hyakkaActive = false;
     c.__hyakkaExtraUsedThisTurn = false;
     c.__battleHitCount = 0;
+    c.katamiKitsuneMask = false; // 形見「うつろの狐面」はその戦闘限り
+    c.katamiShadowGuard = false; // 形見「逆月の鏡片」の身代わりも戦闘をまたいで持ち越さない
   });
   // ボスギミックの場演出(業火オーバーレイ/背景差し替え)も戦闘の後始末で必ず解除する
   if (typeof clearGimmickBattleFx === "function") clearGimmickBattleFx();
@@ -1969,6 +1971,8 @@ function renderActionButtons(actor) {
     atkBtn.onclick = () => {
       if (battleActionLocked) return;
       battleActionLocked = true;
+      // 形見「うつろの狐面」をかぶっている本人は、通常攻撃が2回攻撃に置き換わる(items.js)
+      if (actor.katamiKitsuneMask) { runKitsuneMaskAttack(actor); return; }
       pickSingleEnemyTarget((target) => {
         playAttackSfxWithSwish(actor.classId);
         // 武甕槌命の御守: 戦闘中、最初の通常攻撃が確定で会心になる
@@ -2249,7 +2253,7 @@ function renderActionButtons(actor) {
   const itemBtn = document.createElement("button");
   itemBtn.className = "big";
   itemBtn.textContent = "道具";
-  itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0;
+  itemBtn.disabled = (state.inventory.potion || 0) <= 0 && (state.inventory.smokeBomb || 0) <= 0 && !katamiAvailableInBattle();
   itemBtn.onclick = () => { renderItemMenu(actor); };
   grid.appendChild(itemBtn);
 
@@ -2325,6 +2329,11 @@ document.getElementById("screen-battle").addEventListener("pointerdown", (e) => 
 });
 
 function resolveAllyTarget(actor, kind, target) {
+  // 形見(鏡片/湯の花): 効果本体はitems.jsのresolveKatamiAllyTargetが担当する
+  if (kind === "katami_kagami" || kind === "katami_yunohana") {
+    resolveKatamiAllyTarget(actor, kind, target);
+    return;
+  }
   if (kind === "heal") {
     // 治癒の術は必殺技キャスト演出つき(2026-08-01「対象選択してから技名と音」)
     playSkillCastFx(actor, ABILITY_LABEL.heal, () => {
@@ -2377,7 +2386,8 @@ function renderAllyTargets(actor, kind) {
   // hawkGuard(鷹の身代わり)は戦場に出ていない控えを守れないため従来通り対象外。
   // レイアウトも回復系だけ3列2行にし、控えのボタンは2行目の左端(左下)へ固定配置する
   // (1行目の余りセルを空要素で埋めて行を折り返す。renderActionButtonsで通常の2列に戻る)
-  const isHealKind = kind !== "hawkGuard";
+  // 鏡片(katami_kagami)は回復ではなく「次の被弾の身代わり」のため、戦場に出ていない控えには意味がなく対象外
+  const isHealKind = kind !== "hawkGuard" && kind !== "katami_kagami";
   const reserveTarget = isHealKind && reserveFieldMember && reserveFieldMember.status === "active" ? reserveFieldMember : null;
   if (isHealKind) grid.style.gridTemplateColumns = "1fr 1fr 1fr";
   targets.forEach((target) => {
@@ -2582,6 +2592,22 @@ function victory() {
       playSfx("loot_rare"); // レア入手の風鈴(ユーザー提供SE、2026-07-27)
     } else blog("魂の塊を感じたが、これ以上は持てなかった。");
   }
+  // 形見(物語ボスの遺品、KATAMI_DEFS): 対応ボスの初回討伐で確定ドロップ(2026-08-01ユーザー方針)。
+  // 永久所持のためドロップは1点きり(所持済みなら落ちない)。ボステストは実際の所持品を汚さないため対象外
+  let katamiDropImg = null;
+  if (!bossTestActive && typeof KATAMI_BY_BOSS !== "undefined") {
+    battle.enemies.forEach((e) => {
+      const kid = KATAMI_BY_BOSS[e.id];
+      if (!kid || e.hp > 0) return;
+      if (!state.katamiOwned) state.katamiOwned = [];
+      if (state.katamiOwned.includes(kid)) return;
+      state.katamiOwned.push(kid);
+      const kdef = KATAMI_DEFS[kid];
+      blog(`${e.label}の形見「${kdef.ja}」を受け取った。`);
+      playSfx("loot_rare");
+      if (kdef.image) katamiDropImg = kdef.image;
+    });
+  }
   // 素材(皮/骨/木/鉄)の獲得。テキストログには書かず(文章量削減のユーザー方針、2026-07-27)、
   // 足元ドロップ→巾着袋への回収演出(effects.js playMaterialCollectFx)で見せる
   if (MATERIAL_ORDER.some((id) => materialGains[id])) {
@@ -2616,8 +2642,9 @@ function victory() {
     // 複数体(1〜3体の集団)を倒した時、合計金額でティア判定すると雑魚3体分の少額合計でも
     // 「大量」の絵になってしまうため、1体あたりの平均額でティアを決める(表示・所持金への加算はtotalGoldのまま)。
     // 魂の塊を入手していれば、ゴールドのイラストの横に並べて同じ演出で表示する
-    // (魂のかけらは2026-07-27から素材と同じ足元ドロップ→巾着回収の演出に移行したためここには出さない)
-    const extraImg = soulLumpCount > 0 ? "assets/items/soul_lump.png" : null;
+    // (魂のかけらは2026-07-27から素材と同じ足元ドロップ→巾着回収の演出に移行したためここには出さない)。
+    // 形見(イラストがある物)を入手した戦闘では、塊より形見の絵を優先して見せる
+    const extraImg = katamiDropImg || (soulLumpCount > 0 ? "assets/items/soul_lump.png" : null);
     showTreasurePopup(Math.round(totalGold / battle.enemies.length), extraImg);
   }
   queueSkillChoices(leveledUp); // 戦闘直後には出さず、宿屋の名簿画面から選べるよう積んでおく

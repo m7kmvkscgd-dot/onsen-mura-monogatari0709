@@ -309,6 +309,13 @@
     animation: dmgFloat 2s ease-out forwards; z-index: 20; white-space: nowrap;
   }
   .dmg-pop.heal { color: #8fe0a0; }
+  /* 道具メニュー内の形見ボタン(遠征中1回の切り札): 他の道具と格が違う特別枠の金色・幅いっぱい */
+  #actionGrid .katami-use-btn {
+    grid-column: 1 / -1;
+    border: 1px solid #d7b66f; color: #f0e2b8;
+    background: linear-gradient(155deg, #3a3020, #241d12);
+  }
+  #actionGrid .katami-use-btn:disabled { opacity: 0.5; }
   /* ストレス増減ポップアップ(進む/帰還以外でストレスが即座に増減する場面用)。
      立ち絵のどの部分に重なっても読めるよう、太い白縁取りでコントラストを確保する(彩度の低い
      黒/濃色は立ち絵の明るい部分に重なると消えるため不採用。色だけで増減を判別できるので符号は付けない) */

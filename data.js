@@ -731,6 +731,26 @@ const AILMENT_VFX_ASSIGNMENTS = [
   { ailmentId: "poison", stackLevel: 1, framePrefix: "assets/vfx_library/kenney_smoke/fart/frame_", frameCount: 9, size: 35, offsetX: -1, offsetY: -11, blendScreen: false, frameMs: 109, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg" },
 ];
 
+// ============ 形見(物語ボスの遺品、パーティ共有の切り札) ============
+// 物語クエストのボスを倒すと確定で1点だけ手に入る(ボステストでは落ちない)。武器/防具と違い
+// 常時ステータスは一切上げず、出発時に1つだけ選んで持って行き、戦闘中に道具メニューから使う
+// 「遠征中1回の切り札」(使用者のターンを消費、MP消費なし)。使用するとcdDays日のクールダウン
+// (村の日数基準)に入り、冷めるまで出発時に選べない。永久所持で使っても消滅しない。
+// image=nullの間は絵文字(icon)をチップに表示する(イラストはCodex制作、届き次第差し替え)
+const KATAMI_DEFS = {
+  hanayome_akao: { id: "hanayome_akao", ja: "花婿の赤緒", icon: "🎗️", image: "assets/items/katami_akao.png", cdDays: 2, bossId: "amayome_shiranui",
+    desc: "敵1体を赤い組紐で縛り上げ、1ターン行動不能にする" },
+  sakazuki_kagami: { id: "sakazuki_kagami", ja: "逆月の鏡片", icon: "🪞", image: null, cdDays: 3, bossId: "kagegui_sakazuki",
+    desc: "味方1人の影を分離し、次に受ける攻撃1回を身代わりで無効化する" },
+  utsuro_kitsunemen: { id: "utsuro_kitsunemen", ja: "うつろの狐面", icon: "🦊", image: null, cdDays: 3, bossId: "hyakumenshi_utsuro",
+    desc: "面をかぶった本人の通常攻撃が、その戦闘の間ずっと2回攻撃(威力50%×2)になる" },
+  oshira_yunohana: { id: "oshira_yunohana", ja: "湯の花の小瓶", icon: "🫙", image: null, cdDays: 1, bossId: "wasureyu_oshira",
+    desc: "味方1人のHPを30%回復し、炎上と毒を洗い流す" },
+};
+// ボス敵id→形見id(討伐時のドロップ判定用)
+const KATAMI_BY_BOSS = {};
+Object.values(KATAMI_DEFS).forEach((k) => { KATAMI_BY_BOSS[k.bossId] = k.id; });
+
 // ============ 素材(敵ドロップ) ============
 // 敵を倒すと確率で落とす素材4種。現状の使い道は温泉の売店での売却のみ(鍛冶/建築への
 // 組み込みは後日設計)。ボス/中ボス(isBoss)のドロップ設計は保留中のため対象外。

@@ -150,6 +150,26 @@
     color: #2a1f08; font-size: 9.5px; font-weight: 900; letter-spacing: .1em;
     box-shadow: 0 2px 8px rgba(0,0,0,.5);
   }
+  /* 形見の出発選択チップ(mock_katami_depart.html案B改で承認、2026-08-01)。
+     アイコンのみ56px角・横1行スクロール・選択中は金枠・冷却中はグレー+残り日数 */
+  .katami-chip-bar {
+    display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .katami-chip-bar::-webkit-scrollbar { display: none; }
+  .katami-chip {
+    flex: 0 0 auto; width: 56px; height: 56px; padding: 0;
+    background: #232830; border: 2px solid #3a4048; border-radius: 10px; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .katami-chip img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; }
+  .katami-chip .icon { font-size: 1.6rem; line-height: 1; }
+  .katami-chip.selected { border-color: #d7b66f; background: #2a2620; box-shadow: 0 0 8px rgba(215,182,111,0.35); }
+  .katami-chip.cooldown { opacity: 0.4; }
+  .katami-chip .cd { font-size: 9px; color: #e08a8a; line-height: 1.2; margin-top: 1px; }
+  .katami-effect-line { font-size: 12px; color: #b7a875; margin: 0.35rem 0 0; line-height: 1.5; min-height: 1.2em; }
+  .katami-effect-line .cd-note { color: var(--text-muted); }
+
   /* 海岸行きは藍色の漆カード(森=金のメインCTAとの階層差を付ける) */
   button.depart-coast {
     background: linear-gradient(to bottom, rgba(255,255,255,.07), rgba(255,255,255,0) 30%), linear-gradient(165deg, #1d2733, #101922 62%, #0a1016);

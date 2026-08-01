@@ -95,6 +95,10 @@ function processGimmickTriggers() {
     if (!gimmickTriggerMet(entry)) return;
     entry.active = true;
     entry.roundsSinceActive = 0;
+    // hpBelowギミックの発動=第二形態相当(2026-08-01ユーザー指定)。二段構成BGMの対象ボスなら
+    // ここで導入曲→本命曲(yokai_no_shutai)へ頭出しで切り替える(audio.js playBossClimaxBgm参照。
+    // 将来の第二形態フルシーケンス(無音→口上→背景/ボス絵切替→曲開始)もこの発火点に組み込む)
+    if (entry.def.trigger && entry.def.trigger.type === "hpBelow" && typeof playBossClimaxBgm === "function") playBossClimaxBgm();
     if (entry.def.announce) blog(entry.def.announce);
     else blog(`${entry.owner.label}の【${entry.def.name || "ギミック"}】が発動した！`);
     triggerWarningFlash();

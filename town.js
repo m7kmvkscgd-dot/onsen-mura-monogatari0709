@@ -1192,6 +1192,7 @@ function renderPartySelect() {
   document.getElementById("partySelectBackBtnTop").style.display = raidPrep ? "none" : "";
   pruneActiveParty();
   renderSupplies();
+  renderKatamiSection(raidPrep);
   if (raidPrep) {
     document.getElementById("partySelectMaxHint").textContent = (state.watchtowerLevel || 0) > 0
       ? `タップで防衛隊に入れる(最大4人+見張り台枠1人・控えなし)。5人目の枠は狩人か砲術士が見張り台に立つ`
@@ -1310,6 +1311,44 @@ function renderPartySelect() {
     list.appendChild(row);
   });
   activateHpTrails(list);
+}
+
+// ============ 形見の出発選択(2026-08-01、モックmock_katami_depart.html案B改で承認) ============
+// 所持形見をアイコンのみの56pxチップで横1行に並べる(増えたら横スクロール、行数は増やさない)。
+// タップで選択(金枠)、選択中の再タップで解除。「持って行かない」専用ボタンは置かない。
+// 冷却中(katamiCdLeft>0)はグレー+「あと◯日」で選択不可。下の説明行に「名前: 効果(クールダウン◯日)」
+function renderKatamiSection(raidPrep) {
+  const sec = document.getElementById("katamiSection");
+  if (!sec) return;
+  const owned = state.katamiOwned || [];
+  // 1つも持っていない間と、襲撃の迎撃準備(形見は遠征専用)ではセクションごと出さない
+  const show = owned.length > 0 && !raidPrep;
+  sec.style.display = show ? "" : "none";
+  if (!show) return;
+  // 選択中の形見が冷却入り/所持喪失していたら選択を外してから描く
+  if (state.katamiTakenId && (!owned.includes(state.katamiTakenId) || katamiCdLeft(state.katamiTakenId) > 0)) state.katamiTakenId = null;
+  const bar = document.getElementById("katamiChipBar");
+  bar.innerHTML = "";
+  owned.forEach((id) => {
+    const def = KATAMI_DEFS[id];
+    if (!def) return;
+    const cdLeft = katamiCdLeft(id);
+    const btn = document.createElement("button");
+    btn.className = "katami-chip" + (state.katamiTakenId === id ? " selected" : "") + (cdLeft > 0 ? " cooldown" : "");
+    btn.innerHTML = `${def.image ? `<img src="${def.image}" alt="">` : `<span class="icon">${def.icon}</span>`}${cdLeft > 0 ? `<span class="cd">あと${cdLeft}日</span>` : ""}`;
+    btn.onclick = () => {
+      if (cdLeft > 0) return;
+      playSfx("select");
+      state.katamiTakenId = state.katamiTakenId === id ? null : id;
+      saveState();
+      renderKatamiSection(raidPrep);
+    };
+    bar.appendChild(btn);
+  });
+  const sel = state.katamiTakenId ? KATAMI_DEFS[state.katamiTakenId] : null;
+  document.getElementById("katamiEffectLine").innerHTML = sel
+    ? `<strong>${sel.ja}</strong>: ${sel.desc}<span class="cd-note">(クールダウン${sel.cdDays}日)</span>`
+    : "形見を持たずに出発する";
 }
 
 // 支援物資(回復薬+煙玉+野営具)の購入。道具屋ではなくここ(出発画面)で買う。合計supplyCap()個までの共有枠。

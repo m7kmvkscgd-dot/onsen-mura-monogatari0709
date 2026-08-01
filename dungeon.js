@@ -345,6 +345,10 @@ function enterDungeon() {
   // 鬼神化は「遠征中一度だけ」(2026-07-30)。新しい遠征の開始でリセットする(控えも含む)
   fieldParty.forEach((c) => { c.kishinkaUsed = false; });
   if (reserveFieldMember) reserveFieldMember.kishinkaUsed = false;
+  // 形見も「遠征中1回」: 新しい遠征の開始で使用フラグをリセットする。選択中の形見が
+  // 冷却中(前の遠征で使った直後など)なら持たずに出発する(出発画面側でも同じ検証をしている)
+  state.katamiUsedOnTrip = false;
+  if (state.katamiTakenId && (!(state.katamiOwned || []).includes(state.katamiTakenId) || katamiCdLeft(state.katamiTakenId) > 0)) state.katamiTakenId = null;
   applyOmikujiExpeditionStart();
   advGoldEarned = 0;
   advXpGained = {};
