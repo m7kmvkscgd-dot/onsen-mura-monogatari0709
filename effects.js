@@ -455,9 +455,12 @@ function syncBigAttackStance(card, e, active) {
       // 微振動(構え中ずっと)。CSSアニメだと被弾スカッシュとanimationプロパティを取り合うためWAAPIで、
       // translateプロパティ=transform(--clear-scale/スカッシュ)と独立に合成される
       if (img && img.animate && !img.__stanceTremble) {
+        // 振幅±2px前後・不規則なパターン(2026-08-02「弱すぎてチープ」→等間隔の往復をやめて強化)
         img.__stanceTremble = img.animate([
-          { translate: "-1.2px 0px" }, { translate: "1.2px 0px" }, { translate: "-1.2px 0px" },
-        ], { duration: 280, iterations: Infinity, easing: "steps(2, end)" });
+          { translate: "-2px 0px" }, { translate: "1.6px 0px" }, { translate: "-1.2px 0px" },
+          { translate: "2.2px 0px" }, { translate: "-1.8px 0px" }, { translate: "1.2px 0px" },
+          { translate: "-2px 0px" },
+        ], { duration: 460, iterations: Infinity, easing: "linear" });
       }
       if (!aura) {
         aura = document.createElement("div");
