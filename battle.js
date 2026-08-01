@@ -2813,3 +2813,53 @@ function defeat() {
   };
 }
 
+
+// ============ 実機サイズ調整モード(?sizeTuner=1、2026-08-01) ============
+// 手組みモックは実機のサイズ感と合わない(ユーザー指摘)ため、本物の戦闘画面の上でボス/雑魚/味方の
+// サイズを直接いじって数値を決める開発用ツール。URLに?sizeTuner=1が無ければ一切何もしない。
+// スライダー値はインラインstyleで既存カードへ直接上書きし、再描画や召喚で増えたカードにも
+// 定期再適用(400ms)で追従する。決まった数値をユーザーが読み上げ→Claudeが本実装する運用
+(function initSizeTuner() {
+  try {
+    if (!new URLSearchParams(location.search).has("sizeTuner")) return;
+    const panel = document.createElement("div");
+    panel.style.cssText = "position:fixed;bottom:8px;left:8px;right:8px;z-index:99;background:rgba(16,16,20,0.92);border:1px solid #6d5a35;border-radius:10px;padding:8px 10px;font-size:11px;color:#ece8dc;";
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;"><strong>サイズ調整(実機・戦闘画面で有効)</strong><button id="tunerMinBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;">最小化</button></div>
+      <div id="tunerBody">
+        <label style="display:block;">ボス立ち絵の高さ: <span id="tvBoss">150</span>px <input id="tsBoss" type="range" min="100" max="300" value="150" style="width:100%;"></label>
+        <label style="display:block;">雑魚立ち絵の高さ: <span id="tvMob">101</span>px <input id="tsMob" type="range" min="60" max="150" value="101" style="width:100%;"></label>
+        <label style="display:block;">味方カードの幅: <span id="tvAlly">95</span>px <input id="tsAlly" type="range" min="58" max="115" value="95" style="width:100%;"></label>
+      </div>`;
+    document.body.appendChild(panel);
+    document.getElementById("tunerMinBtn").onclick = () => {
+      const body = document.getElementById("tunerBody");
+      body.style.display = body.style.display === "none" ? "" : "none";
+    };
+    const apply = () => {
+      const bossH = document.getElementById("tsBoss").value;
+      const mobH = document.getElementById("tsMob").value;
+      const allyW = document.getElementById("tsAlly").value;
+      document.getElementById("tvBoss").textContent = bossH;
+      document.getElementById("tvMob").textContent = mobH;
+      document.getElementById("tvAlly").textContent = allyW;
+      if (typeof battle !== "undefined" && battle && battle.enemies) {
+        battle.enemies.forEach((e) => {
+          const card = findVisibleCard(e.instanceId);
+          const img = card && card.querySelector(".card-portrait-img");
+          if (!img) return;
+          img.style.height = (e.isBoss || e.isMidBoss ? bossH : mobH) + "px";
+          img.style.width = "auto";
+          img.style.maxWidth = "none";
+          img.style.aspectRatio = "auto";
+        });
+      }
+      document.querySelectorAll(".party-member").forEach((el) => {
+        el.style.flexBasis = allyW + "px";
+        el.style.maxWidth = allyW + "px";
+      });
+    };
+    ["tsBoss", "tsMob", "tsAlly"].forEach((id) => document.getElementById(id).addEventListener("input", apply));
+    setInterval(apply, 400);
+  } catch (e) {} // 開発ツールの失敗で本編を止めない
+})();
