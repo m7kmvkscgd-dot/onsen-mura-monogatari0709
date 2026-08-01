@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>行動中の敵マーカー代替案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #101014; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  h1 { font-size: 0.95rem; padding: 12px; max-width: 430px; margin: 0 auto; }
+  .stage { position: relative; width: 100%; max-width: 430px; height: 430px; margin: 0 auto;
+    background: url("assets/bg/forest_day.jpg") center 35% / cover no-repeat; overflow: hidden; }
+  .row { position: absolute; top: 110px; left: 0; right: 0; display: flex; justify-content: center; gap: 12px; }
+  .en { width: 110px; text-align: center; position: relative; border: 2px solid transparent; border-radius: 10px; padding: 4px 2px; }
+  .en .nm { font-size: 0.78rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.9); margin-bottom: 4px; position: relative; z-index: 2; }
+  .en .wrap { position: relative; display: inline-block; }
+  .en img { height: 97px; position: relative; z-index: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  /* 接地影(本編CSS共通表現の再現) */
+  .en .wrap::after { content: ""; position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%);
+    width: 76%; height: 12px; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(8,6,4,0.42), rgba(8,6,4,0.22) 55%, transparent 72%); }
+  .en .hp { width: 84px; height: 8px; margin: 3px auto 0; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
+  .en .hp b { display: block; height: 100%; background: #5cb87a; width: 80%; }
+
+  /* ===== 現状: 赤枠+赤グロー ===== */
+  .mode-now .en.acting { border-color: #d1503f; box-shadow: 0 0 12px rgba(209,80,63,0.7); }
+
+  /* ===== 案1: 足元の光輪(接地影の位置に琥珀色のリング) ===== */
+  .mode-ring .en.acting .wrap::before {
+    content: ""; position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%);
+    width: 96%; height: 20px; z-index: 0; pointer-events: none; border-radius: 50%;
+    border: 2px solid rgba(232,183,106,0.9);
+    box-shadow: 0 0 10px rgba(232,183,106,0.8), inset 0 0 8px rgba(232,183,106,0.5);
+    animation: ringPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes ringPulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+  /* ===== 案2: 立ち絵の縁取り発光(シルエットが琥珀色に光る) ===== */
+  .mode-outline .en.acting img {
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55))
+            drop-shadow(0 0 4px rgba(232,183,106,0.9))
+            drop-shadow(0 0 9px rgba(232,183,106,0.55));
+    animation: outlinePulse 1.1s ease-in-out infinite;
+  }
+  @keyframes outlinePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.88; } }
+
+  /* ===== 案3: 背後の淡い光(スポットライト) ===== */
+  .mode-spot .en.acting .wrap::before {
+    content: ""; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+    width: 150%; height: 118%; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 50% 62% at 50% 74%, rgba(240,205,130,0.5), rgba(240,205,130,0.16) 55%, transparent 75%);
+    animation: spotPulse 1.3s ease-in-out infinite;
+  }
+  @keyframes spotPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+  .allies { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.4rem; }
+  .ally { width: 93px; text-align: center; }
+  .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: rgba(20,24,27,0.72); border-radius: 8px; }
+
+  .panel { max-width: 430px; margin: 0 auto; padding: 12px 12px 44px; }
+  .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 12px 0 6px; }
+  .btnrow { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35; background: #2a2620; color: #ece8dc; }
+  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.play { background: #1f2d24; border-color: #3f6d4e; }
+  .note { font-size: 0.74rem; line-height: 1.75; color: #cfc9b8; margin-top: 8px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
+  .note b { color: #d9c49a; }
+</style>
+</head>
+<body>
+<h1>行動中の敵マーカー: 赤枠の代替案(実寸)</h1>
+<div class="stage mode-ring" id="stage">
+  <div class="row">
+    <div class="en"><div class="nm">野犬</div><div class="wrap"><img src="assets/enemies/clear/yaken.png"></div><div class="hp"><b></b></div></div>
+    <div class="en acting" id="actor"><div class="nm">野犬</div><div class="wrap"><img src="assets/enemies/clear/yaken.png" id="actorImg"></div><div class="hp"><b></b></div></div>
+    <div class="en"><div class="nm">野犬</div><div class="wrap"><img src="assets/enemies/clear/yaken.png"></div><div class="hp"><b></b></div></div>
+  </div>
+  <div class="allies">
+    <div class="ally"><img src="assets/class_naginata.png"></div>
+    <div class="ally"><img src="assets/class_hunter.png"></div>
+    <div class="ally"><img src="assets/class_onmyoji.png"></div>
+  </div>
+</div>
+<div class="panel">
+  <div class="sec-label">■ 方式(真ん中の野犬が行動中)</div>
+  <div class="btnrow">
+    <button class="mode" data-mode="now">現状: 赤枠</button>
+    <button class="mode on" data-mode="ring">案1: 足元の光輪</button>
+    <button class="mode" data-mode="outline">案2: 縁取り発光</button>
+    <button class="mode" data-mode="spot">案3: 背後の光</button>
+  </div>
+  <div class="sec-label">■ 動きの確認</div>
+  <div class="btnrow">
+    <button class="play" id="playBtn">▶ 攻撃モーション再生(マーカーの追従を見る)</button>
+  </div>
+  <div class="note">
+    <b>考え方</b>: 透過立ち絵に「四角い枠」は素材が透明な意味を打ち消すので、枠ではなく
+    <b>立ち絵そのもの/足元</b>に印を付ける。色は琥珀(行動中)にして、赤系(大技の構え/狙われ)と役割を分離<br>
+    <b>案1 足元の光輪</b>: 舞台のスポット的。接地影と同じ場所なので世界に馴染む。おすすめ<br>
+    <b>案2 縁取り発光</b>: シルエットが光る。どの体型でも綺麗に出るが、夜背景だとやや主張強め<br>
+    <b>案3 背後の光</b>: 一番控えめ。ただし構えの赤オーラと形が似るので、同時に出ると混ざる懸念
+  </div>
+</div>
+<script>
+  const stage = document.getElementById("stage");
+  document.querySelectorAll(".mode").forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll(".mode").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      stage.className = "stage mode-" + b.dataset.mode;
+    };
+  });
+  document.getElementById("playBtn").onclick = () => {
+    const a = document.getElementById("actor");
+    a.animate([
+      { transform: "translateY(0)" },
+      { transform: "translateY(-7px) scale(1.03, 0.96)", offset: 0.35 },
+      { transform: "translateY(26px) scale(1.05)", offset: 0.62 },
+      { transform: "translateY(0)" },
+    ], { duration: 620, easing: "cubic-bezier(.2,.9,.3,1)" });
+  };
+</script>
+</body>
+</html>
