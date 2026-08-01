@@ -654,6 +654,7 @@ function processNext() {
           triggerWarningFlash();
           playSfx("big_attack_warning");
           renderBattleScreen();
+          if (typeof playEnemyBigAttackTanzaku === "function") playEnemyBigAttackTanzaku(actor); // 技名の紫短冊(再描画後=カード実測位置が確定してから)
           setTimeout(() => { battle.orderIndex++; processNext(); }, 900);
           return;
         }
@@ -735,6 +736,8 @@ function processNext() {
           if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
           triggerWarningFlash();
           playSfx("big_attack_warning");
+          // 技名の紫短冊(モック案I、雑魚もログには出さないが短冊は出す)。この時点のカード位置基準
+          if (typeof playEnemyBigAttackTanzaku === "function") playEnemyBigAttackTanzaku(actor);
           actor.bigAttackCountdown -= 1;
         } else {
           actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);

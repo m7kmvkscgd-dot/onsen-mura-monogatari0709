@@ -397,40 +397,58 @@ function playSkillCastFx(actor, skillName, onRelease) {
       { boxShadow: "0 0 8px rgba(255,214,110,0.4)", filter: "brightness(1.05)" },
     ], { duration: 450, easing: "ease-out" });
     const banner = getSkillBannerSingleton();
+    banner.classList.remove("enemy-big"); // 敵大技予告(紫)と共用のため、味方使用時は必ず金赤へ戻す
     const band = banner.querySelector(".band");
     band.textContent = skillName;
-    // 表示位置(モック案A採用2026-08-01): 技を使う本人のカードの真上。誰が使うかで毎回場所が変わる。
-    // 端のカードで帯が画面外へはみ出さないよう、帯の実測幅で中心座標をクランプする。
-    // カードが見つからない場合(保険)は旧・中央帯の位置へフォールバック
-    const cardRect = card ? card.getBoundingClientRect() : null;
-    if (cardRect) {
-      const bandW = band.offsetWidth || 120;
-      let cx = cardRect.left + cardRect.width / 2;
-      cx = Math.max(bandW / 2 + 4, Math.min(window.innerWidth - bandW / 2 - 4, cx));
-      banner.style.left = `${Math.round(cx)}px`;
-      banner.style.top = `${Math.max(4, Math.round(cardRect.top) - 40)}px`;
-    } else {
-      banner.style.left = "50%";
-      banner.style.top = "236px";
-    }
+    // 表示位置(モック案I採用+ユーザー実機調整2026-08-01): 技を使う本人のカードの右肩に縦書き短冊。
+    // 横=カード右端-23px、縦=短冊の下端がカード上端+36pxに食い込む。画面右端からはみ出す分はクランプ
+    positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 0);
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
     // 全8職業に個別の専用音あり(薙刀士も2026-08-01に独立)。汎用skill_castは未知の職業/式神系のフォールバック
     const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_naginata", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
     const castSfx = castSfxByClass[actor.classId] || "skill_cast";
     setTimeout(() => {
       playSfx(castSfx); // 技名が出る瞬間に再生
-      if (banner.animate) {
-        // 中央寄せ(-50%)を保ったままスライドさせる(leftはカード中心のX座標を指しているため)
-        banner.animate([
-          { opacity: 0, transform: "translateX(calc(-50% - 40px))" },
-          { opacity: 1, transform: "translateX(-50%)", offset: 0.18 },
-          { opacity: 1, transform: "translateX(-50%)", offset: 0.78 },
-          { opacity: 0, transform: "translateX(calc(-50% + 30px))" },
-        ], { duration: 760, easing: "ease" });
-      }
+      if (banner.animate) playTanzakuSlide(banner);
     }, 180);
     setTimeout(onRelease, SKILL_CAST_MS);
   } catch (e) { onRelease(); } // 演出に失敗しても技本体は必ず実行する
+}
+// 短冊の配置共通部: anchorRect(本人カード/敵イラスト)の右肩へ。extraDrop=下端の追加食い込み(敵イラスト用)。
+// ユーザー実機調整値(2026-08-01): 横=右端-23px、縦=下端がアンカー上端+36px
+function positionTanzakuBanner(banner, band, anchorRect, extraDrop) {
+  if (!anchorRect) { banner.style.left = `${window.innerWidth - 60}px`; banner.style.top = "150px"; return; }
+  const bandH = band.offsetHeight || 130;
+  const bandW = band.offsetWidth || 32;
+  let left = Math.round(anchorRect.right - 23);
+  left = Math.min(left, window.innerWidth - bandW - 2);
+  banner.style.left = `${left}px`;
+  banner.style.top = `${Math.max(2, Math.round(anchorRect.top + (extraDrop || 0)) - bandH + 36)}px`;
+}
+// 短冊のスライド(ユーザー指定2026-08-01: 上から下へ入る・表示は従来+0.2秒=計1.2秒)
+function playTanzakuSlide(banner) {
+  banner.animate([
+    { opacity: 0, transform: "translateY(-16px)" },
+    { opacity: 1, transform: "translateY(0)", offset: 0.16 },
+    { opacity: 1, transform: "translateY(0)", offset: 0.82 },
+    { opacity: 0, transform: "translateY(10px)" },
+  ], { duration: 1200, easing: "ease" });
+}
+// 敵の大技予告の短冊(紫): 構えの瞬間(bigAttackPending=true)にbattle.jsから呼ばれる。
+// 次に来る大技名を敵イラストの右肩に立てる(下端の食い込みはイラスト上端+30pxを基準=モックの敵ボタンと同じ)
+function playEnemyBigAttackTanzaku(enemy) {
+  try {
+    const card = findVisibleCard(enemy.instanceId);
+    const img = card ? card.querySelector(".card-portrait-img") : null;
+    const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
+    if (!img || !name) return;
+    const banner = getSkillBannerSingleton();
+    banner.classList.add("enemy-big");
+    const band = banner.querySelector(".band");
+    band.textContent = name;
+    positionTanzakuBanner(banner, band, img.getBoundingClientRect(), 30);
+    if (banner.animate) playTanzakuSlide(banner);
+  } catch (e) {} // 演出の失敗で戦闘進行を止めない
 }
 
 // ============ 敵の攻撃モーション(mock_enemy_attack.htmlでユーザー採用2026-08-01) ============
