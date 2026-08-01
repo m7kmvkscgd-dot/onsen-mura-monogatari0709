@@ -113,7 +113,7 @@
   </div>
 
   <div id="allies">
-    <div class="hero acting"><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
+    <div class="hero acting"><div class="ring"></div><img class="face" src="assets/class_naginata.png"><div class="nm">楓</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
     <div class="hero"><div class="ring"></div><img class="face" src="assets/class_hunter.png"><div class="nm">小夜</div><div class="bars"><div class="hp"><i style="width:62%"></i></div><div class="mp"><i style="width:40%"></i></div></div></div>
     <div class="hero"><div class="ring"></div><img class="face" src="assets/class_onmyoji.png"><div class="nm">晴明</div><div class="bars"><div class="hp"><i style="width:91%"></i></div><div class="mp"><i style="width:88%"></i></div></div></div>
   </div>
@@ -177,7 +177,7 @@ function demoSkill() {
   const r = heroEl.getBoundingClientRect();
   const el = document.createElement("span");
   el.style.cssText = `position:fixed;left:${Math.min(window.innerWidth - 42, r.right - 23)}px;top:${Math.max(4, r.top - 105)}px;z-index:30;pointer-events:none;writing-mode:vertical-rl;padding:8px 6px 9px;border:1px solid #e4c06b;color:#fff4cf;background:linear-gradient(#7b2c22,#3c1513);box-shadow:0 0 0 1px rgba(30,18,13,.7),0 3px 8px rgba(0,0,0,.75);font-family:"Yu Mincho",serif;font-size:14px;font-weight:700;letter-spacing:.08em;`;
-  el.textContent = "燕返しの太刀";
+  el.textContent = "花吹雪";
   document.body.appendChild(el);
   el.animate([
     { opacity: 0, transform: "translateY(-9px)" },
