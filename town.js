@@ -1256,12 +1256,15 @@ function renderPartySelect() {
     row.className = "roster-row" + (inParty ? " selected" : "") + (!selectable ? " disabled" : "");
     const isOnsenBuffTag = c.status === "active" && !isOnsenLocked(c, now) && !!c.onsenBuffKey;
     const tagText = c.status === "injured" ? `療養中(あと${Math.max(1, (c.injuryRecoverOnDay || 0) - state.dayCount)}日)` : c.status !== "active" ? "ロスト" : isOnsenLocked(c, now) ? "入浴中" : isOnsenBuffTag ? onsenBuffName(c.onsenBuffKey) : "待機中";
-    // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする(襲撃戦は控えなしのため出さない)
+    // 4人目(4人編成した時の最後の1枠)は控えに回るため、その旨を分かるようにする(襲撃戦は控えなしのため出さない)。
+    // 名前行のタグ方式だと狭い2列カード内で行が折り返してカードの高さが崩れるため、
+    // 囲い水色+右上バッジ方式に変更(ユーザー指定2026-08-01、mock_party_reserve.htmlで承認)
     const isReserveSlot = !raidPrep && inParty && state.activePartyIds.length >= 4 && state.activePartyIds.indexOf(c.id) === state.activePartyIds.length - 1;
+    if (isReserveSlot) row.className += " reserve"; // バッジ本体は既存「出発」バッジと同じCSSの::after(town.css)
     row.innerHTML = `
       <img src="${characterPortraitSrc(c)}">
       <div class="roster-info">
-        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${isReserveSlot ? ' <span class="status-tag bathing">控え</span>' : ""}${c.id === watchtowerMemberId ? ' <span class="status-tag bathing">🏹見張り台</span>' : ""}</div>
+        <div class="roster-name">${c.name} <span class="status-tag ${statusTagClass(c)}${isOnsenBuffTag ? " onsen-buff-tag" : ""}"${isOnsenBuffTag ? ` data-onsen-buff="${c.onsenBuffKey}"` : ""}>${tagText}</span>${c.id === watchtowerMemberId ? ' <span class="status-tag bathing">🏹見張り台</span>' : ""}</div>
         <div class="roster-sub">${rosterSubWithLevelBadge(c)}</div>
         ${hpBarHtml(c)}
         ${c.maxMp > 0 ? `<div class="mpbar-track"><div class="mpbar-fill" style="width:${c.maxMp > 0 ? Math.max(0, c.mp / c.maxMp) * 100 : 0}%"></div></div>` : ""}
