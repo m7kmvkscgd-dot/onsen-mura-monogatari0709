@@ -4,6 +4,7 @@ let battle = null;
 let pendingEnemyPick = null; // 対象選択待ちの間、敵カード画像を直接タップしても選べるようにする際のコールバック
 let pendingAllyPick = null; // 同様に、味方対象の選択待ちの間、味方の画像を直接タップしても選べるようにする際のコールバック
 let battleSubMenuActive = false; // 対象選択/道具メニューなどのサブ画面を表示中かどうか(trueの間はコマンド外タップで一段戻れる)
+let battleForcedFollowupActive = false; // 連斬などの強制追撃の対象選択中(この間はキャンセル不能=二重行動防止、2026-08-02)
 // このターンで既に行動系ボタン(攻撃/技/かばう/逃げる等)が押されたかどうか。renderActionButtons()の
 // たびにfalseへ戻す。モバイル特有の「ほぼ同時の2本指/2タップが、片方の処理でボタンがDOMから
 // 消える前にもう片方も同じ要素へロックオンして配送される」レースにより、pendingEnemyPick/
@@ -108,6 +109,7 @@ function startBattle(enemies, pathDef, encounterText) {
   // swapCooldown: 交代コマンドの残りクールダウン(ラウンドの節目で1減る、0で使用可、開幕から使用可)。
   // roundsTotal/presence: 参加ターン比の経験値配分用(そのラウンドに戦場へ出ていたキャラのカウント。nextRound/victory参照)
   battle = { enemies, order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: (pathDef && pathDef.goldMult) || 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: omikujiGuaranteedCrits, swapCooldown: 0, roundsTotal: 0, presence: {}, raidRoundTargetCounts: {} };
+  battleForcedFollowupActive = false; // 前の戦闘の強制追撃フラグが残らないように(安全リセット)
   // 新しい戦闘の最初の手番は必ずスライド演出を再生させたいので、前の戦闘の最後にたまたま
   // 同じキャラのidが残っていて「変化なし」と誤判定されない(演出が飛ばされない)よう明示的にリセットする
   lastPartyBarActingId.battlePartyBar = null;
@@ -150,6 +152,7 @@ function startBattle(enemies, pathDef, encounterText) {
     c.onKillEvasionBonusActive = false; // 修羅刃など、キル直後の回避バフも毎戦闘リセットする
     c.hagakiCritStack = 0; // 覇気: 会心のたびに積み上がる会心率も毎戦闘リセットする
     c.nextSkillFreeMp = false; // 残心: キル直後の次技無償化フラグも毎戦闘リセットする
+    c.guaranteedCritNext = false; // 反射神経など「次の攻撃だけ確定会心」も戦闘をまたいで持ち越さない(2026-08-02: 攻撃せず戦闘が終わると次戦へ漏れていた)
     c.dosayUsed = false; // 怒声: 戦闘中一度きりの使用制限も毎戦闘リセットする
     c.__usedShikigamiTypes = new Set(); // 式神: 帰還/消滅したタイプの再召喚禁止も戦闘をまたいで持ち越さない
     // 「誰かがかばっている間」系のスキル(連携の呼吸・援護薙ぎ・護りの薙刀・鼓舞の盾など)がengine.js側から
@@ -527,7 +530,8 @@ function renderBattleScreen() {
   battle.justAppeared = false; // 敵出現演出は戦闘開始直後の初回描画だけ(以降の再描画で毎回再生されないように)
   playRowLayoutSlide(row, rowLayoutOlds); // 召喚・枠畳みでカードが動く時だけスーッと滑らせる(FLIP、モック承認2026-08-01)
   activateHpTrails(row);
-  fieldParty.forEach((c) => renderVfxFor(c.id));
+  // 味方のrenderVfxForはrenderPartyBar(ui.js)が全員分実行済みのため、ここで重ねて呼ばない
+  // (2026-08-02: 1回の再描画で二重実行されていた無駄の除去。findVisibleCardのDOM走査は安くない)
   battle.enemies.forEach((e) => renderVfxFor(e.instanceId));
   positionActionsBelowPartyBar("battlePartyBar", ".battle-actions");
 }
@@ -1304,6 +1308,7 @@ function revertAllTransforms() {
 function cancelBattleSubMenu() {
   if (!battle || battle.actingId == null) return;
   if (battleActionLocked) return; // 既に行動を確定させて次のターンへの待機中なら、今さらメニューへ戻さない(二重行動防止)
+  if (battleForcedFollowupActive) return; // 連斬の強制追撃はキャンセル不能(通常攻撃を確定済みのため、戻すと二重行動になる)
   const actor = fieldParty.find((c) => c.id === battle.actingId);
   if (!actor) return;
   pendingEnemyPick = null;
@@ -1377,6 +1382,10 @@ function pickFollowupTarget(onPicked) {
   if (targets.length === 1) { onPicked(targets[0]); return; }
   battleSubMenuActive = true;
   battleActionLocked = false;
+  // 強制追撃中フラグ: この対象選択はキャンセル不能(cancelBattleSubMenuが弾く)。従来は
+  // 「戻る」ボタンを出さないだけで、コマンド外タップの共通処理からキャンセルが素通りし、
+  // 確定済みの通常攻撃1回分を得た上でフル行動をもう一度選び直せる二重行動の穴があった(2026-08-02修正)
+  battleForcedFollowupActive = true;
   pendingEnemyPick = (t) => { onPicked(t); };
   renderBattleScreen();
   const grid = document.getElementById("actionGrid");
@@ -1390,6 +1399,7 @@ function pickFollowupTarget(onPicked) {
       if (!pendingEnemyPick) return;
       pendingEnemyPick = null;
       battleActionLocked = true;
+      battleForcedFollowupActive = false;
       onPicked(t);
     };
     grid.appendChild(btn);
@@ -2029,6 +2039,7 @@ const NORMAL_ATTACK_VFX_RESUME_FRAME = Math.floor(NORMAL_ATTACK_HITSTOP_MS / ATT
 function renderActionButtons(actor) {
   battleSubMenuActive = false;
   battleActionLocked = false;
+  battleForcedFollowupActive = false; // 追撃の対象を敵カード直タップで選んだ経路でもフラグが残らないよう、手番の頭で必ず戻す
   const grid = document.getElementById("actionGrid");
   grid.innerHTML = "";
   grid.style.gridTemplateColumns = ""; // 敵対象選択(3列)からの復帰時、通常の2列に戻す
@@ -2537,6 +2548,10 @@ function afterPlayerAction() {
 }
 
 function victory() {
+  // 一回限りガード: 非同期演出のコールバック残り(setTimeout多段)からprocessNextが重複して走った場合でも、
+  // 勝利処理(報酬加算・経験値)が二度実行されないようにする(2026-08-02、防御的ガード)
+  if (!battle || battle.__resultResolved) return;
+  battle.__resultResolved = true;
   // 影分身は戦闘が終わると自動で消滅する(式神は逆に生きていれば持ち越されるので、ここでは除去しない)
   fieldParty = fieldParty.filter((c) => !c.isClone);
   advEnemiesDefeated += battle.enemies.filter((e) => e.hp <= 0).length; // リザルトの戦績/朱印評価用(逃げた敵は数えない)
@@ -2800,6 +2815,9 @@ function escapeBattle() {
 }
 
 function defeat() {
+  // 一回限りガード(victory()と同じ防御。全滅演出の多段setTimeoutからの重複呼び出し対策)
+  if (!battle || battle.__resultResolved) return;
+  battle.__resultResolved = true;
   fieldParty = fieldParty.filter((c) => !c.isClone); // 影分身は戦闘が終わると自動で消滅する
   // 全滅=素材は置き去り(拾えない)
   materialGroundDrops = [];
