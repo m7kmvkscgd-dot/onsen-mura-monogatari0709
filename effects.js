@@ -425,13 +425,14 @@ function positionTanzakuBanner(banner, band, anchorRect, extraDrop) {
   banner.style.left = `${left}px`;
   banner.style.top = `${Math.max(2, Math.round(anchorRect.top + (extraDrop || 0)) - bandH + 36)}px`;
 }
-// 短冊のスライド(ユーザー指定2026-08-01: 上から下へ入る・表示は従来+0.2秒=計1.2秒)
+// 短冊のスライド(ユーザー指定2026-08-01: 上から下へ入る・計1.2秒表示)。
+// 消え方は「フェードしながら下へ」をやめて、その場でパッと消す(同日ユーザー指定。
+// 旧フェードに使っていた時間もそのまま表示時間に充てる=最後まで不透明のまま、アニメ終了で即座に消える)
 function playTanzakuSlide(banner) {
   banner.animate([
     { opacity: 0, transform: "translateY(-16px)" },
     { opacity: 1, transform: "translateY(0)", offset: 0.16 },
-    { opacity: 1, transform: "translateY(0)", offset: 0.82 },
-    { opacity: 0, transform: "translateY(10px)" },
+    { opacity: 1, transform: "translateY(0)" },
   ], { duration: 1200, easing: "ease" });
 }
 // 敵の大技予告の短冊(紫): 構えの瞬間(bigAttackPending=true)にbattle.jsから呼ばれる。

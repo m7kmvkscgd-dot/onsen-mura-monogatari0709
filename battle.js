@@ -387,7 +387,7 @@ function updateEnemyCard(card, e) {
   let overlayHtml = "";
   if (e.isFlying) overlayHtml += `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>`;
   if (e.bigAttackPending && !dead) overlayHtml += `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>`;
-  if (e.isQuestTarget) overlayHtml += `<span class="status-icon" data-status="questTarget" style="position:absolute;top:2px;right:2px;font-size:20px;color:#e6c977;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.questTarget}</span>`;
+  // 討伐対象の🎯アイコンは廃止(2026-08-01ユーザー指示「邪魔」。対象表示は依頼文とカード枠の演出に任せる)
   if (enemyIsNextActor) overlayHtml += '<span class="next-actor-badge">▲次ターン行動</span>';
   if (overlayHtml) debuffIconsEl.insertAdjacentHTML("beforebegin", overlayHtml);
   debuffIconsEl.innerHTML = statusIconsFor(e);
