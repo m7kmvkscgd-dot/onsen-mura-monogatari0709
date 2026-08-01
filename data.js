@@ -63,11 +63,11 @@ const CLASS_STRESS_IMAGES = {
 
 // 職業ごとのざっくりとした説明文(ゲーム開始時の最初の1人選び画面で表示する)
 const CLASS_DESC = {
-  samurai: "会心の一撃を得意とする単体特化の剣士。攻撃力・防御力ともに高水準で扱いやすい。",
+  samurai: "渾身斬りを得意とする単体特化の剣士。攻撃力・防御力ともに高水準で扱いやすい。",
   ninja: "抜群の素早さで先手を取り、奇襲で一撃を狙う俊敏な戦士。",
   spearman: "高いHPと防御力を誇り、「かばう」で仲間を守る守護者。",
   naginata: "薙ぎ払いで敵全体を攻撃できる範囲特化の武人。",
-  hunter: "抜群の命中率と会心の一矢で急所を突く弓使い。飛んでいる敵を撃ち落とすのも得意。",
+  hunter: "抜群の命中率と急所撃ちで敵を仕留める弓使い。飛んでいる敵を撃ち落とすのも得意。",
   gunner: "圧倒的な火力の砲撃を放つが、撃った次のターンは装填で動けなくなる。",
   onmyoji: "呪符ノ術(単体)・大祓ノ術(全体)を操る魔法職。打たれ弱いが火力は高い。",
   priest: "治癒の術で仲間のHPを回復する支援役。",
@@ -230,10 +230,10 @@ const ABILITY_LABEL = {
   magicAttack: "呪符ノ術",
   magicAttackAll: "大祓ノ術(全体)",
   heal: "治癒の術",
-  critAttack: "会心の一撃",
+  critAttack: "渾身斬り", // 旧「会心の一撃」(2026-08-01ユーザー改名。内部キーcritAttackは不変)
   powerAttack: "奇襲",
   physicalAttackAll: "薙ぎ払い(全体)",
-  preciseShot: "会心の一矢",
+  preciseShot: "急所撃ち", // 旧「会心の一矢」(2026-08-01ユーザー改名。内部キーpreciseShotは不変)
   cannonShot: "砲撃",
   guard: "かばう",
 };
@@ -1341,7 +1341,7 @@ const SKILL_TREES = {
       left: { name: "火矢", desc: "攻撃力90%。炎上2を与える。", mp: 1, action: { kind: "damage", mult: 0.9, inflict: { type: "burn", chance: 1, turns: 2 } } },
       // 裂傷矢(旧・急所への一撃、スキルエディタ2026-07-30): 通常攻撃の出血付与から「会心の一矢(基本技
       // preciseShot)が確定で出血2〜3を付与」へ。薙刀士の旋風薙ぎと同じabilityOnHitInflict機構を流用
-      right: { name: "裂傷矢", desc: "会心の一矢が敵に出血2〜3を付与する", mp: 0, passive: { abilityOnHitInflict: { preciseShot: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 3 } } } },
+      right: { name: "裂傷矢", desc: "急所撃ちが敵に出血2〜3を付与する", mp: 0, passive: { abilityOnHitInflict: { preciseShot: { type: "bleed", chance: 1.0, valueMin: 2, valueMax: 3 } } } },
     },
     3: {
       // desc変更(スキルエディタの差分反映): 2連続攻撃案を取りやめ、旧・隼落としの飛行ボーナスに再度差し替え
