@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>大技予告=構え状態モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #101014; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  h1 { font-size: 0.95rem; padding: 12px; max-width: 430px; margin: 0 auto; }
+  .stage { position: relative; width: 100%; max-width: 430px; height: 560px; margin: 0 auto;
+    background: url("assets/bg/forest_day.jpg") center 35% / cover no-repeat; overflow: hidden; }
+  .stage-inner { position: absolute; inset: 0; }
+  .caption { position: absolute; top: 10px; left: 50%; translate: -50% 0; z-index: 11; font-size: 0.78rem; font-weight: 700;
+    background: rgba(16,14,18,0.85); border: 1px solid #6d5a35; border-radius: 8px; padding: 5px 14px; opacity: 0; white-space: nowrap; }
+  .enemy { position: absolute; top: 130px; left: 50%; translate: -50% 0; width: 120px; text-align: center; }
+  .enemy .nm { font-size: 0.78rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.9); margin-bottom: 4px; }
+  .enemy .wrap { position: relative; display: inline-block; }
+  .enemy img.sprite { height: 97px; position: relative; z-index: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  .aura { position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%) scale(0.6); width: 150%; height: 120%;
+    opacity: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 50% 62% at 50% 78%, rgba(200,30,20,0.6), rgba(200,30,20,0.22) 55%, transparent 75%); }
+  .enemy .hp { width: 84px; height: 8px; margin: 3px auto 0; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; }
+  .enemy .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; transition: width 0.25s; }
+  .anger { position: absolute; z-index: 9; font-size: 1.6rem; pointer-events: none; opacity: 0; }
+  .allies { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.4rem; }
+  .ally { width: 93px; text-align: center; position: relative; }
+  .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: rgba(20,24,27,0.72); border-radius: 8px; }
+  .ally .hp { height: 8px; background: rgba(0,0,0,0.55); border-radius: 4px; overflow: hidden; margin-top: 3px; }
+  .ally .hp b { display: block; height: 100%; background: #5cb87a; width: 100%; transition: width 0.25s; }
+  .ally .nm { font-size: 0.72rem; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  .tanzaku { position: absolute; z-index: 8; opacity: 0; pointer-events: none;
+    writing-mode: vertical-rl; white-space: nowrap; padding: 8px 6px 9px;
+    border: 1px solid #b98fe0; color: #f3eaff; background: linear-gradient(#4a1a6e, #1d0a30);
+    box-shadow: 0 0 0 1px rgba(22,10,32,0.75), 0 3px 8px rgba(0,0,0,0.75);
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 14px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em; }
+  .dmg { position: absolute; font-weight: 900; text-shadow: 0 0 4px #000, 0 2px 4px #000; pointer-events: none; z-index: 9; animation: dmgUp 0.9s ease-out forwards; }
+  @keyframes dmgUp { 0% { transform: translateY(6px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-30px); opacity: 0; } }
+  .vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 7;
+    background: radial-gradient(ellipse 75% 75% at center, transparent 55%, rgba(160,10,5,0.55) 100%); }
+  .warnflash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 6;
+    box-shadow: inset 0 0 60px 18px rgba(200,30,20,0.8); }
+  .flash { position: absolute; inset: 0; background: rgba(255,240,220,0.9); border-radius: 8px; opacity: 0; pointer-events: none; z-index: 3; }
+  .panel { max-width: 430px; margin: 0 auto; padding: 12px 12px 44px; }
+  .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 12px 0 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35; background: #2a2620; color: #ece8dc; }
+  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.play { background: #1f2d24; border-color: #3f6d4e; font-weight: 700; }
+  .note { font-size: 0.74rem; line-height: 1.75; color: #cfc9b8; margin-top: 8px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
+  .note b { color: #d9c49a; }
+</style>
+</head>
+<body>
+<h1>大技予告=構え状態モック(💢廃止案・実寸)</h1>
+<div class="stage" id="stage">
+  <div class="stage-inner" id="stageInner">
+    <div class="caption" id="caption"></div>
+    <div class="enemy" id="enemy">
+      <div class="nm">野犬</div>
+      <div class="wrap">
+        <div class="aura" id="aura"></div>
+        <img class="sprite" id="enemyImg" src="assets/enemies/clear/yaken.png" alt="">
+      </div>
+      <div class="hp"><b id="hp-en" style="width:70%"></b></div>
+    </div>
+    <div class="anger" id="anger">💢</div>
+    <div class="allies">
+      <div class="ally" id="al1"><img src="assets/class_naginata.png"><div class="flash" id="flash-al1"></div><div class="hp"><b id="hp-al1"></b></div><div class="nm">楓</div></div>
+      <div class="ally" id="al2"><img src="assets/class_hunter.png"><div class="flash" id="flash-al2"></div><div class="hp"><b id="hp-al2"></b></div><div class="nm">小夜</div></div>
+      <div class="ally" id="al3"><img src="assets/class_onmyoji.png"><div class="flash" id="flash-al3"></div><div class="hp"><b id="hp-al3"></b></div><div class="nm">晴明</div></div>
+    </div>
+    <div class="tanzaku" id="tz">牙噛み</div>
+  </div>
+  <div class="warnflash" id="warnflash"></div>
+  <div class="vignette" id="vig"></div>
+</div>
+<div class="panel">
+  <div class="sec-label">■ 方式</div>
+  <div class="row">
+    <button class="mode on" data-mode="new">新案: 構え状態(💢廃止)</button>
+    <button class="mode" data-mode="now">現状(💢のみ)</button>
+  </div>
+  <div class="row" style="margin-top:6px;">
+    <label style="font-size:0.78rem;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="seOn" checked>効果音あり</label>
+  </div>
+  <div class="sec-label">■ 再生(予告ターン→味方のターン→大技発動、の3手番通し)</div>
+  <div class="row"><button class="play" id="playBtn">▶ 通しで再生</button></div>
+  <div class="note">
+    <b>新案</b>: 予告の瞬間に💢ではなく<b>「構え」状態に入る</b> — しゃがんで赤オーラ+ブルブル震えが
+    <b>大技を撃つまでずっと続き</b>、紫短冊「牙噛み」も出っぱなし。味方のターン中も
+    「こいつ次にヤバいの撃つ」が画面から消えない。発動時は構えが一気に膨れ上がって突進→重い着弾<br>
+    <b>現状</b>: 💢が一瞬ポンと出て画面が赤くフラッシュ、短冊0.9秒→その後は普通の見た目に戻る。
+    味方のターンの間は予告の痕跡が消えている(比較用)
+  </div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let mode = "new";
+  document.querySelectorAll(".mode").forEach((b) => {
+    b.onclick = () => { document.querySelectorAll(".mode").forEach((x) => x.classList.remove("on")); b.classList.add("on"); mode = b.dataset.mode; };
+  });
+  const seWarning = new Audio("assets/sfx/big_attack_warning.mp3");
+  const seImpact = new Audio("assets/sfx/hit_taken_4.mp3");
+  const seAtk = new Audio("assets/sfx/attack_hunter.mp3");
+  const seOn = () => $("seOn").checked;
+  function play(a) { if (seOn()) { try { a.currentTime = 0; a.play(); } catch (e) {} } }
+  let ac = null;
+  function rumble(ms, gain) {
+    if (!seOn()) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const len = Math.round(ac.sampleRate * (ms / 1000));
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (0.4 + 0.6 * Math.sin(i / 900));
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 95;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(gain, ac.currentTime + ms / 1000 * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + ms / 1000);
+      src.connect(lp); lp.connect(g); g.connect(ac.destination);
+      src.start();
+    } catch (e) {}
+  }
+
+  const img = $("enemyImg"), aura = $("aura"), tz = $("tz"), inner = $("stageInner");
+  let stanceTimers = [];
+  function caption(text) {
+    const c = $("caption");
+    c.textContent = text;
+    c.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], { duration: 1500, fill: "forwards" });
+  }
+  function placeTanzaku() {
+    const er = $("enemy").getBoundingClientRect(), sr = $("stage").getBoundingClientRect();
+    tz.style.left = (er.right - sr.left - 16) + "px";
+    tz.style.top = (er.top - sr.top - 10) + "px";
+  }
+  function tanzakuIn() { placeTanzaku(); tz.animate([{ opacity: 0, transform: "translateY(-9px)" }, { opacity: 0.95, transform: "translateY(0)" }], { duration: 200, fill: "forwards" }); }
+  function tanzakuSlide900() {
+    placeTanzaku();
+    tz.animate([
+      { opacity: 0, transform: "translateY(-9px)" },
+      { opacity: 0.95, transform: "translateY(0)", offset: 0.13 },
+      { opacity: 0.95, transform: "translateY(0)", offset: 0.78 },
+      { opacity: 0, transform: "translateY(6px)" },
+    ], { duration: 900, easing: "ease", fill: "forwards" });
+  }
+  function tanzakuOut() { tz.animate([{ opacity: 0.95 }, { opacity: 0 }], { duration: 220, fill: "forwards" }); }
+  // 構え状態ON: しゃがみ+赤オーラの脈動+細かい震え(解除まで続く)
+  function stanceOn() {
+    img.animate([{ transform: "translateY(0) scale(1)", filter: "brightness(1)" }, { transform: "translateY(4px) scale(0.97)", filter: "brightness(0.82)" }], { duration: 300, easing: "ease-out", fill: "forwards" });
+    aura.animate([{ opacity: 0, transform: "translateX(-50%) scale(0.6)" }, { opacity: 0.55, transform: "translateX(-50%) scale(0.92)" }], { duration: 300, fill: "forwards" }).onfinish = () => {
+      aura.animate([
+        { opacity: 0.45, transform: "translateX(-50%) scale(0.88)" },
+        { opacity: 0.65, transform: "translateX(-50%) scale(0.98)" },
+        { opacity: 0.45, transform: "translateX(-50%) scale(0.88)" },
+      ], { duration: 1100, iterations: Infinity, easing: "ease-in-out" });
+    };
+    stanceTimers.push(setInterval(() => { img.style.translate = `${(Math.random() * 2 - 1) * 1.6}px 0px`; }, 55));
+  }
+  function stanceOff() {
+    stanceTimers.forEach(clearInterval); stanceTimers = [];
+    img.style.translate = "";
+    img.getAnimations().forEach((a) => a.cancel());
+    aura.getAnimations().forEach((a) => a.cancel());
+    aura.style.opacity = 0;
+    img.style.filter = "";
+  }
+  function warnFlash() { $("warnflash").animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0 }], { duration: 600 }); }
+  function angerPop() {
+    const er = $("enemy").getBoundingClientRect(), sr = $("stage").getBoundingClientRect();
+    const a = $("anger");
+    a.style.left = (er.right - sr.left - 34) + "px";
+    a.style.top = (er.top - sr.top + 8) + "px";
+    a.animate([{ opacity: 0, transform: "scale(0.4)" }, { opacity: 1, transform: "scale(1.15)", offset: 0.25 }, { opacity: 1, transform: "scale(1)", offset: 0.75 }, { opacity: 0 }], { duration: 900 });
+  }
+  function dmgPop(targetId, text, color, size) {
+    const t = $(targetId).getBoundingClientRect(), sr = $("stage").getBoundingClientRect();
+    const d = document.createElement("div");
+    d.className = "dmg"; d.textContent = text;
+    d.style.color = color; d.style.fontSize = (size || 1.05) + "rem";
+    d.style.left = (t.left - sr.left + t.width / 2 - 14) + "px";
+    d.style.top = (t.top - sr.top + 20) + "px";
+    $("stage").appendChild(d);
+    setTimeout(() => d.remove(), 950);
+  }
+  function shake(strength, ms) {
+    const kf = [];
+    for (let i = 0; i <= 8; i++) kf.push({ transform: `translate(${(i % 2 ? -1 : 1) * strength * (1 - i / 8)}px, ${(i % 3 ? 1 : -1) * strength * 0.6 * (1 - i / 8)}px)` });
+    kf.push({ transform: "translate(0,0)" });
+    inner.animate(kf, { duration: ms, easing: "linear" });
+  }
+  // 味方のターン(時間経過の再現): 小夜が踏み込んで敵に一撃
+  function allyTurn(cb) {
+    caption("② 味方のターン(構えは続く)");
+    const a2 = $("al2");
+    a2.animate([{ transform: "translateY(0)" }, { transform: "translateY(-14px)", offset: 0.4 }, { transform: "translateY(0)" }], { duration: 480, easing: "cubic-bezier(.2,.9,.3,1)" });
+    setTimeout(() => {
+      play(seAtk);
+      dmgPop("enemy", "-9", "#fff", 1.05);
+      $("hp-en").style.width = "45%";
+    }, 260);
+    setTimeout(cb, 1600);
+  }
+  function bigAttack(cb) {
+    caption("③ 大技発動");
+    rumble(900, 0.9);
+    // 構えを一気に膨れ上がらせて解放
+    aura.getAnimations().forEach((a) => a.cancel());
+    aura.animate([{ opacity: 0.6, transform: "translateX(-50%) scale(0.95)" }, { opacity: 0.98, transform: "translateX(-50%) scale(1.2)" }], { duration: 600, easing: "ease-in", fill: "forwards" });
+    stanceTimers.push(setInterval(() => { img.style.translate = `${(Math.random() * 2 - 1) * 2.6}px 0px`; }, 40));
+    setTimeout(() => {
+      stanceOff();
+      img.animate([
+        { transform: "translateY(0) scale(1)" },
+        { transform: "translateY(30px) scale(1.06)", offset: 0.55 },
+        { transform: "translateY(0) scale(1)" },
+      ], { duration: 340, easing: "cubic-bezier(.2,.9,.3,1)" });
+      setTimeout(() => {
+        setTimeout(() => { // ヒットストップ120ms
+          play(seImpact);
+          $("flash-al2").animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 260, easing: "ease-out" });
+          $("hp-al2").style.width = "55%";
+          dmgPop("al2", "-18", "#ff9c8a", 1.6);
+          shake(8, 450);
+          $("vig").animate([{ opacity: 0 }, { opacity: 0.95, offset: 0.25 }, { opacity: 0 }], { duration: 700, easing: "ease-out" });
+          cb();
+        }, 120);
+      }, 170);
+    }, 600);
+  }
+
+  let playing = false;
+  $("playBtn").onclick = () => {
+    if (playing) return;
+    playing = true;
+    stanceOff();
+    $("hp-al2").style.width = "100%";
+    $("hp-en").style.width = "70%";
+    caption("① 敵のターン: 大技の予告");
+    play(seWarning);
+    if (mode === "new") {
+      stanceOn();
+      tanzakuIn(); // 短冊は構えの間ずっと出しっぱなし
+      setTimeout(() => allyTurn(() => bigAttack(() => {
+        setTimeout(() => { tanzakuOut(); playing = false; }, 1400);
+      })), 1700);
+    } else {
+      warnFlash();
+      angerPop();
+      tanzakuSlide900();
+      setTimeout(() => allyTurn(() => {
+        // 現状の発動: 短い溜め→突進(短冊は発動時に1.8秒)
+        caption("③ 大技発動");
+        tanzakuIn();
+        aura.animate([{ opacity: 0 }, { opacity: 0.55 }], { duration: 620, fill: "forwards" });
+        setTimeout(() => {
+          aura.getAnimations().forEach((a) => a.cancel());
+          aura.style.opacity = 0;
+          img.animate([
+            { transform: "translateY(0) scale(1)" },
+            { transform: "translateY(26px) scale(1.03)", offset: 0.55 },
+            { transform: "translateY(0) scale(1)" },
+          ], { duration: 340, easing: "cubic-bezier(.2,.9,.3,1)" });
+          setTimeout(() => {
+            play(seImpact);
+            $("flash-al2").animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 260 });
+            $("hp-al2").style.width = "55%";
+            dmgPop("al2", "-18", "#ff9c8a", 1.05);
+            shake(3, 220);
+            $("vig").animate([{ opacity: 0 }, { opacity: 0.6, offset: 0.25 }, { opacity: 0 }], { duration: 450 });
+            setTimeout(() => { tanzakuOut(); playing = false; }, 1800);
+          }, 170);
+        }, 620);
+      }), 1700);
+    }
+  };
+</script>
+</body>
+</html>
