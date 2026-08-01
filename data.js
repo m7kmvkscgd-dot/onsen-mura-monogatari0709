@@ -727,7 +727,7 @@ const BATTLE_LAYOUT = "center_v1";
 // エディタから新しいエクスポートが来たら、この配列に項目を追加/差し替えする)
 const AILMENT_VFX_ASSIGNMENTS = [
   { ailmentId: "bleed", stackLevel: 1, framePrefix: "assets/vfx_library/codemanu_vfx_free/blood_impact/frame_", frameCount: 30, size: 52, offsetX: 0, offsetY: 0, blendScreen: false, frameMs: 19, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_01.ogg" },
-  { ailmentId: "burn", stackLevel: 1, framePrefix: "assets/vfx_library/flame_02_15x4/frame_", frameCount: 60, size: 75, offsetX: -1, offsetY: -14, blendScreen: true, frameMs: 22, se: null },
+  { ailmentId: "burn", stackLevel: 1, framePrefix: "assets/vfx_library/flame_02_15x4/frame_", frameCount: 60, size: 75, offsetX: -1, offsetY: -14, blendScreen: true, frameMs: 18, se: null }, // 22→18ms: 炎上演出を約0.25秒短縮(ユーザー指定2026-08-01)
   { ailmentId: "poison", stackLevel: 1, framePrefix: "assets/vfx_library/kenney_smoke/fart/frame_", frameCount: 9, size: 35, offsetX: -1, offsetY: -11, blendScreen: false, frameMs: 109, se: "assets/se_library/ogart_80_rpg_sfx/creature_slime_04.ogg" },
 ];
 
