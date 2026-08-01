@@ -206,8 +206,9 @@
      (センタリングだと行高との差分だけカードが下へ押されて位置計算が狂う) */
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
   /* #battlePartyBar.layout-centerのtopもJSが実測で設定する(CSSでは指定しない) */
-  /* 味方バーの黒帯は通常戦闘では廃止(2026-08-01ユーザーJSON allyBarBand:false)。探索・襲撃戦は従来どおり */
-  #battlePartyBar.layout-center { background: transparent; }
+  /* 味方バーの黒帯は通常戦闘・探索では廃止(2026-08-01ユーザーJSON allyBarBand:false+「探索も戦闘に
+     合わせて」)。襲撃戦(raid-battle-bar、layout-centerなし)と野営は従来どおり帯あり */
+  #battlePartyBar.layout-center, #dungeonPartyBar.layout-center { background: transparent; }
   /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
      390px端末の3体戦で3枚目が折り返す不具合があった(当時はoverflow:hiddenで丸ごと隠れて
      「敵が消えた」ように見えた。枠が無いので左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */

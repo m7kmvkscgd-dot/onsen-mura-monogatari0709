@@ -1365,13 +1365,17 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
   if (!partyBar || !actions) return;
   const apply = () => {
     // 本採用レイアウトオフセット(battle.jsのBATTLE_LAYOUT_OFFSETS、2026-08-01ユーザー実機調整)。
-    // 通常戦闘(battlePartyBar+layout-center)のみ適用。調整モード起動中はその現在値を優先。
-    // translateはtransform(translateX(-50%)等)と独立に合成されるため既存の中央寄せを壊さない
+    // 通常戦闘(battlePartyBar)と探索(dungeonPartyBar)のlayout-center時に適用(2026-08-01
+    // 「探索のボタンと味方の高さも戦闘に合わせて」=両画面で味方とボタンの位置が一致し、
+    // 戦闘開始でレイアウトが動かない従来原則を新レイアウトでも維持)。襲撃戦・野営は対象外。
+    // 調整モード起動中はその現在値を優先。translateはtransform(translateX(-50%)等)と独立に
+    // 合成されるため既存の中央寄せを壊さない
     const isBattleBar = partyBarId === "battlePartyBar";
-    const loActive = isBattleBar && partyBar.classList.contains("layout-center");
+    const isLoBar = isBattleBar || partyBarId === "dungeonPartyBar";
+    const loActive = isLoBar && partyBar.classList.contains("layout-center");
     const LO = loActive ? (window.__tunerOffsets || (typeof BATTLE_LAYOUT_OFFSETS !== "undefined" ? BATTLE_LAYOUT_OFFSETS : null)) : null;
     const loStr = (o) => (LO ? `${o.x}px ${o.y}px` : "");
-    if (isBattleBar) partyBar.style.translate = LO ? loStr(LO.partyBar) : "";
+    if (isLoBar) partyBar.style.translate = LO ? loStr(LO.partyBar) : "";
     // 戦闘レイアウトcenter_v1(battle.jsがlayout-centerクラスを付ける): 縦の配置をCSSのvh当て推量では
     // なく、実際に見えている高さ(innerHeight)から下から順に逆算して設定する。iOSのCSS vhはバーを
     // 畳んだ大ビューポート基準のため、vh指定だと実機でボタン列が味方バーに重なった(2026-08-01実機報告)。
@@ -1458,7 +1462,7 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
     const maxTop = window.innerHeight - actionsHeight - 6;
     if (top > maxTop) top = Math.max(0, maxTop);
     actions.style.top = `${top}px`;
-    if (isBattleBar) actions.style.translate = LO ? loStr(LO.commands) : "";
+    if (isLoBar) actions.style.translate = LO ? loStr(LO.commands) : "";
   };
   apply();
   lastPartyBarPositionCall = { partyBarId, actionsSelector };
