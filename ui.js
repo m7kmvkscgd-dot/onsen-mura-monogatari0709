@@ -1392,11 +1392,17 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
       }
     }
     const rect = partyBar.getBoundingClientRect();
-    // 逃げる小ボタン(戦闘のみ、位置C=味方バーの右上に浮かせる。2026-08-01ユーザー確定)。
-    // 味方バーの実測位置から44px上に置く(バーが実測配置で動いても常に右肩に追従する)
+    // 逃げる小ボタン(戦闘のみ): テキストボックス(戦闘ログ)の右上角の内側に重ねる
+    // (2026-08-01ユーザー指定。旧・位置C=味方バー右上は「邪魔」とのことで廃止)。
+    // ログはfixedではなく.battle-top内のabsoluteのため、実測rectからfixed座標へ変換して追従させる
     if (partyBarId === "battlePartyBar") {
       const fleeBtn = document.getElementById("battleFleeBtn");
-      if (fleeBtn) fleeBtn.style.top = `${Math.max(8, Math.round(rect.top) - 36)}px`; // -44から8px下げ(2026-08-01ユーザー指定)
+      const logEl = document.getElementById("battleLog");
+      if (fleeBtn && logEl) {
+        const lr = logEl.getBoundingClientRect();
+        fleeBtn.style.top = `${Math.max(4, Math.round(lr.top) + 5)}px`;
+        fleeBtn.style.right = `${Math.max(6, Math.round(window.innerWidth - lr.right) + 5)}px`;
+      }
     }
     let top = Math.round(rect.bottom) + 10;
     // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、

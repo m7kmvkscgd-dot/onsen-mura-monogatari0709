@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: 技名帯の表示位置バリエーション</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  /* ---- 戦闘シーンの簡易再現 ---- */
+  .scene {
+    position: relative; height: 430px; overflow: hidden;
+    background-image: url('assets/bg/suzunari_gake.jpg');
+    background-size: cover; background-position: center 30%;
+  }
+  .scene::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.15), rgba(20,24,27,0.55) 60%, rgba(20,24,27,0.8)); }
+  .logbox { position: absolute; top: 10px; left: 12px; right: 12px; z-index: 2;
+    border: 2px solid #8a7448; border-radius: 10px; background: rgba(16,13,10,0.82);
+    min-height: 56px; padding: 8px 12px; font-size: 0.8rem; color: #d9cfb8; }
+  .enemy { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); z-index: 2; text-align: center; }
+  .enemy img { width: 110px; display: block; margin: 0 auto; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
+  .enemy .nm { font-size: 0.8rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  .allies { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; display: flex; justify-content: center; gap: 10px; }
+  .ally { width: 88px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
+  .ally img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 6px; }
+  .ally .nm { font-size: 0.7rem; font-weight: 700; }
+  .ally .hp { height: 6px; border-radius: 99px; background: #3a3a3a; margin-top: 3px; overflow: hidden; }
+  .ally .hp i { display: block; height: 100%; width: 80%; background: #4caf6f; }
+
+  /* ---- 技名帯(本体と同じ見た目) ---- */
+  .band {
+    display: inline-block; padding: 5px 26px; font-weight: 900; font-size: 1.05rem; letter-spacing: 0.12em;
+    color: #fff7e6; white-space: nowrap;
+    background: linear-gradient(90deg, transparent, rgba(120,20,16,0.92) 18%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 82%, transparent);
+    border-top: 1px solid rgba(255,214,110,0.8); border-bottom: 1px solid rgba(255,214,110,0.8);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+  }
+  .fx-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .fx-item { position: absolute; opacity: 0; }
+  /* 案C: 縦書きの札 */
+  .band.tate {
+    writing-mode: vertical-rl; padding: 22px 6px; letter-spacing: 0.2em; font-size: 1rem;
+    background: linear-gradient(180deg, transparent, rgba(120,20,16,0.92) 15%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 85%, transparent);
+    border: none; border-left: 1px solid rgba(255,214,110,0.8); border-right: 1px solid rgba(255,214,110,0.8);
+  }
+
+  /* ---- 操作パネル ---- */
+  .panel { padding: 0.8rem 0.9rem 3rem; }
+  .panel h2 { font-size: 0.95rem; margin: 0.9rem 0 0.3rem; }
+  .panel p { font-size: 12px; color: #9aa79f; margin: 0.1rem 0 0.4rem; line-height: 1.5; }
+  .panel button.case {
+    width: 100%; padding: 0.65rem 0.8rem; margin-bottom: 0.35rem; border-radius: 9px;
+    border: 1px solid #4a505a; background: #232830; color: #ece8dc; font-size: 0.9rem; font-weight: 700; text-align: left;
+  }
+  .panel button.case:active { background: #2e3540; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scene" id="scene">
+    <div class="logbox">下のボタンを何度も押して、出る場所の変わり方を見てください。</div>
+    <div class="enemy"><img src="assets/enemies/amayome_shiranui.png"><div class="nm">雨嫁・白縫</div></div>
+    <div class="allies" id="allies">
+      <div class="ally"><img src="assets/class_samurai.png" onerror="this.style.display='none'"><div class="nm">権兵衛</div><div class="hp"><i></i></div></div>
+      <div class="ally"><img src="assets/class_hunter.png" onerror="this.style.display='none'"><div class="nm">小夜</div><div class="hp"><i></i></div></div>
+      <div class="ally"><img src="assets/class_onmyoji.png" onerror="this.style.display='none'"><div class="nm">弥助</div><div class="hp"><i></i></div></div>
+    </div>
+    <div class="fx-layer" id="fx"></div>
+  </div>
+
+  <div class="panel">
+    <h2>技名帯の表示位置(タップで再生、押すたび場所が変わる)</h2>
+    <button class="case" onclick="caseA()">案A: 使う本人の頭上に出す<br><span style="font-size:11px;color:#9aa79f;">誰が使うかで毎回位置が変わる。帯は小さめ</span></button>
+    <button class="case" onclick="caseB()">案B: 画面のあちこちにランダム<br><span style="font-size:11px;color:#9aa79f;">5カ所(左上/右上/中央/左下/右下)+軽い傾きから抽選</span></button>
+    <button class="case" onclick="caseC()">案C: 縦書きの札を左右交互<br><span style="font-size:11px;color:#9aa79f;">和風の短冊。右端→左端→右端…と交互に出る</span></button>
+    <button class="case" onclick="caseD()">案D: 現行(中央固定)+高さだけ散らす<br><span style="font-size:11px;color:#9aa79f;">帯は今のまま、縦位置を3段(上/中/下)からランダム</span></button>
+  </div>
+</div>
+
+<script>
+const SKILLS = ["燕返し", "鬼神化", "祓串の舞", "怒声", "水月", "式神召喚"];
+let skillIdx = 0, actorIdx = 0, sideRight = true;
+const nextSkill = () => SKILLS[skillIdx++ % SKILLS.length];
+
+function spawn(html, x, y, opts = {}) {
+  const fx = document.getElementById("fx");
+  const el = document.createElement("div");
+  el.className = "fx-item";
+  el.innerHTML = html;
+  el.style.left = x;
+  el.style.top = y;
+  if (opts.center) el.style.transform = "translateX(-50%)";
+  if (opts.rotate) el.style.transform = (opts.center ? "translateX(-50%) " : "") + `rotate(${opts.rotate}deg)`;
+  fx.appendChild(el);
+  const slide = opts.vertical ? ["translateY(-24px)", "translateY(0)", "translateY(0)", "translateY(14px)"] : ["translateX(-40px)", "translateX(0)", "translateX(0)", "translateX(30px)"];
+  el.animate([
+    { opacity: 0, translate: opts.vertical ? "0 -24px" : "-40px 0" },
+    { opacity: 1, translate: "0 0", offset: 0.18 },
+    { opacity: 1, translate: "0 0", offset: 0.78 },
+    { opacity: 0, translate: opts.vertical ? "0 14px" : "30px 0" },
+  ], { duration: 900, easing: "ease" }).onfinish = () => el.remove();
+}
+
+// 案A: 使う本人(味方カード)の頭上。押すたび使用者が変わる
+function caseA() {
+  const allies = [...document.querySelectorAll(".ally")];
+  const a = allies[actorIdx++ % allies.length];
+  const scene = document.getElementById("scene").getBoundingClientRect();
+  const r = a.getBoundingClientRect();
+  a.animate([{ boxShadow: "0 0 0 rgba(255,214,110,0)" }, { boxShadow: "0 0 20px rgba(255,214,110,0.9)", offset: 0.4 }, { boxShadow: "0 0 0 rgba(255,214,110,0)" }], { duration: 700 });
+  spawn(`<span class="band" style="font-size:0.92rem;padding:4px 18px;">${nextSkill()}</span>`,
+    `${r.left - scene.left + r.width / 2}px`, `${r.top - scene.top - 34}px`, { center: true });
+}
+// 案B: 5アンカー+傾きからランダム
+function caseB() {
+  const anchors = [
+    { x: "27%", y: "18%", rot: -5 },
+    { x: "73%", y: "18%", rot: 4 },
+    { x: "50%", y: "42%", rot: 0 },
+    { x: "30%", y: "64%", rot: 3 },
+    { x: "70%", y: "64%", rot: -4 },
+  ];
+  const a = anchors[Math.floor(Math.random() * anchors.length)];
+  spawn(`<span class="band">${nextSkill()}</span>`, a.x, a.y, { center: true, rotate: a.rot });
+}
+// 案C: 縦書き札を左右交互
+function caseC() {
+  sideRight = !sideRight;
+  spawn(`<span class="band tate">${nextSkill()}</span>`, sideRight ? "84%" : "6%", "22%", { vertical: true });
+}
+// 案D: 中央のまま高さ3段ランダム
+function caseD() {
+  const ys = ["20%", "40%", "58%"];
+  spawn(`<span class="band">${nextSkill()}</span>`, "50%", ys[Math.floor(Math.random() * ys.length)], { center: true });
+}
+</script>
+</body>
+</html>
