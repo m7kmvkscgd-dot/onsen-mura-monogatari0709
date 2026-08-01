@@ -46,6 +46,26 @@
   }
   .fx-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
   .fx-item { position: absolute; opacity: 0; }
+  /* 実際の配置物の再現(重なり確認用): テキストボックス+その右上外の逃げるボタン */
+  .logbox { position: absolute; top: 40px; left: 12px; right: 12px; z-index: 2;
+    border: 2px solid #8a7448; border-radius: 10px; background: rgba(16,13,10,0.82);
+    min-height: 54px; padding: 7px 11px; font-size: 0.76rem; color: #d9cfb8; }
+  .flee-btn { position: absolute; top: 5px; right: 12px; z-index: 3;
+    font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid rgba(217,207,184,0.55); background: rgba(24,20,16,0.82); color: #d9cfb8; }
+  /* 案I: 右上の縦書き短冊。味方必殺技=金赤、敵大技=紫 */
+  .tanzaku {
+    writing-mode: vertical-rl; white-space: nowrap;
+    padding: 20px 7px; font-weight: 900; font-size: 1.02rem; letter-spacing: 0.18em;
+    color: #fff7e6; text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    background: linear-gradient(180deg, transparent, rgba(120,20,16,0.92) 12%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 88%, transparent);
+    border-left: 1px solid rgba(255,214,110,0.8); border-right: 1px solid rgba(255,214,110,0.8);
+  }
+  .tanzaku.enemy-big {
+    color: #f3eaff;
+    background: linear-gradient(180deg, transparent, rgba(74,26,110,0.92) 12%, rgba(36,10,58,0.95) 50%, rgba(74,26,110,0.92) 88%, transparent);
+    border-left: 1px solid rgba(200,150,255,0.8); border-right: 1px solid rgba(200,150,255,0.8);
+  }
 
   .panel { padding: 0.8rem 0.9rem 3rem; }
   .panel h2 { font-size: 0.95rem; margin: 0.9rem 0 0.3rem; }
@@ -59,6 +79,8 @@
 <body>
 <div class="wrap">
   <div class="scene" id="scene">
+    <div class="logbox" id="logbox">白縫が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！</div>
+    <button class="flee-btn">🏃逃げる</button>
     <div class="enemy">
       <img src="assets/enemies/amayome_shiranui.png">
       <div class="nm">雨嫁・白縫</div>
@@ -86,6 +108,9 @@
 
     <div class="row"><div class="label">案H: カード下の名前行に重ねる<small>帯をカード幅に絞り、本人の名前の上でフラッシュ。画面上部が完全に空く</small></div>
       <button onclick="caseH(0)">左</button><button onclick="caseH(1)">中</button><button onclick="caseH(2)">右</button></div>
+
+    <div class="row" style="border-top:1px dashed #4a505a;padding-top:0.55rem;"><div class="label">案I: 右上に縦書きの短冊(ユーザー案)<small>ログボックスの下・右端に固定。味方必殺技=金赤、敵の大技(構えの瞬間)=紫で色分け。使用者は金色発光で分かる</small></div>
+      <button onclick="caseI('ally')">味方技</button><button onclick="caseI('enemy')">敵大技</button></div>
   </div>
 </div>
 
@@ -143,6 +168,26 @@ function caseH(i) {
   const s = sceneEl(), r = allyRect(i);
   spawn(`<span class="band" style="font-size:0.78rem;padding:3px 8px;">${nextSkill()}</span>`,
     r.left - s.left + r.width / 2, r.bottom - s.top - 26, r.width + 8);
+}
+// 案I: 右上(ログボックスの下)に縦書き短冊。上からすっと下りて消える
+function caseI(kind) {
+  if (kind === "ally") glow(1);
+  const s = sceneEl();
+  const lb = document.getElementById("logbox").getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "fx-item";
+  el.innerHTML = kind === "ally"
+    ? `<span class="tanzaku">${nextSkill()}</span>`
+    : `<span class="tanzaku enemy-big">嫁入りの鈴</span>`;
+  el.style.right = "10px";
+  el.style.top = `${lb.bottom - s.top + 8}px`;
+  document.getElementById("fx").appendChild(el);
+  el.animate([
+    { opacity: 0, transform: "translateY(-18px)" },
+    { opacity: 1, transform: "translateY(0)", offset: 0.16 },
+    { opacity: 1, transform: "translateY(0)", offset: 0.8 },
+    { opacity: 0, transform: "translateY(10px)" },
+  ], { duration: 1000, easing: "ease" }).onfinish = () => el.remove();
 }
 </script>
 </body>
