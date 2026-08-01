@@ -275,9 +275,11 @@
   /* 大技着弾の赤ビネット(WAAPIでopacityを振る。常駐シングルトン) */
   .big-atk-vignette { position: fixed; inset: 0; z-index: 41; pointer-events: none; opacity: 0;
     background: radial-gradient(ellipse at center, rgba(120,10,10,0) 55%, rgba(120,10,10,0.5) 100%); }
-  /* 味方必殺技の技名帯(effects.jsのplaySkillCastFxがWAAPIで流す。常駐シングルトン) */
-  .skill-cast-banner { position: fixed; left: 0; right: 0; top: 236px; z-index: 42; text-align: center; pointer-events: none; opacity: 0; }
-  .skill-cast-banner .band { display: inline-block; padding: 5px 26px; font-weight: 900; font-size: 1.05rem; letter-spacing: 0.12em;
+  /* 味方必殺技の技名帯(effects.jsのplaySkillCastFxがWAAPIで流す。常駐シングルトン)。
+     2026-08-01モック案A採用: 中央固定をやめ、技を使う本人のカードの真上に小さめの帯で出す
+     (left/topはJSがカードの実測位置から設定、中央寄せはWAAPIのtranslateX(-50%)側で行う) */
+  .skill-cast-banner { position: fixed; left: 0; top: 0; z-index: 42; pointer-events: none; opacity: 0; white-space: nowrap; }
+  .skill-cast-banner .band { display: inline-block; padding: 4px 18px; font-weight: 900; font-size: 0.92rem; letter-spacing: 0.12em;
     color: #fff7e6; background: linear-gradient(90deg, transparent, rgba(120,20,16,0.92) 18%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 82%, transparent);
     border-top: 1px solid rgba(255,214,110,0.8); border-bottom: 1px solid rgba(255,214,110,0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
   /* 溜め中の赤オーラ(立ち絵の背後、使い捨て生成) */

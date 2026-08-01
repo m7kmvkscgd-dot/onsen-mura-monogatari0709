@@ -399,6 +399,20 @@ function playSkillCastFx(actor, skillName, onRelease) {
     const banner = getSkillBannerSingleton();
     const band = banner.querySelector(".band");
     band.textContent = skillName;
+    // 表示位置(モック案A採用2026-08-01): 技を使う本人のカードの真上。誰が使うかで毎回場所が変わる。
+    // 端のカードで帯が画面外へはみ出さないよう、帯の実測幅で中心座標をクランプする。
+    // カードが見つからない場合(保険)は旧・中央帯の位置へフォールバック
+    const cardRect = card ? card.getBoundingClientRect() : null;
+    if (cardRect) {
+      const bandW = band.offsetWidth || 120;
+      let cx = cardRect.left + cardRect.width / 2;
+      cx = Math.max(bandW / 2 + 4, Math.min(window.innerWidth - bandW / 2 - 4, cx));
+      banner.style.left = `${Math.round(cx)}px`;
+      banner.style.top = `${Math.max(4, Math.round(cardRect.top) - 40)}px`;
+    } else {
+      banner.style.left = "50%";
+      banner.style.top = "236px";
+    }
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
     // 全8職業に個別の専用音あり(薙刀士も2026-08-01に独立)。汎用skill_castは未知の職業/式神系のフォールバック
     const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_naginata", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
@@ -406,11 +420,12 @@ function playSkillCastFx(actor, skillName, onRelease) {
     setTimeout(() => {
       playSfx(castSfx); // 技名が出る瞬間に再生
       if (banner.animate) {
+        // 中央寄せ(-50%)を保ったままスライドさせる(leftはカード中心のX座標を指しているため)
         banner.animate([
-          { opacity: 0, transform: "translateX(-40px)" },
-          { opacity: 1, transform: "translateX(0)", offset: 0.18 },
-          { opacity: 1, transform: "translateX(0)", offset: 0.78 },
-          { opacity: 0, transform: "translateX(30px)" },
+          { opacity: 0, transform: "translateX(calc(-50% - 40px))" },
+          { opacity: 1, transform: "translateX(-50%)", offset: 0.18 },
+          { opacity: 1, transform: "translateX(-50%)", offset: 0.78 },
+          { opacity: 0, transform: "translateX(calc(-50% + 30px))" },
         ], { duration: 760, easing: "ease" });
       }
     }, 180);
