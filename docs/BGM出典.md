@@ -27,3 +27,12 @@
 - 原稿: assets/quest_raw/wasureyu_oshira/music_source.md(納品時の原本。audio_plan.jsonの多層ミックス案は
   既存音声機構の範囲外のため不採用、単一トラック通し再生で組み込み)
 - クレジット記載する場合は「BGM: ハヤシユウ(DOVA-SYNDROME)」
+
+## 第二形態解放の雷鳴SE(assets/sfx/phase2_thunder.mp3)
+
+- 用途: ボス第二形態シーケンス(暗転が明けた瞬間の雷鳴)。奉行所クエストの物語ボス共通
+- 元素材: "Nosferatu thunderclap"(Richard Humphries)
+- 配布元: Wikimedia Commons https://commons.wikimedia.org/wiki/File:Nosferatu_thunderclap_-_Richard_Humphries.wav
+- ライセンス: CC-BY 4.0(要クレジット)。クレジット記載は「Thunder SE: Richard Humphries (CC-BY 4.0)」
+- 加工: 頭の無音3.1秒をカット(暗転明けと同時に鳴るように)+7秒へ切り出し+正規化(2026-08-01、選定はユーザー試聴mock_thunder_pick.htmlの雷9)
+- 候補10本の切り出し元はassets/sfx/thunder_pick/(不採用分。整理してよい)

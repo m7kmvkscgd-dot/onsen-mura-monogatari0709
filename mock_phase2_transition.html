@@ -249,10 +249,10 @@ async function run(pattern) {
     await sleep(1000);
     await playLinesSequential(() => startClimax()); // 1文ずつ表示、最後の文が出た瞬間に本命曲
     whiteFlash(700);
-    thunder.currentTime = 0; thunder.play().catch(() => {}); // 解放と同時に雷鳴
     await sleep(180); // フラッシュが乗り切った瞬間に切替(明けたら第二形態)
     swapToPhase2();
     $("blackout").style.opacity = "0";
+    thunder.currentTime = 0; thunder.play().catch(() => {}); // 暗転が明けた瞬間にドーン(雷9・頭の無音カット済み)
     shake(); vignettePulse();
     announce();
   } else if (pattern === 4) {

@@ -164,7 +164,6 @@ function maybeStartSecondFormSequence(onDone) {
     }, () => {
       if (!battle) { bail(); return; }
       playSecondFormFlash();
-      playSfx("phase2_thunder"); // 解放の雷鳴(合成SE)
       setTimeout(() => {
         if (!battle) { bail(); return; }
         // フラッシュが乗り切っている間に怒り背景+怒り形態の立ち絵へ切替(updateEnemyCardがsrc差分を反映)
@@ -174,6 +173,9 @@ function maybeStartSecondFormSequence(onDone) {
         blackout.style.transition = "opacity 0.35s ease";
         blackout.style.opacity = "0";
         setTimeout(() => { if (blackout.parentNode) blackout.remove(); }, 450);
+        // 雷鳴は「暗転が明けた瞬間にドーン」(ユーザー指定2026-08-01)。音源は雷9(Nosferatu用の重い雷、
+        // Richard Humphries CC-BY 4.0)の頭の無音をカットした即発音版
+        playSfx("phase2_thunder");
         if (typeof playBigAtkImpactFx === "function") playBigAtkImpactFx(); // 赤ビネット+画面揺れ
         // 雷鳴が鳴り響く間を0.6秒置いてから怒りギミック(告知+召喚)を発動して進行再開
         setTimeout(() => {
