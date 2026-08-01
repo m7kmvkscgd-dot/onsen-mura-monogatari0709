@@ -103,7 +103,7 @@ const BGM_ITEMS = [
   { key: "town", ja: "町(朝・昼・夕)", file: "assets/bgm/town_bgm.mp3", vol: 0.56 },
   { key: "town_dawn", ja: "町(早朝)", file: "assets/bgm/town_dawn_bgm.mp3", vol: 0.8 },
   { key: "town_night", ja: "町(夜)", file: "assets/bgm/town_night_bgm.mp3", vol: 0.8 },
-  { key: "dungeon", ja: "森の戦闘(昼)", file: "assets/bgm/dungeon_bgm.mp3", vol: 0.96 },
+  { key: "dungeon", ja: "森の戦闘(昼)", file: "assets/bgm/dungeon_bgm.mp3", vol: 1 },
   { key: "dungeon_night", ja: "森の戦闘(夜)", file: "assets/bgm/dungeon_night_bgm.mp3", vol: 0.96 },
   { key: "coast", ja: "海岸の探索(昼)", file: "assets/bgm/coast_bgm.mp3", vol: 1.0 },
   { key: "coast_night", ja: "海岸の探索(夜)", file: "assets/bgm/coast_night_bgm.mp3", vol: 1.0 },
@@ -123,12 +123,12 @@ const CHANNEL_ITEMS = [
   { key: "camp", ja: "野営", file: "assets/bgm/camp_bgm.mp3", vol: 0.5, ios: true },
   { key: "ambient", ja: "環境音(虫の声/波/洞窟)", file: "assets/bgm/insect_day.mp3", vol: 0.45, ios: true },
   { key: "cave_ambient_ratio", ja: "└ 洞窟内の環境音の比率", file: "assets/bgm/cave_ambient.mp3", vol: 0.8, ios: true, max: 1 },
-  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.55, ios: true },
+  { key: "opening", ja: "タイトル/オープニング", file: "assets/bgm/opening_bgm.mp3", vol: 0.5, ios: true },
 ];
 // 効果音: ゲーム側はSFX_GAIN表(未記載は1.0)。WebAudioのGainNodeなのでiOS実機でも効く。max=2.0
 const SFX_ITEMS = [
   { key: "select", ja: "決定/タップ", vol: 1 },
-  { key: "title_tap", ja: "タイトル開始タップ", vol: 1 },
+  { key: "title_tap", ja: "タイトル開始タップ", vol: 0.4 },
   { key: "coin", ja: "ゴールド入手", vol: 1 },
   { key: "heal", ja: "回復", vol: 1 },
   { key: "rest_heal", ja: "休憩の回復", vol: 1 },

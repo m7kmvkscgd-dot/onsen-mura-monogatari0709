@@ -312,10 +312,10 @@ const BGM_BASE_VOLUME = 0.8; // ユーザー指示で村・冒険中(戦闘含�
 const LODGING_BGM_VOLUME = 0.5;
 const CAMP_BGM_VOLUME = 0.5;
 const AMBIENT_BGM_VOLUME = 0.45;
-// タイトル/オープニングBGMの音量はファイル自体に焼き込み済み(2026-08-01、旧設計値0.55を
-// 音源へ適用。iOSは.volumeを無視するため実機で効かせるには音源側で下げるしかない=洞窟環境音と
-// 同じ方式。GainNode化の試みは実機無音退行でrevert済み。元音源はgit履歴+
-// tmp/opening_bgm_original_backup.mp3に残置)。JS側は二重減衰を避けて等倍にする
+// タイトル/オープニングBGMの音量はファイル自体に焼き込み済み(2026-08-02音量エディタで0.55→0.50へ
+// 焼き直し。元音源tmp/opening_bgm_original_backup.mp3から50%で再生成。iOSは.volumeを無視するため
+// 実機で効かせるには音源側で下げるしかない=洞窟環境音と同じ方式。GainNode化の試みは実機無音退行で
+// revert済み)。JS側は二重減衰を避けて等倍にする
 const OPENING_BGM_VOLUME = 1.0;
 // ============ 音量調整(右上のスピーカーアイコン→0〜10のボタン) ============
 // 0(ミュート)〜1の倍率、0.1刻み。bgmAudio(GainNode経由)の実際のgainに常に掛け合わされる。
@@ -420,7 +420,8 @@ const TOWN_DAY_BGM_VOLUME_MULT = 0.7;
 const NORMAL_BATTLE_BGM_VOLUME_MULT = 1.2;
 function bgmVolumeForKey(key) {
   if (key === "coast" || key === "coast_night" || key === "coast_battle") return Math.min(1, BGM_BASE_VOLUME * COAST_BGM_VOLUME_MULT);
-  if (key === "dungeon" || key === "dungeon_night") return Math.min(1, BGM_BASE_VOLUME * NORMAL_BATTLE_BGM_VOLUME_MULT);
+  if (key === "dungeon") return 1; // 森の戦闘(昼)のみ実効100%(音量エディタ2026-08-02。夜は従来0.96のまま)
+  if (key === "dungeon_night") return Math.min(1, BGM_BASE_VOLUME * NORMAL_BATTLE_BGM_VOLUME_MULT);
   if (key === "town") return BGM_BASE_VOLUME * TOWN_DAY_BGM_VOLUME_MULT;
   return BGM_BASE_VOLUME;
 }
@@ -763,7 +764,7 @@ function footstepSfxName() {
 // SEごとの音量倍率(未指定は1.0=素のまま)。振りかぶりの風切り音はトリム時にピークを-1dBへ
 // 正規化した結果、着弾音より目立ってうるさかった(ユーザー指摘2026-07-26)ため、ここで下げる
 // loot_item(素材を置く音)/loot_rare(レア入手の風鈴)の音量はモックでユーザーが決めた値(50%/30%、2026-07-27)
-const SFX_GAIN = { skill_cast: 0.6, skill_cast_hunter: 0.6, skill_cast_samurai: 0.6, skill_cast_gunner: 0.6, skill_cast_ninja: 0.6, skill_cast_priest: 0.6, skill_cast_onmyoji: 0.6, skill_cast_spearman: 0.6, skill_cast_naginata: 0.6, swish_sharp_1: 0.35, swish_sharp_2: 0.35, swish_sharp_3: 0.35, swish_heavy_1: 0.35, swish_heavy_2: 0.35, loot_item: 0.5, loot_rare: 0.3, barricade_hit: 0.6, barricade_break: 0.7, phase2_thunder: 0.8 };
+const SFX_GAIN = { skill_cast: 0.6, skill_cast_hunter: 0.6, skill_cast_samurai: 0.6, skill_cast_gunner: 0.6, skill_cast_ninja: 0.6, skill_cast_priest: 0.6, skill_cast_onmyoji: 0.6, skill_cast_spearman: 0.6, skill_cast_naginata: 0.6, swish_sharp_1: 0.35, swish_sharp_2: 0.35, swish_sharp_3: 0.35, swish_heavy_1: 0.35, swish_heavy_2: 0.35, loot_item: 0.5, loot_rare: 0.3, barricade_hit: 0.6, barricade_break: 0.7, phase2_thunder: 0.8, title_tap: 0.4 };
 function playSfx(name) {
   if (masterBgmVolume === 0) return;
   const buffer = sfxBuffers[name];
