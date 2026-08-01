@@ -400,9 +400,7 @@ function playSkillCastFx(actor, skillName, onRelease, opts) {
       { filter: "brightness(1.04)" },
     ], { duration: 430, easing: "ease-out" });
     if (!(opts && opts.noBanner)) {
-    const banner = getSkillBannerSingleton();
-    if (typeof tanzakuShowToken !== "undefined") tanzakuShowToken++; // 保留中の「大技短冊を下ろす」処理がこの表示を消さないように
-    banner.classList.remove("enemy-big"); // 敵大技(紫)と共用のため、味方使用時は必ず金赤へ戻す
+    const banner = getSkillBannerSingleton(); // 2026-08-02以降このシングルトンは味方の技名専用(敵は構え状態のstance-tanzaku)
     const band = banner.querySelector(".band");
     band.textContent = skillName;
     // 表示位置(CodexデモcastCommon()準拠2026-08-01): 技を使う本人のカードの右肩(横-23px/上-105px)。
@@ -438,63 +436,66 @@ function playTanzakuSlide(banner) {
     { opacity: 0, transform: "translateY(6px)" },
   ], { duration: 900, easing: "ease", fill: "forwards" });
 }
-// 敵の大技予告の短冊(紫): 構えの瞬間(bigAttackPending=true)にbattle.jsから呼ばれる。
-// 次に来る大技名を敵イラストの右肩に立てる(下端の食い込みはイラスト上端+30pxを基準=モックの敵ボタンと同じ)
-function playEnemyBigAttackTanzaku(enemy) {
+// ============ 大技の構え状態(2026-08-02、💢廃止でモック採用) ============
+// 予告(bigAttackPending)から発動の攻撃演出完了(__stanceHold解除)まで、敵カードに
+// 赤オーラの脈動+立ち絵の微振動(CSS、battle.cssのstance-*)+技名短冊を出し続ける。
+// updateEnemyCardから毎描画呼ばれるデータ駆動=再描画・複数敵の同時予告にもそのまま追従し、
+// 敵ごとに短冊を持つため味方の技名短冊(シングルトン)との取り合いも起きない。
+// 旧・シングルトン方式の敵短冊(予告900msスライド/発動時ホールド)はこの機構で置き換えて廃止
+function syncBigAttackStance(card, e, active) {
   try {
-    const card = findVisibleCard(enemy.instanceId);
-    const img = card ? card.querySelector(".card-portrait-img") : null;
-    const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
-    if (!img || !name) return;
-    const banner = getSkillBannerSingleton();
-    tanzakuShowToken++; // 保留中の「発動時短冊を下ろす」処理がこの予告表示を消さないように
-    banner.classList.add("enemy-big");
-    const band = banner.querySelector(".band");
-    band.textContent = name;
-    positionTanzakuBanner(banner, band, img.getBoundingClientRect(), 30);
-    if (banner.animate) playTanzakuSlide(banner);
-  } catch (e) {} // 演出の失敗で戦闘進行を止めない
-}
-// 大技「発動時」の紫短冊(2026-08-01ユーザー指示「敵の攻撃アニメーション終わるまで出しとけ」+
-// 同日「出てくる時間が短い」): スライドインして出っぱなしにし、battle.js側が攻撃演出の完了時に
-// hideTanzakuBanner()を呼ぶが、表示開始からTANZAKU_MIN_HOLD_MSは必ず出続ける(演出が先に
-// 終わっても、最低表示時間が満ちるまで下ろさない)。予告(構え)時の900msスライドとは別物
-const TANZAKU_MIN_HOLD_MS = 1800; // 2200→1800(2026-08-01「長い、1.8秒にしろ」)
-let tanzakuShowToken = 0; // 遅延した下ろし処理が「次の表示」を誤って消さないための世代カウンタ
-function playEnemyBigAttackTanzakuHold(enemy) {
-  try {
-    const card = findVisibleCard(enemy.instanceId);
-    const img = card ? card.querySelector(".card-portrait-img") : null;
-    const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
-    if (!img || !name) return;
-    const banner = getSkillBannerSingleton();
-    tanzakuShowToken++;
-    banner.__holdShownAt = Date.now();
-    banner.classList.add("enemy-big");
-    const band = banner.querySelector(".band");
-    band.textContent = name;
-    positionTanzakuBanner(banner, band, img.getBoundingClientRect(), 30);
-    if (banner.animate) banner.animate([
-      { opacity: 0, transform: "translateY(-9px)" },
-      { opacity: 0.95, transform: "translateY(0)" },
-    ], { duration: 200, easing: "ease-out", fill: "forwards" });
-  } catch (e) {}
-}
-function hideTanzakuBanner() {
-  try {
-    if (!skillBannerSingleton || !skillBannerSingleton.isConnected || !skillBannerSingleton.animate) return;
-    const banner = skillBannerSingleton;
-    const shownAt = banner.__holdShownAt || 0;
-    const wait = Math.max(0, TANZAKU_MIN_HOLD_MS - (Date.now() - shownAt));
-    const token = tanzakuShowToken;
-    setTimeout(() => {
-      if (token !== tanzakuShowToken) return; // 既に別の短冊表示が始まっていたら触らない
-      banner.animate([
-        { opacity: 0.95, transform: "translateY(0)" },
-        { opacity: 0, transform: "translateY(6px)" },
-      ], { duration: 220, easing: "ease-in", fill: "forwards" });
-    }, wait);
-  } catch (e) {}
+    const box = card.querySelector(".enemy-portrait-box");
+    if (!box) return;
+    let aura = box.querySelector(":scope > .stance-aura");
+    let tzEl = card.querySelector(":scope > .stance-tanzaku");
+    if (active) {
+      if (aura && aura.__closing) { aura.remove(); aura = null; }
+      if (tzEl && tzEl.__closing) { tzEl.remove(); tzEl = null; }
+      const img = card.querySelector(".card-portrait-img");
+      // 微振動(構え中ずっと)。CSSアニメだと被弾スカッシュとanimationプロパティを取り合うためWAAPIで、
+      // translateプロパティ=transform(--clear-scale/スカッシュ)と独立に合成される
+      if (img && img.animate && !img.__stanceTremble) {
+        img.__stanceTremble = img.animate([
+          { translate: "-1.2px 0px" }, { translate: "1.2px 0px" }, { translate: "-1.2px 0px" },
+        ], { duration: 280, iterations: Infinity, easing: "steps(2, end)" });
+      }
+      if (!aura) {
+        aura = document.createElement("div");
+        aura.className = "stance-aura";
+        box.insertBefore(aura, box.firstChild);
+        // 構えに入る瞬間だけ強めの一発震え(その間は上の微振動を上書きし、終わると微振動へ戻る)
+        if (img && img.animate) img.animate([
+          { translate: "0px 0px" }, { translate: "-3px 0px" }, { translate: "3px 0px" },
+          { translate: "-2px 0px" }, { translate: "2px 0px" }, { translate: "0px 0px" },
+        ], { duration: 380, easing: "linear" });
+      }
+      if (!tzEl) {
+        tzEl = document.createElement("span");
+        tzEl.className = "stance-tanzaku";
+        card.appendChild(tzEl);
+        if (tzEl.animate) tzEl.animate(
+          [{ opacity: 0, translate: "0px -8px" }, { opacity: 0.95, translate: "0px 0px" }],
+          { duration: 220, easing: "ease-out", fill: "forwards" }
+        );
+      }
+      const name = e.__stanceSkillName || (typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(e) : "");
+      if (name && tzEl.textContent !== name) tzEl.textContent = name;
+    } else {
+      const img = card.querySelector(".card-portrait-img");
+      if (img && img.__stanceTremble) { img.__stanceTremble.cancel(); img.__stanceTremble = null; }
+      // フェードアウトしてから消す(__closing中の再描画では触らない)
+      if (aura && !aura.__closing) {
+        aura.__closing = true;
+        if (aura.animate) aura.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+        setTimeout(() => aura.remove(), 220);
+      }
+      if (tzEl && !tzEl.__closing) {
+        tzEl.__closing = true;
+        if (tzEl.animate) tzEl.animate([{ opacity: 0.95, translate: "0px 0px" }, { opacity: 0, translate: "0px 6px" }], { duration: 220, fill: "forwards" });
+        setTimeout(() => tzEl.remove(), 240);
+      }
+    }
+  } catch (err) {} // 演出の失敗で戦闘進行を止めない
 }
 
 // ============ 敵の攻撃モーション(mock_enemy_attack.htmlでユーザー採用2026-08-01) ============

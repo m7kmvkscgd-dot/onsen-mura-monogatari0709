@@ -360,7 +360,12 @@ function updateEnemyCard(card, e) {
   if (becomesActing && !card.classList.contains("acting")) card.classList.remove(...HIT_SHAKE_CLASSES);
   card.classList.toggle("acting", becomesActing);
   card.classList.toggle("targetable", targetable);
-  card.classList.toggle("charging", !!e.bigAttackPending && !dead);
+  // 大技の構え状態(2026-08-02、💢廃止): 予告(bigAttackPending)から発動の攻撃演出が終わる
+  // (__stanceHold解除)まで、心拍パルス枠+赤オーラ脈動+微振動+技名短冊を出し続ける。
+  // データ駆動なので再描画・複数敵同時予告にもそのまま追従する
+  const stanceActive = (!!e.bigAttackPending || !!e.__stanceHold) && !dead;
+  card.classList.toggle("charging", stanceActive);
+  if (typeof syncBigAttackStance === "function") syncBigAttackStance(card, e, stanceActive);
   // 出現演出は初回描画だけ。2回目以降の描画でクラスを剥がす(従来はカード作り直しで暗黙に消えていた)
   if (!battle.justAppeared) card.classList.remove("entering");
   // 被弾の揺れ: shakeClassFor()は「1回の被弾(__shakeUntil)につき最初の描画だけ」クラス名を返す。
@@ -387,7 +392,7 @@ function updateEnemyCard(card, e) {
   const enemyIsNextActor = anyCrowScoutActive() && nextActingCombatant() === e;
   let overlayHtml = "";
   if (e.isFlying) overlayHtml += `<span class="status-icon" data-status="flying" style="position:absolute;top:2px;left:2px;font-size:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));z-index:2;">${ICONS.flying}</span>`;
-  if (e.bigAttackPending && !dead) overlayHtml += `<span class="big-attack-warning-icon status-icon" data-status="bigAttackPending" style="position:absolute;top:2px;right:34px;z-index:2;">💢</span>`;
+  // 💢アイコンは廃止(2026-08-02ユーザー指示。大技予告は構え状態=赤オーラ+震え+技名短冊が担う)
   // 討伐対象の🎯アイコンは廃止(2026-08-01ユーザー指示「邪魔」。対象表示は依頼文とカード枠の演出に任せる)
   if (enemyIsNextActor) overlayHtml += '<span class="next-actor-badge">▲次ターン行動</span>';
   if (overlayHtml) debuffIconsEl.insertAdjacentHTML("beforebegin", overlayHtml);
@@ -662,11 +667,11 @@ function processNext() {
           actor.bigAttackPending = true;
           actor.bigAttackCountdown = 0;
           commitBigAttackTelegraphTarget(actor, alive);
+          actor.__stanceSkillName = peekNextBigAttackName(actor); // 構えの短冊用に技名を確定(発動時は抽選が進むため先に取る)
           blog(`${actor.label}が般若の面の奥で息を溜めている…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
           triggerWarningFlash();
           playSfx("big_attack_warning");
-          renderBattleScreen();
-          if (typeof playEnemyBigAttackTanzaku === "function") playEnemyBigAttackTanzaku(actor); // 技名の紫短冊(再描画後=カード実測位置が確定してから)
+          renderBattleScreen(); // 再描画で構え状態(オーラ+震え+短冊)が立ち上がる
           setTimeout(() => { battle.orderIndex++; processNext(); }, 900);
           return;
         }
@@ -675,6 +680,10 @@ function processNext() {
         // 未設定の敵は全敵共通デフォルト(BIG_ATTACK_CYCLE_LENGTH=4ターン固定)のまま。
         const bigAttackDue = (actor.bigAttackCountdown || 0) <= 0;
         if (bigAttackDue) {
+          // 構え状態は発動の攻撃演出が終わる(advanceTurnAfterBig)まで出し続ける。
+          // 技名はこの時点で確定して短冊に固定する(enemyBigAttack内で次回分の抽選が進むため)
+          actor.__stanceHold = true;
+          if (!actor.__stanceSkillName) actor.__stanceSkillName = peekNextBigAttackName(actor);
           actor.bigAttackPending = false;
           actor.bigAttackCountdown = rollBigAttackCountdown(actor);
           // 「〜を放った！」の単独告知は廃止し、直後のかわした/ダメージのログ1行に技名を組み込む形へ統合した
@@ -682,9 +691,6 @@ function processNext() {
           // 【大技モーション刷新2026-08-01(モック案C採用、白フラッシュ無し)】溜め(暗転+赤オーラ+
           // しゃがみ込み)→解放(爆発的踏み込み)の演出後、当たる瞬間にダメージ確定〜表示を行う。
           // ダメージ計算自体も解放後に回す(溜めの間もログや被弾が先行しないよう全部まとめて遅らせる)
-          // 発動時の技名短冊は溜め開始から攻撃演出の完了まで出しっぱなし(2026-08-01ユーザー指示。
-          // peekは回転を消費しないため、この時点の「次の大技」=これから撃つ技の名前)
-          if (typeof playEnemyBigAttackTanzakuHold === "function") playEnemyBigAttackTanzakuHold(actor);
           playEnemyBigAttackCharge(actor, () => {
           if (!battle) return; // 溜めの間に煙玉等で戦闘が終了していた場合の保険
           const hpBeforeBig = {};
@@ -728,7 +734,9 @@ function processNext() {
           const newlyCriticalBig = handleFieldDeaths();
           renderBattleScreen();
           const advanceTurnAfterBig = () => {
-            if (typeof hideTanzakuBanner === "function") hideTanzakuBanner(); // 攻撃演出が終わった=技名短冊を下ろす
+            // 攻撃演出が終わった=構え状態(オーラ+震え+短冊)を解除(次の再描画でフェードアウト)
+            actor.__stanceHold = false;
+            actor.__stanceSkillName = null;
             battle.orderIndex++;
             processNext();
           };
@@ -749,14 +757,14 @@ function processNext() {
           actor.bigAttackPending = true;
           // 単体大技ならこの瞬間に狙う相手を確定する(ターゲットマーク表示と実際の被弾対象を一致させるため)
           commitBigAttackTelegraphTarget(actor, alive);
-          // 予告テキストはボス/中ボスだけ表示する(雑魚は💢アイコン+画面フラッシュ+警告音のみで、
+          actor.__stanceSkillName = peekNextBigAttackName(actor); // 構えの短冊用に技名を確定
+          // 予告テキストはボス/中ボスだけ表示する(雑魚は構え状態+画面フラッシュ+警告音のみで、
           // 毎回同じ文言がログに流れるのは冗長というユーザー指摘)。次に来る技名まで見せる
           // (extraBigAttacksでローテーションする敵は、予告時点で次の技が確定しているため先出しできる)
           if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
           triggerWarningFlash();
           playSfx("big_attack_warning");
-          // 技名の紫短冊(モック案I、雑魚もログには出さないが短冊は出す)。この時点のカード位置基準
-          if (typeof playEnemyBigAttackTanzaku === "function") playEnemyBigAttackTanzaku(actor);
+          // 構え状態(赤オーラ+震え+技名短冊)はこの後の再描画からデータ駆動で立ち上がる(syncBigAttackStance)
           actor.bigAttackCountdown -= 1;
         } else {
           actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);

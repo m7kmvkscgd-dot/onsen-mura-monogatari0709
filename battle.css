@@ -313,9 +313,29 @@
     box-shadow: 0 0 0 1px rgba(30,18,13,0.7), 0 3px 8px rgba(0,0,0,0.75);
     font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 14px; font-weight: 700;
     line-height: 1.2; letter-spacing: 0.08em; }
-  .skill-cast-banner.enemy-big .band { color: #f3eaff; border-color: #b98fe0;
-    background: linear-gradient(#4a1a6e, #1d0a30);
-    box-shadow: 0 0 0 1px rgba(22,10,32,0.75), 0 3px 8px rgba(0,0,0,0.75); }
+  /* ============ 大技の構え状態(2026-08-02、💢廃止。effects.jsのsyncBigAttackStance参照) ============
+     予告から発動の攻撃演出完了まで、赤オーラ脈動+立ち絵の微振動+技名短冊(紫)が出続ける */
+  .stance-aura {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 120%; height: 108%;
+    z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 50% 62% at 50% 78%, rgba(200,30,20,0.5), rgba(200,30,20,0.18) 55%, transparent 75%);
+    animation: stanceAuraPulse 1.15s ease-in-out infinite;
+  }
+  @keyframes stanceAuraPulse {
+    0%, 100% { opacity: 0.42; transform: translateX(-50%) scale(0.88); }
+    50% { opacity: 0.68; transform: translateX(-50%) scale(0.99); }
+  }
+  /* 微振動はCSSアニメではなくWAAPI(syncBigAttackStance内)で行う: CSSのanimationプロパティは
+     被弾スカッシュ(hitSquashPortrait*)とカスケードで取り合いになり、一度殴られると震えが
+     止まったままになるため(HIT_SHAKE_CLASSESと同系の罠)。WAAPIなら独立して合成される */
+  /* 構え中の技名短冊(紫)。カードの子要素なのでFLIPスライド・撃破消滅・攻撃モーションに自動追従する */
+  .stance-tanzaku {
+    position: absolute; top: -2px; right: -4px; z-index: 6; opacity: 0.95; pointer-events: none;
+    writing-mode: vertical-rl; white-space: nowrap; padding: 8px 6px 9px;
+    border: 1px solid #b98fe0; color: #f3eaff; background: linear-gradient(#4a1a6e, #1d0a30);
+    box-shadow: 0 0 0 1px rgba(22,10,32,0.75), 0 3px 8px rgba(0,0,0,0.75);
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 14px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em;
+  }
   /* 溜め中の赤オーラ(立ち絵の背後、使い捨て生成) */
   .big-atk-aura { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 120%; height: 108%;
     z-index: 0; opacity: 0; pointer-events: none;
