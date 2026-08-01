@@ -83,11 +83,10 @@
   .fuda:active { transform: translateY(3px); }
 
   /* 探索モード: 階層プレート(明朝の縦札)だけを左上に */
-  #floorPlate { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 44px); left: 12px; z-index: 5; display: none;
-    writing-mode: vertical-rl; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 1.0rem; font-weight: 700;
-    letter-spacing: 0.24em; color: #f0e6cc; text-shadow: 0 2px 4px #000;
-    padding: 10px 6px; background: linear-gradient(170deg, rgba(40,32,20,0.85), rgba(23,16,9,0.85));
-    border: 1px solid rgba(201,162,74,0.5); border-radius: 4px 4px 8px 8px; }
+  #floorPlate { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 42px); left: 12px; z-index: 5; display: none;
+    font-size: 1.0rem; font-weight: 800; color: #f0e6cc; text-shadow: 0 2px 4px #000; letter-spacing: 0.05em;
+    padding: 5px 12px; background: linear-gradient(170deg, rgba(40,32,20,0.85), rgba(23,16,9,0.85));
+    border: 1px solid rgba(201,162,74,0.5); border-radius: 8px; }
   #stage.explore #floorPlate { display: block; }
   #modeBtn, #noteBtn { position: absolute; z-index: 8; font-size: 0.66rem; padding: 5px 9px; border-radius: 8px;
     border: 1px solid #4a505a; background: rgba(20,22,26,0.85); color: #cfc8b8; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4%); }
@@ -105,7 +104,7 @@
   <div id="ticker">深淵の森で妖怪に遭遇した！</div>
   <button id="fleeBtn">🏃逃げる</button>
 
-  <div id="floorPlate">参層</div>
+  <div id="floorPlate">3層目</div>
   <div id="bossPlate">
     <div class="nm"><b>鈴鳴の花嫁・お鈴</b></div>
     <div class="gauge"><i id="bossHp"></i></div>
@@ -139,7 +138,7 @@
       <li><b>味方はポートレート枠あり(元UI同様、絵の端切れを枠で隠す)。</b>画面横断の帯は廃止のまま。手番は金の輪+わずかな前進+明るさ。</li>
       <li><b>ボス戦だけ</b>上部に名前+太ゲージが出る(それ以外の装飾なし)。ボス248px+提灯童は手前に小さく。</li>
       <li>タップ演出: 攻撃=対象の足元に赤リング+HP減、技=技名札。</li>
-      <li><b>探索パートも同じ文法。</b>1行ログ+左上に階層の縦札(明朝)+同じ味方バー+札コマンド(進む/道具/帰る)。景色が全面に出る。「進む」で層が進むデモ付き。</li>
+      <li><b>探索パートも同じ文法。</b>1行ログ+左上に「3層目」プレート(算用数字、分かりやすさ優先)+同じ味方バー+札コマンド(進む/道具/帰る)。景色が全面に出る。「進む」で層が進むデモ付き。</li>
     </ul>
   </div>
 </div>
@@ -162,10 +161,9 @@ function renderCommands() {
   }
 }
 let walkFloor = 3;
-const KANJI = ["零","壱","弐","参","肆","伍","陸","漆","捌","玖","拾"];
 function demoWalk() {
-  walkFloor = Math.min(10, walkFloor + 1);
-  document.getElementById("floorPlate").textContent = (KANJI[walkFloor] || walkFloor) + "層";
+  walkFloor = Math.min(15, walkFloor + 1);
+  document.getElementById("floorPlate").textContent = walkFloor + "層目";
   document.getElementById("ticker").textContent = "森の奥へ進んだ。湿った鈴の音が、どこかで一度だけ鳴った。";
 }
 function toggleMode() {
