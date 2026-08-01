@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: DOT演出のテンポ改善+味方版</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  .scene { position: sticky; top: 0; z-index: 10; height: 430px; overflow: hidden;
+    background-image: url('assets/bg/suzunari_gake.jpg'); background-size: cover; background-position: center 30%;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
+  .scene::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.15), rgba(20,24,27,0.5) 60%, rgba(20,24,27,0.75)); }
+  .dim { position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    background: rgba(8,8,12,0.55); opacity: 0; }
+  .enemy { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 2; text-align: center; }
+  .enemy.spot, .ally.spot { z-index: 5; }
+  .enemy .imgbox { position: relative; display: inline-block; }
+  .enemy img.portrait { width: 150px; display: block; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.5)); }
+  .enemy .nm { font-size: 0.8rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  .enemy .hpbar { width: 180px; height: 11px; border-radius: 99px; background: #3a3a3a; margin: 5px auto 0;
+    border: 1px solid rgba(0,0,0,0.75); overflow: hidden; }
+  .enemy .hpbar i { display: block; height: 100%; width: 72%; background: #4caf6f; transition: width 0.3s; }
+  .allies { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; display: flex; justify-content: center; gap: 10px; }
+  .ally { position: relative; width: 92px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
+  .ally .imgbox { position: relative; }
+  .ally img.portrait { width: 68px; height: 68px; object-fit: contain; background: #353a44; border-radius: 6px; }
+  .ally .nm { font-size: 0.7rem; font-weight: 700; }
+  .ally .hp { height: 6px; border-radius: 99px; background: #3a3a3a; margin-top: 3px; overflow: hidden; }
+  .ally .hp i { display: block; height: 100%; width: 85%; background: #4caf6f; transition: width 0.3s; }
+
+  /* 本体と同じ見た目のチップ */
+  .chip { position: absolute; left: 50%; top: -26px; transform: translateX(-50%) scale(0.8); z-index: 6;
+    font-size: 0.8rem; font-weight: 800; color: #ffab4d; white-space: nowrap;
+    text-shadow: 0 1px 3px #000, 0 0 8px rgba(0,0,0,0.8);
+    opacity: 0; transition: opacity 0.15s, transform 0.15s; }
+  .chip.show { opacity: 1; transform: translateX(-50%) scale(1); }
+  .chip.poison { color: #c98add; }
+  .vfx { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; }
+  .vfx.blend { mix-blend-mode: screen; }
+  .pop { position: absolute; left: 50%; top: 8%; transform: translateX(-50%); z-index: 7;
+    font-size: 1.05rem; font-weight: 900; color: #e08a3c; text-shadow: 0 2px 3px #000; opacity: 0; }
+  .pop.poison { color: #7bc96b; }
+  .flashwhite { position: absolute; inset: 0; background: rgba(255,255,255,0.55); opacity: 0; pointer-events: none; border-radius: 6px; z-index: 5; }
+
+  .panel { padding: 0.7rem 0.9rem 3rem; }
+  .panel button.case { width: 100%; padding: 0.6rem 0.8rem; margin-bottom: 0.35rem; border-radius: 9px;
+    border: 1px solid #4a505a; background: #232830; color: #ece8dc; font-size: 0.85rem; font-weight: 700; text-align: left; }
+  .panel button.case:active { background: #2e3540; }
+  .panel button.case small { display: block; font-weight: 400; font-size: 10.5px; color: #9aa79f; line-height: 1.45; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scene" id="scene">
+    <div class="enemy" id="enemyCard">
+      <div class="imgbox"><img class="portrait" src="assets/enemies/amayome_shiranui.png"><div class="flashwhite"></div></div>
+      <div class="nm">鈴鳴の花嫁・お鈴</div>
+      <div class="hpbar"><i id="enemyHp"></i></div>
+    </div>
+    <div class="allies">
+      <div class="ally"><div class="imgbox"><img class="portrait" src="assets/class_samurai.png"><div class="flashwhite"></div></div><div class="nm">権兵衛</div><div class="hp"><i></i></div></div>
+      <div class="ally" id="allyCard"><div class="imgbox"><img class="portrait" src="assets/class_hunter.png"><div class="flashwhite"></div></div><div class="nm">小夜</div><div class="hp"><i id="allyHp"></i></div></div>
+      <div class="ally"><div class="imgbox"><img class="portrait" src="assets/class_onmyoji.png"><div class="flashwhite"></div></div><div class="nm">弥助</div><div class="hp"><i></i></div></div>
+    </div>
+    <div class="dim" id="dim"></div>
+  </div>
+
+  <div class="panel">
+    <button class="case" onclick="run('enemy', TIMING_NOW)">敵DOT: 現行テンポ<small>暗転0.22秒+乗り切ってから0.26秒待ってチップ→ダメージ。1種類0.7秒停止</small></button>
+    <button class="case" onclick="run('enemy', TIMING_FAST)">敵DOT: 間を詰めた版<small>暗転0.1秒+待ち0.06秒で即チップ。停止0.7秒と種類間0.14秒はそのまま(見せ場は削らない)</small></button>
+    <button class="case" onclick="run('ally', TIMING_FAST)">味方DOT: 状態異常演出(新規・詰めた間)<small>敵と同じ形式: 小夜だけスポットライト→🔥炎上チップ+VFX+白フラッシュ→ダメージ→🦠毒</small></button>
+  </div>
+</div>
+
+<script>
+const TIMING_NOW = { dimCss: 220, dimWait: 260, hold: 700, gap: 140, dimOut: 250 };
+const TIMING_FAST = { dimCss: 100, dimWait: 60, hold: 700, gap: 140, dimOut: 200 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let running = false;
+
+// 本体と同じ素材のフリップブックVFX
+function playVfx(box, prefix, count, frameMs, size, blend) {
+  const img = document.createElement("img");
+  img.className = "vfx" + (blend ? " blend" : "");
+  img.style.width = size + "px";
+  img.src = `${prefix}1.png`;
+  box.appendChild(img);
+  let f = 1;
+  const timer = setInterval(() => {
+    f++;
+    if (f > count) { clearInterval(timer); img.remove(); return; }
+    img.src = `${prefix}${f}.png`;
+  }, frameMs);
+  return count * frameMs;
+}
+function popup(card, text, cls) {
+  const el = document.createElement("div");
+  el.className = "pop " + (cls || "");
+  el.textContent = text;
+  card.appendChild(el);
+  el.animate([
+    { opacity: 0, transform: "translateX(-50%) translateY(6px)" },
+    { opacity: 1, transform: "translateX(-50%) translateY(-6px)", offset: 0.25 },
+    { opacity: 1, transform: "translateX(-50%) translateY(-14px)", offset: 0.8 },
+    { opacity: 0, transform: "translateX(-50%) translateY(-20px)" },
+  ], { duration: 900, easing: "ease-out" }).onfinish = () => el.remove();
+}
+function hitFlash(card) {
+  const f = card.querySelector(".flashwhite");
+  f.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0 }], { duration: 320, easing: "ease-out" });
+  card.animate([
+    { transform: card.classList.contains("ally") ? "translateY(0)" : "translateX(-50%)" },
+  ], { duration: 1 }); // 揺れは簡易(下のshakeで代用)
+  const kf = card.id === "enemyCard"
+    ? [{ transform: "translateX(-50%)" }, { transform: "translateX(calc(-50% - 5px))" }, { transform: "translateX(calc(-50% + 4px))" }, { transform: "translateX(-50%)" }]
+    : [{ transform: "translateX(0)" }, { transform: "translateX(-5px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }];
+  card.animate(kf, { duration: 300, easing: "ease-out" });
+}
+
+async function run(target, T) {
+  if (running) return;
+  running = true;
+  const dim = document.getElementById("dim");
+  const card = document.getElementById(target === "enemy" ? "enemyCard" : "allyCard");
+  const hp = document.getElementById(target === "enemy" ? "enemyHp" : "allyHp");
+  const imgbox = card.querySelector(".imgbox");
+  dim.style.transition = `opacity ${T.dimCss}ms ease-out`;
+  card.classList.add("spot");
+  dim.style.opacity = "1";
+  await sleep(T.dimCss + T.dimWait);
+  // 1種類目: 炎上
+  await dotStep(card, imgbox, hp, { icon: "🔥", label: "炎上", cls: "", dmg: 9,
+    vfx: () => playVfx(imgbox, "assets/vfx_library/flame_02_15x4/frame_", 60, 18, target === "enemy" ? 120 : 62, true) }, T);
+  // 2種類目: 毒
+  await dotStep(card, imgbox, hp, { icon: "🦠", label: "毒", cls: "poison", dmg: 6,
+    vfx: () => playVfx(imgbox, "assets/vfx_library/kenney_smoke/fart/frame_", 9, 109, target === "enemy" ? 70 : 40, false) }, T);
+  dim.style.opacity = "0";
+  await sleep(T.dimOut);
+  card.classList.remove("spot");
+  running = false;
+}
+async function dotStep(card, imgbox, hpEl, step, T) {
+  const chip = document.createElement("div");
+  chip.className = "chip " + step.cls;
+  chip.textContent = `${step.icon} ${step.label}`;
+  card.appendChild(chip);
+  requestAnimationFrame(() => chip.classList.add("show"));
+  const vfxMs = step.vfx();
+  popup(card, `${step.icon}-${step.dmg}`, step.cls);
+  hitFlash(card);
+  hpEl.style.width = (parseFloat(hpEl.style.width || (hpEl.id === "enemyHp" ? "72%" : "85%")) - step.dmg) + "%";
+  await sleep(Math.max(T.hold, vfxMs - 120) + T.gap);
+  chip.remove();
+}
+</script>
+</body>
+</html>
