@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<title>UIビジョン: 商業クオリティ案(舞台型)</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #000; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; overflow: hidden; }
+  #stage { position: relative; height: 100dvh; max-width: 480px; margin: 0 auto; overflow: hidden;
+    background-image: url('assets/bg/suzunari_gake.jpg'); background-size: cover; background-position: center 24%; }
+  /* 舞台照明: 上下を薄く落として中央の絵を立てる */
+  #stage::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(10,10,14,0.66) 0%, rgba(10,10,14,0.12) 16%, rgba(10,10,14,0.05) 45%, rgba(12,12,16,0.55) 74%, rgba(10,10,14,0.9) 100%); }
+
+  /* ── 最上部: 1行ログティッカー(常設の大箱を廃止) ── */
+  #ticker { position: absolute; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 6;
+    padding: 7px 96px 7px 14px; font-size: 0.78rem; color: #e8dfc8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: linear-gradient(to bottom, rgba(10,8,6,0.82), rgba(10,8,6,0.55));
+    border-bottom: 1px solid rgba(201,162,74,0.5); text-shadow: 0 1px 2px #000; }
+  #fleeBtn { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 3px); right: 10px; z-index: 7;
+    font-size: 0.72rem; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+    border: 1px solid rgba(217,207,184,0.45); background: rgba(24,20,16,0.8); color: #d9cfb8; }
+
+  /* ── ボス専用プレート: 画面上部の太い専用ゲージ+名前(ソウル系文法) ── */
+  #bossPlate { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 36px); left: 14px; right: 14px; z-index: 5; }
+  #bossPlate .nm { display: flex; align-items: baseline; gap: 8px; }
+  #bossPlate .nm b { font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 1.06rem; letter-spacing: 0.12em;
+    color: #f3e8ce; text-shadow: 0 2px 4px #000, 0 0 12px rgba(0,0,0,0.8); }
+  #bossPlate .nm small { font-size: 0.62rem; color: #c9a24a; letter-spacing: 0.2em; }
+  #bossPlate .gauge { margin-top: 4px; height: 9px; border-radius: 2px; overflow: hidden;
+    background: rgba(20,16,12,0.85); border: 1px solid rgba(201,162,74,0.65); box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  #bossPlate .gauge i { display: block; height: 100%; width: 100%; transition: width 0.45s ease;
+    background: linear-gradient(90deg, #8e2f27, #c25a37 60%, #d9903f); }
+
+  /* ── 中央の舞台: ボス特大+雑魚は奥行き配置 ── */
+  #enemyStage { position: absolute; top: 15.5%; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; align-items: flex-end; }
+  .foe { position: relative; text-align: center; }
+  .foe img { display: block; margin: 0 auto; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.55)); }
+  .foe .ground { height: 14px; margin: -7px auto 0; width: 64%; border-radius: 50%;
+    background: radial-gradient(ellipse 50% 50% at center, rgba(6,5,4,0.5), rgba(6,5,4,0.25) 55%, transparent 72%); }
+  .foe.boss img { height: 252px; }
+  .foe.mob { margin: 0 -14px -14px; z-index: 3; }
+  .foe.mob img { height: 88px; }
+  .foe.mob .hp { width: 56px; height: 5px; margin: 2px auto 0; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.8); border: 1px solid rgba(0,0,0,0.7); }
+  .foe.mob .hp i { display: block; height: 100%; width: 90%; background: #4caf6f; }
+
+  /* ── 味方: 箱と帯を廃止、霞の上に立ち絵+細い2連バー ── */
+  #allies { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 4; display: flex; justify-content: center; gap: 22px; }
+  .hero { position: relative; text-align: center; width: 92px; }
+  .hero img.face { width: 86px; height: 86px; object-fit: contain; display: block; margin: 0 auto;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)); }
+  .hero .ring { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); width: 78px; height: 16px;
+    border-radius: 50%; border: 2px solid rgba(215,182,111,0); pointer-events: none; }
+  .hero.acting .ring { border-color: rgba(215,182,111,0.85); box-shadow: 0 0 12px rgba(215,182,111,0.5); }
+  .hero.acting img.face { filter: drop-shadow(0 6px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(255,214,110,0.35)); }
+  .hero .nm { font-size: 0.7rem; font-weight: 700; margin-top: 2px; text-shadow: 0 1px 3px #000; }
+  .hero .bars { width: 84px; margin: 3px auto 0; }
+  .hero .hp { height: 6px; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.85); border: 1px solid rgba(0,0,0,0.8); }
+  .hero .hp i { display: block; height: 100%; width: 85%; background: linear-gradient(90deg, #3f9e63, #57c07d); }
+  .hero .mp { height: 4px; margin-top: 2px; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.85); border: 1px solid rgba(0,0,0,0.8); }
+  .hero .mp i { display: block; height: 100%; width: 70%; background: #4a7fd1; }
+
+  /* ── 下段: コマンドは和風の札4枚(縦書き) ── */
+  #commands { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2%); z-index: 5;
+    display: flex; justify-content: center; gap: 12px; }
+  .fuda { width: 68px; height: 108px; border-radius: 6px 6px 10px 10px; position: relative;
+    writing-mode: vertical-rl; display: flex; align-items: center; justify-content: center;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 1.06rem; font-weight: 700; letter-spacing: 0.3em;
+    color: #efe3c2; background: linear-gradient(170deg, #33291a, #201810 70%, #171009);
+    border: 1px solid rgba(201,162,74,0.55); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.55); }
+  .fuda::before { content: ''; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: #0e0a07; box-shadow: inset 0 1px 2px #000; } /* 札の紐穴 */
+  .fuda.primary { color: #1c1509; background: linear-gradient(170deg, #e8cf8f, #c9a24a 70%, #a87f30); border-color: #f3e3b3; }
+  .fuda:active { transform: translateY(3px); }
+
+  /* 解説オーバーレイ */
+  #noteBtn { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2%); right: 8px; z-index: 8;
+    font-size: 0.66rem; padding: 5px 9px; border-radius: 8px; border: 1px solid #4a505a; background: rgba(20,22,26,0.85); color: #cfc8b8; }
+  #notes { position: absolute; inset: 0; z-index: 20; background: rgba(8,8,10,0.86); display: none; overflow: auto; padding: 20px 18px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+  #notes.on { display: block; }
+  #notes h2 { font-size: 1rem; margin: 0 0 10px; color: #e8cf8f; }
+  #notes li { font-size: 0.8rem; line-height: 1.75; margin-bottom: 10px; color: #ddd5c2; }
+  #notes b { color: #f0e2b8; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="ticker">お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！</div>
+  <button id="fleeBtn">🏃逃げる</button>
+
+  <div id="bossPlate">
+    <div class="nm"><b>鈴鳴の花嫁・お鈴</b><small>― 討伐対象 ―</small></div>
+    <div class="gauge"><i id="bossHp"></i></div>
+  </div>
+
+  <div id="enemyStage">
+    <div class="foe mob"><img src="assets/enemies/clear/chochin_warabe.png"><div class="ground"></div><div class="hp"><i></i></div></div>
+    <div class="foe boss" id="bossFoe"><img src="assets/enemies/amayome_shiranui.png"><div class="ground" style="width:74%;"></div></div>
+    <div class="foe mob"><img src="assets/enemies/clear/chochin_warabe.png"><div class="ground"></div><div class="hp"><i></i></div></div>
+  </div>
+
+  <div id="allies">
+    <div class="hero acting"><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
+    <div class="hero"><div class="ring"></div><img class="face" src="assets/class_hunter.png"><div class="nm">小夜</div><div class="bars"><div class="hp"><i style="width:62%"></i></div><div class="mp"><i style="width:40%"></i></div></div></div>
+    <div class="hero"><div class="ring"></div><img class="face" src="assets/class_onmyoji.png"><div class="nm">晴明</div><div class="bars"><div class="hp"><i style="width:91%"></i></div><div class="mp"><i style="width:88%"></i></div></div></div>
+  </div>
+
+  <div id="commands">
+    <button class="fuda primary" onclick="demoAttack()">攻撃</button>
+    <button class="fuda" onclick="demoSkill()">技</button>
+    <button class="fuda">道具</button>
+    <button class="fuda">交代</button>
+  </div>
+
+  <button id="noteBtn" onclick="document.getElementById('notes').classList.toggle('on')">設計意図</button>
+  <div id="notes" onclick="this.classList.remove('on')">
+    <h2>プロデューサー案「舞台型UI」の設計意図(タップで閉じる)</h2>
+    <ul>
+      <li><b>背景と立ち絵が主役。</b>常設の大きなログ箱・味方の黒帯・灰色カードを全廃し、画面の8割で美術を見せる。情報は「必要な瞬間だけ」出す(技名札・ポップアップ・予告)。</li>
+      <li><b>ログは1行ティッカー化。</b>戦況の詳細は演出が語る。タップで履歴展開(実装時)。浮いた縦150pxをボスに渡す。</li>
+      <li><b>ボスは専用プレート+特大252px。</b>名前は明朝、HPは画面上部の太い専用ゲージ(ソウル系文法)。ボスの頭上に何も置かないことで圧を最大化。雑魚は手前下に小さく=遠近で更に大きく見える。</li>
+      <li><b>味方は「駒」から「人物」へ。</b>箱を捨てて霞の上に立たせ、行動中は足元に金の輪。HP/MPは細い2連バーで視線の邪魔をしない。</li>
+      <li><b>コマンドは木札4枚。</b>攻撃だけ金(主action=最頻ボタン)。縦書き明朝で技名札と言語を統一。押すと沈む。</li>
+      <li><b>実装時の数値はこのモックを叩き台に、実機の調整モード(?sizeTuner=1)で最終決定</b>(モックのサイズ感問題への対策)。</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+let hp = 100;
+function demoAttack() {
+  hp = Math.max(6, hp - 9);
+  document.getElementById("bossHp").style.width = hp + "%";
+  const boss = document.querySelector("#bossFoe img");
+  boss.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.9)", offset: 0.25 }, { filter: "brightness(1)" }], { duration: 300 });
+}
+function demoSkill() {
+  const hero = document.querySelector(".hero.acting");
+  const r = hero.getBoundingClientRect();
+  const el = document.createElement("span");
+  el.style.cssText = `position:fixed;left:${Math.min(window.innerWidth - 42, r.right - 23)}px;top:${Math.max(4, r.top - 105)}px;z-index:30;pointer-events:none;writing-mode:vertical-rl;padding:8px 6px 9px;border:1px solid #e4c06b;color:#fff4cf;background:linear-gradient(#7b2c22,#3c1513);box-shadow:0 0 0 1px rgba(30,18,13,.7),0 3px 8px rgba(0,0,0,.75);font-family:"Yu Mincho",serif;font-size:14px;font-weight:700;letter-spacing:.08em;`;
+  el.textContent = "燕返しの太刀";
+  document.body.appendChild(el);
+  el.animate([
+    { opacity: 0, transform: "translateY(-9px)" },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.13 },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.78 },
+    { opacity: 0, transform: "translateY(6px)" },
+  ], { duration: 900, easing: "ease" }).onfinish = () => el.remove();
+}
+</script>
+</body>
+</html>
