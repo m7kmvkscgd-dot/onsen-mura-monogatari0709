@@ -83,6 +83,27 @@
   .fuda.primary { color: #1c1509; background: linear-gradient(170deg, #e8cf8f, #c9a24a 70%, #a87f30); border-color: #f3e3b3; }
   .fuda:active { transform: translateY(3px); }
 
+  /* GPT版から移植した情報レイヤー(箱を増やさず文字だけ敷く) */
+  #topInfo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 30px); left: 14px; right: 14px; z-index: 6;
+    display: flex; justify-content: space-between; font-size: 0.62rem; color: #bdb49e; letter-spacing: 0.12em; }
+  #bossPlate .tags { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+  #bossPlate .tags .chip { font-size: 0.56rem; letter-spacing: 0.18em; color: #e8cf8f; border: 1px solid rgba(201,162,74,0.6); padding: 1px 6px; border-radius: 3px; }
+  #bossPlate .tags .form { font-size: 0.62rem; color: #c9a24a; letter-spacing: 0.16em; }
+  #bossPlate .gaugeRow { display: flex; align-items: center; gap: 7px; }
+  #bossPlate .gaugeRow .gauge { flex: 1; }
+  .pip { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(201,162,74,0.7); display: flex; align-items: center; justify-content: center;
+    font-family: "Yu Mincho", serif; font-size: 0.62rem; color: #1c1509; background: #c9a24a; }
+  .pip.off { background: transparent; color: #8a7448; }
+  #bossPlate .sub { display: flex; justify-content: space-between; margin-top: 3px; font-size: 0.6rem; color: #cdbf9d; }
+  #bossPlate .sub .st::before { content: '●'; color: #c14a3c; margin-right: 4px; }
+  .hero .turnchip { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.56rem; font-weight: 800;
+    color: #1c1509; background: #c9a24a; border-radius: 3px; padding: 1px 6px; letter-spacing: 0.14em; display: none; }
+  .hero.acting .turnchip { display: block; }
+  #mpLine { position: absolute; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2% + 118px); z-index: 5;
+    display: flex; justify-content: space-between; font-size: 0.62rem; color: #cdbf9d; letter-spacing: 0.1em; }
+  .fudacol { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .fudacol small { font-size: 0.54rem; color: #a89a7c; letter-spacing: 0.06em; }
+
   /* 解説オーバーレイ */
   #noteBtn { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2%); right: 8px; z-index: 8;
     font-size: 0.66rem; padding: 5px 9px; border-radius: 8px; border: 1px solid #4a505a; background: rgba(20,22,26,0.85); color: #cfc8b8; }
@@ -98,9 +119,12 @@
   <div id="ticker">お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！</div>
   <button id="fleeBtn">🏃逃げる</button>
 
+  <div id="topInfo"><span>‹ 撤退</span><span>奉行所依頼 鈴鳴峠・十二層</span><span>TURN 07</span></div>
   <div id="bossPlate">
-    <div class="nm"><b>鈴鳴の花嫁・お鈴</b><small>― 討伐対象 ―</small></div>
-    <div class="gauge"><i id="bossHp"></i></div>
+    <div class="tags"><span class="chip">BOSS</span><span class="form">第一形態</span></div>
+    <div class="nm"><b>鈴鳴の花嫁・お鈴</b></div>
+    <div class="gaugeRow"><div class="gauge"><i id="bossHp"></i></div><span class="pip">壱</span><span class="pip off">弐</span></div>
+    <div class="sub"><span class="st">花婿の赤緒</span><span>次の大技まで 参</span></div>
   </div>
 
   <div id="enemyStage">
@@ -115,16 +139,17 @@
   </div>
 
   <div id="allies">
-    <div class="hero acting"><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
+    <div class="hero acting"><span class="turnchip">手番</span><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
     <div class="hero"><div class="ring"></div><img class="face" src="assets/class_hunter.png"><div class="nm">小夜</div><div class="bars"><div class="hp"><i style="width:62%"></i></div><div class="mp"><i style="width:40%"></i></div></div></div>
     <div class="hero"><div class="ring"></div><img class="face" src="assets/class_onmyoji.png"><div class="nm">晴明</div><div class="bars"><div class="hp"><i style="width:91%"></i></div><div class="mp"><i style="width:88%"></i></div></div></div>
   </div>
 
+  <div id="mpLine"><span>権兵衛の手番 ― 行動を選択</span><span>MP 12 / 15</span></div>
   <div id="commands">
-    <button class="fuda primary" onclick="demoAttack()">攻撃</button>
-    <button class="fuda" onclick="demoSkill()">技</button>
-    <button class="fuda">道具</button>
-    <button class="fuda">交代</button>
+    <div class="fudacol"><button class="fuda primary" onclick="demoAttack()">攻撃</button><small>狙う敵を選ぶ</small></div>
+    <div class="fudacol"><button class="fuda" onclick="demoSkill()">技</button><small>三つ使用可</small></div>
+    <div class="fudacol"><button class="fuda">道具</button><small>形見あり</small></div>
+    <div class="fudacol"><button class="fuda">交代</button><small>控え: 忍</small></div>
   </div>
 
   <button id="modeBtn" onclick="toggleMode()">雑魚戦を見る</button>
@@ -137,6 +162,7 @@
       <li><b>ボスは専用プレート+特大252px。</b>名前は明朝、HPは画面上部の太い専用ゲージ(ソウル系文法)。ボスの頭上に何も置かないことで圧を最大化。雑魚は手前下に小さく=遠近で更に大きく見える。</li>
       <li><b>味方は「駒」から「人物」へ。</b>箱を捨てて霞の上に立たせ、行動中は足元に金の輪。HP/MPは細い2連バーで視線の邪魔をしない。</li>
       <li><b>コマンドは木札4枚。</b>攻撃だけ金(主action=最頻ボタン)。縦書き明朝で技名札と言語を統一。押すと沈む。</li>
+      <li><b>GPT案から情報レイヤーを移植(合成版)。</b>形態ラベル+壱/弐ゲージ・状態チップ・次の大技カウンタ・TURN/階層・手番チップ・MP常設・札のサブ情報。箱は増やさず文字だけ敷くのがシンプル派向けの折衷。</li>
       <li><b>実装時の数値はこのモックを叩き台に、実機の調整モード(?sizeTuner=1)で最終決定</b>(モックのサイズ感問題への対策)。</li>
     </ul>
   </div>
