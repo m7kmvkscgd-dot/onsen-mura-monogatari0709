@@ -158,11 +158,18 @@ function animateSecondFormHpRefill(owner, ms) {
   fill.getAnimations().forEach((a) => a.cancel()); // 回復キャッチアップ等の既存アニメと喧嘩させない
   const trail = card.querySelector(".hpbar-fill-trail");
   if (trail) trail.style.width = "0%";
+  // ms=0は「アニメせず0%で固定」の意味(暗転明けの本番リフィルまでバーを空のまま保つ)。
+  // 旧実装の`ms || 2000`は0がfalsyのため2秒リフィルが始まってしまい、直後の本番リフィルが
+  // それをcancelして0%からやり直す=「満ち始めて巻き戻る」見た目バグになっていた(2026-08-02修正)
+  if (!ms) {
+    fill.style.width = "0%";
+    return;
+  }
   fill.animate([
     { width: "0%", boxShadow: "0 0 10px rgba(190,80,210,0.9)" },
     { width: "100%", boxShadow: "0 0 10px rgba(190,80,210,0.9)", offset: 0.96 },
     { width: "100%", boxShadow: "0 0 0 rgba(190,80,210,0)" },
-  ], { duration: ms || 2000, easing: "ease-in-out" });
+  ], { duration: ms, easing: "ease-in-out" });
 }
 // シーケンスは「案3改」(mock_phase2_transition.htmlでユーザー採用2026-08-01)。発動条件は
 // 【1本目のHPが尽きた時】(旧・HP50%発動は2026-08-01ユーザー指示で廃止。二本ゲージのボス):
