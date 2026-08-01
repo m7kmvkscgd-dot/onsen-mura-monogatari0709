@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: 控え表示のバッジ化</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #e8ecea; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 0.8rem 0.9rem 3rem; }
+  h1 { font-size: 1.1rem; margin: 0.2rem 0 0.8rem; }
+  h2 { font-size: 1rem; margin: 1rem 0 0.3rem; }
+  .caption { font-size: 13px; color: #9aa79f; margin: 0 0 0.5rem; }
+
+  .variant-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; position: sticky; top: 0.4rem; z-index: 5; }
+  .variant-bar button {
+    flex: 1; padding: 0.55rem 0; border-radius: 8px; border: 1px solid #4a505a;
+    background: #232830; color: #e8ecea; font-size: 0.85rem; font-weight: 700;
+  }
+  .variant-bar button.active { background: #d7b66f; color: #1c1913; border-color: #d7b66f; }
+
+  /* ---- 本体の出発メンバー選択(2列グリッド)の再現 ---- */
+  .party-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; align-items: stretch; }
+  .roster-row {
+    position: relative; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.6rem;
+    padding: 0.45rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(20,18,14,0.5);
+  }
+  .roster-row.selected { border-color: #c9a24a; background: rgba(58,48,32,0.65); }
+  .roster-row.disabled { opacity: 0.45; }
+  .portrait {
+    width: 60px; height: 60px; flex-shrink: 0; background: #353a44; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; font-size: 2rem;
+  }
+  .roster-info { flex: 1; min-width: 0; }
+  .roster-name { font-weight: 700; font-size: 0.8rem; overflow-wrap: anywhere; }
+  .roster-sub { font-size: 0.66rem; color: #9aa79f; margin-top: 1px; }
+  .status-tag {
+    font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700; white-space: nowrap;
+  }
+  .status-tag.active { background: #234a2e; color: #7fe0a0; }
+  .status-tag.bathing { background: #1f3a4a; color: #7fd4f0; border: 1px solid #3a7a95; }
+  .status-tag.onsen-buffed { background: linear-gradient(135deg, #4a2a1f, #6b3a1f); color: #ffbe7a; border: 1px solid #d98a3d; }
+  .status-tag.injured { background: rgba(94,134,140,0.35); color: #a8d4d8; }
+  .hpbar { background: #3a3a3a; border-radius: 999px; height: 10px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
+  .hpbar > div { height: 100%; background: #4caf6f; }
+  .mpbar { background: #3a3a3a; border-radius: 999px; height: 6px; overflow: hidden; border: 1px solid rgba(0,0,0,0.75); margin-top: 0.2rem; }
+  .mpbar > div { height: 100%; background: #4a7fd1; }
+
+  /* ---- 改善案: 控えは囲い水色+右上バッジ(名前行にタグを足さない) ---- */
+  .roster-row.reserve {
+    border-color: #5fc3e8; background: rgba(26,48,60,0.6);
+  }
+  .reserve-badge {
+    position: absolute; top: -7px; right: -4px; z-index: 2;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em;
+    background: #1f3a4a; color: #7fd4f0; border: 1px solid #5fc3e8;
+    border-radius: 999px; padding: 0.12rem 0.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>モック: 控え表示のバッジ化</h1>
+  <div class="variant-bar">
+    <button id="btnOld" onclick="setVariant('old')">現状</button>
+    <button id="btnNew" class="active" onclick="setVariant('new')">改善案</button>
+  </div>
+
+  <h2>出発メンバーを選ぶ</h2>
+  <p class="caption">タップで出発パーティに入れる(最大4人・4人目に選んだ人は控え)</p>
+  <div class="party-list" id="list"></div>
+  <p class="caption" id="note" style="margin-top:0.8rem;"></p>
+</div>
+
+<script>
+// サンプル名簿: 4人目の千代が控え。楓は入浴中+温泉効果タグで、名前行のタグ折り返し(高さ崩れ)の
+// 再現用に「現状」表示では千代のカードにも控えタグが名前行に入る
+const MEMBERS = [
+  { name: "権兵衛", icon: "🗡️", cls: "侍", lv: "六", pers: "豪胆", hp: 100, mp: 60, sel: 1 },
+  { name: "小夜",   icon: "🏹", cls: "狩人", lv: "五", pers: "無口", hp: 88,  mp: 45, sel: 2 },
+  { name: "弥助",   icon: "🔫", cls: "砲術士", lv: "五", pers: "陽気", hp: 76,  mp: 30, sel: 3 },
+  { name: "千代",   icon: "📿", cls: "陰陽師", lv: "四", pers: "心配性", hp: 100, mp: 100, sel: 4 }, // 4人目=控え
+  { name: "楓",     icon: "🥷", cls: "忍者", lv: "三", pers: "気まぐれ", hp: 100, mp: 80, sel: 0, tag: "満タン", tagCls: "onsen-buffed" },
+  { name: "佐吉",   icon: "🔱", cls: "槍士", lv: "二", pers: "臆病", hp: 62,  mp: 20, sel: 0 },
+];
+let variant = "new";
+
+function card(m) {
+  const isReserve = m.sel === 4;
+  const rowCls = ["roster-row"];
+  if (m.sel > 0) rowCls.push("selected");
+  if (variant === "new" && isReserve) rowCls.push("reserve");
+  const statusTag = `<span class="status-tag ${m.tagCls || "active"}">${m.tag || "待機中"}</span>`;
+  // 現状: 控えタグを名前行に追加(これが折り返してカードの高さを崩す)。改善案: 名前行には出さない
+  const reserveInline = variant === "old" && isReserve ? ' <span class="status-tag bathing">控え</span>' : "";
+  const reserveBadge = variant === "new" && isReserve ? '<span class="reserve-badge">控え</span>' : "";
+  return `
+    <div class="${rowCls.join(" ")}">
+      ${reserveBadge}
+      <div class="portrait">${m.icon}</div>
+      <div class="roster-info">
+        <div class="roster-name">${m.name} ${statusTag}${reserveInline}</div>
+        <div class="roster-sub">Lv.${m.lv}・${m.cls}・${m.pers}</div>
+        <div class="hpbar"><div style="width:${m.hp}%"></div></div>
+        <div class="mpbar"><div style="width:${m.mp}%"></div></div>
+      </div>
+    </div>`;
+}
+function setVariant(v) {
+  variant = v;
+  document.getElementById("btnOld").className = v === "old" ? "active" : "";
+  document.getElementById("btnNew").className = v === "new" ? "active" : "";
+  document.getElementById("list").innerHTML = MEMBERS.map(card).join("");
+  document.getElementById("note").textContent = v === "old"
+    ? "現状: 4人目(千代)の名前行に「控え」タグが入り、行が折り返してカードの高さが崩れる"
+    : "改善案: 控えタグを名前行から撤去し、囲いを水色+右上バッジに。カードの高さは他と同じまま";
+}
+setVariant("new");
+</script>
+</body>
+</html>
