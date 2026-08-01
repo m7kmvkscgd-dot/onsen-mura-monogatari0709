@@ -1440,6 +1440,7 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
         fleeBtn.style.top = `${Math.max(2, Math.round(lr.top) - btnH - 4)}px`;
         fleeBtn.style.right = `${Math.max(6, Math.round(window.innerWidth - lr.right))}px`;
         fleeBtn.style.translate = LO ? loStr(LO.flee) : "";
+        if (typeof updateBattleFleeBtnVisibility === "function") updateBattleFleeBtnVisibility(); // トップコマンド画面でだけ表示
       }
       // 設定(歯車): 逃げるの左右対称=ログ枠の左上の外。テストモード中は「タイトルへ戻る」と重なるため隠す
       const gearBtn = document.getElementById("battleMuteBtn");

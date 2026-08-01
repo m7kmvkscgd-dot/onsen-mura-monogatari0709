@@ -508,7 +508,22 @@
   }
   /* 手番ハイライトのみ(旧・enemyLungeの手番開始ホップは2026-08-01の攻撃モーション刷新で廃止。
      攻撃の動きはeffects.jsのplayEnemyAttackAnim/playEnemyBigAttackChargeがWAAPIで再生する) */
-  .enemy-card.acting { border-color: var(--danger); box-shadow: 0 0 12px rgba(209,80,63,0.7); }
+  /* 行動中の敵マーカー: 旧・赤枠(border+グロー)は「チープ」で廃止(2026-08-02)。
+     モック採用の「足元の光輪」= 接地影の位置に琥珀色のリングが脈打つ。琥珀=行動中で、
+     赤系(大技の構え/狙われ)と役割を分離 */
+  .enemy-card.acting { border-color: transparent; box-shadow: none; }
+  .enemy-card.acting .enemy-portrait-box::before {
+    content: ""; position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
+    width: 74%; height: 16px; z-index: 0; pointer-events: none; border-radius: 50%;
+    border: 2px solid rgba(232,183,106,0.9);
+    box-shadow: 0 0 10px rgba(232,183,106,0.8), inset 0 0 8px rgba(232,183,106,0.5);
+    animation: actingRingPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes actingRingPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  /* 雑魚の常時名前表示は廃止(2026-08-02ユーザー指示。名前は立ち絵タップの説明に含まれる)。
+     ボス/中ボス(slot-boss)だけ名前を残す(舞台型ビジョン「ボスのみ名前」) */
+  .enemy-card .enemy-name { display: none; }
+  .enemy-card.slot-boss .enemy-name { display: block; }
   /* 戦闘開始の瞬間だけ、敵がふわっと出現する(justAppearedの間だけentringクラスが付く) */
   .enemy-card.entering { animation: enemyAppear var(--dw-t-enemy) ease-out; }
   @keyframes enemyAppear { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }

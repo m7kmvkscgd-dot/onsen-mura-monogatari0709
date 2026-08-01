@@ -2863,6 +2863,19 @@ function defeat() {
 }
 
 
+// ============ 逃げるボタンの表示制御(2026-08-02ユーザー指示) ============
+// コマンドのトップ画面(攻撃/技/道具/交代)でだけ表示する(「技とか道具を開いている時も出てきて
+// 重なって邪魔」)。サブメニュー中(battleSubMenuActive)・行動解決中(battleActionLocked)・
+// 敵ターン(グリッドが空)は隠す。グリッドの中身が変わるたび+戦闘再描画のたびに判定し直す
+function updateBattleFleeBtnVisibility() {
+  const btn = document.getElementById("battleFleeBtn");
+  const grid = document.getElementById("actionGrid");
+  if (!btn || !grid) return;
+  const show = !!battle && !battleSubMenuActive && !battleActionLocked && grid.childElementCount > 0;
+  btn.style.visibility = show ? "" : "hidden";
+}
+new MutationObserver(updateBattleFleeBtnVisibility).observe(document.getElementById("actionGrid"), { childList: true });
+
 // ============ 戦闘レイアウトの本採用オフセット(2026-08-01ユーザー実機調整のJSONより) ============
 // 通常戦闘(layout-center)にのみ適用する各部品の移動量px(襲撃戦のレイアウトには触れない)。
 // カード類はyのみ、ボタン類はx/y。適用箇所: 敵カード=battle.jsのrenderBattleScreen内ループ、
@@ -2942,6 +2955,9 @@ const BATTLE_LAYOUT_OFFSETS = {
           card.style.translate = `${o.x}px ${o.y}px`;
           const img = card.querySelector(".card-portrait-img");
           if (!img) return;
+          // 群れ(isSwarm、こうもり/提灯おばけ等)はサイズを触らない: 本編CSSの小型53px指定を
+          // 97pxで上書きして巨大化していた(2026-08-02ユーザー報告)
+          if (e.isSwarm) return;
           // 本番CSSと同じ「正方形の器+contain」を保つ(width:autoだと提灯童のような縦長PNGで
           // カードごと幅が痩せて細長くなる事故。2026-08-02ユーザー報告)
           const sizePx = (isBossType ? bossH : mobH) + "px";
