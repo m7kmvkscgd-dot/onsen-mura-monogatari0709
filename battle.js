@@ -167,6 +167,7 @@ function startBattle(enemies, pathDef, encounterText) {
     }
   });
   battleLogLines = [];
+  resetBattleLogQueue(); // 順番待ちの残り(前の戦闘分)が新しい戦闘に流れ込まないように
   document.getElementById("battleLog").innerHTML = "";
   // お守り(戦闘単位で発動するもの)のセットアップ。全て装備中(state.omamoriEquipped)の時だけ発動する。
   // battleLogLinesのクリアより後に置く(blog()を呼ぶsarutahikoの分がクリアで消えてしまわないように)

@@ -62,14 +62,14 @@
      そのままアニメーションさせてくれる */
   .mpbar-heal-trail { position: absolute; left: 0; top: 0; height: 100%; background: #BFD9FF; }
   /* キャラのストレス段階(通常/軽度/重度/パニック)は立ち絵そのものを差し替えて表現する
-     (黒もやもやの透過オーバーレイ方式は廃止)。背景は新しい立ち絵の透過部分に合わせた#353a44、
+     (黒もやもやの透過オーバーレイ方式は廃止)。背景は新しい立ち絵の透過部分に合わせたvar(--portrait-bg)、
      引き伸ばし/クロップを避けるためobject-fit:containにしている */
-  .roster-row img { width: 60px; height: 60px; flex-shrink: 0; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .roster-row img { width: 60px; height: 60px; flex-shrink: 0; object-fit: contain; background: var(--portrait-bg); border-radius: var(--radius-xs); }
   .roster-info { flex: 1; }
   /* 担がれているキャラのミニアイコン。担いでいるキャラのカード右上に重ねる(ユーザー指示で従来の1.3倍) */
   .carried-badge {
     position: absolute; top: -6px; right: -6px; width: 36%; aspect-ratio: 1/1;
-    object-fit: contain; background: #353a44; border-radius: 50%;
+    object-fit: contain; background: var(--portrait-bg); border-radius: 50%;
     border: 2px solid var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.5); z-index: 3;
     transition: top 0.3s ease, right 0.3s ease, width 0.3s ease, opacity 0.3s ease;
   }
@@ -171,11 +171,11 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx):not(.kekkai-barrier-vfx):not(.ally-target-marker-img):not(.dot-ailment-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx):not(.kekkai-barrier-vfx):not(.ally-target-marker-img):not(.dot-ailment-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: var(--portrait-bg); border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 式神(サンプル実装)の仮アイコン。本物のポートレート絵が来るまでは絵文字で代用し、
      .card-portrait-img(<img>)と同じ箱サイズ(正方形/背景色/角丸)だけ再現する */
-  .shikigami-emoji-portrait { width: 100%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; background: #353a44; border-radius: var(--radius-xs); font-size: 2.2rem; line-height: 1; }
+  .shikigami-emoji-portrait { width: 100%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; background: var(--portrait-bg); border-radius: var(--radius-xs); font-size: 2.2rem; line-height: 1; }
   .party-member.dead .shikigami-emoji-portrait { filter: grayscale(1) brightness(0.4); }
   /* 状態異常アイコンを立ち絵に重ねて表示するためのラッパー(敵カードの.enemy-debuff-iconsと同じ方式) */
   .party-portrait-wrap { position: relative; }
@@ -318,6 +318,13 @@
     text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
   }
   #dungeonLog .log-name, #battleLog .log-name { color: #d9c49a; }
+  /* 戦闘ログの「直前行の残像」(2026-08-01案A+B)。小さく薄く上段に残る */
+  #battleLog p.log-ghost { font-size: 0.66rem; opacity: 0.5; }
+  /* 順番待ちの件数バッジ(右上)。待ちが無い時はJSがdisplay:noneにする */
+  #battleLog .log-queue-badge {
+    position: absolute; right: 10px; top: 3px; font-size: 0.6rem; color: #d9c49a;
+    opacity: 0.85; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  }
   #dungeonLog .log-char, #battleLog .log-char { opacity: 0; animation: logCharFadeIn 0.08s ease-out forwards; }
   @keyframes logArrowBob {
     0%, 100% { transform: translateY(0); }

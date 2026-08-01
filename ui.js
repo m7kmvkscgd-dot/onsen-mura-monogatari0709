@@ -1539,8 +1539,9 @@ function revealLogLine(p, text, onFinish) {
   activeLogFinishers.add(skipFn);
 }
 // 探索ログ(#dungeonLog)/戦闘ログ(#battleLog)共通の文字送り表示処理。両者でテキストUIの
-// 見た目・演出(1文字ずつフェードイン+名前の金箔色+文字送り完了後の▼)を完全に揃えるための共通化
-function appendTypewriterLog(elId, arrowId, msg) {
+// 見た目・演出(1文字ずつフェードイン+名前の金箔色+文字送り完了後の▼)を完全に揃えるための共通化。
+// onDone: 文字送りが終わった時に呼ぶ(戦闘ログのキュー送り用、省略可)
+function appendTypewriterLog(elId, arrowId, msg, onDone) {
   const el = document.getElementById(elId);
   let arrow = document.getElementById(arrowId);
   if (!arrow) {
@@ -1552,15 +1553,36 @@ function appendTypewriterLog(elId, arrowId, msg) {
   }
   activeTypingCount++;
   arrow.style.display = "none";
+  // 戦闘ログは「現在行+直前行の残像」の2段構成(2026-08-01ユーザー採用の案B)。
+  // 古い残像は消し、今まで現在行だった行を残像化してから新しい行を入れる
+  if (elId === "battleLog") {
+    [...el.querySelectorAll("p.log-ghost")].forEach((g) => g.remove());
+    [...el.children].forEach((c) => { if (c !== arrow && c.tagName === "P") c.classList.add("log-ghost"); });
+  }
   const p = document.createElement("p");
   el.insertBefore(p, arrow);
-  // 行の登場演出(ふわっと下から現れる)は、以前はCSSの@keyframes+animationクラス付与で
-  // 実装していたが、要素が生成された直後にクラスを付けるこの方式だとブラウザ側の
-  // スタイル再計算のタイミング次第でアニメーションが開始状態(translateY(10px)、つまり
-  // 中央より少し下にずれた位置)のまま止まって見えることがあり、これが「ログの文字が
-  // ボックス内で中央からずれて見える」不具合の実際の原因だった(実測で確認済み)。
-  // このプロジェクトで過去に何度も踏んだ「CSSのtransition/animationクラス切り替えは
-  // 信頼できない」問題と同じ系統のため、element.animate()(Web Animations API)に統一する
+  revealLogLine(p, msg, () => {
+    activeTypingCount = Math.max(0, activeTypingCount - 1);
+    // 戦闘ログはキューに続きの行が残っている間は▼(=読み終わり合図)を出さない
+    if (activeTypingCount === 0 && (elId !== "battleLog" || battleLogQueue.length === 0)) arrow.style.display = "block";
+    if (onDone) onDone();
+  });
+  // ログは行を追加するだけで一切消していなかったため、#battleLogは戦闘開始のたびに
+  // innerHTMLごとクリアされて実質問題が起きない一方、#dungeonLogは同じ遠征中(何度も「進む」
+  // を押す間)ずっと蓄積し続け、固定84pxの枠に収まりきらなくなって最下部までスクロールされ、
+  // 一番上の行が枠の上端で欠けて見える不具合になっていた。ボックスの実際の高さを超えた分の
+  // 古い行(矢印と件数バッジを除くp要素だけ)を削除して、常に収まる行数までしか残さない。
+  // 戦闘ログで長文が折り返した時も、まず残像が消えて現在行に2行ぶんの space が空く
+  const lines = [...el.children].filter((c) => c !== arrow && c.tagName === "P");
+  while (lines.length > 1 && el.scrollHeight > el.clientHeight) {
+    const oldest = lines.shift();
+    oldest.remove();
+  }
+  el.scrollTop = el.scrollHeight;
+  // 行の登場演出(ふわっと下から現れる)。CSSのanimationクラス付与は開始状態のまま固まる前科が
+  // あるためelement.animate()(WAAPI)で行う。※必ず上の間引き判定より「後」に開始すること:
+  // WebKitはtranslateY(10px)中の見た目のはみ出しもscrollHeightに算入するため、アニメ中に
+  // 間引き判定をすると常に+10px膨らんで見え、残像行が誤って即削除される(2026-08-01実測)
   const enterAnim = p.animate(
     [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" }],
     { duration: 150, easing: "ease-out", fill: "forwards" }
@@ -1570,25 +1592,72 @@ function appendTypewriterLog(elId, arrowId, msg) {
     p.style.opacity = "1";
     p.style.transform = "translateY(0)";
   };
-  revealLogLine(p, msg, () => {
-    activeTypingCount = Math.max(0, activeTypingCount - 1);
-    if (activeTypingCount === 0) arrow.style.display = "block";
-  });
-  // ログは行を追加するだけで一切消していなかったため、#battleLogは戦闘開始のたびに
-  // innerHTMLごとクリアされて実質問題が起きない一方、#dungeonLogは同じ遠征中(何度も「進む」
-  // を押す間)ずっと蓄積し続け、固定84pxの枠に収まりきらなくなって最下部までスクロールされ、
-  // 一番上の行が枠の上端で欠けて見える不具合になっていた。ボックスの実際の高さを超えた分の
-  // 古い行(矢印を除く)を削除して、常に最新の1〜3行分だけが残るようにする
-  const lines = [...el.children].filter((c) => c !== arrow);
-  while (lines.length > 1 && el.scrollHeight > el.clientHeight) {
-    const oldest = lines.shift();
-    oldest.remove();
+}
+// ============ 戦闘ログの「順番待ち+残像」方式(2026-08-01ユーザー採用の案A+B) ============
+// 一行化した戦闘ログは、行が連続すると読む前に置き換わってしまうため:
+// ・各行を最低BATTLE_LOG_MIN_SHOWミリ秒は見せてから次の行へ(案A)。連続時はキューで順番に流し、
+//   待ち件数を右上に「あと◯件」と出す
+// ・直前の1行は小さく薄い残像として上段に残す(案B)
+// ・ボックスタップ=現在行の文字送りスキップ+待ち時間もカットして早送り(せっかちな人用)
+let battleLogQueue = [];
+let battleLogShowing = false;
+let battleLogFastForward = false;
+let battleLogWaitTimer = null;
+let battleLogWaitFn = null;
+const BATTLE_LOG_MIN_SHOW = 850;
+function updateBattleLogQueueBadge() {
+  const el = document.getElementById("battleLog");
+  if (!el) return;
+  let b = document.getElementById("battleLogQueueBadge");
+  if (!b) {
+    b = document.createElement("span");
+    b.id = "battleLogQueueBadge";
+    b.className = "log-queue-badge";
+    el.appendChild(b);
   }
-  el.scrollTop = el.scrollHeight;
+  b.textContent = `あと${battleLogQueue.length}件`;
+  b.style.display = battleLogQueue.length > 0 ? "block" : "none";
+}
+function pumpBattleLog() {
+  updateBattleLogQueueBadge();
+  if (battleLogShowing || battleLogQueue.length === 0) return;
+  battleLogShowing = true;
+  const msg = battleLogQueue.shift();
+  updateBattleLogQueueBadge();
+  const startedAt = Date.now();
+  appendTypewriterLog("battleLog", "battleLogArrow", msg, () => {
+    const wait = battleLogFastForward ? 0 : Math.max(0, BATTLE_LOG_MIN_SHOW - (Date.now() - startedAt));
+    battleLogWaitFn = () => {
+      battleLogWaitFn = null;
+      battleLogWaitTimer = null;
+      battleLogShowing = false;
+      if (battleLogQueue.length === 0) battleLogFastForward = false; // 早送りは溜まりが捌けたら解除
+      pumpBattleLog();
+    };
+    battleLogWaitTimer = setTimeout(battleLogWaitFn, wait);
+  });
+}
+// タップ早送り: 現在行を即全文表示し、最低表示時間の残りもカットして次の行へ
+function fastForwardBattleLog() {
+  battleLogFastForward = true;
+  if (activeLogFinishers.size > 0) [...activeLogFinishers].forEach((fn) => fn());
+  if (battleLogWaitTimer) {
+    clearTimeout(battleLogWaitTimer);
+    const fn = battleLogWaitFn;
+    if (fn) fn();
+  }
+}
+// 戦闘開始時のリセット(battle.jsのstartBattleから呼ぶ。前の戦闘の残りが次の戦闘に流れ込まないように)
+function resetBattleLogQueue() {
+  battleLogQueue = [];
+  battleLogShowing = false;
+  battleLogFastForward = false;
+  if (battleLogWaitTimer) { clearTimeout(battleLogWaitTimer); battleLogWaitTimer = null; battleLogWaitFn = null; }
 }
 function blog(msg) {
   battleLogLines.push(msg);
-  appendTypewriterLog("battleLog", "battleLogArrow", msg);
+  battleLogQueue.push(msg);
+  pumpBattleLog();
 }
 // ログ全履歴の振り返り画面。#dungeonLog/#battleLogは表示領域の都合で直近数行しかDOMに残らないが、
 // battleLogLines/dungeonLogLines自体は戦闘/遠征が始まってから今までの全行を(枝刈りせず)保持しているため、
@@ -1616,7 +1685,8 @@ document.getElementById("logHistoryOverlay").addEventListener("click", (e) => {
 // テキストボックスのタップは、文字送り中なら従来通りその場でスキップ、文字送り中でなければ
 // 全履歴の振り返り画面を開く(2つの役割を同じタップ操作に自然に振り分ける)
 document.getElementById("battleLog").onclick = () => {
-  if (activeLogFinishers.size > 0) { [...activeLogFinishers].forEach((fn) => fn()); return; }
+  // 文字送り中か順番待ちが残っている間は早送り、何もしていない時だけ履歴を開く
+  if (activeLogFinishers.size > 0 || battleLogQueue.length > 0 || battleLogShowing) { fastForwardBattleLog(); return; }
   showLogHistory(battleLogLines);
 };
 document.getElementById("dungeonLog").onclick = () => {

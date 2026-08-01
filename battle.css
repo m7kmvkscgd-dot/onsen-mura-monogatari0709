@@ -198,10 +198,11 @@
      (innerHeight)より約2割大きい。vhで縦位置を当て推量すると実機でボタン列が味方バーに重なった
      (ユーザー報告)ため、縦の配置は全てJS実測(ui.js positionActionsBelowPartyBarのcenterMode節)が
      毎回innerHeightから逆算して設定する。CSSはログ位置と器の形だけを持つ */
-  /* 2026-08-01ユーザー指示「でかいしいらんかも。一行にせんか？」: 戦闘の文章枠は1行ぶんの高さへ縮小
-     (探索の#dungeonLogは従来の84px3行のまま)。古い行の削除はappendTypewriterLogの高さ駆動トリミングが
-     そのまま面倒を見る。topの経緯: 8→38→53→48px(2026-08-01「テキストボックス5px上」) */
-  .battle-top.layout-center #battleLog { position: absolute; top: 48px; left: 12px; right: 12px; margin: 0; z-index: 2; height: 40px; padding-top: 6px; padding-bottom: 6px; }
+  /* 2026-08-01ユーザー指示で戦闘の文章枠は縮小(探索の#dungeonLogは従来の84px3行のまま)。同日、
+     「現在行+直前行の残像」の2段構成(ui.jsのpumpBattleLog、案A+B)を採用したため高さは56px:
+     内側40px=残像1行+現在行1行。長文が折り返した時は残像が先に間引かれて現在行が2行使える。
+     topの経緯: 8→38→53→48px(2026-08-01「テキストボックス5px上」) */
+  .battle-top.layout-center #battleLog { position: absolute; top: 48px; left: 12px; right: 12px; margin: 0; z-index: 2; height: 56px; padding-top: 6px; padding-bottom: 6px; }
   /* topはJSが設定する(下のcalcはJS実行前の初期値)。align-content:flex-start=上詰め
      (センタリングだと行高との差分だけカードが下へ押されて位置計算が狂う) */
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
@@ -603,7 +604,7 @@
      ステージ自体が台座(グレー背景+角丸)を描き、その中でクローンの立ち絵だけが走る */
   .swap-fx-stage {
     position: fixed; z-index: 40; overflow: hidden; pointer-events: none;
-    background: #353a44; border-radius: var(--radius-xs);
+    background: var(--portrait-bg); border-radius: var(--radius-xs);
   }
   /* ステージ内の可動レイヤー。<img>を直接animateするとiOS WebKitの「置換要素への%transform」系の
      不具合を踏み得る(実機で走り込みだけ動かない事象、2026-07-26)ため、動かすのはこのdivに限定し、
