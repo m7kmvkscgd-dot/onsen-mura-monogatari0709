@@ -148,9 +148,13 @@ function useKatami(actor, def) {
   if (def.id === "hanayome_akao") {
     pickSingleEnemyTarget((target) => {
       consumeKatamiUse();
-      applyStun(target, 1);
-      blog(`${actor.label}が結び縄を掲げると、縄が${target.label}へ伸びて縛り上げた！`);
-      popupOn(target.instanceId, "💫拘束", "stun");
+      // スタン免疫(図鑑のstatusImmune等)の相手には効かない。偽ログを出さず「効かない」と伝える
+      if (applyStun(target, 1)) {
+        blog(`${actor.label}が結び縄を掲げると、縄が${target.label}へ伸びて縛り上げた！`);
+        popupOn(target.instanceId, "💫拘束", "stun");
+      } else {
+        blog(`${actor.label}が結び縄を掲げた…しかし${target.label}には効かない！`);
+      }
       playSfx("big_attack_warning");
       renderBattleScreen();
       finishPlayerAction();

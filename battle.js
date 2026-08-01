@@ -2064,8 +2064,9 @@ function renderActionButtons(actor) {
         // これは演出ではなく確定するゲームロジックのため、ヒットストップの遅延を挟まずここで即座に処理する
         if (result.hit && hasOmamori("takemikazuchi") && !battle.omamoriUsed.takemikazuchi) {
           battle.omamoriUsed.takemikazuchi = true;
-          applyStun(target, 1);
-          blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
+          // スタン免疫(図鑑のstatusImmune等)の相手に「スタンした！」と偽ログを出さない
+          if (applyStun(target, 1)) blog(`建御雷神の御守の加護で、${target.label}はスタンした！`);
+          else blog(`建御雷神の御守が光った…しかし${target.label}には効かない！`);
         }
         // 被弾SE(敵側)は攻撃SEと同時(t=0)に鳴らす。以前はヒットストップ明け(NORMAL_ATTACK_HITSTOP_MS後)の
         // reveal()内で鳴らしていたが、「効果音の遅れをなくしてほしい」との指示で分離した。

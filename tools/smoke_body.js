@@ -73,10 +73,12 @@
   e2.bigAttackPending = true;
   renderBattleScreen();
   check("chargingクラス", row.children[1].classList.contains("charging"));
-  check("💢アイコン", !!row.children[1].querySelector('[data-status="bigAttackPending"]'));
+  // 💢アイコンは2026-08-02廃止。予告は構え状態(赤オーラ+技名短冊、syncBigAttackStance)が担う
+  check("構えオーラが出る", !!row.children[1].querySelector(".stance-aura"));
+  check("構え短冊が出る", !!row.children[1].querySelector(".stance-tanzaku"));
   e2.bigAttackPending = false;
   renderBattleScreen();
-  check("charging解除+💢消滅", !row.children[1].classList.contains("charging") && !row.children[1].querySelector('[data-status="bigAttackPending"]'));
+  check("charging解除", !row.children[1].classList.contains("charging"));
 
   e2.poison = 3;
   renderBattleScreen();

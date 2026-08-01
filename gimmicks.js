@@ -342,7 +342,8 @@ function processGimmickRoundEffects(continueRound) {
         const candidates = aliveField().filter((c) => !(c.stunTurns > 0));
         if (candidates.length === 0) return;
         const t = candidates[Math.floor(Math.random() * candidates.length)];
-        applyStun(t, eff.turns || 1);
+        // 状態異常無効バフ等で弾かれたら演出ごと出さない(偽ログ防止)
+        if (!applyStun(t, eff.turns || 1)) return;
         blog(eff.text ? eff.text.replace("{target}", t.label) : `${eff.name || entry.def.name || "拘束"}が${t.label}を縛り上げた！`);
         popupOn(t.id, "💫拘束", "stun");
         fired = true;

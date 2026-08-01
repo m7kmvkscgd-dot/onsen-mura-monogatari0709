@@ -424,11 +424,12 @@ function useCampRest(character) {
 // 一時的なステータス修正(バフ/デバフ)を付与する。同じstatへの既存の修正は上書き(重ね掛けで際限なく増えないように)
 function applyStatMod(entity, stat, mult, turns) {
   // 黒曜など: 特定ステータスへのデバフを完全に無効化する(誰が与えたデバフでも一律で弾く)
-  if (mult < 1 && entity.passives && entity.passives.debuffImmuneStats && entity.passives.debuffImmuneStats.includes(stat)) return;
+  if (mult < 1 && entity.passives && entity.passives.debuffImmuneStats && entity.passives.debuffImmuneStats.includes(stat)) return false;
   entity.statMods = entity.statMods || [];
   const existing = entity.statMods.find((m) => m.stat === stat);
   if (existing) { existing.mult = mult; existing.turns = turns; }
   else entity.statMods.push({ stat, mult, turns });
+  return true;
 }
 // 蓄積型の一時ステータス変化(迅雷突き/鎧砕きの防御デバフ、剛槍の攻撃バフなど)。使うたびにkey別のスタックを
 // 1増やし(maxStacksで頭打ち)、そのスタック数×perStackぶんの変化量でapplyStatModを呼ぶ(期間は毎回リセット)。
@@ -481,12 +482,19 @@ function dotTickBossCap(entity, dmg) {
   return Math.min(dmg, Math.max(1, Math.round(entity.maxHp * DOT_TICK_BOSS_CAP_RATIO)));
 }
 // 毒を付与する。重ね掛けは加算ではなく現在値との大きい方に上書きする(無限に積み上がらないように)
+// 状態異常のapply系は「実際に付与できたか」を返す(2026-08-02)。呼び出し側はこれを見て
+// 成功ログ/ポップアップを出す(免疫で弾かれたのに「毒を受けた！」と出る偽ログを止める)。
+// 図鑑のstatusImmune配列(種族免疫: お鈴=出血無効、化け茸=毒無効など)もここで初めて実装された
+// (従来はデータだけ存在して誰も参照していない死に設定だった)。
+// 御守(伊邪那岐)による打ち消しだけは従来どおり「成功扱い」で返す(御守処理は2026-08-02の修正対象外)
 function applyPoison(entity, stacks) {
-  if (entity.statusImmuneTurns > 0) return;
-  if (blockedByOmamoriIzanagi(entity)) return;
+  if (entity.statusImmuneTurns > 0) return false;
+  if (entity.statusImmune && entity.statusImmune.includes("poison")) return false;
+  if (blockedByOmamoriIzanagi(entity)) return true;
   // 2026-07-18ユーザー指示: 「最大値で上書き・上限6」から「加算式・天井なし」へ変更。
   // 暴走対策はボス級への1ティック上限(dotTickBossCap)側で行う
   entity.poison = (entity.poison || 0) + stacks;
+  return true;
 }
 // 毒: 自分のターンが来るたびに蓄積値分のダメージを受け、蓄積値が1減る(ダーケストダンジョン方式)。
 // 毒弱点(bleed/burnと同じくENEMY_WEAKNESS)を持つ敵はダメージ2倍
@@ -502,19 +510,23 @@ function tickPoison(entity, log) {
 // 炎上: 毒(固定ダメージ・蓄積減衰)とは違う性質のDOTとして、最大HPの割合ダメージ・ターン数固定(減衰なし)にしてある。
 // 低HPの相手には毒が、高HPのタンク相手には炎上がよく効く、という住み分けを狙った設計
 function applyBurn(entity, turns) {
-  if (entity.statusImmuneTurns > 0) return;
-  if (blockedByOmamoriIzanagi(entity)) return;
+  if (entity.statusImmuneTurns > 0) return false;
+  if (entity.statusImmune && entity.statusImmune.includes("burn")) return false;
+  if (blockedByOmamoriIzanagi(entity)) return true;
   entity.burnTurns = Math.max(entity.burnTurns || 0, turns);
+  return true;
 }
 const BLEED_MAX_STACKS = 5; // (旧)出血蓄積の上限。2026-07-18ユーザー指示で天井撤廃済み、現在はどこも参照しない(module.exports互換のため定義だけ残置)
 // 出血: 毒(重ね掛けは大きい方に上書き)とは違い、こちらは加算で積み上がる方式にしてある
 // (磯魚などの低威力多段ヒットで着実に蓄積していく手触りを狙ったもの、上限で頭打ちにはなる)。
 // 技側の付与量を毒より低めに設定する運用にしてある(旧・出血中の攻撃力-10%一律補正は2026-07-30廃止)
 function applyBleed(entity, stacks) {
-  if (entity.statusImmuneTurns > 0) return;
-  if (blockedByOmamoriIzanagi(entity)) return;
+  if (entity.statusImmuneTurns > 0) return false;
+  if (entity.statusImmune && entity.statusImmune.includes("bleed")) return false;
+  if (blockedByOmamoriIzanagi(entity)) return true;
   // 2026-07-18ユーザー指示: 上限5を撤廃して天井なしの加算式に(毒と同じ扱い)
   entity.bleed = (entity.bleed || 0) + stacks;
+  return true;
 }
 // 出血弱点を持つ敵はダメージ2倍。effectsで指定した継続ステータスデバフはeffectiveStat側で別途処理する
 function tickBleed(entity, log) {
@@ -599,8 +611,9 @@ function tickBurn(entity, log) {
   return dmg;
 }
 function applyStun(entity, turns) {
-  if (entity.statusImmuneTurns > 0) return;
-  if (blockedByOmamoriIzanagi(entity)) return;
+  if (entity.statusImmuneTurns > 0) return false;
+  if (entity.statusImmune && entity.statusImmune.includes("stun")) return false;
+  if (blockedByOmamoriIzanagi(entity)) return true;
   entity.stunTurns = Math.max(entity.stunTurns || 0, turns);
   // 不動明王の御守: 味方がスタンした時、その間だけ防御力が2倍になる(敵には効かない。
   // instanceIdを持つのは敵のみなので、それが無い=味方で判定する)
@@ -617,14 +630,17 @@ function applyStun(entity, turns) {
     entity.bigAttackCountdown = rollBigAttackCountdown(entity);
     entity.bigAttackTelegraphTargetId = null;
   }
+  return true;
 }
 function applySilence(entity, turns) {
-  if (entity.statusImmuneTurns > 0) return;
-  if (blockedByOmamoriIzanagi(entity)) return;
+  if (entity.statusImmuneTurns > 0) return false;
+  if (entity.statusImmune && entity.statusImmune.includes("silence")) return false;
+  if (blockedByOmamoriIzanagi(entity)) return true;
   // 性格の癖「元より無口」(無口): もともと喋らないので黙らせようがない=沈黙が一切効かない
   const quirk = personalityQuirk(entity);
-  if (quirk && quirk.silenceImmune) return;
+  if (quirk && quirk.silenceImmune) return false;
   entity.silenceTurns = Math.max(entity.silenceTurns || 0, turns);
+  return true;
 }
 // 伊邪那美命の御守: 戦闘中最初に自分が敵へ与える状態異常を強化する(パーティ共有の使い捨てフラグ)。
 // 毒/出血のような蓄積値系はスタック+2、それ以外の種類は消費するだけで数値上のボーナスは無い
@@ -1482,9 +1498,12 @@ function useTreeSkill(actor, target, skill, log) {
   // 影縫いなど: ターンを消費せずに敵単体を確定でスタンさせる
   if (action.kind === "stunNoCost") {
     if (Math.random() < resistedChance(target, action.chance != null ? action.chance : 1, "stun")) {
-      applyStun(target, action.turns || 1);
-      log(`${actor.label}は${target.label}を${skill.name}で縫い止めた！`);
-      return { stunned: true, noCost: true };
+      if (applyStun(target, action.turns || 1)) {
+        log(`${actor.label}は${target.label}を${skill.name}で縫い止めた！`);
+        return { stunned: true, noCost: true };
+      }
+      log(`しかし${target.label}には効かない！`);
+      return { stunned: false, noCost: true };
     }
     log(`${target.label}は${actor.label}の${skill.name}をかわした！`);
     return { stunned: false, noCost: true };
@@ -2682,7 +2701,7 @@ function enemyAttack(enemy, targets, log, opts) {
   // stacking:trueは元々「加算される特殊仕様」だったが、2026-07-18の全DOT加算化で標準と同じ挙動になった
   // (蓄積値付きの専用ログを出すためだけに分岐を残している)
   if (!wentDown && enemy.onHitInflict && Math.random() < enemy.onHitInflict.chance) {
-    if (enemy.onHitInflict.type === "poison" && enemy.onHitInflict.stacking && target.statusImmuneTurns <= 0) {
+    if (enemy.onHitInflict.type === "poison" && enemy.onHitInflict.stacking && target.statusImmuneTurns <= 0 && !(target.statusImmune && target.statusImmune.includes("poison"))) {
       target.poison = (target.poison || 0) + (enemy.onHitInflict.value || 1);
       log(`${target.label}は${enemy.label}に噛まれ、毒が蓄積した！(${target.poison})`);
     } else {
@@ -2714,16 +2733,19 @@ function resolveDebuffEffect(target, type, params, log) {
   // 「状態異常にならない」を正しく機能させるため、ここで一括してガードする(天恵の祈り等の既存の
   // 状態異常無効バフにもこの4種が今後正しく効くようになる、望ましい副次効果)
   if (target.statusImmuneTurns > 0) return;
+  // 図鑑のstatusImmune(種族免疫)は「効かない」ことを1行だけ知らせる(黙って握り潰すと紛らわしい)
+  if (target.statusImmune && target.statusImmune.includes(type)) { log(`しかし${target.label}には効かない！`); return; }
   params = params || {};
-  if (type === "atkDown") { applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は攻撃力が下がった！`); }
-  if (type === "defDown") { applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params)); log(`${target.label}は防御力が下がった！`); }
-  if (type === "spdDown") { applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params)); log(`${target.label}は素早さが下がった！`); }
-  if (type === "poison") { applyPoison(target, resolveValue(params, 3)); log(`${target.label}は毒を受けた！`); }
-  if (type === "bleed") { applyBleed(target, resolveValue(params, 2)); log(`${target.label}は出血を負った！`); }
-  if (type === "burn") { applyBurn(target, resolveTurns(params)); log(`${target.label}は炎上した！`); }
-  if (type === "stun") { applyStun(target, params.turns || 1); log(`${target.label}はスタンした！`); }
-  if (type === "silence") { applySilence(target, params.turns || 2); log(`${target.label}は沈黙した！`); }
-  if (type === "dmgTakenUp") { applyStatMod(target, "dmgTaken", 1 + (params.value || 0.15), resolveTurns(params)); log(`${target.label}は呪いを受け、被ダメージが増えた！`); }
+  // apply系/applyStatModの戻り値(実際に付与できたか)を見て、成功した時だけログを出す
+  if (type === "atkDown" && applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params))) log(`${target.label}は攻撃力が下がった！`);
+  if (type === "defDown" && applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params))) log(`${target.label}は防御力が下がった！`);
+  if (type === "spdDown" && applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params))) log(`${target.label}は素早さが下がった！`);
+  if (type === "poison" && applyPoison(target, resolveValue(params, 3))) log(`${target.label}は毒を受けた！`);
+  if (type === "bleed" && applyBleed(target, resolveValue(params, 2))) log(`${target.label}は出血を負った！`);
+  if (type === "burn" && applyBurn(target, resolveTurns(params))) log(`${target.label}は炎上した！`);
+  if (type === "stun" && applyStun(target, params.turns || 1)) log(`${target.label}はスタンした！`);
+  if (type === "silence" && applySilence(target, params.turns || 2)) log(`${target.label}は沈黙した！`);
+  if (type === "dmgTakenUp" && applyStatMod(target, "dmgTaken", 1 + (params.value || 0.15), resolveTurns(params))) log(`${target.label}は呪いを受け、被ダメージが増えた！`);
 }
 
 // debuff.typeの文字列がSTATUS_TOOLTIPSのキーと1対1でない箇所だけの変換表(spdDownは表示上「束縛」の
