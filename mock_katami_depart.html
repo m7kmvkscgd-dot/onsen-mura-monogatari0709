@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>モック: 出発タブの形見選択</title>
+<title>モック: 出発タブの形見選択(案B改)</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
@@ -13,76 +13,29 @@
   h1 { font-size: 1.1rem; margin: 0.2rem 0 0.8rem; }
   h2 { font-size: 1rem; margin: 1rem 0 0.3rem; }
   .caption { font-size: 13px; color: #9aa0a8; margin: 0 0 0.5rem; }
-
-  /* モック用: 案切り替え */
-  .variant-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; position: sticky; top: 0.4rem; z-index: 5; }
-  .variant-bar button {
-    flex: 1; padding: 0.55rem 0; border-radius: 8px; border: 1px solid #4a505a;
-    background: #232830; color: #ece8dc; font-size: 0.85rem; font-weight: 700;
-  }
-  .variant-bar button.active { background: #d7b66f; color: #1c1913; border-color: #d7b66f; }
-
-  .card {
-    background: #1d2127; border: 1px solid #2e343d; border-radius: 10px;
-    padding: 0.7rem 0.8rem; margin-bottom: 0.6rem;
-  }
   .dim-note { font-size: 12px; color: #6f7680; text-align: center; padding: 0.5rem 0; border: 1px dashed #3a4048; border-radius: 8px; margin: 0.4rem 0; }
   hr.divider { border: none; border-top: 1px solid #2e343d; margin: 1rem 0; }
 
-  /* ---- 形見 案A: 1行カード ---- */
-  .katami-row {
-    display: flex; align-items: center; gap: 0.7rem; width: 100%;
-    background: linear-gradient(155deg, #2a2620 0%, #1f1c17 100%);
-    border: 1px solid #6d5a35; border-radius: 10px; padding: 0.65rem 0.8rem;
-    color: #ece8dc; text-align: left; font-size: 0.95rem;
+  /* ---- 形見: アイコンのみのチップを1行・横スクロール ---- */
+  .katami-chip-bar {
+    display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem;
+    -webkit-overflow-scrolling: touch;
+    /* 端が切れて見える=まだ右にあるという手がかりを消さないため、scrollbarは非表示でも余白は残す */
+    scrollbar-width: none;
   }
-  .katami-row .icon { font-size: 1.5rem; flex-shrink: 0; }
-  .katami-row .name { font-weight: 800; }
-  .katami-row .sub { font-size: 12px; color: #b7a875; margin-top: 2px; }
-  .katami-row .chev { margin-left: auto; color: #8a8f98; font-size: 1.1rem; }
-  .katami-row .none-label { color: #9aa0a8; font-weight: 600; }
-
-  /* 案A: 下からのシート */
-  .sheet-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 20;
-    display: none; align-items: flex-end;
-  }
-  .sheet-backdrop.open { display: flex; }
-  .sheet {
-    background: #1d2127; width: 100%; max-width: 480px; margin: 0 auto;
-    border-radius: 14px 14px 0 0; padding: 0.9rem 0.9rem 1.4rem;
-    border-top: 1px solid #6d5a35;
-  }
-  .sheet h3 { margin: 0 0 0.2rem; font-size: 1rem; }
-  .sheet .caption { margin-bottom: 0.7rem; }
-  .sheet-item {
-    display: flex; align-items: center; gap: 0.7rem; width: 100%; text-align: left;
-    background: #232830; border: 2px solid #3a4048; border-radius: 10px;
-    padding: 0.6rem 0.7rem; margin-bottom: 0.5rem; color: #ece8dc;
-  }
-  .sheet-item .icon { font-size: 1.6rem; flex-shrink: 0; }
-  .sheet-item .name { font-weight: 800; font-size: 0.95rem; }
-  .sheet-item .effect { font-size: 12px; color: #9aa0a8; margin-top: 2px; line-height: 1.4; }
-  .sheet-item.selected { border-color: #d7b66f; background: #2a2620; }
-  .sheet-item.selected .name::after { content: " ✓"; color: #d7b66f; }
-  .sheet-item.cooldown { opacity: 0.45; }
-  .sheet-item .cd-tag {
-    margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 700;
-    color: #e08a8a; border: 1px solid #7a4646; border-radius: 6px; padding: 2px 6px;
-  }
-
-  /* ---- 形見 案B: アイコンチップ横並び ---- */
-  .katami-chip-bar { display: flex; gap: 0.5rem; }
+  .katami-chip-bar::-webkit-scrollbar { display: none; }
   .katami-chip {
-    flex: 1; max-width: 84px; background: #232830; border: 2px solid #3a4048;
-    border-radius: 10px; padding: 0.5rem 0.2rem 0.4rem; color: #ece8dc; text-align: center;
+    flex: 0 0 auto; width: 56px; height: 56px;
+    background: #232830; border: 2px solid #3a4048; border-radius: 10px;
+    color: #ece8dc; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0;
   }
-  .katami-chip .icon { font-size: 1.5rem; display: block; }
-  .katami-chip .name { font-size: 10px; font-weight: 700; display: block; margin-top: 2px; line-height: 1.3; }
+  .katami-chip .icon { font-size: 1.6rem; line-height: 1; }
   .katami-chip.selected { border-color: #d7b66f; background: #2a2620; box-shadow: 0 0 8px rgba(215,182,111,0.35); }
   .katami-chip.cooldown { opacity: 0.4; }
-  .katami-chip .cd { font-size: 9px; color: #e08a8a; display: block; }
-  .katami-effect-line { font-size: 12px; color: #b7a875; margin: 0.45rem 0 0; min-height: 1.2em; }
+  .katami-chip .cd { font-size: 9px; color: #e08a8a; line-height: 1.2; margin-top: 1px; }
+  .katami-effect-line { font-size: 12px; color: #b7a875; margin: 0.35rem 0 0; line-height: 1.5; min-height: 1.2em; }
+  .katami-effect-line .cd-note { color: #9aa0a8; }
 
   /* 出発ボタン(本体の簡易再現) */
   .depart-btn {
@@ -94,99 +47,52 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>モック: 出発タブの形見選択</h1>
-  <div class="variant-bar">
-    <button id="btnA" class="active" onclick="setVariant('A')">案A: 1行+選択シート</button>
-    <button id="btnB" onclick="setVariant('B')">案B: チップ直選択</button>
-  </div>
+  <h1>モック: 出発タブの形見選択(案B改)</h1>
 
   <div class="dim-note">…(支援物資: 回復薬/煙玉/野営具の購入カード)…</div>
 
   <!-- ============ 形見セクション(ここが新設部分) ============ -->
   <h2>🎐 形見 <span class="caption" style="font-size:12px;">1つだけ持っていけます</span></h2>
-
-  <!-- 案A: 1行カード。タップでシートが開く -->
-  <div id="variantA">
-    <button class="katami-row" onclick="openSheet()">
-      <span class="icon" id="aIcon">🎗️</span>
-      <span>
-        <span class="name" id="aName">花婿の赤緒</span>
-        <span class="sub" id="aSub">敵1体を組紐で縛り上げる</span>
-      </span>
-      <span class="chev">›</span>
-    </button>
-  </div>
-
-  <!-- 案B: 所持形見をチップで横並び、タップで直接選択 -->
-  <div id="variantB" style="display:none;">
-    <div class="katami-chip-bar" id="chipBar"></div>
-    <p class="katami-effect-line" id="chipEffect"></p>
-  </div>
+  <div class="katami-chip-bar" id="chipBar"></div>
+  <p class="katami-effect-line" id="chipEffect"></p>
 
   <hr class="divider">
   <div class="dim-note">…(出発メンバーを選ぶ: キャラ一覧)…</div>
   <button class="depart-btn">深淵の森へ出発する</button>
-
-  <!-- 案Aの選択シート -->
-  <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet(event)">
-    <div class="sheet" onclick="event.stopPropagation()">
-      <h3>持っていく形見を選ぶ</h3>
-      <p class="caption">討伐の証。使うと数日間は力を失う。</p>
-      <div id="sheetList"></div>
-    </div>
-  </div>
 </div>
 
 <script>
-// 所持形見のサンプル(鏡片はクールダウン中の見え方確認用)
+// 所持形見のサンプル。横スクロール確認用に多め。cdDays=その形見固有のクールダウン日数(仕様)、
+// cdLeft=いま冷却中の残り日数(0=使用可)。鏡片と狐面を冷却中にして見え方を確認する
 const KATAMI = [
-  { id: "none",   icon: "✖️", name: "持って行かない", effect: "", cd: 0 },
-  { id: "akao",   icon: "🎗️", name: "花婿の赤緒",   effect: "敵1体を組紐で縛り上げる", cd: 0 },
-  { id: "kagami", icon: "🪞", name: "逆月の鏡片",   effect: "次の被弾1回を影が身代わりで受ける", cd: 2 },
-  { id: "yunohana", icon: "🧴", name: "湯の花の小瓶", effect: "味方1人のHPを癒やし、炎上と毒を洗い流す", cd: 0 },
+  { id: "none",     icon: "✖️", name: "持って行かない", effect: "", cdDays: 0, cdLeft: 0 },
+  { id: "akao",     icon: "🎗️", name: "花婿の赤緒",   effect: "敵1体を組紐で縛り上げる", cdDays: 2, cdLeft: 0 },
+  { id: "kagami",   icon: "🪞", name: "逆月の鏡片",   effect: "次の被弾1回を影が身代わりで受ける", cdDays: 3, cdLeft: 2 },
+  { id: "yunohana", icon: "🧴", name: "湯の花の小瓶", effect: "味方1人のHPを癒やし、炎上と毒を洗い流す", cdDays: 1, cdLeft: 0 },
+  { id: "kitsune",  icon: "🦊", name: "うつろの狐面", effect: "その戦闘の間、通常攻撃が2回攻撃になる", cdDays: 3, cdLeft: 1 },
+  { id: "kotsurin", icon: "🔔", name: "骨鈴のお守り", effect: "骸骨を1体呼び出して盾にする", cdDays: 1, cdLeft: 0 },
+  { id: "suzu",     icon: "🛎️", name: "白縫の銀鈴",   effect: "味方全員がその場で防御の構えを取る", cdDays: 2, cdLeft: 0 },
 ];
 let selected = "akao";
 
-function setVariant(v) {
-  document.getElementById("variantA").style.display = v === "A" ? "" : "none";
-  document.getElementById("variantB").style.display = v === "B" ? "" : "none";
-  document.getElementById("btnA").className = v === "A" ? "active" : "";
-  document.getElementById("btnB").className = v === "B" ? "active" : "";
-  renderAll();
-}
 function pick(id) {
   const k = KATAMI.find((x) => x.id === id);
-  if (k.cd > 0) return; // クールダウン中は選べない
+  if (k.cdLeft > 0) return; // クールダウン中は選べない
   selected = id;
-  renderAll();
+  render();
 }
-function renderAll() {
-  const sel = KATAMI.find((x) => x.id === selected);
-  // 案A本体行
-  document.getElementById("aIcon").textContent = sel.icon;
-  const nameEl = document.getElementById("aName");
-  nameEl.textContent = sel.name;
-  nameEl.className = sel.id === "none" ? "name none-label" : "name";
-  document.getElementById("aSub").textContent = sel.effect;
-  // 案Aシート
-  document.getElementById("sheetList").innerHTML = KATAMI.map((k) => `
-    <button class="sheet-item ${k.id === selected ? "selected" : ""} ${k.cd > 0 ? "cooldown" : ""}" onclick="pick('${k.id}'); closeSheet();">
-      <span class="icon">${k.icon}</span>
-      <span><span class="name">${k.name}</span>${k.effect ? `<div class="effect">${k.effect}</div>` : ""}</span>
-      ${k.cd > 0 ? `<span class="cd-tag">あと${k.cd}日</span>` : ""}
-    </button>`).join("");
-  // 案Bチップ列(「持って行かない」もチップにする)
+function render() {
   document.getElementById("chipBar").innerHTML = KATAMI.map((k) => `
-    <button class="katami-chip ${k.id === selected ? "selected" : ""} ${k.cd > 0 ? "cooldown" : ""}" onclick="pick('${k.id}')">
+    <button class="katami-chip ${k.id === selected ? "selected" : ""} ${k.cdLeft > 0 ? "cooldown" : ""}" onclick="pick('${k.id}')">
       <span class="icon">${k.icon}</span>
-      <span class="name">${k.name.replace("持って行かない", "なし")}</span>
-      ${k.cd > 0 ? `<span class="cd">あと${k.cd}日</span>` : ""}
+      ${k.cdLeft > 0 ? `<span class="cd">あと${k.cdLeft}日</span>` : ""}
     </button>`).join("");
-  document.getElementById("chipEffect").textContent = sel.effect ? `${sel.name}: ${sel.effect}` : "形見を持たずに出発する";
+  const sel = KATAMI.find((x) => x.id === selected);
+  document.getElementById("chipEffect").innerHTML = sel.effect
+    ? `<strong>${sel.name}</strong>: ${sel.effect} <span class="cd-note">(クールダウン${sel.cdDays}日)</span>`
+    : "形見を持たずに出発する";
 }
-function openSheet() { document.getElementById("sheetBackdrop").classList.add("open"); }
-function closeSheet(e) { document.getElementById("sheetBackdrop").classList.remove("open"); }
-renderAll();
+render();
 </script>
 </body>
 </html>
