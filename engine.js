@@ -422,13 +422,18 @@ function useCampRest(character) {
 }
 
 // 一時的なステータス修正(バフ/デバフ)を付与する。同じstatへの既存の修正は上書き(重ね掛けで際限なく増えないように)
-function applyStatMod(entity, stat, mult, turns) {
+// source: 効果の出所キー(2026-08-02追加)。同じ出所の再使用は更新(重ねがけで際限なく増えない)、
+// 異なる出所は共存(乗算)。従来は同じstatというだけで別スキル/別ギミックの効果が互いに
+// 上書きで消し合っていた(例: 鎧砕きの蓄積デバフが貫通突きで消える、ボスの取り巻き軽減が呪いで消える)。
+// source未指定同士は従来どおり上書き
+function applyStatMod(entity, stat, mult, turns, source) {
   // 黒曜など: 特定ステータスへのデバフを完全に無効化する(誰が与えたデバフでも一律で弾く)
   if (mult < 1 && entity.passives && entity.passives.debuffImmuneStats && entity.passives.debuffImmuneStats.includes(stat)) return false;
   entity.statMods = entity.statMods || [];
-  const existing = entity.statMods.find((m) => m.stat === stat);
+  const src = source || null;
+  const existing = entity.statMods.find((m) => m.stat === stat && (m.source || null) === src);
   if (existing) { existing.mult = mult; existing.turns = turns; }
-  else entity.statMods.push({ stat, mult, turns });
+  else entity.statMods.push({ stat, mult, turns, source: src });
   return true;
 }
 // 蓄積型の一時ステータス変化(迅雷突き/鎧砕きの防御デバフ、剛槍の攻撃バフなど)。使うたびにkey別のスタックを
@@ -438,7 +443,7 @@ function applyStackingStatMod(entity, key, stat, perStack, maxStacks, turns) {
   entity.stackCounters = entity.stackCounters || {};
   const stacks = Math.min(maxStacks, (entity.stackCounters[key] || 0) + 1);
   entity.stackCounters[key] = stacks;
-  applyStatMod(entity, stat, 1 + perStack * stacks, turns);
+  applyStatMod(entity, stat, 1 + perStack * stacks, turns, "stack:" + key); // 蓄積キーごとに独立した出所=他のデバフと消し合わない
 }
 // 自分のターンが来るたびに残りターン数を1減らし、0になったものは消す
 function tickStatMods(entity) {
@@ -1391,10 +1396,10 @@ function applyTreeInflict(t, inflict, actor) {
     if (inf.type === "burn") applyBurn(t, resolveTurns(inf));
     if (inf.type === "stun") applyStun(t, inf.turns || 1);
     if (inf.type === "silence") applySilence(t, inf.turns || 2);
-    if (inf.type === "atkDown") applyStatMod(t, "atk", 1 - (inf.value || 0.2), inf.turns || 3);
-    if (inf.type === "defDown") applyStatMod(t, "def", 1 - (inf.value || 0.2), inf.turns || 3);
-    if (inf.type === "spdDown") applyStatMod(t, "spd", 1 - (inf.value || 0.2), inf.turns || 3);
-    if (inf.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (inf.value || 0.1), inf.turns || 3);
+    if (inf.type === "atkDown") applyStatMod(t, "atk", 1 - (inf.value || 0.2), inf.turns || 3, "debuff:atk");
+    if (inf.type === "defDown") applyStatMod(t, "def", 1 - (inf.value || 0.2), inf.turns || 3, "debuff:def");
+    if (inf.type === "spdDown") applyStatMod(t, "spd", 1 - (inf.value || 0.2), inf.turns || 3, "debuff:spd");
+    if (inf.type === "dmgTakenUp") applyStatMod(t, "dmgTaken", 1 + (inf.value || 0.1), inf.turns || 3, "debuff:dmgTaken");
     // 水月(改)など: この攻撃を受けた敵1体だけを、一定ターンの間ずっとactor(術者)に狙わせる
     if (inf.type === "forceTarget") { t.forcedTargetId = actor.id; t.forcedTargetTurns = inf.turns || 2; }
     // 迅雷突き/鎧砕きなど: 使うたびに防御デバフが蓄積する(maxStacksで頭打ち)
@@ -2360,8 +2365,8 @@ function applyDamageToTarget(target, dmg, log, actorLabel, actor, logSuffix, ext
         if (oh.type === "bleed") applyBleed(target, resolveValue(oh, 2) + izanamiBoost);
         if (oh.type === "burn") applyBurn(target, oh.turns || 3);
         if (oh.type === "stun") applyStun(target, oh.turns || 1);
-        if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
-        if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
+        if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3, "debuff:atk");
+        if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3, "debuff:def");
       }
     });
   }
@@ -2402,8 +2407,8 @@ function applyAbilityOnHitInflicts(actor, target, abilityType, log) {
       if (oh.type === "bleed") applyBleed(target, resolveValue(oh, 2) + izanamiBoost);
       if (oh.type === "burn") applyBurn(target, oh.turns || 3);
       if (oh.type === "stun") applyStun(target, oh.turns || 1);
-      if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3);
-      if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3);
+      if (oh.type === "atkDown") applyStatMod(target, "atk", 1 - (oh.value || 0.15), oh.turns || 3, "debuff:atk");
+      if (oh.type === "defDown") applyStatMod(target, "def", 1 - (oh.value || 0.15), oh.turns || 3, "debuff:def");
     }
   });
 }
@@ -2755,15 +2760,15 @@ function resolveDebuffEffect(target, type, params, log) {
   if (target.statusImmune && target.statusImmune.includes(type)) { log(`しかし${target.label}には効かない！`); return; }
   params = params || {};
   // apply系/applyStatModの戻り値(実際に付与できたか)を見て、成功した時だけログを出す
-  if (type === "atkDown" && applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params))) log(`${target.label}は攻撃力が下がった！`);
-  if (type === "defDown" && applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params))) log(`${target.label}は防御力が下がった！`);
-  if (type === "spdDown" && applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params))) log(`${target.label}は素早さが下がった！`);
+  if (type === "atkDown" && applyStatMod(target, "atk", 1 - (params.value || 0.15), resolveTurns(params), "debuff:atk")) log(`${target.label}は攻撃力が下がった！`);
+  if (type === "defDown" && applyStatMod(target, "def", 1 - (params.value || 0.15), resolveTurns(params), "debuff:def")) log(`${target.label}は防御力が下がった！`);
+  if (type === "spdDown" && applyStatMod(target, "spd", 1 - (params.value || 0.2), resolveTurns(params), "debuff:spd")) log(`${target.label}は素早さが下がった！`);
   if (type === "poison" && applyPoison(target, resolveValue(params, 3))) log(`${target.label}は毒を受けた！`);
   if (type === "bleed" && applyBleed(target, resolveValue(params, 2))) log(`${target.label}は出血を負った！`);
   if (type === "burn" && applyBurn(target, resolveTurns(params))) log(`${target.label}は炎上した！`);
   if (type === "stun" && applyStun(target, params.turns || 1)) log(`${target.label}はスタンした！`);
   if (type === "silence" && applySilence(target, params.turns || 2)) log(`${target.label}は沈黙した！`);
-  if (type === "dmgTakenUp" && applyStatMod(target, "dmgTaken", 1 + (params.value || 0.15), resolveTurns(params))) log(`${target.label}は呪いを受け、被ダメージが増えた！`);
+  if (type === "dmgTakenUp" && applyStatMod(target, "dmgTaken", 1 + (params.value || 0.15), resolveTurns(params), "debuff:dmgTaken")) log(`${target.label}は呪いを受け、被ダメージが増えた！`);
 }
 
 // debuff.typeの文字列がSTATUS_TOOLTIPSのキーと1対1でない箇所だけの変換表(spdDownは表示上「束縛」の

@@ -521,6 +521,7 @@ function renderBattleScreen() {
   // クローンが2体の中間にワープして見える不具合の原因だった)。全カードをrowに追加し終えて
   // レイアウトが確定してから、まとめて起動することで解決する
   newlyDeadForReaction.forEach(({ entity, card }) => {
+    if (typeof gimmickOnEnemyDeath === "function") gimmickOnEnemyDeath(entity); // 取り巻き全滅でボスの軽減を即解除
     playEnemyDefeatReaction(entity, card);
     // 素材ドロップの抽選+足元にポンっと跳ねて落ちる表示。カード位置が確定しているこの瞬間に
     // 行う(以前は勝利時にまとめて抽選していたが、その時点ではカードが消えていて

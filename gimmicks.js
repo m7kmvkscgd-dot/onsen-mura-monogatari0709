@@ -262,7 +262,21 @@ function gimmickApplyMinionShield(owner, mult) {
   if (!battle || owner.hp <= 0) return;
   if (owner.__gimmickShieldRound === battle.roundsTotal) return;
   owner.__gimmickShieldRound = battle.roundsTotal;
-  applyStatMod(owner, "dmgTaken", mult, 2);
+  applyStatMod(owner, "dmgTaken", mult, 2, "gimmickMinionShield");
+}
+// 最後の取り巻きが死んだ瞬間、ボスの「取り巻きが生きている間の被ダメ軽減」を即座に剥がす
+// (従来は2ターンのstatModが残り続け、仕様「生きている間」と食い違っていた。2026-08-02修正。
+//  battle.jsの敵死亡検知(newlyDeadForReaction)から呼ばれる)
+function gimmickOnEnemyDeath(deadEnemy) {
+  if (!battle || !battle.gimmicks) return;
+  battle.gimmicks.forEach((entry) => {
+    const owner = entry.owner;
+    if (!owner || owner === deadEnemy || owner.hp <= 0 || !owner.statMods) return;
+    const hasMinions = battle.enemies.some((e) => e !== owner && e.hp > 0);
+    if (hasMinions) return;
+    owner.statMods = owner.statMods.filter((m) => m.source !== "gimmickMinionShield");
+    owner.__gimmickShieldRound = null;
+  });
 }
 
 // 雑魚召喚の実体。襲撃戦の多段ウェーブ(raidTryAdvanceWave)と同じ「battle.enemiesへ後から足す」方式。
