@@ -391,49 +391,44 @@ function playSkillCastFx(actor, skillName, onRelease) {
     const card = findVisibleCard(actor.id);
     const img = card ? card.querySelector("img") : null;
     if (!img || !img.animate) { onRelease(); return; }
+    // 発動時の立ち絵は控えめに明るくなるだけ(CodexデモcastCommon()準拠2026-08-01。旧・金色の強い発光を置き換え)
     img.animate([
-      { boxShadow: "0 0 0 rgba(255,214,110,0)", filter: "brightness(1)" },
-      { boxShadow: "0 0 26px rgba(255,214,110,0.95)", filter: "brightness(1.35)", offset: 0.45 },
-      { boxShadow: "0 0 8px rgba(255,214,110,0.4)", filter: "brightness(1.05)" },
-    ], { duration: 450, easing: "ease-out" });
+      { filter: "brightness(1)" },
+      { filter: "brightness(1.24) drop-shadow(0 0 7px rgba(255,210,108,0.5))", offset: 0.48 },
+      { filter: "brightness(1.04)" },
+    ], { duration: 430, easing: "ease-out" });
     const banner = getSkillBannerSingleton();
     banner.classList.remove("enemy-big"); // 敵大技予告(紫)と共用のため、味方使用時は必ず金赤へ戻す
     const band = banner.querySelector(".band");
     band.textContent = skillName;
-    // 表示位置(モック案I採用+ユーザー実機調整2026-08-01): 技を使う本人のカードの右肩に縦書き短冊。
-    // 横=カード右端-23px、縦=短冊の下端がカード上端+36pxに食い込む。画面右端からはみ出す分はクランプ
+    // 表示位置(CodexデモcastCommon()準拠2026-08-01): 技を使う本人のカードの右肩(横-23px/上-105px)
     positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 0);
+    // 札アニメは即時開始し、SKILL_CAST_MS(700ms)内に収める(Codexデモ準拠。SEのタイミングは従来どおり180ms)
+    if (banner.animate) playTanzakuSlide(banner);
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
     // 全8職業に個別の専用音あり(薙刀士も2026-08-01に独立)。汎用skill_castは未知の職業/式神系のフォールバック
     const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_naginata", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
     const castSfx = castSfxByClass[actor.classId] || "skill_cast";
-    setTimeout(() => {
-      playSfx(castSfx); // 技名が出る瞬間に再生
-      if (banner.animate) playTanzakuSlide(banner);
-    }, 180);
+    setTimeout(() => { playSfx(castSfx); }, 180);
     setTimeout(onRelease, SKILL_CAST_MS);
   } catch (e) { onRelease(); } // 演出に失敗しても技本体は必ず実行する
 }
-// 短冊の配置共通部: anchorRect(本人カード/敵イラスト)の右肩へ。extraDrop=下端の追加食い込み(敵イラスト用)。
-// ユーザー実機調整値(2026-08-01): 横=右端-23px、縦=下端がアンカー上端+36px
+// 札の配置共通部(CodexデモcastCommon()準拠2026-08-01): anchorRect(本人カード/敵イラスト)の右肩、
+// 横=右端-23px(画面右端-42pxでクランプ)、縦=上端-105px(上端4pxでクランプ)。extraDrop=敵イラスト用の基準下げ
 function positionTanzakuBanner(banner, band, anchorRect, extraDrop) {
   if (!anchorRect) { banner.style.left = `${window.innerWidth - 60}px`; banner.style.top = "150px"; return; }
-  const bandH = band.offsetHeight || 130;
-  const bandW = band.offsetWidth || 32;
-  let left = Math.round(anchorRect.right - 23);
-  left = Math.min(left, window.innerWidth - bandW - 2);
-  banner.style.left = `${left}px`;
-  banner.style.top = `${Math.max(2, Math.round(anchorRect.top + (extraDrop || 0)) - bandH + 36)}px`;
+  banner.style.left = `${Math.round(Math.min(window.innerWidth - 42, anchorRect.right - 23))}px`;
+  banner.style.top = `${Math.max(4, Math.round(anchorRect.top + (extraDrop || 0)) - 105)}px`;
 }
-// 短冊のスライド(ユーザー指定2026-08-01: 上から下へ入る・計1.2秒表示)。
-// 消え方は「フェードしながら下へ」をやめて、その場でパッと消す(同日ユーザー指定。
-// 旧フェードに使っていた時間もそのまま表示時間に充てる=最後まで不透明のまま、アニメ終了で即座に消える)
+// 札のスライド(Codexデモ準拠2026-08-01): 上から静かに現れ、短く留まり、下へ抜けながら消える。
+// SKILL_CAST_MS(700ms=技本体の発動タイミング)内に収める。fill:forwardsで終端(opacity0)を保持
 function playTanzakuSlide(banner) {
   banner.animate([
-    { opacity: 0, transform: "translateY(-16px)" },
-    { opacity: 1, transform: "translateY(0)", offset: 0.16 },
-    { opacity: 1, transform: "translateY(0)" },
-  ], { duration: 1200, easing: "ease" });
+    { opacity: 0, transform: "translateY(-9px)" },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.16 },
+    { opacity: 0.95, transform: "translateY(0)", offset: 0.72 },
+    { opacity: 0, transform: "translateY(6px)" },
+  ], { duration: 700, easing: "ease", fill: "forwards" });
 }
 // 敵の大技予告の短冊(紫): 構えの瞬間(bigAttackPending=true)にbattle.jsから呼ばれる。
 // 次に来る大技名を敵イラストの右肩に立てる(下端の食い込みはイラスト上端+30pxを基準=モックの敵ボタンと同じ)
