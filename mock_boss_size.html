@@ -33,7 +33,9 @@
   .enemy-row.depth .ecard.mob { margin-bottom: -18px; z-index: 3; }
   .enemy-row.depth .ecard.boss { z-index: 2; margin-left: -26px; margin-right: -26px; }
   .allies { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 4; display: flex; justify-content: center; gap: 8px; }
-  .ally { width: 88px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
+  .ally { width: 88px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; transition: width 0.3s; }
+  .allies.shrunk .ally { width: 70px; }
+  .allies.shrunk .ally .nm { font-size: 0.6rem; }
   .ally img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: 6px; }
   .ally .nm { font-size: 0.66rem; font-weight: 700; }
 
@@ -69,17 +71,19 @@
     <div class="row2">
       <button id="mobBtn" class="on" onclick="toggleMobs(this)">提灯童2体: あり</button>
       <button id="depthBtn" onclick="toggleDepth(this)">奥行き配置: OFF</button>
+      <button id="shrinkBtn" onclick="toggleShrink(this)">味方/雑魚を相対縮小: OFF</button>
     </div>
-    <p class="note">「奥行き配置」= 雑魚を一段手前(下寄り)に小さく重ね、ボスは奥で大きく構える。行列の遠近感が出て、幅もその分節約できる。名前とHPバーもボスだけ太く・大きくしてある。</p>
+    <p class="note">「相対縮小」= ボス戦専用に味方カードを70px(5人編成サイズ相当)へ、雑魚も一回り小さく。ボスをただ大きくするのではなく周りを縮めて画面の圧迫を防ぐ案。「奥行き配置」= 雑魚を一段手前(下寄り)に小さく重ね、ボスは奥で大きく構える。行列の遠近感が出て、幅もその分節約できる。名前とHPバーもボスだけ太く・大きくしてある。</p>
   </div>
 </div>
 
 <script>
-let bossSize = 220, mobs = true, depth = false;
+let bossSize = 220, mobs = true, depth = false, shrunk = false;
 function render() {
   const row = document.getElementById("erow");
   row.classList.toggle("depth", depth);
-  const mobH = depth ? 84 : 96;
+  document.querySelector(".allies").classList.toggle("shrunk", shrunk);
+  const mobH = (depth ? 84 : 96) - (shrunk ? 14 : 0);
   const mob = `<div class="ecard mob"><img style="height:${mobH}px" src="assets/enemies/clear/chochin_warabe.png"><div class="shadow"></div><div class="nm">提灯童</div><div class="hp"><i></i></div></div>`;
   row.innerHTML = `${mobs ? mob : ""}
     <div class="ecard boss"><img style="height:${bossSize}px" src="assets/enemies/amayome_shiranui.png"><div class="shadow"></div><div class="nm">鈴鳴の花嫁・お鈴</div><div class="hp" style="width:${Math.min(200, bossSize * 0.85)}px"><i></i></div></div>
@@ -94,6 +98,12 @@ function toggleMobs(btn) {
   mobs = !mobs;
   btn.textContent = `提灯童2体: ${mobs ? "あり" : "なし"}`;
   btn.classList.toggle("on", mobs);
+  render();
+}
+function toggleShrink(btn) {
+  shrunk = !shrunk;
+  btn.textContent = `味方/雑魚を相対縮小: ${shrunk ? "ON" : "OFF"}`;
+  btn.classList.toggle("on", shrunk);
   render();
 }
 function toggleDepth(btn) {
