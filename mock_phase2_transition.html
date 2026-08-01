@@ -80,7 +80,7 @@
     </div>
     <button class="case" onclick="run(1)">案1: 静寂の断ち切り(現行実装ベース)<small>曲を即断→0.6秒の無音→口上→口上明けに絵・背景切替と同時に本命曲が頭から爆発</small></button>
     <button class="case" onclick="run(2)">案2: 口上の最後で曲が走り出す(方針書準拠)<small>無音の中で口上1行ずつ→3行目が出た瞬間に本命曲スタート→曲が走る中で変身</small></button>
-    <button class="case" onclick="run(3)">案3: 暗転からの解放<small>画面が完全に闇へ沈む→闇の中で口上→白フラッシュ+本命曲+強シェイクで第二形態が現れる</small></button>
+    <button class="case" onclick="run(3)">案3: 暗転からの解放(改)<small>闇の中で口上を1文ずつ(出ては消える)→最後の文が出た瞬間に本命曲→白フラッシュ+強シェイクで第二形態</small></button>
     <button class="case" onclick="run(4)">案4: 迫り寄る静寂<small>無音の間、お鈴へゆっくりズーム+色が抜けていく→口上→弾けて戻ると同時に変身+本命曲</small></button>
   </div>
 </div>
@@ -177,6 +177,40 @@ function playLines(onLastLine) {
   });
 }
 
+// 1文ずつの口上(案3用): 出す→少し見せる→消す→次の文。タップでその文を早送り。
+// onLastLine=最後の文が「表示された瞬間」のフック(本命曲の頭出しに使う)
+function playLinesSequential(onLastLine) {
+  return new Promise((resolve) => {
+    const ov = $("linesov"), box = $("linesbox");
+    ov.classList.add("on");
+    let idx = 0, skip = null;
+    const next = () => {
+      if (idx >= LINES.length) { ov.classList.remove("on"); ov.onclick = null; resolve(); return; }
+      const isLast = idx === LINES.length - 1;
+      box.innerHTML = `<p style="opacity:0;">「${LINES[idx]}」</p>`;
+      const p = box.querySelector("p");
+      p.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 450, easing: "ease-out", fill: "forwards" });
+      if (isLast && onLastLine) onLastLine();
+      idx++;
+      let advanced = false;
+      const advance = () => {
+        if (advanced) return;
+        advanced = true;
+        skip = null;
+        const a = p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease" });
+        let moved = false;
+        const go = () => { if (moved) return; moved = true; next(); };
+        a.onfinish = go;
+        setTimeout(go, 430); // onfinish不発の保険(goは一度きりガード済み)
+      };
+      const hold = isLast ? 2100 : 1400; // 最後の文だけ曲の立ち上がりに合わせて少し長く見せる
+      const t = setTimeout(advance, 450 + hold);
+      skip = () => { clearTimeout(t); advance(); };
+    };
+    ov.onclick = () => { if (skip) skip(); };
+    next();
+  });
+}
 async function run(pattern) {
   if (running) return;
   running = true;
@@ -200,12 +234,12 @@ async function run(pattern) {
     await sleep(400);
     $("blackout").style.opacity = "1"; // 完全な闇へ
     await sleep(1000);
-    await playLines();
+    await playLinesSequential(() => startClimax()); // 1文ずつ表示、最後の文が出た瞬間に本命曲
     whiteFlash(700);
     await sleep(180); // フラッシュが乗り切った瞬間に切替(明けたら第二形態)
     swapToPhase2();
     $("blackout").style.opacity = "0";
-    startClimax(); shake(); vignettePulse();
+    shake(); vignettePulse();
     announce();
   } else if (pattern === 4) {
     intro.pause();
