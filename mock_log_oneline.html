@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>一行ログの弱点と改善案モック</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #101014; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  .stage {
+    position: relative; width: 100%; max-width: 430px; height: 300px; margin: 0 auto;
+    background: url("assets/bg/forest_day.jpg") center 30% / cover no-repeat; overflow: hidden;
+  }
+  /* 本物のbattle.css/ui.cssの文章枠と同じ意匠・同じ寸法(高さ40px/padding6px/文字0.78rem) */
+  .log {
+    position: absolute; top: 48px; left: 12px; right: 12px; height: 40px;
+    padding: 6px 18px; display: flex; flex-direction: column; justify-content: center; gap: 0.15rem;
+    overflow: hidden; font-size: 0.78rem; border: 2px solid #4b3728; border-radius: 11px;
+    background-image: linear-gradient(to bottom, rgba(43,43,43,0.89), rgba(24,24,24,0.87));
+    box-shadow: inset 0 0 0 2px #d9c49a, inset 0 2px 3px rgba(255,255,255,0.10), inset 0 -6px 10px rgba(0,0,0,0.25), 0 4px 10px rgba(0,0,0,0.45);
+    transition: height 0.15s ease-out;
+  }
+  .log.tall { height: 56px; } /* 案B(残像)の時だけ少しだけ背が伸びる */
+  .log p { color: #fff; line-height: 1.5; text-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8); white-space: nowrap; }
+  .log p.ghost { font-size: 0.66rem; opacity: 0.5; } /* 案B: 直前行の残像 */
+  .log p.wrapok { white-space: normal; } /* 現状の長文=折返して後半しか見えない状態の再現 */
+  .queue-badge {
+    position: absolute; top: 94px; right: 14px; font-size: 0.66rem; color: #d9c49a;
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(217,196,154,0.4); border-radius: 8px;
+    padding: 2px 8px; display: none;
+  }
+  .panel { max-width: 430px; margin: 0 auto; padding: 12px 12px 40px; }
+  .sec-label { font-size: 0.72rem; color: #9aa79f; margin: 14px 0 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button {
+    font-size: 0.82rem; padding: 10px 12px; border-radius: 10px; border: 1px solid #6d5a35;
+    background: #2a2620; color: #ece8dc;
+  }
+  button.mode.on { background: #c9a24a; color: #1c1810; font-weight: 700; }
+  button.play { background: #1f2d24; border-color: #3f6d4e; }
+  .note { font-size: 0.74rem; line-height: 1.7; color: #cfc9b8; margin-top: 6px; background: #1a1a20; border: 1px solid #33302a; border-radius: 10px; padding: 10px 12px; }
+  .note b { color: #d9c49a; }
+  .risk { color: #d98a7a; }
+  h1 { font-size: 0.95rem; padding: 12px; max-width: 430px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>一行ログの弱点と改善案(実寸モック)</h1>
+<div class="stage">
+  <div class="log" id="logBox"></div>
+  <div class="queue-badge" id="queueBadge">▼ あと2件</div>
+</div>
+<div class="panel">
+  <div class="sec-label">■ 方式を選ぶ</div>
+  <div class="row">
+    <button class="mode on" data-mode="now">現状</button>
+    <button class="mode" data-mode="a">案A: 順番待ち</button>
+    <button class="mode" data-mode="b">案B: 残像</button>
+    <button class="mode" data-mode="ab">案A+B</button>
+  </div>
+  <div class="row" style="margin-top:6px;">
+    <button class="mode" id="fitToggle">案C: 長文の自動縮小 OFF</button>
+  </div>
+  <div class="sec-label">■ シナリオを再生(実戦と同じテンポ)</div>
+  <div class="row">
+    <button class="play" data-scn="burst">激しいターン(4行連続)</button>
+    <button class="play" data-scn="long">長文(口上ふう)</button>
+    <button class="play" data-scn="normal">ふつうの攻撃(2行)</button>
+  </div>
+  <div class="note">
+    <b>一行化のデメリット/リスク(現状モードで再生すると体感できる)</b><br>
+    ①<span class="risk">流れ去り</span>: 連続ヒット・毒・撃破が重なるターンは、読む前に次の行に置き換わる。「なんで倒れた？」が追えない<br>
+    ②<span class="risk">長文の途中切れ</span>: 1行に収まらない文は折返しの後半しか見えない<br>
+    ③<span class="risk">重要情報の見逃し</span>: 状態異常付与・大技予告が数百msで消えると戦術判断に実害<br>
+    (タップで履歴を開ける保険は今もあるが、戦闘中に開くのは手間)
+  </div>
+  <div class="note">
+    <b>案A: 順番待ち(最低表示時間)</b> — 各行を最低0.85秒は必ず見せ、連続時は順番待ち。右端に「あと◯件」表示。
+    <span class="risk">弱点: 行が溜まると演出と文字が数秒ズレる</span><br>
+    <b>案B: 残像</b> — 直前の1行だけ小さく薄く上に残す。高さ+16pxだけ増える。ズレなし・実装も安全<br>
+    <b>案C: 自動縮小</b> — 収まらない長文だけ文字を少し縮めて1行に収める(②専用。A/Bと併用可)<br>
+    <b>おすすめ: 案A+C</b>(テンポより「読める」を優先)。ズレが気になるなら<b>案B+C</b>
+  </div>
+</div>
+<script>
+  const logBox = document.getElementById("logBox");
+  const badge = document.getElementById("queueBadge");
+  let mode = "now";
+  let fitOn = false;
+  let queue = [];
+  let showing = false;
+  let prevLine = null;
+  const MIN_SHOW = 850;
+
+  document.querySelectorAll(".mode[data-mode]").forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll(".mode[data-mode]").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      mode = b.dataset.mode;
+      logBox.classList.toggle("tall", mode === "b" || mode === "ab");
+      clearLog();
+    };
+  });
+  document.getElementById("fitToggle").onclick = (e) => {
+    fitOn = !fitOn;
+    e.target.textContent = "案C: 長文の自動縮小 " + (fitOn ? "ON" : "OFF");
+    e.target.classList.toggle("on", fitOn);
+  };
+  function clearLog() { logBox.innerHTML = ""; prevLine = null; queue = []; showing = false; badge.style.display = "none"; }
+
+  // 文字送り(実機と同じ18ms/文字)
+  function typewrite(p, text, done) {
+    let i = 0;
+    const t = setInterval(() => {
+      p.textContent = text.slice(0, ++i);
+      if (i >= text.length) { clearInterval(t); done && done(); }
+    }, 18);
+  }
+  // 案C: 収まらない時だけフォントを縮める(0.78→最小0.6rem)
+  function fitLine(p) {
+    if (!fitOn) { if (p.scrollWidth > p.clientWidth + 1) p.classList.add("wrapok"); return; }
+    let size = 0.78;
+    p.style.fontSize = size + "rem";
+    p.textContent = p.dataset.full;
+    while (p.scrollWidth > logBox.clientWidth - 36 && size > 0.6) {
+      size -= 0.02;
+      p.style.fontSize = size + "rem";
+    }
+    p.textContent = "";
+  }
+  function showLine(text) {
+    const useGhost = mode === "b" || mode === "ab";
+    if (useGhost && prevLine) {
+      prevLine.classList.add("ghost");
+      while (logBox.children.length > 1) logBox.firstChild.remove();
+      logBox.insertBefore(prevLine, null);
+    } else {
+      logBox.innerHTML = "";
+    }
+    const p = document.createElement("p");
+    p.dataset.full = text;
+    logBox.appendChild(p);
+    if (useGhost && prevLine) logBox.insertBefore(prevLine, p);
+    fitLine(p);
+    prevLine = p;
+    return p;
+  }
+  function pump() {
+    if (showing || queue.length === 0) { if (queue.length === 0) badge.style.display = "none"; return; }
+    showing = true;
+    const text = queue.shift();
+    badge.textContent = "▼ あと" + queue.length + "件";
+    badge.style.display = queue.length > 0 ? "block" : "none";
+    const p = showLine(text);
+    const start = Date.now();
+    typewrite(p, text, () => {
+      const wait = Math.max(0, MIN_SHOW - (Date.now() - start));
+      setTimeout(() => { showing = false; pump(); }, wait);
+    });
+  }
+  function post(text) {
+    if (mode === "a" || mode === "ab") { queue.push(text); pump(); }
+    else { const p = showLine(text); typewrite(p, text); }
+  }
+
+  const SCN = {
+    burst: [
+      ["野犬に12ダメージ！", 0],
+      ["野犬は出血した！", 350],
+      ["小夜は毒で3ダメージ！", 800],
+      ["侍丸は倒れた！", 1250],
+    ],
+    long: [["お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！", 0]],
+    normal: [
+      ["侍丸の攻撃！", 0],
+      ["野犬に9ダメージ！", 500],
+    ],
+  };
+  document.querySelectorAll(".play").forEach((b) => {
+    b.onclick = () => {
+      clearLog();
+      SCN[b.dataset.scn].forEach(([text, delay]) => setTimeout(() => post(text), delay));
+    };
+  });
+  // 初期表示
+  post("河童は晴明に9ダメージ！");
+</script>
+</body>
+</html>
