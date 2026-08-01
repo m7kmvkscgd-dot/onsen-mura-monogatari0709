@@ -166,6 +166,24 @@ function startBattle(enemies, pathDef, encounterText) {
       c.passives.omamoriBishamonPending = false; // 前回誰かに配られた分が残らないよう、毎戦闘リセットしてから配り直す
     }
   });
+  // 【初手速攻の大技は「戦闘開始の瞬間」から予告開始(2026-08-02ユーザー指示)】カウント0で戦闘に
+  // 入る敵(化け茸の奇襲instant/初期位相0)は、開幕から構え(赤オーラ+震え+技名短冊)を表示し、
+  // その敵の最初の手番で発動する。狙う相手もこの時点で確定(ターゲットマークと被弾対象を一致させる)
+  let anyOpeningTelegraph = false;
+  enemies.forEach((e) => {
+    if ((e.bigAttackCountdown || 0) <= 0 && e.hp > 0) {
+      e.bigAttackPending = true;
+      commitBigAttackTelegraphTarget(e, aliveField());
+      e.__stanceSkillName = peekNextBigAttackName(e);
+      anyOpeningTelegraph = true;
+    }
+  });
+  if (anyOpeningTelegraph) {
+    // 戦闘画面が見えた頃合いに予告の警告(フラッシュ+SE)も鳴らす(構え表示自体は最初の描画から出ている)
+    setTimeout(() => {
+      if (battle && battle.enemies === enemies) { triggerWarningFlash(); playSfx("big_attack_warning"); }
+    }, 700);
+  }
   battleLogLines = [];
   resetBattleLogQueue(); // 順番待ちの残り(前の戦闘分)が新しい戦闘に流れ込まないように
   document.getElementById("battleLog").innerHTML = "";
