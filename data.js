@@ -574,11 +574,12 @@ const ENEMIES = {
           { type: "dmgTakenWhileMinions", mult: 0.7 },
         ] },
     ],
-    // 第二形態(2026-08-01、素材+口上はCodex納品phase2_design.md)。HP50%を切った直後の手番の節目に
-    // gimmicks.jsのmaybeStartSecondFormSequenceが「導入BGM停止→無音→口上→怒り背景+怒り絵へ切替→
-    // 本命BGM(yokai_no_shutai)→gimmickIdのギミック発動」を一括で実行する
+    // 第二形態(2026-08-01、素材+口上はCodex納品phase2_design.md)。発動条件は【1本目のHPが尽きた時】
+    // (旧・HP50%発動は同日ユーザー指示で廃止=実質2本ゲージのボス。hpは1本あたりの値で、合計は2倍になる。
+    // 帯の調整はボステストで)。手番の節目にgimmicks.jsのmaybeStartSecondFormSequenceが「とどめの余韻→
+    // 導入BGMフェード→完全暗転→口上1文ずつ→最終文で本命BGM→白フラッシュ+雷鳴→怒り背景/絵+HP全回復
+    // (バーは暗転明け後に0→100%を2秒で回復)→gimmickIdのギミック発動」を一括で実行する
     secondForm: {
-      hpBelow: 0.5,
       lines: [
         "……また、私を置いていくのですか",
         "ならば、この峠から誰ひとり帰しません",

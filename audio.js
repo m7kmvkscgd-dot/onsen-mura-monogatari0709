@@ -491,6 +491,24 @@ function stopBossIntroBgm() {
   bgmAudio.pause();
   currentBgmKey = null;
 }
+// 第一形態を倒した瞬間の導入曲はぶつ切りではなくフェードで止める(ユーザー指定2026-08-01)。
+// フェード中に別の曲(本命曲など)が始まったらトークン不一致で身を引く(stopBattleBgmと同じ護身)
+function fadeOutBossIntroBgm(ms) {
+  if (currentBgmKey !== "boss_battle_intro") { stopBossIntroBgm(); return; }
+  const startVol = getBgmAudioVolume();
+  const t0 = performance.now();
+  const myToken = ++battleBgmFadeToken;
+  currentBgmKey = null; // 先にキーを手放す(以後のplayBgmが「同キー再生中」と誤認しないように)
+  const step = () => {
+    if (battleBgmFadeToken !== myToken) return; // 別の再生が始まった: 音量はそちらが設定済みなので触らない
+    const r = Math.min(1, (performance.now() - t0) / (ms || 900));
+    setBgmAudioVolume(startVol * (1 - r));
+    if (r < 1) { requestAnimationFrame(step); return; }
+    bgmAudio.pause();
+    setBgmAudioVolume(startVol); // 次の曲(本命曲)のために音量を戻しておく
+  };
+  step();
+}
 // 第二形態の発動の瞬間にgimmicks.jsから呼ばれる: 本命曲(yokai_no_shutai)を頭出しする。
 // 通常は導入曲が流れている時だけ切り替えるが、第二形態シーケンス(stopBossIntroBgmで無音を挟む)からは
 // force=trueで呼ばれ、停止済み(currentBgmKey=null)の状態からでも本命曲を開始する

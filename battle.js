@@ -328,7 +328,9 @@ function createEnemyCard(e) {
 }
 const HIT_SHAKE_CLASSES = ["hit-shake", "hit-flash", "hit-shake-normal", "hit-shake-strong"];
 function updateEnemyCard(card, e) {
-  const dead = e.hp <= 0;
+  // 第二形態待ち(1本目のHPが尽きたが変身前)のボスは「撃破」扱いにしない: カードを消さず、
+  // 空のHPバーのまま立たせておく(直後の手番の節目でgimmicks.jsの変身シーケンスが始まる)
+  const dead = e.hp <= 0 && !(typeof enemySecondFormPending === "function" && enemySecondFormPending(e));
   const targetable = !!pendingEnemyPick && !dead;
   card.classList.toggle("swarm", !!e.isSwarm);
   // 飛行中は立ち絵を浮かせて接地影と分離する(frameless時のみ意味を持つ、battle.cssのairborne)。
@@ -471,8 +473,9 @@ function renderBattleScreen() {
     updateEnemyCard(card, e);
     prevCard = card;
     // 撃破リアクションは「初めて死亡を検知した描画」の時だけ起動する(再描画のたびに再生し直さない、
-    // shakeClassFor()と同じ考え方)。起動自体はこのループを抜けた後にまとめて行う(下記参照)
-    if (e.hp <= 0 && !e.__defeatReactionState) {
+    // shakeClassFor()と同じ考え方)。起動自体はこのループを抜けた後にまとめて行う(下記参照)。
+    // 第二形態待ちのボスは撃破ではない(変身する)ため、倒れ演出も素材ドロップも起動しない
+    if (e.hp <= 0 && !e.__defeatReactionState && !(typeof enemySecondFormPending === "function" && enemySecondFormPending(e))) {
       e.__defeatReactionState = "playing";
       newlyDeadForReaction.push({ entity: e, card });
     }

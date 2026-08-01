@@ -140,53 +140,93 @@ function initSecondFormState() {
   if (!battle) return;
   battle.secondForm = null;
   battle.enemies.forEach((e) => {
-    if (e.secondForm && !battle.secondForm) battle.secondForm = { owner: e, def: e.secondForm, fired: false };
+    if (e.secondForm && !battle.secondForm) battle.secondForm = { owner: e, def: e.secondForm, fired: false, done: false };
   });
 }
-// シーケンスは「案3改: 暗転からの解放」(mock_phase2_transition.htmlでユーザー採用2026-08-01):
-// 導入BGM停止→0.4秒→画面が完全な闇へ(1秒)→闇の中で口上を1文ずつ(出て消えて次、タップ早送り可)→
-// 最後の文が表示された瞬間に本命BGM(yokai_no_shutai)頭出し→口上明けに白フラッシュ+雷鳴SE→
-// フラッシュの下で怒り背景+怒り形態絵へ切替→明けたら第二形態→0.6秒置いて怒りギミック発動
+// 第二形態の発動待ち〜変身完了前(1本目のHPが尽きてからHPが回復するまで)のボスかどうか。
+// battle.jsの死亡処理(カード消滅・撃破リアクション・素材ドロップ)がこの間は「撃破扱い」しないための判定。
+// firedではなくdone(HP全回復の瞬間に立つ)で見る=シーケンス演出中の描画でも撃破扱いにならない
+function enemySecondFormPending(e) {
+  return !!(battle && battle.secondForm && battle.secondForm.owner === e && !battle.secondForm.done);
+}
+// 第二形態のHPバー回復演出: 暗転が完全に明けてから0→100%を約2秒かけて満たす(ユーザー指定2026-08-01)。
+// hp値はこの時点で全回復済みのため、見た目のバーだけをWAAPIでゆっくり追いつかせる(紫の禍々しい光つき)
+function animateSecondFormHpRefill(owner, ms) {
+  const card = findVisibleCard(owner.instanceId);
+  const fill = card ? card.querySelector(".hpbar-fill") : null;
+  if (!fill || !fill.animate) return;
+  fill.getAnimations().forEach((a) => a.cancel()); // 回復キャッチアップ等の既存アニメと喧嘩させない
+  const trail = card.querySelector(".hpbar-fill-trail");
+  if (trail) trail.style.width = "0%";
+  fill.animate([
+    { width: "0%", boxShadow: "0 0 10px rgba(190,80,210,0.9)" },
+    { width: "100%", boxShadow: "0 0 10px rgba(190,80,210,0.9)", offset: 0.96 },
+    { width: "100%", boxShadow: "0 0 0 rgba(190,80,210,0)" },
+  ], { duration: ms || 2000, easing: "ease-in-out" });
+}
+// シーケンスは「案3改」(mock_phase2_transition.htmlでユーザー採用2026-08-01)。発動条件は
+// 【1本目のHPが尽きた時】(旧・HP50%発動は2026-08-01ユーザー指示で廃止。二本ゲージのボス):
+// とどめの余韻0.7秒→導入BGMをフェードで止める(0.9秒)→画面が完全な闇へ(1秒)→闇の中で口上を
+// 1文ずつ(出て消えて次、タップ早送り可)→最後の文が表示された瞬間に本命BGM(yokai_no_shutai)頭出し→
+// 口上明けに白フラッシュ→フラッシュの下で怒り背景+怒り形態絵へ切替+状態異常リセット→
+// 暗転が明けた瞬間に雷鳴→完全に明けてからHPバーが0→100%へ約2秒で回復→怒りギミック発動
 function maybeStartSecondFormSequence(onDone) {
   if (!battle || !battle.secondForm) return false;
   const sf = battle.secondForm;
-  if (sf.fired || sf.owner.hp <= 0) return false;
-  if (sf.owner.hp / sf.owner.maxHp >= (sf.def.hpBelow != null ? sf.def.hpBelow : 0.5)) return false;
+  if (sf.fired || sf.owner.hp > 0) return false;
   sf.fired = true; // 開始した時点で発火済み(演出中の再入・二重発動を防ぐ)
-  if (typeof stopBossIntroBgm === "function") stopBossIntroBgm();
-  renderBattleScreen();
-  const blackout = createSecondFormBlackout(); // 0.4秒の静寂の後、1秒かけて闇へ沈む(fadeはCSS遷移)
-  const bail = () => { if (blackout.parentNode) blackout.remove(); onDone(); }; // 演出中に戦闘が終わった時の後始末
+  renderBattleScreen(); // 空になった1本目のHPバーを見せる
+  let blackout = null;
+  const bail = () => { if (blackout && blackout.parentNode) blackout.remove(); onDone(); }; // 演出中に戦闘が終わった時の後始末
   setTimeout(() => {
     if (!battle) { bail(); return; }
-    playSecondFormLines(sf.def.lines || [], () => {
-      if (typeof playBossClimaxBgm === "function") playBossClimaxBgm(true); // 最後の文と同時に本命曲
-    }, () => {
+    if (typeof fadeOutBossIntroBgm === "function") fadeOutBossIntroBgm(900); // ぶつ切りではなくフェード(ユーザー指定)
+    setTimeout(() => {
       if (!battle) { bail(); return; }
-      playSecondFormFlash();
+      blackout = createSecondFormBlackout(); // 1秒かけて闇へ沈む(fadeはCSS遷移)
       setTimeout(() => {
         if (!battle) { bail(); return; }
-        // フラッシュが乗り切っている間に怒り背景+怒り形態の立ち絵へ切替(updateEnemyCardがsrc差分を反映)
-        if (sf.def.bg) { gimmickBattleBgUrl = sf.def.bg; updateSceneBackgrounds(); }
-        if (sf.def.image) sf.owner.image = sf.def.image;
-        renderBattleScreen();
-        blackout.style.transition = "opacity 0.35s ease";
-        blackout.style.opacity = "0";
-        setTimeout(() => { if (blackout.parentNode) blackout.remove(); }, 450);
-        // 雷鳴は「暗転が明けた瞬間にドーン」(ユーザー指定2026-08-01)。音源は雷9(Nosferatu用の重い雷、
-        // Richard Humphries CC-BY 4.0)の頭の無音をカットした即発音版
-        playSfx("phase2_thunder");
-        if (typeof playBigAtkImpactFx === "function") playBigAtkImpactFx(); // 赤ビネット+画面揺れ
-        // 雷鳴が鳴り響く間を0.6秒置いてから怒りギミック(告知+召喚)を発動して進行再開
-        setTimeout(() => {
-          if (!battle) { onDone(); return; }
-          const entry = (battle.gimmicks || []).find((g) => g.owner === sf.owner && g.def.id === sf.def.gimmickId);
-          if (entry && !entry.active) { activateGimmickEntry(entry); renderBattleScreen(); }
-          onDone();
-        }, 600);
-      }, 180);
-    });
-  }, 1400);
+        playSecondFormLines(sf.def.lines || [], () => {
+          if (typeof playBossClimaxBgm === "function") playBossClimaxBgm(true); // 最後の文と同時に本命曲
+        }, () => {
+          if (!battle) { bail(); return; }
+          playSecondFormFlash();
+          setTimeout(() => {
+            if (!battle) { bail(); return; }
+            // フラッシュが乗り切っている間に第二形態へ: 怒り背景+怒り形態絵+HP全回復+状態異常リセット
+            // (新しい体になる扱い。バーの見た目だけは後のrefill演出が0%から満たす)
+            if (sf.def.bg) { gimmickBattleBgUrl = sf.def.bg; updateSceneBackgrounds(); }
+            if (sf.def.image) sf.owner.image = sf.def.image;
+            sf.owner.hp = sf.owner.maxHp;
+            sf.done = true; // ここからは通常の死亡判定に戻る(2本目のバーが尽きたら本当に撃破)
+            sf.owner.poison = 0; sf.owner.bleed = 0; sf.owner.burnTurns = 0;
+            sf.owner.stunTurns = 0; sf.owner.silenceTurns = 0; sf.owner.statMods = [];
+            sf.owner.bigAttackPending = false;
+            if (typeof rollBigAttackCountdown === "function") sf.owner.bigAttackCountdown = rollBigAttackCountdown(sf.owner);
+            renderBattleScreen();
+            animateSecondFormHpRefill(sf.owner, 0); // いったんバーを0%表示で固定(直後のrefillが本番)
+            blackout.style.transition = "opacity 0.35s ease";
+            blackout.style.opacity = "0";
+            setTimeout(() => { if (blackout.parentNode) blackout.remove(); }, 450);
+            // 雷鳴は「暗転が明けた瞬間にドーン」(雷9=Nosferatu/Richard Humphries CC-BY4.0、頭の無音カット済み)
+            playSfx("phase2_thunder");
+            if (typeof playBigAtkImpactFx === "function") playBigAtkImpactFx(); // 赤ビネット+画面揺れ
+            // 完全に明けてから(fade0.35秒+ひと呼吸)、HPバーが約2秒かけて満ちる
+            setTimeout(() => {
+              if (!battle) { onDone(); return; }
+              animateSecondFormHpRefill(sf.owner, 2000);
+              setTimeout(() => {
+                if (!battle) { onDone(); return; }
+                const entry = (battle.gimmicks || []).find((g) => g.owner === sf.owner && g.def.id === sf.def.gimmickId);
+                if (entry && !entry.active) { activateGimmickEntry(entry); renderBattleScreen(); }
+                onDone();
+              }, 2100);
+            }, 500);
+          }, 180);
+        });
+      }, 1400);
+    }, 400);
+  }, 700);
   return true;
 }
 // formCycleの形態切り替えの実体。持ち主に形態フラグを立て(古い形態のフラグは全消去)、
