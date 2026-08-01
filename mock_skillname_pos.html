@@ -3,59 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>モック: 技名表示・改(HPバー重なり対策)</title>
+<title>モック: 技名の縦書き短冊(案I)</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
   button { touch-action: manipulation; font-family: inherit; }
   .wrap { max-width: 480px; margin: 0 auto; }
 
-  /* ---- 戦闘シーンの簡易再現(敵HPバーが味方カードのすぐ上=実際の衝突状況を再現) ---- */
+  /* シーンは上部に固定(sticky)。下の調整卓をスクロールしても短冊が見え続ける */
   .scene {
-    position: relative; height: 470px; overflow: hidden;
+    position: sticky; top: 0; z-index: 10;
+    height: 400px; overflow: hidden;
     background-image: url('assets/bg/suzunari_gake.jpg');
     background-size: cover; background-position: center 30%;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.6);
   }
   .scene::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
     background: linear-gradient(to bottom, rgba(20,24,27,0.15), rgba(20,24,27,0.55) 60%, rgba(20,24,27,0.8)); }
-  .enemy { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 2; text-align: center; }
-  .enemy img { width: 128px; display: block; margin: 0 auto; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
-  .enemy .nm { font-size: 0.8rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
-  .enemy .hpbar { width: 180px; height: 12px; border-radius: 99px; background: #3a3a3a; margin: 6px auto 0;
+  .logbox { position: absolute; top: 34px; left: 12px; right: 12px; z-index: 2;
+    border: 2px solid #8a7448; border-radius: 10px; background: rgba(16,13,10,0.82);
+    min-height: 44px; padding: 6px 10px; font-size: 0.72rem; color: #d9cfb8; }
+  .flee-btn { position: absolute; top: 3px; right: 12px; z-index: 3;
+    font-size: 0.74rem; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+    border: 1px solid rgba(217,207,184,0.55); background: rgba(24,20,16,0.82); color: #d9cfb8; }
+  .enemy { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); z-index: 2; text-align: center; }
+  .enemy img { width: 108px; display: block; margin: 0 auto; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
+  .enemy .nm { font-size: 0.76rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  .enemy .hpbar { width: 170px; height: 11px; border-radius: 99px; background: #3a3a3a; margin: 5px auto 0;
     border: 1px solid rgba(0,0,0,0.75); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
   .enemy .hpbar i { display: block; height: 100%; width: 62%; background: #4caf6f; }
-  .allies { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 2; display: flex; justify-content: center; gap: 10px; }
-  .ally { position: relative; width: 92px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
-  .ally img { width: 68px; height: 68px; object-fit: contain; background: #353a44; border-radius: 6px; }
-  .ally .nm { font-size: 0.7rem; font-weight: 700; }
+  .allies { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2; display: flex; justify-content: center; gap: 10px; }
+  .ally { position: relative; width: 88px; background: rgba(30,34,40,0.85); border: 1px solid #3a4048; border-radius: 10px; padding: 5px; text-align: center; }
+  .ally img { width: 64px; height: 64px; object-fit: contain; background: #353a44; border-radius: 6px; }
+  .ally .nm { font-size: 0.68rem; font-weight: 700; }
   .ally .hp { height: 6px; border-radius: 99px; background: #3a3a3a; margin-top: 3px; overflow: hidden; }
   .ally .hp i { display: block; height: 100%; width: 80%; background: #4caf6f; }
-
-  .band {
-    display: inline-block; padding: 4px 18px; font-weight: 900; font-size: 0.92rem; letter-spacing: 0.12em;
-    color: #fff7e6; white-space: nowrap;
-    background: linear-gradient(90deg, transparent, rgba(120,20,16,0.92) 18%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 82%, transparent);
-    border-top: 1px solid rgba(255,214,110,0.8); border-bottom: 1px solid rgba(255,214,110,0.8);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
-  }
-  /* 案F: 帯なしの縁取り文字 */
-  .plain-name {
-    display: inline-block; font-weight: 900; font-size: 1.02rem; letter-spacing: 0.14em; white-space: nowrap;
-    color: #fff3d6;
-    text-shadow: 0 0 6px rgba(255,190,80,0.9), 0 2px 3px rgba(0,0,0,1), 0 0 2px #000, 2px 0 2px #000, -2px 0 2px #000, 0 -2px 2px #000;
-  }
   .fx-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
   .fx-item { position: absolute; opacity: 0; }
-  /* 実際の配置物の再現(重なり確認用): テキストボックス+その右上外の逃げるボタン */
-  .logbox { position: absolute; top: 40px; left: 12px; right: 12px; z-index: 2;
-    border: 2px solid #8a7448; border-radius: 10px; background: rgba(16,13,10,0.82);
-    min-height: 54px; padding: 7px 11px; font-size: 0.76rem; color: #d9cfb8; }
-  .flee-btn { position: absolute; top: 5px; right: 12px; z-index: 3;
-    font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid rgba(217,207,184,0.55); background: rgba(24,20,16,0.82); color: #d9cfb8; }
-  /* 案I: 右上の縦書き短冊。味方必殺技=金赤、敵大技=紫 */
+
+  /* 縦書き短冊: 味方必殺技=金赤、敵大技=紫 */
   .tanzaku {
-    writing-mode: vertical-rl; white-space: nowrap;
+    writing-mode: vertical-rl; white-space: nowrap; display: inline-block;
     padding: 20px 7px; font-weight: 900; font-size: 1.02rem; letter-spacing: 0.18em;
     color: #fff7e6; text-shadow: 0 2px 4px rgba(0,0,0,0.9);
     background: linear-gradient(180deg, transparent, rgba(120,20,16,0.92) 12%, rgba(60,8,6,0.95) 50%, rgba(120,20,16,0.92) 88%, transparent);
@@ -67,13 +55,16 @@
     border-left: 1px solid rgba(200,150,255,0.8); border-right: 1px solid rgba(200,150,255,0.8);
   }
 
-  .panel { padding: 0.8rem 0.9rem 3rem; }
-  .panel h2 { font-size: 0.95rem; margin: 0.9rem 0 0.3rem; }
-  .row { display: flex; gap: 0.4rem; margin-bottom: 0.55rem; align-items: stretch; }
-  .row .label { flex: 1.6; font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.5rem; background: #232830; border: 1px solid #4a505a; border-radius: 9px; }
-  .row .label small { display: block; font-weight: 400; font-size: 10.5px; color: #9aa79f; line-height: 1.4; margin-top: 2px; }
-  .row button { flex: 0.5; border-radius: 9px; border: 1px solid #4a505a; background: #2e3540; color: #ece8dc; font-size: 0.8rem; font-weight: 700; }
-  .row button:active { background: #3a4250; }
+  .panel { padding: 0.7rem 0.9rem 3rem; }
+  .btns { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .btns button { flex: 1; padding: 0.6rem 0; border-radius: 9px; border: 1px solid #4a505a; background: #2e3540; color: #ece8dc; font-size: 0.85rem; font-weight: 700; }
+  .btns button:active { background: #3a4250; }
+  .tuner { border: 1px solid #4a505a; border-radius: 9px; padding: 0.55rem 0.6rem; }
+  .tuner .head { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+  .tuner .head button { border-radius: 8px; border: 1px solid #4a505a; background: #2e3540; color: #ece8dc; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0.7rem; }
+  .tuner label { font-size: 0.72rem; color: #9aa79f; display: block; margin-top: 0.3rem; }
+  .tuner input[type=range] { width: 100%; }
+  .tuner p { font-size: 0.7rem; color: #9aa79f; margin: 0.4rem 0 0; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -95,35 +86,23 @@
   </div>
 
   <div class="panel">
-    <h2>技名表示・改良案(左/中/右ボタンでその位置のキャラが発動)</h2>
-
-    <div class="row"><div class="label">案E: 自分のカードに重ねる<small>頭上ではなくカードの上端に帯を貼る。敵UIには絶対に触れない。隣のカードに少しかかる</small></div>
-      <button onclick="caseE(0)">左</button><button onclick="caseE(1)">中</button><button onclick="caseE(2)">右</button></div>
-
-    <div class="row"><div class="label">案F: 帯をやめて文字だけ<small>頭上のまま、背景帯なしの金縁文字。HPバーに重なっても後ろが透ける</small></div>
-      <button onclick="caseF(0)">左</button><button onclick="caseF(1)">中</button><button onclick="caseF(2)">右</button></div>
-
-    <div class="row"><div class="label">案G: 頭上+重なる時だけ自動でカードへ退避<small>基本は今の頭上。敵HPバーと重なる中央キャラの時だけ案Eの位置へ自動で下がる</small></div>
-      <button onclick="caseG(0)">左</button><button onclick="caseG(1)">中</button><button onclick="caseG(2)">右</button></div>
-
-    <div class="row"><div class="label">案H: カード下の名前行に重ねる<small>帯をカード幅に絞り、本人の名前の上でフラッシュ。画面上部が完全に空く</small></div>
-      <button onclick="caseH(0)">左</button><button onclick="caseH(1)">中</button><button onclick="caseH(2)">右</button></div>
-
-    <div class="row" style="border-top:1px dashed #4a505a;padding-top:0.55rem;"><div class="label">案I: 本人アイコンの右肩に縦書き短冊(ユーザー案)<small>使ったキャラのカード右上から立ち上る。味方必殺技=金赤、敵の大技(構え)=敵イラストの右肩に紫</small></div>
-      <button onclick="caseI(0)">左</button><button onclick="caseI(1)">中</button><button onclick="caseI(2)">右</button><button onclick="caseIEnemy()">敵</button></div>
-
-    <!-- 案Iの調整卓: サイズ2種+位置スライダー。「調整モード」ONで中キャラに出しっぱなしにして動かせる -->
-    <div style="border:1px solid #4a505a;border-radius:9px;padding:0.55rem 0.6rem;margin-top:0.2rem;">
-      <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
-        <strong style="font-size:0.8rem;">案Iの調整卓</strong>
-        <button id="sizeBtn" onclick="toggleSize()" style="border-radius:8px;border:1px solid #4a505a;background:#2e3540;color:#ece8dc;font-size:0.75rem;font-weight:700;padding:0.3rem 0.7rem;">サイズ: 大</button>
-        <button id="pinBtn" onclick="togglePin()" style="border-radius:8px;border:1px solid #4a505a;background:#2e3540;color:#ece8dc;font-size:0.75rem;font-weight:700;padding:0.3rem 0.7rem;">調整モード: OFF</button>
+    <div class="btns">
+      <button onclick="caseI(0)">左</button>
+      <button onclick="caseI(1)">中</button>
+      <button onclick="caseI(2)">右</button>
+      <button onclick="caseIEnemy()">敵大技</button>
+    </div>
+    <div class="tuner">
+      <div class="head">
+        <strong style="font-size:0.8rem;">調整卓</strong>
+        <button id="sizeBtn" onclick="toggleSize()">サイズ: 大</button>
+        <button id="pinBtn" onclick="togglePin()">調整モード: OFF</button>
       </div>
-      <label style="font-size:0.72rem;color:#9aa79f;display:block;">横位置(カード右端からのずれ): <span id="dxVal">-14</span>px
-        <input type="range" id="dx" min="-60" max="30" value="-14" style="width:100%;" oninput="tunerChanged()"></label>
-      <label style="font-size:0.72rem;color:#9aa79f;display:block;margin-top:0.3rem;">縦位置(アイコン上端への食い込み): <span id="dyVal">18</span>px
-        <input type="range" id="dy" min="-30" max="70" value="18" style="width:100%;" oninput="tunerChanged()"></label>
-      <p style="font-size:0.7rem;color:#9aa79f;margin:0.4rem 0 0;">調整モードONで中キャラに固定表示→スライダーで動かす→決まった数値をClaudeに伝えてください。左/中/右/敵ボタンにも同じ設定が反映されます。</p>
+      <label>横位置(カード右端からのずれ): <span id="dxVal">-14</span>px
+        <input type="range" id="dx" min="-60" max="30" value="-14" oninput="tunerChanged()"></label>
+      <label>縦位置(アイコン上端への食い込み): <span id="dyVal">18</span>px
+        <input type="range" id="dy" min="-30" max="70" value="18" oninput="tunerChanged()"></label>
+      <p>調整モードONで中キャラに出しっぱなし→スライダーで動かす→決まった「サイズ+横+縦」の値を教えてください。シーンは上に固定されているのでスクロールしても見えます。</p>
     </div>
   </div>
 </div>
@@ -138,55 +117,8 @@ function glow(i) {
   document.querySelectorAll(".ally")[i].animate(
     [{ boxShadow: "0 0 0 rgba(255,214,110,0)" }, { boxShadow: "0 0 20px rgba(255,214,110,0.9)", offset: 0.4 }, { boxShadow: "0 0 0 rgba(255,214,110,0)" }], { duration: 700 });
 }
-function spawn(html, x, y, maxW) {
-  const el = document.createElement("div");
-  el.className = "fx-item";
-  el.innerHTML = html;
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
-  if (maxW) { el.style.maxWidth = `${maxW}px`; el.style.overflow = "hidden"; }
-  document.getElementById("fx").appendChild(el);
-  el.animate([
-    { opacity: 0, transform: "translateX(calc(-50% - 40px))" },
-    { opacity: 1, transform: "translateX(-50%)", offset: 0.18 },
-    { opacity: 1, transform: "translateX(-50%)", offset: 0.78 },
-    { opacity: 0, transform: "translateX(calc(-50% + 30px))" },
-  ], { duration: 900, easing: "ease" }).onfinish = () => el.remove();
-}
-// 案E: 自分のカード上端に重ねる
-function caseE(i) {
-  glow(i);
-  const s = sceneEl(), r = allyRect(i);
-  spawn(`<span class="band">${nextSkill()}</span>`, r.left - s.left + r.width / 2, r.top - s.top - 12);
-}
-// 案F: 頭上のまま帯なし文字だけ
-function caseF(i) {
-  glow(i);
-  const s = sceneEl(), r = allyRect(i);
-  spawn(`<span class="plain-name">${nextSkill()}</span>`, r.left - s.left + r.width / 2, r.top - s.top - 36);
-}
-// 案G: 頭上が敵HPバーと重なる時だけ案Eの位置へ退避(実装ではUI要素と実測で衝突判定する)
-function caseG(i) {
-  glow(i);
-  const s = sceneEl(), r = allyRect(i);
-  const hp = document.getElementById("enemyHp").getBoundingClientRect();
-  const bandTop = r.top - 36, bandBottom = bandTop + 30;
-  const bandHalf = 78; // 帯の概算半幅
-  const cx = r.left + r.width / 2;
-  const overlaps = bandBottom > hp.top && bandTop < hp.bottom && cx + bandHalf > hp.left && cx - bandHalf < hp.right;
-  spawn(`<span class="band">${nextSkill()}</span>`, cx - s.left, overlaps ? r.top - s.top - 12 : r.top - s.top - 36);
-}
-// 案H: カード幅に絞って名前行の上でフラッシュ
-function caseH(i) {
-  glow(i);
-  const s = sceneEl(), r = allyRect(i);
-  spawn(`<span class="band" style="font-size:0.78rem;padding:3px 8px;">${nextSkill()}</span>`,
-    r.left - s.left + r.width / 2, r.bottom - s.top - 26, r.width + 8);
-}
-// 案I: 使った本人のアイコンの右肩から縦書き短冊が立ち上る。
-// 位置は調整卓のdx(カード右端からのずれ)/dy(アイコン上端への食い込み)を反映する
 let tanzakuSmall = false;
-let pinned = null; // 調整モードの固定表示要素
+let pinned = null;
 const tunerDx = () => Number(document.getElementById("dx").value);
 const tunerDy = () => Number(document.getElementById("dy").value);
 function tanzakuHtml(text, enemy) {
@@ -221,7 +153,6 @@ function caseIEnemy() {
   const img = document.querySelector(".enemy img").getBoundingClientRect();
   spawnTanzaku(tanzakuHtml("嫁入りの鈴", true), img, img.top + 30);
 }
-// ---- 調整卓 ----
 function toggleSize() {
   tanzakuSmall = !tanzakuSmall;
   document.getElementById("sizeBtn").textContent = tanzakuSmall ? "サイズ: 小" : "サイズ: 大";
