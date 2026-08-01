@@ -1697,8 +1697,8 @@ function instantiateEnemy(pick) {
   // 例: def15の敵にdefBonusPct20を選ぶとdef35になる。defは被ダメ軽減%そのものの値のため)、
   // 攻撃力ダウン(atkReductionPct)は敵の攻撃力にその割合を掛けて減らす(乗算。例: 20を選ぶと攻撃力×0.8)。
   // 2つは独立した設定で、どちらも0なら無効(お試し高難易度/低難易度化設定)。
-  // atk/defは全ての戦闘計算式がenemy.atk/target.defとして生値のまま直接参照するため、
-  // effectiveStat側ではなくここ(スポーン時点)で織り込むのが確実
+  // この高難易度補正はスポーン時点でatk/defの基礎値へ焼き込む(戦闘計算はeffectiveStat経由に
+  // 統一済み(2026-08-02)で、その基礎値としてここで焼いた値が読まれる=二重適用にはならない)
   const defBonusPct = state.highDurabilityDefBonusPct || 0;
   const atkReductionPct = state.highDurabilityAtkReductionPct || 0;
   const atk = atkReductionPct > 0 ? Math.max(1, Math.round(pick.atk * (1 - atkReductionPct / 100))) : pick.atk;
@@ -1993,7 +1993,7 @@ function performAttack(actor, target, log, opts) {
   // opts.atkMult: 形見「うつろの狐面」の2回攻撃(威力50%×2)など、通常攻撃の1振りの威力を割り引く時に使う。
   // ダメージ式はatkに線形(atk×mitigation)なので、atkに掛ければそのまま威力倍率になる
   const atkMult = (opts && opts.atkMult) || 1;
-  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(Math.max(1, Math.round(effectiveStat(actor, "atk") * atkMult)), target.def), log, undefined, normalAttackRangeType(actor));
+  const result = rollAttackOrMiss(actor, target, () => rollBasicAttack(Math.max(1, Math.round(effectiveStat(actor, "atk") * atkMult)), effectiveStat(target, "def")), log, undefined, normalAttackRangeType(actor));
   // ヘビに変身中は、通常攻撃が命中すると確実に毒3を付与する
   if (result.hit && actor.transformForm === "hebi") applyPoison(target, 3);
   // 狩人「追い討ち」: 出血中の敵への通常攻撃が命中すると、出血スタックを3追加する
@@ -2435,27 +2435,27 @@ function useAbility(actor, target, abilityType, log) {
     return { guard: true };
   }
   if (abilityType === "magicAttack") {
-    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), target.def), log, undefined, ABILITY_RANGE_TYPE.magicAttack, true);
+    return rollAttackOrMiss(actor, target, () => rollMagicAttack(effectiveStat(actor, "mag"), effectiveStat(target, "def")), log, undefined, ABILITY_RANGE_TYPE.magicAttack, true);
   }
   if (abilityType === "magicAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), t.def) * 0.561)), log, ABILITY_RANGE_TYPE.magicAttackAll, true);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollMagicAttack(effectiveStat(actor, "mag"), effectiveStat(t, "def")) * 0.561)), log, ABILITY_RANGE_TYPE.magicAttackAll, true);
   }
   if (abilityType === "physicalAttackAll") {
-    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), t.def) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
+    return rollAoeAttack(actor, target, (t) => Math.max(1, Math.round(rollBasicAttack(effectiveStat(actor, "atk"), effectiveStat(t, "def")) * 0.95)), log, ABILITY_RANGE_TYPE.physicalAttackAll);
   }
   if (abilityType === "powerAttack") {
-    return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.powerAttack);
+    return rollAttackOrMiss(actor, target, () => rollPowerAttack(effectiveStat(actor, "atk"), effectiveStat(target, "def")), log, undefined, ABILITY_RANGE_TYPE.powerAttack);
   }
   if (abilityType === "critAttack") {
-    return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.critAttack);
+    return rollAttackOrMiss(actor, target, () => rollCritAttack(effectiveStat(actor, "atk"), effectiveStat(target, "def")), log, undefined, ABILITY_RANGE_TYPE.critAttack);
   }
   if (abilityType === "preciseShot") {
     // 「会心の一矢」の名前通り、通常の会心率(基本5%)に+20%を上乗せし、合計25%で急所を突く
-    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), target.def), log, 0.20, ABILITY_RANGE_TYPE.preciseShot);
+    return rollAttackOrMiss(actor, target, () => rollPreciseShot(effectiveStat(actor, "atk"), effectiveStat(target, "def")), log, 0.20, ABILITY_RANGE_TYPE.preciseShot);
   }
   if (abilityType === "cannonShot") {
     actor.reloading = true; // 命中/回避に関わらず、撃った以上は次のターン装填で動けなくなる
-    return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), target.def), log, undefined, ABILITY_RANGE_TYPE.cannonShot);
+    return rollAttackOrMiss(actor, target, () => rollCannonShot(effectiveStat(actor, "atk"), effectiveStat(target, "def")), log, undefined, ABILITY_RANGE_TYPE.cannonShot);
   }
   if (abilityType === "heal") {
     const bonusMult = healBonusMultiplier(actor, target, false);
@@ -2631,7 +2631,7 @@ function noteRaidFocusTarget(member) {
 // opts.atkMult: この一撃だけ攻撃力に掛ける倍率(三面替え・狐面の連続攻撃で1発あたりを軽くする用。
 // battle.jsの敵通常攻撃ループが渡す。未指定=従来どおり等倍)
 function enemyAttack(enemy, targets, log, opts) {
-  const atkVal = Math.max(1, Math.round(enemy.atk * ((opts && opts.atkMult) || 1)));
+  const atkVal = Math.max(1, Math.round(effectiveStat(enemy, "atk") * ((opts && opts.atkMult) || 1)));
   // 【村襲撃】バリケードが立っている間、飛行以外の敵は味方ではなくバリケード自体を攻撃対象にする
   // (以前は味方を狙った攻撃を着弾時に柵へ差し替えていたため、味方の回避判定で柵が無傷になったり
   // 見切り反撃が柵越しに発動する矛盾があった。ユーザー指摘2026-07-27)。柵は動けないので必中、
@@ -2788,7 +2788,7 @@ function commitBigAttackTelegraphTarget(enemy, alive) {
 // mid: 中央値(変動なしの素の計算) / max: 上振れした場合の目安(+15%、rollBasicAttackの変動幅上限と同じ)
 function predictBigAttackDamage(enemy, target, profile) {
   let mult = profile.mult;
-  const base = enemy.atk * mitigation(effectiveStat(target, "def"), 18) * mult;
+  const base = effectiveStat(enemy, "atk") * mitigation(effectiveStat(target, "def"), 18) * mult;
   return { mid: Math.max(1, Math.round(base)), max: Math.max(1, Math.round(base * 1.15)) };
 }
 // HP警告(⚠️)判定: 予告中の大技を(未かばう想定で)受けた場合、上振れの見積もりで戦闘不能(HP0)に
@@ -2853,7 +2853,8 @@ function bigAttackSummaryText(enemyDef) {
 // 生存中の味方全員に襲いかかる。全敵がbigAttackプロファイル(見た目/生態に合わせた専用の威力+デバフ)を
 // 持っている前提(data.js ENEMIES、汎用フォールバックは廃止済み、2026-07-19)。ボス/中ボスはextraBigAttacksで
 // 複数の大技をローテーション巡回できる(pickBigAttackProfile参照)。
-// 敵自身が毒/炎上状態なら威力がさらに下がる(削る対抗策)。結果は対象ごとの配列で返す
+// 攻撃力はeffectiveStat経由(2026-08-02統一): 弱点システムのatkDown(対応するDOT中-30%)や
+// 憑依・威圧などのデバフが大技の威力にも正しく乗る。結果は対象ごとの配列で返す
 function enemyBigAttack(enemy, targets, log) {
   const alive = targets.filter((t) => t.hp > 0);
   if (!alive.length) return [];
@@ -2862,7 +2863,7 @@ function enemyBigAttack(enemy, targets, log) {
   // 飛行の敵は従来通り柵を飛び越えて味方を狙う
   if (typeof raidBarricadeHp !== "undefined" && raidBarricadeHp > 0 && !enemy.isFlying) {
     let bMult = profile.mult;
-    const dmg = Math.max(1, Math.round(rollBasicAttack(enemy.atk, 0) * bMult));
+    const dmg = Math.max(1, Math.round(rollBasicAttack(effectiveStat(enemy, "atk"), 0) * bMult));
     enemy.bigAttackTelegraphTargetId = null;
     enemy.bigAttackTelegraphForced = false;
     log(`${enemy.label}の${profile.name || "大技"}！ バリケードに${dmg}ダメージ！`);
@@ -2903,7 +2904,7 @@ function enemyBigAttack(enemy, targets, log) {
       onEvadeSuccess(target, enemy, log);
       return { target, dmg: null, hit: false };
     }
-    let rawDmg = Math.round(rollBasicAttack(enemy.atk, effectiveStat(target, "def")) * mult);
+    let rawDmg = Math.round(rollBasicAttack(effectiveStat(enemy, "atk"), effectiveStat(target, "def")) * mult);
     let suffix = "";
     if (target.guarding) {
       rawDmg = Math.max(1, Math.round(rawDmg * 0.4));
