@@ -2862,6 +2862,11 @@ function defeat() {
       $id("tvBoss").textContent = bossH;
       $id("tvMob").textContent = mobH;
       $id("tvAlly").textContent = allyW;
+      // .enemy-rowはheight固定+overflow:hiddenのため、カードを下へドラッグすると行の下端で
+      // 切り取られて「透明の壁に沈む」見た目になる(ユーザー報告2026-08-01)。調整モード中は
+      // クリップを外して自由に動かせるようにする(本編CSSは変更しない)
+      const rowEl = document.getElementById("enemyRow");
+      if (rowEl) rowEl.style.overflow = "visible";
       if (typeof battle !== "undefined" && battle && battle.enemies) {
         battle.enemies.forEach((e) => {
           const card = findVisibleCard(e.instanceId);
