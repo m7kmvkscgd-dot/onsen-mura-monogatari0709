@@ -926,6 +926,10 @@ document.querySelectorAll(".mute-btn").forEach((btn) => {
       popover.style.display = "none";
       return;
     }
+    // 戦闘中はメニューの「タイトルに戻る」を隠す(戦闘状態を破棄したまま画面だけタイトルへ
+    // 飛べてしまい、状態不整合の温床になるため。設定とミュートはどこからでも使える)
+    const menuTitleBtn = document.getElementById("menuTitleBtn");
+    if (menuTitleBtn) menuTitleBtn.style.display = typeof battle !== "undefined" && battle ? "none" : "";
     const btnRect = e.currentTarget.getBoundingClientRect();
     popover.style.top = `${Math.round(btnRect.bottom + 8)}px`;
     // 幅を測るためvisibility:hiddenのまま先に表示し、実測してからleft/rightを決める

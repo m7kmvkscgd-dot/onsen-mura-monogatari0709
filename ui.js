@@ -1427,6 +1427,15 @@ function positionActionsBelowPartyBar(partyBarId, actionsSelector) {
         fleeBtn.style.top = `${Math.max(2, Math.round(lr.top) - btnH - 4)}px`;
         fleeBtn.style.right = `${Math.max(6, Math.round(window.innerWidth - lr.right))}px`;
       }
+      // 設定(歯車): 逃げるの左右対称=ログ枠の左上の外。テストモード中は「タイトルへ戻る」と重なるため隠す
+      const gearBtn = document.getElementById("battleMuteBtn");
+      if (gearBtn && logEl) {
+        const lr = logEl.getBoundingClientRect();
+        const gh = gearBtn.offsetHeight || 33;
+        gearBtn.style.top = `${Math.max(2, Math.round(lr.top) - gh - 4)}px`;
+        gearBtn.style.left = `${Math.max(6, Math.round(lr.left))}px`;
+        gearBtn.style.display = typeof testModeActive !== "undefined" && testModeActive ? "none" : "";
+      }
     }
     let top = Math.round(rect.bottom) + 10;
     // 【見切れ防止クランプ】ボタン列/対象選択ピッカーの下端が可視領域(innerHeight)からはみ出す場合は、

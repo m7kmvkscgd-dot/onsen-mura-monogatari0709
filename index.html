@@ -705,6 +705,8 @@
     <div class="party-bar" id="dungeonPartyBar"></div>
     <div class="dungeon-content">
       <div class="dungeon-top">
+        <!-- 設定(歯車): 探索中も設定を開けるように(2026-08-01)。共通の.mute-btn配線+設定画面の「開いた画面へ戻る」機構で完結 -->
+        <button class="mute-btn dungeon-gear" id="dungeonMuteBtn">⚙️</button>
         <div class="dungeon-info-row">
           <div class="dungeon-info-stack">
             <div class="floor-badge" id="floorBadge">
@@ -1082,6 +1084,9 @@
     <!-- 逃げる小ボタン(2026-08-01ユーザー確定「位置C」): コマンド欄から独立させ味方バーの右上に浮かせる。
          表示=renderActionButtons/非表示=clearBattleTransientForms、縦位置はpositionActionsBelowPartyBarが実測配置 -->
     <button id="battleFleeBtn" style="display:none;">🏃逃げる</button>
+    <!-- 設定(歯車): テキストボックス左上の外(逃げるの左右対称)。.mute-btnクラスでaudio.jsの共通配線に乗る。
+         位置はpositionActionsBelowPartyBarがログ実測から設定。テストモード中は「タイトルへ戻る」と重なるため非表示 -->
+    <button class="mute-btn" id="battleMuteBtn" style="display:none;">⚙️</button>
     <div class="battle-actions">
       <div class="action-grid" id="actionGrid"></div>
     </div>

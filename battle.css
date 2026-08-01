@@ -153,6 +153,20 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
   #battleFleeBtn:active { transform: scale(0.94); }
+  /* 設定(歯車、戦闘中): ログボックス左上の外=逃げるボタンの左右対称。縦位置はui.jsが実測配置 */
+  #battleMuteBtn {
+    position: fixed; left: 10px; z-index: 6;
+    font-size: 0.82rem; padding: 7px 11px;
+    border-radius: 999px; border: 1px solid rgba(217,207,184,0.55);
+    background: rgba(24,20,16,0.82); color: #d9cfb8;
+  }
+  /* 設定(歯車、探索中): 画面右上(層数バッジの反対側) */
+  .dungeon-gear {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 8px); right: 10px; z-index: 6;
+    font-size: 0.82rem; padding: 7px 11px;
+    border-radius: 999px; border: 1px solid rgba(217,207,184,0.55);
+    background: rgba(24,20,16,0.82); color: #d9cfb8;
+  }
   #battleTestExitBtn {
     position: fixed; top: 6px; left: 8px; z-index: 8;
     font-size: 11px; padding: 5px 9px;
