@@ -2822,10 +2822,10 @@ function defeat() {
 (function initSizeTuner() {
   try {
     if (!new URLSearchParams(location.search).has("sizeTuner")) return;
-    // ドラッグで動かせる要素と、そのオフセット(px)。CSSのtranslateプロパティで加算する
-    // (transformとは独立して合成されるため、味方バーの中央寄せtranslateX(-50%)を壊さない)
-    const DRAGGABLES = { enemyRow: "enemyRow", partyBar: "battlePartyBar", logBox: "battleLog" };
-    const offsets = { enemyRow: { x: 0, y: 0 }, partyBar: { x: 0, y: 0 }, logBox: { x: 0, y: 0 } };
+    // ドラッグ調整は縦方向のみ(横は動かさない、ユーザー指定)。オフセットはCSSのtranslateプロパティで
+    // 加算する(transformとは独立して合成されるため、味方バーの中央寄せtranslateX(-50%)を壊さない)。
+    // ボスと雑魚は接地位置が別々に調整できるようカード単位で分割(行ごと動かすと地面の位置が狂う)
+    const offsets = { boss: 0, mob: 0, partyBar: 0, logBox: 0 };
     let bandOff = false;
     let arrangeMode = false;
     const panel = document.createElement("div");
@@ -2838,11 +2838,12 @@ function defeat() {
         <label style="display:block;">味方カードの幅: <span id="tvAlly">95</span>px <input id="tsAlly" type="range" min="58" max="115" value="95" style="width:100%;"></label>
         <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
           <button id="tunerSummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を左右に出す</button>
+          <button id="tunerUnsummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を消す</button>
           <button id="tunerBandBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">味方の帯: あり</button>
           <button id="tunerArrangeBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">配置モード: OFF</button>
           <button id="tunerJsonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">JSON書き出し</button>
         </div>
-        <div id="tunerStatus" style="margin-top:3px;color:#9aa79f;">配置モードON中は敵列/味方バー/テキストボックスを指でドラッグできます(戦闘操作は一時停止)</div>
+        <div id="tunerStatus" style="margin-top:3px;color:#9aa79f;">配置モードON中は上下ドラッグで高さ調整: ボス/雑魚(別々)/味方バー/テキストボックス</div>
         <textarea id="tunerJsonOut" style="display:none;width:100%;height:70px;margin-top:4px;font-size:10px;background:#101014;color:#cfe;border:1px solid #444;border-radius:6px;"></textarea>
       </div>`;
     document.body.appendChild(panel);
@@ -2861,9 +2862,12 @@ function defeat() {
       if (typeof battle !== "undefined" && battle && battle.enemies) {
         battle.enemies.forEach((e) => {
           const card = findVisibleCard(e.instanceId);
-          const img = card && card.querySelector(".card-portrait-img");
+          if (!card) return;
+          const isBossType = e.isBoss || e.isMidBoss;
+          card.style.translate = `0px ${isBossType ? offsets.boss : offsets.mob}px`; // 縦のみ・ボスと雑魚は別々
+          const img = card.querySelector(".card-portrait-img");
           if (!img) return;
-          img.style.height = (e.isBoss || e.isMidBoss ? bossH : mobH) + "px";
+          img.style.height = (isBossType ? bossH : mobH) + "px";
           img.style.width = "auto";
           img.style.maxWidth = "none";
           img.style.aspectRatio = "auto";
@@ -2874,11 +2878,12 @@ function defeat() {
         el.style.maxWidth = allyW + "px";
       });
       const bar = $id("battlePartyBar");
-      if (bar) bar.style.background = bandOff ? "transparent" : "";
-      Object.keys(DRAGGABLES).forEach((key) => {
-        const el = $id(DRAGGABLES[key]);
-        if (el) el.style.translate = `${offsets[key].x}px ${offsets[key].y}px`;
-      });
+      if (bar) {
+        bar.style.background = bandOff ? "transparent" : "";
+        bar.style.translate = `0px ${offsets.partyBar}px`;
+      }
+      const logEl = $id("battleLog");
+      if (logEl) logEl.style.translate = `0px ${offsets.logBox}px`;
     };
     // 提灯童2体をボスの左右へ(本編の召喚と同じバランス挿入=gimmickDoSummonを流用)
     $id("tunerSummonBtn").onclick = () => {
@@ -2889,33 +2894,47 @@ function defeat() {
         renderBattleScreen();
       }
     };
+    // 提灯童(調整用に出した召喚雑魚)を全て消す
+    $id("tunerUnsummonBtn").onclick = () => {
+      if (typeof battle === "undefined" || !battle) return;
+      battle.enemies = battle.enemies.filter((e) => e.id !== "chochin_warabe");
+      battle.enemies.forEach((e) => { e.__enemyAllies = battle.enemies; });
+      renderBattleScreen();
+    };
     $id("tunerBandBtn").onclick = () => {
       bandOff = !bandOff;
       $id("tunerBandBtn").textContent = `味方の帯: ${bandOff ? "なし" : "あり"}`;
       apply();
     };
-    // 配置モード: 3要素をドラッグ移動可能にする(pointerイベントをキャプチャして戦闘タップと分離)
-    const dragState = { key: null, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+    // 配置モード: 上下ドラッグで高さのみ調整(横移動なし)。対象は「ボスカード」「雑魚カード(まとめて)」
+    // 「味方バー」「テキストボックス」の4系統(pointerイベントをキャプチャして戦闘タップと分離)
+    const hitKeyFor = (target) => {
+      const eCard = target.closest ? target.closest(".enemy-card") : null;
+      if (eCard && typeof battle !== "undefined" && battle) {
+        const en = battle.enemies.find((x) => String(x.instanceId) === eCard.dataset.id);
+        if (en) return en.isBoss || en.isMidBoss ? "boss" : "mob";
+      }
+      const bar = $id("battlePartyBar");
+      if (bar && (target === bar || bar.contains(target))) return "partyBar";
+      const logEl = $id("battleLog");
+      if (logEl && (target === logEl || logEl.contains(target))) return "logBox";
+      return null;
+    };
+    const dragState = { key: null, startY: 0, base: 0 };
     const onDown = (e) => {
-      if (!arrangeMode) return;
-      const hit = Object.keys(DRAGGABLES).find((key) => {
-        const el = $id(DRAGGABLES[key]);
-        return el && (e.target === el || el.contains(e.target));
-      });
+      if (!arrangeMode || panel.contains(e.target)) return;
+      const hit = hitKeyFor(e.target);
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
       dragState.key = hit;
-      dragState.startX = e.clientX;
       dragState.startY = e.clientY;
-      dragState.baseX = offsets[hit].x;
-      dragState.baseY = offsets[hit].y;
+      dragState.base = offsets[hit];
     };
     const onMove = (e) => {
       if (!arrangeMode || !dragState.key) return;
       e.preventDefault();
-      offsets[dragState.key].x = Math.round(dragState.baseX + e.clientX - dragState.startX);
-      offsets[dragState.key].y = Math.round(dragState.baseY + e.clientY - dragState.startY);
+      offsets[dragState.key] = Math.round(dragState.base + e.clientY - dragState.startY);
       apply();
     };
     const onUp = () => { dragState.key = null; };
@@ -2925,10 +2944,9 @@ function defeat() {
     $id("tunerArrangeBtn").onclick = () => {
       arrangeMode = !arrangeMode;
       $id("tunerArrangeBtn").textContent = `配置モード: ${arrangeMode ? "ON" : "OFF"}`;
-      Object.values(DRAGGABLES).forEach((elId) => {
-        const el = $id(elId);
-        if (el) el.style.outline = arrangeMode ? "1px dashed rgba(215,182,111,0.8)" : "";
-      });
+      const outline = arrangeMode ? "1px dashed rgba(215,182,111,0.8)" : "";
+      ["battlePartyBar", "battleLog"].forEach((elId) => { const el = $id(elId); if (el) el.style.outline = outline; });
+      document.querySelectorAll(".enemy-card").forEach((el) => { el.style.outline = outline; });
     };
     // 調整結果のJSON書き出し(テキストエリア表示+クリップボードコピー試行)
     $id("tunerJsonBtn").onclick = () => {
@@ -2943,7 +2961,7 @@ function defeat() {
         mobH: Number($id("tsMob").value),
         allyCardW: Number($id("tsAlly").value),
         allyBarBand: !bandOff,
-        dragOffsets: offsets,
+        yOffsets: offsets, // boss/mob/partyBar/logBox それぞれの上下移動量(px、マイナス=上へ)
         rects: { enemyRow: rect("enemyRow"), partyBar: rect("battlePartyBar"), logBox: rect("battleLog") },
         viewport: { w: window.innerWidth, h: window.innerHeight },
       };
