@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>モック: 第二形態移行の演出デモ(音付き)</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14181b; color: #ece8dc; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  .scene { position: sticky; top: 0; z-index: 10; height: 440px; overflow: hidden; box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
+  .shakebox { position: absolute; inset: 0; }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center 30%;
+    transition: filter 0.8s ease; }
+  #bg1 { background-image: url('assets/bg/suzunari_gake.jpg'); }
+  #bg2 { background-image: url('assets/bg/suzunari_gake_phase2.jpg'); opacity: 0; }
+  .dimmer { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(20,24,27,0.15), rgba(20,24,27,0.5) 60%, rgba(20,24,27,0.75)); }
+  .logbox { position: absolute; top: 8px; left: 12px; right: 12px; z-index: 3;
+    border: 2px solid #8a7448; border-radius: 10px; background: rgba(16,13,10,0.82);
+    min-height: 46px; padding: 7px 11px; font-size: 0.74rem; color: #d9cfb8; }
+  .bosswrap { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); z-index: 2; text-align: center;
+    transition: transform 1.2s ease, filter 1.2s ease; }
+  .bosswrap img { width: 170px; display: block; margin: 0 auto; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.5)); }
+  .bosswrap .nm { font-size: 0.82rem; font-weight: 700; text-shadow: 0 1px 3px #000; margin-top: 2px; }
+  .hpbar { width: 190px; height: 12px; border-radius: 99px; background: #3a3a3a; margin: 5px auto 0;
+    border: 1px solid rgba(0,0,0,0.75); overflow: hidden; }
+  .hpbar i { display: block; height: 100%; width: 49%; background: #e0a83a; }
+
+  /* 演出レイヤー */
+  .blackout { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 4; pointer-events: none; transition: opacity 1s ease; }
+  .whiteflash { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 7; pointer-events: none; }
+  .vignette { position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(120,10,10,0) 50%, rgba(120,10,10,0.55) 100%); }
+  .linesov { position: absolute; inset: 0; z-index: 6; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55); }
+  .linesov.on { display: flex; }
+  .linesbox { padding: 1rem 1.4rem; text-align: center; }
+  .linesbox p { margin: 0.7rem 0; font-size: 1rem; font-weight: 700; color: #f3ede0; text-shadow: 0 2px 6px #000; opacity: 0; }
+  .taphint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 0.7rem; color: #bdb49e; }
+
+  @keyframes shakeHard { 0%,100% { transform: translate(0,0); } 15% { transform: translate(-7px,4px); } 30% { transform: translate(6px,-5px); } 45% { transform: translate(-5px,-3px); } 60% { transform: translate(5px,4px); } 75% { transform: translate(-3px,2px); } 90% { transform: translate(2px,-2px); } }
+  .shake { animation: shakeHard 0.55s ease; }
+
+  .panel { padding: 0.7rem 0.9rem 3rem; }
+  .panel button.case { width: 100%; padding: 0.6rem 0.8rem; margin-bottom: 0.35rem; border-radius: 9px;
+    border: 1px solid #4a505a; background: #232830; color: #ece8dc; font-size: 0.85rem; font-weight: 700; text-align: left; }
+  .panel button.case:active { background: #2e3540; }
+  .panel button.case small { display: block; font-weight: 400; font-size: 10.5px; color: #9aa79f; line-height: 1.45; margin-top: 2px; }
+  .panel .startrow { display: flex; gap: 0.4rem; margin-bottom: 0.55rem; }
+  .panel .startrow button { flex: 1; padding: 0.6rem 0; border-radius: 9px; border: 1px solid #6d5a35; background: #3a3020; color: #f0e2b8; font-size: 0.85rem; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scene" id="scene">
+    <div class="shakebox" id="shakebox">
+      <div class="bg" id="bg1"></div>
+      <div class="bg" id="bg2"></div>
+      <div class="dimmer"></div>
+      <div class="bosswrap" id="bosswrap">
+        <img id="bossimg" src="assets/enemies/amayome_shiranui.png">
+        <div class="nm">鈴鳴の花嫁・お鈴</div>
+        <div class="hpbar"><i></i></div>
+      </div>
+      <div class="logbox" id="logbox">HPが50%を切った——(下のボタンで移行演出を再生)</div>
+      <div class="vignette" id="vignette"></div>
+      <div class="blackout" id="blackout"></div>
+      <div class="linesov" id="linesov"><div class="linesbox" id="linesbox"></div><div class="taphint">タップで全部表示→もう一度で進む</div></div>
+      <div class="whiteflash" id="whiteflash"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="startrow">
+      <button onclick="startIntro()">▶ 戦闘開始(導入曲)</button>
+      <button onclick="resetAll()">↺ リセット</button>
+    </div>
+    <button class="case" onclick="run(1)">案1: 静寂の断ち切り(現行実装ベース)<small>曲を即断→0.6秒の無音→口上→口上明けに絵・背景切替と同時に本命曲が頭から爆発</small></button>
+    <button class="case" onclick="run(2)">案2: 口上の最後で曲が走り出す(方針書準拠)<small>無音の中で口上1行ずつ→3行目が出た瞬間に本命曲スタート→曲が走る中で変身</small></button>
+    <button class="case" onclick="run(3)">案3: 暗転からの解放<small>画面が完全に闇へ沈む→闇の中で口上→白フラッシュ+本命曲+強シェイクで第二形態が現れる</small></button>
+    <button class="case" onclick="run(4)">案4: 迫り寄る静寂<small>無音の間、お鈴へゆっくりズーム+色が抜けていく→口上→弾けて戻ると同時に変身+本命曲</small></button>
+  </div>
+</div>
+
+<script>
+const LINES = [
+  "……また、私を置いていくのですか",
+  "ならば、この峠から誰ひとり帰しません",
+  "鈴も、灯りも、皆そろいました――今度こそ、あなたを花婿に",
+];
+const intro = new Audio("assets/bgm/boss_intro_bgm.mp3"); intro.loop = true;
+const climax = new Audio("assets/bgm/yokai_no_shutai.mp3"); climax.loop = true;
+let running = false;
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function startIntro() {
+  resetVisual();
+  climax.pause();
+  intro.currentTime = 0;
+  intro.play().catch(() => {});
+  $("logbox").textContent = "第一形態: 導入曲が流れています。HPが50%を切った——(演出ボタンをどうぞ)";
+}
+function resetAll() {
+  running = false;
+  intro.pause(); climax.pause();
+  resetVisual();
+  $("logbox").textContent = "HPが50%を切った——(下のボタンで移行演出を再生)";
+}
+function resetVisual() {
+  $("bg2").style.opacity = "0";
+  $("bg1").style.filter = "";
+  $("bossimg").src = "assets/enemies/amayome_shiranui.png";
+  $("bosswrap").style.transform = "translate(-50%, -50%)";
+  $("bosswrap").style.filter = "";
+  $("blackout").style.opacity = "0";
+  $("vignette").style.opacity = "0";
+  $("linesov").classList.remove("on");
+}
+function startClimax() {
+  climax.currentTime = 0;
+  climax.play().catch(() => {});
+}
+function swapToPhase2() {
+  $("bg2").style.opacity = "1";
+  $("bossimg").src = "assets/enemies/amayome_shiranui_phase2.png";
+}
+function shake() {
+  const b = $("shakebox");
+  b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+}
+function whiteFlash(ms) {
+  const f = $("whiteflash");
+  f.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }], { duration: ms, easing: "ease" });
+}
+function vignettePulse() {
+  $("vignette").animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0.55, offset: 0.7 }, { opacity: 0 }], { duration: 1600, easing: "ease" });
+}
+function announce() {
+  $("logbox").textContent = "峠に再び強い雨が降り始めた。提灯の灯りが、嫁入り行列となってお鈴を取り囲む！";
+}
+// 口上: 1.3秒ごとに1行ずつ。タップで残り全表示→もう一度タップで終了。
+// onLastLine=3行目が「表示された瞬間」のフック(案2の曲出し用)
+function playLines(onLastLine) {
+  return new Promise((resolve) => {
+    const ov = $("linesov"), box = $("linesbox");
+    box.innerHTML = LINES.map((l) => `<p>「${l}」</p>`).join("");
+    const ps = [...box.querySelectorAll("p")];
+    ov.classList.add("on");
+    let shown = 0, done = false;
+    const timers = [];
+    const showNext = () => {
+      if (shown >= ps.length) return;
+      const p = ps[shown++];
+      p.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 450, easing: "ease-out", fill: "forwards" });
+      p.style.opacity = "1";
+      if (shown === ps.length && onLastLine) onLastLine();
+    };
+    const finish = () => {
+      if (done) return;
+      done = true;
+      timers.forEach(clearTimeout);
+      ov.classList.remove("on");
+      ov.onclick = null;
+      resolve();
+    };
+    ov.onclick = () => {
+      if (shown < ps.length) { while (shown < ps.length) showNext(); }
+      else finish();
+    };
+    showNext();
+    for (let i = 1; i < ps.length; i++) timers.push(setTimeout(showNext, i * 1300));
+    timers.push(setTimeout(finish, ps.length * 1300 + 2600));
+  });
+}
+
+async function run(pattern) {
+  if (running) return;
+  running = true;
+  resetVisual();
+  climax.pause();
+  $("logbox").textContent = "お鈴の様子が変わった……";
+  if (pattern === 1) {
+    intro.pause();
+    await sleep(600);
+    await playLines();
+    swapToPhase2(); startClimax(); shake(); vignettePulse();
+    announce();
+  } else if (pattern === 2) {
+    intro.pause();
+    await sleep(800);
+    await playLines(() => startClimax()); // 3行目が出た瞬間に本命曲
+    swapToPhase2(); shake(); vignettePulse();
+    announce();
+  } else if (pattern === 3) {
+    intro.pause();
+    await sleep(400);
+    $("blackout").style.opacity = "1"; // 完全な闇へ
+    await sleep(1000);
+    await playLines();
+    whiteFlash(700);
+    await sleep(180); // フラッシュが乗り切った瞬間に切替(明けたら第二形態)
+    swapToPhase2();
+    $("blackout").style.opacity = "0";
+    startClimax(); shake(); vignettePulse();
+    announce();
+  } else if (pattern === 4) {
+    intro.pause();
+    $("bosswrap").style.transform = "translate(-50%, -50%) scale(1.14)";
+    $("bosswrap").style.filter = "saturate(0.4) brightness(0.85)";
+    $("bg1").style.filter = "saturate(0.35) brightness(0.7)";
+    await sleep(700);
+    await playLines();
+    $("bosswrap").style.transition = "transform 0.18s ease, filter 0.18s ease";
+    $("bosswrap").style.transform = "translate(-50%, -50%)";
+    $("bosswrap").style.filter = "";
+    $("bg1").style.filter = "";
+    await sleep(180);
+    swapToPhase2(); startClimax(); shake(); vignettePulse();
+    $("bosswrap").style.transition = "transform 1.2s ease, filter 1.2s ease";
+    announce();
+  }
+  running = false;
+}
+</script>
+</body>
+</html>
