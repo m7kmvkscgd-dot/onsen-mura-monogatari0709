@@ -45,6 +45,14 @@
   .foe.mob img { height: 88px; }
   .foe.mob .hp { width: 56px; height: 5px; margin: 2px auto 0; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.8); border: 1px solid rgba(0,0,0,0.7); }
   .foe.mob .hp i { display: block; height: 100%; width: 90%; background: #4caf6f; }
+  /* 雑魚戦: ボス不在なので雑魚を主役サイズに。名前+HPバーを足元へ */
+  .foe.normal { margin: 0 4px; }
+  .foe.normal img { height: 134px; }
+  .foe.normal .nm { font-size: 0.74rem; font-weight: 700; text-shadow: 0 1px 3px #000; margin-top: 1px; }
+  .foe.normal .hp { width: 84px; height: 6px; margin: 3px auto 0; border-radius: 99px; overflow: hidden; background: rgba(20,16,12,0.85); border: 1px solid rgba(0,0,0,0.7); }
+  .foe.normal .hp i { display: block; height: 100%; width: 100%; background: #4caf6f; }
+  #modeBtn { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2%); left: 8px; z-index: 8;
+    font-size: 0.66rem; padding: 5px 9px; border-radius: 8px; border: 1px solid #6d5a35; background: rgba(38,30,18,0.9); color: #f0e2b8; }
 
   /* ── 味方: 箱と帯を廃止、霞の上に立ち絵+細い2連バー ── */
   #allies { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 4; display: flex; justify-content: center; gap: 22px; }
@@ -100,6 +108,11 @@
     <div class="foe boss" id="bossFoe"><img src="assets/enemies/amayome_shiranui.png"><div class="ground" style="width:74%;"></div></div>
     <div class="foe mob"><img src="assets/enemies/clear/chochin_warabe.png"><div class="ground"></div><div class="hp"><i></i></div></div>
   </div>
+  <div id="enemyStageMobs" style="display:none; position:absolute; top:24%; left:0; right:0; z-index:2; justify-content:center; align-items:flex-end;">
+    <div class="foe normal"><img src="assets/enemies/clear/kodama.png"><div class="ground"></div><div class="nm">木霊</div><div class="hp"><i></i></div></div>
+    <div class="foe normal" id="mobTarget"><img src="assets/enemies/clear/chochin_obake.png"><div class="ground"></div><div class="nm">提灯おばけ</div><div class="hp"><i id="mobHp"></i></div></div>
+    <div class="foe normal"><img src="assets/enemies/clear/kamaitachi.png"><div class="ground"></div><div class="nm">かまいたち</div><div class="hp"><i></i></div></div>
+  </div>
 
   <div id="allies">
     <div class="hero acting"><div class="ring"></div><img class="face" src="assets/class_samurai.png"><div class="nm">権兵衛</div><div class="bars"><div class="hp"><i></i></div><div class="mp"><i></i></div></div></div>
@@ -114,6 +127,7 @@
     <button class="fuda">交代</button>
   </div>
 
+  <button id="modeBtn" onclick="toggleMode()">雑魚戦を見る</button>
   <button id="noteBtn" onclick="document.getElementById('notes').classList.toggle('on')">設計意図</button>
   <div id="notes" onclick="this.classList.remove('on')">
     <h2>プロデューサー案「舞台型UI」の設計意図(タップで閉じる)</h2>
@@ -129,12 +143,29 @@
 </div>
 
 <script>
-let hp = 100;
+let hp = 100, mobHp = 100, bossMode = true;
+function toggleMode() {
+  bossMode = !bossMode;
+  document.getElementById("enemyStage").style.display = bossMode ? "flex" : "none";
+  document.getElementById("enemyStageMobs").style.display = bossMode ? "none" : "flex";
+  document.getElementById("bossPlate").style.display = bossMode ? "" : "none";
+  document.getElementById("modeBtn").textContent = bossMode ? "雑魚戦を見る" : "ボス戦を見る";
+  document.getElementById("ticker").textContent = bossMode
+    ? "お鈴が銀の鈴を鳴らした。赤い組紐が、静かに獲物を探し始める…！"
+    : "深淵の森で妖怪の群れに遭遇した！";
+}
 function demoAttack() {
-  hp = Math.max(6, hp - 9);
-  document.getElementById("bossHp").style.width = hp + "%";
-  const boss = document.querySelector("#bossFoe img");
-  boss.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.9)", offset: 0.25 }, { filter: "brightness(1)" }], { duration: 300 });
+  if (bossMode) {
+    hp = Math.max(6, hp - 9);
+    document.getElementById("bossHp").style.width = hp + "%";
+    const boss = document.querySelector("#bossFoe img");
+    boss.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.9)", offset: 0.25 }, { filter: "brightness(1)" }], { duration: 300 });
+  } else {
+    mobHp = Math.max(4, mobHp - 16);
+    document.getElementById("mobHp").style.width = mobHp + "%";
+    const m = document.querySelector("#mobTarget img");
+    m.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.9)", offset: 0.25 }, { filter: "brightness(1)" }], { duration: 300 });
+  }
 }
 function demoSkill() {
   const hero = document.querySelector(".hero.acting");
