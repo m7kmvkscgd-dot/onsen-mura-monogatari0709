@@ -39,13 +39,14 @@
   questRouteFlavorShown = {};
   retreating = false;
   dungeonLogLines = [];
-  currentFloor = 3;
+  // 12層再配分(2026-08-01)後の区間割: 1/4/8/11。「提灯」のフレーバーは第2区間(4層〜)のもの
+  currentFloor = 4;
   maybeShowQuestRouteFlavor();
   check("区間開始層でフレーバーが流れる", dungeonLogLines.some((l) => l.includes("誰も持っていない提灯")));
   const countAfterFirst = dungeonLogLines.length;
   maybeShowQuestRouteFlavor();
   check("同じ区間で二度は流れない", dungeonLogLines.length === countAfterFirst);
-  currentFloor = 4;
+  currentFloor = 5; // 同じ第2区間の途中の層
   maybeShowQuestRouteFlavor();
   check("区間の途中の層では流れない", dungeonLogLines.length === countAfterFirst);
   currentStage = "forest";
@@ -86,9 +87,15 @@
     check("赤緒の周期前は誰も拘束されない", fieldParty.every((c) => !(c.stunTurns > 0)));
     processGimmickRoundEffects(() => {});
     check("3ラウンド目で味方1人が拘束される", fieldParty.filter((c) => c.stunTurns > 0).length === 1);
+    // 【2026-08-02更新】行列(tomurai)は旧HP60%トリガーから「第二形態(1本目HP0で変身)」へ移行済み。
+    // HP判定はsecondForm側が一元管理し、trigger:"secondForm"は自力発動しない(gimmicks.js参照)。
+    // ここでは①HPを削っただけでは起動しないこと ②第二形態シーケンスの締めと同じ
+    // activateGimmickEntry直接発動で提灯童2体が湧くこと、を現行仕様として検証する
     b.hp = Math.floor(b.maxHp * 0.5);
     processGimmickTriggers();
-    check("HP60%未満で行列が起動+提灯童2体", battle.gimmicks.find((g) => g.def.id === "tomurai").active && battle.enemies.filter((e) => e.id === "chochin_warabe").length === 2);
+    check("HP半減では行列はまだ起動しない(第二形態トリガー)", !battle.gimmicks.find((g) => g.def.id === "tomurai").active);
+    activateGimmickEntry(battle.gimmicks.find((g) => g.def.id === "tomurai"));
+    check("第二形態の締めで行列が起動+提灯童2体", battle.gimmicks.find((g) => g.def.id === "tomurai").active && battle.enemies.filter((e) => e.id === "chochin_warabe").length === 2);
     processGimmickRoundEffects(() => {});
     check("提灯童がいる間は被ダメ軽減が掛かる", b.statMods.some((m) => m.stat === "dmgTaken" && m.mult === 0.7));
     battle.enemies.forEach((e) => { if (e.id === "chochin_warabe") e.hp = 0; });
@@ -165,7 +172,7 @@
   // F: クエストテスト(タイトルの開発ツール)。抽選なしで受注→出発し、1層目のフレーバーまで流れる
   function runQuestTesterCase() {
     console.log("--- F: クエストテスターとタイトル整理 ---");
-    check("タイトルのdevグリッドに4ボタン", document.querySelectorAll(".title-dev-grid .title-menu-btn").length === 4);
+    check("タイトルのdevグリッドに5ボタン(UI調整トグル追加2026-08-01)", document.querySelectorAll(".title-dev-grid .title-menu-btn").length === 5);
     check("クエストテストボタンがある", !!document.getElementById("titleQuestTestBtn"));
     battle = null;
     renderQuestTestScreen();
@@ -184,10 +191,12 @@
   // G: 影盗り宿の十三号室(第2号)のデータ整合+十三枚目の席ギミック(round3毎に影法師召喚+拘束)
   function runKagegiCase() {
     console.log("--- G: 影盗り宿の十三号室のデータ整合とギミック ---");
+    // 【2026-08-02更新】影盗り宿は2026-08-01に廃案→休眠(QUEST_DEFSから除外、敵/ルート/背景データは残置)。
+    // 「奉行所に再掲載されないこと」と「休眠データが壊れていないこと」を現行仕様として検証する
     const qDef2 = QUEST_DEFS.kagegui_sakazuki;
     const route2 = QUEST_ROUTE_DEFS.tsukikage_yado;
-    check("依頼がルートに紐付く", !!qDef2 && qDef2.route === "tsukikage_yado" && !!route2);
-    check("ボスは最終層に配置", qDef2.targetFloor === route2.totalFloors);
+    check("依頼は休眠中(QUEST_DEFSに存在しない=奉行所に出ない)", !qDef2);
+    check("ルート/ボスの休眠データは残置", !!route2 && !!ENEMIES.kagegui_sakazuki);
     check("区間4つ・fromFloor昇順", route2.segments.length === 4 && route2.segments.every((s, i) => i === 0 || s.fromFloor > route2.segments[i - 1].fromFloor));
     check("区間の敵IDが実在する", route2.segments.every((s) => (s.enemies || []).every((id) => !!ENEMIES[id])));
     const boss2 = ENEMIES.kagegui_sakazuki;
@@ -254,7 +263,8 @@
     const bossBgm = instantiateEnemyById("hyakumenshi_utsuro");
     battle = { enemies: [bossBgm], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };
     playBattleBgm();
-    check("ルート上のボス戦はボス曲を流す(2026-08-01仕様変更)", currentBgmKey === "boss_battle");
+    // うつろはhpBelowギミック持ち=二段BGMボス扱いで導入曲(boss_battle_intro)から始まる(2026-08-01ボスBGM二段化)
+    check("ルート上のボス戦はボス導入曲を流す(ボスBGM二段化2026-08-01)", currentBgmKey === "boss_battle_intro");
     // 通常戦闘は従来どおりルート曲が途切れず流れ続ける
     const normalBgm = instantiateEnemyById("yaken");
     battle = { enemies: [normalBgm], order: [], orderIndex: 0, actingId: null, actingEnemyId: null, goldMult: 1, justAppeared: true, omamoriUsed: {}, omikujiGuaranteedCritsLeft: 0, swapCooldown: 0, roundsTotal: 0, presence: {} };

@@ -626,6 +626,11 @@ function nextRound(forceFirstStrike) {
 function processNext() {
   // 煙玉等で戦闘が終了した後、直前にsetTimeoutで予約されていたターン処理が遅れて発火してもクラッシュしないための保険
   if (!battle) return;
+  // 【リロード巻き戻し対策(2026-08-02)】全ターンの節目でセーブする。従来は戦闘開始時にしか
+  // 保存されず、「被ダメ・MP消費してからリロード」で戦闘開始時のHP/MPへ巻き戻せた(受けた損害の
+  // 帳消し)。ここで毎ターン保存することで、リロードしても直前ターンまでの損害・消費が残る
+  // (戦闘そのものの完全復元はしない=リロード後は従来どおり仕切り直し)
+  saveState();
   battle.actingId = null;
   battle.actingEnemyId = null;
   // ボス第二形態(secondForm、gimmicks.js): HP50%を切った直後の手番の節目に、進行を止めて
@@ -2536,8 +2541,11 @@ function afterPlayerAction() {
   autoDeployReserveIfNeeded(newlyCritical, () => {
     if (!battle) return;
     // 百花繚乱(2026-07-30): 行動終了時、50%の確率でもう一度行動できる(1手番につき追加は1回まで。
-    // 追加行動は攻撃/技/道具など何でも選べる=通常の行動選択メニューをそのまま出し直す)
-    const actor = battle.order[battle.orderIndex];
+    // 追加行動は攻撃/技/道具など何でも選べる=通常の行動選択メニューをそのまま出し直す)。
+    // 【2026-08-02修正】battle.order[orderIndex]ではなくactingId(実際に今行動したキャラ)で判定する:
+    // 同ターンに交代した場合、orderの要素は「下がった側」のままで、控えへ下がったキャラに
+    // 追加行動メニューが開いてしまう(戦場外のキャラで行動できる)バグがあった
+    const actor = fieldParty.find((c) => c.id === battle.actingId);
     if (actor && actor.instanceId === undefined && actor.hyakkaActive && !actor.__hyakkaExtraUsedThisTurn &&
         actor.hp > 0 && actor.status === "active" && actor.fleeState !== "fled" && aliveEnemies().length > 0 && Math.random() < 0.5) {
       actor.__hyakkaExtraUsedThisTurn = true;
