@@ -78,6 +78,11 @@
       <button onclick="startIntro()">▶ 戦闘開始(導入曲)</button>
       <button onclick="resetAll()">↺ リセット</button>
     </div>
+    <div class="startrow">
+      <button onclick="hearThunder('a')">⚡雷A(ドン…ゴロゴロ)を単体で聴く</button>
+      <button onclick="hearThunder('b')">⚡雷B(ゴロゴロー…)を単体で聴く</button>
+    </div>
+    <p style="font-size:0.7rem;color:#9aa79f;margin:0 0 0.5rem;">案3の演出では現在「雷A」を使用。Bが良ければ切り替えます。</p>
     <button class="case" onclick="run(1)">案1: 静寂の断ち切り(現行実装ベース)<small>曲を即断→0.6秒の無音→口上→口上明けに絵・背景切替と同時に本命曲が頭から爆発</small></button>
     <button class="case" onclick="run(2)">案2: 口上の最後で曲が走り出す(方針書準拠)<small>無音の中で口上1行ずつ→3行目が出た瞬間に本命曲スタート→曲が走る中で変身</small></button>
     <button class="case" onclick="run(3)">案3: 暗転からの解放(改)<small>闇の中で口上を1文ずつ(出ては消える)→最後の文が出た瞬間に本命曲→白フラッシュ+強シェイクで第二形態</small></button>
@@ -93,7 +98,14 @@ const LINES = [
 ];
 const intro = new Audio("assets/bgm/boss_intro_bgm.mp3"); intro.loop = true;
 const climax = new Audio("assets/bgm/yokai_no_shutai.mp3"); climax.loop = true;
-const thunder = new Audio("assets/sfx/phase2_thunder.mp3"); // 解放の瞬間の雷鳴(合成SE)
+const thunder = new Audio("assets/sfx/phase2_thunder.mp3"); // 解放の瞬間の雷鳴(合成SE・雷A)
+const thunderB = new Audio("assets/sfx/phase2_thunder_b.mp3"); // 聴き比べ用の雷B
+function hearThunder(kind) {
+  const a = kind === "b" ? thunderB : thunder;
+  thunder.pause(); thunderB.pause();
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
 let running = false;
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
