@@ -2822,27 +2822,42 @@ function defeat() {
 (function initSizeTuner() {
   try {
     if (!new URLSearchParams(location.search).has("sizeTuner")) return;
+    // ドラッグで動かせる要素と、そのオフセット(px)。CSSのtranslateプロパティで加算する
+    // (transformとは独立して合成されるため、味方バーの中央寄せtranslateX(-50%)を壊さない)
+    const DRAGGABLES = { enemyRow: "enemyRow", partyBar: "battlePartyBar", logBox: "battleLog" };
+    const offsets = { enemyRow: { x: 0, y: 0 }, partyBar: { x: 0, y: 0 }, logBox: { x: 0, y: 0 } };
+    let bandOff = false;
+    let arrangeMode = false;
     const panel = document.createElement("div");
     panel.style.cssText = "position:fixed;bottom:8px;left:8px;right:8px;z-index:99;background:rgba(16,16,20,0.92);border:1px solid #6d5a35;border-radius:10px;padding:8px 10px;font-size:11px;color:#ece8dc;";
     panel.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;"><strong>サイズ調整(実機・戦闘画面で有効)</strong><button id="tunerMinBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;">最小化</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;"><strong>調整モード(実機・戦闘画面で有効)</strong><button id="tunerMinBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;">最小化</button></div>
       <div id="tunerBody">
         <label style="display:block;">ボス立ち絵の高さ: <span id="tvBoss">150</span>px <input id="tsBoss" type="range" min="100" max="300" value="150" style="width:100%;"></label>
         <label style="display:block;">雑魚立ち絵の高さ: <span id="tvMob">101</span>px <input id="tsMob" type="range" min="60" max="150" value="101" style="width:100%;"></label>
         <label style="display:block;">味方カードの幅: <span id="tvAlly">95</span>px <input id="tsAlly" type="range" min="58" max="115" value="95" style="width:100%;"></label>
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+          <button id="tunerSummonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">提灯童を左右に出す</button>
+          <button id="tunerBandBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">味方の帯: あり</button>
+          <button id="tunerArrangeBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">配置モード: OFF</button>
+          <button id="tunerJsonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">JSON書き出し</button>
+        </div>
+        <div id="tunerStatus" style="margin-top:3px;color:#9aa79f;">配置モードON中は敵列/味方バー/テキストボックスを指でドラッグできます(戦闘操作は一時停止)</div>
+        <textarea id="tunerJsonOut" style="display:none;width:100%;height:70px;margin-top:4px;font-size:10px;background:#101014;color:#cfe;border:1px solid #444;border-radius:6px;"></textarea>
       </div>`;
     document.body.appendChild(panel);
-    document.getElementById("tunerMinBtn").onclick = () => {
-      const body = document.getElementById("tunerBody");
+    const $id = (i) => document.getElementById(i);
+    $id("tunerMinBtn").onclick = () => {
+      const body = $id("tunerBody");
       body.style.display = body.style.display === "none" ? "" : "none";
     };
     const apply = () => {
-      const bossH = document.getElementById("tsBoss").value;
-      const mobH = document.getElementById("tsMob").value;
-      const allyW = document.getElementById("tsAlly").value;
-      document.getElementById("tvBoss").textContent = bossH;
-      document.getElementById("tvMob").textContent = mobH;
-      document.getElementById("tvAlly").textContent = allyW;
+      const bossH = $id("tsBoss").value;
+      const mobH = $id("tsMob").value;
+      const allyW = $id("tsAlly").value;
+      $id("tvBoss").textContent = bossH;
+      $id("tvMob").textContent = mobH;
+      $id("tvAlly").textContent = allyW;
       if (typeof battle !== "undefined" && battle && battle.enemies) {
         battle.enemies.forEach((e) => {
           const card = findVisibleCard(e.instanceId);
@@ -2858,8 +2873,93 @@ function defeat() {
         el.style.flexBasis = allyW + "px";
         el.style.maxWidth = allyW + "px";
       });
+      const bar = $id("battlePartyBar");
+      if (bar) bar.style.background = bandOff ? "transparent" : "";
+      Object.keys(DRAGGABLES).forEach((key) => {
+        const el = $id(DRAGGABLES[key]);
+        if (el) el.style.translate = `${offsets[key].x}px ${offsets[key].y}px`;
+      });
     };
-    ["tsBoss", "tsMob", "tsAlly"].forEach((id) => document.getElementById(id).addEventListener("input", apply));
+    // 提灯童2体をボスの左右へ(本編の召喚と同じバランス挿入=gimmickDoSummonを流用)
+    $id("tunerSummonBtn").onclick = () => {
+      if (typeof battle === "undefined" || !battle) { $id("tunerStatus").textContent = "先に戦闘(ボステスト等)を開始してください"; return; }
+      const boss = battle.enemies.find((e) => e.isBoss || e.isMidBoss) || battle.enemies[0];
+      if (typeof gimmickDoSummon === "function") {
+        gimmickDoSummon({ enemyId: "chochin_warabe", count: 2, maxAlive: 99 }, boss);
+        renderBattleScreen();
+      }
+    };
+    $id("tunerBandBtn").onclick = () => {
+      bandOff = !bandOff;
+      $id("tunerBandBtn").textContent = `味方の帯: ${bandOff ? "なし" : "あり"}`;
+      apply();
+    };
+    // 配置モード: 3要素をドラッグ移動可能にする(pointerイベントをキャプチャして戦闘タップと分離)
+    const dragState = { key: null, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+    const onDown = (e) => {
+      if (!arrangeMode) return;
+      const hit = Object.keys(DRAGGABLES).find((key) => {
+        const el = $id(DRAGGABLES[key]);
+        return el && (e.target === el || el.contains(e.target));
+      });
+      if (!hit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragState.key = hit;
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+      dragState.baseX = offsets[hit].x;
+      dragState.baseY = offsets[hit].y;
+    };
+    const onMove = (e) => {
+      if (!arrangeMode || !dragState.key) return;
+      e.preventDefault();
+      offsets[dragState.key].x = Math.round(dragState.baseX + e.clientX - dragState.startX);
+      offsets[dragState.key].y = Math.round(dragState.baseY + e.clientY - dragState.startY);
+      apply();
+    };
+    const onUp = () => { dragState.key = null; };
+    document.addEventListener("pointerdown", onDown, true); // capture=戦闘側のタップ処理より先に奪う
+    document.addEventListener("pointermove", onMove, { passive: false });
+    document.addEventListener("pointerup", onUp);
+    $id("tunerArrangeBtn").onclick = () => {
+      arrangeMode = !arrangeMode;
+      $id("tunerArrangeBtn").textContent = `配置モード: ${arrangeMode ? "ON" : "OFF"}`;
+      Object.values(DRAGGABLES).forEach((elId) => {
+        const el = $id(elId);
+        if (el) el.style.outline = arrangeMode ? "1px dashed rgba(215,182,111,0.8)" : "";
+      });
+    };
+    // 調整結果のJSON書き出し(テキストエリア表示+クリップボードコピー試行)
+    $id("tunerJsonBtn").onclick = () => {
+      const rect = (elId) => {
+        const el = $id(elId);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
+      };
+      const data = {
+        bossH: Number($id("tsBoss").value),
+        mobH: Number($id("tsMob").value),
+        allyCardW: Number($id("tsAlly").value),
+        allyBarBand: !bandOff,
+        dragOffsets: offsets,
+        rects: { enemyRow: rect("enemyRow"), partyBar: rect("battlePartyBar"), logBox: rect("battleLog") },
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+      };
+      const json = JSON.stringify(data, null, 1);
+      const out = $id("tunerJsonOut");
+      out.style.display = "";
+      out.value = json;
+      out.select();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(json).then(
+          () => { $id("tunerStatus").textContent = "JSONをコピーしました。そのままClaudeへ貼り付けてください"; },
+          () => { $id("tunerStatus").textContent = "コピー失敗。下のテキストを長押しでコピーしてください"; }
+        );
+      }
+    };
+    ["tsBoss", "tsMob", "tsAlly"].forEach((id) => $id(id).addEventListener("input", apply));
     setInterval(apply, 400);
   } catch (e) {} // 開発ツールの失敗で本編を止めない
 })();
