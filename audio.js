@@ -791,6 +791,35 @@ function playSfx(name) {
     start();
   }
 }
+// 任意URLのSEをGainNode経由で鳴らす(VFXエディタ割り当てのDOT演出SE等、SFX_EXT登録外の素材用)。
+// iOSは<audio>.volumeを無視するため、new Audio+volume直指定では実機で満音量になっていた(2026-08-02修正)。
+// 初回はデコードに時間がかかるためその回は鳴らない(playSfxの「デコード未了なら無音で諦める」と同じ方針)
+const urlSfxBuffers = {};
+function playSfxFromUrl(url, gainValue) {
+  if (!url || masterBgmVolume === 0 || !sfxAudioCtx) return;
+  const buffer = urlSfxBuffers[url];
+  if (buffer === undefined) {
+    urlSfxBuffers[url] = null; // デコード中マーカー(多重fetch防止)
+    fetch(url).then((r) => r.arrayBuffer()).then((ab) => sfxAudioCtx.decodeAudioData(ab))
+      .then((b) => { urlSfxBuffers[url] = b; }).catch(() => { delete urlSfxBuffers[url]; });
+    return;
+  }
+  if (!buffer) return; // デコード中
+  const start = () => {
+    const source = sfxAudioCtx.createBufferSource();
+    source.buffer = buffer;
+    if (gainValue != null && gainValue !== 1) {
+      const g = sfxAudioCtx.createGain();
+      g.gain.value = gainValue;
+      source.connect(g).connect(sfxAudioCtx.destination);
+    } else {
+      source.connect(sfxAudioCtx.destination);
+    }
+    source.start(0);
+  };
+  if (sfxAudioCtx.state === "suspended") sfxAudioCtx.resume().then(start).catch(() => {});
+  else start();
+}
 // ページがバックグラウンドから復帰した瞬間にもAudioContextの復旧を試みておく(念のための保険)。
 // bgmAudioも、SE再生時のオーディオフォーカス関連などで意図せず一時停止したまま
 // currentBgmKeyだけが再生中のつもりで固まってしまうことがあるため、同様に復旧を試みる

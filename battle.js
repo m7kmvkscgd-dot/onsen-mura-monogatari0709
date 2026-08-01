@@ -768,13 +768,15 @@ function processNext() {
             processNext();
           };
           const continueAfterBig = () => {
-            const bigCounterResult = results.find((r) => r.guardCounterDmg);
-            if (bigCounterResult) {
-              // かばう反撃(会心の返し): 大技の演出の0.5秒後に槍士側の反撃演出を差し込んでから次のターンへ進む
-              playGuardCounterVisual(bigCounterResult.target, actor, bigCounterResult.guardCounterDmg, advanceTurnAfterBig);
-            } else {
-              setTimeout(advanceTurnAfterBig, 500);
-            }
+            // かばう反撃(会心の返し): 全体大技で複数人が同時に成立した場合も全件を順番に適用する
+            // (旧実装はfindで最初の1件だけ演出=HP減算しており、2件目以降の反撃ダメージが消えていた。2026-08-02修正)
+            const counterResults = results.filter((r) => r.guardCounterDmg);
+            if (counterResults.length === 0) { setTimeout(advanceTurnAfterBig, 500); return; }
+            const playNext = (i) => {
+              if (i >= counterResults.length) { advanceTurnAfterBig(); return; }
+              playGuardCounterVisual(counterResults[i].target, actor, counterResults[i].guardCounterDmg, () => playNext(i + 1));
+            };
+            playNext(0);
           };
           autoDeployReserveIfNeeded(newlyCriticalBig, continueAfterBig);
           }); // ← playEnemyBigAttackChargeの着弾コールバック(大技モーション刷新2026-08-01)

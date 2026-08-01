@@ -1403,7 +1403,15 @@ function applyTreeInflict(t, inflict, actor) {
 }
 // スキルツリーの能動スキル(単体/範囲攻撃、バフ、回復など)を実行する汎用リゾルバ。
 // target: 単体系はentity1体、範囲系(action.aoe)は配列
+// 残心(nextSkillFreeMp)の空振り保護(2026-08-02): 中身がfailed(鷹が既に出ている/式神のMP不足等、
+// 実際には何もしなかった)で返った場合、冒頭で消費済みの残心フラグを返却する
 function useTreeSkill(actor, target, skill, log) {
+  const hadZanshin = !!(actor && actor.nextSkillFreeMp);
+  const result = useTreeSkillInner(actor, target, skill, log);
+  if (hadZanshin && result && result.failed) actor.nextSkillFreeMp = true;
+  return result;
+}
+function useTreeSkillInner(actor, target, skill, log) {
   const action = skill.action;
   // 煙幕など: アイテムを消費して発動する技。MPが足りていても道具が無ければ発動できない(MP消費前に判定する)
   if (action.kind === "buffPartyConsumeItem" && (state.inventory[action.item] || 0) <= 0) {
@@ -2438,6 +2446,12 @@ function maybeHawkFollowup(actor, target, log) {
 // abilityType: 'magicAttack' | 'magicAttackAll' | 'heal' | 'critAttack' | 'powerAttack' | 'physicalAttackAll' | 'guard'
 // target: 単体系は対象1体、全体系(...All)は生存中の敵配列、heal/guardはactor自身か味方1体
 function useAbility(actor, target, abilityType, log) {
+  const hadZanshin = !!(actor && actor.nextSkillFreeMp);
+  const result = useAbilityInner(actor, target, abilityType, log);
+  if (hadZanshin && result && result.failed) actor.nextSkillFreeMp = true; // 残心の空振り保護(useTreeSkillと同じ)
+  return result;
+}
+function useAbilityInner(actor, target, abilityType, log) {
   let cost = abilityMpCost(abilityType, actor);
   if (actor.nextSkillFreeMp) actor.nextSkillFreeMp = false; // 残心: 次に使う技1回だけ無償化、ここで消費する
   // 鉄壁など: かばうのMP消費が一定確率で0になる

@@ -1692,11 +1692,10 @@ function playAilmentVfxOnCard(card, assignment) {
     if (frame > assignment.frameCount) { clearInterval(timer); img.remove(); return; }
     img.src = `${assignment.framePrefix}${frame}.png`;
   }, frameMs);
-  // 効果音: エディタで割り当てた素材をそのまま鳴らす(エディタのプレビュー再生と同じ方式)
-  if (assignment.se) {
-    const se = new Audio(assignment.se);
-    se.volume = 0.5;
-    se.play().catch(() => {});
+  // 効果音: エディタで割り当てた素材を鳴らす。iOSは<audio>.volumeを無視するため、
+  // GainNode経由(audio.jsのplaySfxFromUrl)で音量50%を実機でも効かせる(2026-08-02修正)
+  if (assignment.se && typeof playSfxFromUrl === "function") {
+    playSfxFromUrl(assignment.se, 0.5);
   }
   return assignment.frameCount * frameMs;
 }
