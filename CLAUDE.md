@@ -103,6 +103,7 @@ npx wrangler pages deploy . --project-name=onsen-mura-monogatari --branch=main -
 
 ## リリース前に戻すもの
 - タイトル画面のタップ後の静止時間: 本来1秒→テスト期間中0.1秒に短縮中(title.jsのrunTitleSequence内sleep(100)、2026-07-28)。リリース前にsleep(1000)へ戻す
+- タイトルの「UI調整」トグルボタン+戦闘のサイズ/配置調整パネル一式(2026-08-01): index.htmlのtitleSizeTunerBtn、title.jsのトグル処理、battle.js末尾のinitSizeTuner。リリース前にまとめて削除(?sizeTuner=1のURL起動も同関数)
 
 ## 未決定事項(次回セッションで詰める)
 - ステータス名・UI文言なども含めて和風に統一するかどうか(「◯層目」以外は概ね西洋ファンタジー風の言い回しが残っている)

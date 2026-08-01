@@ -2821,7 +2821,8 @@ function defeat() {
 // 定期再適用(400ms)で追従する。決まった数値をユーザーが読み上げ→Claudeが本実装する運用
 (function initSizeTuner() {
   try {
-    if (!new URLSearchParams(location.search).has("sizeTuner")) return;
+    // 起動条件: ?sizeTuner=1 または タイトルの「UI調整」トグルON(localStorage、title.js参照)
+    if (!new URLSearchParams(location.search).has("sizeTuner") && localStorage.getItem("onsen_size_tuner_on") !== "1") return;
     // ドラッグ調整は縦方向のみ(横は動かさない、ユーザー指定)。オフセットはCSSのtranslateプロパティで
     // 加算する(transformとは独立して合成されるため、味方バーの中央寄せtranslateX(-50%)を壊さない)。
     // ボスと雑魚は接地位置が別々に調整できるようカード単位で分割(行ごと動かすと地面の位置が狂う)

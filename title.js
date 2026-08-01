@@ -712,6 +712,22 @@ document.getElementById("titleRaidTestBtn").onclick = () => {
   renderRaidTestScreen();
   showScreen("screen-raid-test");
 };
+// UI調整モードのトグル(開発用2026-08-01、リリース前にボタンごと削除)。ONでlocalStorageへ記録し、
+// battle.jsのinitSizeTunerが起動時に読む(?sizeTuner=1と同じパネル)。反映にはリロードが必要なため、
+// 切り替えたらその場でリロードして即使える状態にする
+const SIZE_TUNER_LS_KEY = "onsen_size_tuner_on";
+function refreshSizeTunerBtnLabel() {
+  const btn = document.getElementById("titleSizeTunerBtn");
+  if (btn) btn.querySelector("span").textContent = `UI調整: ${localStorage.getItem(SIZE_TUNER_LS_KEY) === "1" ? "ON" : "OFF"}`;
+}
+refreshSizeTunerBtnLabel();
+document.getElementById("titleSizeTunerBtn").onclick = () => {
+  playSfx("select");
+  const on = localStorage.getItem(SIZE_TUNER_LS_KEY) === "1";
+  if (on) localStorage.removeItem(SIZE_TUNER_LS_KEY);
+  else localStorage.setItem(SIZE_TUNER_LS_KEY, "1");
+  location.reload();
+};
 document.getElementById("raidTestBackBtn").onclick = () => {
   playSfx("select");
   showScreen("screen-title");
