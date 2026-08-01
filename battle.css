@@ -185,7 +185,10 @@
     transform: translateX(-50%) translateZ(0) translate(var(--crit-shake-x, 0px), var(--crit-shake-y, 0px));
     width: 100%; max-width: 480px; z-index: 4;
   }
-  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; overflow: hidden; box-sizing: border-box; }
+  /* 高さ固定=敵の体格/数が変わっても下の文章枠・味方バー・コマンド欄が動かないための土台(v1.1の
+     表示位置完全固定化)。overflow:hiddenは2026-08-01に廃止: はみ出しを黙って切り取ると「敵が消える」
+     系の事故になる(3体戦の折り返し隠れ・配置調整の透明の壁)。はみ出しは見せて直す方針 */
+  .enemy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-content: center; gap: 0.8rem; padding: 38px 0.6rem 10px; flex-wrap: wrap; height: 176px; box-sizing: border-box; }
   /* ============ 戦闘レイアウトプリセット「center_v1」(2026-07-31、mock_battle_layout_editorのユーザー確定値) ============
      従来レイアウト(classic)のルールは一切変更・削除していない。data.jsのBATTLE_LAYOUTを"classic"へ
      変えるだけでこのセクションは丸ごと不使用になり完全に元へ戻る。適用はrenderBattleScreen(battle.js)。
@@ -201,8 +204,8 @@
   .battle-top.layout-center .enemy-row { position: absolute; top: calc(26vh - 38px); left: 0; right: 0; height: 200px; align-content: flex-start; }
   /* #battlePartyBar.layout-centerのtopもJSが実測で設定する(CSSでは指定しない) */
   /* framelessカードは左右paddingを最小化する。立ち絵110px化でカード幅が123pxになり、
-     390px端末の3体戦で3枚目が折り返し→overflow:hiddenに隠れる不具合があった(枠が無いので
-     左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */
+     390px端末の3体戦で3枚目が折り返す不具合があった(当時はoverflow:hiddenで丸ごと隠れて
+     「敵が消えた」ように見えた。枠が無いので左右の余白は見た目に不要。110+4px×3+gapで390pxに収まる) */
   .enemy-card.frameless { padding-left: 2px; padding-right: 2px; }
   .enemy-row.crowded { gap: 0.25rem; }
   .enemy-card {
@@ -749,8 +752,8 @@
      不具合の原因)。明示的に対象から除外して、通常サイズの敵と同じ大きさでエフェクトが出るようにした */
   .enemy-card.swarm img:not(.slash-vfx) { width: 48px; height: 48px; }
   .enemy-card.swarm .enemy-name { font-size: 0.6rem; line-height: 1.1; overflow-wrap: break-word; }
-  /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定+overflow:hidden)の
-     枠内に収める必要があるため、名前ラベルを詰めて画像の拡大分を吸収している */
+  /* 中ボス級の依頼専用敵(大猪等)は通常より一回り大きく表示する。.enemy-row(高さ176px固定)の
+     枠内に収まるよう、名前ラベルを詰めて画像の拡大分を吸収している */
   .enemy-card.midboss img { width: 112px; height: 112px; }
   .enemy-card.midboss .enemy-name { font-size: 0.7rem; margin: 0.1rem 0 0.05rem; }
   /* 奉行所の依頼で確定出現した討伐対象であることが分かる、金色の常時パルス枠(targetPulseの赤/chargingPulseの
