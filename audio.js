@@ -523,7 +523,10 @@ function shouldKeepBossBgmOnFlee() {
   return isContinuingBossChase() && isBossBgmActive();
 }
 function stopBattleBgm() {
-  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle" && currentBgmKey !== "tengu_battle" && currentBgmKey !== "boss_battle_intro" && currentBgmKey !== "boss_battle_climax") return;
+  // 【2026-08-01修正】quest_route_battle(奉行所ルート道中戦)とcave_battle(洞窟戦)がこの一覧から
+  // 漏れており、その戦闘の終了時に早期returnして曲が止まらない不具合があった(ユーザー報告:
+  // 奉行所クエストで戦闘後もBGMが消えない)。戦闘用キーを追加する時はここへの追記を忘れないこと
+  if (currentBgmKey !== "dungeon" && currentBgmKey !== "dungeon_night" && currentBgmKey !== "coast_battle" && currentBgmKey !== "boss_battle" && currentBgmKey !== "mid_boss_battle" && currentBgmKey !== "quest_target_battle" && currentBgmKey !== "tengu_battle" && currentBgmKey !== "boss_battle_intro" && currentBgmKey !== "boss_battle_climax" && currentBgmKey !== "quest_route_battle" && currentBgmKey !== "cave_battle") return;
   const key = currentBgmKey;
   // ボス戦(boss_battle/mid_boss_battle/quest_target_battle/二段構成のintro/climax)や天狗戦は
   // 森・海岸共通の1トラックのため、戦闘終了時にどちらへ戻すかは現在のステージ(currentStage)で判定する
