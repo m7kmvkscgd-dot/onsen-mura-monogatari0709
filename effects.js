@@ -404,8 +404,9 @@ function playSkillCastFx(actor, skillName, onRelease, opts) {
     banner.classList.remove("enemy-big"); // 敵大技予告(紫)と共用のため、味方使用時は必ず金赤へ戻す
     const band = banner.querySelector(".band");
     band.textContent = skillName;
-    // 表示位置(CodexデモcastCommon()準拠2026-08-01): 技を使う本人のカードの右肩(横-23px/上-105px)
-    positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 0);
+    // 表示位置(CodexデモcastCommon()準拠2026-08-01): 技を使う本人のカードの右肩(横-23px/上-105px)。
+    // 同日「味方は位置が高い、20px下げろ」でextraDrop 20(実効-85px)
+    positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 20);
     // 札アニメは即時開始し、SKILL_CAST_MS(700ms)内に収める(Codexデモ準拠。SEのタイミングは従来どおり180ms)
     if (banner.animate) playTanzakuSlide(banner);
     }

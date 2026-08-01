@@ -1416,10 +1416,10 @@ function runTreeSkill(actor, skill) {
   // 対象選択(敵/味方)を伴う技は「選択してから技名と音」(2026-08-01ユーザー指示)のため
   // 入口では鳴らさず、各分岐の選択後コールバック内で鳴らす(treeSkillFxAfterPick)。
   // 使用不可の早期return(上の怒声系ガード)は演出より前に弾いておく
+  // 対象選択を伴わない技(全体技/自己バフ等)もこの発動タイミングで技名短冊を出す(2026-08-01「2は出せや！
+  // 発動のタイミングで出せ」。同日中の一時的な短冊なし化を撤回)
   if (treeSkillFxAfterPick(action)) runTreeSkillBody(actor, skill);
-  // 対象選択を伴わない技(全体技/自己バフ/変身/式神等)は技名短冊を出さない(2026-08-01ユーザー指示
-  // 「味方の技名(全体)とかまで出てる、まだ出さなくていい」。発光とSEは従来どおり)
-  else playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill), { noBanner: true });
+  else playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill));
 }
 // 対象選択を伴う(=キャスト演出を選択後に出す)技の判定。runTreeSkillBodyの分岐実体と対応させる。
 // 変身/式神召喚の種類ピッカーは戦場の対象選択ではないため入口演出のまま
@@ -2143,7 +2143,6 @@ function renderActionButtons(actor) {
           // 治癒の術は味方選択後(resolveAllyTarget)側で演出する
           if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
-            // 全体技は技名短冊なし(2026-08-01ユーザー指示。発光とSEのみ)
             playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
             playAttackSfxWithSwish(actor.classId);
             const targetsList = targetableEnemies();
@@ -2173,7 +2172,7 @@ function renderActionButtons(actor) {
             playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
             triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
-            }, { noBanner: true }); // ← 全体技のplaySkillCastFxコールバック閉じ(短冊なし)
+            }); // ← 全体技のplaySkillCastFxコールバック閉じ
             return;
           }
           // 単体系(会心の一撃/奇襲/呪符ノ術など): 対象を選んでからキャスト演出→実行
