@@ -386,7 +386,9 @@ function getSkillBannerSingleton() {
   skillBannerSingleton = wrap;
   return wrap;
 }
-function playSkillCastFx(actor, skillName, onRelease) {
+// opts.noBanner: 技名短冊を出さない(発光とSEだけ)。対象選択を伴わない技(全体技/自己バフ等)は
+// 「まだ技名を出さなくていい」(2026-08-01ユーザー指示)ため、こちらを指定する
+function playSkillCastFx(actor, skillName, onRelease, opts) {
   try {
     const card = findVisibleCard(actor.id);
     const img = card ? card.querySelector("img") : null;
@@ -397,6 +399,7 @@ function playSkillCastFx(actor, skillName, onRelease) {
       { filter: "brightness(1.24) drop-shadow(0 0 7px rgba(255,210,108,0.5))", offset: 0.48 },
       { filter: "brightness(1.04)" },
     ], { duration: 430, easing: "ease-out" });
+    if (!(opts && opts.noBanner)) {
     const banner = getSkillBannerSingleton();
     banner.classList.remove("enemy-big"); // 敵大技予告(紫)と共用のため、味方使用時は必ず金赤へ戻す
     const band = banner.querySelector(".band");
@@ -405,6 +408,7 @@ function playSkillCastFx(actor, skillName, onRelease) {
     positionTanzakuBanner(banner, band, card ? card.getBoundingClientRect() : null, 0);
     // 札アニメは即時開始し、SKILL_CAST_MS(700ms)内に収める(Codexデモ準拠。SEのタイミングは従来どおり180ms)
     if (banner.animate) playTanzakuSlide(banner);
+    }
     // 技名SEは職業別(ユーザー支給2026-08-01、いずれも音量60%=SFX_GAIN)。
     // 全8職業に個別の専用音あり(薙刀士も2026-08-01に独立)。汎用skill_castは未知の職業/式神系のフォールバック
     const castSfxByClass = { hunter: "skill_cast_hunter", samurai: "skill_cast_samurai", naginata: "skill_cast_naginata", gunner: "skill_cast_gunner", ninja: "skill_cast_ninja", priest: "skill_cast_priest", onmyoji: "skill_cast_onmyoji", spearman: "skill_cast_spearman" };
@@ -447,6 +451,35 @@ function playEnemyBigAttackTanzaku(enemy) {
     positionTanzakuBanner(banner, band, img.getBoundingClientRect(), 30);
     if (banner.animate) playTanzakuSlide(banner);
   } catch (e) {} // 演出の失敗で戦闘進行を止めない
+}
+// 大技「発動時」の紫短冊(2026-08-01ユーザー指示「敵の攻撃アニメーション終わるまで出しとけ」):
+// スライドインして出っぱなしにし、battle.js側が攻撃演出の完了時にhideTanzakuBanner()で下ろす。
+// 予告(構え)時の900msスライド(上のplayEnemyBigAttackTanzaku)とは別物
+function playEnemyBigAttackTanzakuHold(enemy) {
+  try {
+    const card = findVisibleCard(enemy.instanceId);
+    const img = card ? card.querySelector(".card-portrait-img") : null;
+    const name = typeof peekNextBigAttackName === "function" ? peekNextBigAttackName(enemy) : null;
+    if (!img || !name) return;
+    const banner = getSkillBannerSingleton();
+    banner.classList.add("enemy-big");
+    const band = banner.querySelector(".band");
+    band.textContent = name;
+    positionTanzakuBanner(banner, band, img.getBoundingClientRect(), 30);
+    if (banner.animate) banner.animate([
+      { opacity: 0, transform: "translateY(-9px)" },
+      { opacity: 0.95, transform: "translateY(0)" },
+    ], { duration: 200, easing: "ease-out", fill: "forwards" });
+  } catch (e) {}
+}
+function hideTanzakuBanner() {
+  try {
+    if (!skillBannerSingleton || !skillBannerSingleton.isConnected || !skillBannerSingleton.animate) return;
+    skillBannerSingleton.animate([
+      { opacity: 0.95, transform: "translateY(0)" },
+      { opacity: 0, transform: "translateY(6px)" },
+    ], { duration: 220, easing: "ease-in", fill: "forwards" });
+  } catch (e) {}
 }
 
 // ============ 敵の攻撃モーション(mock_enemy_attack.htmlでユーザー採用2026-08-01) ============

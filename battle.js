@@ -682,6 +682,9 @@ function processNext() {
           // 【大技モーション刷新2026-08-01(モック案C採用、白フラッシュ無し)】溜め(暗転+赤オーラ+
           // しゃがみ込み)→解放(爆発的踏み込み)の演出後、当たる瞬間にダメージ確定〜表示を行う。
           // ダメージ計算自体も解放後に回す(溜めの間もログや被弾が先行しないよう全部まとめて遅らせる)
+          // 発動時の技名短冊は溜め開始から攻撃演出の完了まで出しっぱなし(2026-08-01ユーザー指示。
+          // peekは回転を消費しないため、この時点の「次の大技」=これから撃つ技の名前)
+          if (typeof playEnemyBigAttackTanzakuHold === "function") playEnemyBigAttackTanzakuHold(actor);
           playEnemyBigAttackCharge(actor, () => {
           if (!battle) return; // 溜めの間に煙玉等で戦闘が終了していた場合の保険
           const hpBeforeBig = {};
@@ -724,7 +727,11 @@ function processNext() {
           alive.forEach((c) => checkPinchTrigger(c, hpBeforeBig[c.id]));
           const newlyCriticalBig = handleFieldDeaths();
           renderBattleScreen();
-          const advanceTurnAfterBig = () => { battle.orderIndex++; processNext(); };
+          const advanceTurnAfterBig = () => {
+            if (typeof hideTanzakuBanner === "function") hideTanzakuBanner(); // 攻撃演出が終わった=技名短冊を下ろす
+            battle.orderIndex++;
+            processNext();
+          };
           const continueAfterBig = () => {
             const bigCounterResult = results.find((r) => r.guardCounterDmg);
             if (bigCounterResult) {
@@ -1410,7 +1417,9 @@ function runTreeSkill(actor, skill) {
   // 入口では鳴らさず、各分岐の選択後コールバック内で鳴らす(treeSkillFxAfterPick)。
   // 使用不可の早期return(上の怒声系ガード)は演出より前に弾いておく
   if (treeSkillFxAfterPick(action)) runTreeSkillBody(actor, skill);
-  else playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill));
+  // 対象選択を伴わない技(全体技/自己バフ/変身/式神等)は技名短冊を出さない(2026-08-01ユーザー指示
+  // 「味方の技名(全体)とかまで出てる、まだ出さなくていい」。発光とSEは従来どおり)
+  else playSkillCastFx(actor, skill.name, () => runTreeSkillBody(actor, skill), { noBanner: true });
 }
 // 対象選択を伴う(=キャスト演出を選択後に出す)技の判定。runTreeSkillBodyの分岐実体と対応させる。
 // 変身/式神召喚の種類ピッカーは戦場の対象選択ではないため入口演出のまま
@@ -2134,6 +2143,7 @@ function renderActionButtons(actor) {
           // 治癒の術は味方選択後(resolveAllyTarget)側で演出する
           if (ability === "heal") { renderAllyTargets(actor, "heal"); return; }
           if (ability === "magicAttackAll" || ability === "physicalAttackAll") {
+            // 全体技は技名短冊なし(2026-08-01ユーザー指示。発光とSEのみ)
             playSkillCastFx(actor, ABILITY_LABEL[ability], () => {
             playAttackSfxWithSwish(actor.classId);
             const targetsList = targetableEnemies();
@@ -2163,7 +2173,7 @@ function renderActionButtons(actor) {
             playScreenShakeOnHit(null, anyCrit); // 全体技は一括で1回だけ軽く揺らす
             hitTargets.forEach((t) => playAttackVfx(t.instanceId, actor, "skill"));
             triggerShootDownEvents(shotDownTargets, () => maybeCritFollowupThenFinish(actor, anyCrit));
-            }); // ← 全体技のplaySkillCastFxコールバック閉じ
+            }, { noBanner: true }); // ← 全体技のplaySkillCastFxコールバック閉じ(短冊なし)
             return;
           }
           // 単体系(会心の一撃/奇襲/呪符ノ術など): 対象を選んでからキャスト演出→実行
