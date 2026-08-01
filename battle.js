@@ -808,16 +808,16 @@ function processNext() {
     actor.guardProtectCount = 0;
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
-    const dot = tickTurnStartEffects(actor, blog);
-    if (dot.total > 0) {
-      popupOn(actor.id, `-${dot.total}`, "dmg");
-      popupDotStack(actor.id, dot, "burn");
-      const newlyCriticalDot = handleFieldDeaths();
-      renderBattleScreen();
-      if (actor.hp <= 0 || actor.status !== "active") {
-        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
-        return;
-      }
+    // 式神のDOT(毒/出血/炎上)も敵と同じ停止演出で1種類ずつ見せる(モック採用2026-08-01)。
+    // ダメージ適用は演出側(playEnemyDotStopSequence)が行い、その他のターン開始処理はskipDotsで通す
+    const continueShikigamiTurn = () => {
+    if (!battle) return; // 演出中に煙玉等で戦闘が終わっていた場合の保険
+    tickTurnStartEffects(actor, blog, { skipDots: true });
+    handleFieldDeaths();
+    renderBattleScreen();
+    if (actor.hp <= 0 || actor.status !== "active") {
+      setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      return;
     }
     if (actor.stunTurns > 0) {
       actor.stunTurns--;
@@ -856,6 +856,8 @@ function processNext() {
       const advanceTurn = () => { battle.orderIndex++; processNext(); };
       autoDeployReserveIfNeeded(newlyCriticalAction, () => setTimeout(advanceTurn, 500));
     }, 600);
+    };
+    playEnemyDotStopSequence(actor, blog, continueShikigamiTurn);
   } else {
     if (actor.hp <= 0 || actor.status !== "active" || actor.fleeState === "fled") { battle.orderIndex++; processNext(); return; }
     battle.actingId = actor.id;
@@ -866,18 +868,19 @@ function processNext() {
     tickSamuraiForms(actor, blog); // 鬼神化/明鏡止水のターン経過(残りターン消化・明鏡のストレス回復)
     document.getElementById("actionGrid").innerHTML = "";
     renderBattleScreen();
-    const dot = tickTurnStartEffects(actor, blog);
-    if (dot.total > 0) {
-      popupOn(actor.id, `-${dot.total}`, "dmg");
-      popupDotStack(actor.id, dot, "burn");
-      const newlyCriticalDot = handleFieldDeaths();
-      renderBattleScreen();
-      if (actor.hp <= 0 || actor.status !== "active") {
-        autoDeployReserveIfNeeded(newlyCriticalDot, () => {
-          setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
-        });
-        return;
-      }
+    // 味方のDOT(毒/出血/炎上)も敵と同じ停止演出で1種類ずつ見せる(モック採用2026-08-01。
+    // 旧・小さいポップをまとめて出すだけの表示を置き換え)。ダメージ適用は演出側が行うため、
+    // その他のターン開始処理(継続回復・バフ経過など)はskipDots付きのtickTurnStartEffectsで通す
+    const continueAllyTurn = () => {
+    if (!battle) return; // 演出中に煙玉等で戦闘が終わっていた場合の保険
+    tickTurnStartEffects(actor, blog, { skipDots: true });
+    const newlyCriticalDot = handleFieldDeaths();
+    renderBattleScreen();
+    if (actor.hp <= 0 || actor.status !== "active") {
+      autoDeployReserveIfNeeded(newlyCriticalDot, () => {
+        setTimeout(() => { battle.orderIndex++; processNext(); }, 500);
+      });
+      return;
     }
     if (actor.stunTurns > 0) {
       actor.stunTurns--;
@@ -915,6 +918,8 @@ function processNext() {
       });
     }
     renderActionButtons(actor);
+    };
+    playEnemyDotStopSequence(actor, blog, continueAllyTurn);
   }
 }
 

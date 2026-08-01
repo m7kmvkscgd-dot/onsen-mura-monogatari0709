@@ -1602,9 +1602,9 @@ function spawnCatapultDust(x, y, n) {
 // skipDotsを渡して二重適用を防ぐ。VFX/効果音の割り当てはAILMENT_VFX_ASSIGNMENTS(data.js、
 // VFXエディタのエクスポート)から、その時点の蓄積値に最も近いstackLevelの項目を選ぶ
 const DOT_STOP_HOLD_MS = 700; // 1種類ごとの停止時間(モックの選択肢からユーザーが0.7秒を採用)
-const DOT_STOP_DIM_IN_MS = 260; // 暗転が乗り切ってから最初の種類を見せるまでの間
+const DOT_STOP_DIM_IN_MS = 60; // 暗転が乗り切ってから最初の種類を見せるまでの間(260→60、モック「間を詰めた版」採用2026-08-01)
 const DOT_STOP_STEP_GAP_MS = 140; // 種類と種類の間の小休止(チップの消え際)
-const DOT_STOP_DIM_OUT_MS = 250; // 明転してから敵の行動フローへ戻るまでの間
+const DOT_STOP_DIM_OUT_MS = 200; // 明転してから行動フローへ戻るまでの間(250→200、同上)
 const AILMENT_VFX_STAGE_PORTRAIT_W = 96; // VFXエディタのステージ敵絵の幅(px)。size/offsetの基準
 function ailmentVfxAssignmentFor(ailmentId, stackValue) {
   const list = (typeof AILMENT_VFX_ASSIGNMENTS !== "undefined" ? AILMENT_VFX_ASSIGNMENTS : []).filter((a) => a.ailmentId === ailmentId);
@@ -1621,8 +1621,12 @@ function playAilmentVfxOnCard(card, assignment) {
   img.className = "dot-ailment-vfx" + (assignment.blendScreen ? " blend-screen" : "");
   img.style.width = Math.max(8, Math.round(assignment.size * scale)) + "px";
   img.style.height = "auto";
-  const cx = portrait ? portrait.offsetLeft + portrait.clientWidth / 2 : card.clientWidth / 2;
-  const cy = portrait ? portrait.offsetTop + portrait.clientHeight / 2 : card.clientHeight / 2;
+  // 絵の中心はrect差分で求める(offsetLeft方式は基準がoffsetParent依存で、味方カード(入れ子の
+  // party-portrait-wrap)だと座標がズレるため。敵カードでも同じ結果になる安全な計算に統一、2026-08-01)
+  const cardRect = card.getBoundingClientRect();
+  const pRect = portrait ? portrait.getBoundingClientRect() : null;
+  const cx = pRect ? pRect.left - cardRect.left + pRect.width / 2 : card.clientWidth / 2;
+  const cy = pRect ? pRect.top - cardRect.top + pRect.height / 2 : card.clientHeight / 2;
   img.style.left = Math.round(cx + assignment.offsetX * scale) + "px";
   img.style.top = Math.round(cy + assignment.offsetY * scale) + "px";
   img.src = `${assignment.framePrefix}1.png`;
@@ -1642,8 +1646,10 @@ function playAilmentVfxOnCard(card, assignment) {
   }
   return assignment.frameCount * frameMs;
 }
-// 本体シーケンス。DOTが1つも無ければ何もせず即onDoneを呼ぶ(従来と同じ同期タイミングを保つ)
+// 本体シーケンス。DOTが1つも無ければ何もせず即onDoneを呼ぶ(従来と同じ同期タイミングを保つ)。
+// 2026-08-01のモック採用で味方/式神のターン開始にも共通で使う(actorのカードidだけ敵味方で異なる)
 function playEnemyDotStopSequence(actor, blogFn, onDone) {
+  const cardId = actor.instanceId !== undefined ? actor.instanceId : actor.id;
   const steps = [];
   // 処理順は炎上→毒→出血(ユーザー指定)。stackはVFXのstackLevel選択に使う現在の蓄積値/残りターン
   if (actor.burnTurns > 0) steps.push({ id: "burn", icon: "🔥", label: "炎上", popCls: actor.isPlant ? "burn-plant" : "burn", chipCls: "dot-chip-burn", stack: actor.burnTurns, tick: () => tickBurn(actor, blogFn) });
@@ -1657,10 +1663,10 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
     setTimeout(onDone, DOT_STOP_DIM_OUT_MS);
   };
   const runStep = (i) => {
-    // 途中で敵が力尽きたら残りの種類は省略して締める(死体に0ダメージの表示を続けない)
+    // 途中で力尽きたら残りの種類は省略して締める(死体に0ダメージの表示を続けない)
     if (!battle || i >= steps.length || actor.hp <= 0) { finish(); return; }
     const s = steps[i];
-    const card = findVisibleCard(actor.instanceId);
+    const card = findVisibleCard(cardId);
     let chip = null;
     let vfxMs = 0;
     if (card) {
@@ -1673,7 +1679,7 @@ function playEnemyDotStopSequence(actor, blogFn, onDone) {
     }
     const dmg = s.tick(); // 実際のダメージ適用とログはengine.jsのtickBurn等がそのまま担当する
     if (dmg > 0) {
-      popupOn(actor.instanceId, `${s.icon}-${dmg}`, s.popCls);
+      popupOn(cardId, `${s.icon}-${dmg}`, s.popCls);
       // 通常攻撃の被弾と同じリアクション(白フラッシュ+ノックバック+潰れ伸び)を再発火させる
       actor.__shakeUntil = Date.now() + 400;
       actor.__shakeIntensity = "normal";

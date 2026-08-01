@@ -171,7 +171,7 @@
     0%, 100% { box-shadow: 0 0 8px rgba(76,175,111,0.3); }
     50% { box-shadow: 0 0 16px rgba(76,175,111,0.8); }
   }
-  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx):not(.kekkai-barrier-vfx):not(.ally-target-marker-img) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
+  .party-member img:not(.carried-badge):not(.hawk-badge):not(.bishamon-barrier-vfx):not(.kekkai-barrier-vfx):not(.ally-target-marker-img):not(.dot-ailment-vfx) { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #353a44; border-radius: var(--radius-xs); }
   .party-member.dead img { filter: grayscale(1) brightness(0.4); }
   /* 式神(サンプル実装)の仮アイコン。本物のポートレート絵が来るまでは絵文字で代用し、
      .card-portrait-img(<img>)と同じ箱サイズ(正方形/背景色/角丸)だけ再現する */
