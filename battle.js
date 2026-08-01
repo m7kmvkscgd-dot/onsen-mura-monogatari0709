@@ -769,7 +769,9 @@ function processNext() {
           if (actor.isBoss || actor.isMidBoss) blog(`${actor.label}が唸り声をあげて構えた…次のターンは大技【${peekNextBigAttackName(actor)}】だ！`);
           triggerWarningFlash();
           playSfx("big_attack_warning");
-          // 構え状態(赤オーラ+震え+技名短冊)はこの後の再描画からデータ駆動で立ち上がる(syncBigAttackStance)
+          // 構え状態(赤オーラ+震え+技名短冊)を予告の瞬間に必ず立ち上げる(後続の通常攻撃の描画を
+          // 待たない。2026-08-02「予告のターンには必ず短冊と溜めモーション」)
+          renderBattleScreen();
           actor.bigAttackCountdown -= 1;
         } else {
           actor.bigAttackCountdown = Math.max(0, (actor.bigAttackCountdown || 0) - 1);

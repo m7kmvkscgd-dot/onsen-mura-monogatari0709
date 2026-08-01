@@ -1681,11 +1681,13 @@ function rollBigAttackCountdown(def) {
 // 通常抽選(pickEnemyForFloor)と、緊急依頼専用の狙い撃ちスポーン(instantiateEnemyById)の両方から使う共通処理
 function instantiateEnemy(pick) {
   const hp = pick.hp;
-  // bigAttackCycle.instant指定の敵は、遭遇後いきなり最初のターンで大技が来る(予告無しの奇襲)。
-  // それ以外は通常通りサイクル間隔を1回抽選し、さらにその中でランダムな初期位相にずらす
-  // (同種の敵が複数体並んだ時に全員が同時に予告/発動して見えるのを防ぐため)
+  // 【予告なし大技は全面禁止(2026-08-02ユーザー指示「予告のターンには必ず短冊と溜めモーション。
+  // 1ターン目でも例外ではない」)】初期カウントは必ず1以上=どの敵も発動の前に必ず「構え」の
+  // 予告ターン(赤オーラ+震え+技名短冊)を1回挟む。instant指定(化け茸の奇襲)は「初手が予告」の
+  // 最速値1として扱い、発動は最短でも2手番目。通常の敵はサイクル間隔を1回抽選し、その中の
+  // ランダムな初期位相(1以上)にずらす(同種の敵が複数体並んだ時の同時予告/発動を防ぐため)
   const instant = pick.bigAttackCycle && pick.bigAttackCycle.instant;
-  const initialCountdown = instant ? 0 : Math.floor(Math.random() * (rollBigAttackCountdown(pick) + 1));
+  const initialCountdown = instant ? 1 : Math.max(1, Math.floor(Math.random() * (rollBigAttackCountdown(pick) + 1)));
   // extraBigAttacksを持つボス/中ボスは、初手のローテーション位置もランダムにする
   // (同じボスと何度戦っても毎回同じ技から始まる単調さを避けるため)
   const extraCount = pick.extraBigAttacks ? pick.extraBigAttacks.length : 0;
