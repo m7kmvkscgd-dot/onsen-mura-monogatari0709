@@ -2823,10 +2823,12 @@ function defeat() {
   try {
     // 起動条件: ?sizeTuner=1 または タイトルの「UI調整」トグルON(localStorage、title.js参照)
     if (!new URLSearchParams(location.search).has("sizeTuner") && localStorage.getItem("onsen_size_tuner_on") !== "1") return;
-    // ドラッグ調整は縦方向のみ(横は動かさない、ユーザー指定)。オフセットはCSSのtranslateプロパティで
-    // 加算する(transformとは独立して合成されるため、味方バーの中央寄せtranslateX(-50%)を壊さない)。
-    // ボスと雑魚は接地位置が別々に調整できるようカード単位で分割(行ごと動かすと地面の位置が狂う)
-    const offsets = { boss: 0, mob: 0, partyBar: 0, logBox: 0 };
+    // カード類(ボス/雑魚/味方バー/ログ)は縦のみ、ボタン類(コマンド欄/逃げる/歯車)は縦横自由に
+    // ドラッグできる(2026-08-01「あらゆるボタンを動かせるように」)。オフセットはCSSのtranslate
+    // プロパティで加算(transformとは独立して合成されるため、既存のtranslateX(-50%)等を壊さない)
+    const offsets = { boss: { x: 0, y: 0 }, mob: { x: 0, y: 0 }, partyBar: { x: 0, y: 0 }, logBox: { x: 0, y: 0 }, commands: { x: 0, y: 0 }, flee: { x: 0, y: 0 }, gear: { x: 0, y: 0 } };
+    const Y_ONLY = { boss: true, mob: true, partyBar: true, logBox: true }; // 接地/整列が狂うものは縦のみ
+    const BTN_ELS = { commands: () => document.querySelector(".battle-actions"), flee: () => $id("battleFleeBtn"), gear: () => $id("battleMuteBtn") };
     let bandOff = false;
     let arrangeMode = false;
     const panel = document.createElement("div");
@@ -2844,7 +2846,7 @@ function defeat() {
           <button id="tunerArrangeBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">配置モード: OFF</button>
           <button id="tunerJsonBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;">JSON書き出し</button>
         </div>
-        <div id="tunerStatus" style="margin-top:3px;color:#9aa79f;">配置モードON中は上下ドラッグで高さ調整: ボス/雑魚(別々)/味方バー/テキストボックス</div>
+        <div id="tunerStatus" style="margin-top:3px;color:#9aa79f;">配置モードON中ドラッグ: ボス/雑魚/味方バー/文章枠=上下のみ、コマンド欄/逃げる/歯車=自由。パネルに隠れる所は「最小化」してから</div>
         <textarea id="tunerJsonOut" style="display:none;width:100%;height:70px;margin-top:4px;font-size:10px;background:#101014;color:#cfe;border:1px solid #444;border-radius:6px;"></textarea>
       </div>`;
     document.body.appendChild(panel);
@@ -2865,7 +2867,8 @@ function defeat() {
           const card = findVisibleCard(e.instanceId);
           if (!card) return;
           const isBossType = e.isBoss || e.isMidBoss;
-          card.style.translate = `0px ${isBossType ? offsets.boss : offsets.mob}px`; // 縦のみ・ボスと雑魚は別々
+          const o = isBossType ? offsets.boss : offsets.mob;
+          card.style.translate = `${o.x}px ${o.y}px`;
           const img = card.querySelector(".card-portrait-img");
           if (!img) return;
           img.style.height = (isBossType ? bossH : mobH) + "px";
@@ -2881,10 +2884,14 @@ function defeat() {
       const bar = $id("battlePartyBar");
       if (bar) {
         bar.style.background = bandOff ? "transparent" : "";
-        bar.style.translate = `0px ${offsets.partyBar}px`;
+        bar.style.translate = `${offsets.partyBar.x}px ${offsets.partyBar.y}px`;
       }
       const logEl = $id("battleLog");
-      if (logEl) logEl.style.translate = `0px ${offsets.logBox}px`;
+      if (logEl) logEl.style.translate = `${offsets.logBox.x}px ${offsets.logBox.y}px`;
+      Object.keys(BTN_ELS).forEach((key) => {
+        const el = BTN_ELS[key]();
+        if (el) el.style.translate = `${offsets[key].x}px ${offsets[key].y}px`;
+      });
     };
     // 提灯童2体をボスの左右へ(本編の召喚と同じバランス挿入=gimmickDoSummonを流用)
     $id("tunerSummonBtn").onclick = () => {
@@ -2907,10 +2914,16 @@ function defeat() {
       $id("tunerBandBtn").textContent = `味方の帯: ${bandOff ? "なし" : "あり"}`;
       apply();
     };
-    // 配置モード: 上下ドラッグで高さのみ調整(横移動なし)。対象は「ボスカード」「雑魚カード(まとめて)」
-    // 「味方バー」「テキストボックス」の4系統(pointerイベントをキャプチャして戦闘タップと分離)
+    // 配置モード: ドラッグで位置調整(pointerイベントをキャプチャして戦闘タップと分離)。
+    // カード類=「ボス」「雑魚(まとめて)」「味方バー」「テキストボックス」の4系統は上下のみ、
+    // ボタン類=「コマンド欄」「逃げる」「歯車」は縦横自由(2026-08-01「あらゆるボタンを動かせるように」)
     const hitKeyFor = (target) => {
-      const eCard = target.closest ? target.closest(".enemy-card") : null;
+      if (!target.closest) return null;
+      // ボタン類を先に判定(コマンド欄はカード類と重ならない位置だが、逃げる/歯車はログ枠の近くにあるため優先)
+      if (target.closest("#battleFleeBtn")) return "flee";
+      if (target.closest("#battleMuteBtn")) return "gear";
+      if (target.closest(".battle-actions")) return "commands";
+      const eCard = target.closest(".enemy-card");
       if (eCard && typeof battle !== "undefined" && battle) {
         const en = battle.enemies.find((x) => String(x.instanceId) === eCard.dataset.id);
         if (en) return en.isBoss || en.isMidBoss ? "boss" : "mob";
@@ -2921,7 +2934,7 @@ function defeat() {
       if (logEl && (target === logEl || logEl.contains(target))) return "logBox";
       return null;
     };
-    const dragState = { key: null, startY: 0, base: 0 };
+    const dragState = { key: null, startX: 0, startY: 0, baseX: 0, baseY: 0 };
     const onDown = (e) => {
       if (!arrangeMode || panel.contains(e.target)) return;
       const hit = hitKeyFor(e.target);
@@ -2929,24 +2942,41 @@ function defeat() {
       e.preventDefault();
       e.stopPropagation();
       dragState.key = hit;
+      dragState.startX = e.clientX;
       dragState.startY = e.clientY;
-      dragState.base = offsets[hit];
+      dragState.baseX = offsets[hit].x;
+      dragState.baseY = offsets[hit].y;
     };
     const onMove = (e) => {
       if (!arrangeMode || !dragState.key) return;
       e.preventDefault();
-      offsets[dragState.key] = Math.round(dragState.base + e.clientY - dragState.startY);
+      if (!Y_ONLY[dragState.key]) offsets[dragState.key].x = Math.round(dragState.baseX + e.clientX - dragState.startX);
+      offsets[dragState.key].y = Math.round(dragState.baseY + e.clientY - dragState.startY);
       apply();
     };
     const onUp = () => { dragState.key = null; };
     document.addEventListener("pointerdown", onDown, true); // capture=戦闘側のタップ処理より先に奪う
     document.addEventListener("pointermove", onMove, { passive: false });
     document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onUp);
+    // 立ち絵IMGはネイティブの画像ドラッグがpointer列を奪う(pointercancelになり移動が届かない)ため、
+    // 配置モード中はdragstart自体を潰す。iOS実機ではタッチドラッグがスクロールに化けるのも防ぐ
+    document.addEventListener("dragstart", (e) => { if (arrangeMode) e.preventDefault(); }, true);
+    document.addEventListener("touchmove", (e) => { if (arrangeMode && dragState.key) e.preventDefault(); }, { passive: false });
+    // pointerdownをpreventDefaultしてもclickは別途発火し、ドラッグの離し際にボタンが「押されて」しまう
+    // (歯車なら音量ポップオーバーが開いて画面を覆い、以降のドラッグを遮る事故)。配置モード中は
+    // パネル以外へのclickを全て遮断する(=配置モード中に戦闘操作が誤発動しない保険も兼ねる)
+    document.addEventListener("click", (e) => {
+      if (arrangeMode && !panel.contains(e.target)) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
     $id("tunerArrangeBtn").onclick = () => {
       arrangeMode = !arrangeMode;
+      document.body.style.touchAction = arrangeMode ? "none" : "";
       $id("tunerArrangeBtn").textContent = `配置モード: ${arrangeMode ? "ON" : "OFF"}`;
       const outline = arrangeMode ? "1px dashed rgba(215,182,111,0.8)" : "";
-      ["battlePartyBar", "battleLog"].forEach((elId) => { const el = $id(elId); if (el) el.style.outline = outline; });
+      ["battlePartyBar", "battleLog", "battleFleeBtn", "battleMuteBtn"].forEach((elId) => { const el = $id(elId); if (el) el.style.outline = outline; });
+      const actionsEl = document.querySelector(".battle-actions");
+      if (actionsEl) actionsEl.style.outline = outline;
       document.querySelectorAll(".enemy-card").forEach((el) => { el.style.outline = outline; });
     };
     // 調整結果のJSON書き出し(テキストエリア表示+クリップボードコピー試行)
@@ -2962,7 +2992,7 @@ function defeat() {
         mobH: Number($id("tsMob").value),
         allyCardW: Number($id("tsAlly").value),
         allyBarBand: !bandOff,
-        yOffsets: offsets, // boss/mob/partyBar/logBox それぞれの上下移動量(px、マイナス=上へ)
+        offsets: offsets, // 各部品の移動量px(カード類はyのみ有効、commands/flee/gearはx/y両方。マイナス=上/左へ)
         rects: { enemyRow: rect("enemyRow"), partyBar: rect("battlePartyBar"), logBox: rect("battleLog") },
         viewport: { w: window.innerWidth, h: window.innerHeight },
       };
